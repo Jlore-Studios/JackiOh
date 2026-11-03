@@ -429,7 +429,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
 /// `test:db` only: the real catalog into a real Postgres.
 mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague_catalyst_prime_and_acclaimed_tags_included {
     use super::*;
-    use jackioh_server::cli::seed_catalog::seed_catalog;
+    use jackioh_server::cli::seed_catalog::{CatalogEntry, seed_catalog};
     use sqlx::PgPool;
 
     /// The store contract's fixture catalog version.
@@ -723,6 +723,171 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         restore_fixture_catalog(&admin).await;
         admin.close().await;
     }
+
+    /// Each row's `xmin`, by id: it changes when the row is written, even to the same values.
+    async fn xmins(admin: &PgPool, ids: &[String]) -> Vec<(String, String)> {
+        sqlx::query_as("select id, xmin::text from public.cards where id = any($1::text[]) order by id")
+            .bind(ids)
+            .fetch_all(admin)
+            .await
+            .expect("the rows' xmin read back")
+    }
+
+    /// The ids whose row was written between two reads of `xmins`.
+    fn written(before: &[(String, String)], after: &[(String, String)]) -> Vec<String> {
+        assert_eq!(before.len(), after.len());
+        before
+            .iter()
+            .zip(after)
+            .filter(|(was, now)| was != now)
+            .map(|((id, _), _)| id.clone())
+            .collect()
+    }
+
+    /// A wake with nothing new writes no card (#2926): one statement seeds the catalog, and a row that is
+    /// already as the catalog has it is left alone.
+    #[tokio::test]
+    async fn a_second_seed_rewrites_no_unchanged_card_and_updates_a_changed_one() {
+        let Ok(url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
+        if url.is_empty() {
+            return;
+        }
+        let _one_at_a_time = crate::store::contract::PG_SERIAL.lock().await;
+        let admin = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
+            .expect("the admin connection opens");
+        sqlx::query(TRUNCATE)
+            .execute(&admin)
+            .await
+            .expect("the tables are emptied");
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
+        assert!(entries.len() > 3, "the catalog has cards to edit");
+        let ids: Vec<String> = entries.iter().map(|entry| entry.id.clone()).collect();
+
+        // The first seed writes every column of every row as its entry has it, `index` and `set` into
+        // `card_index` and `set_id`, a cost of any shape as it came.
+        seed_catalog(&url, CATALOG_VERSION, &entries)
+            .await
+            .expect("the catalog is seeded");
+        type Row = (
+            String,
+            String,
+            String,
+            String,
+            String,
+            Vec<String>,
+            String,
+            bool,
+            Value,
+            String,
+        );
+        let rows: Vec<Row> = sqlx::query_as(
+            "select id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version
+               from public.cards where id = any($1::text[]) order by id",
+        )
+        .bind(&ids)
+        .fetch_all(&admin)
+        .await
+        .expect("the rows read back");
+        assert_eq!(rows.len(), entries.len());
+        let by_id: IndexMap<&str, &CatalogEntry> =
+            entries.iter().map(|entry| (entry.id.as_str(), entry)).collect();
+        for (id, index, name, set, type_, tags, rarity, token, cost, version) in rows {
+            let entry = by_id[id.as_str()];
+            assert_eq!(
+                (index, name, set, type_, tags, rarity, token, cost, version),
+                (
+                    entry.index.clone(),
+                    entry.name.clone(),
+                    entry.set.clone(),
+                    entry.type_.clone(),
+                    entry.tags.clone(),
+                    entry.rarity.clone(),
+                    entry.token,
+                    entry.cost.clone(),
+                    CATALOG_VERSION.to_owned()
+                ),
+                "{id}"
+            );
+        }
+
+        // A second seed of the same catalog writes no row.
+        let first_seed = xmins(&admin, &ids).await;
+        seed_catalog(&url, CATALOG_VERSION, &entries)
+            .await
+            .expect("a second seed succeeds");
+        let second_seed = xmins(&admin, &ids).await;
+        assert_eq!(written(&first_seed, &second_seed), Vec::<String>::new());
+
+        // A card whose entry changed is written, and it alone.
+        let mut edited = entries.clone();
+        edited[0].name = format!("{} (edited)", edited[0].name);
+        seed_catalog(&url, CATALOG_VERSION, &edited)
+            .await
+            .expect("an edited entry is seeded");
+        let third_seed = xmins(&admin, &ids).await;
+        assert_eq!(written(&second_seed, &third_seed), vec![ids[0].clone()]);
+        let (name,): (String,) = sqlx::query_as("select name from public.cards where id = $1")
+            .bind(&ids[0])
+            .fetch_one(&admin)
+            .await
+            .expect("the name reads back");
+        assert_eq!(name, edited[0].name);
+
+        // So is a card another version stamped, and the first card goes back to its own name.
+        sqlx::query("update public.cards set catalog_version = 'stale' where id = $1")
+            .bind(&ids[1])
+            .execute(&admin)
+            .await
+            .expect("a row is stamped by hand");
+        seed_catalog(&url, CATALOG_VERSION, &entries)
+            .await
+            .expect("the catalog is seeded again");
+        let fourth_seed = xmins(&admin, &ids).await;
+        assert_eq!(
+            written(&third_seed, &fourth_seed),
+            vec![ids[0].clone(), ids[1].clone()]
+        );
+        let stamped: Vec<(String, String)> = sqlx::query_as(
+            "select name, catalog_version from public.cards where id = any($1::text[]) order by id",
+        )
+        .bind(&ids[..2])
+        .fetch_all(&admin)
+        .await
+        .expect("the rows read back");
+        assert_eq!(
+            stamped,
+            vec![
+                (entries[0].name.clone(), CATALOG_VERSION.to_owned()),
+                (entries[1].name.clone(), CATALOG_VERSION.to_owned()),
+            ]
+        );
+
+        // A catalog that names an id twice keeps its last entry, as one write per entry did, and an
+        // unchanged row stays unwritten.
+        let mut twice = entries[2].clone();
+        twice.name = "First".to_owned();
+        let written_count = seed_catalog(&url, CATALOG_VERSION, &[twice, entries[2].clone()])
+            .await
+            .expect("a repeated id is seeded");
+        assert_eq!(written_count, 2);
+        assert_eq!(xmins(&admin, &ids).await, fourth_seed);
+        let (name,): (String,) = sqlx::query_as("select name from public.cards where id = $1")
+            .bind(&ids[2])
+            .fetch_one(&admin)
+            .await
+            .expect("the name reads back");
+        assert_eq!(name, entries[2].name);
+
+        restore_fixture_catalog(&admin).await;
+        admin.close().await;
+    }
 }
 
 /// R1178000: the release migration's wait. A tag only a held set carries (Meditative+'s Potion) is
@@ -850,11 +1015,12 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
                 // `starter` is the registry's, not a column (R1301002), and so is `jlorious`, which
                 // the server reads from the registry alone (R2755000); and R1313000:
                 // `public.cosmetics` keeps no card, since a full art's card is the `card_id` of its
-                // ownership row.
+                // ownership row; and no offer, which the server reads from the registry alone (R2725001).
                 if let Some(fields) = row.as_object_mut() {
                     fields.remove("starter");
                     fields.remove("jlorious");
                     fields.remove("card");
+                    fields.remove("offer");
                 }
                 row
             })

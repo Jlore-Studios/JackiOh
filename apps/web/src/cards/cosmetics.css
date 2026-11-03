@@ -32,6 +32,11 @@
  * set in its set's face or its card's (`data-signature-face`, fonts.css); in the gate it signs fast
  * under a pen tip, through a slanted, feathered mask, then bursts, slashes a flourish under itself and
  * shines now and then, its timings the custom properties FullArtSignature.tsx sets.
+ *
+ * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2725003: on the normal
+ * face the signature sits over the lower part of the art window, inside it, clear of the name ribbon and the
+ * rules text. R2725004: no part of it is Radiant's gold: the ink is a cool silver and the pen's glow and the
+ * landing's burst white.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -795,6 +800,14 @@
   }
 }
 
+/* R2725003: on the normal face the signature is the art window's, over its lower part. */
+.cf .cf-art-frame > .cf-signature {
+  top: 58%;
+  left: 6%;
+  right: 6%;
+  height: 36%;
+}
+
 .cf-signature > svg {
   display: block;
   width: 100%;
@@ -805,7 +818,7 @@
 .cf-signature-text {
   font-family: var(--font-signature);
   font-weight: 700;
-  fill: var(--pal-parchment);
+  fill: var(--pal-slate-100);
   filter: drop-shadow(0 0 1px var(--pal-black)) drop-shadow(0 1px 1px var(--pal-black));
 }
 
@@ -843,7 +856,7 @@
 /* The flourish under the name, in the ink's color. */
 .cf-signature-flourish {
   fill: none;
-  stroke: var(--pal-parchment);
+  stroke: var(--pal-slate-100);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -858,7 +871,7 @@
 }
 
 .cf-signature-pen-glow {
-  fill: var(--pal-gold-200);
+  fill: var(--pal-white);
   opacity: 0.6;
 }
 
@@ -868,7 +881,7 @@
 }
 
 .cf-signature-burst {
-  fill: var(--pal-gold-200);
+  fill: var(--pal-white);
 }
 
 /* ----------------------------------------------------------------------------- motion --- */

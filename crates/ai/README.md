@@ -117,6 +117,11 @@ target `legal_actions` lists, beside the same attack by the unit's hookless twin
 keywords granted, its text given back before scoring), and prices the controller's evaluation after the
 one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
+A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
+Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
+counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
+spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
+`GREEDY_EVAL` keeps 0 (#2928).
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

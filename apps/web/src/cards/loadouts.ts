@@ -60,8 +60,8 @@ export function parseSeatPicks(raw: unknown): Record<PlayerId, CardCosmetics> | 
 
 /**
  * One card entry's picks: each kind it names resolved (its word is final), and full art only when it
- * says `true` (its Epic) or names a full art by its id (R2655000), which fullArt.ts reads only when it
- * is that card's.
+ * says `true` (its Epic) or names a full art by its id (R2655000), or a version (R2725000), which fullArt.ts
+ * reads only when it is that card's; and the augments it lists (R2725000), each a text.
  */
 function cardPicksOf(raw: Record<string, unknown>): CardPicks {
   const out: CardPicks = {};
@@ -70,6 +70,10 @@ function cardPicksOf(raw: Record<string, unknown>): CardPicks {
     if (typeof id === "string") out[kind] = resolveCosmetic(kind, id);
   }
   if (raw.fullArt === true || (typeof raw.fullArt === "string" && raw.fullArt !== "")) out.fullArt = raw.fullArt;
+  if (Array.isArray(raw.augments)) {
+    const augments = raw.augments.filter((id): id is string => typeof id === "string" && id !== "");
+    if (augments.length > 0) out.augments = augments;
+  }
   return out;
 }
 

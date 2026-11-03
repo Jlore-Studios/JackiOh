@@ -191,7 +191,8 @@ describe("R915006 a saved deck that names custom cards starts with them", () => 
     expect(screen.queryByTestId(practiceTestid.customBlocked)).toBeNull();
 
     fireEvent.click(screen.getByTestId(practiceTestid.start));
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     const [config] = host.starts();
     expect(config?.deck).toMatchObject({ kind: "saved", cards: IMP_DECK });
     expect(config?.customCards).toEqual([IMP_IN_GAME]);
@@ -217,7 +218,8 @@ describe("R915006 a saved deck that names custom cards starts with them", () => 
     fireEvent.change(screen.getByTestId(practiceTestid.deck), { target: { value: "random" } });
     expect(screen.queryByTestId(practiceTestid.customBlocked)).toBeNull();
     fireEvent.click(screen.getByTestId(practiceTestid.start));
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.customCards).toBeUndefined();
   });
 
@@ -282,7 +284,8 @@ describe("#1691 custom cards that could not be read", () => {
     expect(screen.getByTestId(practiceTestid.start)).toBeEnabled();
 
     fireEvent.click(screen.getByTestId(practiceTestid.start));
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.customCards).toEqual([IMP_IN_GAME]);
   });
 });
@@ -311,7 +314,8 @@ describe("#921 ?try=<custom id> plays the creator's card at once", () => {
     expect(screen.queryByTestId(practiceTestid.setup)).toBeNull();
     answer(customResponse([IMP]));
 
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     expect(host.starts()).toEqual([
       { seed: "try-seed", difficulty: "hard", humanSeat: "p2", deck: { kind: "try", card: IMP.id }, customCards: [IMP_IN_GAME] },
     ]);
@@ -343,7 +347,8 @@ describe("R915009 a practice game with custom cards records no card statistics",
     visit(`?try=${IMP.id}`);
     const host = fakeHost();
     renderRoute(host);
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     await concede();
     expect(readPlayerStats().games).toBe(0);
 
@@ -358,7 +363,8 @@ describe("R915009 a practice game with custom cards records no card statistics",
     visit("?difficulty=easy&deck=random");
     const host = fakeHost();
     renderRoute(host);
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     await concede();
     await waitFor(() => {
       expect(readPlayerStats().games).toBe(1);

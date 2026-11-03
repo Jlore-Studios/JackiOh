@@ -194,6 +194,7 @@
   "Close settings": "关闭设置",
   "Settings sections": "设置分区",
   "Close": "关闭",
+  "Dismiss": "关闭",
   "In deck": "在卡组中",
   "In {name}": "在{name}中",
   "Remove {name} from {deck}": "从{deck}中移除{name}",
@@ -4147,5 +4148,8 @@
   "Deepest row": "最深行数",
   "Most curse points": "最多诅咒点数",
   "Top score": "最高分",
-  "Fastest win": "最快胜利"
+  "Fastest win": "最快胜利",
+  "Version": "版本",
+  "Augments": "增强",
+  "Signature": "签名"
 }

@@ -114,6 +114,14 @@ export type GameProps = {
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
   resultForm?: ResultForm;
+  /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
+  enemyLabel?: string;
+  /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */
+  controlExtras?: ReactNode;
+  /** The route's way back to its own result dialog from the board's result chip (practice). */
+  onOpenResult?: () => void;
+  /** The chip's `practice-outcome` button that opens the route's result dialog. */
+  openResultTestId?: string;
   /** R345: pins the R82 preference this board sends; the tutorial's lessons are written around R82. */
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
@@ -203,6 +211,10 @@ export default function Game({
   error,
   resultActions,
   resultForm = "panel",
+  enemyLabel,
+  controlExtras,
+  onOpenResult,
+  openResultTestId,
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   matchStatus,
@@ -230,6 +242,10 @@ export default function Game({
   // R2118000: no command menu over a board.
   useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
+  // #2924: the shown turn, active seat and viewer the selection was built on. The turn clock
+  // (§10.10) can end the turn mid-choice, so a half-built play or attack is dropped when the
+  // shown view moves to another turn, seat or viewer, as Escape already drops it.
+  const [selectionKey, setSelectionKey] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
   // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -581,6 +597,16 @@ export default function Game({
   if (emoteMenu !== null && (interaction !== IDLE || emoteMenu.viewer !== shown.viewer)) {
     setEmoteMenu(null);
   }
+  // #2924: drop a half-built play or attack when the shown view's turn, active seat or viewer
+  // changes (React's "adjust state while rendering" pattern, as the concede dialog above does).
+  // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
+  // board back, `shown` is old and `view` is new, and comparing them would drop the selection
+  // mid-animation on every animated turn change.
+  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  if (selectionKey !== shownKey) {
+    setSelectionKey(shownKey);
+    if (interaction.stage !== "idle") setInteraction(IDLE);
+  }
   useEffect(() => {
     if (shown.result !== null) setEmoteMenu(null);
   }, [shown.result]);
@@ -728,6 +754,8 @@ export default function Game({
         highlight={highlight}
         animating={animating}
         animated={animated}
+        enemyLabel={enemyLabel}
+        controlExtras={controlExtras}
         turnClock={turnClock}
         matchStatus={matchStatus}
         boardRail={railTop ? undefined : boardRail}
@@ -829,6 +857,8 @@ export default function Game({
             actions={resultActions}
             animating={animating.get(testid.result)}
             theirHand={theirHandOf(shown)}
+            onOpenResult={onOpenResult}
+            openResultTestId={openResultTestId}
           />
         </WearerProvider>
       ) : null}

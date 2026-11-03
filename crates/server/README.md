@@ -646,7 +646,8 @@ series still makes its picks.
   `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
   (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), seated by the same coin (R1989000), and
   neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
-  whose actor is not in memory, which no socket would come back to rebuild after a restart.
+  whose actor is not in memory, which no socket would come back to rebuild after a restart. The sweep
+  decides on `bots_states` (no decks or cosmetics) and loads `bots_list` only to choose a pair.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
   `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
   the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
@@ -1110,6 +1111,15 @@ nothing more (R2422000). A refusal before the burn counts once per request, best
 fails is logged (`practice.claim.countFailed`) and the claim answers as before. At most nine rows a day, so
 nothing purges it. `tests/sql/44_practice_claim_counts.sql` checks the shape, the checks, the refusal to
 client roles and the re-apply.
+
+Migration 0079 adds `augments` to `card_cosmetic_picks` (R2725000) and rewrites no row: the augment ids
+(`augment-…`, Animated and Signature) a card layers on the version it wears, NULL for none.
+`card_cosmetic_picks_augments_check` holds the list to one id or more, each `augment-` and a slug of at
+most 40 characters, none NULL; `card_cosmetic_picks_full_art_id_check` widens again to take a version's id
+(`version-…`, the Full art version `version-full-art` first), still only beside `full_art = true`; and
+`card_cosmetic_picks_some_check` counts an augments list as a pick. Nothing is granted: a retired full art
+owns the version and augments it combines where the server reads it (R2725002), never as a row.
+`tests/sql/45_card_versions.sql` checks the column, the ids kept, the shapes refused and the re-apply.
 
 ## Tests
 

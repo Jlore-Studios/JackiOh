@@ -96,6 +96,8 @@ export const FX_INK_TEAR_TRAUMA = 0.2;
 export const FX_JADE_CRACK_TRAUMA = 0.3;
 export const FX_HARMONY_TRAUMA = 0.15;
 export const FX_CN_SWEEP_TRAUMA = 0.35;
+// R2794000: Classic #85 King Wagtoggle's crown swap shakes as the two decks land in each other's place.
+export const FX_CROWN_SWAP_TRAUMA = 0.2;
 // R437: a mark branded onto a card; its sigil fades over FX_BRAND_TAIL_MS after the entry.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
@@ -188,6 +190,7 @@ export const FX_MOTIF_TRAUMA = {
   mend: 0,
   deal: 0,
   seal: 0.2,
+  recall: 0,
 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
@@ -201,6 +204,10 @@ export const FX_FORGE_REACH = 0.2;
 export const FX_FLASH_FREEZE_TRAUMA = 0.35;
 export const FX_DUO_BOND_TRAUMA = 0.3;
 export const FX_STRATOS_SWARM_TRAUMA = 0.3;
+// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land.
+export const FX_CELESTIAL_TRAUMA = 0.35;
+export const FX_DINO_STOMP_TRAUMA = 0.55;
+export const FX_GAME_DESIGN_TRAUMA = 0.45;
 // #2793: the share of a set's non-token cards its pass gives an entry other than `none`.
 export const FX_SET_PASS_FLOOR = 0.55;
 // R2784000: the scales the /dev/fx gallery offers.

@@ -10,8 +10,9 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { CardFace } from "./CardFace.tsx";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import {
@@ -19,6 +20,8 @@ import {
   readCardPicks,
   resetCosmeticsForTests,
   writeCardFullArt,
+  writeCardPick,
+  writeCardVersion,
   type CardPicks,
   type OwnedByCard,
 } from "./cosmetics.ts";
@@ -29,7 +32,9 @@ import {
   FULL_ARTS_OF_CARD,
   FullArtAllowed,
   FullArtOwned,
+  FullArtShown,
   NO_FULL_ART,
+  OwnCopy,
   fullArtIdOf,
   fullArtPickOf,
   fullArtSource,
@@ -39,11 +44,12 @@ import {
   type FullArtTier,
 } from "./fullArt.ts";
 import fullArtTokens from "./fullArtTokens.json";
-import { TheirCopy, type SeatLoadout } from "./loadouts.ts";
+import { TheirCopy, parseCardLoadouts, type SeatLoadout } from "./loadouts.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
+import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID } from "./versions.ts";
 
 /** R2655001: the fifteen cards #2655 adds to the six hero portraits' cards. */
 const NEW_CARDS = [
@@ -515,6 +521,239 @@ describe("R2715001 the moving art", () => {
       expect(container.querySelector(".cf")?.getAttribute("data-art-motion"), tier).toBe("static");
       expect(container.querySelector('.cf-art[data-art-moving="true"]'), tier).toBeNull();
       cleanup();
+    }
+  });
+});
+
+describe("R2725000 a card's version and augments on its face", () => {
+  /**
+   * R2725001: two Units and two Spells offered the Full art version and both augments: The Mother Pancake and Dice
+   * of Doom, two of the 21, and Carnivorous Cube (an Epic Unit) and Transmogulate (a Legendary Spell), which have no
+   * retired full art.
+   */
+  const CARDS = ["classicplus-012", "stinkyscape-154", "core-022", "core-083"] as const;
+  /** Every look of part 1: each version, with no augment, either and both. */
+  const LOOKS: readonly (readonly [false | string, readonly string[]])[] = ([false, VERSION_FULL_ART_ID] as const).flatMap((version) =>
+    [[], [AUGMENT_ANIMATED_ID], [AUGMENT_SIGNATURE_ID], [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]].map((augments) => [version, augments] as const),
+  );
+
+  function faceIn(id: string, radiant: boolean): HTMLElement {
+    const def = CATALOG[id];
+    if (def === undefined) throw new Error(`no ${id}`);
+    const { container } = render(<CardFace face={faceModel({ defId: id, def, radiant })} layout="full" worn />);
+    const cf = container.querySelector<HTMLElement>(".cf");
+    if (cf === null) throw new Error(`no face for ${id}`);
+    return cf;
+  }
+
+  it("R2725003 augments layer on the normal face and on Full art", () => {
+    for (const id of CARDS) {
+      for (const [version, augments] of LOOKS) {
+        writeCardVersion(id, version, augments);
+        // A border and a finish wear on every look, and a foil on these cards, none of which wears a rarity foil.
+        writeCardPick(id, "border", "border-runes");
+        writeCardPick(id, "finish", "finish-stained-glass");
+        writeCardPick(id, "foil", "foil-galaxy");
+        const cf = faceIn(id, false);
+        const where = `${id} ${String(version)} ${augments.join("+")}`;
+        const full = version !== false;
+        const animated = augments.includes(AUGMENT_ANIMATED_ID);
+        const signed = augments.includes(AUGMENT_SIGNATURE_ID);
+        expect(cf.getAttribute("data-full-art"), where).toBe(full ? "true" : null);
+        expect(cf.getAttribute("data-version"), where).toBe(full ? VERSION_FULL_ART_ID : null);
+        expect(cf.getAttribute("data-augments"), where).toBe(augments.length > 0 ? augments.join(" ") : null);
+        // Full art has no words; the normal face keeps its type line and rules box under every augment.
+        expect(cf.querySelector(".card-text") === null, where).toBe(full);
+        expect(cf.querySelector(".card-name"), where).not.toBeNull();
+        // Animated moves the art's own layers, taking a slot; on Full art it also lays the band.
+        expect(cf.getAttribute("data-art-motion"), where).toBe(animated ? "animated" : null);
+        if (animated) expect(pictureOf(cf), where).toContain("art-m-");
+        expect(cf.classList.contains("cf-full-art--animated"), where).toBe(full && animated);
+        // Signature signs on either face: over the art window on the normal face, over the art on Full art.
+        const signature = cf.querySelector(".cf-signature");
+        expect(signature !== null, where).toBe(signed);
+        if (signature !== null) expect(signature.parentElement?.classList.contains("cf-art-frame"), where).toBe(!full);
+        expect(cf.getAttribute("data-full-art-motion"), where).toBe((full && animated) || signed ? "animated" : null);
+        expect(cf.getAttribute("data-frame"), where).toBe("border-runes");
+        expect(cf.getAttribute("data-finish"), where).toBe("finish-stained-glass");
+        expect(cf.getAttribute("data-cosmetic-foil"), where).toBe("foil-galaxy");
+        cleanup();
+      }
+    }
+    // Still under reduced motion and with Animated foil off: the art holds, its slot given back.
+    writeCardVersion("core-022", VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+    setReducedMotion(true);
+    const reduced = faceIn("core-022", false);
+    expect(reduced.getAttribute("data-art-motion")).toBe("static");
+    expect(pictureOf(reduced)).not.toContain("art-m-");
+    cleanup();
+    setReducedMotion(false);
+    writeCardSettings({ animatedFoil: false });
+    const off = faceIn("core-022", false);
+    expect(off.getAttribute("data-art-motion")).toBe("static");
+    expect(off.getAttribute("data-full-art-motion")).toBe("static");
+  });
+
+  it("R2725000 a shown pick with no augments layers none of the store's, and one with augments layers its own", () => {
+    // A Collection edit of a retired Mythic stores the Full art version with both augments; the Stats drill-down's
+    // art buttons (R2756000) then show a pick alone, as one's own copy, with every cosmetic counted as owned.
+    writeCardVersion(VANILLA, VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+    function shown(pick: boolean | string, augments?: readonly string[]): HTMLElement {
+      const def = CATALOG[VANILLA];
+      if (def === undefined) throw new Error(`no ${VANILLA}`);
+      const { container } = render(
+        <OwnCopy own>
+          <FullArtShown defId={VANILLA} pick={pick} {...(augments === undefined ? {} : { augments })}>
+            <CardFace face={faceModel({ defId: VANILLA, def, radiant: false })} layout="full" />
+          </FullArtShown>
+        </OwnCopy>,
+      );
+      const cf = container.querySelector<HTMLElement>(".cf");
+      if (cf === null) throw new Error(`no face for ${VANILLA}`);
+      return cf;
+    }
+    const expectations: readonly (readonly [boolean | string, readonly string[] | undefined, string | null, string | null])[] = [
+      [false, undefined, null, null],
+      [true, undefined, "Epic", null],
+      [idOf(VANILLA, "Legendary"), undefined, "Legendary", AUGMENT_ANIMATED_ID],
+      [false, [AUGMENT_SIGNATURE_ID], null, AUGMENT_SIGNATURE_ID],
+      [true, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID], "Mythic", `${AUGMENT_ANIMATED_ID} ${AUGMENT_SIGNATURE_ID}`],
+    ];
+    for (const [pick, augments, tier, worn] of expectations) {
+      const cf = shown(pick, augments);
+      const where = `${String(pick)} ${augments?.join("+") ?? "(none given)"}`;
+      expect(cf.getAttribute("data-full-art-tier"), where).toBe(tier);
+      expect(cf.getAttribute("data-augments"), where).toBe(worn);
+      expect(cf.querySelector(".cf-signature") !== null, where).toBe(worn?.includes(AUGMENT_SIGNATURE_ID) ?? false);
+      cleanup();
+    }
+  });
+
+  it("R2725000 R2725001 the other seat's copy wears the version and augments its owner's frozen loadout names, and nothing its card is not offered", () => {
+    // The cards' entries as the server froze and sent them (a `cardLoadouts` frame, R1834003), read as the board
+    // reads them. Carnivorous Cube is offered the version and both augments; Bigot (core-002, a Common) is offered none,
+    // so a frame naming them there (a newer client's, or a forged one) draws its normal face.
+    const OFFERED = "core-022";
+    const UNOFFERED = "core-002";
+    expect(COSMETIC_OFFERS[VERSION_FULL_ART_ID]).toContain(OFFERED);
+    for (const id of [VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) expect(COSMETIC_OFFERS[id]).not.toContain(UNOFFERED);
+    const frame = parseCardLoadouts({
+      seat: "p2",
+      cards: [
+        { cardId: OFFERED, fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, "augment-from-a-newer-client"] },
+        { cardId: UNOFFERED, fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] },
+      ],
+    });
+    if (frame === null) throw new Error("the frame did not parse");
+    const theirs = (face: ReactElement) => <TheirCopy loadout={loadout(frame.cards)}>{face}</TheirCopy>;
+    // The viewer owns nothing and picks nothing of their own: what prints is the owner's.
+    writeCardVersion(OFFERED, false, []);
+    const worn = drawn(OFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+    expect(worn.getAttribute("data-full-art")).toBe("true");
+    expect(worn.getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
+    expect(worn.getAttribute("data-augments")).toBe(`${AUGMENT_ANIMATED_ID} ${AUGMENT_SIGNATURE_ID}`);
+    expect(worn.getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(worn.getAttribute("data-art-motion")).toBe("animated");
+    expect(worn.querySelector(".cf-signature text")?.textContent).toBe(CATALOG[OFFERED]?.name);
+    cleanup();
+    const refused = drawn(UNOFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+    expect(refused.getAttribute("data-full-art")).toBeNull();
+    expect(refused.getAttribute("data-version")).toBeNull();
+    expect(refused.getAttribute("data-augments")).toBeNull();
+    expect(refused.querySelector(".cf-signature")).toBeNull();
+    cleanup();
+    // The Full-art cards setting off: the other seat's copy prints its normal face, augments and all off.
+    writeCardSettings({ fullArt: false });
+    const off = drawn(OFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+    expect(off.getAttribute("data-full-art")).toBeNull();
+    expect(off.getAttribute("data-version")).toBeNull();
+    expect(off.getAttribute("data-augments")).toBeNull();
+    expect(off.querySelector(".cf-signature")).toBeNull();
+  });
+
+  /** R2725001: the cards offered the Full art version and the Animated augment, and each offered card by its set. */
+  const OFFERED_FULL_ART = COSMETIC_OFFERS[VERSION_FULL_ART_ID] ?? [];
+  const OFFERED_ANIMATED = new Set(COSMETIC_OFFERS[AUGMENT_ANIMATED_ID] ?? []);
+  const OFFERED_BY_SET = new Map<string, string[]>();
+  for (const id of new Set([...OFFERED_FULL_ART, ...OFFERED_ANIMATED])) {
+    const set = CATALOG[id]?.set ?? "";
+    OFFERED_BY_SET.set(set, [...(OFFERED_BY_SET.get(set) ?? []), id]);
+  }
+
+  it("R2725001 the Full art version and the Animated augment are offered in every set that ships", () => {
+    expect(OFFERED_FULL_ART.length).toBeGreaterThan(FULL_ART_CARDS.size);
+    expect([...OFFERED_BY_SET.keys()].sort()).toEqual([...SHIPPED_SETS].sort());
+  });
+
+  /** How many offered cards one test draws (six faces each), so that no test nears the timeout on a loaded runner. */
+  const OFFERED_CARDS_PER_TEST = 12;
+  for (const [set, ids] of OFFERED_BY_SET) {
+    for (let from = 0; from < ids.length; from += OFFERED_CARDS_PER_TEST) {
+      const some = ids.slice(from, from + OFFERED_CARDS_PER_TEST);
+      it(`R2725001 every ${set} card offered the Full art version or the Animated augment, ${some[0] ?? ""} to ${some.at(-1) ?? ""}, draws it, base and Radiant, apart from its normal face`, () => {
+        drawsEveryOfferedLook(some);
+      });
+    }
+  }
+
+  /** R2725001: each of `ids` draws its normal face, and the Full art version and the Animated augment where offered. */
+  function drawsEveryOfferedLook(ids: readonly string[]): void {
+    const fullArt = OFFERED_FULL_ART;
+    const animated = OFFERED_ANIMATED;
+    for (const id of ids) {
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        writeCardVersion(id, false, []);
+        const normal = faceIn(id, radiant);
+        const normalMarkup = normal.outerHTML;
+        const stillPicture = pictureOf(normal);
+        expect(normal.getAttribute("data-full-art"), where).toBeNull();
+        cleanup();
+        if (fullArt.includes(id)) {
+          writeCardVersion(id, VERSION_FULL_ART_ID, []);
+          const full = faceIn(id, radiant);
+          expect(full.getAttribute("data-full-art"), where).toBe("true");
+          expect(full.getAttribute("data-version"), where).toBe(VERSION_FULL_ART_ID);
+          expect(full.outerHTML, where).not.toBe(normalMarkup);
+          cleanup();
+        }
+        if (animated.has(id)) {
+          writeCardVersion(id, false, [AUGMENT_ANIMATED_ID]);
+          const moving = faceIn(id, radiant);
+          expect(moving.getAttribute("data-art-motion"), where).toBe("animated");
+          expect(pictureOf(moving), where).toContain("art-m-");
+          expect(pictureOf(moving), where).not.toBe(stillPicture);
+          cleanup();
+        }
+      }
+    }
+  }
+
+  it('R2725004 a Radiant face keeps data-radiant-face and data-art-variant="radiant" under every look; a base face has neither', () => {
+    for (const id of CARDS) {
+      const def = CATALOG[id];
+      if (def === undefined) throw new Error(`no ${id}`);
+      const marked = faceModel({ defId: id, def, radiant: true }).text.marks.length > 0;
+      for (const [version, augments] of LOOKS) {
+        writeCardVersion(id, version, augments);
+        for (const radiant of [false, true]) {
+          const cf = faceIn(id, radiant);
+          const where = `${id} ${radiant ? "Radiant" : "base"} ${String(version)} ${augments.join("+")}`;
+          // The gold-foil frame, and the art's Radiant paint.
+          expect(cf.getAttribute("data-radiant-face"), where).toBe(radiant ? "true" : null);
+          expect(cf.querySelector(".cf-art")?.getAttribute("data-art-variant"), where).toBe(radiant ? "radiant" : "base");
+          // R277's marks wherever the words show: never on a base face, on a Radiant normal face that differs.
+          const marks = cf.querySelectorAll('.cf-mark[data-mark="radiant"]').length;
+          if (!radiant || version !== false) expect(marks, where).toBe(0);
+          else expect(marks > 0, where).toBe(marked);
+          // A Unit's gold stats: what its Radiant face raises.
+          if (def.type === "Unit") {
+            const grew = (def.radiant.attack ?? 0) > (def.base.attack ?? 0);
+            expect(cf.querySelector(".cf-atk")?.getAttribute("data-grew"), where).toBe(radiant && grew ? "true" : null);
+          }
+          cleanup();
+        }
+      }
     }
   });
 });

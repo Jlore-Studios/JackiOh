@@ -7,6 +7,9 @@
 // `cards/cardPicksSync.ts` sends to the account (R1834000) and an online match freezes for the
 // opponent's sight (R1834002). So a preview writes no pick, lest it stand as one opponents are shown:
 // it is an unworn copy of the face dressed by `SampleFace` (CosmeticLook.tsx), or a `FullArtShown`.
+// R2725000: a card's version is one of the normal face and the versions it is offered, and each augment it is
+// offered toggles on top; either write keeps the other (`writeCardVersion`), so a retired full art's pick becomes
+// the version and the augments it combines on its first edit (R2725002).
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -24,11 +27,12 @@ import {
   useCanEquip,
   useCardPicks,
   wornCosmetics,
-  writeCardFullArt,
   writeCardPick,
+  writeCardVersion,
   type CardPicks,
 } from "../cards/cosmetics.ts";
-import { FullArtShown, OwnCopy, fullArtIdOf, fullArtPickOf, useOwnCopy } from "../cards/fullArt.ts";
+import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
+import { augmentPicksOf, augmentsOf, lookOf, versionPickOf } from "../cards/versions.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
@@ -54,7 +58,7 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   const owned = useContext(OwnershipContext);
   const largeFace = <CardFace face={face} layout="full" worn={own} />;
   let sample: ReactElement | null = null;
-  if (preview !== null && preview.kind !== "fullArt") {
+  if (preview !== null && preview.kind !== "version" && preview.kind !== "augment") {
     const picks: CardPicks = { ...card };
     picks[preview.kind] = resolveCosmetic(preview.kind, preview.id);
     // What it would wear were it the card's pick: the shown item, and the card's other picks where
@@ -75,8 +79,8 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   return (
     <span className="collection-cardview__stage">
       <span className="collection-cardview__face" data-testid={T.cardViewFace}>
-        {preview !== null && preview.kind === "fullArt" && preview.owned ? (
-          <FullArtShown defId={face.defId} pick={preview.id === NO_FULL_ART_ID ? false : fullArtPickOf(face.defId, preview.id)}>
+        {preview !== null && (preview.kind === "version" || preview.kind === "augment") && preview.owned ? (
+          <FullArtShown defId={face.defId} {...lookShown(card, preview)}>
             {largeFace}
           </FullArtShown>
         ) : (
@@ -88,16 +92,40 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   );
 }
 
-/** For a full art, the tier the card's pick names (R2655000). */
-function isEquipped(defId: string, item: StripItem, picks: CardPicks): boolean {
-  if (item.kind === "fullArt") return item.id === NO_FULL_ART_ID ? picks.fullArt === false : fullArtIdOf(defId, picks.fullArt) === item.id;
+/**
+ * R2725000: the pick a card would hold were `item` chosen: a version in place of its own, or an augment toggled
+ * (on where it is off, off where it is on), the other part kept as `versionPickOf` and `augmentPicksOf` keep it.
+ */
+function chosen(picks: CardPicks, item: StripItem): { fullArt: boolean | string | null; augments: string[] } {
+  const augments = augmentPicksOf(picks.fullArt, picks.augments);
+  if (item.kind === "version") return { fullArt: item.id === NO_FULL_ART_ID ? false : item.id, augments };
+  const on = augments.includes(item.id);
+  return { fullArt: versionPickOf(picks.fullArt), augments: on ? augments.filter((id) => id !== item.id) : [...augments, item.id] };
+}
+
+/** R2725000: what the large face shows while a version or an augment is previewed: that version, or that augment on. */
+function lookShown(picks: CardPicks, item: StripItem): { pick?: boolean | string; augments: string[] } {
+  const augments = augmentPicksOf(picks.fullArt, picks.augments);
+  if (item.kind === "version") return { pick: item.id === NO_FULL_ART_ID ? false : item.id, augments };
+  const pick = versionPickOf(picks.fullArt);
+  return { ...(pick === null ? {} : { pick }), augments: augments.includes(item.id) ? augments : [...augments, item.id] };
+}
+
+/** R2725000: a version the card's pick names, or an augment it layers on (a retired full art's among them). */
+function isEquipped(item: StripItem, picks: CardPicks): boolean {
+  if (item.kind === "version") {
+    if (picks.fullArt === undefined) return false;
+    const version = lookOf(picks.fullArt).version;
+    return item.id === NO_FULL_ART_ID ? version === null : version === item.id;
+  }
+  if (item.kind === "augment") return augmentsOf(lookOf(picks.fullArt, picks.augments)).includes(item.id);
   return picks[item.kind] === item.id;
 }
 
 /** One item's small live preview: the card wearing it, or for a full art the art across the whole face. */
 function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item: StripItem }): ReactElement {
   const { rarityFoil } = useCardSettings();
-  if (item.kind === "fullArt" && item.id !== NO_FULL_ART_ID) {
+  if (item.kind === "version" && item.id !== NO_FULL_ART_ID) {
     return (
       <span className="collection-strip__picture collection-strip__picture--full-art">
         <CardArt defId={def.id} radiant={false} tags={def.tags} type={def.type} name={def.name} shape="full" />
@@ -105,7 +133,7 @@ function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item
     );
   }
   const wears =
-    item.kind === "fullArt"
+    item.kind === "version" || item.kind === "augment"
       ? wornCosmetics(face, normalizeCosmetics({}), {}, () => true, rarityFoil)
       : wornCosmetics(face, normalizeCosmetics({ [item.kind]: item.id }), {}, () => true, rarityFoil);
   return (
@@ -201,7 +229,12 @@ function StripKindGroup({
   /** R2730000: what a held or inspected item opens: its fullscreen preview. */
   onPreview: (item: StripItem) => void;
 }): ReactElement {
-  const own = group.kind === "fullArt" ? picks.fullArt : picks[group.kind];
+  const own =
+    group.kind === "version"
+      ? picks.fullArt
+      : group.kind === "augment"
+        ? augmentPicksOf(picks.fullArt, picks.augments)[0]
+        : picks[group.kind];
   return (
     <section className="collection-strip" data-testid={T.strip(group.kind)} aria-label={cosmeticKindWords(group.kind)}>
       <div className="collection-strip__head">
@@ -225,7 +258,7 @@ function StripKindGroup({
               def={def}
               face={face}
               item={item}
-              equipped={isEquipped(def.id, item, picks)}
+              equipped={isEquipped(item, picks)}
               show={show}
               hide={hide}
               equip={equip}
@@ -291,11 +324,14 @@ export default function CardCosmeticsView({
 
   const equip = (item: StripItem): void => {
     if (!item.owned) return;
-    if (item.kind === "fullArt") writeCardFullArt(def.id, item.id === NO_FULL_ART_ID ? false : fullArtPickOf(def.id, item.id));
-    else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
+    if (item.kind === "version" || item.kind === "augment") {
+      const next = chosen(picks, item);
+      writeCardVersion(def.id, next.fullArt, next.augments);
+    } else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
   };
   const clear = (kind: StripKind): void => {
-    if (kind === "fullArt") writeCardFullArt(def.id, null);
+    if (kind === "version") writeCardVersion(def.id, null, augmentPicksOf(picks.fullArt, picks.augments));
+    else if (kind === "augment") writeCardVersion(def.id, versionPickOf(picks.fullArt), []);
     else writeCardPick(def.id, kind, null);
   };
   const offer = (item: StripItem): ReactElement | null => {
@@ -386,7 +422,7 @@ export default function CardCosmeticsView({
           rarity={previewed.rarity}
           owned={previewed.owned}
           picture={
-            previewed.kind === "fullArt" && !previewed.owned ? (
+            (previewed.kind === "version" || previewed.kind === "augment") && !previewed.owned ? (
               <StripPicture def={def} face={face} item={previewed} />
             ) : (
               <LargeFace face={face} preview={previewed} />

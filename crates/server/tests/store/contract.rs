@@ -24,14 +24,14 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
-    Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
-    RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
-    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
+    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant,
+    CustomCardWrite, Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
+    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode,
+    ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding,
+    SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow,
+    Tx, UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -8249,9 +8249,61 @@ mod bots {
         assert_eq!((in_match(&bots, &c), in_match(&bots, &d)), (None, None));
     }
 
+    /// R1555000: the kickoff's narrow read answers each bot's match, grinding and retirement, retired
+    /// ones included, in `bots_list`'s order.
+    async fn r1555000_bots_states_answers_the_kickoffs_reads_in_the_lists_order(harness: &StoreHarness) {
+        let now = harness.now();
+        let version = harness.catalog_version.clone();
+        assert!(q!(harness, t => t.bots_states()).is_empty(), "no bot yet");
+
+        let older = new_bot(1, now - 3 * DAY, 900.0);
+        let retired = new_bot(3, now - 2 * DAY, 1000.0);
+        let newer = new_bot(2, now - DAY, 1100.0);
+        for bot in [&newer, &older, &retired] {
+            q!(harness, t => t.bots_create(bot));
+        }
+        q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
+        q!(harness, t => t.bots_set_grinding(&newer.profile_id, true));
+        let match_id = id();
+        let pair = (older.profile_id.clone(), newer.profile_id.clone());
+        assert!(q!(harness, t => t.bots_claim_pair(&pair, &match_id, &version, now)));
+
+        let states = q!(harness, t => t.bots_states());
+        assert_eq!(
+            states,
+            vec![
+                BotState {
+                    profile_id: older.profile_id.clone(),
+                    in_match_id: Some(match_id.clone()),
+                    grinding: false,
+                    retired_at: None,
+                },
+                BotState {
+                    profile_id: retired.profile_id.clone(),
+                    in_match_id: None,
+                    grinding: false,
+                    retired_at: Some(now),
+                },
+                BotState {
+                    profile_id: newer.profile_id.clone(),
+                    in_match_id: Some(match_id),
+                    grinding: true,
+                    retired_at: None,
+                },
+            ],
+            "oldest profile first, retired ones included"
+        );
+        let listed: Vec<BotState> = q!(harness, t => t.bots_list())
+            .iter()
+            .map(BotState::from)
+            .collect();
+        assert_eq!(states, listed, "the list's bots, in the list's order");
+    }
+
     both_stores!(
         r1555000_a_grind_counts_its_wins_and_steps_the_strength,
         r1555000_a_pair_claim_takes_two_free_bots_once,
+        r1555000_bots_states_answers_the_kickoffs_reads_in_the_lists_order,
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
         r1453_claim_for_bot_is_single_shot,
@@ -10921,6 +10973,54 @@ mod cosmetic_loadouts {
         );
     }
 
+    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0079's
+    /// `augments`, and the `full_art_id` check widened to `version-…`), through a put and an upload, a row
+    /// of augments alone among them; a put with none takes them away, and an id the registry does not know
+    /// is kept too.
+    async fn r2725000_card_picks_keep_augments(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        let both = json!({
+            "cardId": "core-022",
+            "fullArt": "version-full-art",
+            "augments": ["augment-signature", "augment-animated"],
+        });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(both.clone()), now));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([both]));
+        // A put writes the row whole: the version kept, the augments gone.
+        let version = json!({ "cardId": "core-022", "fullArt": "version-full-art" });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(version.clone()), now + 1));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([version]));
+        // Augments alone are a row; the upload writes them too, one this build does not know among them.
+        let alone = json!({ "cardId": "core-008", "augments": ["augment-animated"] });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(alone.clone()), now + 2));
+        let upload = vec![picks(
+            json!({ "cardId": "core-004", "augments": ["augment-from-a-newer-client"] }),
+        )];
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, now + 3)),
+            1
+        );
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "augments": ["augment-from-a-newer-client"] },
+                alone,
+                version,
+            ])
+        );
+        // An empty list is no pick: the row of augments alone is deleted.
+        let none = json!({ "cardId": "core-008", "augments": [] });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(none), now + 4));
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "augments": ["augment-from-a-newer-client"] },
+                version,
+            ])
+        );
+    }
+
     /// R1834002: a Best-of-1 ticket and a room freeze their deck's slots beside the deck, a trio's
     /// decks theirs inside it, a match both seats' loadouts, and a bot's decks and trio theirs; each
     /// reads back as it was written, and one written without them reads back without them.
@@ -11190,6 +11290,7 @@ mod cosmetic_loadouts {
         r1834000_card_picks_put_upload_get_cascade,
         r2655000_card_picks_keep_a_full_art_id,
         r2715000_card_picks_keep_an_animated_art_id,
+        r2725000_card_picks_keep_augments,
         r1834002_frozen_slots_and_loadouts_round_trip,
         r1834005_bots_keep_their_cosmetics,
         r1834005_cosmetic_owners_count_people_and_their_first_grant,

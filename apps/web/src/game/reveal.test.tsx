@@ -128,7 +128,7 @@ describe("R434 the game-over screen lists 'Their hand'", () => {
     const open = within(overlay).getByTestId(revealTestid.theirHandOpen);
     expect(open).toHaveAttribute("data-count", String(THEIRS.length));
     expect(open.tagName).toBe("BUTTON");
-    // The chip is blind to the pointer but its own buttons (animations.css): this one is a direct child.
+    // The chip sits in-flow under the board (animations.css); its buttons are direct children.
     expect(open.parentElement).toBe(overlay);
     fireEvent.click(open);
     const sheet = screen.getByTestId(INSPECT_LIST_SHEET);

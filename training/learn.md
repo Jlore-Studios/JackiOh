@@ -67,12 +67,13 @@ day starts the lane again should that chain stop (one run at a time). Each run:
    promotion is still open, a pass waits behind it instead ("a promotion still open"): pushing
    `ai/learn` again would close that one, so this one stays the run's artifact (`promotion.patch`) and
    the next run gates on `main` once the open one has merged.
-7. **Files the export's games** into staging's card statistics, the JackiOh-Staging project's, since
-   production's holds live games alone (docs/deploy-cloudflare.md section 8) (`import`, once the retrain has ended,
+7. **Files the export's games** into both projects' card statistics, JackiOh-Staging's and then
+   JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section 8) (`import`, once the retrain has ended,
    however it ended): `cargo jackioh stats from-selfplay` over the shards that finished, with the build
    that played them (R1676000), then `jackioh-server stats-import --totals-only` (R1976000), which adds
    their counts to the totals and keeps no row per game, so the database grows with the patches, not the
-   games. It needs `STATS_IMPORT_DATABASE_URL` (Setting it up); without it nothing is filed. A run on an
+   games. It files into each database it has a secret for, `STATS_IMPORT_DATABASE_URL` and
+   `PRODUCTION_STATS_IMPORT_DATABASE_URL` (Setting it up); with neither, nothing is filed. A run on an
    earlier run's export (`export_run`) files nothing new.
 8. **Starts the next run** (`next`), unless one is already on its way (a run on the same export, or the
    schedule's) or this one took under an hour (`LEARN_NEXT_MIN_MINUTES`): one that breaks that early
@@ -101,7 +102,7 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 | `LEARN_LANE_TOKEN` is missing or has expired | A passing run fails in red at its deliver step and keeps the promotion as its artifact (`promotion.patch`). A person renews the token (Setting it up) |
 | A run ends | It starts the next (step 8). A run that broke within the hour starts none, and the schedule (06:23 and 18:23 UTC) starts the lane again |
 | GitHub skips or delays the schedule | It matters only once the chain has stopped: the next one, 12 hours on, or `gh workflow run learn.yml`, picks it up. Nothing is lost. A scheduled run queued behind a running one waits; the next schedule's replaces it (the `learn` concurrency group holds one waiting), and the status issue leaves out a run canceled that way |
-| `STATS_IMPORT_DATABASE_URL` is missing, or the import fails | The export's games are not filed; the retrain, the gate and the next run go on as before. The shards stay the run's artifacts for 30 days, so a person can file them by hand (`training/README.md`, The gather lane) |
+| `STATS_IMPORT_DATABASE_URL` or `PRODUCTION_STATS_IMPORT_DATABASE_URL` is missing, or the import fails | The export's games are not filed where it is missing or failed (rerunning the job files them only there, each database claiming the file once); the retrain, the gate and the next run go on as before. The shards stay the run's artifacts for 30 days, so a person can file them by hand (`training/README.md`, The gather lane) |
 | The PC is in use | The runner works only while the PC is idle: a job waiting is not started, and one in the middle of its work is slowed to half a CPU until the PC is idle again. Nothing is lost; the run takes longer (its timeouts allow days) |
 | The PC is off, asleep or busy for 24 hours | GitHub fails a job no runner takes in 24 hours. A lost shard costs the export its games and the retrain goes on with the rest; a lost plan or retrain ends the run, and the next run comes anyway. A shard in the middle of its work when the PC sleeps or restarts is lost the same way. The status issue shows a run the PC never took as "⏸️ the PC's runner took none of it in 24 hours" |
 | The PC's supervisor is not running (nobody logged in since a restart) | The same as the PC off: its scheduled task starts it at logon (`bot/machine/README.md`, The local runner) |
@@ -155,8 +156,10 @@ may act as `service_role` (Supabase's SQL editor: `create role stats_importer lo
 '…'; grant service_role to stats_importer;`), and save its session-pooler connection string
 (`postgresql://stats_importer.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`,
 the pooler because GitHub's runners and many home connections reach no IPv6-only direct host) as the
-repository secret `STATS_IMPORT_DATABASE_URL`. Set on 2026-10-26 (#1976). `gather.yml` imports with
-the same secret.
+repository secret `STATS_IMPORT_DATABASE_URL`. Set on 2026-10-26 (#1976). Production's
+(JackiOh-Production) has the same login, its address the repository secret
+`PRODUCTION_STATS_IMPORT_DATABASE_URL`, set on 2026-11-03 by `cutover.yml`'s step `stats-logins`
+(R1933001). `gather.yml` imports with the same two secrets.
 
 The token: a person does this once: create a fine-grained token that can write contents and pull requests on
 this repository alone, and save it as the repository secret `LEARN_LANE_TOKEN` (Settings → Secrets

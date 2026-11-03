@@ -6,6 +6,8 @@
 // a definition the viewer reads; a hidden play never keys one (R202).
 // R2787000: a hooks entry may also carry, or be only, an `aura: { look, palette?, scope }`, the standing
 // look its card wears while it holds (fx/aura/); a `zone` or `lane` aura stands in a Field card's zone.
+// R2794000: a Unit's hooks entry may also carry `entrance: "<key>"`, its marquee entrance (entrances.ts)
+// beside its hooks; an entrance alone stays `{ bespoke: "<key>" }`.
 
 import JSON5 from "json5";
 
@@ -18,7 +20,8 @@ import { isAuraFieldType, isAuraLook, isAuraScope, type AuraLook, type AuraScope
 import { isPalette, type FxPalette } from "../flavors.ts";
 import { isCardHook, isMotifName, type FxCardHook, type MotifName } from "../motifs/names.ts";
 import { isSetPieceKey, type SetPieceKey } from "../setPieceKeys.ts";
-import { isBespokeKey, type BespokeKey } from "./bespoke.ts";
+import { isBespokeKey, isEntranceKey, type BespokeKey } from "./bespoke.ts";
+import type { EntranceKey } from "./recipe.ts";
 import rawClassic from "./classic.json5?raw";
 import rawClassicPlus from "./classicplus.json5?raw";
 import rawCore from "./core.json5?raw";
@@ -56,7 +59,7 @@ export type FxCardEntry =
   | { kind: "none"; reason: string }
   | { kind: "bespoke"; key: BespokeKey }
   | { kind: "setPiece"; key: SetPieceKey }
-  | { kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec };
+  | { kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec; entrance?: EntranceKey };
 
 const HOOK_FIELDS: readonly string[] = ["motif", "palette", "row"];
 const AURA_FIELDS: readonly string[] = ["look", "palette", "scope"];
@@ -119,9 +122,16 @@ function parseEntry(value: unknown, type: string, fail: (problem: string) => nev
   }
   const hooks: Partial<Record<FxCardHook, FxHookSpec>> = {};
   let aura: FxAuraSpec | undefined;
+  let entrance: EntranceKey | undefined;
   for (const [hook, spec] of Object.entries(value)) {
     if (hook === "aura") {
       aura = parseAura(spec, type, fail);
+      continue;
+    }
+    if (hook === "entrance") {
+      if (typeof spec !== "string" || !isEntranceKey(spec)) fail(`unknown entrance "${String(spec)}"`);
+      if (type !== "Unit") fail(`an entrance is a Unit's; this card is a ${type}`);
+      entrance = spec;
       continue;
     }
     if (!isCardHook(hook)) fail(`unknown hook "${hook}"`);
@@ -130,7 +140,7 @@ function parseEntry(value: unknown, type: string, fail: (problem: string) => nev
   if (Object.keys(hooks).length === 0 && aura === undefined) fail("names no hook");
   if (hooks.cry !== undefined && type !== "Unit") fail(`cry is a Unit's play; this card is a ${type}, whose play is cast`);
   if (hooks.cast !== undefined && type === "Unit") fail("cast is a non-Unit's play; a Unit's is cry");
-  return aura === undefined ? { kind: "hooks", hooks } : { kind: "hooks", hooks, aura };
+  return { kind: "hooks", hooks, ...(aura === undefined ? {} : { aura }), ...(entrance === undefined ? {} : { entrance }) };
 }
 
 /**

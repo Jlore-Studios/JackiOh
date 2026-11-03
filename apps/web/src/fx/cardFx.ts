@@ -58,11 +58,13 @@ function bespokeOf(defId: string): BespokeKey | undefined {
 
 /**
  * R670, R2800000: the bespoke entrance a card lands with: its table entry's, or that of the set piece it
- * names (Ceaseless Void lands with its collapse, and its fold follows).
+ * names (Ceaseless Void lands with its collapse, and its fold follows). R2794000: a hooks entry's
+ * `entrance`, beside its hooks (Nature Titan's beside its Cry).
  */
 export function entranceKeyOf(defId: string): EntranceKey | undefined {
   const entry = FX_CARD_TABLE.get(defId);
   if (entry?.kind === "setPiece") return SET_PIECES[entry.key].entrance;
+  if (entry?.kind === "hooks") return entry.entrance;
   return entry?.kind === "bespoke" && isEntranceKey(entry.key) ? entry.key : undefined;
 }
 

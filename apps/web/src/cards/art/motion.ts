@@ -183,6 +183,23 @@ export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = {
   "classicplus-075": { subject: beat("bob", 4.2), back: beat("drift", 11), props: beat("flutter", 3), particles: particles("leaf", "fall", 3.8) },
 };
 
+/**
+ * R2725004: the particle kinds drawn in a gold or a cream near it (`particleShape`), which a card's borrowed
+ * motion never takes: the Animated augment tints no base face's art Radiant's gold.
+ */
+export const GOLD_PARTICLES: ReadonlySet<ParticleKind> = new Set(["coin", "spark", "star", "crumb", "confetti"]);
+
+/** R2725000: the motions a card with none of its own may borrow, in `FULL_ART_MOTION`'s order: those with no gold particle. */
+const BORROWED_MOTIONS: readonly ArtMotion[] = Object.values(FULL_ART_MOTION).filter((motion) => !GOLD_PARTICLES.has(motion.particles.kind));
+
+/**
+ * R2725000: the moving art `defId` draws under the Animated augment: its own (`FULL_ART_MOTION`), else one of
+ * `BORROWED_MOTIONS` picked by its id, its particles placed by its id too (`particleMarkup`).
+ */
+export function artMotionFor(defId: string): ArtMotion | null {
+  return FULL_ART_MOTION[defId] ?? BORROWED_MOTIONS[hashId(defId) % BORROWED_MOTIONS.length] ?? null;
+}
+
 /** A beat's loop as the style writes it: `art-<move> <seconds>s <timing> infinite`. */
 function animation(step: ArtBeat): string {
   return `art-${step.move} ${fmt(step.seconds)}s ${ART_MOVES[step.move].timing} infinite`;

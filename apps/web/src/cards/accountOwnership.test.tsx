@@ -231,7 +231,8 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     });
     expect(probe.owns(SNOW)).toBe(false);
     // The full-art reader shares the session's one answer: no second request.
-    expect(await readOwnedFullArt("e2e-token-p1", fetchOwned)).toEqual(new Map([["core-008", new Set(["full-art-mr-vanilla"])]]));
+    // R2725002: the still Epic owns the Full art version it implies on its card.
+    expect(await readOwnedFullArt("e2e-token-p1", fetchOwned)).toEqual(new Map([["core-008", new Set(["full-art-mr-vanilla", "version-full-art"])]]));
     expect(fetchOwned).toHaveBeenCalledTimes(1);
 
     // No token (a pending account's screen) owns only the starters and reads nothing.
