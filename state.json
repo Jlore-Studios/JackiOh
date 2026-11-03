@@ -14949,10 +14949,12 @@
     "what": "revise #2831 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-03T03:18:31Z",
+    "at": "2026-11-03T03:26:33Z",
     "notes": [
-      "delivered build #2875 on claude-4 (run 41555218473): approved",
-      "delivered build #2853 on claude-8 (run 41543808770): approved"
+      "delivered review #2831 on claude-7 (run 41570753694): reviewed",
+      "started revise #2831 on claude-7 (run 41572375823)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15658,7 +15660,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T03:18:31Z",
+  "loop_tick": "2026-11-03T03:26:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
