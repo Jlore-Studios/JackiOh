@@ -3,6 +3,7 @@
 // (tables.test.ts holds the file to the catalog). An entry is one of:
 //   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
@@ -25,7 +26,7 @@
   "core-014": "none: pending", // Jlockeed's Weapons
   "core-015": "none: pending", // Me and Mr Token
   "core-016": "none: pending", // Hit Job
-  "core-017": "none: pending", // Flood
+  "core-017": { setPiece: "vortex" }, // Flood
   "core-018": "none: pending", // Bread and Butter
   "core-019": "none: pending", // Midrange Menace
   "core-020": "none: pending", // Pointmaster
@@ -98,7 +99,7 @@
   "core-085": "none: pending", // Unlicensed Experimentation
   "core-086": "none: pending", // "Miss" Mrow
   "core-087": "none: pending", // Pocket Chaos
-  "core-088": { cast: { motif: "wipe" } }, // Twisting Nether
+  "core-088": { setPiece: "nether" }, // Twisting Nether
   "core-089": "none: pending", // Corpse Eater
   "core-090": "none: pending", // CN-Viral Injection
   "core-090-1": "none: pending", // CN-Virus
@@ -113,7 +114,7 @@
   "core-097": "none: pending", // Zephrys
   "core-098": "none: pending", // Heroic Power
   "core-099": "none: pending", // Craft a Card
-  "core-100": { bespoke: "voidCollapse" }, // Ceaseless Void
+  "core-100": { setPiece: "voidFold" }, // Ceaseless Void
   "core-t-rush": "none: pending", // Rush Token
   "core-t-sheep": "none: pending", // Sheep Token
   "core-t-felinor": "none: pending", // Felinor Token

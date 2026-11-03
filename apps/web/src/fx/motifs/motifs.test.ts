@@ -237,7 +237,7 @@ const destroyed = (unit: PlayerView["you"]["units"][number] | undefined, killerI
 /** The twelve example cards and the motif each names. */
 const EXAMPLES: readonly (readonly [string, DrawnMotif])[] = [
   ["core-035", "bolt"],
-  ["core-088", "wipe"],
+  ["classicplus-032-2", "wipe"],
   ["classicplus-021", "nova"],
   ["classicplus-025", "bolt"],
   ["meditative-078", "vanish"],
