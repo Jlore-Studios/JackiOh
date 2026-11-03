@@ -15736,13 +15736,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "41690785182",
+            "tier": "medium"
+          }
+        ],
         "sha": "98476e00a60de181102ce87325540fda27013020",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2953": {
