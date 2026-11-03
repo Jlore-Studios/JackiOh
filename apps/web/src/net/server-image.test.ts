@@ -1,11 +1,12 @@
 // scripts/server-image.sh, the server image the two deploy jobs (deploy-staging.yml, promote-production.yml)
 // reuse instead of building: its tag named by its inputs, the three ways it gets an image, the rewrite of
-// wrangler.jsonc, and what `prune` deletes. Stand-ins for `pnpm` (wrangler), `docker`, `gh` and `curl` on
-// PATH record each call and answer from files, so neither Docker nor Cloudflare is needed. The script runs
-// in the repository itself, whose HEAD names the inputs it hashes.
+// wrangler.jsonc, and what `prune` deletes. Each case runs the script in a repository of its own (a small
+// Dockerfile, its inputs and the real wrangler.jsonc), with stand-ins for `pnpm` (wrangler), `docker`, `gh`
+// and `curl` on PATH that record each call and answer from files, so neither Docker nor Cloudflare is needed.
 
-import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,9 +15,24 @@ import JSON5 from "json5";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const SCRIPT = join(HERE, "../../../../scripts/server-image.sh");
-const REPO = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: HERE, encoding: "utf8" }).stdout.trim();
+const ROOT = join(HERE, "../../../..");
+const SCRIPT = join(ROOT, "scripts/server-image.sh");
 const TAG = /^[0-9]{14}-[0-9a-f]{12}$/u;
+
+// A Dockerfile shaped as crates/server/Dockerfile: a `COPY` of several sources, one of a directory, and one
+// `--from` a stage, which copies nothing from the context.
+const DOCKERFILE = `FROM rust AS build
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+RUN cargo build --release
+
+FROM debian
+COPY --from=build /jackioh-server /app/jackioh-server
+`;
+const INPUTS = ["Cargo.lock", "Cargo.toml", "crates", "crates/server/Dockerfile"];
+
+/** Git's background upkeep is off, as ci-scope.test.ts's (#1016). */
+const GIT_CONFIG = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0"];
 
 let bin = "";
 
@@ -73,61 +89,100 @@ beforeAll(() => {
 afterAll(() => rmSync(bin, { recursive: true, force: true }));
 
 interface World {
-  dir: string;
-  config: string;
+  /** The repository the script runs in, its HEAD the inputs it hashes. */
+  repo: string;
+  /** The stand-ins' answers and their record of calls. */
+  fake: string;
   images?: { name: string; tags: string[] }[];
   apps?: { image: string }[];
   digests?: Record<string, string>;
 }
 
+function git(w: World, ...args: string[]): string {
+  return execFileSync("git", [...GIT_CONFIG, ...args], { cwd: w.repo, encoding: "utf8" }).trim();
+}
+
+function commit(w: World, files: Record<string, string>): void {
+  for (const [file, content] of Object.entries(files)) {
+    mkdirSync(dirname(join(w.repo, file)), { recursive: true });
+    writeFileSync(join(w.repo, file), content);
+  }
+  git(w, "add", "-A");
+  git(w, "commit", "-qm", "change");
+}
+
 function world(): World {
   const dir = mkdtempSync(join(bin, "run-"));
-  const config = join(dir, "wrangler.jsonc");
-  copyFileSync(join(REPO, "wrangler.jsonc"), config);
-  return { dir, config };
+  const w: World = { repo: join(dir, "repo"), fake: join(dir, "fake") };
+  mkdirSync(w.fake);
+  mkdirSync(w.repo);
+  git(w, "init", "-q");
+  // The script finds json5 from apps/web, as this test does.
+  mkdirSync(join(w.repo, "apps/web"), { recursive: true });
+  symlinkSync(join(ROOT, "apps/web/node_modules"), join(w.repo, "apps/web/node_modules"));
+  copyFileSync(join(ROOT, "wrangler.jsonc"), join(w.repo, "wrangler.jsonc"));
+  commit(w, {
+    ".gitignore": "node_modules/\n.DS_Store\n",
+    "Cargo.toml": "[workspace]\n",
+    "Cargo.lock": "version = 4\n",
+    "README.md": "fixture\n",
+    "crates/server/Dockerfile": DOCKERFILE,
+    "crates/server/src/main.rs": "fn main() {}\n",
+    "crates/engine/src/lib.rs": "\n",
+  });
+  return w;
 }
 
 function run(w: World, args: string[], env: Record<string, string> = {}) {
-  writeFileSync(join(w.dir, "calls"), "");
-  writeFileSync(join(w.dir, "out"), "");
-  writeFileSync(join(w.dir, "images.json"), JSON.stringify(w.images ?? []));
-  writeFileSync(join(w.dir, "apps.json"), JSON.stringify(w.apps ?? []));
+  writeFileSync(join(w.fake, "calls"), "");
+  writeFileSync(join(w.fake, "out"), "");
+  writeFileSync(join(w.fake, "images.json"), JSON.stringify(w.images ?? []));
+  writeFileSync(join(w.fake, "apps.json"), JSON.stringify(w.apps ?? []));
   writeFileSync(
-    join(w.dir, "digests"),
+    join(w.fake, "digests"),
     Object.entries(w.digests ?? {})
       .map(([tag, digest]) => `${tag} ${digest}\n`)
       .join(""),
   );
   const r = spawnSync("bash", [SCRIPT, ...args], {
-    cwd: REPO,
+    cwd: w.repo,
     encoding: "utf8",
     env: {
       PATH: `${bin}:${process.env.PATH ?? ""}`,
       HOME: process.env.HOME ?? "",
-      FAKE: w.dir,
-      WRANGLER_CONFIG: w.config,
-      GITHUB_OUTPUT: join(w.dir, "out"),
+      FAKE: w.fake,
+      GITHUB_OUTPUT: join(w.fake, "out"),
       CLOUDFLARE_ACCOUNT_ID: "acct",
       CLOUDFLARE_API_TOKEN: "token",
       ...env,
     },
   });
-  const lines = (file: string) => readFileSync(join(w.dir, file), "utf8").split("\n").filter(Boolean);
+  const lines = (file: string) => readFileSync(join(w.fake, file), "utf8").split("\n").filter(Boolean);
   const out = Object.fromEntries(lines("out").map((l) => l.split("=") as [string, string]));
   return { status: r.status, text: r.stdout + r.stderr, calls: lines("calls"), out };
 }
 
 type Container = { name: string; image: string; image_build_context?: string };
 function containers(w: World): Record<string, Container> {
-  const c = JSON5.parse<{ containers: Container[]; env: { staging: { containers: Container[] } } }>(readFileSync(w.config, "utf8"));
+  const c = JSON5.parse<{ containers: Container[]; env: { staging: { containers: Container[] } } }>(
+    readFileSync(join(w.repo, "wrangler.jsonc"), "utf8"),
+  );
   return { production: c.containers[0] as Container, staging: c.env.staging.containers[0] as Container };
 }
 
-/** The inputs' hash for the repository's HEAD, from a first run that pushes. */
-function inputsHash(): string {
-  const r = run(world(), ["use", "jackioh-server"]);
+/** The hash the tag ends in: each input's object at HEAD, one a line, in the order above. */
+function inputsHash(w: World): string {
+  const objects = INPUTS.map((p) => `${git(w, "rev-parse", `HEAD:${p}`)}\n`).join("");
+  return createHash("sha256").update(objects).digest("hex").slice(0, 12);
+}
+
+/** The tag a first run that pushes gives HEAD's inputs. */
+function pushedTag(w: World): string {
+  const r = run(w, ["use", "jackioh-server"]);
   expect(r.status, r.text).toBe(0);
-  return (r.out.tag as string).slice(15);
+  expect(r.out.pushed).toBe("true");
+  git(w, "checkout", "-q", "--", "wrangler.jsonc");
+  return r.out.tag as string;
 }
 
 describe("scripts/server-image.sh use", () => {
@@ -136,8 +191,11 @@ describe("scripts/server-image.sh use", () => {
     const r = run(w, ["use", "jackioh-staging-server"], { IMAGE_COMMIT: "abc", FAKE_RUN: "123", FAKE_ARTIFACT: "1" });
     expect(r.status, r.text).toBe(0);
     expect(r.out.tag).toMatch(TAG);
+    expect(r.out.tag?.slice(15)).toBe(inputsHash(w));
     expect(r.out.pushed).toBe("true");
-    expect(r.calls).toContain("gh run list --workflow ci.yml --branch main --event push --status success --commit abc --limit 1 --json databaseId --jq .[0].databaseId // empty");
+    expect(r.calls).toContain(
+      "gh run list --workflow ci.yml --branch main --event push --status success --commit abc --limit 1 --json databaseId --jq .[0].databaseId // empty",
+    );
     expect(r.calls.some((c) => c.startsWith("docker load -i "))).toBe(true);
     expect(r.calls).toContain(`docker tag jackioh-server:rehearsal jackioh-server:${r.out.tag}`);
     expect(r.calls).toContain(`pnpm --dir apps/edge exec wrangler containers push jackioh-server:${r.out.tag}`);
@@ -148,18 +206,30 @@ describe("scripts/server-image.sh use", () => {
     // The other site's container, and the file's comments, are left as they were.
     expect(production.image).toBe("./crates/server/Dockerfile");
     expect(production.image_build_context).toBe(".");
-    expect(readFileSync(w.config, "utf8")).toMatch(/^\s*\/\/ /mu);
+    expect(readFileSync(join(w.repo, "wrangler.jsonc"), "utf8")).toMatch(/^\s*\/\/ /mu);
   });
 
   it("builds and pushes nothing when the registry holds the inputs' image, whichever site pushed it", () => {
-    const hash = inputsHash();
     const w = world();
+    const hash = inputsHash(w);
     w.images = [{ name: "jackioh-server", tags: [`20260101000000-${hash}`, "a0816719", `20250101000000-${hash}`] }];
     const r = run(w, ["use", "jackioh-server"], { IMAGE_COMMIT: "abc", FAKE_RUN: "123", FAKE_ARTIFACT: "1" });
     expect(r.status, r.text).toBe(0);
     expect(r.out).toEqual({ pushed: "false", tag: `20260101000000-${hash}` });
     expect(r.calls.filter((c) => /^(docker|gh) |containers push/u.test(c))).toEqual([]);
     expect(containers(w).production.image).toBe(`registry.cloudflare.com/acct/jackioh-server:20260101000000-${hash}`);
+  });
+
+  it("names the image by what the Dockerfile copies, so only a change to that moves the tag", () => {
+    const w = world();
+    const first = pushedTag(w).slice(15);
+    commit(w, { "README.md": "elsewhere\n", "apps/web/x.ts": "\n" });
+    expect(pushedTag(w).slice(15)).toBe(first);
+    for (const file of ["crates/engine/src/lib.rs", "Cargo.lock", "crates/server/Dockerfile"]) {
+      const before = pushedTag(w).slice(15);
+      commit(w, { [file]: `${readFileSync(join(w.repo, file), "utf8")}# ${file}\n` });
+      expect(pushedTag(w).slice(15), file).not.toBe(before);
+    }
   });
 
   it("builds on the layer cache when CI kept no image, and plainly without a cache", () => {
@@ -173,26 +243,23 @@ describe("scripts/server-image.sh use", () => {
     expect(cached.calls).toContain(
       `docker buildx build --cache-from type=gha,scope=a --cache-from type=gha,scope=b --load -t jackioh-server:${cached.out.tag} -f crates/server/Dockerfile .`,
     );
-    const plain = run(world(), ["use", "jackioh-server"]);
+    const plain = run(world(), ["use", "jackioh-server"], { IMAGE_COMMIT: "abc" });
     expect(plain.status, plain.text).toBe(0);
+    expect(plain.text).toContain("no passing push-to-main CI run");
     expect(plain.calls).toContain(`docker build -t jackioh-server:${plain.out.tag} -f crates/server/Dockerfile .`);
   });
 
-  it("hashes what the Dockerfile copies, read from the Dockerfile", () => {
-    const r = run(world(), ["use", "jackioh-server"]);
-    expect(r.text).toContain("is built from Cargo.lock Cargo.toml crates crates/ai crates/cards crates/engine crates/server and crates/server/Dockerfile");
-  });
-
   it("refuses inputs that differ from HEAD, even an ignored file a COPY would take", () => {
-    const stray = join(REPO, "crates/server/.DS_Store");
-    writeFileSync(stray, "x");
-    try {
-      const r = run(world(), ["use", "jackioh-server"]);
-      expect(r.status).not.toBe(0);
+    for (const [file, content] of [
+      ["crates/server/.DS_Store", "x"],
+      ["Cargo.lock", "changed\n"],
+    ] as const) {
+      const w = world();
+      writeFileSync(join(w.repo, file), content);
+      const r = run(w, ["use", "jackioh-server"]);
+      expect(r.status, file).not.toBe(0);
       expect(r.text).toContain("differ from HEAD");
-      expect(r.calls.filter((c) => c.includes("containers push"))).toEqual([]);
-    } finally {
-      rmSync(stray, { force: true });
+      expect(r.calls.filter((c) => /containers push|^docker /u.test(c))).toEqual([]);
     }
   });
 
@@ -237,9 +304,13 @@ describe("scripts/server-image.sh prune", () => {
     expect(r.text).not.toContain("secret");
   });
 
-  it("refuses a tag the registry does not hold", () => {
-    const r = run(world(), ["prune", "20261103000015-aaaaaaaaaa15"]);
+  it("refuses a tag the registry does not hold, and deletes nothing", () => {
+    const w = world();
+    w.images = [{ name: "jackioh-staging-server", tags: ["05a67597"] }];
+    w.digests = { "jackioh-staging-server:05a67597": "sha256:cccc3" };
+    const r = run(w, ["prune", "20261103000015-aaaaaaaaaa15"]);
     expect(r.status).not.toBe(0);
     expect(r.text).toContain("the registry has no jackioh-server:20261103000015-aaaaaaaaaa15");
+    expect(r.calls.filter((c) => c.includes("images delete"))).toEqual([]);
   });
 });

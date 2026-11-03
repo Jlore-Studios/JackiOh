@@ -158,10 +158,11 @@ use() {
   [ -f "$dockerfile" ] || fail "$dockerfile (the image of $container in $CONFIG) does not exist"
 
   # What the Dockerfile copies from the build context: each `COPY` that is not `--from` a stage
-  # names its sources before its destination.
+  # names its sources before its destination. Sorted bytewise, so every runner hashes them in one
+  # order whatever its locale.
   local p
   while IFS= read -r p; do paths+=("$p"); done < <(sed -n 's/^COPY[[:space:]]\{1,\}//p' "$dockerfile" |
-    grep -v '^--' | awk '{ for (i = 1; i < NF; i++) print $i }' | sort -u)
+    grep -v '^--' | awk '{ for (i = 1; i < NF; i++) print $i }' | LC_ALL=C sort -u)
   [ ${#paths[@]} -gt 0 ] || fail "$dockerfile copies nothing from its context"
   if [ -n "$(git status --porcelain --ignored -- "${paths[@]}" "$dockerfile")" ]; then
     fail "the image's inputs (${paths[*]}) differ from HEAD, so a tag named for HEAD's would not be this image"
