@@ -10567,6 +10567,61 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_idempotency_get(&other.id, &key)), None);
     }
 
+    /// R2875000: a news claim is kept once per account and entry: the first answers true, the same
+    /// claim again false and writes nothing, another account keeps its own, an id that is no slug is
+    /// refused, both ledgers a reward lands in take the reason `news` (migration 0077), and a deleted
+    /// account takes its claims with it.
+    async fn r2875000_a_news_claim_is_kept_once_per_account_and_entry(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&owner.id)),
+            Vec::<String>::new()
+        );
+        assert!(q!(harness, t => t.economy_news_claim(&owner.id, "patch-v0-5-11d", now)));
+        assert!(!q!(harness, t => t.economy_news_claim(&owner.id, "patch-v0-5-11d", now + 1)));
+        assert!(q!(harness, t => t.economy_news_claim(&owner.id, "an-alert", now + 2)));
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&owner.id)),
+            vec!["an-alert".to_string(), "patch-v0-5-11d".to_string()]
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&other.id)),
+            Vec::<String>::new()
+        );
+        assert!(q!(harness, t => t.economy_news_claim(&other.id, "patch-v0-5-11d", now)));
+        for refused in ["Patch-V0", "", "9-lives", "a b"] {
+            assert!(
+                call!(harness, t => t.economy_news_claim(&owner.id, refused, now)).is_err(),
+                "{}: {refused:?}",
+                harness.name
+            );
+        }
+
+        let news = JloreGrant {
+            reference: Some("an-alert".to_string()),
+            ..jlore(&owner.id, 20, "news", false, now)
+        };
+        assert_eq!(q!(harness, t => t.economy_jlore_grant(&news)), Some(20));
+        let pack = InventoryGrant {
+            reason: from(json!("news")),
+            reference: Some("patch-v0-5-11d".to_string()),
+            ..item(&owner.id, "global_pack", "", 1, now)
+        };
+        assert_eq!(q!(harness, t => t.economy_inventory_grant(&pack)), Some(1));
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        assert_eq!(j(&ledger.jlore)[0]["reason"], json!("news"));
+        assert_eq!(j(&ledger.inventory)[0]["reason"], json!("news"));
+
+        assert!(q!(harness, t => t.profiles_remove(&other.id)));
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&other.id)),
+            Vec::<String>::new()
+        );
+        assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10586,6 +10641,7 @@ mod economy {
         r2422000_a_practice_claim_is_kept_until_it_settles_once,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
+        r2875000_a_news_claim_is_kept_once_per_account_and_entry,
     );
 }
 

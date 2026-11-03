@@ -17,7 +17,7 @@ use crate::bug_reports::BUG_REPORTS_HEADER;
 
 /// The patch list (R388, B4.2): `patches.json`, the list of patches in the order they were made.
 /// Compiled in from the cards crate's copy, like the catalog itself.
-const PATCHES_JSON: &str = include_str!("../../../cards/patches/patches.json");
+pub(crate) const PATCHES_JSON: &str = include_str!("../../../cards/patches/patches.json");
 
 /// Where the compiled-in catalog came from, for the error messages.
 const CATALOG_SOURCE: &str = "crates/cards/catalog.json";

@@ -15,6 +15,10 @@ export const landingTestid = {
   questsBookmark: "landing-quests-bookmark",
   questsCount: "landing-quests-count",
   questsPanel: "landing-quests-panel",
+  /** R2875002: the news bookmark beside the quests', its count of unclaimed entries and its parchment. */
+  newsBookmark: "landing-news-bookmark",
+  newsCount: "landing-news-count",
+  newsPanel: "landing-news-panel",
   fan: "landing-card-fan",
   fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",
