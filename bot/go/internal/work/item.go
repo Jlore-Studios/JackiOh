@@ -11,7 +11,6 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/easy"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gates"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -601,6 +600,7 @@ func (x *Worker) FirstWhy(role string, conflicts []string) string {
 
 // FirstPrompt is work.Worker._first_prompt: the first builder pass's role and prompt.
 func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
+	x.session.conflicts = conflicts // for a resumed builder's prompt (`session.go`)
 	plan := x.Plan
 	number := x.planItem("number")
 	if x.planItem("action") == "revise" {
@@ -633,6 +633,11 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 			", was closed and this issue built again from `main`: " +
 			py.OrStr(plan.Get("previous_why"), "it kept failing") + kept + ". Start from " +
 			"`main`, learn from what went wrong, and do not repeat it.\n\n"
+	}
+	if sent := pyjson.Obj(plan.Get("sent_back")); plan.Truthy("onto") && sent.Len() > 0 {
+		previous += pyFormat(SentBackNote, map[string]any{"parent": plan.Get("part_of"),
+			"onto": x.planItem("onto")}) + "\n\n" +
+			prompts.Data(py.OrStr(sent.Get("findings"), ""), "The reconcile's findings") + "\n\n"
 	}
 	if prior := plan.Get("previous_findings"); pyjson.Truthy(prior) {
 		var findings []*verdicts.Finding
@@ -685,6 +690,7 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 		}
 		values.Set("children", x.planItem("children"))
 		values.Set("parked", parkedText)
+		values.Set("send_back", x.sendBackText())
 		prompt = x.Render("reconcile", values)
 	} else {
 		prompt = x.Render("build", values)
@@ -930,6 +936,40 @@ func (x *Worker) baseWorktree() *git.Git {
 	return x.BaseWt
 }
 
+// prepareMerged is `prepare` for an after-merge spot-check (#2748, section 5): the worktree at the
+// commit that merged the pull request into the default branch (the plan's `merge_sha`), on a
+// local branch of its own, and that commit's first parent as the base, so the review's diff is
+// the change exactly as it merged. Nothing is merged, installed or run, and nothing is pushed.
+func (x *Worker) prepareMerged() {
+	number := py.MustInt(x.planItem("number"))
+	merged := py.OrStr(x.Plan.Get("merge_sha"), "")
+	fetchRef(x.Repo, x.Cfg.DefaultBranch, true)
+	sha := ""
+	if merged != "" {
+		sha = x.Repo.Rev(merged)
+	}
+	parent := ""
+	if sha != "" {
+		parent = x.Repo.Rev(sha + "^")
+	}
+	if parent == "" {
+		herr.Raise(&py.Error{Type: "RuntimeError", Msg: fmt.Sprintf("the commit that merged #%d (`%s`) "+
+			"is not on origin", number, first12(merged))})
+	}
+	x.BaseRef = parent
+	x.BaseSHA = parent
+	x.StartSHA = sha
+	x.Wt = git.WorktreeAdd(x.Repo, filepath.Join(x.WorkDir, fmt.Sprintf("item-%d", number)),
+		fmt.Sprintf("bot-spot-check-%d", number), sha)
+	x.excludeNotes()
+	x.seedNotes()
+	x.Result.Set("branch", py.OrStr(x.Plan.Get("branch"), ""))
+	x.Result.Set("base", x.BaseSHA)
+	x.Result.Set("start", x.StartSHA)
+	x.Step("start", fmt.Sprintf("the commit that merged #%d into `%s`", number, x.Cfg.DefaultBranch),
+		pyjson.New("outcome", "at `"+first12(sha)+"`, against its parent `"+first12(parent)+"`"))
+}
+
 // review is `self._review(...)` as the run calls it: through ReviewFunc when a test replaced it.
 func (x *Worker) review(cycle int, report *verdicts.BuildReport, results []*gates.GateResult, previous []*verdicts.Finding, context string, maxCycles *int, role string) *verdicts.Review {
 	if x.ReviewFunc != nil {
@@ -964,7 +1004,11 @@ func (x *Worker) Review(cycle int, report *verdicts.BuildReport, results []*gate
 			previousFindings = x.findingsText(previous, "Blocking findings")
 		}
 	}
-	prompt := x.Render("review", pyjson.New(
+	template := "review"
+	if x.Plan.Truthy("spot_check") {
+		template = "spotcheck" // a merged change: it blocks nothing (#2748, section 5)
+	}
+	prompt := x.Render(template, pyjson.New(
 		"number", x.planItem("number"), "repo", x.Cfg.Repo, "cycle", cycle,
 		"max_cycles", cycles, "branch", x.planItem("branch"),
 		"base", x.BaseSHA, "thread", x.Plan.GetOr("thread", ""),
@@ -1013,7 +1057,7 @@ func (x *Worker) planning() {
 		"base", x.BaseSHA, "thread", x.Plan.GetOr("thread", ""),
 		"branch_state", x.branchState(), "gate_list", x.GateList(),
 		"difficulty", py.OrStr(x.Plan.Get("difficulty"), "medium"),
-		"rating", x.ratingAsk(), "easy_rule", x.easyRule(),
+		"rating", x.ratingAsk(), "difficulty_rule", x.difficultyRule(),
 		"plan_words", py.Thousands(issueplan.PlanWords), "plan_chars", py.Thousands(issueplan.PlanChars),
 		"draft_file", PlanDraftFile,
 	)) + x.HandoffText(false)
@@ -1069,15 +1113,14 @@ func (x *Worker) ratingAsk() string {
 			"that, and give no rating line. If the rule below says it is harder, say so " +
 			"under **Open questions**."
 	}
-	line := "    <!-- bot: {\"difficulty\": \"easy\", \"why\": \"one line: the rule's line you were " +
-		"least sure of, and why it holds\"} -->"
+	line := "    <!-- bot: {\"difficulty\": \"medium\", \"why\": \"one line: the rule's line that " +
+		"decides it, and why\"} -->"
 	ask := "Rate how hard it is, by the rule below. The very first line of your answer is a " +
 		"single HTML comment carrying JSON, with nothing before it, then the plan:\n\n" +
-		line + "\n\n`difficulty` is `easy`, `medium` or `hard`. The rating decides who " +
-		"builds it: an easy item goes to the weakest model free, which may be unable to " +
-		"fill gaps, resolve a hard conflict, or judge what it cannot see. When in doubt " +
-		"between easy and medium, rate medium: a borderline easy costs a weak builder's " +
-		"failed run, while a medium plan still builds fast."
+		line + "\n\n`difficulty` is `medium` or `hard`. The rating decides who builds and " +
+		"approves it: a medium item goes to a medium model, whose approval ships it; a hard item " +
+		"goes to Opus alone. When in doubt between " +
+		"the two, rate hard."
 	if x.ratingSource() == "bot" {
 		by := ""
 		if rating.Truthy("by") {
@@ -1089,10 +1132,9 @@ func (x *Worker) ratingAsk() string {
 	return ask
 }
 
-func (x *Worker) easyRule() string {
-	rule := x.Cfg.Easy
-	return pyTemplate(easy.Rule).safeSubstitute(map[string]string{
-		"max_files": strconv.Itoa(rule.MaxFiles), "max_lines": strconv.Itoa(rule.MaxLines)})
+// The rule the planner rates by (`DifficultyRule`), its number filled in.
+func (x *Worker) difficultyRule() string {
+	return pyTemplate(DifficultyRule).safeSubstitute(map[string]string{"hard_files": strconv.Itoa(HardFiles)})
 }
 
 // A round the reviewer sent back, built on `built_on`. On a lane with two models,
@@ -1368,6 +1410,86 @@ func (x *Worker) Item() {
 		x.finish()
 		return
 	}
+	x.rounds(conflicts, false)
+}
+
+// ChainsReview is: this build or revision hands its lane to the change's own review run (#2748,
+// 2026-11-02; the plan's `own_review_next`, `plan.Chains`): it builds and runs the checks, fixes the
+// ones it turned red (up to `CheckFixRounds`), and reviews nothing itself.
+func (x *Worker) ChainsReview() bool {
+	return x.Plan.Truthy("own_review_next") && x.planIn("action", "build", "revise")
+}
+
+// OwnReviewRun is: this run is a change's own review run (#2748, 2026-11-02; the plan's
+// `own_review`), on the subscription whose run built it: the change's adversarial review loop,
+// moved out of its build into a run of its own.
+func (x *Worker) OwnReviewRun() bool {
+	return x.Plan.Truthy("own_review") && x.planIn("action", "review")
+}
+
+// OwnReview is a change's own review run (#2748, the owner's decision of 2026-11-02): its build
+// pushed it and handed its lane to this run, on the same subscription. Its first round builds
+// nothing: a fresh adversarial session of the lane's reviewer (the subscription's strongest seat at
+// or above the item's tier, Opus for a hard item) reviews the head as the build left it, with the
+// checks that build ran on it and the pull request's CI on it (`ciRed`: a red required check is a
+// finding). Blocking findings go to a fix pass of the lane's builder in this run, then the checks
+// and a fresh review again, as a build's review loop did, up to the item's verdict rounds
+// (`max_review_cycles`), counted across runs. This run runs on the builder's own login, so it
+// installs and runs the branch's code as its build did; a final audit on another subscription
+// still runs nothing (`SecondReview`).
+func (x *Worker) OwnReview() {
+	x.prepare(false, false)
+	x.Result.Set("own_review", true)
+	if x.roundsSpent() >= x.CyclesCap() {
+		status, reason := x.roundsOut(x.roundsSpent())
+		x.Result.Set("status", status)
+		x.Result.Set("reason", reason)
+		x.lastCheckpoint()
+		x.finish()
+		return
+	}
+	x.rounds(nil, true)
+}
+
+// handedPass is an own review run's first round: no builder session, the head its build pushed.
+// Its report is the pull request's description, which holds that build's, and its record names
+// who built it.
+func (x *Worker) handedPass(cycle int) (*verdicts.BuildReport, *pyjson.Object) {
+	by := py.OrStr(x.Plan.Get("built_by"), x.Provider.ID)
+	x.Step("handed", "the head its build pushed, for its own review run", pyjson.New(
+		"outcome", "at `"+first12(x.Wt.Head())+"`, built on `"+by+"`"))
+	entry := pyjson.New(
+		"n", cycle,
+		"builder", pyjson.New("role", "handed", "ok", true, "turns", 0, "minutes", 0.0,
+			"status", "done", "error", "", "timed_out", false, "model", by, "tier", "",
+			"changed", false),
+	)
+	return &verdicts.BuildReport{Status: "done", Title: py.OrStr(x.Plan.Get("title"), ""),
+		Body: py.OrStr(x.Plan.Get("pull"), "")}, entry
+}
+
+// builtGates is the checks the build ran on the head it handed on, when this run starts from that
+// head: its own review's first round judges them rather than run them again (nil otherwise).
+func (x *Worker) builtGates() []*gates.GateResult {
+	if py.OrStr(x.Plan.Get("built_head"), "") != x.StartSHA || x.Wt.Head() != x.StartSHA {
+		return nil
+	}
+	var out []*gates.GateResult
+	for _, g := range pyjson.Objs(x.Plan.Get("built_gates")) {
+		out = append(out, &gates.GateResult{
+			Name: py.Str(g.Get("name")), Run: py.Str(g.Get("run")), OK: g.Truthy("ok"),
+			ExitCode: g.Int("exit_code"), Seconds: g.Float("seconds"), Tail: py.OrStr(g.Get("tail"), ""),
+			PreExisting: g.Truthy("pre_existing"), Skipped: py.OrStr(g.Get("skipped"), ""),
+			Inconclusive: g.Truthy("inconclusive")})
+	}
+	return out
+}
+
+// rounds is a build's, a revision's or an own review run's rounds: a builder pass (none in an own
+// review's first round, `handed`, nor in a harness merge), the path guard and the checks, then the
+// run's own adversarial review, until it approves or the verdict rounds run out. A build or revision
+// that hands its lane to its own review run (`ChainsReview`) stops after the checks instead.
+func (x *Worker) rounds(conflicts []string, handed bool) {
 	findings := []*verdicts.Finding{}
 	for _, f := range pyjson.List(x.Plan.Get("previous_findings")) {
 		findings = append(findings, finding(f))
@@ -1385,7 +1507,10 @@ func (x *Worker) Item() {
 	laneVerdicts := 0
 	x.Result.Set("round_tier", ownerTier)
 	x.Result.Set("verdict_rounds", used)
-	mergeOnly := x.MergeOnly(conflicts)
+	mergeOnly := !handed && x.MergeOnly(conflicts)
+	chained := x.ChainsReview()
+	checkFixes := 0
+	after := "review"
 	cycle := 0
 	for {
 		cycle++
@@ -1397,18 +1522,22 @@ func (x *Worker) Item() {
 		}
 		builtOn := x.BuildSeat
 		harnessRound := mergeOnly && cycle == 1
+		handedRound := handed && cycle == 1
 		var built *verdicts.BuildReport
 		var entry *pyjson.Object
-		if harnessRound {
+		switch {
+		case harnessRound:
 			built, entry = x.mergePass(cycle)
-		} else {
+		case handedRound:
+			built, entry = x.handedPass(cycle)
+		default:
 			var role, prompt, why string
 			if cycle == 1 {
 				role, prompt = x.FirstPrompt(conflicts)
 				why = x.FirstWhy(role, conflicts)
 			} else {
 				role, prompt = "fix", x.fixPrompt(cycle, findings, failures, "Blocking findings")
-				why = fixWhy(fmt.Sprintf("round %d's review", cycle-1), findings)
+				why = fixWhy(fmt.Sprintf("round %d's %s", cycle-1, after), findings)
 			}
 			built, entry = x.buildPass(cycle, role, prompt, why)
 		}
@@ -1416,21 +1545,64 @@ func (x *Worker) Item() {
 		if built == nil {
 			return
 		}
+		if cycle == 1 && !harnessRound && !handedRound && built.Status == "send_back" && x.reconciles() {
+			// A reconcile that sends parts back to their builders ends here (#2748, `sendBack`).
+			if x.sendBack(built) {
+				return
+			}
+			// None it named may go back: it fixes them itself, in one more pass before the checks.
+			fixed, fixEntry := x.buildPass(cycle, "fix", x.fixPrompt(cycle,
+				[]*verdicts.Finding{x.refusedFinding(built)}, "", "Blocking findings"),
+				"the parts it named cannot be sent back")
+			entry.Set("fix", fixEntry.Get("builder"))
+			if fixed == nil {
+				return
+			}
+			built = fixed
+		}
 		report = built
 		guard := Guard(x)
 		if x.OnlyForbidden() {
 			return
 		}
 		x.Check()
-		results = x.checks()
+		if found := x.builtGates(); handedRound && found != nil {
+			results = found // the checks its build ran on this head
+			entry.Set("gates_from", "its build")
+		} else {
+			results = x.checks()
+		}
 		entry.Set("gates", gateDicts(results))
-		if x.SelfCheck && !harnessRound {
+		if x.SelfCheck && !harnessRound && !handedRound {
 			var checked *verdicts.BuildReport
 			checked, results, guard, openSelfCheck = x.selfCheckLoop(cycle, entry, report, results, guard)
 			if checked == nil {
 				return
 			}
 			report = checked
+		}
+		if chained {
+			// Its own review run reviews it (#2748, 2026-11-02): this run fixes only the checks it
+			// turned red, up to `CheckFixRounds` passes, then hands the change on as it stands.
+			after = "checks"
+			findings = append([]*verdicts.Finding{}, guard...)
+			failures = gates.FailuresText(results)
+			if failures != "" {
+				findings = append(findings, newFinding("blocking", "checks", "Checks this change "+
+					"turned red must pass.", "the harness's gate run"))
+			}
+			if len(findings) > 0 && checkFixes < CheckFixRounds {
+				checkFixes++
+				continue
+			}
+			reason := "built and checked; its own review run, on this subscription, reviews it next"
+			if len(findings) > 0 {
+				reason += fmt.Sprintf(", with %d finding(s) of its checks still open", len(findings))
+			}
+			x.Result.Set("status", "built")
+			x.Result.Set("reason", reason)
+			x.Result.Set("review_next", "own")
+			break
 		}
 		if x.ReviewSeat == nil {
 			// No seat here reviews in the run (a weak one only in a review run): a review
@@ -1480,6 +1652,14 @@ func (x *Worker) Item() {
 			entry.Set("caught_up", x.BaseSHA)
 			guard = Guard(x)
 		}
+		var redCI []*verdicts.Finding
+		ciFailures := ""
+		if handed {
+			// Its own review run reads the pull request's CI on the head it reviews (#2748).
+			redCI, ciFailures = x.ciRed(x.Wt.Head())
+			entry.Set("ci", x.ciRecord(redCI))
+			context = x.withEarlier(context, findings, x.ownReviewNote(cycle, redCI))
+		}
 		review = x.review(cycle, report, results, findings, context, nil, "review")
 		entry.Set("review", review.ToDict())
 		if !review.Readable {
@@ -1489,20 +1669,24 @@ func (x *Worker) Item() {
 		}
 		laneVerdicts++
 		x.Result.Set("verdict_rounds", used+laneVerdicts)
-		if review.Approved() && gates.Green(results) && len(guard) == 0 {
+		if review.Approved() && gates.Green(results) && len(guard) == 0 && len(redCI) == 0 {
 			x.ApprovedSHA = review.ReviewedSHA
 			x.Result.Set("status", "approved")
 			x.Result.Set("reason", "the reviewer approved and every check passed")
 			break
 		}
-		findings = append(append([]*verdicts.Finding{}, guard...), review.Blocking()...)
+		after = "review"
+		findings = append(append(append([]*verdicts.Finding{}, guard...), review.Blocking()...), redCI...)
 		failures = gates.FailuresText(results)
+		if ciFailures != "" {
+			failures = strings.TrimSpace(failures + "\n\n" + ciFailures)
+		}
 		if len(findings) == 0 && failures != "" {
 			findings = []*verdicts.Finding{newFinding("blocking", "checks", "Checks this change "+
 				"turned red must pass.", "the harness's gate run")}
 		}
-		if !harnessRound {
-			x.sentBack(cycle, builtOn) // a rejected harness merge is no builder's round
+		if !harnessRound && !handedRound {
+			x.sentBack(cycle, builtOn) // a rejected harness merge, or the head handed on, is no builder's round
 		}
 		if laneVerdicts+used >= x.CyclesCap() {
 			status, reason := x.roundsOut(laneVerdicts + used)
@@ -1655,16 +1839,27 @@ func (x *Worker) lastCheckpoint() {
 	}
 }
 
-// SecondReview is a review run: the lane's final audit (#725). A model reads a bot pull request
-// (a strong one for a medium or hard item, the weakest shipping seat for an easy one).
+// SecondReview is a review run: the lane's final audit (#725), for a head its own run's reviewer
+// did not approve. A model reads a bot pull request (a medium one first for a medium item, a
+// strong one for a hard item, on another subscription than the builder's when one is free, #2748).
 // Nothing is built or pushed: the verdict goes
 // to `deliver`, which merges once the approvals for the same commit meet the review rule
-// (`review_rule.py`), or asks for a revision at the auditor's tier.
+// (`review_rule.py`), or makes the auditor's subscription the owner of a revision that fixes what
+// it found, whose own run's reviewer approving it ships it (2026-11-02).
 // Nothing is installed or run either: the reviewer holds another subscription's login, and
 // the builder's code (a postinstall script, a test) must not run beside it. CI runs every
 // check on the pull request before it can merge.
+//
+// An after-merge spot-check (#2748, section 5; the plan's `spot_check`) is the same review of a
+// pull request that has merged: the worktree is the commit that merged it, its base that
+// commit's first parent (`prepareMerged`), and its prompt is `spotcheck`, since it blocks nothing.
 func (x *Worker) SecondReview() {
-	x.prepare(false, false)
+	spot := x.Plan.Truthy("spot_check")
+	if spot {
+		x.prepareMerged()
+	} else {
+		x.prepare(false, false)
+	}
 	x.Check()
 	seat := x.SeatFor("review")
 	builder := py.OrStr(x.Plan.Get("builder"), "an unknown model")
@@ -1679,10 +1874,23 @@ func (x *Worker) SecondReview() {
 	}
 	context := "This is a review run. `" + builder + "` built this change; you are `" +
 		x.Provider.Family + "` on `" + seat.Model + "` (" + seat.Tier + " tier). It merges once " +
-		reviewrule.Summary + " approved the same commit. " + soFar + " Dependencies are " +
+		reviewrule.Summary + " approved the same commit. " + soFar + " If you find blocking " +
+		"problems, your own subscription fixes them in a revision of its own (the auditor fixes " +
+		"its own findings), and that fix ships once its own run's reviewer approves it at the " +
+		"item's tier, so write " +
+		"each finding as you would want it to fix it: where, what, and the evidence. Dependencies are " +
 		"not installed in this run and you " +
 		"should not run the branch's code: read it. CI runs every check on the pull " +
 		"request before it can merge."
+	if spot {
+		context = "This is an after-merge spot-check. `" + builder + "` built this change and it " +
+			"merged into `" + x.Cfg.DefaultBranch + "` on " + py.OrStr(x.Plan.Get("approver"), "one approval") +
+			", which is not evidence: judge it from scratch. You are `" + x.Provider.Family + "` on `" +
+			seat.Model + "` (" + seat.Tier + " tier). You block nothing and revert nothing: your " +
+			"blocking findings become one follow-up issue, built as a new change from `" +
+			x.Cfg.DefaultBranch + "`. Dependencies are not installed in this run and you should not " +
+			"run the change's code: read it."
+	}
 	if notes := strings.TrimSpace(py.OrStr(x.Plan.Get("review_notes"), "")); notes != "" {
 		context += "\n\nA person asked for this review (`" + config.Slash + " review`) with " +
 			"these notes:\n\n" + prompts.Data(notes, "Their notes")
@@ -1738,7 +1946,7 @@ func (x *Worker) Split() {
 		fullsend = pyFormat(split.FullsendNotes, map[string]any{"branch": x.planItem("branch")})
 	}
 	values.Set("fullsend", fullsend)
-	values.Set("easy_rule", x.easyRule())
+	values.Set("difficulty_rule", x.difficultyRule())
 	values.Set("max_issues", split.MaxIssues)
 	prompt := x.Render("split", values) + x.HandoffText(false)
 	head := x.Wt.Head()
@@ -1748,7 +1956,7 @@ func (x *Worker) Split() {
 	}
 	result := x.Call("plan", prompt, x.Wt.Cwd, true, why, false)
 	x.resetTo(head)
-	tree := split.Parse(redact.Redact(result.Text, nil), []string{"easy", "medium", "hard"})
+	tree := split.Parse(redact.Redact(result.Text, nil), split.Difficulties)
 	x.Result.Set("tree", tree.ToDict())
 	if !tree.OK() {
 		problems := or(strings.Join(tree.Problems, "; "), "no tree")

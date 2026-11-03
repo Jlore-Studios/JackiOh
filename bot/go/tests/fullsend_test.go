@@ -20,7 +20,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -415,45 +414,6 @@ func TestFullsend_APartTouchingAForbiddenPathLandsNothing(t *testing.T) {
 	assertIn(t, config.LabelBuild, world.gh.LabelNames(fullsendRules))
 }
 
-// ---------------------------------------------------------------------------- EasyPartTests
-
-// The easy rule counts only the part's own change, not the parts that landed before it: here
-// one file is the limit, and an earlier part already added another.
-func TestFullsend_AWeakBuildersPartIsMeasuredAgainstTheBranch(t *testing.T) {
-	world := newFullsendWorld(t, fullsendWorldOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
-		Machine: []string{"lite"}, Overrides: pyjson.New("easy", pyjson.New("max_files", 1, "max_lines", 400))})
-	world.gh.AddIssue(fullsendParent, fakes.Issue{Labels: []string{config.LabelTree}})
-	fakes.PushBranch(world.origin, world.root, fullsendOnto, map[string]string{"src/rules.txt": "rules\n"})
-	world.gh.AddIssue(fullsendClient, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"},
-		Body: issueplan.WithPlan("Write `src/client.txt`.", "1. Write src/client.txt.", "a person", "")})
-	world.gh.AddSubIssue(fullsendParent, crossInt(t, world.gh.GetIssue(fullsendClient), "id"))
-	partOf := func(number string) {
-		world.ctx.Store.Update(func(s *pyjson.Object) any {
-			pyjson.Obj(pyjson.Obj(s.Get("items")).SetDefault(number, pyjson.New())).Update(
-				pyjson.New("onto", fullsendOnto, "part_of", fullsendParent))
-			return nil
-		}, "state")
-	}
-	partOf(strconv.Itoa(fullsendClient))
-	r := fullsendBuilds(map[string]string{"src/client.txt": "ui\n"})
-	planned, result := world.run(r)
-	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"lite", "part"})
-	assertEqual(t, workRoles(r), []string{"build"}) // no self check
-	assertTrue(t, world.has(fullsendOnto, "src/client.txt"))
-	assertEqual(t, world.gh.GetIssue(fullsendClient).Get("state"), "closed")
-	// A part of its own that breaks the rule lands nothing, and a stronger model takes it.
-	world.gh.AddIssue(43, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"},
-		Body: issueplan.WithPlan("Write two files.", "1. Write them.", "a person", "")})
-	partOf("43")
-	landed := world.tip(fullsendOnto)
-	_, result = world.run(fullsendBuilds(map[string]string{"src/a.txt": "a\n", "src/b.txt": "b\n"}))
-	assertEqual(t, result.Get("status"), "part")
-	assertEqual(t, world.tip(fullsendOnto), landed)
-	assertIn(t, "breaks the easy rule (line 1: it changes 2 files, over 1)", lastOf(t, world.gh.BotComments(43)))
-	assertEqual(t, world.gh.GetIssue(43).Get("state"), "open")
-	assertIn(t, config.LabelBuild, world.gh.LabelNames(43))
-}
-
 // ---------------------------------------------------------------------------- AdoptTests
 
 const (
@@ -625,10 +585,21 @@ func TestFullsend_TheReconcileOpensOnePullIntoMain(t *testing.T) {
 	assertIn(t, fmt.Sprintf("# Reconcile fullsend tree #%d", fullsendParent), prompts[0])
 	assertIn(t, fmt.Sprintf("`origin/bot/issue-%d`", fullsendClient), prompts[0])
 	assertIn(t, ".claude/skills/fullsend/SKILL.md", prompts[0])
-	assertEqual(t, result.Get("status"), "approved")
+	// The reconcile builds and checks; its own review run reviews it (#2748, 2026-11-02), so its
+	// pull request opens as a draft, which CI runs on.
+	assertEqual(t, []any{result.Get("status"), result.Get("review_next")}, []any{"built", "own"})
 	assertEqual(t, len(created), 1)
-	assertEqual(t, []any{created[0].Get("head"), created[0].Get("base")}, []any{fullsendOnto, "main"})
+	assertEqual(t, []any{created[0].Get("head"), created[0].Get("base"), created[0].Get("draft")},
+		[]any{fullsendOnto, "main", true})
 	assertIn(t, fmt.Sprintf("Closes #%d", fullsendParent), crossStr(t, created[0], "body"))
 	// The pull request holds the parts that landed and the reconcile's own change.
 	assertEqual(t, fakes.Git(world.origin, "show", "refs/heads/"+fullsendOnto+":src/game.txt"), "rules A and B")
+	// Its own review run, Opus on the reconcile's own account (a hard item), approves it.
+	reviewed, verdict := world.run(workFake(map[string]runner.Handler{"review": crossAnswer(fullsendApprove)}))
+	pr := crossPullOf(t, world.gh, fullsendOnto)
+	assertEqual(t, []any{reviewed.Get("action"), reviewed.Get("number"), reviewed.Get("provider"),
+		dig(t, reviewed, "seats", "review", "model"), verdict.Get("status")},
+		[]any{"review", pr, planned.Get("provider"), "opus", "approved"})
+	assertIn(t, fmt.Sprintf("PR_%d", pr), world.gh.AutoMerge)
+	assertEqual(t, world.gh.GetPull(pr).Get("draft"), false)
 }

@@ -637,6 +637,31 @@ describe("#2645 a phone's control bar holds the match menu", () => {
     expect(row).toHaveAttribute("title", text.title);
   });
 
+  it("#2883 with showOfferDraw off, ⋯'s menu holds Concede but no Offer draw, and ⋯ wears neither its dot nor its glow", () => {
+    phone(true);
+    render(
+      <Board
+        view={boardView({ drawOfferBlockedTurns: 2 })}
+        highlight={highlight(["end-turn", "offer-draw", "concede"], ["offer-draw"])}
+        showOfferDraw={false}
+      />,
+    );
+    const toggle = screen.getByTestId("match-menu");
+
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+    expect(screen.getByTestId("match-menu-panel").contains(screen.getByTestId("concede"))).toBe(true);
+    expect(toggle).not.toHaveAttribute("data-dot");
+    expect(toggle).not.toHaveAttribute("data-glow");
+  });
+
+  it("#2883 with showOfferDraw off, the desktop bar holds Concede but no Offer draw", () => {
+    phone(false);
+    render(<Board view={boardView()} highlight={NOTHING_LEFT} showOfferDraw={false} />);
+
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+    expect(screen.getByTestId("concede").closest(".control-bar")).toBe(bar());
+  });
+
   it("#2645 ⋯ carries the glow of the control a tutorial points at while the menu is closed, and the row carries it once it is open", () => {
     phone(true);
     render(<Board view={boardView()} highlight={highlight(["end-turn", "concede"], ["concede"])} />);

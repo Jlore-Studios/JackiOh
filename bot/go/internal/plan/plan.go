@@ -3,41 +3,53 @@
 // The first job of a night run: decide what this run does and which subscription does it.
 //
 // It spends nothing. In order: the two kill switches, housekeeping (items a dead run left
-// `bot:working`, bot PRs that conflict with `main`), the lanes (at most `max_parallel` runs on
+// a live label, bot PRs that conflict with `main`), the lanes (at most `max_parallel` runs on
 // GitHub's runners and, apart from those, `machine_parallel` on the machine hold an item at once,
-// and a subscription holds as many as its `lanes`), then one item and the subscription that
+// and a subscription holds as many as the lanes in force for it: its `lanes`, or a Claude
+// account's by the 5-hour cap in force, `lanes_by_cap`), then one item and the subscription that
 // takes it (`pairs`), or a suggestion survey when nothing is queued and one is due. Having claimed
 // an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 //
 // Who does what (`pairs`, `assign`): items go in order of urgency (forced, then the priority tier,
 // reviews, revisions, then builds, the harder first and then the oldest), so work already begun is
-// finished before new work starts. An item's difficulty (`difficulty:easy`,
-// `medium` or `hard`; medium without a label) sets the weakest tier that may build it (`MIN_TIER`).
-// Among the seats (`providers.Seat`: one model on one subscription) whose subscription is free and
-// available (`providers.availability`: switched on, its secret set, inside its hours unless the item
-// is forced, under its limits):
+// finished before new work starts. An item's difficulty (`difficulty:medium` or `hard`; medium
+// without a label, and a retired `difficulty:easy` too) sets the weakest tier that may build it
+// (`MIN_TIER`). Among the seats (`providers.Seat`: one model on one subscription) whose
+// subscription is free and available (`providers.availability`: switched on, its secret set,
+// inside its hours unless the item is forced, under its limits):
 //
-//   - **build, revise, fix**: the first free seat in the lane's tier order (#695: Muse before
-//     agy before GPT before Sonnet), on the weakest seat of a subscription that meets the
-//     tier; ties break by the load balancer (`balance`: the most room under its caps, then the
-//     fewest runs held) and then the usage order (`priority`), with `build_last` ones such as
-//     claude-2 after all of them. The subscription that planned the item builds only when no other
-//     lane seat is free, so planner and builder differ (and the run may switch: `work._switch`). A
+//   - **build, revise, fix**: the subscription that owns it first (one lane, one owner: the one
+//     that planned it or took it up last, #2748), which it waits for a bounded while when only
+//     that one's 5-hour session keeps it (`hold.go`), and each subscription's own work before new
+//     work; else the first free seat in the lane's tier order (#695: Muse before agy before GPT
+//     before Sonnet), on the weakest seat of a subscription that meets the tier; ties break by the load
+//     balancer (`balance`: the most room under its caps, then the fewest runs held) and then the
+//     usage order (`priority`), with `build_last` ones such as claude-2 after all of them. A
 //     builder above the item's tier (no seat of that tier free, or one comes later in the tier
 //     order) is said in the run's log.
-//   - **plan**: a build that has no plan yet gets a planning session first, on the lane's weakest
-//     seat that meets its plan floor: a medium seat plans an easy or medium item, a strong one a
-//     hard item. When the builder's own subscription has a seat of that tier, the plan and the
-//     build share one run; otherwise the planning is a run of its own, and the item goes back to
-//     the queue to build from the plan. Such a planning run is short and starts before any long
-//     run, so a planner plans a weak builder's next item before it builds one of its own.
+//   - **plan**: a build that has no plan yet gets a planning session first, on the planning lane:
+//     a medium or unrated item goes to a medium seat first (Muse, agy, GPT, Sonnet, in the tier
+//     order and the load balancer's), and to a strong one only when no medium planner can take it
+//     now (#2748); a hard item to a strong seat only. When no planner is free on the lane, a
+//     builder whose own strongest seat meets the plan floor plans it in its own run.
 //   - **review** in the run: the run's own strongest seat of at least medium, in a fresh
-//     adversarial session; a weak builder's own model checks itself instead (findings only, never
-//     an approval), and the change goes to its final audit.
-//   - **a review run** (`bot:cross-review`): the lane's final audit. A medium or hard item waits
-//     for a strong seat; an easy item takes the weakest seat that ships it (medium first). No weak
-//     review runs go out. What counts is the review rule (`review_rule.py`): the final audit's
-//     approval (strong, or medium for an easy item).
+//     adversarial session; its findings count, and its approval at the item's tier ships the
+//     change (2026-11-02, #2748: a medium or strong one for a medium item, a strong one for a hard
+//     item, Opus on the same account). With `own_review_run` (the night bot's) a run that changes
+//     code reviews nothing itself (`Chains`): its deliver reserves its lane for the change's own
+//     review run, on the same subscription (`ownReviewer`: its strongest seat at or above the
+//     item's tier), which goes to it alone as its own work, held for it a while or handed off as a
+//     final audit (`Owning`, `HandOffOwnReview`).
+//   - **a review run** (`bot:cross-review`): the lane's final audit, when the run's own reviewer
+//     did not approve it, on another subscription of the tier when one is free and else on the
+//     builder's own. A medium item takes a medium seat first, a hard item waits for a strong
+//     seat (Opus). No weak review runs go out. What counts is the review rule (`review_rule.py`).
+//     An audit that asks for changes makes its own subscription the owner of the fix, and the
+//     approval that ships a head makes its subscription the owner of the merge, whose CI fixes go
+//     to it first (`Own`, #2748).
+//   - **an after-merge spot-check** (`spotcheck`, #2748): a review run of a merged medium change, on
+//     a strong seat of neither its builder's subscription nor, while another is free, its
+//     approver's, after every other review run and before the builds.
 //   - **a conflict on a cleared change** (a bot PR whose commit met the rule, then conflicted with
 //     `main`): a builder with its own reviewer in the run first, since that review carries the
 //     clearance to the resolution (`deliver._carry`) and no review run follows.
