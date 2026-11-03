@@ -15771,15 +15771,8 @@
       }
     },
     "2953": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41694841904",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-03T19:18:36Z",
-        "until": "2026-11-03T19:48:36Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15791,10 +15784,9 @@
         "reason": "planned on opus",
         "trail": "\": \"sed -n 1100,1130p crates/tools/src/patches.rs; sed -n 700,760p crates/tools/src/patches.rs\", \"description\": \"Read fragment slug and player note rules\"}\n- Bash: {\"command\": \"git grep -n -i 'stinkyscape-044' -- apps/web/src/audio apps/web/public/audio/music/*.json 2>/dev/null | head; ls apps/web/public/audio/music/*.json 2>/dev/null\", \"description\": \"Check mu\u2026\n- tool error: Exit code 2 apps/web/src/audio/card-audio.json5:2191: \"stinkyscape-044\": { // Great Replacement Theory apps/web/src/audio/music-cards.json:123: \"stinkyscape-044\": { \"intro\": \"intro-stinkyscape-044\" }\u2026\n- Bash: {\"command\": \"sed -n 1718,1730p apps/web/src/audio/music-manifest.json; grep -n -E 'hash|source' apps/web/scripts/gen-music.mjs 2>/dev/null | head -10; ls apps/web/scripts/ | head -30\", \"description\":\u2026\n- Bash: {\"command\": \"sed -n 1275,1300p apps/web/scripts/music/tracks.mjs | grep -n -E 'rng|seed|card\\\\.' | head\", \"description\": \"Check intro RNG seed source\"}\n- Bash: {\"command\": \"grep -n -E 'function introSpec|function derive|mulberry|rngFor|seedFrom|hashString' apps/web/scripts/music/tracks.mjs | head; grep -n -E 'card\\\\.name' apps/web/scripts/music/*.mjs apps/w\u2026\n- Bash: {\"command\": \"sed -n 871,880p apps/web/scripts/music/tracks.mjs\", \"description\": \"Read introSpec seed\"}\n- Bash: {\"command\": \"git grep -n -E 'NAME_MAX|name\\\\.len\\\\(\\\\) *[<>]|name.length *[<>]|nameLength|NAME_LENGTH' -- crates apps/web/src | grep -v -i custom | head -10\", \"description\": \"Look for card name lengt\u2026\n- Bash: {\"command\": \"git grep -n -i -E 'TEXT_MAX|text limit|MAX_TEXT|text_max' -- crates/engine/src/config.rs crates/cards/tests apps/web/src/cards/*.ts | head -10\", \"description\": \"Look for card text length\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/cards/textLimit.test.ts | grep -n -E 'stinkyscape-088|meditative-095-1|core-090|FACE_TEXT_LIMIT|lines|chars|EXEMPT|exempt|shortText|over' | head -20; git grep -\u2026\n- Bash: {\"command\": \"sed -n 175,230p apps/web/src/cards/shortText.ts\", \"description\": \"Read faceLines wrapping logic\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\ndef fl(text,c=28):\\n n=0\\n for line in text.split(\\\"\\\\n\\\"):\\n w=0;n+=1\\n for word in line.split(\\\" \\\"):\\n if w==0: w=len(word)\\n elif w+1+len(word)<=c: w+=1+len(wor\u2026\n- Bash: {\"command\": \"git rev-parse origin/main 2>&1 | head -2; sed -n 875,890p crates/server/src/loadout.rs | head -5; grep -n 'cfg(test)' crates/server/src/loadout.rs | head -3\", \"description\": \"Check origi\u2026\n- Bash: {\"command\": \"git grep -n 'eugenic' -- . ':!crates/cards/patches' ':!reviews' ':!training' | grep -v -i 'eugenics' | head\", \"description\": \"Find eugenic word-pattern mentions\"}\n- Bash: {\"command\": \"git grep -n -E 'const (FORCED_GAMES|UNFORCED_GAMES|RULE_MIN_GAMES)' crates/tools/src | head\", \"description\": \"Check stage 2 game counts\"}\n- Bash: {\"command\": \"grep -n -E '^\\\\s*(pub )?(name|title|label)\\\\s*:' crates/engine/src/wire/events.rs | head; grep -n -E 'title|label' crates/engine/src/view_for.rs | head -10\", \"description\": \"Check whethe\u2026\n- Bash: {\"command\": \"sed -n 1135,1150p crates/engine/src/wire/events.rs; sed -n 550,585p crates/engine/src/view_for.rs\", \"description\": \"Read named event and view label code\"}\n- Bash: {\"command\": \"ls crates/tools/fuzz-corpus/ | head; git grep -l -E '\\\"(core-002|core-042|core-090|core-090-1|meditative-061|meditative-095-1|stinkyscape-044|stinkyscape-088|traininggrounds-029|training\u2026\n- Bash: {\"command\": \"grep -o -E '\\\"(catalogVersion|version|hash|finalHash)\\\": *\\\"[^\\\"]*\\\"' crates/ai/tests/fixtures/pinned-improve-dev-154.json | sort | uniq -c | head; git grep -n -E 'pub const CATALOG_VERS\u2026\n- Bash: {\"command\": \"sed -n 705,718p crates/cards/src/lib.rs | grep -n 'fn '; grep -n 'fn r279_names_a_card' crates/cards/tests/cross/references.rs; grep -n 'it(\\\"R2196003\\\\|fn r2196003' -r crates/cards/src/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2953/.bot-plan.md\", \"content\": \"**Goal.** Rename `core-002` Bigot \\u2192 Speciesist, `traininggrounds-041` Legacy: Bigot \\u2192 Legacy: Speciesist, `t\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-2953/.bot-plan.md <<'EOF'\\n\\n(draft continues: steps being written; see final message)\\nEOF\\nwc -w /home/runner/work/_temp/work/item-2953/.bot-pl\u2026\n- Bash: {\"command\": \"cat > /tmp/p2953/scripts/rename.pl <<'EOF'\\ns/CN-Viral Injection/Super-Virus Injection/g; s/CN Viral Injection/Super-Virus Injection/g;\\ns/CN-Viral/Super-Virus/g; s/CN-Viruses/Super-Viru\u2026\n- Bash: {\"command\": \"cd /tmp/p2953 && diff -u orig/crates/cards/card-text.yaml tree/crates/cards/card-text.yaml | grep '^[-+]' | grep -v '#'; grep -rn \\\"Selective Breeding's\\\" tree | cut -c1-170 | head -8; d\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\nt=open(p,encoding='utf-8').read()\\nt=t.replace(\\\"\\\\n(draft continues: steps being written; see final message)\\\\n\\\",\\\"\\\")\\nt+=r'''\\n## Steps\\n\\n1. \u2026\n- Bash: {\"command\": \"grep -n -E 'cards' crates/tools/src/fuzz.rs | grep -i -E 'arg|split|value_delimiter|long' | head -8\", \"description\": \"Check fuzz --cards argument format\"}\n- Bash: {\"command\": \"git grep -n -B2 -A6 'fn from_cards' crates/tools/src | head -20; git grep -n -B3 'pub cards:' crates/tools/src/fuzz.rs | head -10\", \"description\": \"Read Forcing::from_cards parsing\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\nt=open(p,encoding='utf-8').read()\\nold=\\\"cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && git status --porcelain -- a\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2953/.bot-plan.md\", \"limit\": 30}\n- Bash: {\"command\": \"sed -i 's/^\\\\*\\\\*Goal\\\\.\\\\*\\\\* /## Goal\\\\n\\\\n/' .bot-plan.md && sed -n 30,200p .bot-plan.md\", \"description\": \"Normalize Goal heading and print rest of plan\"}\n- said: ## Goal Rename `core-002` Bigot \u2192 Speciesist, `traininggrounds-041` Legacy: Bigot \u2192 Legacy: Speciesist, `traininggrounds-029` Oriental \u2192 Easterner, `stinkyscape-044` Great Replacement Theory \u2192 Great Paperclip Theory, `core-042` Eugenics \u2192 Selective Breeding, `core-090` CN-Viral Injection \u2192 Super-Vi\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-03T18:32:44Z",
       "owner_why": "it plans it",
@@ -15807,9 +15799,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-03T18:14:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41694841904",
+      "run_id": "pending:c269115c-1793733557",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T18:32:44Z",
+      "started_at": "2026-11-03T19:19:50Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15972,9 +15964,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T18:58:10Z",
+    "at": "2026-11-03T19:19:50Z",
     "url": "",
-    "what": "spot-check #2951 on claude-6"
+    "what": "build #2953 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-03T18:40:36Z",
