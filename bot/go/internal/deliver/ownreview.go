@@ -69,17 +69,19 @@ func (x *Deliverer) handOn(pr int, head string) string {
 		source = py.OrStr(x.Plan.Get("source"), "request")
 	}
 	rounds, roundTier := x.rounds()
-	reservation := pyjson.New("provider", x.Provider.ID, "since", clock.ISO(now), "until", clock.ISO(until),
-		"head", head, "from_run", x.Cfg.RunID, "kind", kind, "source", source, "gates", checks,
-		"rounds_used", rounds, "round_tier", roundTier, "rounds_on", roundsOn)
+	// The model that built the head reviews it and fixes what it finds (#2903): one model, one lane.
+	model := x.headModel()
+	reservation := pyjson.New("provider", x.Provider.ID, "model", model, "since", clock.ISO(now),
+		"until", clock.ISO(until), "head", head, "from_run", x.Cfg.RunID, "kind", kind, "source", source,
+		"gates", checks, "rounds_used", rounds, "round_tier", roundTier, "rounds_on", roundsOn)
 	x.remember(pr, pyjson.New(queue.OwnReviewKey, reservation, "queued_at", clock.ISO(now)))
 	queue.SetStateLabel(x.Ctx, pr, x.Labels(pr), config.LabelOwnReview)
 	x.OwnReviewPR = pr
 	x.log(fmt.Sprintf("#%d: its own review run on %s is next; its lane is kept until %s", pr,
 		x.Provider.ID, clock.ISO(until)))
-	reviewer := "its lane's reviewer"
-	if x.ReviewSeat != nil {
-		reviewer = x.ReviewSeat.Describe()
+	reviewer := "the model that built it"
+	if seat := x.Cfg.Pool.Seat(x.Provider.ID, model); seat != nil {
+		reviewer = seat.Describe() + ", the model that built it,"
 	}
 	return fmt.Sprintf("Its own review run is next, on `%s` (`%s`): %s reviews it adversarially in a "+
 		"fresh session, reads its CI, and fixes what it finds in the same run, up to %d rounds. Once it "+

@@ -322,8 +322,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0077_news_claims.sql"),
     ),
     (
-        "0078_card_versions.sql",
-        include_str!("../../migrations/0078_card_versions.sql"),
+        "0078_practice_claim_counts.sql",
+        include_str!("../../migrations/0078_practice_claim_counts.sql"),
+    ),
+    (
+        "0079_card_versions.sql",
+        include_str!("../../migrations/0079_card_versions.sql"),
     ),
 ];
 

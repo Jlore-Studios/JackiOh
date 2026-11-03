@@ -1,4 +1,4 @@
--- A card pick keeps a version and its augments (migration 0078, SPEC §14.2; R2725000; issue #2725).
+-- A card pick keeps a version and its augments (migration 0079, SPEC §14.2; R2725000; issue #2725).
 -- Runs after 42_animated_art.sql; profile 1 (11111111-…) exists by then, and
 -- 34_cosmetic_loadouts.sql holds the table's columns, RLS and grants.
 \set ON_ERROR_STOP on
@@ -48,14 +48,14 @@ declare
                 values (%L, 'core-004', array['augment-animated', null])$q$, p1)]];
   i int;
 begin
-  -- The constraints are there, and they are 0078's, so the refusals below are their own.
+  -- The constraints are there, and they are 0079's, so the refusals below are their own.
   select pg_get_constraintdef(oid)
     into v_text
     from pg_constraint
    where conrelid = 'public.card_cosmetic_picks'::regclass
      and conname = 'card_cosmetic_picks_full_art_id_check';
   if v_text is null or position('version' in v_text) = 0 then
-    raise exception 'FAIL (R2725000): card_cosmetic_picks_full_art_id_check is not 0078''s: %', coalesce(v_text, '(missing)');
+    raise exception 'FAIL (R2725000): card_cosmetic_picks_full_art_id_check is not 0079''s: %', coalesce(v_text, '(missing)');
   end if;
   if not exists (select 1 from pg_constraint
                   where conrelid = 'public.card_cosmetic_picks'::regclass
@@ -94,9 +94,9 @@ end $$;
 
 rollback;
 
-\echo '### R2725000: 0078 re-applies and keeps its checks ###'
+\echo '### R2725000: 0079 re-applies and keeps its checks ###'
 begin;
-\i /tmp/0078_card_versions.sql
+\i /tmp/0079_card_versions.sql
 do $$
 declare
   p1 constant uuid := '11111111-1111-1111-1111-111111111111';
@@ -106,10 +106,10 @@ begin
   begin
     insert into public.card_cosmetic_picks (profile_id, card_id, augments)
     values (p1, 'core-004', array['foil-rainbow']);
-    raise exception 'FAIL (R2725000): after re-applying 0078, an augments list naming a foil was accepted';
+    raise exception 'FAIL (R2725000): after re-applying 0079, an augments list naming a foil was accepted';
   exception when check_violation then
     null;
   end;
-  raise notice 'OK (R2725000): 0078 re-applies, and its checks still keep a version and augments and refuse a bad one';
+  raise notice 'OK (R2725000): 0079 re-applies, and its checks still keep a version and augments and refuse a bad one';
 end $$;
 rollback;

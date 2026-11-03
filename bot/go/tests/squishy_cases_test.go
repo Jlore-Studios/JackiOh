@@ -391,6 +391,35 @@ func TestSquishyCases_ItKeepsItsOneRunFlow(t *testing.T) {
 	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
 }
 
+// One lane and one model from plan to own review (#2903) are the night bot's alone: Squishy chains
+// nothing (`own_review_run` off) and holds nothing (`hold_minutes` 0), so no plan of its takes a lane
+// of its own, even with a planning lane, nor keeps one for a build, and its build records no
+// planner's model: it plans, builds and reviews in one run, as before.
+func TestSquishyCases_OneLaneAndOneModelAreTheNightBotsAlone(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertFalse(t, world.cfg.OwnReviewRun)
+	assertEqual(t, world.cfg.HoldMinutes, 0)
+	assertFalse(t, plan.PlanChains(world.cfg, queue.NewCandidate(12, "build", "", false, "")))
+	lanes := plan.ReadLanes(world.ctx, world.ctx.Store.Load())
+	lanes.PlanLimit = 2 // even with a planning lane
+	assertEqual(t, len(plan.InLanePlanners(world.ctx, world.ctx.Store.Load(), lanes, false, plan.AnyQuiet)), 0)
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	r := workFake(map[string]runner.Handler{
+		"build": func(request *runner.RunRequest) *runner.RunResult {
+			writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+			return runner.NewRunResult(true, squishyCasesDone)
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }})
+	planned, result := world.run(r)
+	assertEqual(t, []any{planned.Get("action"), planned.Has("build_next"), result.Get("status")},
+		[]any{"build", false, "approved"})
+	record := world.ctx.Store.Load().Obj("items").Obj("12")
+	for _, key := range []string{queue.BuildNextKey, queue.PlanModelKey, queue.InLaneKey} {
+		assertFalse(t, record.Has(key), key)
+	}
+}
+
 // Squishy keeps no usage history (#2749): its config leaves `usage_history` off and its identity
 // names no usage branch, so its runs keep no readings, its claims note nothing for one, its
 // deliveries spool nothing, and its loop clones and pushes nothing.

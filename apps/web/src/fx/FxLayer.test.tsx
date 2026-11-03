@@ -12,7 +12,7 @@ import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { FX_CALLOUT_MS, FX_TEXT } from "./constants.ts";
+import { FX_CALLOUT_MS, FX_STACK_LAND, FX_TEXT } from "./constants.ts";
 import FxLayer, { type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
 import type { FxSurface } from "./surface.ts";
@@ -1005,15 +1005,21 @@ describe("S9 — the default catalog and the surface seam", () => {
     // core-019 is Brute in the bundled catalog, so its entrance shakes the board (#1445).
     expect(fx.shakes).toContain("apply");
     // Every measure is the landing zone: at its foot for the dust (the base burst plus the Brute's
-    // two), and bare for the stand-in that follows it.
+    // two), and bare for the stand-in that follows it. R2791000: lane 3 stands occupied (u3, the
+    // file's id scheme above), so the Stack beat measures first: its burst over the occupant, its
+    // callout and count over it bare.
     const zone = { kind: "testid", testid: "zone-you-units-3" };
+    const occupant = { kind: "testid", testid: "card-u3" };
     expect(fx.measured.filter((anchor) => anchor.kind === "testid" && anchor.at !== undefined)).toEqual([
+      { ...occupant, at: { ...FX_STACK_LAND } },
       { ...zone, at: { x: 0.5, y: 1 } },
       { ...zone, at: { x: 0.5, y: 1 } },
       { ...zone, at: { x: 0.5, y: 1 } },
     ]);
     expect(fx.measured.filter((anchor) => !(anchor.kind === "testid" && anchor.at !== undefined)).length).toBeGreaterThan(0);
-    for (const anchor of fx.measured) expect(anchor).toMatchObject(zone);
+    for (const anchor of fx.measured) {
+      expect(anchor.kind === "testid" ? [zone.testid, occupant.testid].includes(anchor.testid) : true).toBe(true);
+    }
   });
 
   it("S9 a catalog seam overrides CatalogContext", () => {

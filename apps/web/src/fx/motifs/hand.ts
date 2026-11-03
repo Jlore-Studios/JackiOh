@@ -1,19 +1,21 @@
 // R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,
-// tithe, tally and send (#2793). Like the damage motifs (damage.ts) each plays in the entry's
+// tithe, tally and send (#2793), then #2796's deal (cards dealt into a hand or deck) and seal (a
+// lasting modifier laid on a seat). Like the damage motifs (damage.ts) each plays in the entry's
 // phases (build.ts) and plans nothing without an event it reads.
-
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { animTestid, locateInstance, type AnimationEntry } from "../../game/animations.ts";
 import { sideOf, testid, type Side } from "../../game/contract.ts";
 import { tid } from "../build.ts";
-import { FX_MANA_MAX_SPARKS, FX_MOTIF_TITHE_MAX } from "../constants.ts";
+import { FX_MANA_MAX_SPARKS, FX_MOTIF_DEAL_MAX, FX_MOTIF_TITHE_MAX } from "../constants.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../types.ts";
 import {
   flies,
   MOTIF_TUNING,
   motifBurst,
+  motifRing,
   motifShake,
+  motifShot,
   readEvents,
   sourceOf,
   timesOf,
@@ -147,7 +149,7 @@ export const tithe: MotifPlanner = {
   },
 };
 
-const TALLY_READS = ["counterChanged", "questProgressed"] as const;
+const TALLY_READS = ["counterChanged", "questProgressed", "jadeChanged"] as const;
 
 /** tally: a quest's or a counter's tick: a sparkle where the card stands. */
 export const tally: MotifPlanner = {
@@ -186,6 +188,67 @@ export const send: MotifPlanner = {
       if (flies(from, h.at)) cues.push({ kind: "ghost", from, to: h.at, delayMs: t.T, durationMs: t.L - t.T });
       cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
     }
+    cues.push(...motifShake(spec, t.L));
+    return cues;
+  },
+};
+
+const DEAL_READS = ["addedToHand", "shuffledIn", "fused"] as const;
+
+/**
+ * Where a deal's cards fly from: the first event's source (the resolving play's hero), else, for a card
+ * added to a hand or shuffled into a deck with no play to read, its receiver's hero; null for a fuse.
+ */
+function dealtFrom(event: GameEvent, view: PlayerView, env: FxPlanEnv): FxAnchor | null {
+  const from = sourceOf(event, view, env);
+  if (from !== null) return from;
+  if (event.type === "addedToHand" || event.type === "shuffledIn") return tid(testid.hero(sideOf(view, event.player)));
+  return null;
+}
+
+/** deal: cards dealt from the caster into a hand or a deck, each a card back flying in and landing with a sparkle; no shake. */
+export const deal: MotifPlanner = {
+  reads: DEAL_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, DEAL_READS).slice(0, FX_MOTIF_DEAL_MAX);
+    const first = hits[0];
+    if (first === undefined) return [];
+    const t = timesOf(entry.durationMs);
+    const from = dealtFrom(first.event, view, env);
+    const cues: FxCue[] = [];
+    if (from !== null) cues.push(motifBurst(spec, from, "point", t.G, MOTIF_TUNING.gather));
+    for (const h of hits) {
+      if (flies(from, h.at)) cues.push({ kind: "ghost", from, to: h.at, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    }
+    return cues;
+  },
+};
+
+const SEAL_READS = ["modifierChanged"] as const;
+
+/** seal: a lasting modifier laid on a seat: a bolt from the caster, a ring closing on the seat's modifiers and a slow afterglow. */
+export const seal: MotifPlanner = {
+  reads: SEAL_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, SEAL_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    const cues: FxCue[] = [];
+    for (const h of hits) {
+      if (h.event.type !== "modifierChanged" || !h.event.added) continue;
+      const from = sourceOf(h.event, view, env);
+      if (flies(from, h.at)) {
+        cues.push(motifBurst(spec, from, "point", t.G, MOTIF_TUNING.gather));
+        cues.push(motifShot(spec, "bolt", from, h.at, t.T, t.L - t.T));
+      }
+      cues.push(motifRing(spec, t.D, h.at, t.L));
+      cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.land));
+      cues.push(motifBurst(spec, h.at, "area", t.Li, MOTIF_TUNING.linger));
+    }
+    if (cues.length === 0) return [];
     cues.push(...motifShake(spec, t.L));
     return cues;
   },

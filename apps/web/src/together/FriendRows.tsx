@@ -172,11 +172,11 @@ export function FriendRow({
             <button
               type="button"
               data-testid={togetherTestid.watch}
-              data-route={watchLink(friend.matchId, friend.profileId)}
+              data-route={watchLink(friend.matchId, friend.profileId, friend.duos === true)}
               onClick={() => {
                 if (friend.matchId === null) return;
                 onWatch?.();
-                navigate(watchLink(friend.matchId, friend.profileId));
+                navigate(watchLink(friend.matchId, friend.profileId, friend.duos === true));
               }}
             >
               {t("Watch")}

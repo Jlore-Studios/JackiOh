@@ -476,6 +476,7 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
+  public.practice_claim_counts,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
@@ -8854,7 +8855,8 @@ mod social {
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series not over holds, each one's newest live co-op match, and whose
     /// live 1v1 the viewer may watch (friends, unblocked, live, ranked or not, seating the friend and
-    /// not the viewer; no setting of the friend's refuses it, R2615000). Each answers in the order named.
+    /// not the viewer; no setting of the friend's refuses it, R2615000), and which co-op matches seat
+    /// someone the viewer stands blocked with (R2881000). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -8950,6 +8952,22 @@ mod social {
             ]
         );
         assert!(q!(harness, t => t.presence_in_duos(&[])).is_empty());
+
+        // R2881000: the co-op matches seating someone the viewer stands blocked with, either way:
+        // `blocked` blocked the viewer, and the viewer now blocks `stranger`.
+        let teamed = coop_match(&watched.id, &blocked.id, now - 250);
+        q!(harness, t => t.duos_matches_create(&teamed));
+        q!(harness, t => t.blocks_add(&viewer.id, &stranger.id, now));
+        let games: Vec<String> = [&newer.id, &teamed.id, &"not-a-uuid".to_string(), &older.id]
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.presence_duos_blocked(&viewer.id, &games)),
+            vec![teamed.id.clone(), older.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_duos_blocked(&viewer.id, &[])).is_empty());
+        assert!(q!(harness, t => t.presence_duos_blocked("not-a-uuid", &games)).is_empty());
     }
 
     /// R1435000: the friends a sharer shared a finished match with, read as the friend's own read
@@ -9517,10 +9535,11 @@ mod duos {
 mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
-    use jackioh_server::economy::practice::ClaimedResult;
+    use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
         CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
-        JloreGrant, PracticeClaim, PracticeOutcome, PracticeSeed, PracticeSettled, QuestGrant, TrackGrant,
+        JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled,
+        QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -10622,6 +10641,49 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
     }
 
+    /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
+    /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
+    /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
+    /// outcomes in byte order.
+    async fn practice_claims_count_once_per_bucket_and_utc_day(harness: &StoreHarness) {
+        let day = 86_400_000_i64;
+        assert_eq!(q!(harness, t => t.economy_practice_claim_counts()), Vec::new());
+        for bucket in ClaimBucket::ALL {
+            q!(harness, t => t.economy_practice_claim_count(*bucket, 10 * day));
+        }
+        q!(harness, t => t.economy_practice_claim_count(ClaimBucket::Paid, 11 * day - 1));
+        q!(harness, t => t.economy_practice_claim_count(ClaimBucket::Refused(ClaimRefusal::Expired), 11 * day));
+        {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.economy_practice_claim_count(ClaimBucket::Paid, 10 * day)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the count: {error}", harness.name));
+            // Dropped without a commit: the rollback.
+        }
+        let row = |day: &str, outcome: &str, count: i64| PracticeClaimCount {
+            day: day.to_string(),
+            outcome: outcome.to_string(),
+            count,
+        };
+        assert_eq!(
+            q!(harness, t => t.economy_practice_claim_counts()),
+            vec![
+                row("1970-01-11", "already_claimed", 1),
+                row("1970-01-11", "does_not_fold", 1),
+                row("1970-01-11", "economy_off", 1),
+                row("1970-01-11", "expired", 1),
+                row("1970-01-11", "not_finished", 1),
+                row("1970-01-11", "paid", 2),
+                row("1970-01-11", "result_mismatch", 1),
+                row("1970-01-11", "unknown_seed", 1),
+                row("1970-01-11", "voided", 1),
+                row("1970-01-12", "expired", 1),
+            ],
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10642,6 +10704,7 @@ mod economy {
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
+        practice_claims_count_once_per_bucket_and_utc_day,
     );
 }
 
@@ -10858,7 +10921,7 @@ mod cosmetic_loadouts {
         );
     }
 
-    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0078's
+    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0079's
     /// `augments`, and the `full_art_id` check widened to `version-…`), through a put and an upload, a row
     /// of augments alone among them; a put with none takes them away, and an id the registry does not know
     /// is kept too.

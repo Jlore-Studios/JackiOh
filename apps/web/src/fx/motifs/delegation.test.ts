@@ -68,17 +68,18 @@ const DELEGATED: readonly Delegated[] = [
   {
     recipe: "buff",
     events: () => [{ type: "upgraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: 1, health: 1 } }],
-    motif: "bless",
-    flavor: "Holy",
+    motif: "transmute",
+    flavor: "Nerd",
   },
   {
     recipe: "buff",
     events: () => [{ type: "degraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: -1, health: -1 } }],
-    motif: "curse",
-    flavor: "Dark",
+    motif: "transmute",
+    flavor: "Nerd",
   },
-  { recipe: "armor", events: () => [{ type: "damageAbsorbed", sourceId: null, targetId: ENEMY, absorbed: 5, combat: false }], motif: "ward", flavor: "Holy" },
-  { recipe: "shieldBreak", events: () => [{ type: "divineShieldLost", instanceId: ENEMY }], motif: "ward", flavor: "Holy" },
+  // Issue #2790: `armor` and `shieldBreak` still route through `ward`, but their entries now
+  // carry beat callouts too, so `planFx`-equals-`planMotif` no longer holds for them; beats.test.ts
+  // pins them instead.
   { recipe: "draw", events: () => [{ type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" }], motif: "flight", flavor: "Spirit" },
   { recipe: "mana", events: () => [{ type: "manaChanged", player: "p1", current: 4, max: 4 }], motif: "mana", flavor: "Holy" },
   {

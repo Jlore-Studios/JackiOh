@@ -22,7 +22,10 @@ Every catalog card starts as `"none: pending"` and moves up a tier in its set's 
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
 Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the marquee entrances of
 BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
-names, below).
+names, below), and the Flourishes of the set passes, each built from the motifs' cue helpers
+(`fx/motifs/build.ts`): Meditative #39.1 Auspicious Rock's `jadeCrack`, #32 Spiritually 中国's
+`cnSweep` and Meditative+ #21 Harmony Spirit's `harmonyWave` (#2796, `fx/cards/meditative/`,
+`fx/cards/meditativeplus/`; their per-card table is `fx/cards/meditative.md`).
 
 Core's pass (#2793) adds three flourishes, each built from the motif primitives at the card's motif
 scale (`fx/cards/core/flourish.ts`) and drawn over the event rows (`keep`):
@@ -32,6 +35,23 @@ scale (`fx/cards/core/flourish.ts`) and drawn over the event rows (`keep`):
 | #83 Transmogulate | `legendaryTide` | its transforms land in a hand and a deck the board does not show: Legendary rays over the caster's Deck and hand piles at the first, a sheen on each hand card the viewer reads |
 | #97 Zephrys | `perfectWish` | its "perfect" card blows in from the far side: a star from the other hero into the caster's hand pile in Mythic rays |
 | #99 Craft a Card | `fusionForge` | its Discovered Units fuse off the board and no motif reads `fused`: two halves forged at the board's centre, the card flying on into the hand |
+
+Classic+'s pass (#2795, R2795000) adds three Flourishes beside Crushing Walls, each for a
+card whose one event no motif reads: #35 Rollback (`rollbackSweep`: an arcane ring runs back from lane 5
+to lane 1 on the sides it rolls back, then the heroes glint), #41 KY's Constant (`constantStamp`: the new
+number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: each discarded card torn
+out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
+phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
+
+Stinkyscape's pass, part two (#2798), adds three more, in `fx/cards/stinkyscape/` on the same shared
+spec (`fx/cards/core/flourish.ts`); the two mark flourishes draw in the colors of the mark the engine
+sends (`stinkyscape/markLook.ts`), as its brand row does:
+
+| Card | Recipe | Why bespoke |
+|---|---|---|
+| #110 iKwzki | `duoBond` | its Duo is a bond between two cards and no motif reads `marked`: a beam from iKwzki (its caster's hero when it is off the board) to the permanent it Duos with, Radiant rays there, in the Duo mark's gold |
+| #146 Flash Freeze | `flashFreeze` | it freezes the whole board in one breath and no motif reads `marked`: at its first freeze a frost wave across both sides lane by lane into one ring over the board, a sheen and a burst on each Unit frozen, in the freeze mark's cyan |
+| #158 Stratos Swarm | `stratosSwarm` | conjure's circle lands one Unit, where the Swarm fills the board: each Stratos streaking in on a `Tech/rocket` trail from its caster's hero to the zone it fills, one shake a play |
 
 ## The motifs
 
@@ -86,6 +106,15 @@ each:
 | `send` | addedToHand, shuffledIn | nothing | a gather at the caster's hero (the receiver's with no play), a card back flying to the hand or the library, and its sparkle there; no shake |
 | `radiance` | radiantSet | nothing | a sheen and a burst over the card made Radiant (its hand pile for a hand card the viewer may not read), and once a play the Radiant rays |
 | `mend` | healed | nothing | a sheen over the healed hero or unit, a ring closing as it lands and a soft afterglow; the heal's number stays on its row; no shake |
+
+Drawn in #2796, Meditative's pass, built beside #2793's: `seal` for an event no motif read that comes up
+on three or more Meditative cards, and `deal`, written at the same time as `send`, which it widens (it
+also reads a fuse, gathers once an entry and caps its cards; a later pass may fold the two into one):
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `deal` | addedToHand, shuffledIn, fused | nothing | a gather at the caster's hero (the receiver's with no play), then a card back flying to each hand, deck or card dealt, at most `FX_MOTIF_DEAL_MAX` an entry, landing with a sparkle; no shake |
+| `seal` | modifierChanged (an add) | nothing | a bolt from the resolving play's hero to the seat's modifiers, a ring closing on them and a slow afterglow |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -249,6 +278,15 @@ A set's pass (#2782's parts, Core's #2793 the first) fills its table from `cargo
 A motif joins the vocabulary when three or more of a set's cards show an event no motif reads; a
 card no motif can say takes a recipe of its own (Tiers, above).
 
+Stinkyscape's two parts each hold their own file to the pass: part two's are `stinkyscape-2.test.ts`
+and `stinkyscape-2.md` (#2798), over `stinkyscape-091` to the end with the set's tokens. The
+Starship's own moments (the fuse, the launch, Launch Sequencer, #130 Jlockeed's Starship Retrofitting
+Program and the Launchers #140 to #143) are #2782's Starship part: a card whose only hook is one of
+them is `"none: Starship part"`, the one `none` a Spell of the pass may wear, and a Starship Piece's
+other hooks take their entries in the pass. Part two adds no motif: every event it shows on three or
+more of its cards is read already (`send`, `mend`), and the two cards whose `marked` is the moment
+take recipes.
+
 ### Dispatch
 
 `planFx` asks `planCardMotif` first, for every entry. It reads the play resolving now
@@ -280,10 +318,12 @@ and a card its hits already reached dies under its own row, so a lethal bolt fli
 
 A **beat** is #2782's smallest tier: a short decoration inside the entry of the event it keys on (at most
 about 400 ms at speed 1), holding nothing and reading no card. The nine combat keywords each have one
-(`fx/motifs/beats.ts`, ruling R2789000), planned by `planFx` after the cast cues and built from the
+(`fx/motifs/beats.ts`, ruling R2789000), and the ten tempo and card keywords one more each (ruling
+R2791000), planned by `planFx` after the cast cues and built from the
 helpers of `fx/motifs/build.ts` (`CueSpec` is the part of a motif's spec they read). The beats key on the
 `via` of #2783's events (R2783001), and on the keywords the view shows on an attacker for the three that
-act when it attacks.
+act when it attacks; the tempo beats key on the existing events plus the keywords and ids the view
+shows, a landing on the played card's hand keywords, never a hidden card.
 
 | Keyword | Keyed on | Beat |
 |---|---|---|
@@ -296,9 +336,20 @@ act when it attacks.
 | Poisonous | `destroyed`, `via: Poisonous` | the callout over the poisoner; the poison burst is the death recipe's (`sourceIsPoisonous`'s guess from the view is gone) |
 | Ranged | `attackDeclared` by a Ranged unit | the callout; the flavor shot stays `stage.ts`'s |
 | Flying | `attackDeclared` by a Flying unit | the callout; the lunge carries `arc`, and the director sets `--fx-lunge-lift` (`FX_FLYING_LUNGE_LIFT`) so `jk-lunge` lifts toward the viewer |
+| Charge | `summoned`, the played card's hand keywords showing Charge | speed lines (`FX_CHARGE_LINE_SPREAD`) and a forward lean at the enemy hero as it lands, then a dash on its first attack that turn |
+| Rush | `summoned`, the played card's hand keywords showing Rush | as Charge, but the lean points at the first enemy unit, never the hero (skipped when none shows); its own first-attack dash |
+| Equip | `fused`, the kept result on the field with no ingredient there | the equipment flies from the hand region onto its host and snaps on, with a gold ring; the stat tick-up stays the `bless` row's |
+| Tradable | `traded`, then the trade's `shuffledIn` and `drawn` | the card swirls hand region to library; the drawn card answers with a sparkle over the hand region, no second ghost (`flight` owns the flight) |
+| Stack | `summoned` into an occupied slot | a gold burst at `FX_STACK_LAND` and a `zone` count pulse of the new pile total at `FX_ZONE_COUNT_AT` |
+| Spell Damage | non-combat `damage`/`damageAbsorbed` while a Spell resolves, first entry | the hit burns hotter, with a `+N` sigil (the view's total) over the source |
+| Lucky | `rolled` with extra draws | a leaf burst and a gold ring over the roll panel at each extra roll's `rollLandAt`, the kept face the panel's own highlight |
+| Deft | `attackDeclared` after a same-turn `positionSwitched` | two Spirit bolts feinting out `FX_DEFT_FEINT_STEP` and back, under a sheen |
+| Flashback | `cardPlayed` with `from: "graveyard"`, then its `exiled` | the card rises from the graveyard pile in a ghost frame, then dissolves at the exile pile once its graveyard play is in the history |
+| Temporary | `discarded`, the hand card's Temporary count | the hourglass count over the hand card, dissolving in smoke and embers |
 
 **The callout** (`fx/motifs/callout.ts`) is the shared cue every keyword part of #2782 uses: the keyword's
-icon (`KEYWORD_CALLOUT_ICONS`, `cards/keywordVisuals.ts`) pops over a unit for `FX_CALLOUT_MS`
+icon (`KEYWORD_CALLOUT_ICONS`, `cards/keywordVisuals.ts`: the nine combat icons plus R2791000's ten
+tempo ones) pops over a unit for `FX_CALLOUT_MS`
 (`.fx-callout`, a badge on the unit's top edge). A repeat of one keyword over a unit takes the first's place.
 
 **Several keywords on one hit:** each fires its beat, `FX_BEAT_STAGGER_MS` apart (scaled with the speed,
@@ -384,4 +435,13 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
 - #2782's full text, with its 27 motif names and section 4's table layout, is not in the
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
+- `cargo jackioh fx census` suggests only #2784's damage and removal motifs, `rise` and `offering`:
+  its `FAMILY_EVENTS` and `FAMILY_MOTIFS` (`crates/tools/src/fx_census.rs`) know none of #2786's
+  other motifs nor #2793's, so a pass maps the events it counts through the Reads column above, with
+  a reason per override (`core.md`, `stinkyscape-2.md`).
 - `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
+- The census's `FAMILY_MOTIFS` knows only damage, removal, return and cost, so for a draw, a buff, a
+  summon, a card dealt or a modifier it says `none: no motif reads …`; a set pass maps that event to
+  the motif whose Reads column names it (#2796's `meditative.md` does, card by card, as Classic+'s
+  `classicplus.md` does, R2795000). It also takes a hook's window's turn and draw events (`turnEnded`,
+  `manaChanged`, `drawn`) as the hook's own, which Classic+'s pass overrides with the hook's own event.

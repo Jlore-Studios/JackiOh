@@ -11,37 +11,37 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "meditativeplus-001": "none: pending", // Bob's Plan
-  "meditativeplus-001-1": "none: pending", // Base Camp
-  "meditativeplus-001-2": "none: pending", // Spa Day
-  "meditativeplus-001-3": "none: pending", // Garage Sale
-  "meditativeplus-001-4": "none: pending", // Leg Day
-  "meditativeplus-001-5": "none: pending", // Star Chart
-  "meditativeplus-002": "none: pending", // NA Tech
-  "meditativeplus-003": "none: pending", // Wondrous Wand
-  "meditativeplus-004": "none: pending", // Jlockeed's Supply Drop
+  "meditativeplus-001": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Bob's Plan
+  "meditativeplus-001-1": { cast: { motif: "deal" } }, // Base Camp
+  "meditativeplus-001-2": { cast: { motif: "deal" } }, // Spa Day
+  "meditativeplus-001-3": { cast: { motif: "vanish", palette: "Hustle/cash" } }, // Garage Sale
+  "meditativeplus-001-4": { cast: { motif: "bless", palette: "Physical/sport" } }, // Leg Day
+  "meditativeplus-001-5": "none: no motif reads starscapeTravelled (its map draws the journey)", // Star Chart
+  "meditativeplus-002": { cast: { motif: "deal", palette: "Tech/hologram" } }, // NA Tech
+  "meditativeplus-003": { cast: { motif: "flight" } }, // Wondrous Wand
+  "meditativeplus-004": { cast: { motif: "seal" } }, // Jlockeed's Supply Drop
   "meditativeplus-005": { cast: { motif: "chain" } }, // Spirit Lash
-  "meditativeplus-006": "none: pending", // Bloodbloom
-  "meditativeplus-007": "none: pending", // Life Mage
-  "meditativeplus-008": "none: pending", // Arch Mage
-  "meditativeplus-009": { aura: { look: "arcane", scope: "board" } }, // Magic Amplifier
-  "meditativeplus-010": "none: pending", // Medina Grifter
-  "meditativeplus-011": "none: pending", // Living Mana Potion
-  "meditativeplus-012": "none: pending", // Living Armor Potion
-  "meditativeplus-013": "none: pending", // Living Health Potion
-  "meditativeplus-014": "none: pending", // Potion Pouch
-  "meditativeplus-015": "none: pending", // Book of Potions
-  "meditativeplus-016": "none: pending", // Jazakus
-  "meditativeplus-016-1": "none: pending", // Jazakus Prime
-  "meditativeplus-017": "none: pending", // Dogpile
-  "meditativeplus-018": "none: pending", // Cognitive Offloading
-  "meditativeplus-019": "none: pending", // Grubby Gloves
-  "meditativeplus-020": "none: pending", // KY's Competition
-  "meditativeplus-020-1": "none: pending", // Lil' Kenny
-  "meditativeplus-021": "none: pending", // Harmony Spirit
-  "meditativeplus-022": "none: pending", // Mountaintop Garden
-  "meditativeplus-023": "none: pending", // Enormous Elderberry
-  "meditativeplus-024": "none: pending", // Bob, Wisconsin's Strongest Soldier
-  "meditativeplus-025": "none: pending", // KY's Intuition
-  "meditativeplus-026": "none: pending", // Scratch Pad
+  "meditativeplus-006": { cast: { motif: "seal", palette: "Dark/blood" } }, // Bloodbloom
+  "meditativeplus-007": "none: vanilla", // Life Mage
+  "meditativeplus-008": "none: vanilla", // Arch Mage
+  "meditativeplus-009": { cast: { motif: "deal" }, aura: { look: "arcane", scope: "board" } }, // Magic Amplifier
+  "meditativeplus-010": { cry: { motif: "tether", palette: "Hustle/cash" } }, // Medina Grifter
+  "meditativeplus-011": { activate: { motif: "seal" } }, // Living Mana Potion
+  "meditativeplus-012": { activate: { motif: "seal" } }, // Living Armor Potion
+  "meditativeplus-013": { activate: { motif: "mend" } }, // Living Health Potion
+  "meditativeplus-014": { cast: { motif: "deal" } }, // Potion Pouch
+  "meditativeplus-015": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Book of Potions
+  "meditativeplus-016": { cry: { motif: "deal" }, death: { motif: "deal" } }, // Jazakus
+  "meditativeplus-016-1": { cry: { motif: "deal" } }, // Jazakus Prime
+  "meditativeplus-017": { cast: { motif: "bolt" } }, // Dogpile
+  "meditativeplus-018": { cast: { motif: "mana", palette: "Tech/hologram" } }, // Cognitive Offloading
+  "meditativeplus-019": { cast: { motif: "tether", palette: "Dark/shadow" } }, // Grubby Gloves
+  "meditativeplus-020": { cast: { motif: "conjure" } }, // KY's Competition
+  "meditativeplus-020-1": "none: unseen (no census game summoned it)", // Lil' Kenny
+  "meditativeplus-021": { bespoke: "harmonyWave" }, // Harmony Spirit
+  "meditativeplus-022": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // Mountaintop Garden
+  "meditativeplus-023": { cast: { motif: "deal" } }, // Enormous Elderberry
+  "meditativeplus-024": { cry: { motif: "deal" } }, // Bob, Wisconsin's Strongest Soldier
+  "meditativeplus-025": { cast: { motif: "deal", palette: "Nerd/pixel" } }, // KY's Intuition
+  "meditativeplus-026": { cast: { motif: "deal", palette: "Nerd/pixel" } }, // Scratch Pad
 }

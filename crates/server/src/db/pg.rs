@@ -7296,6 +7296,37 @@ pub async fn presence_watchable(
     Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
 }
 
+/// One statement: of the named co-op matches, those whose a1 or a2 and `viewer` stand blocked,
+/// either way; in the order the ids were named.
+pub async fn presence_duos_blocked(
+    t: &mut PgTx<'_>,
+    viewer: &str,
+    match_ids: &[String],
+) -> Result<Vec<String>, StoreError> {
+    let ids: Vec<String> = match_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() || !is_uuid(viewer) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(viewer)).await?;
+    let rows = sqlx::query(
+        "select d.id from public.duos_matches d
+          where d.id = any($2::uuid[])
+            and exists (select 1 from public.blocks k
+                         where (k.blocker = $1::uuid and k.blocked in (d.a1, d.a2))
+                            or (k.blocked = $1::uuid and k.blocker in (d.a1, d.a2)))",
+    )
+    .bind(viewer)
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let blocked = rows
+        .iter()
+        .map(|row| uuid_text(row, "id"))
+        .collect::<Result<Vec<String>, StoreError>>()?;
+    Ok(ids.into_iter().filter(|id| blocked.contains(id)).collect())
+}
+
 // profiles (B46)
 
 pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
