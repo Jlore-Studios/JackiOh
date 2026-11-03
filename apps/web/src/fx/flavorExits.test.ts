@@ -17,6 +17,7 @@ import {
   FX_INTENSITY_SCALE,
   FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
+  FX_MOTIF_PHASES,
   FX_RING_MS,
 } from "./constants.ts";
 import { planFx } from "./cues.ts";
@@ -34,8 +35,11 @@ function tid(value: string, point?: FxPoint): { kind: "testid"; testid: string; 
   return point === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at: point };
 }
 
-function burst(preset: string, at: ReturnType<typeof tid>, spread: string, delayMs: number): Loose {
-  return { kind: "burst", preset, at, spread, delayMs };
+function burst(preset: string, at: ReturnType<typeof tid>, spread: string, delayMs: number, colors?: readonly string[]): Loose {
+  return { kind: "burst", preset, at, spread, delayMs, ...(colors === undefined ? {} : { colors: [...colors] }) };
+}
+function shake(trauma: number, delayMs: number): Loose {
+  return { kind: "shake", trauma, delayMs };
 }
 function ring(preset: string, at: ReturnType<typeof tid>, delayMs: number, D: number): Loose {
   return { kind: "ring", preset, at, delayMs, durationMs: Math.min(FX_RING_MS, D - delayMs + T) };
@@ -221,7 +225,7 @@ describe("#1446 a Unit's death exit takes its flavor", () => {
     }
   });
 
-  it("#1446 exiled, bounced, crumbled and transformed cues are unchanged", () => {
+  it("#1446 exiled, bounced and crumbled cues are unchanged, and transformed transmutes", () => {
     for (const D of [350, 732]) {
       expectCues(plan([{ type: "exiled", instanceId: ENEMY_2, defId: "core-013", owner: "p2" }], D), [
         ring("void", cardT(ENEMY_2), 0, D),
@@ -236,9 +240,18 @@ describe("#1446 a Unit's death exit takes its flavor", () => {
         burst("shard", cardT(MINE_3), "ring", r(FX_DEATH_EMBER_AT * D)),
         burst("dust", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
       ]);
+      // R2784000: the transform family plans through one shared transmute, never its own smoke:
+      // the Nerd (arcane) look, with no resolving play in memory. Mirrors cues.test.ts's B16 pin.
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
       expectCues(plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D), [
-        burst("smoke", cardT(MINE_3), "point", 0),
-        burst("arcane", cardT(MINE_3), "point", 0),
+        burst("smoke", cardT(MINE_3), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE_3), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE_3), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
     }
   });

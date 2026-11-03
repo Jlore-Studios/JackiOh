@@ -931,6 +931,19 @@ describe("B46 the game screen, route bar included, fits the viewport", () => {
     });
   }
 
+  it("B46 the match bar keeps to one line at phone, Safari's visible viewport 390x664", () => {
+    cy.viewport(390, 664);
+    mountMatch(fullBoardView(), ONLY_END_TURN);
+    cy.get(".match-bar .clock").should(($clock) => {
+      const clock = $clock[0];
+      if (clock === undefined) throw new Error("the clock is mounted");
+      const range = clock.ownerDocument.createRange();
+      range.selectNodeContents(clock);
+      // One line box, never wrapped word by word into several.
+      expect(range.getClientRects().length, "the clock keeps its words on one line").to.eq(1);
+    });
+  });
+
   it("B46 a tablet held landscape gets the desktop board: the controls in a sidebar right of the field", () => {
     cy.viewport(1024, 768);
     mountGame(fullBoardView());
