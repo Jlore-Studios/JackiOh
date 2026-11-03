@@ -15,6 +15,8 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 	hstate "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 )
 
@@ -61,6 +63,9 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 	state = ctx.Store.Load()
 	notes = append(notes, SyncNeedsPlan(ctx, state)...)
 	lanes := ReadLanes(ctx, state)
+	// The holds for owners (#2748): put on, lifted or released before anything is given out.
+	notes = append(notes, SyncHolds(ctx, state, lanes, force, quiet)...)
+	state = ctx.Store.Load()
 	if !lanes.AnyRoom() {
 		return Nothing(fmt.Sprintf("every lane is busy (%s)", lanes.Describe())).
 			Set("housekeeping", pyjson.ListOf(notes))
@@ -82,8 +87,12 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 		}
 	}
 	if item != nil && mode != "suggest" {
+		why := WhyNone(ctx, state, lanes)
+		if held := Holds(ctx, state, q, lanes, force, quiet)[*item]; held != nil {
+			why = fmt.Sprintf("it is %s; %s", HoldLine(ctx, held), why)
+		}
 		return Nothing(fmt.Sprintf("#%d is not queued (or has failed %d times), or no subscription "+
-			"can take it now: %s", *item, cfg.MaxFailures, WhyNone(ctx, state, lanes))).
+			"can take it now: %s", *item, cfg.MaxFailures, why)).
 			Set("skipped", pyjson.ListOf(skipped))
 	}
 	if mode == "suggest" || mode == "auto" {
@@ -95,6 +104,9 @@ func Make(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, m
 	reason := "nothing is queued"
 	if len(q) > 0 {
 		reason = "no subscription can take the queue now: " + WhyNone(ctx, state, lanes)
+		if held := HeldNote(ctx, Holds(ctx, state, q, lanes, force, quiet)); held != "" {
+			reason += "; waiting for their owners: " + held
+		}
 	}
 	return Nothing(reason).Set("housekeeping", pyjson.ListOf(notes)).Set("skipped", pyjson.ListOf(skipped))
 }
@@ -167,7 +179,7 @@ func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
 		number := py.MustInt(thread.Get("number"))
 		have[number] = true
 		record := recordOf(state, strconv.Itoa(number))
-		planning := queue.LabelNames(thread)[config.LabelWorking] && eqStr(record.Get("action"), "plan")
+		planning := config.IsLive(queue.LabelNames(thread)) && eqStr(record.Get("action"), "plan")
 		if !wanted[number] && !planning {
 			ctx.GH.RemoveLabel(number, needsPlan)
 			notes = append(notes, fmt.Sprintf("#%d left the Needs plan stage", number))
@@ -207,7 +219,7 @@ var PruneEvery = 24 * time.Hour
 // ShedWhenClosed is SHED_WHEN_CLOSED: what a closed thread's record sheds at once: the bulky
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
-	"asks", "taken_asks", "question"}
+	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep
@@ -263,15 +275,16 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 		s.Set("pruned", pyjson.New("at", clock.ISO(now), "dropped", len(gone), "shed", len(shed)))
 		return nil
 	}, "prune")
-	return []string{fmt.Sprintf("pruned the state file: dropped %d closed item(s), lightened %d",
-		len(gone), len(shed))}
+	dropped := sessions.Prune(ctx, openNow) // the Claude sessions kept for closed items (#2748)
+	return append([]string{fmt.Sprintf("pruned the state file: dropped %d closed item(s), lightened %d",
+		len(gone), len(shed))}, dropped...)
 }
 
 // Housekeeping requeues items a dead run left working; queues a revision for conflicted bot
 // PRs; puts back in the merge queue a cleared one it took out with no failed build
 // (`queue.requeue_cleared`).
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
-	labelRevise, labelWorking := config.LabelRevise, config.LabelWorking
+	labelRevise := config.LabelRevise
 	labelBlocked := config.LabelBlocked
 	notes := Prune(ctx, state)
 	for _, thread := range WorkingThreads(ctx) {
@@ -281,16 +294,44 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		if runID != "" && runID == ctx.Cfg.RunID {
 			continue
 		}
+		open := eqStr(thread.Get("state"), "open")
+		if queue.OwnReviewWaits(record) && open {
+			continue // its own review run has not started (#2748): it waits in the state file's queue
+		}
 		if RunStatus(ctx, runID) != "dead" {
 			continue
 		}
-		if !eqStr(thread.Get("state"), "open") { // closed meanwhile: nothing to requeue
+		if !open { // closed meanwhile: nothing to requeue
 			queue.SetStateLabel(ctx, number, queue.LabelNames(thread), "")
+			if queue.OwnReviewOf(record) != nil {
+				ctx.Store.Update(func(s *pyjson.Object) any {
+					hstate.Item(s, number).Pop(queue.OwnReviewKey)
+					return nil
+				}, fmt.Sprintf("own review #%d closed", number))
+			}
+			if spotcheck.Running(state, number) {
+				// An after-merge spot-check's run died (#2748): the check goes back in the queue,
+				// a try spent.
+				ctx.Store.Update(func(s *pyjson.Object) any {
+					spotcheck.Requeue(s, number, "its run ended without finishing", ctx.Cfg.MaxFailures, ctx.Now())
+					return nil
+				}, fmt.Sprintf("spot-check #%d requeued", number))
+				notes = append(notes, fmt.Sprintf("requeued the spot-check of #%d from a dead run", number))
+				continue
+			}
 			notes = append(notes, fmt.Sprintf("#%d was closed; its dead run's label is gone", number))
 			continue
 		}
 		var wanted string
-		if eqStr(record.Get("kind"), "review") {
+		ownReview := queue.OwnReviewOf(record) != nil
+		if ownReview {
+			// Its own review run died (#2748): its lane takes it up again, as its own work.
+			wanted = config.LabelOwnReview
+			ctx.Store.Update(func(s *pyjson.Object) any {
+				queue.RequeueOwnReview(hstate.Item(s, number), ctx.Now())
+				return nil
+			}, fmt.Sprintf("own review #%d requeued", number))
+		} else if eqStr(record.Get("kind"), "review") {
 			wanted = config.LabelCross
 		} else if thread.Has("pull_request") {
 			wanted = labelRevise
@@ -318,7 +359,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			continue
 		}
 		names := queue.LabelNames(thread)
-		if names[labelRevise] || names[labelWorking] || names[labelBlocked] || queue.IsHuman(names) {
+		if names[labelRevise] || config.IsLive(names) || names[labelBlocked] || queue.IsHuman(names) {
 			continue
 		}
 		pull := ctx.GH.GetPull(py.MustInt(thread.Get("number")))
@@ -330,6 +371,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 				// The revision may come from another model; its approval decides afresh.
 				herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(pull.Get("node_id"))) })
 			}
+			queue.NotMerging(ctx, number, names)
 			ctx.Store.Update(func(s *pyjson.Object) any {
 				hstate.Item(s, number).Update(pyjson.New("kind", "revise", "source", "conflict",
 					"queued_at", clock.ISO(ctx.Now()), "failures", 0, "stop_requested", false))

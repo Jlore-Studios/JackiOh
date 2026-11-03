@@ -2,7 +2,9 @@
 //
 // A weak builder committed nested conflict markers in SPEC §11 and the rulings index on #203,
 // #214 and #287, more than once each: its self checks ran out with them still open, the run
-// ended `built`, and deliver pushed it. Review runs then spent themselves finding them.
+// ended `built`, and deliver pushed it. Review runs then spent themselves finding them. Since
+// #2748 no weak seat builds, but a self-checking builder with no reviewer in its run still ends
+// `built`, so the tests hold one to it: agy, made so.
 //
 // bot/tests/test_markers.py, ported (#467).
 package tests
@@ -18,6 +20,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
@@ -28,12 +31,19 @@ var markersMarked = "<<<<<<< HEAD\nrules v2\n=======\nrules from main\n>>>>>>> o
 var markersPlan = "<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n" +
 	"<!-- /jackioh-bot:plan -->"
 
-// markersWeakHarness is weak_harness(test): the weak subscription alone, and an easy #12 with
-// its plan.
+// markersWeakHarness is weak_harness(test): one subscription alone, agy, checking its own builds
+// with no reviewer in its run (it may not review), as the weak one did, and #12 with its plan.
 func markersWeakHarness(t *testing.T) *flowHarness {
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
-		Machine: []string{"lite"}})
-	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild, "difficulty:easy"), Body: markersPlan})
+		Machine: []string{"agy"}})
+	cfg := *h.cfg
+	pool := *cfg.Pool
+	difficultyReplaceProvider(&pool, "agy", func(a *providers.Provider) {
+		a.SelfCheck, a.Roles = true, []string{"plan", "build", "fix", "revise"}
+	})
+	cfg.Pool = &pool
+	h.cfg, h.ctx.Cfg = &cfg, &cfg
+	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild), Body: markersPlan})
 	return h
 }
 
@@ -45,7 +55,7 @@ func TestMarkers_MarkersThatSurviveTheSelfChecksAndOneFixEndUnapproved(t *testin
 		"self_check": workReviewer(workApprove),
 		"fix":        workBuilder(map[string]any{"src/game.txt": markersMarked + "again\n"})})
 	planned, result := h.night(r)
-	assertEqual(t, planned.Get("provider"), "lite")
+	assertEqual(t, planned.Get("provider"), "agy")
 	assertEqual(t, result.Get("status"), "not_approved")
 	assertIn(t, "conflict markers are still in src/game.txt", result.Str("reason"))
 	assertTrue(t, pyjson.Obj(dig(t, result, "cycles", 0)).Has("marker_fix"))

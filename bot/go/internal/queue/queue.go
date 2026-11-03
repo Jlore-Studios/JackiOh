@@ -3,9 +3,11 @@
 // The work queue, kept as labels on issues and pull requests plus a record in the state file.
 //
 // `bot:build` on an issue and `bot:revise` on a pull request mean queued; `bot:cross-review` on a
-// bot pull request means it waits for a review run; `bot:working` means a run holds it;
+// bot pull request means it waits for a review run; a live label (`bot:building`, `bot:reviewing`
+// and the rest, `config.LiveLabels`; `bot:working` before #2748) means a run holds it;
 // `bot:blocked` means it waits for a person. Only one `bot:` state label is on a thread at a time,
-// apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
+// apart from `bot:pr` and `bot:pr-open`, which say what a thread is, and `bot:merging`, which says
+// its auto-merge is on.
 //
 // The prefix is the running bot's (`config.LABEL_PREFIX`): Squishy's queue is `squishy:build` and the
 // rest (#60). Beside its queue label, a mode label (`squishy:oneshot`, `squishy:split`,
@@ -53,10 +55,9 @@ func modeLabels() []modeLabel {
 }
 
 // difficultyLabel is config.DIFFICULTY_LABELS (`{f"difficulty:{name}": name}`) read for a
-// lowercased label name.
+// lowercased label name, a retired one as what it became (`difficulty:easy` is medium, #2748).
 func difficultyLabel(lowered string) (string, bool) {
-	name, ok := strings.CutPrefix(lowered, "difficulty:")
-	return name, ok && slices.Contains(config.Difficulties, name)
+	return config.LabelDifficulty(lowered)
 }
 
 // stateItem is state.item.
@@ -88,9 +89,11 @@ func lowered(names map[string]bool) map[string]bool {
 	return out
 }
 
-// STATE_LABELS
-var StateLabels = []string{config.LabelBuild, config.LabelRevise,
-	config.LabelCross, config.LabelWorking, config.LabelBlocked}
+// STATE_LABELS: the queue's, every label that says a run holds the thread (`config.HeldLabels`:
+// the live labels, and the retired `bot:working`, so a run delivered now takes an old one off
+// too) and `bot:blocked`.
+var StateLabels = slices.Concat([]string{config.LabelBuild, config.LabelRevise, config.LabelCross},
+	config.HeldLabels, []string{config.LabelBlocked})
 
 // LabelNames is queue.label_names.
 func LabelNames(thread *pyjson.Object) map[string]bool {
@@ -104,18 +107,62 @@ func LabelNames(thread *pyjson.Object) map[string]bool {
 }
 
 // Leave exactly `wanted` (or none) of the queue's state labels on the thread. A pull request
-// back in the queue is no longer ready for a person to merge, so `ready for merge` comes off.
+// back in the queue is no longer ready for a person to merge, so `ready for merge` comes off. A
+// thread that leaves the queue (a run takes it, it is blocked, stopped or done) waits for no owner
+// any more, so `bot:waiting` comes off unless it stays queued (`bot:build`, `bot:revise`).
 func SetStateLabel(ctx *hctx.Context, number int, current map[string]bool, wanted string) {
 	for _, name := range StateLabels {
 		if current[name] && name != wanted {
 			ctx.GH.RemoveLabel(number, name)
 		}
 	}
+	if current[config.LabelWaiting] && wanted != config.LabelBuild && wanted != config.LabelRevise {
+		ctx.GH.RemoveLabel(number, config.LabelWaiting)
+	}
 	if wanted != "" && current[config.LabelReady] {
 		ctx.GH.RemoveLabel(number, config.LabelReady)
 	}
 	if wanted != "" && !current[wanted] {
 		ctx.GH.AddLabels(number, []string{wanted})
+	}
+}
+
+// LiveLabelOn is the label that says a run holds the thread (`config.HeldLabels`), the first
+// of them on it, or "" for none.
+func LiveLabelOn(names map[string]bool) string {
+	for _, label := range config.HeldLabels {
+		if names[label] {
+			return label
+		}
+	}
+	return ""
+}
+
+// Merging marks a bot pull request whose auto-merge the bot just turned on (`bot:merging`,
+// #2748). `current` is its labels.
+func Merging(ctx *hctx.Context, number int, current map[string]bool) {
+	if !current[config.LabelMerging] {
+		ctx.GH.AddLabels(number, []string{config.LabelMerging})
+	}
+}
+
+// NotMerging takes `bot:merging` off a pull request whose auto-merge went off, or that merged or
+// closed. `current` is its labels.
+func NotMerging(ctx *hctx.Context, number int, current map[string]bool) {
+	if current[config.LabelMerging] {
+		ctx.GH.RemoveLabel(number, config.LabelMerging)
+	}
+}
+
+// SetWaiting puts `bot:waiting` on an item held for its owner (#2748, section 1), or takes it off
+// (`waiting` false): the hold (`plan.SyncHolds`) and a handoff (`plan.Handoff`) call it. No other
+// subscription takes an item while it waits (`plan.Owning`, `plan.Pairs`). `current` is its
+// labels.
+func SetWaiting(ctx *hctx.Context, number int, current map[string]bool, waiting bool) {
+	if waiting && !current[config.LabelWaiting] {
+		ctx.GH.AddLabels(number, []string{config.LabelWaiting})
+	} else if !waiting && current[config.LabelWaiting] {
+		ctx.GH.RemoveLabel(number, config.LabelWaiting)
 	}
 }
 
@@ -152,17 +199,37 @@ func haltNote(ctx *hctx.Context, s *pyjson.Object) string {
 
 // Labelled `human` (whatever its case): people do it, and the bot leaves it alone. So is one
 // labelled `human required` (#793): the bot found it needs what only a person can do and
-// handed it to people (`deliver.Deliverer._needs_person`), or a person said so.
+// handed it to people (`deliver.Deliverer._needs_person`), or a person said so. And so, for every
+// queue path, is one labelled `tracking` (#2748): a tracker or a status issue, which the bot may
+// comment on and rewrite its own of, but never queues, plans, builds or splits.
 func IsHuman(names map[string]bool) bool {
 	low := lowered(names)
-	return low[config.LabelHuman] || low[config.LabelHumanRequired]
+	return low[config.LabelHuman] || low[config.LabelHumanRequired] || low[config.LabelTracking]
+}
+
+// IsTracking is: labelled `tracking` (whatever its case, #2748).
+func IsTracking(names map[string]bool) bool {
+	return lowered(names)[config.LabelTracking]
+}
+
+// KeptBy is the label that keeps the thread from the bot (`IsHuman`): `human`, `human required`
+// or `tracking`, in that order, or "" for none.
+func KeptBy(names map[string]bool) string {
+	low := lowered(names)
+	for _, label := range []string{config.LabelHuman, config.LabelHumanRequired, config.LabelTracking} {
+		if low[label] {
+			return label
+		}
+	}
+	return ""
 }
 
 // OWNING: what follows another bot's prefix on a label that makes the thread that bot's (#60): its
 // queue and state labels, its pull request, and its modes and trees. A `planned` or `stuck` label
 // left from an old run does not.
-var Owning = []string{"build", "revise", "cross-review", "working", "blocked", "pr-open", "pr",
-	"needs-plan", "oneshot", "split", "split-bot", "fullsend", "tree"}
+var Owning = slices.Concat([]string{"build", "revise", "cross-review"}, config.LiveRuns,
+	[]string{"working", "blocked", "pr-open", "pr", "merging", "waiting", "needs-plan", "oneshot",
+		"split", "split-bot", "fullsend", "tree"})
 
 // The other bot whose thread this is (`config.OTHERS`), or None (nil): one of its owning labels
 // is on it, or it is assigned to that bot's account.
@@ -265,16 +332,15 @@ func IsPart(record *pyjson.Object) bool {
 	return parent != 0 && record.Get("onto") == BranchForIssue(parent)
 }
 
-// The sub-issues of issue `number` still open: while a fullsend tree has any, its parts are
-// still landing on its branch, and nothing builds the issue itself (#505).
-func OpenParts(ctx *hctx.Context, number int) []int {
-	parts := []int{}
-	for _, child := range ctx.GH.ListSubIssues(number) {
-		if child.Get("state") == "open" {
-			parts = append(parts, numberOf(child))
-		}
+// PartBuilder is the subscription whose run built fullsend part `record` (#2748, section 2), the
+// one its tree's reconcile may send it back to: its `built_by`, which deliver writes when the part
+// lands (`deliver.LandPart`), or, for one landed before that was kept, its owner then (the
+// subscription that took its build up). "" for none.
+func PartBuilder(record *pyjson.Object) string {
+	if builder := py.OrStr(record.Get("built_by"), ""); builder != "" {
+		return builder
 	}
-	return parts
+	return py.OrStr(record.Get("owner"), "")
 }
 
 func refs(numbers []int) string {
@@ -295,6 +361,11 @@ func PartsReply(number int, parts []int) string {
 // The reply to a request for a thread `is_human` keeps from the bot.
 func HumanReply(number int, names map[string]bool /* = frozenset() */) string {
 	low := lowered(names)
+	if KeptBy(names) == config.LabelTracking {
+		return fmt.Sprintf("#%d is labelled `%s`: a tracker or status issue, which I may comment on "+
+			"but never queue, plan or build. Take that label off to hand it to me.", number,
+			config.LabelTracking)
+	}
 	if low[config.LabelHumanRequired] && !low[config.LabelHuman] {
 		return fmt.Sprintf("#%d is labelled `%s`: it needs something only a "+
 			"person can do (my comment on it says what), so it is people's and I leave it "+
@@ -339,8 +410,8 @@ func labelled(names map[string]bool) []string {
 // and `medium` with neither.
 func DifficultyOf(names map[string]bool, carried string /* = "" */) string {
 	found := labelled(names)
-	if slices.Contains(config.Difficulties, carried) {
-		found = append(found, carried)
+	if d := config.AsDifficulty(carried); d != "" {
+		found = append(found, d)
 	}
 	return hardest(found, config.DefaultDifficulty)
 }
@@ -352,11 +423,11 @@ func LabelledDifficulty(names map[string]bool) string {
 
 // What the state file carries for a thread's difficulty: a bot pull request's issue's
 // (`difficulty`), and a floor the bot raised it to (`difficulty_floor`: the easy rule broken,
-// or three failures under a person's label, #317 part 8), the harder of the two.
+// before #2748 retired it), the harder of the two; a retired difficulty reads as what it became.
 func CarriedDifficulty(record *pyjson.Object) string {
 	var found []string
 	for _, key := range []string{"difficulty", "difficulty_floor"} {
-		if d := py.OrStr(record.Get(key), ""); slices.Contains(config.Difficulties, d) {
+		if d := config.AsDifficulty(py.OrStr(record.Get(key), "")); d != "" {
 			found = append(found, d)
 		}
 	}
@@ -369,7 +440,8 @@ func CarriedDifficulty(record *pyjson.Object) string {
 func RatingSource(names map[string]bool, record *pyjson.Object) string {
 	label := LabelledDifficulty(names)
 	by := record.Obj("difficulty_by")
-	if label != "" && by.Get("difficulty") == label {
+	// A rating from before #2748 may say easy, which reads as medium, as its relabelled label does.
+	if label != "" && config.AsDifficulty(py.OrStr(by.Get("difficulty"), "")) == label {
 		return "bot"
 	}
 	if label != "" {
@@ -464,6 +536,19 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 			return PartsReply(number, parts)
 		}
 	}
+	if asked == "" {
+		// A plain build of a parent with open sub-issues is a fullsend tree's (#2748, section 2).
+		if record.Len() == 0 {
+			record = recordOf(ctx.Store.Load(), number)
+		}
+		children, unread := QueuedParent(ctx, issue, record)
+		if unread != "" {
+			return fmt.Sprintf("#%d's sub-issues could not be read (%s), so I queued nothing.", number, unread)
+		}
+		if len(children) > 0 {
+			return AutoAdopt(ctx, number, names, children, by)
+		}
+	}
 	if mode != nil && len(modes) > 0 {
 		names = SetMode(ctx, number, names, *mode)
 	}
@@ -483,7 +568,7 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 			return nil
 		}, fmt.Sprintf("suggestion #%d approved", number))
 	}
-	if names[config.LabelWorking] {
+	if config.IsLive(names) {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
@@ -534,7 +619,7 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	if unread != "" {
 		return unread
 	}
-	labelWorking, labelPROpen := config.LabelWorking, config.LabelPROpen
+	labelPROpen := config.LabelPROpen
 	var adopted []*pyjson.Object
 	var kept []string
 	for _, child := range children {
@@ -548,10 +633,10 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 		case lowered(childNames)[config.LabelHuman]:
 			why = "labelled `human`"
 		case IsHuman(childNames):
-			why = fmt.Sprintf("labelled `%s`", config.LabelHumanRequired)
+			why = fmt.Sprintf("labelled `%s`", KeptBy(childNames))
 		case other != nil:
 			why = fmt.Sprintf("%s's", other.Name)
-		case childNames[labelWorking]:
+		case config.IsLive(childNames):
 			why = "a run holds it now"
 		case childNames[labelPROpen]:
 			why = "a pull request of mine is open"
@@ -585,6 +670,9 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	}
 	names = SetMode(ctx, number, names, "")
 	SetStateLabel(ctx, number, names, "")
+	if names[config.LabelNeedsPlan] {
+		ctx.GH.RemoveLabel(number, config.LabelNeedsPlan) // a tree's parts are planned, not it
+	}
 	if labelTree := config.LabelTree; !names[labelTree] {
 		ctx.GH.AddLabels(number, []string{labelTree})
 	}
@@ -611,6 +699,51 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	return said
 }
 
+// QueuedParent is the sub-issues of `issue`, queued for a plain build (`record` its state), when
+// this bot adopts it as a fullsend tree by itself (#2748, section 2; `fullsend_adopt`): one of
+// them is open, and `issue` is an open issue the bot may build that is no tree already, no part
+// or sub-issue of another (trees never nest: a sub-issue is built as it is asked), and has no
+// pull request of mine open and no run holding it. None (nil) for any other issue, and `unread`
+// when its sub-issues could not be read. A `human` or `tracking` issue, and the other bot's
+// (Squishy's), are never adopted. The request paths (`QueueBuild`) and the claim of a queued
+// build (`plan.Claim`, which a label an issue form or triage put on reaches without an event) ask
+// it; only the claim's question costs a call per plain build, and GitHub's `sub_issues_summary`
+// spares it for an issue with no sub-issue at all.
+func QueuedParent(ctx *hctx.Context, issue *pyjson.Object, record *pyjson.Object) ([]*pyjson.Object, string) {
+	names := LabelNames(issue)
+	if !ctx.Cfg.FullsendAdopt || !slices.Contains(config.Modes, "fullsend") || issue.Has("pull_request") ||
+		issue.Get("state") != "open" || IsHuman(names) || Owner(issue) != nil || config.IsLive(names) ||
+		names[config.LabelTree] || names[config.LabelPROpen] || IsFullsend("", record) || IsPart(record) ||
+		ParentOf(issue) != 0 {
+		return nil, ""
+	}
+	if summary := issue.Obj("sub_issues_summary"); summary != nil && py.MustInt(py.Or(summary.Get("total"), 0)) == 0 {
+		return nil, ""
+	}
+	var children []*pyjson.Object
+	if exc, ok := herr.Catch[*herr.GitHubError](func() {
+		children = ctx.GH.ListSubIssues(numberOf(issue))
+	}); ok {
+		return nil, py.SliceTo(exc.Error(), 200)
+	}
+	if !slices.ContainsFunc(children, func(child *pyjson.Object) bool { return child.Get("state") == "open" }) {
+		return nil, ""
+	}
+	return children, ""
+}
+
+// AutoAdopt is `Adopt` for a queued parent (`QueuedParent`, #2748): its open sub-issues become its
+// fullsend parts as `fullsend` would make them, and the reply says it was done unasked and how to
+// stop it.
+func AutoAdopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyjson.Object, by string) string {
+	return fmt.Sprintf("#%d was queued with open sub-issues, so I adopted it as a fullsend tree "+
+		"by itself (#2748), as `%s fullsend` would. ", number, config.Slash) +
+		Adopt(ctx, number, names, children, by) +
+		fmt.Sprintf(" To stop it, comment `%s stop` here: it and its parts leave the queue. A "+
+			"queued parent with open sub-issues is always built this way; to have one built as a "+
+			"single issue, remove its sub-issues before you queue it.", config.Slash)
+}
+
 // The squash commit's title: the pull request's, as GitHub writes it for a pull request of
 // several commits. Without it a one-commit pull request lands on `main` under the bot's own
 // commit message ("bot: build pass 1 for #85").
@@ -622,10 +755,14 @@ func MergeTitle(pull *pyjson.Object, method string) string {
 	return fmt.Sprintf("%s (#%s)", title, py.Str(pull.Get("number")))
 }
 
-// Keep a pull request from merging: auto-merge off, and out of `main`'s merge queue. A queued
-// pull request has no auto-merge left to turn off (REST `auto_merge` reads null once GitHub put
-// it in the queue), so only the dequeue stops it; a push to its branch takes it out as well.
+// Keep a pull request from merging: auto-merge off, and out of `main`'s merge queue, and
+// `bot:merging` off (#2748). A queued pull request has no auto-merge left to turn off (REST
+// `auto_merge` reads null once GitHub put it in the queue), so only the dequeue stops it; a push
+// to its branch takes it out as well.
 func HoldMerge(ctx *hctx.Context, pull *pyjson.Object) {
+	if number := py.MustInt(py.Or(pull.Get("number"), 0)); number != 0 {
+		NotMerging(ctx, number, LabelNames(pull))
+	}
 	node := pull.Get("node_id")
 	if !pyjson.Truthy(node) {
 		return
@@ -667,6 +804,7 @@ func RequeueCleared(ctx *hctx.Context, pull *pyjson.Object, record *pyjson.Objec
 	}
 	ctx.GH.EnableAutoMerge(node, ctx.Cfg.MergeMethod, head, MergeTitle(pull, ctx.Cfg.MergeMethod))
 	number := numberOf(pull)
+	Merging(ctx, number, names)
 	tried.Set(head, main)
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		stateItem(s, number).Set("requeued", tried)
@@ -694,10 +832,19 @@ func QueueRevise(ctx *hctx.Context, number int, by string, force bool /* = False
 			ctx.Cfg.Repo)
 	}
 	names := LabelNames(pull)
-	if names[config.LabelWorking] {
+	waits := OwnReviewWaits(recordOf(ctx.Store.Load(), number))
+	if config.IsLive(names) && !waits {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am revising #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
+	}
+	if waits {
+		// Its own review run has not started (#2748): the revision goes first, and chains an own
+		// review run of its own.
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			stateItem(s, number).Pop(OwnReviewKey)
+			return nil
+		}, fmt.Sprintf("own review #%d gives way", number))
 	}
 	SetStateLabel(ctx, number, names, config.LabelRevise)
 	botPR := names[config.LabelPR]
@@ -741,10 +888,18 @@ func QueueReview(ctx *hctx.Context, number int, by string, floor string /* = "" 
 	if !names[config.LabelPR] {
 		return fmt.Sprintf("#%d is not a pull request I opened; review runs are for mine only.", number)
 	}
-	if names[config.LabelWorking] {
+	waits := OwnReviewWaits(recordOf(ctx.Store.Load(), number))
+	if config.IsLive(names) && !waits {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
+	}
+	if waits {
+		// Its own review run has not started (#2748): the review asked for takes its place.
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			stateItem(s, number).Pop(OwnReviewKey)
+			return nil
+		}, fmt.Sprintf("own review #%d gives way", number))
 	}
 	SetStateLabel(ctx, number, names, config.LabelCross)
 
@@ -795,17 +950,20 @@ func pending(ctx *hctx.Context, number int, by string, ask *asks.Ask /* = None *
 	ctx.Store.Update(change, fmt.Sprintf("pending #%d", number))
 }
 
-// Take a thread out of the queue. A run that holds it keeps `bot:working` until it has
+// Take a thread out of the queue. A run that holds it keeps its live label until it has
 // stopped, so a request made in the meantime waits for that run instead of racing it.
 func Stop(ctx *hctx.Context, number int, by string) string {
 	thread := ctx.GH.GetIssue(number)
 	names := LabelNames(thread)
-	labelWorking := config.LabelWorking
-	working := names[labelWorking]
-	if working {
-		SetStateLabel(ctx, number, names, labelWorking)
-	} else {
+	working := config.IsLive(names)
+	// A pull request whose own review run has not started yet (#2748) carries `bot:reviewing` with
+	// no run behind it: it leaves the queue, and its reservation goes.
+	reserved := OwnReviewWaits(recordOf(ctx.Store.Load(), number))
+	if reserved {
+		working = false
 		SetStateLabel(ctx, number, names, "")
+	} else {
+		SetStateLabel(ctx, number, names, LiveLabelOn(names))
 	}
 	if thread.Has("pull_request") && names[config.LabelPR] {
 		herr.Catch[*herr.GitHubError](func() { HoldMerge(ctx, ctx.GH.GetPull(number)) })
@@ -815,6 +973,10 @@ func Stop(ctx *hctx.Context, number int, by string) string {
 		record := stateItem(s, number)
 		record.Set("stop_requested", true).Set("stopped_by", by).Set("stopped_at", clock.ISO(ctx.Now())).
 			Set("forced", false).Set("pending_request", false)
+		record.Pop("hold") // out of the queue, it waits for no owner (its `bot:waiting` is off)
+		if reserved {
+			record.Pop(OwnReviewKey)
+		}
 		// Asks still waiting will never be answered; a run's own are settled when it stops.
 		dropped = asks.PopWaiting(record)
 		return nil

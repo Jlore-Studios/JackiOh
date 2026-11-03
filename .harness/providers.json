@@ -2,13 +2,14 @@
   "max_parallel": 8,
   "machine_parallel": 6,
   "plan_lanes": 6,
+  "lanes_by_cap": { "cli": "claude", "line": 0.5, "low": 1, "high": 2, "note": "The Claude accounts' lanes (#2748), decided when a run starts from the 5-hour cap in force at that moment: above 50% up to 2, at 50% or under 1, and 2 with no 5-hour cap or in a session's last hour while last_hour lifts the cap. A run already going is never stopped when the count drops; the account starts nothing more until its runs fit the lanes in force. Each run takes its own reading before it starts and watches it during every call, so two runs pass a cap by at most one reading's worth. No Claude account names its own lanes." },
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
   "balance": true,
   "priority": ["claude-3", "claude-7", "claude-8", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2"],
   "tiers": {
     "medium": [
       { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse: the most reliable builder (#305), first among the medium models." },
-      { "model": "gemini-3.8-flash-high", "note": "Google through agy." },
+      { "model": "gemini-3.8-flash-high", "note": "Google through agy, on Gemini 3.8 Flash (High): a medium model that plans, builds and reviews. Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12). To try a newer model later, confirm its name with `agy models` and that it answers a headless `agy -p` call first." },
       { "model": "gpt-5.6-sol", "note": "ChatGPT through Codex, on GPT-5.6 Sol: medium again since 2026-10-20 (weak from 2026-10-11, on Terra), after agy and before Sonnet." },
       { "model": "sonnet", "note": "Claude Sonnet at xhigh (#317 part 5): a medium seat on every Claude account, which switches between it and Opus as the work needs (work.Worker.Switch)." }
     ],
@@ -18,7 +19,7 @@
   },
   "providers": {
     "claude-1": {
-      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. One lane, so it works one item at a time (#695).",
+      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its hours (100%), one outside them (40%), by lanes_by_cap (#2748; one lane until then, #695).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -30,7 +31,6 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
-      "lanes": 1,
       "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
       "off_hours": { "five_hour": 0.4 },
       "limits": { "mode": "caps", "five_hour": 1.0 },
@@ -38,7 +38,7 @@
       "quiet_check": false
     },
     "claude-2": {
-      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free (build_last), on Sonnet unless the item is hard; its runs switch between the two as the work needs. One lane, so it works one item at a time (#695).",
+      "note": "A second Claude account, capped at 90% of both its 5-hour session and its week. Kept back for planning and adversarial review on Opus: after the medium models in the usage order, and it builds only when no other subscription that may is free (build_last), on Sonnet unless the item is hard; its runs switch between the two as the work needs. Two lanes at its 90% cap, by lanes_by_cap (#2748; one lane until then, #695).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -50,14 +50,13 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
       "runs_on": "ubuntu-latest",
-      "lanes": 1,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.9, "seven_day": 0.9 },
       "build_last": true,
       "quiet_check": false
     },
     "claude-3": {
-      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. Two lanes, so it works two items at once.",
+      "note": "A third Claude account, the bot's own: any hour, no caps. First in the usage order: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes, with no 5-hour cap (lanes_by_cap, #2748), so it works two items at once.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -69,13 +68,12 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
       "runs_on": "ubuntu-latest",
-      "lanes": 2,
       "schedule": { "mode": "always" },
       "limits": { "mode": "none" },
       "quiet_check": false
     },
     "claude-4": {
-      "note": "A fourth Claude account (token added 2026-10-04) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
+      "note": "A fourth Claude account (token added 2026-10-04) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its window, one outside it, by lanes_by_cap (#2748).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -94,7 +92,7 @@
       "quiet_check": false
     },
     "claude-5": {
-      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week, and from Sunday 17:00 Central until its week resets (Monday at 09:00 UTC, 03:00 Central in winter) at 80% of its 5-hour session and 90% of its week, with its session's last hour up to 90% too (`late_week`): its only time past those caps. A hard cap of 90% on both windows (`hard_cap`) that nothing lifts, neither its late week nor its last hour, and a run stops a point under it, so no call spills past 90%. Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
+      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week, and from Sunday 17:00 Central until its week resets (Monday at 09:00 UTC, 03:00 Central in winter) at 80% of its 5-hour session and 90% of its week, with its session's last hour up to 90% too (`late_week`): its only time past those caps. A hard cap of 90% on both windows (`hard_cap`) that nothing lifts, neither its late week nor its last hour, and a run stops a point under it, so no call spills past 90%. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. One lane at its 40% cap, two in its late week (80%) and its last hours there, by lanes_by_cap (#2748).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -113,7 +111,7 @@
       "quiet_check": false
     },
     "claude-6": {
-      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
+      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its window, one outside it, by lanes_by_cap (#2748).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -132,7 +130,7 @@
       "quiet_check": false
     },
     "claude-7": {
-      "note": "A seventh Claude account (token added 2026-10-07) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 01:00 to 10:00 Central (its window) up to 70% of it. Second in the usage order, after claude-3: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
+      "note": "A seventh Claude account (token added 2026-10-07) with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 01:00 to 10:00 Central (its window) up to 70% of it. Second in the usage order, after claude-3: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its window, one outside it, by lanes_by_cap (#2748).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -144,7 +142,6 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
       "runs_on": "ubuntu-latest",
-      "lanes": 1,
       "schedule": { "mode": "window", "start": "01:00", "end": "10:00" },
       "off_hours": { "five_hour": 0.5 },
       "limits": { "mode": "caps", "five_hour": 0.7 },
@@ -152,7 +149,7 @@
       "quiet_check": false
     },
     "claude-8": {
-      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. Two lanes (three on 2026-10-27, #2112; two since #2129), so it works up to two items at once: each run takes its own reading before it starts and watches it during every call, so they pass its cap by at most one reading's worth.",
+      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes at its 85% cap, by lanes_by_cap (#2748; three on 2026-10-27, #2112; two since #2129), so it works up to two items at once: each run takes its own reading before it starts and watches it during every call, so they pass its cap by at most one reading's worth.",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -164,7 +161,6 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
       "runs_on": "ubuntu-latest",
-      "lanes": 2,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.85 },
       "last_hour": true,
@@ -185,7 +181,7 @@
       "quiet_check": false
     },
     "agy": {
-      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 3.8 Flash (High); `agy models` lists the names, each carrying its effort. Its usage is its own `agy -p /usage` (no model call), the Gemini pool's row: read before the run, after every call and every ten minutes during one.",
+      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 3.8 Flash (High): a medium model in every role (plans, builds, reviews). Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12). To try a newer model later, confirm its name with `agy models` on the box and that it answers a headless `agy -p` call first, then set it here and in `tiers`. `agy models` lists the names, each carrying its effort. Its usage is its own `agy -p /usage` (no model call), the Gemini pool's row (a pool whose name starts with Gemini; with several, the one naming the model's line, else the fullest): read before the run, after every call and every ten minutes during one.",
       "enabled": true,
       "cli": "agy",
       "family": "gemini",
@@ -199,7 +195,7 @@
       "quiet_check": false
     },
     "muse": {
-      "note": "Meta's Muse Code CLI, logged in on both boxes as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Four lanes of its own (two since #1273), under the one login: its caps are its whole plan, which read under 10% of the week on one lane, so the one run at a time of a capped subscription (#695) bought it nothing. Each box runs three jobs at most, set for m7i-flex.xlarge (4 vCPUs, 16 GB), though both are still m7i-flex.large (2 vCPUs, 8 GB), the largest the Free plan allows, and lean on compressed swap in memory (reviews/2026-10-27-muse-usage.md, finding 4): one of Muse's own runners is on the night box (`night-vm-muse`) and three on the Muse box (`night-vm-muse-b2`, `-2-b2`, `-3-b2`). It also fills gpt's and agy's lanes on the night box while one of them cannot start work (`fill_in`: capped, off, outside its hours, backing off), on its two runners there, `night-vm-muse-fill` and `night-vm-muse-fill-2`; the three share those two lanes. So Muse runs six at most, and the boxes six jobs together (`machine_parallel`; bot/machine/README.md, The Muse box). On Meta's $50 plan since 2026-10-11, four times the usage of the one before; its caps are shares of whatever the plan gives, so they stretch with it. Its week has no start headroom (`start_headroom`, #682): a build or a plan may start right up to the 100% cap, since a run the cap cuts off keeps its work and Muse then waits for the reset.",
+      "note": "Meta's Muse Code CLI, logged in on both boxes as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Four lanes of its own (two since #1273), under the one login: its caps are its whole plan, which read under 10% of the week on one lane, so the one run at a time a capped subscription had then (#695) bought it nothing. Each box runs three jobs at most, set for m7i-flex.xlarge (4 vCPUs, 16 GB), though both are still m7i-flex.large (2 vCPUs, 8 GB), the largest the Free plan allows, and lean on compressed swap in memory (reviews/2026-10-27-muse-usage.md, finding 4): one of Muse's own runners is on the night box (`night-vm-muse`) and three on the Muse box (`night-vm-muse-b2`, `-2-b2`, `-3-b2`). It also fills gpt's and agy's lanes on the night box while one of them cannot start work (`fill_in`: capped, off, outside its hours, backing off), on its two runners there, `night-vm-muse-fill` and `night-vm-muse-fill-2`; the three share those two lanes. So Muse runs six at most, and the boxes six jobs together (`machine_parallel`; bot/machine/README.md, The Muse box). On Meta's $50 plan since 2026-10-11, four times the usage of the one before; its caps are shares of whatever the plan gives, so they stretch with it. Its week has no start headroom (`start_headroom`, #682): a build or a plan may start right up to the 100% cap, since a run the cap cuts off keeps its work and Muse then waits for the reset.",
       "enabled": true,
       "cli": "muse",
       "family": "muse",

@@ -304,7 +304,9 @@ func (x *MuseCli) ReadUsage(model string) *pyjson.Object {
 	return ParseMuseUsage(MuseScreen(x.Binary, env, workspace, float64(UsageTimeoutS), 1.0), time.Now())
 }
 
-// Argv is MuseCli.argv.
+// Argv is MuseCli.argv. Every call is a fresh session: a resume flag, if `muse --help` on the box
+// shows one, would go here, and Muse's home on the machine persists, so it would need no store
+// (#2748 resumes only Claude's sessions for now).
 func (x *MuseCli) Argv(request *RunRequest, promptFile string) []string {
 	argv := []string{x.Binary, "exec", "--yolo", "--disable-web-tools",
 		"--workspace", request.Cwd, "--model", request.Model,
