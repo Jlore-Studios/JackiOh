@@ -562,8 +562,12 @@
    "name": "Temp Thick Skin",
    "kind": "combat",
    "tier": "silver",
+   "fightEffect": {
+    "type": "ownArmor",
+    "n": 1
+   },
    "starter": true,
-   "text": "Your hero starts each fight with 3 Armor. (Placeholder: combat artifacts do nothing in a fight yet.)"
+   "text": "Your hero starts each fight with 1 Armor for each level."
   },
   {
    "id": "temp-greedy",
@@ -604,7 +608,11 @@
    "name": "Temp Quick Start",
    "kind": "combat",
    "tier": "gold",
-   "text": "Draw 1 more card in your opening hand. (Placeholder.)"
+   "fightEffect": {
+    "type": "ownOpeningCards",
+    "n": 1
+   },
+   "text": "Draw 1 more card in your opening hand for each level."
   },
   {
    "id": "temp-war-chest",
@@ -622,15 +630,23 @@
    "name": "Temp Crown",
    "kind": "combat",
    "tier": "diamond",
-   "text": "A mini-boss's strong artifact. (Placeholder.)"
+   "fightEffect": {
+    "type": "ownArmor",
+    "n": 2
+   },
+   "text": "A mini-boss's strong artifact: your hero starts each fight with 2 Armor for each level."
   },
   {
    "id": "temp-final-relic",
    "name": "Temp Final Relic",
    "kind": "combat",
    "tier": "diamond",
+   "fightEffect": {
+    "type": "ownOpeningCards",
+    "n": 2
+   },
    "unobtainable": true,
-   "text": "Temp Final Boss's own: nothing else gives it, and it cannot be extracted. (Placeholder.)"
+   "text": "Draw 2 more cards in your opening hand for each level. Temp Final Boss's own: nothing else gives it, and it cannot be extracted."
   },
   {
    "id": "looming-presence",
@@ -721,20 +737,32 @@
   {
    "id": "temp-curse-1",
    "name": "Temp Curse 1",
-   "text": "Placeholder: curses change no fight yet.",
-   "points": 1
+   "text": "Enemies start each fight with 5 more health.",
+   "points": 1,
+   "fightEffect": {
+    "type": "enemyHealth",
+    "n": 5
+   }
   },
   {
    "id": "temp-curse-2",
    "name": "Temp Curse 2",
-   "text": "Placeholder: curses change no fight yet.",
-   "points": 2
+   "text": "Enemies start each fight with 1 more card in hand.",
+   "points": 2,
+   "fightEffect": {
+    "type": "enemyOpeningCards",
+    "n": 1
+   }
   },
   {
    "id": "temp-curse-3",
    "name": "Temp Curse 3",
-   "text": "Placeholder: curses change no fight yet.",
-   "points": 3
+   "text": "Enemies have 1 more mana crystal every turn.",
+   "points": 3,
+   "fightEffect": {
+    "type": "enemyMana",
+    "n": 1
+   }
   }
  ]
 }

@@ -422,6 +422,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 pool_hold: None,
                 tutorial_cards_only: None,
                 deck_copies: None,
+                hero_armor: None,
             }
         );
         assert_eq!(AI_DIFFICULTY.easy, HUMAN_HANDICAP);
@@ -438,6 +439,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 pool_hold: None,
                 tutorial_cards_only: None,
                 deck_copies: None,
+                hero_armor: None,
             }
         );
         assert_eq!(
@@ -453,6 +455,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 pool_hold: None,
                 tutorial_cards_only: None,
                 deck_copies: None,
+                hero_armor: None,
             }
         );
         assert_eq!(
@@ -1586,6 +1589,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 pool_hold: None,
                 tutorial_cards_only: Some(true),
                 deck_copies: Some(TUTORIAL_DECK_COPIES),
+                hero_armor: None,
             }
         );
         assert_eq!(tutorial_health(), 20);
