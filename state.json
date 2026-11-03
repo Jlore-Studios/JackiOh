@@ -16164,9 +16164,12 @@
     "what": "review #2958 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-03T19:49:24Z",
+    "at": "2026-11-03T19:59:22Z",
     "notes": [
-      "delivered revise #2931 on claude-8 (run 41694413516): approved"
+      "delivered build #2949 on claude-8 (run 41688918059): built",
+      "started review #2958 on claude-8 (run 41709000795)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16870,7 +16873,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T19:49:24Z",
+  "loop_tick": "2026-11-03T19:59:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
