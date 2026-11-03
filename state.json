@@ -13781,23 +13781,24 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
+            "apps/web/README.md",
             "apps/web/src/fx/cards/bespoke.ts",
             "apps/web/src/fx/motifs/gallery.ts",
             "apps/web/src/routes/dev/fx.test.tsx"
           ],
-          "from": "f1baed117ad78824d0fdd5cbd98c9b7a7bad7b0c",
-          "main": "c7145e4d941c6131378b5ef01be606e08775daf8"
+          "from": "068fc2bbf13521b630c52cf5695e0b7e89f3ee9e",
+          "main": "4fc70e59d76f5b08db2b549c3ef619cdc6772649"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "41642746535",
+            "run": "41657336200",
             "tier": "strong"
           }
         ],
-        "sha": "068fc2bbf13521b630c52cf5695e0b7e89f3ee9e",
+        "sha": "e59737c1af629a8215f57eb7ebe28f728ec4e59a",
         "tiers": {
           "claude": "strong"
         }
