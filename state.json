@@ -15773,6 +15773,8 @@
       }
     },
     "2952": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T16:24:58Z",
@@ -15786,8 +15788,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} -->\n- ## What changed and why\n- Two independent root causes, one per failed job of run 41660039742. No test skipped, disabled, or weakened; no lint suppressions; no spec changes.\n- **`web (audio, fx, asset and daily tests)` \u2014 stale `transformed` expectation in `apps/web/src/fx/flavorExits.test.ts`.** #2908 deliberately rerouted the transform family (`transformed`, `fused`, `upgraded`, `degraded`) through one shared `transmute` motif, proven by `systemMoments.test.ts`'s R27840\u2026\n- **`e2e component (chrome)` \u2014 match-bar clock wraps at 390px (`apps/web/src/game/board.css`).** B46's match route at 390x664 scrolled 9px (`expected 673 to be at most 664`). Measured cause: the `.match-bar`'s clock span wrapped word-by-word into 4 lines (bar 75px tall, not one); the phone rule cut o\u2026\n- ## How tested\n- - `JACKIOH_DAILY=1 pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts src/net/promote-production.test.ts src/tutorial/scripts/` \u2014 before: 1 failed (`flavorExits` transformed), 1725 passed; after: 81 files, 1726 passed, 5 skipped, exit 0.\n- - `pnpm --dir e2e exec cypress run --component --browser chrome` (after `sh scripts/build-wasm.sh`) \u2014 before: 664 passed, 1 failed (B46 match 390x664); after: 34 specs, 666 passed, exit 0.\n- - Revert checks: with the CSS fix temporarily removed, B46 match-390x664 fails (673) and the new pin fails (4 line boxes); with it, `mobile-ux.cy.tsx` is 87/87. The flavorExits failure was observed pre-edit in the full daily run.\n- - `pnpm --dir apps/web typecheck`, `tsc -p cypress/component/tsconfig.json`, `pnpm exec eslint` on both touched test/spec files, `cargo fmt --check` \u2014 all clean. (`spec check` not needed: no ruling added; the R2784000 cite resolves to an existing note.)\n- ## Decisions\n- - Updated the stale test instead of changing source for the fx failure (plan step 4 said source-first): restoring old smoke cues would contradict the ruling-backed transmute and break `systemMoments.test.ts` + `cues.test.ts`. Rejected: re-adding per-event smoke in `cues.ts`.\n- - Fixed the chrome row instead of the board budget or tray for the layout failure (plan step 2 said tray/allowance): probe measurements showed the tray fit fine and the 75px wrapped bar was the excess. Rejected: raising the `--card-h` 348px budget (would shrink phone cards and risk #2876's area pin\u2026\n- - Environment (not delivered): Cypress 16.1.0 binary fetched directly from `cdn.cypress.io` (`download.cypress.io` 404s here), Xvfb run from the machine's cached root via a `~/bin` wrapper plus an `LD_PRELOAD` shim for its hardcoded `/usr/bin/xkbcomp`; WASM built with the full script.\n- Reviewer, look twice at: the `+36 vs +18` tray-channel/budget arithmetic in the note above (left as-is since the one-line bar restores slack \u2014 flag if you want the budget corrected anyway), and that B46's `mountMatch` still mounts a `.match-bar` no current route renders (kept: B46's requirement tex\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2941 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2941/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2941,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T18:07:31Z",
         "from_run": "41673980376",
         "gates": [
           {
@@ -15846,8 +15851,15 @@
         "source": "build",
         "until": "2026-11-03T18:36:17Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T18:06:17Z",
+      "run_id": "pending:33954b07-1793729220",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-03T18:07:31Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15861,9 +15873,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T17:55:39Z",
+    "at": "2026-11-03T18:07:31Z",
     "url": "",
-    "what": "build #2949 on claude-8"
+    "what": "review #2952 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T17:49:39Z",
