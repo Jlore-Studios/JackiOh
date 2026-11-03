@@ -13,7 +13,7 @@
 {
   "classicplus-001": { setPiece: "vortex" }, // Doom Shroom
   "classicplus-002": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Groom Shroom
-  "classicplus-003": { death: { motif: "barrage" } }, // Second Amendment Snake
+  "classicplus-003": { death: { motif: "barrage" }, trigger: { motif: "tally" } }, // Second Amendment Snake
   "classicplus-004": { cry: { motif: "mirror" } }, // Juhan Biggest Bat
   "classicplus-005": { cry: { motif: "bolt" } }, // Guy Att
   "classicplus-006": "none: vanilla", // Wrong-House Attacker
@@ -67,7 +67,7 @@
   "classicplus-037": { trigger: { motif: "conjure" } }, // Wardrum
   "classicplus-038": { death: { motif: "deal" } }, // Solarius
   "classicplus-038-1": "none: token (each Spell it casts draws its own)", // Solarius Prime
-  "classicplus-039": { death: { motif: "deal" } }, // Book Worm
+  "classicplus-039": { death: { motif: "deal" }, trigger: { motif: "tally" } }, // Book Worm
   "classicplus-040": { cast: { motif: "bless", palette: "Hustle/cash" } }, // Appropriations
   "classicplus-041": { bespoke: "constantStamp" }, // KY's Constant
   "classicplus-042": { cast: { motif: "deal", palette: "Nerd/chalk" } }, // KY's Test
