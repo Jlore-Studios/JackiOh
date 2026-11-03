@@ -5,7 +5,9 @@
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { flavorOf } from "../../cards/flavor.ts";
+import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
+import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
 import { isCardRecipeKey, type CardRecipeKey } from "../cards/bespoke.ts";
@@ -27,6 +29,9 @@ export function galleryPlayId(n: number): string {
 
 /** R2785000: the key of the gallery's fixture set piece. */
 export const GALLERY_SET_PIECE = "fixture";
+
+/** #2798: Stinkyscape #68 Stratos, the Unit Stratos Swarm fills a board with. */
+const STRATOS = "stinkyscape-068";
 
 /**
  * R2785000: the gallery's fixture set piece: the entry holding the play of `instanceId` claims the set
@@ -248,7 +253,9 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * `view`: Hinder adds the next-refresh rider to the other player, Blood Ridden Glowy Jelly Bean makes the
  * viewer's first hand card Radiant at a life price, Crushing Walls takes wipe's fixture, Transmogulate
  * turns the viewer's first hand card into a Legendary, Zephrys adds its card to the hand and Craft a
- * Card adds its crafted card, then fuses it.
+ * Card adds its crafted card, then fuses it. #2798: iKwzki Duos with the player's first unit, Flash
+ * Freeze freezes every unit on both sides and Stratos Swarm fills the player's empty zones with Stratos
+ * (its first unit zone, a full board having none).
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -265,6 +272,26 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "addedToHand", player, instanceId: "fx-fused", defId: "core-055" },
     { type: "fused", instanceIds: ["fx-half-a", "fx-half-b"], resultInstanceId: "fx-fused", defId: "core-055" },
   ],
+  duoBond: (view, _instanceId, player) => {
+    const mine = unitsOf(player === view.viewer ? view.you : view.opponent)[0];
+    return mine === undefined ? [] : [{ type: "marked", instanceId: mine.instanceId, mark: DUO_MARK, color: DUO_MARK_COLOR, added: true }];
+  },
+  flashFreeze: (view) =>
+    [...unitsOf(view.you), ...unitsOf(view.opponent)].map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  stratosSwarm: (view, _instanceId, player) => {
+    const side = player === view.viewer ? view.you : view.opponent;
+    const open = (row: "units" | "backrow", zones: readonly unknown[]): { row: "units" | "backrow"; lane: number }[] =>
+      zones.flatMap((zone, k) => (zone === null ? [{ row, lane: k + 1 }] : []));
+    const zones = [...open("units", side.units), ...open("backrow", side.backrow)];
+    return (zones.length === 0 ? [{ row: "units" as const, lane: 1 }] : zones).map(({ row, lane }) => ({
+      type: "summoned",
+      player,
+      instanceId: `fx-stratos-${row}-${String(lane)}`,
+      defId: STRATOS,
+      row,
+      lane,
+    }));
+  },
 };
 
 /**
