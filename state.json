@@ -14900,10 +14900,8 @@
       "taken_asks": []
     },
     "2881": {
-      "action": "build",
-      "asks": [
-        "c:6594905440"
-      ],
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T04:05:16Z",
         "difficulty": "hard",
@@ -14929,15 +14927,17 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-03T03:45:56Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41574415137",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-03T03:48:48Z",
+      "run_id": "pending:ef03db25-1793678750",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-03T04:06:07Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6594905440"
+      ]
     },
     "2882": {
       "action": "plan",
@@ -15106,9 +15106,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-03T03:57:19Z",
+    "at": "2026-11-03T04:06:07Z",
     "url": "",
-    "what": "build #2883 on claude-4"
+    "what": "plan #2881 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T03:55:54Z",
