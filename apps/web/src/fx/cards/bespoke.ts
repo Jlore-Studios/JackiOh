@@ -16,6 +16,9 @@ import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
+import { duoBond } from "./stinkyscape/duoBond.ts";
+import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
+import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { pageMend } from "./classic/bookOfHeal.ts";
 import { crownSwap } from "./classic/kingWagtoggle.ts";
 import { recycleLoop } from "./classic/recycle.ts";
@@ -33,6 +36,9 @@ export const CARD_RECIPES = {
   jadeCrack,
   cnSweep,
   harmonyWave,
+  duoBond,
+  flashFreeze,
+  stratosSwarm,
   pageMend,
   recycleLoop,
   crownSwap,

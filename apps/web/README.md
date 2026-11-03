@@ -320,9 +320,9 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
 (`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and every entry of its set's
-effects table (`fx/cards/<set>.json5`, #2793, #2796, R2794000): a cast, a cry, a card recipe or Flourish (on its fixture,
-`RECIPE_FIXTURES`), a set piece or an aura plays as the card's play, a death, trigger or activate motif through the
-gallery's own director, a Field card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as
+effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, R2794000): a cast, a cry, a card recipe or Flourish (on its
+fixture, `RECIPE_FIXTURES`), a set piece or an aura plays as the card's play, a death, trigger or activate motif through
+the gallery's own director, a Field card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as
 it lands. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
