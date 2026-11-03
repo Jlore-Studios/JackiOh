@@ -11419,11 +11419,6 @@
       "owner": "claude-1",
       "owner_since": "2026-11-03T09:06:14Z",
       "owner_why": "it took it up; released from its hold: `claude-8` has no runner free where it runs",
-      "paused": {
-        "at": "2026-11-03T08:34:54Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-03T06:19:17Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
