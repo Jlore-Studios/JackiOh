@@ -165,6 +165,25 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
     }
 }
 
+/// The static trader's value of `attacker` hitting `defender`'s hero: `AI_EVAL.win` when
+/// `face_is_lethal`, else `reply_face_value` of what the hit deals through the hero's Armor and caps
+/// (`projected_hero_damage`). The reply's ranking and the seat's own move order (`candidates.rs`,
+/// #2825) read it alike.
+pub(crate) fn face_value(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: PlayerId,
+    face_is_lethal: bool,
+) -> f64 {
+    if face_is_lethal {
+        return AI_EVAL.win;
+    }
+    let pierce = pierces(state, Some(attacker), None);
+    let damage =
+        subsystems::projected_hero_damage(state, defender, unit_view(state, attacker).attack, pierce);
+    reply_face_value(state, defender, damage)
+}
+
 /// Ranked attacks worth making from `legal`. When `face_is_lethal`, every hero attack is `AI_EVAL.win` (#1634).
 fn ranked_attacks(
     state: &GameState,
@@ -186,13 +205,8 @@ fn ranked_attacks(
         let Some(attacker) = find_instance(state, attacker_id) else {
             continue;
         };
-        let value = if *target_id == hero && face_is_lethal {
-            AI_EVAL.win
-        } else if *target_id == hero {
-            let pierce = pierces(state, Some(attacker), None);
-            let damage =
-                subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
-            reply_face_value(state, seat, damage)
+        let value = if *target_id == hero {
+            face_value(state, attacker, seat, face_is_lethal)
         } else {
             trade_value(state, attacker, target_id, prices).value
         };
