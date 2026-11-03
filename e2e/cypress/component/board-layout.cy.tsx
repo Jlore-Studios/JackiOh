@@ -24,6 +24,9 @@ const BOARD = '[data-testid="board"]';
 const FIELD_CARDS = `${BOARD} .field .card`;
 const FIELD_CARD_COUNT = 20;
 
+/** #2876's tile width-to-height cap, mirroring `--field-tile-max` (`position-switch.test.tsx` pins it). */
+const FIELD_TILE_MAX = 1.25;
+
 type Measurement = {
   viewport: string;
   viewportWidth: number;
@@ -288,4 +291,205 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
       });
     });
   }
+});
+
+// #2876: on a phone held upright every field card is a tile that fills its zone: face-up units,
+// face-down backs and backrow cards are as wide as their zone's inside or the tile ratio cap,
+// the four rows share the field's height, and an ATK unit's drawn area is at least 1.5x its size
+// on `main`. The hand, `--card-h` and the screen budget stay exactly as they are.
+describe("#2876 phone portrait tiles fill their zones", () => {
+  /** The issue's phones, upright. */
+  const SIZES = [
+    { label: "phone", width: 390, height: 844 },
+    { label: "phone, Safari's visible viewport", width: 390, height: 664 },
+    { label: "phone", width: 360, height: 780 },
+    { label: "phone", width: 430, height: 932 },
+  ] as const;
+  /** Sub-pixel rounding between layout boxes and their measured rects. */
+  const SLACK_PX = 1;
+
+  /** A zone's inside: its border box less its borders (a zone has no padding). */
+  function insideOf(zone: HTMLElement): { width: number; height: number } {
+    const box = zone.getBoundingClientRect();
+    const style = getComputedStyle(zone);
+    return {
+      width: box.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth),
+      height: box.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth),
+    };
+  }
+
+  function mountBoard(rail: boolean): void {
+    cy.mount(
+      <div className="app-shell app-shell--wide">
+        <Game
+          view={fullBoardView()}
+          legal={[]}
+          onAction={() => undefined}
+          boardRail={rail ? <button type="button">Back</button> : undefined}
+        />
+      </div>,
+    );
+  }
+
+  /**
+   * Resolve `--card-h` to pixels with a hidden probe in the board's scope. Custom properties
+   * compute to their specified value (`clamp(44px, …)`), so `getComputedStyle` never yields
+   * pixels for one; a probe with `height: var(--card-h)` does. The probe is absolute, so it
+   * takes no space, and it is removed before the assertion returns.
+   */
+  function cardHPx(board: HTMLElement): number {
+    const probe = board.ownerDocument.createElement("div");
+    probe.style.position = "absolute";
+    probe.style.visibility = "hidden";
+    probe.style.height = "var(--card-h)";
+    board.appendChild(probe);
+    const px = probe.getBoundingClientRect().height;
+    probe.remove();
+    return px;
+  }
+
+  for (const size of SIZES) {
+    const where = `${size.label} ${size.width}x${size.height}`;
+
+    it(`#2876 field cards are as wide as their zone or the tile cap at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      mountBoard(false);
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const field = doc.querySelector<HTMLElement>(`${BOARD} .field`);
+        expect(field, "the field is mounted").to.not.eq(null);
+        if (field === null) return;
+        const board = field.closest<HTMLElement>(BOARD);
+        expect(board, "the board is mounted").to.not.eq(null);
+        if (board === null) return;
+        // Rows may grow past the zone's width (tall viewports), so a tile filling its zone can be
+        // narrower than 0.74 of its height; what proves the 0.72 shape is gone is beating it.
+        const cardH = cardHPx(board);
+        expect(cardH, "--card-h resolves to pixels").to.be.greaterThan(0);
+        const oldWidth = 0.72 * cardH;
+        for (const card of field.querySelectorAll<HTMLElement>('.zone > .card:not([data-position="DEF"])')) {
+          const zone = card.parentElement;
+          expect(zone, "a field card sits in a zone").to.not.eq(null);
+          if (zone === null) continue;
+          const room = insideOf(zone);
+          const box = card.getBoundingClientRect();
+          const expected = Math.min(room.width, FIELD_TILE_MAX * box.height);
+          expect(box.width, `${card.dataset.testid ?? "a back"} is inside its zone at ${where}`).to.be.at.most(
+            room.width + SLACK_PX,
+          );
+          expect(box.width, `${card.dataset.testid ?? "a back"} fills its zone or the cap at ${where}`).to.be.at.least(
+            expected - 1.5,
+          );
+          // Where the zone is wider than the old cap, the old shape would have bound: beating it
+          // proves the tile. Where the zone binds the old shape too (390x844, 360x780), old and
+          // new widths coincide and the taller rows (the lanes and area its) carry the proof.
+          if (oldWidth < room.width - 1) {
+            expect(box.width, `the 0.72 portrait shape no longer applies at ${where}`).to.be.greaterThan(oldWidth);
+          }
+        }
+      });
+    });
+
+    it(`#2876 lanes fill the field's inside height at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      mountBoard(false);
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const field = doc.querySelector<HTMLElement>(`${BOARD} .field`);
+        expect(field, "the field is mounted").to.not.eq(null);
+        if (field === null) return;
+        const style = getComputedStyle(field);
+        const inner = field.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+        expect(inner, `the field has a height at ${where}`).to.be.greaterThan(0);
+        for (const lane of field.querySelectorAll<HTMLElement>(".lane")) {
+          expect(lane.getBoundingClientRect().height, `lane ${lane.dataset.lane ?? "?"} fills the field at ${where}`).to.be.closeTo(
+            inner,
+            SLACK_PX,
+          );
+        }
+      });
+    });
+  }
+
+  it("#2876 an ATK unit's drawn area is at least 1.5x main's at 390x664", () => {
+    cy.viewport(390, 664);
+    mountBoard(false);
+    cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+    const out: { measured?: { mainArea: number; newArea: number } } = {};
+
+    cy.document({ log: false }).should((doc) => {
+      const board = doc.querySelector<HTMLElement>(BOARD);
+      expect(board, "the board is mounted").to.not.eq(null);
+      if (board === null) return;
+      const cardH = cardHPx(board);
+      expect(cardH, "--card-h resolves to pixels").to.be.greaterThan(0);
+      const mainArea = 0.72 * cardH * cardH;
+      const card = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-row="units"] > .card[data-position="ATK"]`);
+      expect(card, "an ATK unit is on the field").to.not.eq(null);
+      if (card === null) return;
+      const box = card.getBoundingClientRect();
+      const newArea = box.width * box.height;
+      expect(newArea, "an ATK unit's drawn area at 390x664").to.be.at.least(1.5 * mainArea);
+      out.measured = { mainArea: Math.round(mainArea), newArea: Math.round(newArea) };
+    });
+
+    cy.then(() => {
+      cy.task("layout:report", { issue: 2876, size: "phone 390x664", ...out.measured }, { log: false });
+    });
+  });
+
+  it("#2876 End turn and your hand stay on screen at 390x664, with and without a rail", () => {
+    for (const rail of [false, true]) {
+      const where = rail ? "with a rail" : "with no rail";
+      cy.viewport(390, 664);
+      mountBoard(rail);
+      cy.get('[data-testid="end-turn"]').should("be.visible");
+
+      cy.document({ log: false }).should((doc) => {
+        const endTurn = doc.querySelector("[data-testid=\"end-turn\"]");
+        expect(endTurn, `End turn is mounted ${where}`).to.not.eq(null);
+        if (endTurn === null) return;
+        expect(endTurn.getBoundingClientRect().bottom, `End turn stays on screen at 390x664 ${where}`).to.be.at.most(
+          664 + SLACK_PX,
+        );
+        const cards = [...doc.querySelectorAll('[data-testid="hand-you"] [data-testid^="hand-card-"]')];
+        expect(cards.length, `your hand has cards ${where}`).to.be.greaterThan(0);
+        for (const card of cards) {
+          expect(
+            card.getBoundingClientRect().bottom,
+            `a hand card's bottom edge stays on screen at 390x664 ${where}`,
+          ).to.be.at.most(664 + SLACK_PX);
+        }
+      });
+    }
+  });
+
+  it("#2876 your hand keeps its size at 390x844", () => {
+    cy.viewport(390, 844);
+    mountBoard(false);
+    cy.get('[data-testid="hand-you"] [data-testid^="hand-card-"]').should("have.length.greaterThan", 0);
+
+    cy.document({ log: false }).should((doc) => {
+      const board = doc.querySelector<HTMLElement>(BOARD);
+      expect(board, "the board is mounted").to.not.eq(null);
+      if (board === null) return;
+      const cardH = cardHPx(board);
+      expect(cardH, "--card-h resolves to pixels").to.be.greaterThan(0);
+      const card = doc.querySelector<HTMLElement>('[data-testid="hand-you"] [data-testid^="hand-card-"]');
+      expect(card, "your hand has a card").to.not.eq(null);
+      if (card === null) return;
+      // The fan tilts each slot, so the rect is the tilted box; the offsets are the card itself.
+      expect(card.offsetHeight, "your hand's card height is unchanged at 390x844").to.be.closeTo(
+        1.24 * cardH,
+        SLACK_PX,
+      );
+      expect(card.offsetWidth, "your hand's card width is unchanged at 390x844").to.be.closeTo(
+        0.68 * 1.24 * cardH,
+        SLACK_PX,
+      );
+    });
+  });
 });
