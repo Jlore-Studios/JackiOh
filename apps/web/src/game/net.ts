@@ -343,6 +343,8 @@ export type ServerFrame =
   | { type: "emote"; from: PlayerId; emote: EmoteId }
   /** R738: what the opponent is aiming at now, or null when its aim has ended. */
   | { type: "aim"; from: PlayerId; aim: Aim | null }
+  /** R2739001: the option of the opponent's card picker under its pointer or focus, or null when none is. */
+  | { type: "choiceHover"; from: PlayerId; index: number | null }
   /** #936 B51: how many friends are watching this match, sent when the count changes. */
   | { type: "watchers"; count: number }
   /** R1834003: both seats' frozen picks (R1834002), on every join and hello, before the view. */
@@ -430,6 +432,12 @@ export function parseServerFrame(text: string): ServerFrame | null {
       if (aim === undefined || (from !== "p1" && from !== "p2")) return null;
       return { type: "aim", from, aim };
     }
+    case "choiceHover": {
+      const { from, index } = parsed;
+      if (from !== "p1" && from !== "p2") return null;
+      if (index !== null && !(typeof index === "number" && Number.isInteger(index) && index >= 0)) return null;
+      return { type: "choiceHover", from, index };
+    }
     case "watchers": {
       const count = parsed.count;
       if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return null;
@@ -509,6 +517,11 @@ export type MatchSnapshot = {
   emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
   /** R738: the opponent's aim as last relayed; null when none is up or the socket has dropped. */
   aim: { from: PlayerId; aim: Aim } | null;
+  /**
+   * R2739001: the option of the opponent's card picker under its pointer as last relayed; null when
+   * none is, or the socket has dropped.
+   */
+  choiceHover: { from: PlayerId; index: number } | null;
   /** #936 B51: the last `watchers` frame's count; 0 until one arrives. */
   watchers: number;
   /**
@@ -529,6 +542,8 @@ export type MatchClient = {
   sendEmote: (emote: EmoteId) => void;
   /** R738: tell the opponent what this seat is aiming at (null: the aim ended). Never answered. */
   sendAim: (aim: Aim | null) => void;
+  /** R2739001: tell the opponent which option of this seat's card picker is hovered (null: none). Never answered. */
+  sendChoiceHover: (index: number | null) => void;
   /** Close for good: no reconnect until `connect()` is called again. */
   close: () => void;
   /** The URL the next socket will open, for a diagnostic panel. */
@@ -571,6 +586,7 @@ const INITIAL: MatchSnapshot = {
   emoteHand: null,
   emote: null,
   aim: null,
+  choiceHover: null,
   watchers: 0,
   loadouts: null,
 };
@@ -672,6 +688,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "aim":
         patch({ aim: frame.aim === null ? null : { from: frame.from, aim: frame.aim } });
         return;
+      case "choiceHover":
+        patch({ choiceHover: frame.index === null ? null : { from: frame.from, index: frame.index } });
+        return;
       case "watchers":
         patch({ watchers: frame.count });
         return;
@@ -736,8 +755,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       if (socket !== created) return;
       socket = null;
       wakeProbe.cancel();
-      // R738: clear an aim from before the drop.
-      if (snapshot.aim !== null) patch({ aim: null });
+      // R738, R2739001: clear an aim and a hovered option from before the drop.
+      if (snapshot.aim !== null || snapshot.choiceHover !== null) patch({ aim: null, choiceHover: null });
       if (stopped) {
         patch({ connection: "closed" });
         return;
@@ -771,7 +790,11 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     socket = null;
     letGo(live, "replaced", () => {
       wakeProbe.cancel();
-      patch({ connection: "reconnecting", ...(snapshot.aim === null ? {} : { aim: null }) });
+      patch({
+        connection: "reconnecting",
+        ...(snapshot.aim === null ? {} : { aim: null }),
+        ...(snapshot.choiceHover === null ? {} : { choiceHover: null }),
+      });
       open();
     });
   }
@@ -822,6 +845,16 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       if (live === null || live.readyState !== OPEN) return;
       try {
         live.send(JSON.stringify({ type: "aim", aim }));
+      } catch {
+        // Gone between the check and the send; `onclose` reports the connection.
+      }
+    },
+    sendChoiceHover: (index) => {
+      const live = socket;
+      // R2739001: cosmetic, as an aim is: a dead socket drops it.
+      if (live === null || live.readyState !== OPEN) return;
+      try {
+        live.send(JSON.stringify({ type: "choiceHover", index }));
       } catch {
         // Gone between the check and the send; `onclose` reports the connection.
       }
@@ -934,6 +967,8 @@ export type UseMatchResult = MatchSnapshot & {
   sendEmote: (emote: EmoteId) => void;
   /** R738: send this seat's aim (null: the aim ended); the server relays it to the opponent. */
   sendAim: (aim: Aim | null) => void;
+  /** R2739001: send the option of this seat's card picker under its pointer (null: none); relayed to the opponent. */
+  sendChoiceHover: (index: number | null) => void;
   connect: () => void;
   /** The handshake URL, for the diagnostic line on the match route. */
   url: string;
@@ -977,6 +1012,7 @@ export function useMatch(options: UseMatchOptions): UseMatchResult {
     send: client.send,
     sendEmote: client.sendEmote,
     sendAim: client.sendAim,
+    sendChoiceHover: client.sendChoiceHover,
     connect: client.connect,
     url: client.url(),
   };

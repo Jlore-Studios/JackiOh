@@ -2,6 +2,7 @@ package deliver
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -11,12 +12,14 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
+	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	splitmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/split"
 	statemod "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/verdicts"
 )
 
 // ------------------------------------------------------------------ a split (#60)
@@ -36,7 +39,7 @@ import (
 // A fullsend split (#505) first makes the parent's own branch from `main`'s head, the branch
 // its parts land on (`_land_part`), and each part's record says so (`onto`, `part_of`).
 func (x *Deliverer) SplitOut(number int) {
-	tree := splitmod.FromDict(x.Result.Get("tree"), config.Difficulties)
+	tree := splitmod.FromDict(x.Result.Get("tree"), splitmod.Difficulties)
 	mode := py.OrStr(x.Plan.Get("mode"), "split")
 	names := x.Labels(number)
 	if !tree.OK() {
@@ -112,8 +115,8 @@ func (x *Deliverer) SplitOut(number int) {
 				labels = append(labels, label)
 			}
 		}
-		if issue.Difficulty != "" {
-			labels = append(labels, "difficulty:"+issue.Difficulty)
+		if d := config.AsDifficulty(issue.Difficulty); d != "" { // a retired `easy` is medium (#2748)
+			labels = append(labels, "difficulty:"+d)
 		}
 		labels = append(labels, priority...)
 		labels = append(labels, queueLabel)
@@ -208,9 +211,6 @@ func (x *Deliverer) integrationBranch(number int) (string, string) {
 // checks and reviews every part at once.
 func (x *Deliverer) LandPart(number int) {
 	onto, parent := py.Str(x.Plan.Get("onto")), py.MustInt(x.Plan.Get("part_of"))
-	if x.easyBreach(number, "build") {
-		return
-	}
 	sha, problem := x.land(onto, number)
 	own := queue.BranchForIssue(number)
 	parked := ""
@@ -239,9 +239,26 @@ func (x *Deliverer) LandPart(number int) {
 			return nil
 		}
 		x.Ctx.Store.Update(change, fmt.Sprintf("#%d parked for #%d", number, parent))
-	} else if x.Repo.Rev("origin/"+own) != "" {
-		// A cut-off run's work, kept there, is on `onto` now.
-		x.try(func() { x.GH.DeleteBranch(own) })
+	} else {
+		if x.Repo.Rev("origin/"+own) != "" {
+			// A cut-off run's work, kept there, is on `onto` now.
+			x.try(func() { x.GH.DeleteBranch(own) })
+		}
+		if slices.Contains(py.Each(x.Record(parent).Get("parked")), any(own)) {
+			// Parked before and sent back (#2748): it landed this time, so the reconcile has no
+			// branch of it to merge.
+			x.Ctx.Store.Update(func(state *pyjson.Object) any {
+				entry := statemod.Item(state, parent)
+				kept := []any{}
+				for _, b := range py.Each(entry.Get("parked")) {
+					if py.Str(b) != own {
+						kept = append(kept, b)
+					}
+				}
+				entry.Set("parked", kept)
+				return nil
+			}, fmt.Sprintf("#%d no longer parked for #%d", number, parent))
+		}
 	}
 	queue.SetStateLabel(x.Ctx, number, x.Labels(number), "")
 	var said string
@@ -261,8 +278,96 @@ func (x *Deliverer) LandPart(number int) {
 	x.try(func() {
 		x.GH.UpdateIssue(number, pyjson.New("state", "closed", "state_reason", "completed"))
 	})
+	// Who built it (`built_by`), whom its tree's reconcile may send it back to (#2748); the findings
+	// of a send-back it answered are answered.
 	x.remember(number, pyjson.New("landed", sha, "parked_on", parked, "last_findings", []any{}, "question", "",
-		"failures", 0, "forced", false, "interruptions", 0, "died", 0, "pending_request", false))
+		"failures", 0, "forced", false, "interruptions", 0, "died", 0, "pending_request", false,
+		"built_by", x.Provider.ID))
+	x.Ctx.Store.Update(func(state *pyjson.Object) any {
+		statemod.Item(state, number).Pop("sent_back")
+		return nil
+	}, fmt.Sprintf("#%d landed", number))
+}
+
+// SendBack is a fullsend reconcile's end when it sent parts back (#2748, section 2): it found them
+// largely wrong. Each part it named that may still go back (`plan.SendBackable`, read again here
+// from the state, never from the model job) is reopened, made the owner's of the subscription that
+// built it (`owner_why`: sent back by the reconcile), and queued as a part build onto the tree's
+// branch again, with the findings on its record (`sent_back`) for its prompt, and its count
+// (`send_backs`) one higher. The parent goes back to waiting for its parts (`bot:tree`, its mode
+// label off), and the sweep queues its reconcile again once they have closed (`sweep.Trees`).
+// Nothing of the reconcile's own run is pushed. A run that named no part that may go back fails,
+// as a run that produced nothing does.
+func (x *Deliverer) SendBack(parent int) {
+	allowed := map[int]*pyjson.Object{}
+	for _, entry := range pyjson.Objs(planmod.SendBackable(x.Ctx, parent)) {
+		allowed[py.MustInt(entry.Get("part"))] = entry
+	}
+	onto := queue.BranchForIssue(parent)
+	limit := x.Cfg.FullsendSendBacks
+	var sent []string
+	for _, raw := range objList(x.Result.Get("send_back")) {
+		part, _ := py.Int(raw.Get("part"))
+		entry := allowed[part]
+		if entry == nil {
+			x.log(fmt.Sprintf("#%d: the reconcile may not send #%d back", parent, part))
+			continue
+		}
+		delete(allowed, part) // once each
+		thread := x.GH.GetIssue(part)
+		if names := queue.LabelNames(thread); queue.IsHuman(names) || queue.Owner(thread) != nil {
+			x.log(fmt.Sprintf("#%d: #%d is no longer the bot's to build", parent, part))
+			continue
+		}
+		builder := entry.Str("built_by")
+		findings := py.SliceTo(redact.Redact(py.OrStr(raw.Get("findings"), ""), nil), verdicts.SendBackChars)
+		count := py.MustInt(py.Or(entry.Get("sent_backs"), 0)) + 1
+		if exc, ok := herr.Catch[*herr.GitHubError](func() {
+			x.GH.UpdateIssue(part, pyjson.New("state", "open", "state_reason", "reopened"))
+		}); ok {
+			x.log(fmt.Sprintf("#%d: could not reopen #%d: %s", parent, part, exc.Error()))
+			continue
+		}
+		now := x.Ctx.Now()
+		why := fmt.Sprintf("sent back by #%d's reconcile (run %s) to the subscription that built it", parent,
+			x.Cfg.RunID)
+		x.Ctx.Store.Update(func(state *pyjson.Object) any {
+			statemod.Item(state, part).Set("send_backs", count).Set("sent_back", pyjson.New(
+				"by", parent, "at", clock.ISO(now), "run", x.Cfg.RunURL(), "reconciler", x.Provider.ID,
+				"built_by", builder, "findings", findings))
+			planmod.Own(state, part, builder, why, now)
+			return nil
+		}, fmt.Sprintf("#%d sent back by #%d", part, parent))
+		queued := queue.QueueBuild(x.Ctx, part, x.Cfg.BotLogin, false, false, nil, nil)
+		x.GH.CreateComment(part, fmt.Sprintf("#%d's reconcile (%s) read every part of the tree and "+
+			"sent this one back to `%s`, the subscription that built it (send-back %d of %d): it found "+
+			"it largely wrong.\n\n**What it found:**\n\n%s\n\n%s It lands on `%s` again, on top of what "+
+			"it landed before, and #%d's reconcile runs again once every part has closed.",
+			parent, x.link(), builder, count, limit, findings, queued, onto, parent))
+		sent = append(sent, fmt.Sprintf("#%d to `%s`", part, builder))
+		x.log(fmt.Sprintf("#%d: sent #%d back to %s", parent, part, builder))
+	}
+	if len(sent) == 0 {
+		x.Result.Set("reason", "the reconcile sent back no part that may go back now")
+		x.Fail(parent, "build")
+		return
+	}
+	queue.SetStateLabel(x.Ctx, parent, x.Labels(parent), "")
+	names := queue.SetMode(x.Ctx, parent, x.Labels(parent), "")
+	if !names[config.LabelTree] {
+		x.GH.AddLabels(parent, []string{config.LabelTree})
+	}
+	x.remember(parent, pyjson.New("closeout", false, "forced", false, "interruptions", 0, "died", 0,
+		"pending_request", false))
+	report := py.SliceTo(py.OrStr(x.Result.Get("report"), ""), ReportChars)
+	if report != "" {
+		report = "\n\n<details><summary>The reconcile's report</summary>\n\n" + report + "\n\n</details>"
+	}
+	x.GH.CreateComment(parent, fmt.Sprintf("The reconcile (%s, on %s) found parts largely wrong and "+
+		"sent them back to the subscriptions that built them, with its findings: %s. Each is queued to "+
+		"build again onto `%s`, and nothing of this run was pushed. Once they have closed I queue the "+
+		"reconcile again; a part goes back at most %d time(s), and past that the reconcile fixes it "+
+		"itself.%s", x.link(), x.builtOn(), strings.Join(sent, ", "), onto, limit, report))
 }
 
 // Push the part's bundle onto `onto`: `(sha landed, problem)`, and `("", "")` when it
@@ -377,8 +482,8 @@ func (x *Deliverer) rounds() (int, string) {
 	return py.MustInt(py.Or(x.Result.Get("verdict_rounds"), 0)), py.OrStr(x.Result.Get("round_tier"), "")
 }
 
-// The tier of the seat that just reviewed this pull request (#725): a revision that
-// answers its findings stays at that tier, so the auditor fixes and pushes it.
+// The tier of the seat that just reviewed this pull request (#725): the auditor, which owns the
+// revision that answers its findings (#2748), fixes and pushes it on its seat of that tier.
 func (x *Deliverer) auditTier() string {
 	seats := x.Plan.Obj("seats")
 	tier := ""
@@ -510,9 +615,6 @@ func (x *Deliverer) Revise(number int, status string) {
 		x.remember(number, pyjson.New("question", py.OrStr(question, "")))
 		return
 	}
-	if (status == "approved" || status == "built") && x.easyBreach(number, "revise") {
-		return
-	}
 	// As the run found it: the source and the clearance `_carry` reads are reset below.
 	before := x.Record(number)
 	started := before.Get("started_at")
@@ -545,6 +647,8 @@ func (x *Deliverer) Revise(number int, status string) {
 		return
 	}
 	approved := status == "approved"
+	// Pushed for its own review run on this subscription (#2748, 2026-11-02), auto-merge off.
+	chained := status == "built" && botPR && x.chained()
 	pushed, problem := x.publish(approved)
 	if problem != "" {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
@@ -565,9 +669,11 @@ func (x *Deliverer) Revise(number int, status string) {
 		fixed.Set("ci_fixed_head", py.OrStr(x.Result.Get("head"), ""))
 	}
 	rounds, roundTier := x.rounds()
+	// The audit it answered, if any, is answered: a later revision (a CI fix, a person's request)
+	// answers no audit's tier (#2748).
 	x.remember(number, pyjson.New("feedback_since", started, "failures", 0, "source", "", "last_findings", []any{},
 		"question", "", "verdict_rounds", rounds, "round_tier", roundTier,
-		"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})).Update(fixed))
+		"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{}), "audit_tier", "").Update(fixed))
 	note := ""
 	if !pushed && approved {
 		note = "\n\nI changed nothing: the reviewer agreed no change was needed."
@@ -601,7 +707,9 @@ func (x *Deliverer) Revise(number int, status string) {
 			if target == "" {
 				target = nowHead
 			}
-			if !approved {
+			if chained && !waiting {
+				rule = x.handOn(number, target) // its own review run is next (#2748)
+			} else if !approved {
 				rule = x.awaitReview(number, target, !waiting)
 			} else {
 				if pull.Truthy("draft") && !waiting {
@@ -616,9 +724,12 @@ func (x *Deliverer) Revise(number int, status string) {
 		}
 	}
 	var said string
-	if approved {
+	switch {
+	case approved:
 		said = x.ReviewSeat.Describe() + " reviewed it adversarially and approved it"
-	} else {
+	case chained:
+		said = x.checksSaid()
+	default:
 		said = x.selfCheckSaid()
 	}
 	done := "done"

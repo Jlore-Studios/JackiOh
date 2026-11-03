@@ -22,6 +22,12 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/threads"
 )
 
+// UsageFacts is where a claim puts in the plan what the run's row in the usage history reads when
+// it is delivered (#2749, `usage.RunOf`): `queued_at` and `claimed_at`, `previous_provider` (the
+// subscription the thread's last run was on) and `handed_off` (its item's `owner_why` when the
+// claim took it from another owner, "" when it did not). Only with `usage_history`.
+var UsageFacts = "usage_facts"
+
 // providerFields is what the model job needs to know about the subscription it runs on. The
 // secret's value is never here: the workflow hands the model job only the secret named.
 func providerFields(ctx *hctx.Context, provider *providers.Provider) *pyjson.Object {
@@ -36,7 +42,7 @@ func providerFields(ctx *hctx.Context, provider *providers.Provider) *pyjson.Obj
 }
 
 // startMessage is what a build or revision run says it does, by who runs each role.
-func startMessage(assignment *Assignment, cfg *config.Config) string {
+func startMessage(assignment *Assignment, cfg *config.Config, chained bool) string {
 	var steps []string
 	if assignment.Plan != nil {
 		steps = append(steps, "plan it on "+assignment.Plan.Describe())
@@ -52,10 +58,18 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 			cfg.MaxSelfCheckRounds))
 	}
 	var end string
-	if assignment.Review != nil {
+	if assignment.Review != nil && chained {
+		// Its own review run on this subscription reviews it (#2748, 2026-11-02).
+		steps = append(steps, fmt.Sprintf("open the pull request, so CI starts, and hand this lane to "+
+			"its own review run, where %s reviews the change adversarially and fixes what it finds, up "+
+			"to %s rounds", assignment.Review.Describe(),
+			py.Str(cfg.MaxReviewCycles.GetOr(assignment.Difficulty, 3))))
+		end = "It merges once " + reviewrule.Summary + " approved it."
+	} else if assignment.Review != nil {
 		steps = append(steps, fmt.Sprintf("have %s review the change adversarially, up to %s rounds",
 			assignment.Review.Describe(), py.Str(cfg.MaxReviewCycles.GetOr(assignment.Difficulty, 3))))
-		end = "Only an approved change becomes a pull request."
+		end = "Only an approved change becomes a pull request, and it merges once " +
+			reviewrule.Summary + " approved it."
 	} else {
 		end = "No model here reviews it, so the pull request then waits for a review run, until " +
 			reviewrule.Summary + " approved it."
@@ -63,9 +77,16 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 	return fmt.Sprintf("I %s and %s. %s", strings.Join(steps[:len(steps)-1], ", "), steps[len(steps)-1], end)
 }
 
-// Claim builds the plan for one queued thread on one subscription, and marks it `bot:working`.
-// nil when the thread is closed, or a pull request from a fork.
+// Claim builds the plan for one queued thread on one subscription, and marks it with its run's
+// live label (`config.LiveRun`: `bot:planning`, `bot:building`, `bot:fixing-ci`, …, #2748), which
+// its record keeps as `live`. A planning run, a build or a revision makes its subscription the
+// item's owner (`takeOver`, #2748), and ends any hold on it (its `bot:waiting` goes with the
+// queue's label). nil when the thread is closed, or a pull request from a fork. An after-merge
+// spot-check, of a pull request closed by its merge, is claimed apart (`claimSpotCheck`).
 func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment) *pyjson.Object {
+	if candidate.SpotCheck {
+		return claimSpotCheck(ctx, candidate, assignment)
+	}
 	cfg := ctx.Cfg
 	provider := assignment.Provider
 	number, kind := candidate.Number, candidate.Kind
@@ -77,9 +98,24 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		return nil
 	}
 	record := recordOf(ctx.Store.Load(), strconv.Itoa(number))
+	if kind == "build" && candidate.Mode == "" && !candidate.Part {
+		// A queued parent with open sub-issues is a fullsend tree's (#2748, section 2), however it
+		// was queued: a label an issue form or triage put on reaches the queue with no event.
+		children, unread := queue.QueuedParent(ctx, thread, record)
+		if unread != "" {
+			return nil // its sub-issues could not be read: the next plan asks again
+		}
+		if len(children) > 0 {
+			by := py.OrStr(record.Get("requested_by"), cfg.BotLogin)
+			ctx.GH.CreateComment(number, queue.AutoAdopt(ctx, number, names, children, by))
+			return nil
+		}
+	}
 	// (The Python's `who = provider.describe()` is never read, so it is left out.)
 	var planned *pyjson.Object
 	var message string
+	// A run that changes code hands its lane to its own review run (#2748, 2026-11-02).
+	chains := false
 	if kind == "build" {
 		planned = pyjson.New(
 			"action", assignment.Action,
@@ -113,12 +149,22 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 					parked = append(parked, py.Str(b))
 				}
 				planned.Set("parked", parked)
+				if planned.Truthy("children") {
+					// The parts its reconcile may send back to their builders (#2748).
+					planned.Set("send_backs", SendBackable(ctx, number))
+					planned.Set("send_back_cap", cfg.FullsendSendBacks)
+				}
 			}
 		}
+		chains = Chains(cfg, candidate, assignment, names, record, planned.Truthy("children"))
 		if record.Truthy("onto") {
 			// A fullsend part (#505): it lands on its tree's branch, not `main`.
 			planned.Set("onto", py.Str(record.Get("onto")))
 			planned.Set("part_of", py.MustInt(py.Or(record.Get("part_of"), 0)))
+			if record.Truthy("sent_back") {
+				// Its tree's reconcile sent it back to its builder, with its findings (#2748).
+				planned.Set("sent_back", record.Get("sent_back"))
+			}
 		}
 		if record.Truthy("previous_pr") {
 			planned.Set("previous_pr", record.Get("previous_pr"))
@@ -130,7 +176,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			message = fmt.Sprintf("Starting work on this now%s: the reconcile of this fullsend "+
 				"tree. Every part has closed, so this run merges them on `%s`, follows fullsend's "+
 				"reconcile and makes every check green, for one pull request into `main`. %s",
-				RunLink(cfg), py.Str(planned.Get("branch")), startMessage(assignment, cfg))
+				RunLink(cfg), py.Str(planned.Get("branch")), startMessage(assignment, cfg, chains))
 		case candidate.Mode == "fullsend":
 			message = fmt.Sprintf("Splitting this now for fullsend%s, on %s: one session reads it "+
 				"and the code and answers with parts that each own their files. When the run ends I "+
@@ -143,25 +189,29 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				"open them, queued for %s in the order they depend on each other.",
 				RunLink(cfg), assignment.Build.Describe(), SplitBuilders(candidate.Mode))
 		case planned.Truthy("onto") && assignment.Action == "build":
+			again := ""
+			if planned.Truthy("sent_back") {
+				again = fmt.Sprintf(" #%s's reconcile sent it back with its findings, which this "+
+					"build answers on top of what it landed before.", py.Str(planned.Get("part_of")))
+			}
 			message = fmt.Sprintf("Starting work on this now%s: a fullsend part, "+
 				"difficulty:%s, built on %s. It lands on `%s`, the branch of #%s, with no checks, "+
 				"review or pull request of its own: the tree's reconcile checks and reviews every "+
-				"part at once.", RunLink(cfg), candidate.Difficulty, assignment.Build.Describe(),
-				py.Str(planned.Get("onto")), py.Str(planned.Get("part_of")))
+				"part at once.%s", RunLink(cfg), candidate.Difficulty, assignment.Build.Describe(),
+				py.Str(planned.Get("onto")), py.Str(planned.Get("part_of")), again)
 		case candidate.Mode == "oneshot":
 			message = fmt.Sprintf("Starting a one-shot build of this now%s, on %s, with fullsend: a "+
 				"spec first, then many agents writing its parts at once, each in its own worktree "+
 				"and branch, reconciled against tests written from the spec. %s",
-				RunLink(cfg), assignment.Build.Describe(), startMessage(assignment, cfg))
+				RunLink(cfg), assignment.Build.Describe(), startMessage(assignment, cfg, chains))
 		case assignment.Action == "plan":
 			message = fmt.Sprintf("Planning this now%s, on %s (`%s`): it is difficulty:%s. The plan "+
 				"goes into this issue's description, under **Plan**, and the lane's owner builds "+
-				"from it (a medium or hard item stays with its planner; an easy one goes to the "+
-				"weakest weak seat).", RunLink(cfg), assignment.Plan.Describe(), labelNeedsPlan,
-				candidate.Difficulty)
+				"from it (the planner owns the item, so it builds it when it can).", RunLink(cfg),
+				assignment.Plan.Describe(), labelNeedsPlan, candidate.Difficulty)
 		default:
 			message = fmt.Sprintf("Starting work on this now%s: it is difficulty:%s. %s",
-				RunLink(cfg), candidate.Difficulty, startMessage(assignment, cfg))
+				RunLink(cfg), candidate.Difficulty, startMessage(assignment, cfg, chains))
 		}
 	} else {
 		pull := ctx.GH.GetPull(number)
@@ -205,6 +255,16 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			message = fmt.Sprintf("Starting a review now%s, on %s. `%s` built the change; it merges "+
 				"once %s approved the same commit.", RunLink(cfg), assignment.Review.Describe(),
 				builder, reviewrule.Summary)
+			if candidate.OwnReview {
+				ownReviewPlan(planned, record)
+				message = fmt.Sprintf("Starting its own review run now%s, on `%s`, whose run built it: %s "+
+					"reviews the change adversarially in a fresh session, reads its CI, and %s fixes what "+
+					"it finds in the same run, then a fresh review again, up to %s rounds. Once it "+
+					"approves, I mark the pull request ready and turn auto-merge on: it merges once %s "+
+					"approved the same commit and CI passes.", RunLink(cfg), provider.ID,
+					assignment.Review.Describe(), assignment.Build.Describe(),
+					py.Str(cfg.MaxReviewCycles.GetOr(candidate.Difficulty, 3)), reviewrule.Summary)
+			}
 		} else {
 			source := py.OrStr(record.Get("source"), "request")
 			feedback := threads.PullFeedback(ctx.GH, ctx.Trust, number, cfg.BotLogin,
@@ -221,6 +281,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				}
 				feedback += "\n\n" + prompts.Data(strings.Join(lines, "\n"), "The second review's blocking findings")
 			}
+			chains = Chains(cfg, candidate, assignment, names, record, false)
 			planned = pyjson.New(
 				"action", "revise",
 				"number", number,
@@ -235,7 +296,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				"issue_number", intOrNone(issueNumber),
 			)
 			message = fmt.Sprintf("Starting a revision now%s, because of: %s. %s",
-				RunLink(cfg), source, startMessage(assignment, cfg))
+				RunLink(cfg), source, startMessage(assignment, cfg, chains))
 			if names[labelPR] && queue.Carries(record) {
 				// The work job tells its builder and reviewer; deliver decides from git alone.
 				planned.Set("cleared", queue.Cleared(record))
@@ -255,10 +316,13 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	planned.Set("seats", assignment.Seats())
 	planned.Set("routing", pyjson.ListOf(assignment.Notes))
 	planned.Set("assignment", assignment.Describe())
-	if kind == "build" || kind == "revise" {
-		// Verdict rounds the item already used in its current owner's hands (#725).
+	if kind == "build" || kind == "revise" || candidate.OwnReview {
+		// Verdict rounds the item already used in its current owner's hands (#725), across runs.
 		planned.Set("rounds_used", candidate.RoundsUsed)
 		planned.Set("round_tier", candidate.RoundTier)
+	}
+	if chains {
+		planned.Set("own_review_next", true)
 	}
 	if kind == "review" && record.Truthy("self_check_findings") {
 		planned.Set("self_check_findings", record.Get("self_check_findings"))
@@ -266,12 +330,26 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
+	if record.Truthy("session") {
+		// The Claude session the item's last run kept, which a run on its subscription resumes
+		// (#2748): the record only; the work job fetches the sealed file itself.
+		planned.Set("session", record.Get("session"))
+	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).
 	journalOf := journal.Key(planned)
 	if journalOf == 0 {
 		journalOf = number
 	}
-	if text := journal.Read(ctx.GH, journalOf, journal.ReadChars); text != "" {
+	text := journal.Read(ctx.GH, journalOf, journal.ReadChars)
+	// And the handoffs people's Claude sessions left on the issue or its pull request (CLAUDE.md
+	// rule 14, #2748 section 10), which no session can write to the journal's branch.
+	if handoffs := journal.SessionHandoffs(ctx.GH, journal.TrustedAuthor(ctx.Trust), journalOf, number); handoffs != "" {
+		if text != "" {
+			text = strings.TrimRight(text, "\n") + "\n\n"
+		}
+		text += handoffs
+	}
+	if text != "" {
 		planned.Set("journal", text)
 	}
 	if wip, isDict := record.Get("wip").(*pyjson.Object); kind == "revise" && isDict && wip != nil {
@@ -291,16 +369,41 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			planned.Set("handoff", merged)
 		}
 	}
-	queue.SetStateLabel(ctx, number, names, config.LabelWorking)
+	live := config.LiveRun(kind, assignment.Action, candidate.Mode, py.OrStr(record.Get("source"), "request"),
+		planned.Truthy("children"), kind != "build")
+	queue.SetStateLabel(ctx, number, names, config.LiveLabel(live))
 	if names[labelNeedsPlan] && assignment.Action != "plan" {
 		ctx.GH.RemoveLabel(number, labelNeedsPlan) // this run plans it first, in the run
 	}
 	var taken []string
 	ctx.Store.Update(func(state *pyjson.Object) any {
 		entry := hstate.Item(state, number)
+		previous := entry.Get("provider")
 		entry.Update(pyjson.New("run_id", cfg.RunID, "started_at", clock.ISO(ctx.Now()), "kind", kind,
 			"action", assignment.Action, "stop_requested", false, "pending_request", false,
-			"provider", provider.ID, "runs_on", planned.Get("runs_on")))
+			"provider", provider.ID, "runs_on", planned.Get("runs_on"), "live", live))
+		handedOff := ""
+		if kind != "review" {
+			// The subscription that takes it up owns it (#2748); a held item waits no more.
+			was := queue.OwnerOf(state, number)
+			takeOver(state, number, provider.ID, assignment, ctx.Now())
+			why := recordOf(state, strconv.Itoa(queue.OwnerItem(state, number))).Str("owner_why")
+			if was != provider.ID && (was != "" || strings.Contains(why, "released")) {
+				handedOff = why // from another owner, or released from one: not a first claim
+			}
+			entry.Pop("hold")
+		}
+		if cfg.RecordsUsage() {
+			// What the run's row in the usage history reads at delivery (#2749): how long it was
+			// queued, the subscription its last run was on, and why it changed hands, if it did.
+			planned.Set(UsageFacts, pyjson.New("queued_at", candidate.QueuedAt,
+				"claimed_at", clock.ISO(ctx.Now()), "previous_provider", previous, "handed_off", handedOff))
+		}
+		if reserved := queue.OwnReviewOf(entry); candidate.OwnReview && reserved != nil {
+			// Its own review run takes it up (#2748): the lane its build reserved is this run's now.
+			reserved.Set("claimed", true).Set("claimed_at", clock.ISO(ctx.Now()))
+			entry.Pop("hold")
+		}
 		taken = asks.Take(entry)
 		state.Set("last_run", pyjson.New("at", clock.ISO(ctx.Now()), "url", cfg.RunURL(),
 			"what", fmt.Sprintf("%s #%d on %s", assignment.Action, number, provider.ID)))
@@ -336,6 +439,42 @@ func TreeText(ctx *hctx.Context, number int) string {
 			py.Str(c.GetOr("title", ""))))
 	}
 	return prompts.Data(strings.Join(lines, "\n"), fmt.Sprintf("The sub-issues #%d has already", number))
+}
+
+// SendBackable is the parts of fullsend tree `number` that its reconcile may send back to the
+// subscription that built each (#2748, section 2): every closed sub-issue the bot landed (or
+// parked) as a part of this tree (`part_of`, `onto`, `landed`), whose builder is on record
+// (`queue.PartBuilder`), and that was sent back fewer times than `fullsend_send_backs`.
+// `[{"part", "title", "built_by", "sent_backs"}]`, in the sub-issues' order; none when the cap is
+// 0 (Squishy's) or the sub-issues could not be read. Past the cap the reconcile fixes it itself.
+func SendBackable(ctx *hctx.Context, number int) []any {
+	out := []any{}
+	limit := ctx.Cfg.FullsendSendBacks
+	if limit <= 0 {
+		return out
+	}
+	var children []*pyjson.Object
+	if _, failed := herr.Catch[*herr.GitHubError](func() { children = ctx.GH.ListSubIssues(number) }); failed {
+		return out
+	}
+	state := ctx.Store.Load()
+	onto := queue.BranchForIssue(number)
+	for _, c := range children {
+		part := py.MustInt(py.Or(c.Get("number"), 0))
+		record := recordOf(state, strconv.Itoa(part))
+		if !eqStr(c.Get("state"), "closed") || py.MustInt(py.Or(record.Get("part_of"), 0)) != number ||
+			!eqStr(record.Get("onto"), onto) || !record.Has("landed") {
+			continue
+		}
+		builder := queue.PartBuilder(record)
+		sent := py.MustInt(py.Or(record.Get("send_backs"), 0))
+		if builder == "" || sent >= limit {
+			continue
+		}
+		out = append(out, pyjson.New("part", part, "title", py.OrStr(c.Get("title"), ""),
+			"built_by", builder, "sent_backs", sent))
+	}
+	return out
 }
 
 // CILogs is the tails of the failed jobs of one CI run, fenced as data.
@@ -374,4 +513,40 @@ func CILogs(ctx *hctx.Context, runID any) string {
 		text = "(no failed job found)"
 	}
 	return prompts.Data(text, "CI run "+py.Str(runID))
+}
+
+// Chains is whether the run `assignment` makes of `candidate` hands its lane to the change's own
+// review run (#2748, the owner's decision of 2026-11-02; `own_review_run`): a build or a revision
+// on a subscription with a reviewer of its own, of a bot pull request (a revision a person asked
+// for, an auditor's fix, a CI fix, a conflict), whose deliver opens or pushes the pull request and
+// reserves the lane for that run. A fullsend tree's reconcile (`reconcile`) chains as any hard
+// build does. Not a fullsend part (no review per part), a split (no pull request), a person's pull
+// request (its reviewer must be in the run), or a conflict on a cleared change, whose own run's
+// review carries its clearance (`deliver.Carry`).
+func Chains(cfg *config.Config, candidate *queue.Candidate, assignment *Assignment, names map[string]bool,
+	record *pyjson.Object, reconcile bool) bool {
+	if !cfg.OwnReviewRun || assignment.Review == nil || candidate.Part {
+		return false
+	}
+	switch candidate.Kind {
+	case "build":
+		if strings.HasPrefix(candidate.Mode, "split") || (candidate.Mode == "fullsend" && !reconcile) {
+			return false
+		}
+		return assignment.Action == "build"
+	case "revise":
+		return names[config.LabelPR] && !queue.Carries(record)
+	}
+	return false
+}
+
+// ownReviewPlan puts into an own review run's plan what its build left on the pull request's record
+// (`own_review`): the head it pushed, the checks it ran on it, who built it, and why it ran.
+func ownReviewPlan(planned *pyjson.Object, record *pyjson.Object) {
+	reserved := queue.OwnReviewOf(record)
+	planned.Set("own_review", true)
+	planned.Set("built_head", py.OrStr(reserved.Get("head"), ""))
+	planned.Set("built_gates", py.Or(reserved.Get("gates"), []any{}))
+	planned.Set("built_by", reserved.Str("provider"))
+	planned.Set("source", py.OrStr(reserved.Get("source"), "build"))
 }

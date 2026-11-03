@@ -479,7 +479,7 @@ func TestWork_NeverApproved(t *testing.T) {
 		"review": workReviewer(workChanges("Still wrong."))})
 	result := w.worker(r).Run()
 	assertEqual(t, result.Get("status"), "built")
-	assertIn(t, "Strong final audit", result.Str("reason"))
+	assertIn(t, "its final audit, another subscription's when one is free", result.Str("reason"))
 	assertEqual(t, len(result.List("cycles")), 3)
 	assertEqual(t, result.Get("verdict_rounds"), 3)
 	assertTrue(t, exists(filepath.Join(w.out, "branch.bundle")))

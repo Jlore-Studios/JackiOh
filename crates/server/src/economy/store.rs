@@ -4,8 +4,9 @@
 //! ledger, whose claim burns in place (`economy_practice_seed_claim`); migration 0067's idempotency keys
 //! (R2124000), written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`; and
 //! migration 0071's claim, kept with its seed until a pay or a refusal settles it, once (R2422000,
-//! `economy_practice_seed_settle`); and migration 0077's practice claim counts by UTC day and outcome
-//! (#2884, `economy_practice_claim_count`).
+//! `economy_practice_seed_settle`); migration 0077's news claims, one per account and entry
+//! (R2875000), no holding and no ledger: the reward a claim pays is written to the ledgers; and
+//! migration 0078's practice claim counts by UTC day and outcome (#2884, `economy_practice_claim_count`).
 //!
 //! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching to
 //! this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and ledger row together, in the
@@ -30,7 +31,7 @@ use crate::economy::practice::{ClaimBucket, ClaimedResult};
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
 /// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
-/// or the launch's reset (§14.12).
+/// the launch's reset (§14.12) or a news entry's reward claimed (§14.13).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum JloreReason {
@@ -42,11 +43,14 @@ pub enum JloreReason {
     /// Migration 0050's reset of every existing account's economy (R1310002); no server path
     /// writes it.
     Launch,
+    /// R2875000: a news entry's reward claimed (§14.13), its `ref` the entry's id; migration 0077.
+    News,
 }
 
 /// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, and a pack
 /// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5), the Chase Shard bar
-/// buying (§14.6), the launch's reset (§14.12) and reaching Jlorious (R2755000).
+/// buying (§14.6), the launch's reset (§14.12), reaching Jlorious (R2755000) and a news entry's
+/// reward claimed (§14.13).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EconomyReason {
@@ -65,6 +69,9 @@ pub enum EconomyReason {
     /// R2755000: the Jlorious card back, granted by the rated game that left its person Jlorious,
     /// or by migration 0074 to each person who had held Jlorious before.
     Jlorious,
+    /// R2875000: a news entry's reward claimed (§14.13), its `ref` the entry's id; migration 0077
+    /// lets the inventory ledger take it.
+    News,
 }
 
 /// What an inventory row counts (§14.3, §14.5, §14.6). A set's card pack is keyed by its set, the
@@ -344,7 +351,7 @@ pub struct PracticeSeed {
     pub settled: Option<PracticeSettled>,
 }
 
-/// One row of `public.practice_claim_counts` (migration 0077, #2884): how many practice claims ended
+/// One row of `public.practice_claim_counts` (migration 0078, #2884): how many practice claims ended
 /// on a UTC day (`YYYY-MM-DD`) in one bucket, its `outcome` a `ClaimBucket::name`. Aggregates alone:
 /// no account, seed or log.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -378,6 +385,17 @@ pub struct IdempotencyRow {
     pub status: i64,
     pub body: serde_json::Value,
     pub created_at: i64,
+}
+
+/// R2875000: one row of `public.news_claims` (migration 0077): the account claimed the news entry's
+/// reward, once, at `claimed_at`. Its key (`profile_id`, `news_id`) is what makes a claim once.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct NewsClaim {
+    pub profile_id: String,
+    /// The entry's id, a slug (`economy::news`).
+    pub news_id: String,
+    pub claimed_at: i64,
 }
 
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
@@ -509,12 +527,14 @@ pub struct EconomyTables {
     pub cosmetic_grants: Vec<CosmeticGrant>,
     /// Migration 0047's seeds, in the order they were issued.
     pub practice_seeds: Vec<PracticeSeed>,
-    /// #2884: migration 0077's claim counts, one per day and outcome.
+    /// #2884: migration 0078's claim counts, one per day and outcome.
     pub practice_claim_counts: Vec<PracticeClaimCount>,
     /// R1834000: migration 0061's per-card picks, one per profile and card.
     pub card_picks: Vec<(String, CardPicks)>,
     /// R2124000: migration 0067's idempotency keys, one per profile and key.
     pub idempotency_keys: Vec<IdempotencyRow>,
+    /// R2875000: migration 0077's news claims, one per profile and entry.
+    pub news_claims: Vec<NewsClaim>,
 }
 
 // What both stores refuse alike: migration 0045's checks
@@ -930,6 +950,26 @@ impl Tx<'_> {
         economy_dispatch!(self, idempotency_sweep(created_before))
     }
 
+    /// R2875000: the ids of the news entries the profile claimed, in byte order (`collate "C"`).
+    pub async fn economy_news_claims_get(&mut self, profile_id: &str) -> StoreResult<Vec<String>> {
+        economy_dispatch!(self, news_claims_get(profile_id))
+    }
+
+    /// R2875000: marks the profile's claim of the news entry `news_id` at `at`. False, writing
+    /// nothing, when it claimed it already, as the table's key refuses a second row; an id that is
+    /// no slug is refused, as migration 0077's check refuses it.
+    pub async fn economy_news_claim(
+        &mut self,
+        profile_id: &str,
+        news_id: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        if !crate::cosmetics::is_slug(news_id) {
+            return Err(refused(format!("a news id is a slug, not {news_id:?}")));
+        }
+        economy_dispatch!(self, news_claim(profile_id, news_id, at))
+    }
+
     /// R1301003: a lock on the account's economy until the transaction ends, so two pack openings
     /// at once run one after the other and neither rolls on counters the other is moving. A lock,
     /// not a holding: no ledger row.
@@ -964,6 +1004,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables.practice_seeds.retain(|seed| seed.profile_id != profile_id);
     tables.card_picks.retain(|(owner, _)| owner != profile_id);
     tables.idempotency_keys.retain(|row| row.profile_id != profile_id);
+    tables.news_claims.retain(|row| row.profile_id != profile_id);
 }
 
 // Postgres (migration 0045)
@@ -2027,7 +2068,7 @@ mod pg {
         Ok(())
     }
 
-    /// Migration 0077: one statement, adding to the day's row or writing it. No profile's row, so
+    /// Migration 0078: one statement, adding to the day's row or writing it. No profile's row, so
     /// it runs as no subject.
     pub async fn practice_claim_count(
         t: &mut PgTx<'_>,
@@ -2130,6 +2171,39 @@ mod pg {
         .await?;
         Ok(done.rows_affected())
     }
+
+    /// Migration 0077.
+    pub async fn news_claims_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<String>, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let ids: Vec<String> = sqlx::query_scalar(
+            r#"select news_id from public.news_claims where profile_id = $1::uuid order by news_id collate "C""#,
+        )
+        .bind(profile_id)
+        .fetch_all(&mut **t)
+        .await?;
+        Ok(ids)
+    }
+
+    /// One statement: the key's conflict writes nothing, and says so.
+    pub async fn news_claim(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        news_id: &str,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let done = sqlx::query(
+            "insert into public.news_claims (profile_id, news_id, claimed_at)
+             values ($1::uuid, $2::text, to_timestamp($3::double precision / 1000.0))
+             on conflict (profile_id, news_id) do nothing",
+        )
+        .bind(profile_id)
+        .bind(news_id)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
 }
 
 // The in-memory fake (`FakeTables::economy`)
@@ -2138,9 +2212,9 @@ mod fake {
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
         EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry,
-        InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim, PracticeClaimCount,
-        PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange, QuestGrant, SetTrack,
-        TrackGrant, claim_count_day, count_after, literal, track_after,
+        InventoryGrant, JloreGrant, JloreReason, NewsClaim, OwnedCosmetics, PracticeClaim,
+        PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
+        QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, literal, track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -2810,5 +2884,39 @@ mod fake {
             .idempotency_keys
             .retain(|held| held.created_at >= created_before);
         Ok(u64::try_from(before - tables.idempotency_keys.len()).unwrap_or(u64::MAX))
+    }
+
+    pub fn news_claims_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<String>, StoreError> {
+        let tables = call(f, "economy.newsClaims.get")?;
+        let ids: Vec<String> = tables
+            .news_claims
+            .iter()
+            .filter(|held| held.profile_id == profile_id)
+            .map(|held| held.news_id.clone())
+            .collect();
+        Ok(sorted_by(ids, |id| id.clone()))
+    }
+
+    /// A claim the profile already holds writes nothing, as Postgres's `on conflict do nothing` does.
+    pub fn news_claim(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        news_id: &str,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.newsClaims.put")?;
+        if tables
+            .news_claims
+            .iter()
+            .any(|held| held.profile_id == profile_id && held.news_id == news_id)
+        {
+            return Ok(false);
+        }
+        tables.news_claims.push(NewsClaim {
+            profile_id: profile_id.to_string(),
+            news_id: news_id.to_string(),
+            claimed_at: at,
+        });
+        Ok(true)
     }
 }

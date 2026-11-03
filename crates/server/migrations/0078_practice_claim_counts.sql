@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0077: practice claim counts (issue #2884) -- how each claim ended
+-- Migration 0078: practice claim counts (issue #2884) -- how each claim ended
 -- ============================================================================
 -- Serves SPEC §14.8 (a practice game pays once the server has checked it): a
 -- count of how practice claims ended, so the seed TTL and the abuse surface
@@ -22,8 +22,8 @@
 --
 -- Nine rows a day at most, so nothing purges it.
 --
--- Apply order: ... -> 0071 (practice settles) -> ... -> 0076 -> 0077 (this
--- file).
+-- Apply order: ... -> 0071 (practice settles) -> ... -> 0077 (news claims) ->
+-- 0078 (this file).
 -- Safe to re-apply: create-if-not-exists, comment-on, revoke.
 -- ============================================================================
 

@@ -325,7 +325,8 @@ func TestWaste_AnUnapprovedPullRequestSaysHowManyRoundsItTookAndWhy(t *testing.T
 }
 
 func TestWaste_TheSquashCommitTakesThePullRequestsTitle(t *testing.T) {
-	// claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
+	// claude-3 alone: its own Opus review meets the rule (#695; 2026-11-02, #2748) and auto-merge
+	// turns on.
 	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
@@ -346,7 +347,8 @@ func TestWaste_ATitleThatBreaksTheConventionGivesWayToTheIssues(t *testing.T) {
 			"Patch v0.3.2: the rules, version two"},
 	} {
 		text, want := c[0], c[1]
-		// claude-3 alone, so its Opus review meets the rule (#695) and auto-merge turns on.
+		// claude-3 alone: its own Opus review meets the rule (#695; 2026-11-02, #2748) and
+		// auto-merge turns on.
 		h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 		h.gh.AddIssue(12, fakes.Issue{Title: issue, Labels: []string{config.LabelBuild}})
 		h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}, text),

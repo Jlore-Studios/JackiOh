@@ -47,7 +47,7 @@ pub enum ClaimRefusal {
     ResultMismatch,
 }
 
-/// How a practice claim ended, as migration 0077's `practice_claim_counts` counts it by UTC day
+/// How a practice claim ended, as migration 0078's `practice_claim_counts` counts it by UTC day
 /// (#2884): paid, or refused for one reason. A claim whose seed burned counts once, by the settle
 /// that marked it paid or refused ([[R2422000]]); a refusal before the burn counts once per request.
 /// A new refusal joins [`ClaimBucket::name`], [`ClaimBucket::ALL`] and a new migration's

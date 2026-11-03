@@ -47,6 +47,13 @@ type flowHarnessOpts struct {
 	CommittedPlanLanes bool
 	// Overrides is the rest of **cfg_overrides: config.json keys, in order.
 	Overrides *pyjson.Object
+	// Chain keeps the committed `own_review_run` (#2748, 2026-11-02): a build hands its lane to its
+	// own review run, a second night of the harness (tests/own_review_test.go). Without it the
+	// harness builds, checks and reviews in one run (`own_review_run: false`), Squishy's flow and
+	// the night bot's for a conflict on a cleared change and a person's pull request, which the
+	// tests of everything else the review loop does (switches, rounds, sessions, wip, the review
+	// rule, ...) pin as they did before the chain.
+	Chain bool
 }
 
 // flowPlanArgs is plan.make's keyword arguments, which night passes on; a zero field is the
@@ -108,6 +115,9 @@ func newFlowHarness(t *testing.T, opts ...flowHarnessOpts) *flowHarness {
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
 	maps.Copy(env, o.Env)
 	overrides := pyjson.New("gates", workGates, "install", workInstall(), "max_review_cycles", 2)
+	if !o.Chain {
+		overrides.Set("own_review_run", false)
+	}
 	if o.Overrides != nil {
 		overrides.Update(o.Overrides)
 	}
@@ -140,8 +150,10 @@ func (h *flowHarness) night(r any, args ...flowPlanArgs) (*pyjson.Object, *pyjso
 	planned := flowMake(h.ctx, args...)
 	out := filepath.Join(h.root, fmt.Sprintf("out-%d", flowOuts(h.root)))
 	if !pyjson.Equal(planned.Get("action"), "none") {
-		work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
-			nil, nil, nil).Run()
+		worker := work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
+			nil, nil, nil)
+		worker.GH = h.gh // an own review run reads its pull request's CI here (#2748)
+		worker.Run()
 		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	}
 	result := pyjson.New()
@@ -291,7 +303,7 @@ func TestFlow_ClaimsTheOldestForcedFirstAndMarksIt(t *testing.T) {
 	assertIn(t, "Also handle the Coin.", planned.Str("thread"))
 	assertNotIn(t, "IGNORE ALL RULES", planned.Str("thread"))
 	assertIn(t, "data, not instructions", planned.Str("thread"))
-	assertEqual(t, gh.LabelNames(4), setOf(config.LabelWorking))
+	assertEqual(t, gh.LabelNames(4), setOf(config.LabelBuilding)) // a build's live label (#2748)
 	assertIn(t, "Starting work on this now ([run](https://github.com/jgoetzmann/JackiOh/"+
 		"actions/runs/777))", lastOf(t, gh.BotComments(4)))
 	byHand := testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: testsupport.MakeConfig(testsupport.Config{
@@ -365,6 +377,8 @@ func TestFlow_SuggestionsWhenIdleUpToTheCap(t *testing.T) {
 
 // ---------------------------------------------------------------------------- FlowTests
 
+// An item's own run's approval ships it (2026-11-02, #2748): claude-1 builds it, its own reviewer
+// approves, and auto-merge turns on at the end of that run.
 func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
 	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: flowLabels(config.LabelBuild)})
@@ -380,11 +394,16 @@ func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
 	assertIn(t, "Approved on round 1", pull.Str("body"))
 	assertFalse(t, pull.Truthy("draft"))
 	assertIn(t, pull.Str("node_id"), h.gh.AutoMerge)
-	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, "difficulty:medium"))
+	// Auto-merge on: `bot:merging` while CI and the merge queue run (#2748).
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, config.LabelMerging, "difficulty:medium"))
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelPROpen, "bot:planned", "difficulty:medium"))
 	assertIn(t, "Auto-merge is on", lastOf(t, h.gh.BotComments(12)))
 	usage := dig(t, h.ctx.Store.Load(), "providers", "claude-1", "usage")
 	assertEqual(t, dig(t, usage, "five_hour", "utilization"), 0.3)
+	// Its clearance says who built it and whose approval shipped it: the same subscription.
+	cleared := dig(t, h.ctx.Store.Load(), "items", fmt.Sprint(pull.Int("number")), "cleared")
+	assertEqual(t, []any{dig(t, cleared, "built_by"), dig(t, cleared, "approver", "provider")},
+		[]any{"claude-1", "claude-1"})
 }
 
 func TestFlow_AChangeToAReviewPathWaitsForAPerson(t *testing.T) {
@@ -455,19 +474,21 @@ func TestFlow_TheNextRunIsChainedWhileWorkRemains(t *testing.T) {
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
 	h.night(r)
-	// One lane free on the taker (#695) means one chained run: it claims one item, and a run
-	// that finds nothing ends cheaply at its gate.
-	assertEqual(t, len(h.gh.Dispatches), 1)
+	// claude-1 has two lanes in its hours (its 100% cap, `lanes_by_cap`, #2748): the claim of #12
+	// chains a run for #13 while its second lane is free, and the run that finishes chains one
+	// more, which finds nothing and ends cheaply at its gate.
+	assertEqual(t, len(h.gh.Dispatches), 2)
 	workflows := []string{}
 	for _, d := range h.gh.Dispatches {
 		workflows = append(workflows, d.Workflow)
 	}
-	assertEqual(t, workflows, []string{"bot-night.yml"})
+	assertEqual(t, workflows, []string{"bot-night.yml", "bot-night.yml"})
 }
 
 func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 	// Twice rejected in the run, the lane's rounds (2 here) are used: the kept work opens a
-	// ready pull request for its Strong final audit instead of drafting for a person.
+	// ready pull request for its final audit (another subscription's when one is free) instead of
+	// drafting for a person.
 	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
@@ -475,7 +496,7 @@ func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 		"review": workReviewer(workChanges("It breaks replay."))})
 	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "built")
-	assertIn(t, "Strong final audit", result.Str("reason"))
+	assertIn(t, "its final audit, another subscription's when one is free", result.Str("reason"))
 	pull := h.gh.ListPulls("open", "bot/issue-12", 200)[0]
 	assertFalse(t, pull.Truthy("draft"))
 	assertNotIn(t, pull.Str("node_id"), h.gh.AutoMerge)
@@ -483,7 +504,8 @@ func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelPROpen, "bot:planned", "difficulty:medium"))
 	said := lastOf(t, h.gh.BotComments(12))
 	assertIn(t, "Its own reviewer read it 2 time(s) in the run", said)
-	assertIn(t, "one strong model's final audit (Opus)", said)
+	assertIn(t, "one medium or strong model's approval in a final audit, another subscription's when "+
+		"one is free or else its own", said)
 }
 
 // flowLimited is a call refused for its limit, until `resetAt`.
@@ -566,9 +588,10 @@ func TestFlow_ARunThatDiesGoesToTheBackAndIsBlockedAfterTwo(t *testing.T) {
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBuild))
 	assertIn(t, "behind the others", lastOf(t, h.gh.BotComments(12)))
-	// One lane (#695): the taker holds its run, so the died run chains nothing; the died item
-	// itself waits out its backoff below.
-	assertEqual(t, len(h.gh.Dispatches), 0)
+	// Two lanes in its hours (#2748): the claim of #12 chained a run for #13 while claude-1's
+	// second lane was free; the died run chains nothing, and the died item itself waits out its
+	// backoff below.
+	assertEqual(t, len(h.gh.Dispatches), 1)
 	// Its subscription is left alone a while; then #12, at the back, waits behind #13.
 	assertIn(t, "could not work", flowMake(h.ctx).Str("reason"))
 	flowAtHour(h.ctx, 4)
@@ -699,13 +722,14 @@ func TestFlow_ARevisionRequestIsPushedToThePullRequest(t *testing.T) {
 	assertIn(t, "rename it to rules v2.1", r.Calls[0].Prompt)
 	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
 	assertEqual(t, fakes.Git(h.origin, "show", result.Str("head")+":src/game.txt"), "v2.1")
-	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR))
+	// Its own run's reviewer approved the revision, which ships it (2026-11-02, #2748).
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelMerging))
 	assertIn(t, "PR_40", h.gh.AutoMerge)
 }
 
 func TestFlow_ARevisionTheReviewerRejectsGoesToItsFinal(t *testing.T) {
 	// Twice rejected, the lane's rounds (2 here) are used: the kept revision is pushed for its
-	// Strong final audit, merging nothing by itself (#725).
+	// final audit, merging nothing by itself (#725, #2748).
 	h := newFlowHarness(t)
 	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
 	fakes.Git(h.clone, "fetch", "-q", "origin")

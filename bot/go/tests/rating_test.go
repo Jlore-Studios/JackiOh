@@ -1,6 +1,6 @@
-// #317 parts 4, 8 and 10: the bot rates each item's difficulty when it plans it, under the easy
-// rule; three failures of an item's own raise it a step and rebuild its pull request from `main`;
-// `/harness rebuild` and `/harness review [strong|medium]`.
+// #317 parts 4, 8 and 10: the bot rates each item's difficulty when it plans it, medium or hard
+// (#2748 retired easy); three failures of an item's own raise it a step and rebuild its pull
+// request from `main`; `/harness rebuild` and `/harness review [strong|medium]`.
 //
 // bot/tests/test_rating.py. Its rated_plan, planner, day_harness, EASY and MEDIUM are
 // ratingRatedPlan, ratingPlanner, ratingDayHarness, ratingEasy and ratingMedium, which other files
@@ -114,27 +114,43 @@ func ratingPrompt(t *testing.T, fake *runner.FakeRunner, i int) string {
 
 // ---------------------------------------------------------------------------- RatingTests
 
-func TestRating_AMediumPlannerRatesAnUnratedItemEasyAndItIsCleared(t *testing.T) {
+func TestRating_AMediumPlannerRatesAnUnratedItemMediumAndItIsCleared(t *testing.T) {
 	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
-	fake := ratingPlanner(ratingRatedPlan("easy", nil, ""))
+	fake := ratingPlanner(ratingRatedPlan("medium", nil, ""))
 	planned, result := h.night(fake)
 	assertEqual(t, []any{dig(t, planned, "action"), dig(t, planned, "provider"), dig(t, result, "status")},
 		[]any{"plan", "muse", "planned"})
 	assertEqual(t, dig(t, planned, "rating"), pyjson.New("difficulty", "medium", "source", "", "by", ""))
-	assertIn(t, "Rate how hard it is", ratingPrompt(t, fake, 0))
-	assertIn(t, "At most 10 files changed", ratingPrompt(t, fake, 0))
-	assertIn(t, ratingEasy, h.gh.LabelNames(12))
+	prompt := ratingPrompt(t, fake, 0)
+	assertIn(t, "Rate how hard it is", prompt)
+	assertIn(t, "`difficulty` is `medium` or `hard`", prompt)
+	assertIn(t, "about 40 files or more", prompt)
+	assertIn(t, "Torn between the two, take the harder", prompt)
+	assertNotIn(t, "`easy`", prompt)
+	assertIn(t, ratingMedium, h.gh.LabelNames(12))
 	record := dig(t, h.ctx.Store.Load(), "items", "12")
 	assertEqual(t, []any{dig(t, record, "difficulty_by", "difficulty"), dig(t, record, "difficulty_by", "tier")},
-		[]any{"easy", "medium"})
+		[]any{"medium", "medium"})
 	said := lastOf(t, h.gh.BotComments(12))
-	assertIn(t, "Rated `difficulty:easy` by `muse`", said)
+	assertIn(t, "Rated `difficulty:medium` by `muse`", said)
 	assertIn(t, "Cleared and queued to build", said)
 	assertNotIn(t, "<!-- bot:", issueplan.PlanOf(pyjson.Str(dig(t, h.gh.Threads.Item(12), "body"))))
-	// The weak one builds it from Muse's plan, which meets an easy item's floor.
+	// Muse, its planner, builds it from its own plan (one lane, one owner); the weak one never does.
 	planned = plan.Make(h.ctx, false, nil, "auto", nil)
-	assertEqual(t, []any{dig(t, planned, "action"), dig(t, planned, "provider")}, []any{"build", "lite"})
+	assertEqual(t, []any{dig(t, planned, "action"), dig(t, planned, "provider")}, []any{"build", "muse"})
+}
+
+// A planner that still answers `easy` (#2748 retired it) rates the item medium.
+func TestRating_ARetiredEasyRatingIsMedium(t *testing.T) {
+	h := ratingDayHarness(t)
+	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
+	h.night(ratingPlanner(ratingRatedPlan("easy", nil, "")))
+	assertEqual(t, ratingDifficulties(h.gh.LabelNames(12)), setOf(ratingMedium))
+	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", "12", "difficulty_by", "difficulty"), "medium")
+	said := lastOf(t, h.gh.BotComments(12))
+	assertIn(t, "Rated `difficulty:medium` by `muse`", said)
+	assertIn(t, "Cleared and queued to build", said)
 }
 
 // A planner that leaves out its `<!-- bot: ... -->` line must not leave the item unlabelled
@@ -142,7 +158,7 @@ func TestRating_AMediumPlannerRatesAnUnratedItemEasyAndItIsCleared(t *testing.T)
 func TestRating_APlanWithNoRatingLineStillLabelsTheItemMedium(t *testing.T) {
 	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
-	_, rest, _ := strings.Cut(ratingRatedPlan("easy", nil, ""), "\n")
+	_, rest, _ := strings.Cut(ratingRatedPlan("medium", nil, ""), "\n")
 	h.night(ratingPlanner(rest))
 	assertEqual(t, ratingDifficulties(h.gh.LabelNames(12)), setOf(ratingMedium))
 	record := dig(t, h.ctx.Store.Load(), "items", "12")
@@ -163,11 +179,11 @@ func TestRating_AMediumRatingByAMediumPlannerStands(t *testing.T) {
 
 func TestRating_ARatingIsNeverLoweredAndAPersonsLabelNeverReplaced(t *testing.T) {
 	// A hard item with only a medium plan still needs a strong one: by night claude-1, strong,
-	// plans it, and its easy rating does not lower it.
+	// plans it, and its medium rating does not lower it.
 	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{"muse"}, CommittedPlanLanes: true})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingHard}, Body: "Make the rules v2."})
 	flowUpdateItem(h.ctx, 12, pyjson.New("difficulty_by", pyjson.New("difficulty", "hard", "provider", "muse", "tier", "medium"), "planned_at", "2026-09-29T00:00:00Z", "planned_tier", "medium"))
-	fake := ratingPlanner(ratingRatedPlan("easy", nil, ""))
+	fake := ratingPlanner(ratingRatedPlan("medium", nil, ""))
 	planned, _ := h.night(fake)
 	assertEqual(t, []any{dig(t, planned, "action"), dig(t, planned, "provider")}, []any{"plan", "claude-1"})
 	assertIn(t, "you may rate it higher, never lower", ratingPrompt(t, fake, 0))
@@ -177,29 +193,12 @@ func TestRating_ARatingIsNeverLoweredAndAPersonsLabelNeverReplaced(t *testing.T)
 	// A person's label: the planner is told not to rate, and a rating it gives anyway is
 	// ignored.
 	h = ratingDayHarness(t, "muse")
-	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingEasy}, Body: "Make the rules v2."})
+	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingMedium}, Body: "Make the rules v2."})
 	fake = ratingPlanner(ratingRatedPlan("hard", nil, ""))
 	planned, _ = h.night(fake)
 	assertEqual(t, dig(t, planned, "rating", "source"), "person")
 	assertIn(t, "A person set this item's difficulty", ratingPrompt(t, fake, 0))
-	assertEqual(t, ratingDifficulties(h.gh.LabelNames(12)), setOf(ratingEasy))
-}
-
-func TestRating_AnEasyPlanThatBreaksTheRuleIsMedium(t *testing.T) {
-	h := ratingDayHarness(t)
-	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
-	h.night(ratingPlanner(ratingRatedPlan("easy", []string{"src/game.txt", "SPEC.md"}, "")))
-	assertIn(t, ratingMedium, h.gh.LabelNames(12))
-	said := lastOf(t, h.gh.BotComments(12))
-	assertIn(t, "The easy rule does not hold (lines 3–5: the plan touches `SPEC.md`)", said)
-	h = ratingDayHarness(t)
-	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Make the rules v2."})
-	files := []string{}
-	for n := range 11 {
-		files = append(files, fmt.Sprintf("src/f%d.txt", n))
-	}
-	h.night(ratingPlanner(ratingRatedPlan("easy", files, "")))
-	assertIn(t, "line 1: the plan touches 11 files, over 10", lastOf(t, h.gh.BotComments(12)))
+	assertEqual(t, ratingDifficulties(h.gh.LabelNames(12)), setOf(ratingMedium))
 }
 
 // With the planning lane off, Muse plans the unrated item in its own build run; it rates it hard,
@@ -220,29 +219,6 @@ func TestRating_ABuildRunThatRatesItsItemOutOfReachStopsAfterPlanning(t *testing
 	assertIsNone(t, h.originSHA("bot/issue-12"))
 }
 
-func TestRating_AWeakBuildersChangeThatBreaksTheRuleIsNotPushed(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": ""},
-		Machine: []string{"lite"}})
-	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, ratingEasy}, Body: issueplan.WithPlan(
-		"Make it.", "1. Edit src/game.txt.", "a person", "")})
-	many := map[string]string{}
-	for n := range 11 {
-		many[fmt.Sprintf("src/f%d.txt", n)] = "x\n"
-	}
-	planned, result := h.night(workFake(map[string]runner.Handler{"build": workBuilder(many),
-		"self_check": workReviewer(workApprove)}))
-	assertEqual(t, []any{dig(t, planned, "provider"), dig(t, result, "status")}, []any{"lite", "built"})
-	assertEqual(t, h.gh.ListPulls("open", "", 200), []*pyjson.Object{})
-	assertIn(t, "breaks the easy rule (line 1: it changes 11 files, over 10)",
-		lastOf(t, h.gh.BotComments(12)))
-	// A person labelled it easy, so the label stays, under a medium floor.
-	assertIn(t, ratingEasy, h.gh.LabelNames(12))
-	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
-	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", "12", "difficulty_floor"), "medium")
-	assertIsNotNone(t, h.originSHA("bot/issue-12"))                                     // the work is kept on its branch
-	assertEqual(t, dig(t, plan.Make(h.ctx, false, nil, "auto", nil), "action"), "none") // The weak one may not take it now
-}
-
 // ---------------------------------------------------------------------------- StepUpTests
 
 // ratingCtx is StepUpTests.ctx and CommandTests.ctx.
@@ -251,6 +227,8 @@ func ratingCtx() (*fakes.FakeGitHub, *hctx.Context) {
 	return gh, testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: testsupport.MakeConfig()})
 }
 
+// A bot's rating from before #2748 that says easy, under its retired label, is medium: three
+// strikes raise it to hard, and the retired label comes off with the medium one.
 func TestRating_ThreeStrikesRaiseABotRatedItemAStep(t *testing.T) {
 	gh, ctx := ratingCtx()
 	gh.AddIssue(12, fakes.Issue{Labels: []string{ratingEasy}})
@@ -258,26 +236,25 @@ func TestRating_ThreeStrikesRaiseABotRatedItemAStep(t *testing.T) {
 	assertFalse(t, stepup.Strike(ctx, 12, "the run failed: a", ""))
 	assertFalse(t, stepup.Strike(ctx, 12, "its reviewer did not approve it: b", ""))
 	assertTrue(t, stepup.Strike(ctx, 12, "the run failed: c", ""))
-	assertIn(t, ratingMedium, gh.LabelNames(12))
-	assertNotIn(t, ratingEasy, gh.LabelNames(12))
+	assertEqual(t, ratingDifficulties(gh.LabelNames(12)), setOf(ratingHard))
 	assertIn(t, config.LabelBuild, gh.LabelNames(12))
 	said := lastOf(t, gh.BotComments(12))
-	assertIn(t, "This failed 3 times at `difficulty:easy`", said)
+	assertIn(t, "This failed 3 times at `difficulty:medium`", said)
 	assertIn(t, "the run failed: a; its reviewer did not approve it: b; the run failed: c",
 		said)
 	record := dig(t, ctx.Store.Load(), "items", "12")
-	assertEqual(t, []any{dig(t, record, "strikes"), dig(t, record, "difficulty_by", "difficulty")}, []any{0, "medium"})
+	assertEqual(t, []any{dig(t, record, "strikes"), dig(t, record, "difficulty_by", "difficulty")}, []any{0, "hard"})
 }
 
 func TestRating_APersonsLabelOrHardAsksAPerson(t *testing.T) {
 	gh, ctx := ratingCtx()
-	gh.AddIssue(12, fakes.Issue{Labels: []string{ratingEasy, config.LabelBuild}})
+	gh.AddIssue(12, fakes.Issue{Labels: []string{ratingMedium, config.LabelBuild}})
 	for n := range 3 {
 		stepup.Strike(ctx, 12, fmt.Sprintf("failure %d", n), "")
 	}
-	assertEqual(t, gh.LabelNames(12), setOf(ratingEasy, config.LabelBlocked))
-	assertIn(t, "A person set `difficulty:easy`, so I do not change it: should it be "+
-		"`difficulty:medium`?", lastOf(t, gh.BotComments(12)))
+	assertEqual(t, gh.LabelNames(12), setOf(ratingMedium, config.LabelBlocked))
+	assertIn(t, "A person set `difficulty:medium`, so I do not change it: should it be "+
+		"`difficulty:hard`?", lastOf(t, gh.BotComments(12)))
 	gh.AddIssue(13, fakes.Issue{Labels: []string{ratingHard}})
 	flowUpdateItem(ctx, 13, pyjson.New("difficulty_by", pyjson.New("difficulty", "hard")))
 	for n := range 3 {

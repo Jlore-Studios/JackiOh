@@ -5,12 +5,18 @@
 //
 // Each role runs on the seat `plan` gave it (`plan["seats"]`: a model and its tier on this
 // subscription): a planning session first when the item has no plan yet, the builder and its
-// fixes, and the run's own adversarial reviewer. A builder whose seat has `self_check` (a weak one)
-// checks its own change before any review: build, checks, a self check by a fresh session of the same
-// model, and on findings a fix and the checks and the self check again, up to
-// `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
+// fixes, and the run's own adversarial reviewer, whose findings count and whose approval at the
+// item's tier ships the change (2026-11-02, #2748; without it, a review run's final audit does).
+// With `own_review_run` (the night bot's) that review is a run of its own: a build or revision
+// builds and runs the checks, fixes the ones it turned red, and stops (`ChainsReview`), and the
+// change's own review run, the next run on the same subscription, starts from the head it pushed,
+// reviews it in fresh adversarial sessions with the pull request's CI (`ci.go`), and fixes what it
+// finds in the same run (`OwnReview`).
+// A builder whose seat has `self_check` checks its own change before any review: build, checks, a
+// self check by a fresh session of the same model, and on findings a fix and the checks and the
+// self check again, up to `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
 // seat of at least medium to review in the run (only weak ones) ends with the change built, for a
-// review run to judge; a weak model reviews only in a review run, and only an easy item.
+// review run to judge.
 //
 // A fullsend part (#505, `plan["onto"]`) is one builder pass from its tree's branch and nothing
 // more (`_part`): its tree's reconcile, an ordinary build of the parent on that branch, runs the
@@ -37,6 +43,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/disk"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gates"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/memory"
@@ -47,6 +54,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/resolve"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/verdicts"
 )
 
@@ -164,6 +172,27 @@ var SwitchAsk = "\n\n## Your model\n\nThis run's lane can run {models}, and this
 
 // PlanCut is PLAN_CUT.
 var PlanCut = "\n\n…(the plan was cut here; the planner wrote more)"
+
+// HardFiles is how many changed files make an item hard by their number alone (`DifficultyRule`;
+// CLAUDE.md rule 11 and docs/issues-and-patches.md, How hard it is, say "about 40").
+var HardFiles = 40
+
+// DifficultyRule is the rule a planner rates an item by (#2748: medium or hard, `difficulty:easy`
+// retired), as the plan and split prompts read it (`$difficulty_rule`). `$hard_files` is
+// `HardFiles`.
+var DifficultyRule = "" +
+	"An item is **hard** if any line below holds; otherwise it is **medium**.\n" +
+	"\n" +
+	"1. **Engine rules:** the rules or the resolution loop (`crates/engine/src/`).\n" +
+	"2. **The AI:** its decisions or its search (`crates/ai/src/`).\n" +
+	"3. **Design across crates:** a change several crates or apps must agree on, beyond a call\n" +
+	"   site or a test.\n" +
+	"4. **A migration:** a database migration (`crates/server/migrations/`), or moving data or\n" +
+	"   state between shapes.\n" +
+	"5. **Big:** about $hard_files files or more changed in all, the tests included.\n" +
+	"\n" +
+	"Torn between the two, take the harder: rate **hard**. A medium item is planned, built and\n" +
+	"approved by a medium model (Muse, Gemini, GPT or Sonnet); a hard one by Opus alone."
 
 // SelfCheckContext is SELF_CHECK_CONTEXT.
 var SelfCheckContext = "This is a self check, not a review. You are the same model that built\n" +
@@ -397,6 +426,20 @@ type Worker struct {
 	// replace the bound method (`worker._review = …`).
 	ReviewFunc func(cycle int, report *verdicts.BuildReport, results []*gates.GateResult,
 		previous []*verdicts.Finding, context string, maxCycles *int, role string) *verdicts.Review
+	// Sessions: what lets this run keep its own Claude session and resume the one the item's
+	// last run on this subscription kept (`session.go`, #2748); nil keeps and resumes none.
+	Sessions *Sessions
+	session  sessionState
+	// GH reads the pull request's CI in an own review run (#2748, `ci.go`), with the job's own
+	// read-only token; nil reads none.
+	GH gh.Client
+	// ciRead is what the last CI reading found (`ciRed`), for the round's record and the reviewer.
+	ciRead string
+	// readings is every usage reading this run took, for the usage history (#2749,
+	// `usage.Note`), which its result carries; readingsMu guards it, since a call's watch adds to
+	// it from a goroutine of its own. None is kept without `usage_history`.
+	readings   []any
+	readingsMu sync.Mutex
 
 	sigMu sync.Mutex
 	sigCh chan os.Signal
@@ -476,7 +519,7 @@ func NewWorker(cfg *config.Config, plan *pyjson.Object, runner any, repoDir stri
 	x.PlanSeat = x.seat(seats, "plan")
 	x.SelfCheck = seats != nil && seats.Truthy("self_check")
 	x.MainSeat = main
-	own := cfg.Pool.OwnSeats(x.Provider)
+	own := cfg.Pool.Seats(x.Provider)
 	tiers := map[string]bool{}
 	for _, seat := range own {
 		tiers[seat.Tier] = true
@@ -570,7 +613,7 @@ func (x *Worker) SeatFor(role string) *providers.Seat {
 }
 
 // CyclesCap is in-run review verdict rounds for this item's difficulty (#725): 3 for a medium
-// or easy item, then it goes to its final audit; 10 for a hard one, which stays with Opus.
+// item, then it goes to its final audit; 10 for a hard one, which stays with Opus.
 func (x *Worker) CyclesCap() int {
 	return py.MustInt(x.Cfg.MaxReviewCycles.GetOr(x.Difficulty(), 3))
 }
@@ -590,18 +633,14 @@ func (x *Worker) roundsSpent() int {
 }
 
 // The run used every verdict round with this owner (#725): a hard item stays
-// unapproved, for the strike path; a medium or easy item's kept work goes to its lane's
-// final audit (Strong for medium, Medium for easy).
+// unapproved, for the strike path; a medium item's kept work goes to its lane's final audit,
+// on another subscription when one is free (#2748).
 func (x *Worker) roundsOut(total int) (string, string) {
 	if x.Difficulty() == "hard" {
 		return "not_approved", fmt.Sprintf("no approval after %d review cycles", total)
 	}
-	final := "its Medium final audit"
-	if x.Difficulty() == "medium" {
-		final = "its Strong final audit"
-	}
 	return "built", fmt.Sprintf("used its %d review rounds with this owner; the work is kept for %s",
-		total, final)
+		total, "its final audit, another subscription's when one is free")
 }
 
 // Difficulty is the item's difficulty as this run knows it: the planner's rating when it rated
@@ -625,7 +664,7 @@ func (x *Worker) Difficulty() string {
 	return found
 }
 
-// difficultyIndex is `list(MIN_TIER).index(d)`: easy, medium, hard.
+// difficultyIndex is `list(MIN_TIER).index(d)`: medium, hard.
 func difficultyIndex(d string) int {
 	for i, name := range config.Difficulties {
 		if name == d {
@@ -839,6 +878,10 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 	if x.Provider.Limits.Stops().Len() > 0 {
 		usageStop = x.usageStop
 	}
+	var usageSeen func(*pyjson.Object)
+	if x.Cfg.RecordsUsage() {
+		usageSeen = func(reading *pyjson.Object) { x.noteReading(reading, x.callSource(), "call", time.Time{}) }
+	}
 	request := &runner.RunRequest{
 		Role:            role,
 		Prompt:          prompt,
@@ -853,31 +896,19 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 		Transcript:      transcript,
 		ExtraDirs:       x.gitDirs(cwd),
 		UsageStop:       usageStop,
+		UsageSeen:       usageSeen,
 	}
-	result := x.Runner.(modelRunner).Run(request)
-	step.Set("minutes", py.RoundN(result.DurationS/60, 1))
-	step.Set("outcome", callOutcome(result))
-	if result.Tokens.Len() > 0 {
-		these := pyjson.New()
-		for _, name := range x.Tokens.Keys() {
-			n := tokenCount(result.Tokens, name)
-			x.Tokens.Set(name, x.Tokens.Int(name)+n)
-			these.Set(name, n)
-		}
-		step.Set("tokens", these)
-	}
-	if result.CostUSD != nil && *result.CostUSD != 0 {
-		x.CostUSD += *result.CostUSD
-		step.Set("cost_usd", py.RoundN(*result.CostUSD, 4))
-	}
+	// The call, and its tally on `step`: in its own session's continuation when the item's last
+	// run here kept one, else (and whenever that fails) fresh (`session.go`, #2748).
+	result, step := x.runCall(request, step, reader, drafting)
 	x.readMemory()
 	if x.AfterCall != nil {
 		x.AfterCall()
 	}
-	x.Minutes += result.DurationS / 60
 	if result.Usage.Len() > 0 {
 		x.LastUsage = result.Usage
 	}
+	x.noteCall(result)
 	if result.Extra.Truthy("usage_stop") {
 		herr.Raise(NewInterrupt(fmt.Sprintf("`%s` stops mid-call: %s", x.Provider.ID,
 			py.Str(result.Extra.Get("usage_stop"))), "usage", ""))
@@ -898,6 +929,27 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 	return result
 }
 
+// tally puts one model call's minutes, outcome, tokens and cost on its step and adds them to the
+// run's totals.
+func (x *Worker) tally(step *pyjson.Object, result *runner.RunResult) {
+	step.Set("minutes", py.RoundN(result.DurationS/60, 1))
+	step.Set("outcome", callOutcome(result))
+	if result.Tokens.Len() > 0 {
+		these := pyjson.New()
+		for _, name := range x.Tokens.Keys() {
+			n := tokenCount(result.Tokens, name)
+			x.Tokens.Set(name, x.Tokens.Int(name)+n)
+			these.Set(name, n)
+		}
+		step.Set("tokens", these)
+	}
+	if result.CostUSD != nil && *result.CostUSD != 0 {
+		x.CostUSD += *result.CostUSD
+		step.Set("cost_usd", py.RoundN(*result.CostUSD, 4))
+	}
+	x.Minutes += result.DurationS / 60
+}
+
 // tokenCount is `int(tokens.get(name) or 0)`.
 func tokenCount(tokens *pyjson.Object, name string) int {
 	v := tokens.Get(name)
@@ -905,6 +957,52 @@ func tokenCount(tokens *pyjson.Object, name string) int {
 		return 0
 	}
 	return py.MustInt(v)
+}
+
+// noteReading keeps one usage reading for the usage history (#2749, `usage.Note`), read now from
+// `source` `during` the run, with the caps in force on it as the run holds them (its off hours,
+// late week, last hour and hard cap: `refusal`'s), and a refusal's end. Nothing without
+// `usage_history`.
+func (x *Worker) noteReading(reading *pyjson.Object, source, during string, refusedUntil time.Time) {
+	if !x.Cfg.RecordsUsage() {
+		return
+	}
+	now := x.Now()
+	observed := reading.Copy()
+	observed.Set("observed_at", clock.ISO(now))
+	caps := x.Provider.CapsAt(now, x.Cfg.Timezone, observed, x.LastHour)
+	x.readingsMu.Lock()
+	defer x.readingsMu.Unlock()
+	x.readings = usage.Note(x.readings, now, source, during, reading, caps, refusedUntil)
+}
+
+// noteCall keeps what a model call's end says of its subscription's usage: its refusal, or its
+// last reading (what it streamed; Muse's and agy's `/usage` after it).
+func (x *Worker) noteCall(result *runner.RunResult) {
+	switch {
+	case result.RateLimited():
+		x.noteReading(result.Usage, "refusal", "call", usage.RefusalEnd(result.ResetAt, x.Now()))
+	case result.Usage.Len() > 0 && x.polls():
+		x.noteReading(result.Usage, "usage-command", "after", time.Time{})
+	case result.Usage.Len() > 0:
+		x.noteReading(result.Usage, "stream", "call", time.Time{})
+	}
+}
+
+// polls is: this run's CLI streams no usage and reads it with its own command (Muse's and agy's
+// `/usage`, `runner.PollsUsage`).
+func (x *Worker) polls() bool {
+	poller, ok := x.Runner.(interface{ PollsUsage() bool })
+	return ok && poller.PollsUsage()
+}
+
+// callSource is where a reading during a call comes from: Muse's and agy's own `/usage`, or what
+// the call streamed.
+func (x *Worker) callSource() string {
+	if x.polls() {
+		return "usage-command"
+	}
+	return "stream"
 }
 
 // While a call runs: the reading it just streamed, against the provider's caps (and
@@ -951,7 +1049,13 @@ func (x *Worker) startCheck() {
 		return
 	}
 	x.LastUsage = x.StartUsage
-	if reason := x.refusal(x.StartUsage, x.planIn("action", LongActions...)); reason != "" {
+	reason := x.refusal(x.StartUsage, x.planIn("action", LongActions...))
+	source := "ping" // a Claude account's Haiku turn (`cmd_work`)
+	if x.polls() {
+		source = "usage-command"
+	}
+	x.noteReading(x.StartUsage, source, "before", time.Time{})
+	if reason != "" {
 		herr.Raise(NewInterrupt(fmt.Sprintf("`%s` stops before it starts: %s", x.Provider.ID,
 			reason), "usage", ""))
 	}
@@ -976,7 +1080,13 @@ func (x *Worker) gitDirs(cwd string) []string {
 // here on should hand on, as a pause of kind `died` (#342).
 func (x *Worker) WriteResult(checkpoint bool /* = False */) string {
 	mkdirAll(x.OutDir)
+	x.keepSession() // the builder's session as it stands, sealed beside the result (#2748)
 	x.Result.Set("usage", objOrNone(x.LastUsage))
+	x.readingsMu.Lock()
+	if len(x.readings) > 0 { // the usage history's (#2749): numbers and times only
+		x.Result.Set(usage.ResultKey, pyjson.DeepCopy(x.readings))
+	}
+	x.readingsMu.Unlock()
 	x.Result.Set("finished_at", clock.ISO(x.Now()))
 	x.Result.Set("model_calls", x.Calls)
 	x.Result.Set("minutes", py.RoundN(x.Minutes, 1))
@@ -1005,7 +1115,7 @@ func (x *Worker) WriteResult(checkpoint bool /* = False */) string {
 // step and the deliver job run whatever happens to this one (`if: always()`), and the
 // run's own end writes over it. A build or a revision only: nothing else has work to keep.
 func (x *Worker) checkpoint() {
-	if x.Wt == nil || x.isDying() || !x.planIn("action", "build", "revise") {
+	if x.Wt == nil || x.isDying() || !(x.planIn("action", "build", "revise") || x.OwnReviewRun()) {
 		return
 	}
 	err := herr.Try(func() {
@@ -1189,6 +1299,8 @@ func (x *Worker) Run() *pyjson.Object {
 				x.planRun()
 			case action == "build" || action == "revise":
 				x.Item()
+			case action == "review" && x.OwnReviewRun():
+				x.OwnReview() // a change's own review run (#2748, 2026-11-02)
 			case action == "review":
 				x.SecondReview()
 			default:

@@ -33,10 +33,52 @@ func TestMatchesPython(t *testing.T) {
 			t.Errorf("approvals(%s) = %v, want %v", c.votes, got, c.want)
 		}
 	}
-	if !Met([]string{"medium"}, "easy") || Met([]string{"medium", "weak"}, "hard") || !Met([]string{"strong"}, "hard") {
+}
+
+// #2748: a medium approval ships a medium item, a strong one either; a weak one nothing.
+func TestMetAndReachable(t *testing.T) {
+	if !Met([]string{"medium"}, "medium") || Met([]string{"medium", "weak"}, "hard") ||
+		!Met([]string{"strong"}, "hard") || !Met([]string{"strong"}, "medium") || Met([]string{"weak"}, "medium") {
 		t.Error("met")
 	}
-	if !Reachable(nil, []string{"medium"}, "easy") || Reachable(nil, []string{"medium"}, "medium") {
+	if !Reachable(nil, []string{"medium"}, "medium") || Reachable(nil, []string{"medium"}, "hard") ||
+		!Reachable(nil, []string{"strong"}, "hard") || Reachable(nil, []string{"weak"}, "medium") {
 		t.Error("reachable")
+	}
+}
+
+// #2748, 2026-11-02: every approval counts, the builder's own subscription's included; votes from
+// before #2748, which name no builder subscription, count their strong approvals alone.
+func TestCountedFromAnySubscription(t *testing.T) {
+	tier := func(string) string { return "weak" }
+	cases := []struct {
+		votes string
+		want  []string
+		tiers []string
+	}{
+		{`{"built_by": "muse", "reviews": [{"family": "muse", "tier": "medium", "provider": "muse"},
+			{"family": "gemini", "tier": "medium", "provider": "agy"}]}`, []string{"medium", "medium"},
+			[]string{"medium", "strong"}},
+		{`{"built_by": "claude-7", "reviews": [{"family": "claude", "tier": "strong", "provider": "claude-7"}]}`,
+			[]string{"strong"}, []string{"medium", "strong"}},
+		{`{"built_by": "", "reviews": [{"family": "muse", "tier": "medium", "provider": "muse"}, {"family": "x"}]}`,
+			[]string{"medium", "weak"}, []string{"medium", "strong"}},
+		{`{"builder": "muse", "reviews": [{"family": "muse", "tier": "medium"}, {"family": "claude", "tier": "strong"}]}`,
+			[]string{"strong"}, []string{"strong"}},
+	}
+	for _, c := range cases {
+		votes, err := pyjson.LoadsString(c.votes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := Counted(pyjson.Obj(votes), tier); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("counted(%s) = %v, want %v", c.votes, got, c.want)
+		}
+		if got := Tiers(pyjson.Obj(votes), "medium"); !reflect.DeepEqual(got, c.tiers) {
+			t.Errorf("tiers(%s) = %v, want %v", c.votes, got, c.tiers)
+		}
+		if got := Tiers(pyjson.Obj(votes), "hard"); !reflect.DeepEqual(got, []string{"strong"}) {
+			t.Errorf("tiers(%s, hard) = %v", c.votes, got)
+		}
 	}
 }

@@ -24,6 +24,9 @@
 //! Its options are library INSTANCES drawn without replacement (R60); `add_to_hand` MOVES the chosen one
 //! to hand, keeping its identity, radiant flag and `costOverride`. The radiant Echo is
 //! `StaticFlags.echo` (R30), the count of EXTRA resolutions, 1 here.
+//!
+//! R2739000: both faces set `secret_option_counts`, since the type and bracket prompts offer what the
+//! library holds, so how many they offer is the library's secret and the other seat is never told it.
 
 use jackioh_engine::prelude::*;
 
@@ -289,6 +292,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(start_step)),
         resume: steps.clone(),
+        secret_option_counts: true,
         ..Script::default()
     };
     // The radiant face is the same four steps — each repeat re-enters `cry` and opens its own fresh
@@ -297,6 +301,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(start_step)),
         resume: steps,
         static_flags: Some(radiant_flags()),
+        secret_option_counts: true,
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -691,6 +696,23 @@ mod tests {
             for def_id in revealed_def_ids(&s, &open(&s)) {
                 assert!(!text.contains(&def_id));
             }
+        }
+
+        #[test]
+        fn r2739000_the_other_seat_is_never_told_how_many_types_brackets_or_cards_match() {
+            crate::register_all();
+            // A library of one Spell type and one bracket, so each prompt's count would name it.
+            let mut s = tutor_with(&[SPELL_0A, SPELL_1A, UNIT_4]);
+            let bare = json!({ "forYou": false, "pendingFor": "p1" });
+            s.play(TUTOR, json!({}));
+            assert_eq!(mode_options(&open(&s)), vec!["Spell", "Unit"]);
+            assert_eq!(js(&s.view(P2).pending), bare);
+            s.answer(json!("Spell"));
+            assert_eq!(mode_options(&open(&s)), vec!["0-1"]);
+            assert_eq!(js(&s.view(P2).pending), bare);
+            s.answer(json!("0-1"));
+            assert_eq!(open(&s).options.len(), 2);
+            assert_eq!(js(&s.view(P2).pending), bare);
         }
     }
 

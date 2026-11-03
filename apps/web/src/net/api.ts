@@ -12,7 +12,7 @@ import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, Set
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
-import { rememberRead, updateCachedRead } from "./readCache.ts";
+import { forgetRead, rememberRead, updateCachedRead } from "./readCache.ts";
 import { whileSpending } from "./spending.ts";
 
 const DEFAULT_HTTP_URL = "http://localhost:8787";
@@ -776,6 +776,56 @@ export async function buyChase(token: string, cosmeticId: string, cardId?: strin
     cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
   );
   rememberRead(token, keptPaths.cosmeticPacks, answer);
+  return answer;
+}
+
+// News (SPEC §14.13, #2875): the patches and alerts the server posts, each with a reward an account
+// claims once. The server decides which entries are live (R2875001), what each pays (R2875003) and
+// whether a claim lands; the client shows its answers.
+
+/** R2875003: what a news entry pays; a card pack's `pack` is `GLOBAL_PACK_NAME` or a set's name. */
+export type NewsReward =
+  | { kind: "jlore"; amount: number }
+  | { kind: "cardPack"; amount: number; pack: string }
+  | { kind: "cardToken"; amount: number }
+  | { kind: "cosmeticToken"; amount: number; tier: CosmeticTokenTier }
+  | { kind: "cosmeticPack"; amount: number };
+
+/** One live news entry (R2875001); `postedAt` is epoch ms, `version` a patch's, null for an alert. */
+export type NewsEntry = {
+  id: string;
+  kind: "patch" | "alert";
+  version: string | null;
+  title: string;
+  summary: string;
+  postedAt: number;
+  reward: NewsReward;
+  claimed: boolean;
+};
+
+/** `GET /api/news`, newest first; a claim answers the same. */
+export type NewsResponse = { news: NewsEntry[] };
+
+/** Not kept (R2125000): a count the landing shows only once the server has answered it. */
+export function getNews(token: string): Promise<NewsResponse> {
+  return apiRequest<NewsResponse>("/api/news", { token });
+}
+
+/** The kept reads a claimed reward changes, which no answer of a claim carries: dropped once it lands. */
+const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>> = {
+  jlore: [keptPaths.wallet],
+  cardPack: [keptPaths.packs],
+  cardToken: [keptPaths.tokens],
+  cosmeticToken: [keptPaths.tokens],
+  // One inventory item: the tokens' `cosmeticPack` and the cosmetic packs' `unopened`.
+  cosmeticPack: [keptPaths.tokens, keptPaths.cosmeticPacks],
+};
+
+/** `POST /api/news/:id/claim` (R2875000): a spend, so it sends an `Idempotency-Key` (R2124000). */
+export async function claimNews(token: string, id: string): Promise<NewsResponse> {
+  const answer = await spendRequest<NewsResponse>(`/api/news/${encodeURIComponent(id)}/claim`, token, {});
+  const reward = answer.news.find((entry) => entry.id === id)?.reward;
+  for (const path of reward === undefined ? [] : NEWS_REWARD_READS[reward.kind]) forgetRead(token, path);
   return answer;
 }
 

@@ -1,4 +1,4 @@
--- How practice claims ended, counted per UTC day and outcome (migration 0077, SPEC §14.8; issue #2884).
+-- How practice claims ended, counted per UTC day and outcome (migration 0078, SPEC §14.8; issue #2884).
 -- Runs after 42_animated_art.sql. The client's refusal on practice_claim_counts is also
 -- 02_rls_as_client.sql's CHECK 3, with the other server-only tables.
 \set ON_ERROR_STOP on
@@ -71,7 +71,7 @@ declare
   -- `ClaimBucket::name` of every bucket (src/economy/practice.rs).
   outcomes constant text[] := array['paid', 'economy_off', 'unknown_seed', 'already_claimed', 'expired',
                                     'does_not_fold', 'not_finished', 'voided', 'result_mismatch'];
-  -- [what, outcome, count]. Each breaks one of 0077's checks and nothing else.
+  -- [what, outcome, count]. Each breaks one of 0078's checks and nothing else.
   refused constant text[][] := array[
     ['an outcome no claim ends in', 'lost', '1'],
     ['a count of 0', 'paid', '0'],
@@ -116,12 +116,12 @@ begin
 end $$;
 rollback;
 
-\echo '### #2884: 0077 re-applies over counts of its own and changes none ###'
+\echo '### #2884: 0078 re-applies over counts of its own and changes none ###'
 begin;
 insert into public.practice_claim_counts (day, outcome, count) values (date '1970-01-11', 'expired', 3);
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0077_practice_claim_counts.sql
+\i /tmp/0078_practice_claim_counts.sql
 set local client_min_messages = notice;
 do $$
 declare
@@ -132,18 +132,18 @@ begin
       (select count(*) from public.practice_claim_counts);
   end if;
   if (select count from public.practice_claim_counts where day = date '1970-01-11' and outcome = 'expired') <> 3 then
-    raise exception 'FAIL (#2884): re-applying 0077 changed a count';
+    raise exception 'FAIL (#2884): re-applying 0078 changed a count';
   end if;
   foreach con in array array['practice_claim_counts_outcome_check', 'practice_claim_counts_count_check'] loop
     if (select count(*) from pg_constraint
          where conrelid = 'public.practice_claim_counts'::regclass and conname = con) <> 1 then
-      raise exception 'FAIL (#2884): re-applying 0077 left % other than once', con;
+      raise exception 'FAIL (#2884): re-applying 0078 left % other than once', con;
     end if;
   end loop;
   if exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'practice_claim_counts') then
-    raise exception 'FAIL (#2884): re-applying 0077 left a policy on practice_claim_counts';
+    raise exception 'FAIL (#2884): re-applying 0078 left a policy on practice_claim_counts';
   end if;
-  raise notice 'OK (#2884): 0077 re-applies over its own counts and changes none';
+  raise notice 'OK (#2884): 0078 re-applies over its own counts and changes none';
 end $$;
 rollback;
 

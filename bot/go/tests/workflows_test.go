@@ -223,7 +223,8 @@ func TestWorkflows_FourJobsInOrder(t *testing.T) {
 func TestWorkflows_TheModelJobHoldsNoGithubWriteToken(t *testing.T) {
 	work := workflowsJob(t, workflowsNight(t), "work")
 	assertNotIn(t, "BOT_GITHUB_TOKEN", work)
-	assertEqual(t, workflowsGrants(t, work), map[string]string{"contents": "read"})
+	// `actions: read` downloads the last run's `work` artifact, its sealed session (#2748).
+	assertEqual(t, workflowsGrants(t, work), map[string]string{"contents": "read", "actions": "read"})
 	// Exactly one model secret: the one plan named, picked by name. A run the status loop
 	// started names it in its inputs, which `plan-fetch --check` holds to the plan and to
 	// providers.json before any step reads it (#1455).

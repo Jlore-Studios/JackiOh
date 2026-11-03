@@ -51,4 +51,12 @@ func TestMatchesPython(t *testing.T) {
 	if got := digest(WithPlan(strings.Repeat("t", 65000), "plan", "who", "")); !pyjson.Equal(got, data.Get("big")) {
 		t.Errorf("with_plan(big) = %v, want %v", got, data.Get("big"))
 	}
+	// What `easy.plan_paths` answered (bot/harness/easy.py), the table `human` still reads.
+	for _, e := range data.List("files_to_touch") {
+		c := pyjson.List(e)
+		plan := c[0].(string)
+		if got := FilesToTouch(plan); !pyjson.Equal(pyjson.ListOf(got), c[1]) {
+			t.Errorf("FilesToTouch(%q) = %q, want %v", plan, got, c[1])
+		}
+	}
 }

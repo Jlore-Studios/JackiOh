@@ -2,7 +2,7 @@
 "need": [
 [
 "review",
-"easy",
+"medium",
 {},
 [
 "review",
@@ -12,7 +12,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "review_floor": "strong"
 },
@@ -24,7 +24,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "review_floor": "medium"
 },
@@ -36,7 +36,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "review_floor": "weak"
 },
@@ -48,7 +48,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "review_floor": "bogus"
 },
@@ -60,7 +60,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "audit_tier": "strong"
 },
@@ -72,7 +72,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "audit_tier": "medium"
 },
@@ -84,7 +84,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "bot_pr": true
 },
@@ -96,7 +96,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "bot_pr": true,
 "conflict": true
@@ -109,7 +109,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "bot_pr": true,
 "audit_tier": "weak"
@@ -122,7 +122,7 @@
 ],
 [
 "review",
-"easy",
+"medium",
 {
 "bot_pr": false,
 "audit_tier": "strong"
@@ -131,139 +131,6 @@
 "review",
 "medium",
 ""
-]
-],
-[
-"review",
-"medium",
-{},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"review_floor": "strong"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"review_floor": "medium"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"review_floor": "weak"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"review_floor": "bogus"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"audit_tier": "strong"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"audit_tier": "medium"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"bot_pr": true
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"bot_pr": true,
-"conflict": true
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"bot_pr": true,
-"audit_tier": "weak"
-},
-[
-"review",
-"strong",
-"its final audit"
-]
-],
-[
-"review",
-"medium",
-{
-"bot_pr": false,
-"audit_tier": "strong"
-},
-[
-"review",
-"strong",
-"its final audit"
 ]
 ],
 [
@@ -401,139 +268,6 @@
 ],
 [
 "revise",
-"easy",
-{},
-[
-"revise",
-"medium",
-"a person's pull request wants a reviewer in its run"
-]
-],
-[
-"revise",
-"easy",
-{
-"review_floor": "strong"
-},
-[
-"revise",
-"medium",
-"a person's pull request wants a reviewer in its run"
-]
-],
-[
-"revise",
-"easy",
-{
-"review_floor": "medium"
-},
-[
-"revise",
-"medium",
-"a person's pull request wants a reviewer in its run"
-]
-],
-[
-"revise",
-"easy",
-{
-"review_floor": "weak"
-},
-[
-"revise",
-"medium",
-"a person's pull request wants a reviewer in its run"
-]
-],
-[
-"revise",
-"easy",
-{
-"review_floor": "bogus"
-},
-[
-"revise",
-"medium",
-"a person's pull request wants a reviewer in its run"
-]
-],
-[
-"revise",
-"easy",
-{
-"audit_tier": "strong"
-},
-[
-"revise",
-"strong",
-"it answers a strong reviewer's audit"
-]
-],
-[
-"revise",
-"easy",
-{
-"audit_tier": "medium"
-},
-[
-"revise",
-"medium",
-"it answers a medium reviewer's audit"
-]
-],
-[
-"revise",
-"easy",
-{
-"bot_pr": true
-},
-[
-"revise",
-"weak",
-""
-]
-],
-[
-"revise",
-"easy",
-{
-"bot_pr": true,
-"conflict": true
-},
-[
-"revise",
-"medium",
-"a conflict with main wants a reviewer in its run"
-]
-],
-[
-"revise",
-"easy",
-{
-"bot_pr": true,
-"audit_tier": "weak"
-},
-[
-"revise",
-"weak",
-""
-]
-],
-[
-"revise",
-"easy",
-{
-"bot_pr": false,
-"audit_tier": "strong"
-},
-[
-"revise",
-"strong",
-"it answers a strong reviewer's audit"
-]
-],
-[
-"revise",
 "medium",
 {},
 [
@@ -598,8 +332,8 @@
 },
 [
 "revise",
-"strong",
-"it answers a strong reviewer's audit"
+"medium",
+""
 ]
 ],
 [
@@ -661,8 +395,8 @@
 },
 [
 "revise",
-"strong",
-"it answers a strong reviewer's audit"
+"medium",
+""
 ]
 ],
 [

@@ -14,7 +14,7 @@
 //!   `refused`. The shutdown drain waits for running settles, and the retention loop settles a claim
 //!   left past `PRACTICE_SETTLE_GRACE_SECONDS` (`sweep_unsettled`).
 //! - **A count** (#2884): each claim's outcome adds one to its day's `ClaimBucket` (migration
-//!   0077), as the last statement of the transaction that decided it: the settle that marked the
+//!   0078), as the last statement of the transaction that decided it: the settle that marked the
 //!   seed paid or refused, or a refusal before the burn, which counts best effort. Each refusal also
 //!   logs `practice.claim.refused` with its seed and reason, and no account.
 //!

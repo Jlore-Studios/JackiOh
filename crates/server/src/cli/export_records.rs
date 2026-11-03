@@ -14,7 +14,7 @@
 //! `cargo jackioh stats report` read and `analysis/` loads. `--out` is resolved against the directory
 //! the command was started in, and an existing file there is replaced.
 //!
-//! `--claims` writes migration 0077's practice claim counts instead (#2884, §14.8): one
+//! `--claims` writes migration 0078's practice claim counts instead (#2884, §14.8): one
 //! `{ day, outcome, count }` per line, oldest day first, how many claims ended that UTC day paid or
 //! refused for each reason. Aggregates alone: no account, seed or log leaves with them.
 

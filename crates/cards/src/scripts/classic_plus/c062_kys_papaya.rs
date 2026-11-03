@@ -420,7 +420,7 @@ mod tests {
         }
 
         #[test]
-        fn r177_the_prompts_offer_cells_never_cards_the_other_seat_sees_only_that_a_prompt_is_open_then_the_destroys()
+        fn r177_the_prompts_offer_cells_never_cards_the_other_seat_sees_only_how_many_then_the_destroys()
          {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
@@ -428,7 +428,8 @@ mod tests {
             }));
             let trap = at(&s, PlayerId::P2, "backrow", 1);
             s.play(PAPAYA, json!({}));
-            let elsewhere = json!({ "forYou": false, "pendingFor": "p1" });
+            // R2739000: each Discover's count of cells, never the cells.
+            let elsewhere = json!({ "forYou": false, "pendingFor": "p1", "optionCount": 2 });
             assert_eq!(
                 serde_json::to_value(&s.view(PlayerId::P2).pending).unwrap(),
                 elsewhere

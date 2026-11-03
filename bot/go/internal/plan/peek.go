@@ -212,7 +212,7 @@ func HousekeepingDue(ctx *hctx.Context, state *pyjson.Object) string {
 	}
 	for _, thread := range ctx.GH.ListIssues(config.LabelPR, "open", 300, "") {
 		names := queue.LabelNames(thread)
-		if !thread.Has("pull_request") || names[config.LabelRevise] || names[config.LabelWorking] ||
+		if !thread.Has("pull_request") || names[config.LabelRevise] || config.IsLive(names) ||
 			names[config.LabelBlocked] || queue.IsHuman(names) {
 			continue
 		}

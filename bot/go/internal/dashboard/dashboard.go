@@ -71,8 +71,9 @@ var Title = "Night bot status"
 // Marker is MARKER.
 var Marker = "<!-- jackioh-bot:dashboard -->"
 
-// Labels is LABELS.
-var Labels = []string{"night bot"}
+// Labels is LABELS: the status issue's labels, `tracking` among them (#2748), which keeps every
+// queue path off it; `update` puts any it lacks on the issue it finds.
+var Labels = []string{"night bot", config.LabelTracking}
 
 // EveryMinutes is how often the `bot-status` loop rewrites the issue (`EVERY_SECONDS` in
 // bot-status.yml).
@@ -205,15 +206,7 @@ func doing(state *pyjson.Object, number int) (string, string, time.Time) {
 	if number == 0 {
 		return "surveying", "survey", clock.ParseISOValue(record.Get("last_run"))
 	}
-	kind := py.Str(record.Get("kind"))
-	if pyjson.Equal(record.Get("action"), "plan") {
-		kind = "plan"
-	}
-	verb, ok := status.Doing[kind]
-	if !ok {
-		verb = "working on"
-	}
-	return verb, "#" + strconv.Itoa(number), clock.ParseISOValue(record.Get("started_at"))
+	return status.DoingOf(record), "#" + strconv.Itoa(number), clock.ParseISOValue(record.Get("started_at"))
 }
 
 // lane is one live lane: the item's number (0 for the suggestion survey) and its provider's id.

@@ -52,10 +52,10 @@ func RawProviders() *pyjson.Object {
 	return loadObject(filepath.Join(Root, providers.ProvidersPath))
 }
 
-// A weak subscription for the tests alone (#2129): no committed one is weak any more, so the weak
-// tier's rules (weak first for an easy item, `easy_first`, `self_check`, the easy rule) keep one
-// to hold them to. It is what the weak seat was: on the machine, any hour, no caps, six lanes,
-// last in the usage order, its builds checking themselves.
+// A weak subscription for the tests alone (#2129): no committed one is weak any more, and since
+// `difficulty:easy` went (#2748) a weak seat takes no work, which the tests hold it to. It is what
+// the weak seat was: on the machine, any hour, no caps, six lanes, last in the usage order, its
+// builds checking themselves (`self_check`).
 var Weak = "lite"
 
 // WeakModel = "lite-1"
@@ -65,7 +65,7 @@ var WeakModel = "lite-1"
 var WeakProvider = pyjson.New(
 	"note", "The tests' weak subscription (tests/support.py).", "enabled", true, "cli", "codex",
 	"family", "lite", "model", WeakModel, "effort", "", "tier", "weak", "self_check", true,
-	"easy_first", true, "login", "machine", "runs_on", "night-vm-"+Weak, "lanes", 6,
+	"login", "machine", "runs_on", "night-vm-"+Weak, "lanes", 6,
 	"schedule", pyjson.New("mode", "always"), "limits", pyjson.New("mode", "none"), "quiet_check", false)
 
 // `raw` (providers.json's JSON) with the tests' weak subscription (`WEAK`), last in the usage

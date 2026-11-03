@@ -30,6 +30,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	hstate "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
@@ -514,10 +515,11 @@ func TestDashboard_OpenedAndPinnedOnceThenRewrittenInPlace(t *testing.T) {
 	number := issues[0]
 	assertEqual(t, note, fmt.Sprintf("opened #%d and pinned it", number))
 	assertEqual(t, gh.Pinned, []string{fmt.Sprintf("I_%d", number)})
-	assertEqual(t, gh.LabelNames(number), map[string]bool{"night bot": true})
+	assertEqual(t, gh.LabelNames(number), map[string]bool{"night bot": true, config.LabelTracking: true})
 	assertIn(t, dashboard.Marker, gh.Threads.Get(number).Str("body"))
 	assertTrue(t, pyjson.Equal(ctx.Store.Load().Get("dashboard"), pyjson.New("issue", number)),
 		"state's dashboard")
+	// Still labelled `difficulty:easy`, which is retired (#2748): it is a medium item.
 	gh.AddIssue(7, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy", "priority:high"}})
 	assertEqual(t, dashboardUpdate(ctx), fmt.Sprintf("rewrote #%d", number))
 	assertEqual(t, dashboardOpened(gh), []int{number}) // no second issue, no second pin
@@ -533,7 +535,7 @@ func TestDashboard_OpenedAndPinnedOnceThenRewrittenInPlace(t *testing.T) {
 	if row == "" {
 		t.Fatalf("no row for #7 in:\n%s", body)
 	}
-	assertIn(t, "| plan, then build | 🟢 easy → medium<br/><sub>a plan first</sub> | "+
+	assertIn(t, "| plan, then build | 🟡 medium → medium<br/><sub>a plan first</sub> | "+
 		"▶️ **starts at the next run** on `claude-1` (`sonnet`, medium) | high |", row)
 }
 
@@ -568,6 +570,20 @@ func TestDashboard_AClosedIssueIsReplacedAndAFullPinListIsSaid(t *testing.T) {
 	assertIn(t, fmt.Sprintf("opened #%d; could not pin it (422)", number), note)
 	assertTrue(t, pyjson.Equal(ctx.Store.Load().Get("dashboard"), pyjson.New("issue", number)),
 		"state's dashboard")
+}
+
+// The status issue is a tracker (#2748): one opened before `tracking` gets it at its next rewrite,
+// with nothing else about it changed, and keeps it; no queue path takes it.
+func TestDashboard_AStatusIssueOpenedBeforeGetsTracking(t *testing.T) {
+	gh, ctx := dashboardSetUp()
+	gh.AddIssue(148, fakes.Issue{Title: dashboard.Title, Body: dashboard.Marker, Labels: []string{"night bot"},
+		User: pyjson.New("login", ctx.Cfg.BotLogin)})
+	assertEqual(t, dashboardUpdate(ctx), "rewrote #148")
+	assertEqual(t, gh.LabelNames(148), setOf("night bot", config.LabelTracking))
+	assertEqual(t, dashboardOpened(gh), []int{148})
+	assertEqual(t, dashboardUpdate(ctx), "rewrote #148")
+	assertEqual(t, gh.LabelNames(148), setOf("night bot", config.LabelTracking))
+	assertTrue(t, queue.IsHuman(gh.LabelNames(148)))
 }
 
 func TestDashboard_TheVisuals(t *testing.T) {
@@ -620,11 +636,12 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	gantt := dashboardBefore(dashboardAfter(t, body, dashboard.TimelineStyle+"\ngantt"), "```")
 	assertNotIn(t, "#", gantt) // a gantt chart reads `#` as a comment
 	// Every subscription as a box, with what it does or why not and its usage, always: the
-	// Claude accounts, then the night box's.
+	// Claude accounts, then the night box's. claude-1 has two lanes in its hours (its 100% cap,
+	// `lanes_by_cap`, #2748), so beside #37 it takes #9 next.
 	assertIn(t, `subgraph hosted["Claude accounts, on GitHub's runners: 1 of 8 working"]`,
 		body)
-	assertIn(t, `h0["<b>claude-1</b><br/>🟢 building #37 · since 21:13<br/>5h ▰▰▱▱▱ 30%"]`+
-		`:::busy`, body)
+	assertIn(t, `h0["<b>claude-1</b><br/>🟢 building #37 · since 21:13<br/>▶️ takes #9 next<br/>`+
+		`5h ▰▰▱▱▱ 30%"]:::busy`, body)
 	assertIn(t, `h1["<b>claude-2</b><br/>⚫ off: no secret set<br/>5h not read yet · cap 90%`+
 		`<br/>7d not read yet · cap 90%"]:::off`, body)
 	slots := ctx.Cfg.Pool.MachineParallel
@@ -641,13 +658,16 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	assertNotIn(t, "pie", body)
 	// Each subscription, with its usage as a bar.
 	assertIn(t, "| `claude-1` |", body)
-	assertIn(t, "| `claude-1` | 🟢 building #37 |", body)
+	assertIn(t, "| `claude-1` | 🟢 building #37<br/>▶️ takes #9 next |", body)
 	assertIn(t, "▰▰▰▱▱▱▱▱▱▱ 30%", body)
-	// The queue and the last runs.
-	assertIn(t, "| #9 | Make it so | revise | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "+
-		"busy `claude-1` | — |", body)
-	assertIn(t, "> 🟢 **2 running** · 📋 **1 queued**: 1 waits for a strong model · 🔋 "+
-		"**none of 12 subscriptions can start work now**", body)
+	// The queue and the last runs: the hard revision goes to claude-1's second lane.
+	assertIn(t, "| #9 | Make it so | revise | 🔴 hard → strong | ▶️ **starts at the next run** on "+
+		"`claude-1` (`opus`, strong) | — |", body)
+	assertIn(t, "> 🟢 **2 running** · 📋 **1 queued**: 1 starts at the next run · 🔋 "+
+		"**1 of 12 subscriptions can start work now**: `claude-1`", body)
+	// The lanes in force now: claude-1's two, one of them held.
+	assertIn(t, "| `claude-1` | GitHub's runners | 2 | 1 | 1 |", body)
+	assertIn(t, "1 lane now (its 5-hour cap in force", body) // claude-5, at its 40% cap
 	assertIn(t, `| <span title="took 4m">Tue 21:30</span> | schedule | ✅ `+
 		`| [812](https://github.com/x/y/actions/runs/200) |`, body)
 	// The full status, folded.
@@ -885,13 +905,19 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	if len(rows) > 0 {
 		rows = rows[1:]
 	}
+	// The lanes in force at night (`lanes_by_cap`, #2748): two on every Claude account but
+	// claude-5, whose 40% cap gives it one.
 	want := []string{
-		"| `claude-1` | GitHub's runners | 1 | 0 | 1 |",
-		"| `claude-2` | GitHub's runners | 1 | 0 | 1 |",
+		"| `claude-1` | GitHub's runners | 2 | 0 | 2 |",
+		"| `claude-2` | GitHub's runners | 2 | 0 | 2 |",
 		"| `claude-3` | GitHub's runners | 2 | 0 <sub>(+1 planning, on the planning lane)</sub>" +
 			" | 2 |"}
 	for _, n := range []int{4, 5, 6, 7} {
-		want = append(want, fmt.Sprintf("| `claude-%d` | GitHub's runners | 1 | 0 | 1 |", n))
+		lanes := 2
+		if n == 5 {
+			lanes = 1
+		}
+		want = append(want, fmt.Sprintf("| `claude-%d` | GitHub's runners | %d | 0 | %d |", n, lanes, lanes))
 	}
 	want = append(want,
 		"| `claude-8` | GitHub's runners | 2 | 2 | 0 |",
@@ -901,8 +927,8 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 			"`agy`'s)</sub> | 3 |",
 		"| `lite` | `night-vm-lite` | 6 | 0 | 6 |",
 		"| `claude-squishy` (Squishy) | GitHub's runners | 2 | 1 | 1 |",
-		"| **All 9 Claude accounts** | | **12** | **3** | **9** |",
-		"| **All 13 subscriptions** | | **24** | **5** | **19** |")
+		"| **All 9 Claude accounts** | | **17** | **3** | **14** |",
+		"| **All 13 subscriptions** | | **29** | **5** | **24** |")
 	assertEqual(t, rows, want)
 	// Under them, the limits on the lanes, each with how much of it is held now.
 	var limits []string
@@ -926,23 +952,23 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 		"needs a new secret there and in the workflows.", limits[1])
 	assertIn(t, "GitHub's runners take 8 of the bots' runs, planning runs too (4 now: 3 the "+
 		"night bot's, 1 Squishy's), the organization's 20 hosted jobs less the 12 "+
-		"kept for CI (#1455). So the 12 Claude lanes never all run at once: past 8,",
+		"kept for CI (#1455). So the 17 Claude lanes never all run at once: past 8,",
 		limits[2])
 	assertIn(t, "runs 6 plans at once beside the accounts' own lanes (1 now)", limits[3])
 	assertIn(t, "6 runs at once (2 now)", limits[4])
 	assertTrue(t, strings.HasSuffix(limits[6],
-		"9 Claude lanes are open on accounts that may start work, and GitHub's runners have "+
+		"14 Claude lanes are open on accounts that may start work, and GitHub's runners have "+
 			"4 free, so there is room for 4 more Claude runs."), limits[6])
 	// A subscription switched off has no open lane, and the totals say how many are off; with no
 	// Squishy row, its secret is the one free.
 	ctx = testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night}) // only claude-1's secret, the machine's off
 	table := strings.Join(dashboard.LanesTable(ctx, ctx.Store.Load(), pyjson.New(), nil, ""), "\n")
 	assertIn(t, "| `claude-8` | GitHub's runners | 2 | 0 | ⚫ off |", table)
-	assertIn(t, "| **All 8 Claude accounts** (7 off) | | **10** | **0** | **1** |", table)
+	assertIn(t, "| **All 8 Claude accounts** (7 off) | | **15** | **0** | **2** |", table)
 	assertIn(t, "one an account: 8 the night bot's; free: `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`.",
 		table)
-	assertIn(t, "**Now:** 1 Claude lane is open on accounts that may start work, and GitHub's "+
-		"runners have 8 free, so there is room for 1 more Claude run.", table)
+	assertIn(t, "**Now:** 2 Claude lanes are open on accounts that may start work, and GitHub's "+
+		"runners have 8 free, so there is room for 2 more Claude runs.", table)
 	// Halted, no lane may start work.
 	table = strings.Join(dashboard.LanesTable(ctx, ctx.Store.Load(), pyjson.New(), nil, "HALT is on main"),
 		"\n")
