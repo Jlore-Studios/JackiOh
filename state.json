@@ -15286,9 +15286,7 @@
     },
     "2881": {
       "action": "build",
-      "asks": [
-        "c:6594905440"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T04:34:40Z",
         "difficulty": "hard",
@@ -15310,6 +15308,10 @@
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
+      "live": "building",
+      "owner": "claude-3",
+      "owner_since": "2026-11-03T09:52:15Z",
+      "owner_why": "it planned it",
       "paused": {
         "at": "2026-11-03T09:50:05Z",
         "interrupt": "budget",
@@ -15324,12 +15326,14 @@
       "queued_at": "2026-11-03T03:45:56Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "41579030374",
+      "run_id": "pending:d53dfa97-1793699496",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T04:35:29Z",
+      "started_at": "2026-11-03T09:52:15Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6594905440"
+      ],
       "verdict_rounds": 2
     },
     "2882": {
@@ -16591,9 +16595,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T09:51:21Z",
+    "at": "2026-11-03T09:52:15Z",
     "url": "",
-    "what": "review #2912 on muse"
+    "what": "build #2881 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T09:32:26Z",
