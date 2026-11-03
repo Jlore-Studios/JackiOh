@@ -16690,6 +16690,8 @@
       }
     },
     "2916": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T07:49:26Z",
@@ -16703,8 +16705,11 @@
         "trail": "t: the Hero vitest run (including the shared-box WASM rebuild) is still going, and its result will arrive automatically. So far I've confirmed the branch state and reviewed the full diff against the base:\n- - `HeroTray.tsx` / `heroLayout.ts` / `config.ts` / `Hero.tsx` / `ModifierBadge.tsx` changes match the plan: fixed-size plate, out-of-flow tray with per-layout allowance (4/3/2), `+N` overflow bubble reusing `bubblePlacement`, Used mark as an inside-corner overlay, Jade/Credits as portrait overlays.\n- - `board.css` has the pass-2 fixes (tag inside the chip corner, no seat-wide `z-index`).\n- - `cargo fmt --check` and `eslint` on all touched files are clean.\n- - `pnpm --dir apps/web typecheck` currently fails only on missing generated WASM `pkg` modules (`src/wasm/index.ts`, `src/wasm/luau.ts`) plus one related nullability error \u2014 pre-existing fallout of the unbuilt WASM package, which the test runner's build step produces. I'll re-run typecheck after th\u2026\n- Still to run once the build completes: `Hero.test.tsx`, the other listed web suites (`ModifierBadge`, `secrets`, `animation-targets`, `Board`), typecheck, and the `board-layout.cy.tsx` component spec.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: hero plates keep one size however many effects they c\u2026\n- ## What changed and why\n- Hero plates (`.hero` in `apps/web/src/game/board.css`) changed size whenever a seat gained or lost an effect, and the board jumped with them. The plate now has a fixed width and height per layout with no wrapping; the portrait, seat label and primary power live inside it. The modifier, secret and R\u2026\n- - **Fixed plate** (`board.css`): `.hero` gets per-layout `--hero-w`/`--hero-h` and `flex-wrap: nowrap`. The primary power chip is a fixed `14ch`; R1639000's \"Used\" mark is an absolutely-positioned corner tag inside the chip (first in DOM order, still first in the accessible name). The Jade and Cred\u2026\n- - **Status tray** (`HeroTray.tsx`, `heroLayout.ts`, `config.ts`): entries run modifiers in view order, then secrets, then the Rift flag, inside the always-present `modifiers-<side>` span plus the existing `secrets-<side>` / `rift-spent-<side>` spans with their current chip markup. The tray shows a \u2026\n- - **Phone-portrait channel** (`board.css`, this run's fix): on `max-width: 600px` the field zones pack edge to edge, leaving only ~10px between plate and zones, so the absolute tray overlapped zones. Each phone-portrait seat now reserves a fixed 22px tray channel toward the field (`seat-opponent` p\u2026\n- - **Tests**: `Hero.test.tsx` covers per-layout counts (mocked `matchMedia` plus the no-`matchMedia` host), the `+N` list contents and outside-press close, `modifiers-<side>` present when empty, no `+N` at exactly the allowance, the Used overlay structure/name, and CSS pins (absolute mark, fixed chi\u2026\n- ## How it was tested (commands I ran, what they printed)\n- - `pnpm --dir apps/web test src/game/Hero.test.tsx` \u2014 11/11 green.\n- - `pnpm --dir apps/web test src/game/ModifierBadge.test.tsx src/game/secrets.test.tsx src/game/animation-targets.test.tsx src/game/Board.test.tsx` \u2014 38/38 green, no changes needed.\n- - `pnpm --dir apps/web typecheck` \u2014 clean (only after the WASM `pkg` build the test runner produces).\n- - `pnpm exec eslint apps/edge apps/web e2e` \u2014 clean; `cargo fmt --check` \u2014 clean; `cargo jackioh spec check` \u2014 ok (1651 rulings, 3950 proofs).\n- - `pnpm --dir e2e exec cypress run --component --spec cypress/component/board-layout.cy.tsx` \u2014 **50/50 green**, including the 18 new `#2877` tests and all existing B28/R504/#2330/#2876 checks. Cypress needed Xvfb (absent, no sudo): I assembled the prior run's downloaded debs under `/tmp` with a use\u2026\n- The first real Cypress run was 48/50: the two phone-portrait no-overlap tests failed with 3 zone hits, contradicting the earlier session's 39/39 note. That failure drove the tray-channel fix above; the re-run is 50/50. The full `test:component` suite and CI gates (clippy, fuzz, daily AI gates) are \u2026\n- ## Decisions the issue did not settle\n- - **Reserved channel vs. the alternatives on phone portrait**: beside-the-plate placement overflows the 390px screen (B28); sub-20px chips would be unreadable; an in-flow tray row is a bigger diff with the same geometry as seat padding. Seat padding keeps the tray absolute (the issue's letter) with\u2026\n- - **Tray chips use per-layout `max-width` (18/14/12ch) with ellipsis rather than a rigid `width`**: short chips stay narrow, but the tray is out of flow so nothing moves either way; the stability spec is the arbiter.\n- - **Kept the tray itself at `--z-popover`** (only the tray, never the seat) so a lifted card's name never slides under a seat (B45).\n- - **No ruling note**: this is pure client layout \u2014 no rules decision, so rule 3 adds nothing; the existing R169/R860/R847/R1639000/R1840005 cites stay accurate.\n- A reviewer should look twice at the phone-portrait channel size (22px vs ~24px tray height \u2014 2px slack, verified at both 390x844 and 390x664) and at the `--card-h` budget change on short phones.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-2877 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-2877/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 1000ms (attempt 2/10)\n- muse: retrying meta model stream in 2000ms (attempt 3/10)\n- muse: retrying meta model stream in 4000ms (attempt 4/10)\n- muse: retrying meta model stream in 8000ms (attempt 5/10)\n- muse: retrying meta model stream in 16000ms (attempt 6/10)\n- muse: retrying meta model stream in 32000ms (attempt 7/10)\n- muse: retrying meta model stream in 60000ms (attempt 8/10)\n- muse: retrying meta model stream in 60000ms (attempt 9/10)"
       },
       "issue": 2877,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T10:19:47Z",
         "from_run": "41598876611",
         "gates": [
           {
@@ -16762,8 +16767,15 @@
         "source": "build",
         "until": "2026-11-03T10:34:24Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T10:04:24Z",
+      "run_id": "pending:8d5fbd03-1793701161",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-03T10:19:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16863,9 +16875,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T10:07:07Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/41616118035",
-    "what": "review #2915 on claude-4"
+    "at": "2026-11-03T10:19:47Z",
+    "url": "",
+    "what": "review #2916 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T10:05:10Z",
