@@ -92,6 +92,9 @@ type Identity struct {
 	BranchPrefix  string // default: "bot/"
 	StateBranch   string // default: "bot-state"
 	JournalBranch string // default: "bot-journal"
+	// UsageBranch is where the status loop keeps every subscription's usage history (#2749,
+	// `internal/usage`): the night bot's `bot-usage`. "" keeps none, as Squishy's identity says.
+	UsageBranch string // default: "bot-usage"
 	// Workflow is the workflow a run is (`bot-night.yml`): dispatched to start one, read to list
 	// the runs.
 	Workflow string // default: "bot-night.yml"
@@ -115,6 +118,7 @@ func NewIdentity() *Identity {
 		BranchPrefix:  "bot/",
 		StateBranch:   "bot-state",
 		JournalBranch: "bot-journal",
+		UsageBranch:   "bot-usage",
 		Workflow:      "bot-night.yml",
 		Marker:        "<!-- jackioh-bot -->",
 		Trust:         ".harness/trust.txt",
@@ -165,7 +169,7 @@ func other(raw any, where string) (*Other, error) {
 
 // Keys are the keys an `identity` section may have.
 var Keys = []string{"name", "title", "command", "label_prefix", "branch_prefix", "state_branch",
-	"journal_branch", "workflow", "marker", "trust", "modes", "others"}
+	"journal_branch", "usage_branch", "workflow", "marker", "trust", "modes", "others"}
 
 // Parse is an `Identity` from a config's `identity` section (None or {} is the night bot's). Its
 // error is Python's ValueError, with its message; config.parse turns it into a ConfigError.
@@ -225,6 +229,8 @@ func Parse(raw any, suggestions bool /* = True */) (*Identity, error) {
 			found.StateBranch = s
 		case "journal_branch":
 			found.JournalBranch = s
+		case "usage_branch":
+			found.UsageBranch = s
 		case "workflow":
 			found.Workflow = s
 		case "marker":

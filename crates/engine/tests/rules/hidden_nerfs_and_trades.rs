@@ -540,6 +540,7 @@ mod r1845002_a_trade_offer {
                 Some(PendingView::Elsewhere(PendingElsewhereView {
                     for_you: false,
                     pending_for: holder,
+                    option_count: None,
                 }))
             );
             let choice_id = pending.id.clone();

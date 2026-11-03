@@ -130,21 +130,6 @@ mod tests {
             };
             assert_eq!(exiled(&run()), exiled(&s));
         }
-
-        #[test]
-        fn an_empty_opponent_library_costs_it_nothing() {
-            let mut s = scn(json!({
-                "seed": "collateral-empty-library",
-                "p1": { "hand": ["34"], "field": ["15"], "library": ["15"] },
-                "p2": { "field": ["66"], "library": [] },
-            }));
-            let rock = must(s.unit("p2", 1), "p2 lane 1");
-
-            s.play("34", json!({ "targets": pick::instance(&rock) }));
-
-            s.expect_in_zone(&rock, "exile");
-            assert_eq!(s.pile("p2", "exile").len(), 1);
-        }
     }
 
     mod radiant {
@@ -167,31 +152,6 @@ mod tests {
             s.expect_in_zone(&left, "exile");
             s.expect_in_zone(&middle, "exile");
             s.expect_in_zone(&right, "exile");
-        }
-
-        #[test]
-        fn sec3_1_adjacency_does_not_wrap_and_never_crosses_sides() {
-            let mut s = scn(json!({
-                "seed": "collateral-radiant-edge",
-                "p1": { "hand": ["34"], "field": [{ "def": "15", "lane": 1 }], "library": ["15"] },
-                "p2": {
-                    "field": [{ "def": "66", "lane": 1 }, { "def": "15", "lane": 2 }, { "def": "43", "lane": 5 }],
-                    "library": ["15", "43", "13"],
-                },
-            }));
-            s.card_mut("34").radiant = true;
-            let edge = must(s.unit("p2", 1), "p2 lane 1");
-            let neighbour = must(s.unit("p2", 2), "p2 lane 2");
-            let faraway = must(s.unit("p2", 5), "p2 lane 5");
-            let ally = must(s.unit("p1", 1), "p1 lane 1");
-
-            s.play("34", json!({ "targets": pick::instance(&edge) }));
-
-            s.expect_in_zone(&edge, "exile");
-            s.expect_in_zone(&neighbour, "exile");
-            // Lane 1 has no lane 0, so nothing wraps round to lane 5, and p1's own lane 1 is another side.
-            s.expect_in_zone(&faraway, "field");
-            s.expect_in_zone(&ally, "field");
         }
 
         #[test]

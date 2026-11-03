@@ -165,14 +165,6 @@ mod tests {
         }
 
         #[test]
-        fn s8_conventions_a_target_includes_a_hero_on_either_side() {
-            let mut s = spell(json!({ "def": "core-025" }), false);
-            s.play("core-044", json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
-
-            s.expect_health(PlayerId::P2, 26);
-        }
-
-        #[test]
         fn r346_ignores_a_heros_armor_too() {
             let mut s = scenario(json!({
                 "seed": "true-strike",

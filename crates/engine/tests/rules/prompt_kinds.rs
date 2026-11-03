@@ -87,15 +87,17 @@ fn answer_all(state: &mut GameState, keys: &[String]) {
     answer_keys(state, &keys);
 }
 
-/// R81, R97: the other seat's view of a prompt: that it is open, and whose — the whole of `pending`,
-/// so no option, caption, cost or budget travels — and `promptOpened` events of the holder's that name
-/// the player and nothing more: not the prompt's kind, nor its id.
-fn expect_only_that_it_is_open(state: &GameState, viewer: PlayerId, holder: PlayerId) {
+/// R81, R97: the other seat's view of a prompt: that it is open, whose and, for a card picker whose
+/// count hides nothing, how many cards it offers (`count`, R2739000) — the whole of `pending`, so no
+/// option, caption, cost or budget travels — and `promptOpened` events of the holder's that name the
+/// player and nothing more: not the prompt's kind, nor its id.
+fn expect_only_that_it_is_open(state: &GameState, viewer: PlayerId, holder: PlayerId, count: Option<usize>) {
     let view = view_for(state, viewer);
-    assert_eq!(
-        json_of(&view.pending),
-        json!({ "forYou": false, "pendingFor": holder })
-    );
+    let mut expected = json!({ "forYou": false, "pendingFor": holder });
+    if let Some(count) = count {
+        expected["optionCount"] = json!(count);
+    }
+    assert_eq!(json_of(&view.pending), expected);
     for opened in events_of_type(&view.events, GameEventType::PromptOpened) {
         let opened = json_of(&opened);
         if opened["player"] != json!(holder) {
@@ -178,7 +180,7 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
             refusal(&first, P1, vec![mode("draw")]),
             Some("that prompt belongs to the other player".to_string())
         );
-        expect_only_that_it_is_open(&state, P1, P2);
+        expect_only_that_it_is_open(&state, P1, P2, Some(3));
         assert_eq!(
             for_you(view_for(&state, P2).pending)
                 .options
@@ -218,7 +220,7 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
                 .map(|card| instance(&card.id))
                 .collect::<Vec<_>>()
         );
-        expect_only_that_it_is_open(&state, P1, P2);
+        expect_only_that_it_is_open(&state, P1, P2, None);
         let kept = state.players.p2.hand[0].clone();
         let gone = state.players.p2.hand[1].clone();
         answer_keys(&mut state, &[format!("instance:{}", gone.id).as_str()]);
@@ -359,7 +361,7 @@ mod e18_the_number_kind {
         assert_eq!(keys(&pending.options), ["mode:1", "mode:2", "mode:3"]);
         assert_eq!(prompt_answers(&pending).len(), 3);
         assert_eq!(for_you(view_for(&state, P1).pending).kind, PromptKind::Number);
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, None);
         let mut copy = round_trip(&state);
         answer_keys(&mut state, &["mode:3"]);
         answer_keys(&mut copy, &["mode:3"]);
@@ -440,7 +442,7 @@ mod r465_e18_the_answer_kind_classic_plus_42 {
                 .collect::<Vec<_>>(),
             labels(&pending.options)
         );
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, Some(4));
         assert_eq!(prompt_answers(&pending).len(), 4);
     }
 
@@ -564,7 +566,7 @@ mod e18_the_cell_kind_classic_plus_62 {
             &json_of(&cells[10]),
             &json!({ "player": "p2", "row": "units", "lane": 1 })
         ));
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, None);
 
         answer_keys(&mut state, &["zone:p2:units:2"]);
         let second = open_as(&state, PromptKind::Cell, P1);
@@ -685,7 +687,7 @@ mod e18_the_reward_kind_classic_90 {
                 .map(|reward| reward.label.to_string())
                 .collect::<Vec<_>>()
         );
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, Some(2));
         let mut copy = round_trip(&state);
         answer_keys(&mut copy, &["mode:A"]);
         assert_eq!(copy.players.p1.hero.health, HERO_HEALTH + 6);
@@ -777,7 +779,7 @@ mod e18_the_pick_kind_an_up_to_pile_pick_classic_44 {
             .collect();
         assert_eq!(distinct.len(), 7);
         assert_eq!(answers.len(), 7);
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, None);
 
         let mut copy = round_trip(&state);
         let picks = [
@@ -987,7 +989,7 @@ mod e18_a_pick_across_zones_classic_78s_radiant {
                 .map(|card| format!("instance:{}", card.id))
                 .collect::<Vec<_>>()
         );
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, None);
         answer_keys(&mut state, &[format!("instance:{}", deck[1].id).as_str()]);
         assert_eq!(ids(&state.players.p1.exile), [deck[1].id.clone()]);
     }
@@ -1025,7 +1027,7 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
                 .collect::<Vec<_>>(),
             vec![Some(plain.id.clone()), Some(plain.id.clone())]
         );
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, None);
     }
 
     #[test]
@@ -1062,7 +1064,7 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
         assert_eq!(shown[2].radiant, Some(true));
         // The hand itself is still a count in the chooser's view: the prompt is the only window.
         assert_eq!(view_for(&state, P1).opponent.hand, HandView::Count { count: 3 });
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, None);
         assert!(
             !serde_json::to_string(&view_for(&state, P2).pending)
                 .expect("a view")
@@ -1102,7 +1104,7 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
         let pending = open_as(&state, PromptKind::Mode, P1);
         assert_eq!(keys(&pending.options), ["mode:0", "mode:1", "mode:3"]);
         assert!(pending.options[1].label.contains(&plain.name));
-        expect_only_that_it_is_open(&state, P2, P1);
+        expect_only_that_it_is_open(&state, P2, P1, Some(3));
         answer_keys(&mut state, &["mode:1"]);
         assert_eq!(sorted(ids(&state.players.p2.exile)), sorted(ids(&ones)));
         assert_eq!(

@@ -77,40 +77,6 @@ mod tests {
         }
 
         #[test]
-        fn r74_the_flag_is_the_whole_model_so_the_card_s_stats_swap_while_it_sits_in_hand_s5_2() {
-            crate::register_all();
-            let mut s = glowy(json!(["core-026", "core-013"]));
-            let chosen = hand_id_of(s.state(), "core-013");
-
-            s.play("core-026", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
-
-            // #13 Jlockeed Shredder-10 is 6/10 → 12/20: no card id changed, only the flag.
-            s.expect_stats(&chosen, json!({ "attack": 12, "maxHealth": 20 }));
-            assert_eq!(s.card(&chosen).def_id, "core-013");
-            assert_eq!(s.card(&chosen).zone.z(), ZoneName::Hand);
-        }
-
-        #[test]
-        fn s6_3_leaves_a_card_that_is_already_radiant_alone_nothing_in_core_un_sets_the_flag() {
-            crate::register_all();
-            let mut s = glowy(json!(["core-026", { "def": "core-005", "radiant": true }]));
-            let chosen = hand_id_of(s.state(), "core-005");
-
-            s.play("core-026", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
-
-            assert_eq!(radiant_hand(s.state()), vec![chosen.clone()]);
-            // It was already Radiant, so the flag is unchanged; the cue still goes out, because the card is
-            // hidden from the opponent and its absence would tell them its face (R177, R97).
-            assert_eq!(
-                s.last_events()
-                    .iter()
-                    .filter(|event| matches!(event, GameEvent::RadiantSet { .. }))
-                    .count(),
-                1
-            );
-        }
-
-        #[test]
         fn s8_conventions_an_empty_hand_fizzles_the_pick_and_the_spell_still_counts_as_played() {
             crate::register_all();
             let mut s = glowy(json!(["core-026"]));

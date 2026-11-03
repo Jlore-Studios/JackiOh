@@ -33,6 +33,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/logins"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
@@ -41,6 +42,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/quiet"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
@@ -48,6 +50,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/titles"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/wake"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
@@ -128,6 +131,9 @@ type Args struct {
 	Offline      bool // --offline (providers, window)
 	Work         bool // --work (doctor)
 	RepoSettings bool // --repo-settings (setup)
+
+	UsageCommand string // usage's own command: backfill
+	Since        string // --since (usage backfill)
 }
 
 // argsOf is the namespace as Args.
@@ -144,7 +150,7 @@ func argsOf(ns map[string]any) *Args {
 		Every: n("every"), RunnersEvery: n("runners_every"), ForSeconds: n("for_seconds"),
 		Sweep: b("sweep"), Stats: b("stats"), Companions: b("companions"), Controller: b("controller"),
 		SectionOnly: b("section_only"), Offline: b("offline"), Work: b("work"),
-		RepoSettings: b("repo_settings"),
+		RepoSettings: b("repo_settings"), UsageCommand: s("usage_command"), Since: s("since"),
 	}
 	if q, ok := ns["quiet_ok"].(string); ok {
 		a.QuietOK = &q
@@ -621,6 +627,16 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	worker = work.NewWorker(cfg, planned, run, cfg.Root, args.WorkDir, out,
 		MakeProbe(ctx, item, provider, func() time.Time { return worker.LastHour }),
 		keepLogin, nil, nil, nil, nil)
+	// An own review run reads its pull request's CI with the job's own read-only token (#2748,
+	// `work/ci.go`): the CI workflow's runs and jobs, which `actions: read` covers.
+	worker.GH = ctx.GH
+	if login != nil {
+		// A Claude account keeps its own session, and resumes the one the item's last run on it
+		// kept (#2748), out of that run's `work` artifact (the job's token has `actions: read`);
+		// NewSessions is nil for every other CLI and with `resume_sessions` off.
+		worker.Sessions = work.NewSessions(cfg, provider, login.Secret, login.Env["CLAUDE_CONFIG_DIR"],
+			func(record *pyjson.Object) (string, error) { return sessions.Fetch(ctx.GH, record) })
+	}
 	if cfg.Backend != "fake" && provider.Limits.Stops().Len() > 0 {
 		// A fresh reading before any model work: the stored one is the last run's, and none at
 		// all once its window reset. Claude: one Haiku turn, signed in as this subscription; agy
@@ -639,6 +655,9 @@ func CmdWork(cfg *config.Config, args *Args) int {
 	keepLogin()
 	Summary(fmt.Sprintf("### Work: %s\n\n%s\n", py.Str(result.Get("status")), py.Str(result.GetOr("reason", ""))))
 	say(fmt.Sprintf("work: %s: %s", py.Str(result.Get("status")), py.Str(result.GetOr("reason", ""))))
+	if session := result.Obj("session"); session != nil {
+		say("work: " + journal.SessionLine(session))
+	}
 	return 0
 }
 
@@ -902,6 +921,19 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 		loop.ControllerLoop = true // this loop plans (#1455)
 		cfg = &loop
 	}
+	if every > 0 && cfg.RecordsUsage() {
+		// The usage history (#2749): each rewrite's view is a tick of it, and every 30 minutes
+		// its rows go to the usage branch; once more as the loop ends.
+		recorder := usage.NewRecorder(say)
+		was := dashboard.Looked
+		dashboard.Looked = func(ctx *hctx.Context, view *dashboard.View) {
+			recorder.Tick(ctx, usage.TickFacts{State: view.State, Live: view.Live, Explained: view.Explained})
+		}
+		defer func() {
+			dashboard.Looked = was
+			recorder.Close(Ctx(cfg, true))
+		}()
+	}
 	for {
 		fresh := current(cfg, since)
 		if fresh == nil {
@@ -983,6 +1015,36 @@ func CmdStats(cfg *config.Config, args *Args) int {
 	}
 	say(redact.Redact("dashboard: "+dashboard.Update(Ctx(cfg, true), extra, true, statsSections(cfg, args),
 		args.Force, cardsets.FetchJSON), nil))
+	return 0
+}
+
+// CmdUsage is `harness usage backfill [--since DATE]` (#2749): read the journal into the usage
+// branch's history again, as the status loop does by itself the first time it finds the branch
+// without a backfill marker: runs and cut-off readings since the day given (2026-10-06 by default),
+// and the sessions and weeks they let it derive, each row once (a run by its run id), pushed.
+func CmdUsage(cfg *config.Config, args *Args) int {
+	if !cfg.RecordsUsage() {
+		sayErr(fmt.Sprintf("usage: %s keeps no usage history (`usage_history` is off, or its identity "+
+			"names no usage branch)", config.Name))
+		return 1
+	}
+	since := usage.BackfillSince
+	if args.Since != "" {
+		day, err := time.Parse("2006-01-02", args.Since)
+		if err != nil {
+			sayErr(fmt.Sprintf("usage: --since %s is not a day (YYYY-MM-DD)", args.Since))
+			return 2
+		}
+		since = day
+	}
+	ctx := Ctx(cfg, true)
+	recorder := usage.NewRecorder(say)
+	recorder.Since, recorder.Rebackfill = since, true
+	recorder.Flush(ctx)
+	recorder.Close(ctx)
+	if recorder.Problem != "" {
+		return 1
+	}
 	return 0
 }
 
@@ -1422,6 +1484,10 @@ func Parser() *ArgumentParser {
 	p.option("--payload", nil, "the event's payload file").required = true
 	p = sub.addParser(top, "forget", "clear an item's failure count")
 	p.positional("number", nargsOne)
+	p = sub.addParser(top, "usage", "the usage history on the usage branch (#2749)")
+	what := p.subparsers("usage_command", true)
+	p = what.addParser(p, "backfill", "read the journal into it again: runs and cut-offs since --since")
+	p.option("--since", "", "the first day to read, YYYY-MM-DD (2026-10-06 by default)")
 	return top
 }
 
@@ -1454,6 +1520,7 @@ var Commands = map[string]func(cfg *config.Config, args *Args) int{
 	"setup":      CmdSetup,
 	"forget":     CmdForget,
 	"triage":     CmdTriage,
+	"usage":      CmdUsage,
 }
 
 // loadConfig is `config_mod.load()`; a variable so this package's own tests can run `main`

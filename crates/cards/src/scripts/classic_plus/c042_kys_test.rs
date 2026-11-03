@@ -352,9 +352,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r465_the_key_never_reaches_a_view_the_chooser_sees_the_labels_the_statement_and_the_options_the_opponent_only_that_a_prompt_is_open() {
+        fn r465_the_key_never_reaches_a_view_the_chooser_sees_the_labels_the_statement_and_the_options_the_opponent_only_how_many() {
             let mut s = cast("kys-test-view", false, &[FILLER]);
-            assert_eq!(view(&s, P2)["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
+            // R2739000: the other seat is shown how many difficulties, then how many answers, never them.
+            assert_eq!(view(&s, P2)["pending"], json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 }));
             let offer = view(&s, P1)["pending"].clone();
             let offered: Vec<String> = if offer["forYou"] == true {
                 offer["options"]
@@ -371,7 +372,8 @@ mod tests {
             let mine = view(&s, P1)["pending"].clone();
             let shown = if mine["forYou"] == true { mine["prompt"].as_str().unwrap_or_default().to_string() } else { String::new() };
             assert_eq!(shown, pending_prompt(&s));
-            assert_eq!(view(&s, P2)["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
+            let answers = s.state().pending.as_ref().map_or(0, |pending| pending.options.len());
+            assert_eq!(view(&s, P2)["pending"], json!({ "forYou": false, "pendingFor": "p1", "optionCount": answers }));
             for viewer in [P1, P2] {
                 let text = serde_json::to_string(&s.view(viewer)).expect("a view is JSON");
                 assert!(!text.contains("__answerKey"));

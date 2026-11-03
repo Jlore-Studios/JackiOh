@@ -21,7 +21,7 @@ begin
   end if;
 
   -- The columns, as the store reads and writes them: 0061's seven, then 0072's full_art_id
-  -- (R2655000, 40_full_art_tiers.sql) and 0077's augments (R2725000, 43_card_versions.sql).
+  -- (R2655000, 40_full_art_tiers.sql) and 0078's augments (R2725000, 44_card_versions.sql).
   select string_agg(format('%s %s %s', column_name, data_type, is_nullable), ', ' order by ordinal_position)
     into v_text
     from information_schema.columns

@@ -283,7 +283,11 @@ test that proves a ruling is named after it: `fn r64_the_copy_lands_in_the_leftm
 (CLAUDE.md rule 3). A test that only reads printed data back with no action (cost, stats, type, tags
 or rarity, which `tests/cross/catalog.rs` proves for every entry) proves nothing a card test should,
 so write none (#1125). A "no tuned numbers" clause still gets its
-`params.is_none()` test: `catalog.rs` does not assert `params`.
+`params.is_none()` test: `catalog.rs` does not assert `params`. Nor does a card's file re-prove an
+engine rule its script adds nothing to (#2853): a printed keyword gets one test per face showing it
+reaches play, and a plain verb one test of the card's own use of it, while the keyword's rule matrix
+and the verb's edge cases (another target or count, an empty library or hand, the hand cap, a full row
+or library, a seeded replay) stay with `crates/engine/tests/rules/`.
 
 A card that declares `condition_met` proves both answers in `tests/cross/condition_active.rs`, and
 one that declares `preview` proves its values in `tests/cross/preview.rs`; each file also pins the

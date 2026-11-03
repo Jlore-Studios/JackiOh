@@ -213,25 +213,6 @@ mod tests {
             assert!(first[0].position <= 4);
             assert_eq!(second, first);
         }
-
-        #[test]
-        fn r80_a_full_library_refuses_the_shuffle_no_virus_is_created_and_the_spell_still_resolves() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "seed": "core-090-library-cap",
-                "p1": { "hand": [INJECTION, "core-005"], "library": filler(3) },
-                "p2": { "hand": ["core-005"], "library": filler(LIBRARY_CAP) },
-            }));
-
-            s.play(INJECTION, json!({}));
-
-            assert_eq!(library_of(&s, P2).len(), LIBRARY_CAP);
-            assert!(!def_ids(&library_of(&s, P2)).contains(&VIRUS.to_string()));
-            assert!(shuffled_in(&s, None).is_empty());
-            // §8 Conventions: a fizzled clause does not un-play the card.
-            s.expect_in_zone(INJECTION, "graveyard");
-            assert_eq!(s.state().players[P1].turn_log.cards_played, 1);
-        }
     }
 
     // #90 CN-Viral Injection — radiant

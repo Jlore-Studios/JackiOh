@@ -215,36 +215,6 @@ mod tests {
                 assert_eq!(s.unit(P2, 1).map(|card| card.controller), Some(P2));
             }
         }
-
-        #[test]
-        fn r361_with_no_free_zone_the_killer_stays_with_its_controller_r15() {
-            crate::register_all();
-            // Mrow sits on top of a pile in lane 5, so her death leaves that lane with the Gary beneath her
-            // and p1's row stays full (§3.2).
-            let mut s = scenario(json!({
-                "seed": SEED,
-                "active": "p2",
-                "p1": {
-                    "hand": [FILLER],
-                    "field": [
-                        { "def": RENO, "lane": 1 },
-                        { "def": RENO, "lane": 2 },
-                        { "def": STRAAZA, "lane": 3 },
-                        { "def": SORCERER, "lane": 4 },
-                        { "def": GARY, "lane": 5 },
-                        { "def": MROW, "lane": 5, "stack": true },
-                    ],
-                },
-                "p2": { "hand": [FILLER], "field": [{ "def": FELINORS, "lane": 1 }] },
-            }));
-
-            s.attack(FELINORS, MROW);
-
-            s.expect_in_zone(MROW, "graveyard");
-            assert_eq!(s.unit(P1, 5).as_ref().map(|card| card.def_id.as_str()), Some(GARY));
-            assert_eq!(s.unit(P2, 1).as_ref().map(|card| card.def_id.as_str()), Some(FELINORS));
-            assert_eq!(s.unit(P2, 1).map(|card| card.controller), Some(P2));
-        }
     }
 
     mod n86_miss_mrow_radiant {

@@ -272,7 +272,8 @@ mod r266_an_answer_is_sealed_until_both_are_in {
             own.pending,
             Some(PendingView::Elsewhere(PendingElsewhereView {
                 for_you: false,
-                pending_for: P2
+                pending_for: P2,
+                option_count: None,
             }))
         );
         assert_eq!(

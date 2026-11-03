@@ -24,8 +24,8 @@ use jackioh_engine::config::{
     DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE,
     EMOTE_HAND_VOICE, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
     KY_COMPETITION_SECONDS, LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA,
-    RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS, ROLL_TAILS,
-    SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
+    PROMPT_CARD_OPTION_LIMIT, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS,
+    ROLL_TAILS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
     TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
     VOTE_TALLY_SIZE,
 };
@@ -163,6 +163,9 @@ fn engine_config_ts() -> String {
         ),
         constant("MAX_COPIES", None, &MAX_COPIES),
         constant("MAX_MANA", None, &MAX_MANA),
+        // R2739000: the most options a `mode`, `reward` or `answer` prompt has and is still drawn as
+        // cards, which the client's card picker reads.
+        constant("PROMPT_CARD_OPTION_LIMIT", None, &PROMPT_CARD_OPTION_LIMIT),
         constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
@@ -210,7 +213,7 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    assert_eq!(text.matches("\nexport const ").count(), 65, "{text}");
+    assert_eq!(text.matches("\nexport const ").count(), 66, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

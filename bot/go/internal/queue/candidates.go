@@ -14,6 +14,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 )
 
 // PRIORITY_TIERS: the pickup tiers by label (#90). A thread with none of them is in tier 2.
@@ -48,10 +49,14 @@ type Candidate struct {
 	Forced bool
 	// QueuedAt is queued_at.
 	QueuedAt string
-	// `easy`, `medium` or `hard` (`difficulty_of`): which models may plan, build and review it.
+	// `medium` or `hard` (`difficulty_of`): which models may plan, build and review it.
 	Difficulty string // default: DEFAULT_DIFFICULTY
 	// For a review: the family of the model that built the change.
 	Builder string // default: ""
+	// For a review: the subscription whose run built the change ("" when unknown, or recorded
+	// before #2748). A final audit goes to it only when no other subscription of the tier is free
+	// (2026-11-02), and an after-merge spot-check never does (`plan.ReviewSeat`).
+	BuiltBy string // default: ""
 	// Its pickup tier (`priority_tier`), which comes before everything but `forced`.
 	Priority int // default: NO_PRIORITY
 	// For a build: a planning session already wrote its plan (`plan.py` plans it first if not).
@@ -63,15 +68,16 @@ type Candidate struct {
 	PlannedBy string // default: ""
 	// For a review: the families whose approval the head already has (for the reviewer's prompt).
 	Approved []string // default: ()
-	// For a review: the tier of each approval the head has, one per review (`review_rule`).
-	ApprovalTiers []string // default: ()
+	// For a review: the tiers whose approval of the head would ship it, weakest first
+	// (`review_rule.tiers`): medium then strong for a medium item, strong for a hard one.
+	ReviewTiers []string // default: ()
 	// A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
 	// its revision needs a reviewer in the same run.
 	BotPR bool // default: False
 	// Someone has rated how hard it is (`rated`); an unrated build is rated when it is planned.
 	Rated bool // default: True
 	// A revision queued because `main` left the pull request with conflicts: only a builder
-	// with its own reviewer in the run takes it, never a weak one (#317 part 2).
+	// with its own reviewer in the run takes it (#317 part 2).
 	Conflict bool // default: False
 	// For a review: the weakest tier a person asked to review it (`/harness review strong`).
 	ReviewFloor string // default: ""
@@ -81,20 +87,52 @@ type Candidate struct {
 	// For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
 	// checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
 	Part bool // default: False
-	// For a revision: the tier of the final audit it answers (#725), so the auditor's tier
-	// fixes and pushes it ("" when no audit has asked for changes yet).
+	// For a part: its tree's reconcile sent it back (#2748, section 2; its record's `sent_back`),
+	// so it goes to its owner, the subscription that built it, first (`plan.Assign`), as owned
+	// work does.
+	SentBack bool // default: False
+	// For a revision: the tier of the final audit it answers (#725), at which its owner, the
+	// auditor's subscription, fixes and pushes it (#2748; "" when no audit has asked for changes
+	// since the last revision landed).
 	AuditTier string // default: ""
 	// Review verdict rounds already used on the item in the current owner's hands (#725).
 	RoundsUsed int // default: 0
 	// The owner tier that used them ("" when none); a new owner starts its own count.
 	RoundTier string // default: ""
+	// For a build or a revision: the subscription that owns the item (`OwnerOf`, #2748): the one
+	// that planned it or took it up last, until a handoff ("" for none, or released).
+	Owner string // default: ""
+	// It carries `bot:waiting`: held for its owner (`plan.Owning`).
+	Waiting bool // default: False
+	// When its hold began (its record's `hold`), while it carries `bot:waiting`: the hold ends
+	// `hold_minutes` after it ("" for none).
+	HoldSince string // default: ""
+	// It was held for its owner, and its owner has not taken it up since (its record's `hold`).
+	WasHeld bool // default: False
+	// It continues work a run left unfinished: a run was paused or cut off on it (its record's
+	// `paused`), or left its unfinished work or draft (`handoff` of kind `work` or `draft`, or a
+	// revision's `wip`). With its owner, its own work goes before new builds (`plan.Pairs`).
+	Continues bool // default: False
+	// For a review: an after-merge spot-check (#2748, section 5; `spotcheck`) of a merged pull
+	// request, queued in the state file and not by a label. It goes on a strong seat, after every
+	// other review run, and blocks nothing.
+	SpotCheck bool // default: False
+	// For a spot-check: the subscription whose approval shipped the head, which reviews it only
+	// when no other strong seat is free ("" when none is on record).
+	ApprovedBy string // default: ""
+	// For a review: the change's own review run (#2748, 2026-11-02; `own_review_run`): a run of
+	// the subscription whose run built the head (its `Owner`, `BuiltBy`), which reviews the change,
+	// fixes what it finds and approves it, queued in the state file (`OwnReviewsWaiting`). It goes
+	// to that subscription alone, as its own work (`plan.Pairs`), held for it a while or handed off
+	// as a final audit (`plan.Owning`).
+	OwnReview bool // default: False
 }
 
 // NewCandidate is Candidate(number, kind, title, forced, queued_at) with its defaults.
 func NewCandidate(number int, kind string, title string, forced bool, queuedAt string) *Candidate {
 	return &Candidate{Number: number, Kind: kind, Title: title, Forced: forced, QueuedAt: queuedAt,
 		Difficulty: config.DefaultDifficulty, Priority: NoPriority, Approved: []string{},
-		ApprovalTiers: []string{}, Rated: true}
+		ReviewTiers: []string{}, Rated: true}
 }
 
 // The last commit of a bot pull request that met the review rule, as deliver recorded it
@@ -131,8 +169,8 @@ func PlanOf(record *pyjson.Object, thread *pyjson.Object, kind string, mode stri
 	return pyjson.New("planned", false, "plan_tier", "", "planned_by", "")
 }
 
-// The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for an
-// easy or medium item, strong for a hard one, and medium to rate and plan an item nobody has
+// The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for a
+// medium item, strong for a hard one, and medium to rate and plan an item nobody has
 // rated or planned yet. One planned but never rated (a plan from before ratings, or a planner
 // that gave none) still needs a plan from its difficulty's floor.
 func PlanFloor(candidate *Candidate) string {
@@ -154,10 +192,39 @@ func PlanMeets(candidate *Candidate) bool {
 }
 
 // The Needs plan stage: a build with no plan yet, or one whose plan came from a model
-// weaker than its difficulty's plan floor (a medium plan for a hard item). A weak builder,
-// which cannot plan, builds only from a plan that meets its floor.
+// weaker than its difficulty's plan floor (a medium plan for a hard item).
 func NeedsPlan(candidate *Candidate) bool {
 	return candidate.Kind == "build" && !PlanMeets(candidate)
+}
+
+// OwnerItem is the item whose owner a thread answers to (#2748): a bot pull request's issue (its
+// record's `issue`, which deliver writes when it opens it), whose plan and build it carries on, or
+// else the thread itself.
+func OwnerItem(s *pyjson.Object, number int) int {
+	if issue := py.MustInt(py.Or(recordOf(s, number).Get("issue"), 0)); issue != 0 {
+		return issue
+	}
+	return number
+}
+
+// OwnerOf is the subscription that owns thread `number`'s item (`OwnerItem`, #2748): its record's
+// `owner`, which a claim writes for the subscription that takes the item up (a planning run, a
+// build or a revision; never a review) and a handoff clears to "", or, in a record from before
+// owners were kept, the subscription that planned it (`planned_by_id`). "" for none.
+func OwnerOf(s *pyjson.Object, number int) string {
+	record := recordOf(s, OwnerItem(s, number))
+	if owner, ok := record.Lookup("owner"); ok {
+		return py.OrStr(owner, "")
+	}
+	return py.OrStr(record.Get("planned_by_id"), "")
+}
+
+// Continues is: a run left the item's work unfinished, and the next run goes on from it: one was
+// paused or cut off on it (`paused`, deliver), or kept its notes, its draft (`handoff` of kind
+// `work` or `draft`) or a revision's unfinished commits (`wip`).
+func Continues(record *pyjson.Object) bool {
+	return record.Truthy("paused") || record.Truthy("wip") ||
+		py.In(record.Obj("handoff").Get("kind"), "work", "draft")
 }
 
 // KIND_ORDER: the order of urgency after forced items, the priority tier and the difficulty
@@ -481,12 +548,13 @@ func sortedKeys(set map[int]bool) []int {
 // Read by label, so no number of open threads hides one, and a label changed since the last
 // plan counts at this one. Either queue label queues either kind of thread: an issue builds
 // and a pull request revises. A queue label is the request, so a thread that failed before and
-// was labelled again is taken again. A thread labelled `human` or `human required` is left
-// out, whatever model would take it, and so are a fullsend issue whose parts are still open
-// (`open_parts`, #505),
+// was labelled again is taken again. A thread labelled `human`, `human required` or `tracking` is
+// left out, whatever model would take it, and so are a fullsend issue whose parts (its open
+// sub-issues) are still open (#505),
 // forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
 // each with a line in `skipped` when the caller keeps one, and in `held_back` (number -> why)
-// when the caller keeps that (the status issue's queue).
+// when the caller keeps that (the status issue's queue). A fullsend issue with no sub-issue yet
+// is its split, which goes first among the builds, as `priority:high` does (#2748).
 func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None */, heldBack map[int]string /* = None */) []*Candidate {
 	found := map[int]*Candidate{}
 	var order []int            // found's insertion order
@@ -494,7 +562,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	others := map[int]string{} // number -> the other bot's name
 	parted := map[int][]int{}  // number -> its open parts
 	var builds []*pyjson.Object
-	labelWorking, labelPR := config.LabelWorking, config.LabelPR
+	labelPR := config.LabelPR
 	labelCross := config.LabelCross
 	for _, label := range []string{config.LabelBuild, config.LabelRevise, labelCross} {
 		for _, thread := range ctx.GH.ListIssues(label, "open", 300, "") {
@@ -504,7 +572,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			_, isHuman := human[number]
 			_, isOther := others[number]
 			_, isParted := parted[number]
-			if names[labelWorking] || isFound || isHuman || isOther || isParted {
+			if config.IsLive(names) || isFound || isHuman || isOther || isParted {
 				continue
 			}
 			isPR := thread.Has("pull_request")
@@ -512,11 +580,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				continue // a second review is for the bot's own pull requests only
 			}
 			if IsHuman(names) {
-				if lowered(names)[config.LabelHuman] {
-					human[number] = config.LabelHuman
-				} else {
-					human[number] = config.LabelHumanRequired
-				}
+				human[number] = KeptBy(names)
 				continue
 			}
 			if other := Owner(thread); other != nil {
@@ -534,15 +598,24 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			if kind == "build" {
 				mode = ModeOf(names)
 			}
+			split := false
 			if kind == "build" && IsFullsend(mode, record) {
-				var parts []int
-				if _, ok := herr.Catch[*herr.GitHubError](func() { parts = OpenParts(ctx, number) }); ok {
+				var children []*pyjson.Object
+				parts := []int{}
+				if _, ok := herr.Catch[*herr.GitHubError](func() { children = ctx.GH.ListSubIssues(number) }); ok {
 					parts = []int{number} // unread: wait for the next pickup rather than race them
+				}
+				for _, child := range children {
+					if child.Get("state") == "open" {
+						parts = append(parts, numberOf(child))
+					}
 				}
 				if len(parts) > 0 {
 					parted[number] = parts
 					continue
 				}
+				// No sub-issue at all: the run splits it (`plan.Claim`'s `children`), not reconciles.
+				split = mode == "fullsend" && len(children) == 0
 			}
 			votes := record.Obj("votes")
 			if votes == nil {
@@ -561,15 +634,19 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				c.Difficulty = DifficultyOf(names, CarriedDifficulty(record))
 			}
 			c.Builder = py.OrStr(votes.Get("builder"), "")
+			c.BuiltBy = py.OrStr(votes.Get("built_by"), "")
 			c.Priority = PriorityTier(names)
+			if split {
+				// A fullsend split goes first among the builds, as a `priority:high` item does
+				// (#2748, section 2): its parts wait on it. No label changes; a person's stays.
+				c.Priority = min(c.Priority, PriorityTiers[config.LabelPriorityHigh])
+			}
 			plan := PlanOf(record, thread, kind, mode)
 			c.Planned, c.PlanTier, c.PlannedBy = plan.Bool("planned"), plan.Str("plan_tier"), plan.Str("planned_by")
 			for _, family := range pyjson.List(votes.Get("approvals")) {
 				c.Approved = append(c.Approved, py.Str(family))
 			}
-			for _, approval := range reviewrule.Approvals(votes, ctx.Cfg.Pool.FamilyTier) {
-				c.ApprovalTiers = append(c.ApprovalTiers, approval[1])
-			}
+			c.ReviewTiers = reviewrule.Tiers(votes, c.Difficulty)
 			c.BotPR = names[labelPR]
 			c.Rated = kind != "build" || Rated(names, record)
 			c.Conflict = kind == "revise" && record.Get("source") == "conflict"
@@ -578,18 +655,60 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			}
 			c.Mode = mode
 			c.Part = kind == "build" && mode == "" && IsPart(record)
+			c.SentBack = c.Part && record.Truthy("sent_back")
 			if kind == "revise" {
 				c.AuditTier = py.OrStr(record.Get("audit_tier"), "")
 			}
 			if kind == "build" || kind == "revise" {
 				c.RoundsUsed = py.MustInt(py.Or(record.Get("verdict_rounds"), 0))
 				c.RoundTier = py.OrStr(record.Get("round_tier"), "")
+				c.Owner = OwnerOf(s, number)
+				c.Waiting = names[config.LabelWaiting]
+				hold := record.Obj("hold")
+				c.WasHeld = hold != nil
+				if c.Waiting && hold != nil && !hold.Truthy("lifted") {
+					c.HoldSince = py.OrStr(hold.Get("since"), "")
+				}
+				c.Continues = Continues(record)
 			}
 			found[number] = c
 			order = append(order, number)
 			if kind == "build" && !c.Forced {
 				builds = append(builds, thread)
 			}
+		}
+	}
+	// The after-merge spot-checks (#2748, section 5): a review run each of a merged pull request,
+	// queued in the state file (`spotcheck.Pending`), since a closed thread is in no label's list.
+	for _, entry := range spotcheck.Pending(s) {
+		number := py.MustInt(py.Or(entry.Get("pr"), 0))
+		if _, isFound := found[number]; isFound || number == 0 {
+			continue
+		}
+		c := NewCandidate(number, "review", entry.Str("title"), false, entry.Str("queued_at"))
+		c.SpotCheck = true
+		c.Difficulty = config.AsDifficulty(entry.Str("difficulty"))
+		if c.Difficulty == "" {
+			c.Difficulty = config.DefaultDifficulty
+		}
+		c.Builder = entry.Obj("builder").Str("family")
+		c.BuiltBy = entry.Obj("builder").Str("provider")
+		c.ApprovedBy = entry.Obj("approver").Str("provider")
+		c.ReviewTiers = []string{spotcheck.Tier}
+		c.BotPR = true
+		found[number] = c
+		order = append(order, number)
+	}
+	// The own review runs (#2748, 2026-11-02): each pull request whose build handed its lane to its
+	// own review, queued in the state file (`own_review`), since its `bot:reviewing` keeps it out of
+	// every label's list.
+	for _, number := range OwnReviewsWaiting(s) {
+		if _, isFound := found[number]; isFound {
+			continue
+		}
+		if c := ownReviewCandidate(ctx, s, number, human, others); c != nil {
+			found[number] = c
+			order = append(order, number)
 		}
 	}
 	waiting := map[int][]int{}
@@ -640,8 +759,56 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	return queue
 }
 
-// candidateLess is the key `(not c.forced, c.priority, KIND_ORDER[c.kind], c.queued_at,
-// c.number)`.
+// ownReviewCandidate is the own review run thread `number` waits for, or nil when its thread is
+// closed, no bot pull request, people's, the other bot's or stopped (a stop drops the reservation
+// too, `Stop`). `human` and `others` take the threads left out for those reasons, as Candidates'
+// lists do.
+func ownReviewCandidate(ctx *hctx.Context, s *pyjson.Object, number int, human, others map[int]string) *Candidate {
+	var thread *pyjson.Object
+	if _, failed := herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(number) }); failed {
+		return nil
+	}
+	names := LabelNames(thread)
+	record := recordOf(s, number)
+	if thread.Get("state") != "open" || !thread.Has("pull_request") || !names[config.LabelPR] ||
+		record.Truthy("stop_requested") {
+		return nil
+	}
+	if IsHuman(names) {
+		human[number] = KeptBy(names)
+		return nil
+	}
+	if other := Owner(thread); other != nil {
+		others[number] = other.Name
+		return nil
+	}
+	reserved := OwnReviewOf(record)
+	queuedAt := py.OrStr(reserved.Get("since"), py.OrStr(record.Get("queued_at"), ""))
+	c := NewCandidate(number, "review", py.Str(thread.GetOr("title", "")), record.Truthy("forced"), queuedAt)
+	c.OwnReview = true
+	c.Difficulty = DifficultyOf(names, CarriedDifficulty(record))
+	votes := record.Obj("votes")
+	c.Builder = py.OrStr(votes.Get("builder"), "")
+	c.BuiltBy = reserved.Str("provider")
+	c.Owner = reserved.Str("provider")
+	c.Priority = PriorityTier(names)
+	c.ReviewTiers = reviewrule.Shipping(c.Difficulty)
+	c.BotPR = true
+	// Its rounds go on from its build's (`own_review`'s `rounds_used`, #725).
+	c.RoundsUsed = py.MustInt(py.Or(reserved.Get("rounds_used"), py.Or(record.Get("verdict_rounds"), 0)))
+	c.RoundTier = py.OrStr(reserved.Get("round_tier"), py.OrStr(record.Get("round_tier"), ""))
+	c.Waiting = names[config.LabelWaiting]
+	hold := record.Obj("hold")
+	c.WasHeld = hold != nil
+	if c.Waiting && hold != nil && !hold.Truthy("lifted") {
+		c.HoldSince = py.OrStr(hold.Get("since"), "")
+	}
+	c.Continues = Continues(record)
+	return c
+}
+
+// candidateLess is the key `(not c.forced, c.priority, KIND_ORDER[c.kind], c.spot_check,
+// c.queued_at, c.number)`.
 func candidateLess(a, b *Candidate) bool {
 	if a.Forced != b.Forced {
 		return a.Forced
@@ -651,6 +818,9 @@ func candidateLess(a, b *Candidate) bool {
 	}
 	if KindOrder[a.Kind] != KindOrder[b.Kind] {
 		return KindOrder[a.Kind] < KindOrder[b.Kind]
+	}
+	if a.SpotCheck != b.SpotCheck {
+		return b.SpotCheck // a spot-check after the other review runs (#2748)
 	}
 	if a.QueuedAt != b.QueuedAt {
 		return a.QueuedAt < b.QueuedAt

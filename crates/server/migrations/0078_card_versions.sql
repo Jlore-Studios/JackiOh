@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0077: a card pick keeps a version and its augments (SPEC §14.2;
+-- Migration 0078: a card pick keeps a version and its augments (SPEC §14.2;
 -- R2725000; issue #2725)
 -- ============================================================================
 -- Serves SPEC §14.2: a card wears one version, its normal face or one of the
@@ -23,7 +23,7 @@
 -- granted: every row 0075's checks took, these take, and the retired full arts
 -- own what they imply where the server reads them (R2725002), never as rows.
 --
--- Apply order: ... -> 0072 (full_art_id) -> ... -> 0075 -> 0076 -> 0077 (this file).
+-- Apply order: ... -> 0072 (full_art_id) -> ... -> 0075 -> 0076 -> 0077 -> 0078 (this file).
 -- Safe to re-apply: add-column-if-not-exists, drop-constraint-if-exists then
 -- add.
 -- ============================================================================

@@ -238,21 +238,6 @@ mod tests {
             }
 
             #[test]
-            fn r11_an_exiled_bread_token_ceases_to_exist_rather_than_entering_the_exile_pile() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED }));
-                let mut token = summon_bread_token(&mut s, json!({ "statsOverride": { "attack": 2, "health": 2 } }));
-
-                // Called directly so this test holds the instance the engine mutates (`reduce` clones).
-                let moved = move_to_zone(s.state_mut(), &mut token, OffFieldZone::Exile, Default::default());
-                assert!(matches!(moved, MoveResult::Vanished));
-
-                s.expect_in_zone(&token, "gone");
-                assert_eq!(token.zone.z(), ZoneName::Gone);
-                assert!(s.pile(P1, "exile").is_empty());
-            }
-
-            #[test]
             fn r11_a_unit_token_never_enters_a_graveyard_or_exile_so_a_fixture_may_not_put_one_there() {
                 crate::register_all();
                 expect_throw_with(

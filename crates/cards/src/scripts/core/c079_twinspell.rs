@@ -29,8 +29,7 @@ pub fn script() -> CardScripts {
 
 // BUILD M4-T4 (R30). The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes
 // each resolution a number: one extra resolution is +2 instead of +1, two extra is +3. The "fresh prompts
-// per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every resolution opens a
-// Discover of a set and then one of a number (§10.6, R831004); #80 Zao Gao's discard is random (R354).
+// per repeat" half of §10.5 step 6 is the engine's Echo rule (`crates/engine/tests/rules/echo.rs`).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -40,9 +39,6 @@ mod tests {
 
     const TWINSPELL: &str = "core-079";
     const COIN: &str = "core-t-coin";
-    /// #82 KY's Trial, cost 1: "Discover one of 3 random sets, then one of 3 random numbers in it" (R247,
-    /// R831004).
-    const TRIAL: &str = "core-082";
 
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
@@ -73,42 +69,6 @@ mod tests {
             "p1": { "hand": [{ "def": TWINSPELL, "radiant": radiant }, COIN], "mana": 4, "library": LIBRARY },
             "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
         }))
-    }
-
-    /// Mana 4: Twinspell (2) and KY's Trial (1), with a spare card so nothing auto-ends.
-    fn with_trial(radiant: bool) -> Scenario {
-        scenario(json!({
-            "p1": { "hand": [{ "def": TWINSPELL, "radiant": radiant }, TRIAL, "core-005"], "library": LIBRARY },
-            "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
-        }))
-    }
-
-    /// Answer the open Discover with its first option, and return the index it named.
-    /// One resolution of KY's Trial: its set Discover (a `mode` prompt), then its number Discover, each
-    /// answered with its first option (R831004).
-    fn trial_answers(s: &mut Scenario) {
-        assert_eq!(pending_kind(s), Some(PromptKind::Mode));
-        discover_first(s);
-        assert_eq!(pending_kind(s), Some(PromptKind::Discover));
-        discover_first(s);
-    }
-
-    fn discover_first(s: &mut Scenario) -> String {
-        let option = s
-            .state()
-            .pending
-            .as_ref()
-            .and_then(|pending| pending.options.first())
-            .cloned();
-        let Some(option) = option else {
-            panic!("no Discover is open");
-        };
-        s.answer(json!([option.selection]));
-        option.label
-    }
-
-    fn pending_kind(s: &Scenario) -> Option<PromptKind> {
-        s.state().pending.as_ref().map(|pending| pending.kind)
     }
 
     #[test]
@@ -227,25 +187,6 @@ mod tests {
             );
             assert_eq!(echo_riders(&s).len(), 0);
         }
-
-        #[test]
-        fn s10_5_step_6_an_echoed_prompting_spell_reopens_its_prompt_on_the_repeat() {
-            crate::register_all();
-            let mut s = with_trial(false);
-            s.play(TWINSPELL, json!({}));
-            let before = s.hand(P1).len();
-
-            s.play(TRIAL, json!({}));
-
-            // First resolution's two Discovers (§10.6): a set, then a number.
-            trial_answers(&mut s);
-            // The repeat asks again: prompts of its own, not the first one's answers carried over.
-            trial_answers(&mut s);
-
-            assert!(s.state().pending.is_none());
-            // Two resolutions × one card each, for the Trial that left the hand.
-            assert_eq!(s.hand(P1).len(), before - 1 + 2);
-        }
     }
 
     mod n79_twinspell_radiant {
@@ -302,23 +243,6 @@ mod tests {
 
             s.expect_in_zone(&twin, "graveyard");
             assert_eq!(echo_riders(&s).len(), 0);
-        }
-
-        #[test]
-        fn s10_5_step_6_radiant_reopens_a_prompting_spell_s_prompt_on_both_repeats() {
-            crate::register_all();
-            let mut s = with_trial(true);
-            s.play(TWINSPELL, json!({}));
-            let before = s.hand(P1).len();
-
-            s.play(TRIAL, json!({}));
-
-            for _resolution in 0..3 {
-                trial_answers(&mut s);
-            }
-
-            assert!(s.state().pending.is_none());
-            assert_eq!(s.hand(P1).len(), before - 1 + 3);
         }
     }
 }

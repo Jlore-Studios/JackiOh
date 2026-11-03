@@ -193,17 +193,6 @@ mod tests {
         }
 
         #[test]
-        fn r60_takes_all_of_them_when_the_hand_holds_fewer_than_2_non_radiant_cards() {
-            crate::register_all();
-            let mut s = drawing(json!(["core-016"]), true, None);
-
-            s.start_turn();
-
-            assert_eq!(radiant_hand(s.state()).len(), 1);
-            s.expect_health(P1, 23);
-        }
-
-        #[test]
         fn keeps_cast_on_draw_on_the_radiant_face_so_a_radiant_copy_is_still_cast_from_the_library() {
             crate::register_all();
             let mut s = drawing(json!(["core-016"]), true, None);

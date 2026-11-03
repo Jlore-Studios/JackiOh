@@ -160,11 +160,8 @@ func summary(pool *Pool, zone string) *pyjson.Object {
 		}
 		var seats, own []any
 		for _, s := range pool.Seats(p) {
-			seats = append(seats, s.ToDict().Set("rank", s.Rank).Set("takes_over", s.TakesOver).
-				Set("describe", s.Describe()))
-		}
-		for _, s := range pool.OwnSeats(p) {
-			own = append(own, s.Model)
+			seats = append(seats, s.ToDict().Set("rank", s.Rank).Set("describe", s.Describe()))
+			own = append(own, s.Model) // every seat is its own since #2748 retired the stand-ins
 		}
 		best := pyjson.New()
 		for _, floor := range Tiers {

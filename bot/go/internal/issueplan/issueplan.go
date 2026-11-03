@@ -11,6 +11,7 @@ package issueplan
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -75,4 +76,79 @@ func WithPlan(body string, plan string, who string, link string /* = "" */) stri
 		text = strings.TrimRightFunc(py.SliceTo(text, room), py.IsSpace) + "\n\n…(cut to fit the description)"
 	}
 	return strings.TrimLeft(fmt.Sprintf("%s%s\n%s\n", head, text, End), "\n")
+}
+
+// tableHeading is _TABLE_HEADING, `(?im)^\s*(?:#+\s*)?(?:\d+\.\s*)?\**\s*files to touch\b`,
+// without its `\b`, which tableHeadingEnd checks: the heading's end is used, so the boundary
+// cannot be a character the match takes.
+var tableHeading = regexp.MustCompile(`(?im)^` + py.ReS + `*(?:#+` + py.ReS + `*)?(?:` + py.DigitClass + `+\.` +
+	py.ReS + `*)?\**` + py.ReS + `*files to touch`)
+
+var pathCell = regexp.MustCompile("`([^`]+)`")
+
+var wordChar = regexp.MustCompile(`^` + py.ReW)
+
+// tableHeadingEnd is _TABLE_HEADING.search(text).end(), or -1 when there is no heading. A match
+// starts at a line, so a later one never starts inside an earlier one's "files to touch": the
+// first that a word character does not follow is Python's.
+func tableHeadingEnd(text string) int {
+	for _, m := range tableHeading.FindAllStringIndex(text, -1) {
+		if !wordChar.MatchString(text[m[1]:]) {
+			return m[1]
+		}
+	}
+	return -1
+}
+
+// onlyChars is set(s) <= set(chars).
+func onlyChars(s, chars string) bool {
+	for _, r := range s {
+		if !strings.ContainsRune(chars, r) {
+			return false
+		}
+	}
+	return true
+}
+
+// FilesToTouch is the paths in the first column of the plan's **Files to touch** table, in order
+// (`bot/prompts/plan.md` asks for it), which `human.PlanNeeds` reads. It was `easy.plan_paths`
+// until #2748 retired the easy rule that also read it.
+//
+// A row's first cell may hold its path in backticks or bare; a header row, the separator row and
+// a cell that is not a path (no `/` or `.`) are skipped.
+func FilesToTouch(plan string) []string {
+	text := plan
+	end := tableHeadingEnd(text)
+	if end < 0 {
+		return []string{}
+	}
+	found := []string{}
+	started := false
+	for _, line := range py.Splitlines(text[end:]) {
+		row := strings.TrimSpace(line)
+		if !strings.HasPrefix(row, "|") {
+			if started {
+				break
+			}
+			continue
+		}
+		started = true
+		cells := strings.Split(strings.Trim(row, "|"), "|")
+		first := strings.TrimSpace(cells[0])
+		if first == "" || onlyChars(first, "-: ") {
+			continue
+		}
+		path := first
+		if quoted := pathCell.FindStringSubmatch(first); quoted != nil {
+			path = quoted[1]
+		}
+		path = strings.TrimSpace(path)
+		if !strings.Contains(path, "/") && !strings.Contains(path, ".") {
+			continue // the header row ("Path", "File"), or a cell that names no file
+		}
+		if !slices.Contains(found, path) {
+			found = append(found, path)
+		}
+	}
+	return found
 }

@@ -1270,6 +1270,14 @@ pub struct PendingElsewhereView {
     #[cfg_attr(feature = "ts", ts(type = "false"))]
     pub for_you: bool,
     pub pending_for: PlayerId,
+    /// R2739000: how many cards the other seat's card picker offers, so the client can draw that many
+    /// backs; never what they are. Present only for a `discover`, or a `mode`, `reward` or `answer`
+    /// of `PROMPT_CARD_OPTION_LIMIT` options or fewer, whose asking card and options this viewer may
+    /// read; absent for every other prompt and for the mulligan (R265). A view field, never state: no
+    /// hash moves.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub option_count: Option<i32>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]

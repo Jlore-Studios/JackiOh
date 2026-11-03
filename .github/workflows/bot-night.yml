@@ -287,6 +287,12 @@ jobs:
     timeout-minutes: 350
     permissions:
       contents: read         # the model job may read; it may not write anything to GitHub
+      # Read only, to download the `work` artifact of the item's last run on this subscription:
+      # it holds that run's own Claude session, sealed (`session.enc`), which this run resumes
+      # (#2748, bot/go/internal/sessions). A change's own review run also reads its pull request's
+      # CI with it: the CI workflow's runs and jobs for the head it reviews (bot/go/internal/work/
+      # ci.go). Nothing here writes to Actions either.
+      actions: read
     # The plan job's outputs, or a loop's run's inputs, which the step after the checkout holds to
     # the plan and providers.json before any step is handed a secret (`plan-fetch --check`).
     env:
@@ -467,6 +473,9 @@ jobs:
           harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
 
+      # It also carries a Claude run's own session, sealed with its subscription's vault key
+      # (`session.enc`): this artifact is where it is kept for the item's next run on that
+      # subscription, for as long as the artifact is retained (#2748).
       - name: Keep the result, the bundle, the sealed login and the transcripts
         if: always()
         uses: actions/upload-artifact@v4
