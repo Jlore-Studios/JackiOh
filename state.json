@@ -14679,15 +14679,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/fx/cards/tables.test.ts"
+          ],
+          "from": "4e645629cb8f67567a9aa02524a28faa4e25a0ad",
+          "main": "1b418ead95896b8ff40016bf4df77da80411adeb"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41521597856",
+            "run": "41545704899",
             "tier": "strong"
           }
         ],
-        "sha": "4e645629cb8f67567a9aa02524a28faa4e25a0ad",
+        "sha": "34e5fc421b6745ab34358171a533f24ad4ebeb7d",
         "tiers": {
           "claude": "strong"
         }
