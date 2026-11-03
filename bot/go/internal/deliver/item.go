@@ -9,11 +9,11 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/easy"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/human"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	journalmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
+	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -41,7 +41,7 @@ func (x *Deliverer) lateStop(number int, status string) string {
 		return "stopped"
 	}
 	switch status {
-	case "approved", "built", "not_approved", "blocked", "part":
+	case "approved", "built", "not_approved", "blocked", "part", "sent_back":
 		if state.Truthy("halted") || x.Ctx.RepoHalted() {
 			x.Result.Set("status", "interrupted")
 			x.Result.Set("interrupt", "halt")
@@ -68,6 +68,13 @@ func (x *Deliverer) Item() {
 	if (action == "plan" || action == "build") && x.hasResultPlan() {
 		x.RatingNote = x.ApplyRating(number)
 	}
+	if x.Record(number).Truthy("paused") {
+		// A run of it delivers: whether it was paused again, `Interrupted` says anew (#2748).
+		x.Ctx.Store.Update(func(s *pyjson.Object) any {
+			statemod.Item(s, number).Pop("paused")
+			return nil
+		}, fmt.Sprintf("paused #%d delivered", number))
+	}
 	if action == "build" && x.hasResultPlan() {
 		// The run planned it first: a later run builds from that plan, never plans again.
 		who, tier := x.planner()
@@ -80,11 +87,23 @@ func (x *Deliverer) Item() {
 	}
 	x.deliverItem(number)
 	x.keepHandoff(number)
+	x.keepSession(number) // a Claude run's own session, for its next run there (#2748)
 	x.journal(number)
 	x.closeAsks(number)
+	// A `/harness handoff` that came while this run held it (#2748): applied now it is delivered.
+	x.try(func() {
+		if said := planmod.DeliverHandoff(x.Ctx, number); said != "" {
+			x.log(fmt.Sprintf("#%d: handed off as asked: %s", number, said))
+		}
+	})
 }
 
 func (x *Deliverer) deliverItem(number int) {
+	if x.Plan.Get("action") == "review" && x.Plan.Truthy("spot_check") {
+		// An after-merge spot-check: its pull request is closed by its merge (#2748).
+		x.SpotCheck(number, x.lateStop(number, py.Str(x.Result.Get("status"))))
+		return
+	}
 	thread := x.GH.GetIssue(number)
 	if thread.Get("state") != "open" {
 		x.closed(number, thread)
@@ -95,6 +114,13 @@ func (x *Deliverer) deliverItem(number int) {
 	if action == "plan" || (action == "build" && status == "planned") {
 		// A build run that rated the item out of its reach stopped after planning it.
 		x.planned(number, status)
+		return
+	}
+	if x.ownReviewDelivery() {
+		x.OwnReview(number, status) // a change's own review run (#2748, 2026-11-02)
+		if status != "infra" && status != "interrupted" && status != "failed" {
+			x.settle(number)
+		}
 		return
 	}
 	if action == "review" {
@@ -125,6 +151,10 @@ func (x *Deliverer) deliverItem(number int) {
 	if status == "split" && (strings.HasPrefix(mode, "split") || mode == "fullsend") {
 		x.SplitOut(number)
 		x.settle(number)
+		return
+	}
+	if status == "sent_back" && mode == "fullsend" {
+		x.SendBack(number) // the reconcile sent parts back to their builders (#2748)
 		return
 	}
 	if status == "part" {
@@ -226,10 +256,9 @@ func (x *Deliverer) planned(number int, status string) {
 // ApplyRating is Deliverer._apply_rating.
 //
 // Label the item with the difficulty its planner rated (#317 part 8), and say so: only
-// when no person set one (`queue.rating_source`), never lower than the bot's own earlier
-// rating, and easy only when the plan's **Files to touch** table holds to the easy rule
-// (`easy.plan_breach`, borderline included) and the rating's `why` admits no doubt
-// (`easy.uncertain_why`, #695). Records `difficulty_by`. Returns the sentence for the
+// when no person set one (`queue.rating_source`), and never lower than the bot's own earlier
+// rating. The ratings are medium and hard since #2748; a retired `easy` (a run planned before
+// it) is medium (`config.as_difficulty`). Records `difficulty_by`. Returns the sentence for the
 // comment.
 func (x *Deliverer) ApplyRating(number int) string {
 	plan := x.resultPlan()
@@ -239,7 +268,7 @@ func (x *Deliverer) ApplyRating(number int) string {
 	if queue.RatingSource(labels, record) == "person" {
 		return ""
 	}
-	if rated.Len() == 0 || !hasString(config.Difficulties, py.Str(rated.Get("difficulty"))) {
+	if rated.Len() == 0 || config.AsDifficulty(py.Str(rated.Get("difficulty"))) == "" {
 		// The planner left its rating line out (a weaker model may): the item routes as medium
 		// anyway, so say so on the thread instead of leaving it unlabelled. An earlier rating
 		// of the bot's own stands, and a later planner may raise this one.
@@ -254,22 +283,10 @@ func (x *Deliverer) ApplyRating(number int) string {
 		return fmt.Sprintf("%s gave no rating, so it is `difficulty:medium`, which is how an unrated "+
 			"item is routed anyway.", who)
 	}
-	wanted := py.Str(rated.Get("difficulty"))
-	earlier := py.OrStr(record.Obj("difficulty_by").Get("difficulty"), "")
+	wanted := config.AsDifficulty(py.Str(rated.Get("difficulty")))
+	earlier := config.AsDifficulty(py.OrStr(record.Obj("difficulty_by").Get("difficulty"), ""))
 	if hasString(config.Difficulties, earlier) && indexOf(config.Difficulties, wanted) < indexOf(config.Difficulties, earlier) {
 		wanted = earlier // a rating stands: nobody lowers it
-	}
-	breach := ""
-	if wanted == "easy" {
-		breach = easy.PlanBreach(py.OrStr(plan.Get("text"), ""), x.Cfg.Easy, x.Cfg.ReviewPaths, x.Cfg.ForbiddenPaths)
-		if breach != "" {
-			wanted = "medium"
-		} else if easy.UncertainWhy(py.OrStr(rated.Get("why"), "")) {
-			// Torn between two means the higher (#695): the planner admitted doubt.
-			breach = fmt.Sprintf("the rating itself was unsure (%s), so borderline easy is medium",
-				py.SliceTo(strings.TrimSpace(py.OrStr(rated.Get("why"), "")), 140))
-			wanted = "medium"
-		}
 	}
 	who, tier := x.planner()
 	x.setDifficulty(number, wanted, labels)
@@ -280,10 +297,11 @@ func (x *Deliverer) ApplyRating(number int) string {
 	if rated.Truthy("why") {
 		why = ": " + py.Str(rated.Get("why"))
 	}
-	said := fmt.Sprintf("Rated `difficulty:%s` by %s%s.", py.Str(rated.Get("difficulty")), who, why)
-	if breach != "" {
-		said += fmt.Sprintf(" The easy rule does not hold (%s), so it is `difficulty:medium`.", breach)
-	} else if rated.Get("difficulty") != wanted {
+	given := py.Str(rated.Get("difficulty"))
+	said := fmt.Sprintf("Rated `difficulty:%s` by %s%s.", given, who, why)
+	if config.AsDifficulty(given) != given {
+		said += fmt.Sprintf(" `difficulty:%s` is retired, so it is `difficulty:%s`.", given, wanted)
+	} else if given != wanted {
 		said += fmt.Sprintf(" It was rated `difficulty:%s` before, and a rating is never lowered.", wanted)
 	}
 	return said
@@ -301,12 +319,13 @@ func indexOf(xs []string, s string) int {
 	return -1
 }
 
-// Leave exactly `difficulty:<difficulty>` on the thread, of the difficulty labels. (Python walks
-// the set of labels in its hash order, which is a process's own; sorted here.)
+// Leave exactly `difficulty:<difficulty>` on the thread, of the difficulty labels, a retired one
+// (`difficulty:easy`) among them. (Python walks the set of labels in its hash order, which is a
+// process's own; sorted here.)
 func (x *Deliverer) setDifficulty(number int, difficulty string, labels map[string]bool) {
 	wanted := "difficulty:" + difficulty
 	for _, name := range sortedKeys(labels) {
-		if config.DifficultyLabels.Has(strings.ToLower(name)) && name != wanted {
+		if _, ok := config.LabelDifficulty(strings.ToLower(name)); ok && name != wanted {
 			x.try(func() { x.GH.RemoveLabel(number, name) })
 		}
 	}
@@ -366,6 +385,9 @@ func (x *Deliverer) planIntoIssue(number int, who string) bool {
 // pushed, no pull request opens, and nothing queues it again.
 func (x *Deliverer) closed(number int, thread *pyjson.Object) {
 	queue.SetStateLabel(x.Ctx, number, queue.LabelNames(thread), "")
+	if queue.OwnReviewOf(x.Record(number)) != nil {
+		x.dropOwnReview(number)
+	}
 	if thread.Has("pull_request") {
 		x.dropWip(number)
 	}
@@ -419,7 +441,9 @@ func (x *Deliverer) closeAsks(number int) {
 func (x *Deliverer) keepHandoff(number int) {
 	status := py.Str(x.Result.Get("status"))
 	handoff, isDict := x.Result.Get("handoff").(*pyjson.Object)
-	finished := status == "approved" || status == "reviewed" || status == "split" || status == "part"
+	// A reconcile that sent parts back hands nothing on: the next one starts afresh once they land.
+	finished := status == "approved" || status == "reviewed" || status == "split" || status == "part" ||
+		status == "sent_back"
 	if !finished && !isDict {
 		return
 	}
@@ -455,6 +479,10 @@ func (x *Deliverer) keepHandoff(number int) {
 			entry.Pop("handoff")
 		} else {
 			entry.Set("handoff", kept)
+		}
+		if pr := x.OwnReviewPR; pr != 0 && pr != number && kept != nil {
+			// Its own review run, on its pull request, goes on from its notes (#2748).
+			statemod.Item(state, pr).Set("handoff", kept.Copy())
 		}
 		return nil
 	}
@@ -563,7 +591,6 @@ func (x *Deliverer) requeueLabel(number int, kind string) {
 // result at all (its runner died or timed out), it may be this item too: it goes to the back
 // of the queue, and two in a row block it.
 func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) {
-	x.Chain = false
 	reason := py.OrStr(x.Result.Get("reason"), NoResult)
 	now := clock.ISO(x.Ctx.Now())
 	label := requeue
@@ -573,17 +600,7 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 			label = config.LabelRevise
 		}
 	}
-	// A failure that was not the subscription's (an install red on untouched main, a push
-	// GitHub refused) backs it off but does not lengthen its streak.
-	escalate := !x.Result.Truthy("infra_scope")
-	var streak []int
-	x.Ctx.Store.Update(func(s *pyjson.Object) any {
-		streak = append(streak, providers.NoteInfra(s, x.Provider.ID, reason, x.Ctx.Now(), escalate))
-		return nil
-	}, "infra "+x.Provider.ID)
-	if escalate && len(streak) > 0 {
-		x.askAboutInfra(streak[len(streak)-1], reason)
-	}
+	x.noteInfra(reason)
 	where := fmt.Sprintf("on `%s`", x.Provider.ID)
 	if !x.Result.Truthy("no_result") {
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), label)
@@ -612,6 +629,24 @@ func (x *Deliverer) infra(number int, kind string, requeue string /* = None */) 
 	queue.SetStateLabel(x.Ctx, number, x.Labels(number), label)
 	x.GH.CreateComment(number, fmt.Sprintf("The run working on this died %s (%s): %s. It is back in "+
 		"the queue, behind the others.", where, x.link(), reason))
+}
+
+// noteInfra is a run that could not work, on its subscription's record: it is left alone for a
+// while (`providers.INFRA_BACKOFFS`), a person is asked once the streak is long enough
+// (`askAboutInfra`), and no run is chained after this one.
+func (x *Deliverer) noteInfra(reason string) {
+	x.Chain = false
+	// A failure that was not the subscription's (an install red on untouched main, a push
+	// GitHub refused) backs it off but does not lengthen its streak.
+	escalate := !x.Result.Truthy("infra_scope")
+	var streak []int
+	x.Ctx.Store.Update(func(s *pyjson.Object) any {
+		streak = append(streak, providers.NoteInfra(s, x.Provider.ID, reason, x.Ctx.Now(), escalate))
+		return nil
+	}, "infra "+x.Provider.ID)
+	if escalate && len(streak) > 0 {
+		x.askAboutInfra(streak[len(streak)-1], reason)
+	}
 }
 
 // Keep what a run that did not finish made: a build's on its own branch, a revision's
@@ -771,8 +806,11 @@ func (x *Deliverer) Interrupted(number int, kind string) {
 	}
 	x.requeueLabel(number, kind)
 	rounds, roundTier := x.rounds()
+	// `paused`: the next run goes on from this one's work, on its owner first when it is free, ahead
+	// of new work there (#2748, `plan.Pairs`), or held for it while only its 5-hour window keeps it.
 	x.remember(number, pyjson.New("last_findings", py.Or(x.Result.Get("findings"), []any{}),
-		"verdict_rounds", rounds, "round_tier", roundTier))
+		"verdict_rounds", rounds, "round_tier", roundTier,
+		"paused", pyjson.New("at", clock.ISO(x.Ctx.Now()), "provider", x.Provider.ID, "interrupt", interrupt)))
 	where := "on the branch"
 	if kind == "revise" {
 		where = fmt.Sprintf("on `%s`, where the next revision starts", queue.WipBranch(number))
@@ -805,88 +843,6 @@ func (x *Deliverer) builderWorked() bool {
 		}
 	}
 	return false
-}
-
-// A weak builder's change on an easy item that breaks the easy rule (`easy.change_breach`:
-// too many files or lines, or an off-limits path) is not pushed (#317 part 8): its work is
-// kept for a stronger builder (a build's on its own branch, with no pull request; a
-// revision's on `bot/wip/<pr>`), the item becomes medium (its label, or a floor under a
-// person's label), and it is queued again. True when it did so.
-func (x *Deliverer) easyBreach(number int, kind string) bool {
-	if x.BuildSeat == nil || x.BuildSeat.Tier != "weak" {
-		return false
-	}
-	if x.Difficulty(number) != "easy" {
-		return false
-	}
-	counts := x.bundleCounts()
-	breach := ""
-	if counts.Len() > 0 {
-		breach = easy.ChangeBreach(counts, x.Cfg.Easy)
-	}
-	if breach == "" {
-		return false
-	}
-	var pushed bool
-	if kind == "build" {
-		pushed, _ = x.publish(false)
-	} else {
-		pushed, _ = x.publishWip(number)
-	}
-	issue, pr := stepup.Pair(x.Ctx, number)
-	targets := []int{issue}
-	if pr != nil && *pr != 0 {
-		targets = setOrder(issue, *pr) // `{issue, pr}`, in the order Python's set walks it
-	}
-	for _, target := range targets {
-		labels := x.Labels(target)
-		if queue.RatingSource(labels, x.Record(target)) == "person" {
-			x.remember(target, pyjson.New("difficulty_floor", "medium"))
-		} else {
-			x.setDifficulty(target, "medium", labels)
-			x.remember(target, pyjson.New("difficulty_by", pyjson.New(
-				"difficulty", "medium", "provider", "easy rule", "tier", "",
-				"at", clock.ISO(x.Ctx.Now()), "why", breach)))
-		}
-		if pr != nil && target == *pr {
-			x.remember(target, pyjson.New("difficulty", "medium"))
-		}
-	}
-	x.requeueLabel(number, kind)
-	kept := ""
-	if pushed {
-		if kind == "build" {
-			kept = fmt.Sprintf(" Its work is kept on `%s`", py.Str(x.Plan.Get("branch")))
-		} else {
-			kept = fmt.Sprintf(" Its work is kept on `%s`", queue.WipBranch(number))
-		}
-		kept += ", for it to go on from."
-	}
-	x.GH.CreateComment(number, fmt.Sprintf("Not pushed (%s): %s built it as `difficulty:easy`, but "+
-		"the change breaks the easy rule (%s), so it is `difficulty:medium` now and a medium or "+
-		"stronger model takes it.%s", x.link(), x.BuildSeat.Describe(), breach, kept))
-	return true
-}
-
-// Lines added plus removed per path of the bundle's head against `main`, or, for a
-// fullsend part (#505), against its tree's branch: the parts before it are not its change.
-func (x *Deliverer) bundleCounts() *pyjson.Object {
-	name := x.Result.Get("bundle")
-	branch := py.OrStr(x.Plan.Get("branch"), "")
-	if !pyjson.Truthy(name) || branch == "" || !isFile(outPath(x.OutDir, py.Str(name))) {
-		return pyjson.New()
-	}
-	base := py.OrStr(x.Plan.Get("onto"), x.Cfg.DefaultBranch)
-	var counts *pyjson.Object
-	if _, ok := herr.Catch[*herr.GitError](func() {
-		x.fetch(base, true)
-		local := "deliver/measure/" + branch
-		x.Repo.FetchBundle(outPath(x.OutDir, py.Str(name)), branch, local)
-		counts = x.Repo.Numstat("origin/"+base, local)
-	}); ok {
-		return pyjson.New()
-	}
-	return counts
 }
 
 // One failure of the item's own (`stepup.strike`): True when it was its third, and the
@@ -1063,11 +1019,11 @@ func (x *Deliverer) build(number int, status string) {
 		x.Fail(number, "build")
 		return
 	}
-	if (status == "approved" || status == "built") && x.easyBreach(number, "build") {
-		return
-	}
 	approved := status == "approved"
 	built := status == "built" // no model in the run could review it: a review run will
+	// Built and checked for its own review run on this subscription (#2748, 2026-11-02): its pull
+	// request opens as a draft, which CI runs on, and is marked ready once that review approves it.
+	chained := built && x.chained()
 	pushed, problem := x.publish(approved)
 	if strings.HasPrefix(problem, "the push was refused") {
 		x.Result.Set("status", "infra")
@@ -1106,7 +1062,7 @@ func (x *Deliverer) build(number int, status string) {
 		x.Fail(number, "build")
 		return
 	}
-	body := x.pullBody(number, approved)
+	body := x.pullBody(number, approved, chained)
 	// A title the title check passes (#187): the builder's, else the issue's.
 	title := triage.PullTitle(py.OrStr(x.Result.Get("title"), ""), py.OrStr(x.Plan.Get("title"), ""))
 	if title == "" {
@@ -1114,18 +1070,24 @@ func (x *Deliverer) build(number int, status string) {
 	}
 	pull := x.openPull()
 	if pull == nil {
-		pull = x.createPull(title, branch, body, !(approved || built))
+		pull = x.createPull(title, branch, body, !(approved || built) || chained)
 	} else {
 		x.GH.UpdatePull(py.MustInt(pull.Get("number")), pyjson.New("title", title, "body", body))
-		if (approved || built) && pull.Truthy("draft") {
+		if (approved || built) && !chained && pull.Truthy("draft") {
 			x.try(func() { x.GH.MarkReady(py.Str(pull.Get("node_id"))) })
 		}
 	}
 	pr := py.MustInt(py.Or(pull.Get("number"), 0))
 	if pr != 0 {
+		difficulty := x.Difficulty(number)
+		if x.Plan.Get("mode") == "fullsend" {
+			// A fullsend tree's reconcile is a strong model's (#505), and so are its final audit and
+			// its revisions (#2748): its pull request carries hard, whatever the issue's label says.
+			difficulty = "hard"
+		}
 		x.GH.AddLabels(pr, append([]string{config.LabelPR}, x.Carried(number)...))
 		x.remember(pr, pyjson.New("issue", number, "feedback_since", started, "failures", 0, "kind", "revise",
-			"difficulty", x.Difficulty(number),
+			"difficulty", difficulty,
 			"self_check_findings", py.Or(x.Result.Get("self_check_findings"), []any{})))
 	}
 	issueLabels := x.Labels(number)
@@ -1149,9 +1111,12 @@ func (x *Deliverer) build(number int, status string) {
 		if pr != 0 {
 			head := py.OrStr(x.Result.Get("head"), "")
 			var rule string
-			if approved {
+			switch {
+			case approved:
 				rule = x.approved(pr, head, mergeNote == "", true, true, nil)
-			} else {
+			case chained && mergeNote == "":
+				rule = x.handOn(pr, head) // its own review run is next (#2748)
+			default:
 				rule = x.awaitReview(pr, head, mergeNote == "")
 			}
 			if mergeNote == "" {
@@ -1160,10 +1125,13 @@ func (x *Deliverer) build(number int, status string) {
 		}
 		cycles := pyLen(py.Or(x.Result.Get("cycles"), []any{}))
 		var said string
-		if approved {
+		switch {
+		case approved:
 			said = fmt.Sprintf("Its adversarial reviewer, %s, approved it on round %d of %d.",
 				x.ReviewSeat.Describe(), cycles, x.CyclesCap())
-		} else {
+		case chained:
+			said = x.checksSaid()
+		default:
 			said = x.selfCheckSaid()
 		}
 		if approved {

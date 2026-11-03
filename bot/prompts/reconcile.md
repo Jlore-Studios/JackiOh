@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # Reconcile fullsend tree #$number
 
 You are the reconciler for issue #$number of `$repo`, on branch `$branch` (base `$base`). A person
@@ -24,6 +24,17 @@ $children
 $branch_state
 
 $previous
+
+## First, judge each part
+
+Before you merge or fix anything, read each part's change against its sub-issue and this issue's
+"Done when": `git log --first-parent $base..HEAD` lists what landed, `git diff $base...HEAD` shows it,
+and a part left aside (below) is `git diff $base...origin/<its branch>`. Small problems are yours to
+fix in the steps that follow, always: a broken seam, a wrong name, a missing case, a failing test, a
+collision with another part. Send a part back only when it is largely wrong: it built something other
+than its sub-issue asks, misses most of it, or must be rewritten rather than fixed.
+
+$send_back
 
 ## How to reconcile it
 
@@ -81,6 +92,11 @@ guessing.
 The very first line must be a single HTML comment carrying JSON, with nothing before it:
 
     <!-- bot: {"status": "done", "title": "Pull request title, as docs/issues-and-patches.md (Titles) sets it"} -->
+
+or, when you send parts back (only parts listed as ones that may go back, under "First, judge each
+part"), naming each with what is wrong with it, where, and the evidence, for its builder to read:
+
+    <!-- bot: {"status": "send_back", "send_back": [{"part": 123, "findings": "What is largely wrong with it, where, and how you know"}]} -->
 
 or, when you could not build it:
 
