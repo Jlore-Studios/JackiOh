@@ -71,6 +71,16 @@ var PromptsDir = filepath.Join(RepoRoot, "bot", "prompts")
 // can tell the bot's own words from a person's.
 var Marker = Identity.Marker
 
+// SessionHandoffMarker marks a handoff a Claude session outside the harness leaves on an issue or
+// pull request (CLAUDE.md rule 14, `.claude/skills/handoff/SKILL.md`, #2748 section 10). Both bots
+// read it, so it is not an identity's: a claim puts the newest trusted ones in the run's journal
+// (`journal.SessionHandoffs`), and no command, vote or mention is ever read from one
+// (`commands.CommandLines`), whatever words its notes quote.
+const SessionHandoffMarker = "<!-- jackioh-session:handoff -->"
+
+// IsSessionHandoff: `body` is a session's handoff (it carries SessionHandoffMarker).
+func IsSessionHandoff(body string) bool { return strings.Contains(body, SessionHandoffMarker) }
+
 // StateBranch is STATE_BRANCH = IDENTITY.state_branch.
 var StateBranch = Identity.StateBranch
 

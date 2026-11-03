@@ -1267,6 +1267,20 @@ while only its 5-hour session keeps it, up to `hold_minutes` ([Ownership and the
 hold](#ownership-and-the-hold)); otherwise a task agy started when its quota ran out can be
 finished by Codex the same hour.
 
+**A person's Claude session hands over too** (CLAUDE.md rule 14, #2748 section 10,
+[`.claude/skills/handoff/`](../.claude/skills/handoff/SKILL.md)). A Claude session outside the
+harness (Claude Code on the web, the desktop app, a cloud session a person started) cannot write
+`bot-journal`: it pushes only its own branch. So it leaves its handoff as one comment of its own on
+the issue (or its pull request), edited in place at the end of each turn that pushes or leaves the
+work unfinished, marked `<!-- jackioh-session:handoff -->` (`config.SessionHandoffMarker`), in the
+bots' shape: asked, done, left, tried and failed, and the checks still red. Before it starts, it
+reads the item's journal and the handoffs already there. A claim puts the newest
+`journal.SessionHandoffKeep` (3) handoffs of trusted people (level 1 or more in `trust.txt`) from the
+issue and its pull request under the journal the work job gives the agent, each cut to
+`journal.SessionHandoffChars` (6,000), so the bot's next run reads what a person's session did. No
+command, vote or mention is ever read from a handoff (`commands.CommandLines`): the `/harness` lines
+it quotes do nothing.
+
 **A Claude run resumes its own session** (#2748, [`go/internal/sessions/`](go/internal/sessions/)).
 On a Claude account the next run of an item on the **same subscription** goes on in the Claude
 Code session the last one left (`claude -p --resume <id>`), instead of a fresh session that reads
