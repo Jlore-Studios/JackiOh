@@ -12960,6 +12960,9 @@
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
+      "owner": "muse",
+      "owner_since": "2026-11-03T08:23:51Z",
+      "owner_why": "it planned it",
       "pending_request": false,
       "planned_at": "2026-11-03T08:20:44Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -16230,6 +16233,8 @@
       }
     },
     "2908": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "approver": {
           "family": "muse",
@@ -16247,11 +16252,18 @@
       "feedback_since": "2026-11-03T05:04:55Z",
       "issue": 2802,
       "kind": "revise",
+      "live": "revising",
       "merge_owner": "muse",
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T08:22:15Z",
+      "run_id": "pending:46aad88e-1793694191",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-11-03T08:23:51Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -16276,9 +16288,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T08:22:56Z",
+    "at": "2026-11-03T08:23:51Z",
     "url": "",
-    "what": "review #2907 on claude-8"
+    "what": "revise #2908 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T07:58:38Z",
