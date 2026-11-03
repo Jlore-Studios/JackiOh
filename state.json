@@ -13189,7 +13189,7 @@
       }
     },
     "2831": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "strong",
       "ci_fixed_head": "c218167df2955acbb4808d7f67c04f8831d45c3f",
@@ -13221,7 +13221,7 @@
       },
       "interruptions": 0,
       "issue": 2786,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
@@ -13231,11 +13231,11 @@
       "review_floor": "",
       "review_notes": "try again",
       "round_tier": "strong",
-      "run_id": "41547652174",
+      "run_id": "pending:e2458a65-1793675500",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-02T23:43:51Z",
+      "started_at": "2026-11-03T03:11:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -14886,9 +14886,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-03T02:52:18Z",
+    "at": "2026-11-03T03:11:58Z",
     "url": "",
-    "what": "suggestions on muse"
+    "what": "review #2831 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-03T02:58:55Z",
