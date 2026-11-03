@@ -174,6 +174,10 @@ const S2 = {
   FX_WISH_TRAUMA: 0.3,
   FX_FORGE_TRAUMA: 0.4,
   FX_FORGE_REACH: 0.2,
+  // Issue #2798: Stinkyscape's flourishes.
+  FX_FLASH_FREEZE_TRAUMA: 0.35,
+  FX_DUO_BOND_TRAUMA: 0.3,
+  FX_STRATOS_SWARM_TRAUMA: 0.3,
   FX_SET_PASS_FLOOR: 0.55,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #2787: the auras (R2787000).
