@@ -11,10 +11,20 @@ import { planCardFx, planCardMotif } from "../../fx/cardFx.ts";
 import { planAuras } from "../../fx/aura/plan.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
+import { planFx } from "../../fx/cues.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
 import { createFxMemory } from "../../fx/memory.ts";
 import { motifScale } from "../../fx/motifs/build.ts";
-import { GALLERY_SET_PIECE, galleryCardEvents, galleryCues, galleryFieldView, galleryPlayOf } from "../../fx/motifs/gallery.ts";
+import {
+  GALLERY_SET_PIECE,
+  SYSTEM_MOMENTS,
+  galleryCardEvents,
+  galleryCues,
+  galleryEntry,
+  galleryFieldView,
+  galleryPlayOf,
+  systemMomentFixture,
+} from "../../fx/motifs/gallery.ts";
 import { hasSetPiece } from "../../fx/setPieces.ts";
 import type { FxPlanEnv } from "../../fx/types.ts";
 import { BURST_BUDGET_MS, planEntries } from "../../game/animations.ts";
@@ -67,6 +77,23 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       // The effects off plays nothing.
       expect(galleryCues(motif, "Fire", 1, view, FX_INTENSITY_SCALE.off)).toEqual([]);
     }
+  });
+
+  it("R2784000 the gallery lists and plays every system moment", () => {
+    render(<FxGallery />);
+    expect(optionsOf(fxGalleryTestid.moment)).toEqual([...SYSTEM_MOMENTS]);
+    const base = fullBoardView();
+    for (const moment of SYSTEM_MOMENTS) {
+      const events = systemMomentFixture(moment, base);
+      expect(events.length, `${moment} has a fixture`).toBeGreaterThan(0);
+      const entry = galleryEntry(events, base);
+      const memory = createFxMemory();
+      memory.remember(entry.events);
+      expect(planFx(entry, base, { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory }).length, `${moment} plans`).toBeGreaterThan(0);
+    }
+    fireEvent.change(screen.getByTestId(fxGalleryTestid.moment), { target: { value: "glitched" } });
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.playMoment));
+    expect(screen.getByTestId(fxGalleryTestid.root)).toBeInTheDocument();
   });
 
   /**

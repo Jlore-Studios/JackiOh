@@ -23,7 +23,6 @@ import {
   FX_DEATH_SMOKE_AT,
   FX_FATIGUE_FLIGHT_FRACTION,
   FX_FATIGUE_STREAK_AT,
-  FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
   FX_INTENSITY_SCALE,
@@ -757,7 +756,13 @@ describe("B14 summon", () => {
 
   function summonCues(facts: FxCardFacts | undefined, D: number, row: "units" | "backrow" = "units"): FxCue[] {
     const zoneLane = 3;
+    // R2791000: a plain summon needs an empty zone (§3.2); lane 3 stands occupied, which would
+    // draw the Stack beat over its occupant instead of the arrival alone.
+    const empty = fullBoardView();
+    if (row === "units") empty.you.units[zoneLane - 1] = null;
+    else empty.you.backrow[zoneLane - 1] = null;
     return plan([summon("p1", "n1", "core-500", row, zoneLane)], D, {
+      view: empty,
       env: envOf({ card: (defId) => (defId === "core-500" ? facts : undefined) }),
     });
   }
@@ -858,7 +863,11 @@ describe("B14 summon", () => {
   it("B14 the opponent's summon lands on the opponent's zone", () => {
     const slam = r(FX_SLAM_AT * 250);
     const zone = testid.zone("opponent", "units", 2);
-    expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { env: envOf({ card: catalog(FACTS) }) }), [
+    // R2791000: lane 2 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+    // beat lands on the occupant too.
+    const empty = fullBoardView();
+    empty.opponent.units[1] = null;
+    expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { view: empty, env: envOf({ card: catalog(FACTS) }) }), [
       ring("dust", tid(zone), slam, 250),
       burst("dust", tid(zone, FOOT), "ring", slam),
       // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
@@ -872,7 +881,12 @@ describe("B15 cast", () => {
     for (const D of [ANIMATIONS.cardPlayed.durationMs, ODD_D]) {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("you", "units", 3);
+      // R2791000: lane 3 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+      // beat lands on the occupant too.
+      const empty = fullBoardView();
+      empty.you.units[2] = null;
       const cues = plan([played("p1", HAND), summon("p1", HAND, "core-002", "units", 3)], D, {
+        view: empty,
         env: envOf({ card: catalog(FACTS) }),
       });
       expectCues(cues, [
@@ -1149,13 +1163,19 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 transformed: a smoke point burst and an arcane point burst at the card", () => {
+  it("B16 transformed: smoke and sparks as one transmute, phased", () => {
     forDs("transformed", (D) => {
-      expectCues(
-        plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D),
-        // Centered on the unit (integration QA: an area of puffs drifted over the next lanes).
-        [burst("smoke", cardT(MINE_3), "point", 0), burst("arcane", cardT(MINE_3), "point", 0)],
-      );
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
+      expectCues(plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D), [
+        burst("smoke", cardT(MINE_3), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE_3), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE_3), "point", linger, nerd.colors),
+        shake(0.3, land),
+      ]);
     });
   });
 
@@ -1165,30 +1185,41 @@ describe("B16 the recipe table, row by row", () => {
     ).toEqual([]);
   });
 
-  it("B16 fused: smoke at every located ingredient, arcane projectiles into the survivor and an arcane burst on arrival", () => {
+  it("B16 fused: one transmute where it lands, no projectiles", () => {
     forDs("fused", (D) => {
-      const f = r(FX_FUSE_FLIGHT_FRACTION * D);
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
       expectCues(plan([{ type: "fused", instanceIds: [MINE, POISONER], resultInstanceId: "c91", defId: "core-088" }], D), [
-        burst("smoke", cardT(MINE), "area", 0),
-        burst("smoke", cardT(POISONER), "area", 0),
-        projectile("arcane", cardT(POISONER), cardT(MINE), f),
-        burst("arcane", cardT(MINE), "area", f),
+        burst("smoke", cardT(MINE), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
     });
   });
 
-  it("B16 fused skips ingredients the view does not render", () => {
+  it("B16 fused lands where its first rendered ingredient stands", () => {
     forDs("fused", (D) => {
-      const f = r(FX_FUSE_FLIGHT_FRACTION * D);
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
       expectCues(plan([{ type: "fused", instanceIds: ["gone", POISONER, MINE_3], resultInstanceId: "c91", defId: "core-088" }], D), [
-        burst("smoke", cardT(POISONER), "area", 0),
-        burst("smoke", cardT(MINE_3), "area", 0),
-        projectile("arcane", cardT(MINE_3), cardT(POISONER), f),
-        burst("arcane", cardT(POISONER), "area", f),
+        burst("smoke", cardT(POISONER), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(POISONER), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(POISONER), "area", land, nerd.colors),
+        burst("smoke", cardT(POISONER), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
       expectCues(plan([{ type: "fused", instanceIds: [MINE, "gone"], resultInstanceId: "c91", defId: "core-088" }], D), [
-        burst("smoke", cardT(MINE), "area", 0),
-        burst("arcane", cardT(MINE), "area", f),
+        burst("smoke", cardT(MINE), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
     });
   });
@@ -1783,7 +1814,11 @@ describe("B21 the redacted stream only", () => {
     for (const D of [ANIMATIONS.summoned.durationMs, ODD_D]) {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("opponent", "units", 2);
-      const cues = plan([summon("p2", "hidden", "hidden", "units", 2)], D, { env: envOf({ card: lookup }) });
+      // R2791000: lane 2 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+      // beat lands on the occupant too.
+      const empty = fullBoardView();
+      empty.opponent.units[1] = null;
+      const cues = plan([summon("p2", "hidden", "hidden", "units", 2)], D, { view: empty, env: envOf({ card: lookup }) });
       expect(cues.some((c) => c.kind === "rays")).toBe(false);
       expectCues(cues, [burst("dust", tid(zone, FOOT), "ring", slam)]);
     }
