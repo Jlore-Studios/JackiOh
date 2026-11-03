@@ -247,6 +247,10 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             );
             tie(&mut ties, object.get("newInstanceId"), &[object.get("toDefId")]);
             tie(&mut ties, object.get("resultInstanceId"), &[object.get("defId")]);
+            // R2783000: a hook's marker names its card by `sourceId`, as the card stood when the hook began.
+            if object.get("type").and_then(Value::as_str) == Some("hookResolving") && !unread_here {
+                tie(&mut ties, object.get("sourceId"), &[object.get("defId")]);
+            }
             let Some(id) = card_id(id) else {
                 return;
             };
