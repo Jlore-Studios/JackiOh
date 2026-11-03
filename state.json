@@ -15196,6 +15196,7 @@
       "run_id": "41662069914",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 15,
       "started_at": "2026-11-03T15:15:51Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -29136,9 +29137,33 @@
         "title": "Patch: hero plates keep one size however many effects they carry",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "c44f4a80f12d9450ed8a3f87dd08be10cc110549",
+        "issue": 2927,
+        "merged_at": "2026-11-03T16:05:15Z",
+        "n": 15,
+        "pr": 2935,
+        "queued_at": "2026-11-03T16:05:15Z",
+        "sha": "46b50bf36d30c4e2890999e2bd644bc591feccbe",
+        "status": "queued",
+        "title": "Patch: the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
+        "tries": 0
       }
     ],
-    "count": 14
+    "count": 15
   },
   "statistics": {
     "at": "2026-11-03T16:02:17Z"
