@@ -16421,7 +16421,7 @@
       }
     },
     "2912": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_fixed_head": "21dcb308e84b59f498166000e9feef9f1feadd16",
@@ -16459,11 +16459,13 @@
       },
       "interruptions": 0,
       "issue": 2791,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "muse",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T09:51:21Z",
         "from_run": "41609860082",
         "gates": [
           {
@@ -16527,11 +16529,11 @@
       "queued_at": "2026-11-03T09:48:07Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "41609860082",
-      "runs_on": "night-vm-muse-fill",
+      "run_id": "pending:3e886d14-1793699444",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-03T09:17:41Z",
+      "started_at": "2026-11-03T09:51:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16589,9 +16591,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T09:38:04Z",
+    "at": "2026-11-03T09:51:21Z",
     "url": "",
-    "what": "spot-check #2909 on claude-8"
+    "what": "review #2912 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T09:32:26Z",
