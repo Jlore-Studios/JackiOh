@@ -402,6 +402,11 @@ pub struct EvalWeights {
     /// discard of its owner's hand waits (`DELAYED_DISCARD_HAND_HOOK`), unless it is played first. A
     /// Temporary card (R637) keeps the smaller of the two shares, not their product.
     pub doomed_hand_discount: f64,
+    /// #2928, R454, R65: the share of its hand price (`hand_card_value`) a card counts while it lies in
+    /// a graveyard its owner may play it from (`playable_from_graveyard`: its own Flashback, R783012, a
+    /// lent one, R1869003, or a field permission such as Second Wind's), either side's, since a
+    /// graveyard is public. At 0 nothing is read.
+    pub graveyard_playable: f64,
     /// §3.2, R13: the share of its `unit_worth` a card dormant under one of the seat's own unit piles
     /// counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
@@ -524,7 +529,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         flying: 0.5,
         cloaked: 0.0,
         crater: 0.0,
-        // R783012: no card prints it yet (§6.1), so nothing until one does and the lanes measure it.
+        // R783012: Moonberry (S #21) and Prepare For Liftoff (S #144) print it, Sanctum lends it (R1869003)
+        // and a Buff may give it (R2657005). It stays 0, so a play from the graveyard is priced in one
+        // place: in the graveyard, at `graveyard_playable` of the card's hand price (#2928).
         flashback: 0.0,
         // #1602: off. At 1.0 its screen read 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing
         // (training/improve.md, A screen).
@@ -564,6 +571,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     start_of_turn_effect: 3.0,
     alt_win: 60.0,
     doomed_hand_discount: 0.5,
+    // #2928: an untuned start, half a hand card: a card its owner may still play from the graveyard is
+    // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
+    // (-0.021 to 0.041), against the control (training/improve.md, A screen).
+    graveyard_playable: 0.5,
     // #1506: off. At 0.5 and 1.0 its screen read 200-200, edge 0.0 (-0.024 to 0.024), which keeps
     // nothing (training/improve.md, A screen).
     dormant_share: 0.0,
@@ -759,6 +770,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     start_of_turn_effect: 0.0,
     alt_win: 0.0,
     doomed_hand_discount: 0.0,
+    graveyard_playable: 0.0,
     dormant_share: 0.0,
     dormant_card: 0.0,
     slumber_turn_share: 0.0,

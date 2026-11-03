@@ -19,8 +19,7 @@
 #     .cache/emsdk keyed on the EMSDK_VERSION line;
 #   - cargo rebuilds only what changed, and wasm-bindgen rewrites the same pkg. Both deploys build on
 #     GitHub's runners, whose setup action restores target/ (Swatinem/rust-cache) and .cache/emsdk,
-#     so nothing here keeps the built modules (#997 kept them for Vercel, which kept only
-#     node_modules between builds).
+#     so nothing here keeps the built modules.
 #
 # The output is apps/web/src/wasm/pkg/{jackioh_wasm.js, jackioh_wasm.d.ts, jackioh_wasm_bg.wasm,
 # jackioh_wasm_bg.wasm.d.ts}, gitignored; `--target web` makes the glue an ES module whose default
