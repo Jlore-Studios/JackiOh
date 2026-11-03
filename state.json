@@ -15816,6 +15816,8 @@
       }
     },
     "2905": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T06:04:59Z",
@@ -15829,8 +15831,13 @@
         "trail": "e=*.ts --include=*.tsx --include=*.rs | grep -v \\\"^.*// \\\\|//!\\\" | head; grep -rn \\\"readFileSync.*docs/polish\\\\|docs/pol\u2026\n- Bash: {\"command\": \"grep -rln \\\"readdirSync\\\\|import.meta.glob\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; ls apps/web/src/**/*.md 2>/dev/null | head; find apps/web/src -name \\\"*.md\\\" | \u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\.md\\\\|extensions\\\\|EXT\\\\|\\\\.ts\\\\b\\\" apps/web/src/wording.test.ts | head -20; grep -n \\\"\\\\.md\\\" apps/web/src/surfaces.test.ts apps/web/src/typography.test.ts apps/web/src/type\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='docs/polish/9-card-animations.md'\\ns=open(p).read()\\nold=\\\"a sheen and a burst over the card made Radiant (a back for a hand card the viewer may not read), and once\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/fx/motifs/life.ts'\\ns=open(p).read()\\nold=\\\"\\\"\\\" const t = timesOf(entry.durationMs);\\n const cues: FxCue[] = [];\\n hits.forEach((h, k) => {\\n cues.pus\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/fx/motifs/motifs.test.ts'\\ns=open(p).read()\\nold=''' it(\\\"R2784000 drain shows a life loss's number once: in place of its row under replace, left to th\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2793 && git show --stat cc73e95a6 | head -60\", \"description\": \"See what the previous motif PR touched\"}\n- Bash: {\"command\": \"git diff apps/web/src/fx/motifs/gallery.ts | head -150\", \"description\": \"Review gallery.ts diff\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/fx/motifs/gallery.ts'\\ns=open(p).read()\\na=s.index('/** A card\\\\'s table entry played out: the viewer plays it, its motif\\\\'s fixture resolves under it\u2026\n- Bash: {\"command\": \"sleep 60; tail -30 /tmp/webtest.log | grep -v \\\"^ *\\u2713\\\"\", \"description\": \"Check full web suite progress\", \"timeout\": 120000}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -30 /tmp/webtest.log grep -v \"^ *\u2713\". To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for \u2026\n- Bash: {\"command\": \"tail -5 /tmp/webtest.log; grep -c \\\"\\u2713\\\\|\\u00d7\\\" /tmp/webtest.log\", \"description\": \"Check full web suite progress\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('- Next: full web suite'); b=s.index('\\\\n',a)\\ns=s[:a]+\\\"- Done since: doc step 11; radiance rays once a play (isFirstEn\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- said: While the full web suite runs, I'll draft the PR description with the per-card table taken from `core.md`.\n- Bash: {\"command\": \"sed -n '/^| Card | Name/,/^$/p' apps/web/src/fx/cards/core.md > /tmp/fxgen/table.md; wc -l /tmp/fxgen/table.md; tail -3 /tmp/fxgen/table.md\", \"description\": \"Extract the per-card table f\u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/webtest.log; do sleep 5; done; grep -E \\\"Test Files|Tests |EXIT|FAIL\\\" /tmp/webtest.log | head -30\", \"description\": \"Wait for the full web suite to finish\", \u2026\n- Bash: {\"command\": \"git status --short; git diff apps/web/src/fx/motifs/hand.ts apps/web/src/fx/motifs/life.ts | head -150\", \"description\": \"Review motif diffs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nfor p,old,new in [\\n ('apps/web/src/fx/motifs/hand.ts','''// R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,\\n// tithe, \u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/webtest.log; do sleep 5; done; grep -E \\\"Test Files|Tests |EXIT|FAIL\\\" /tmp/webtest.log | head -30\", \"description\": \"Wait for full web suite result\", \"timeou\u2026\n- Bash: {\"command\": \"grep -n \\\"radiance's rays\\\" -A25 /tmp/webtest.log | grep -v \\\"^.*\\u2713\\\" | head -40\", \"description\": \"Read the radiance test failure\"}\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/fx src/routes/dev/fx.test.tsx 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head -20\", \"description\": \"Re-run fx and gallery test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2793 && git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -5; timeout 9\u2026\n- Bash: {\"command\": \"timeout 1200 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | grep -E \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('- Next: wait for full web suite'); b=s.index('\\\\n',a)\\ns=s[:a]+\\\"- Full web suite (vitest --project web): 494/495 files\u2026\n- Bash: {\"command\": \"cat > /tmp/fxgen/pr_head.md <<'EOF'\\nCore's pass over its card animation table (#2782's Core part). Presentation only (CLAUDE.md rule 7): nothing changes in the engine, the catalog, the \u2026\n- Bash: {\"command\": \"until grep -qE \\\"Test Files|Error\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-2793/25d99a44-bc70-43b0-afc4-1aa83f189cf8/tasks/bhqw34s75.output; do sleep 5; done; cat /tmp/claude\u2026\n- said: The harness's changed-files web check passes (319 files, 5755 tests), and typecheck and eslint are clean. Final tidy-up and notes.\n- Bash: {\"command\": \"git status --short; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('- Next: harness changed-files web check running'); b=s.index('\\\\n',a)\\ns=s[:a]+\\\"- Harness web chec\u2026\n- Bash: {\"command\": \"cat > /tmp/fxgen/pr_tail.md <<'EOF'\\n\\n## How I tested it\\n\\n- `cargo jackioh fx census --format md --out /tmp/census.md` printed `fx census: 747 cards to /tmp/census.md`. Its Core sugge\u2026\n- Bash: {\"command\": \"cat /tmp/fxgen/pr.md\", \"description\": \"Print the PR description\"}\n- Bash: {\"command\": \"cat /tmp/fxgen/table.md\", \"description\": \"Print the per-card table\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: card animations for the Core set\"} --> This fills in Core's card animation table, `apps/web/src/fx/cards/core.json5`, for #2782. The change is presentation only (CLAUDE.md rule 7): the engine, the catalog, the rulings and the wire are untouched. ## What\u2026"
       },
       "issue": 2793,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-2",
       "queued_at": "2026-11-03T07:49:10Z",
+      "run_id": "pending:6654d3a1-1793692228",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15849,6 +15856,9 @@
         "provider": "claude-1",
         "run": "41587660170"
       },
+      "started_at": "2026-11-03T07:51:03Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15862,9 +15872,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T07:50:13Z",
+    "at": "2026-11-03T07:51:03Z",
     "url": "",
-    "what": "build #2878 on muse"
+    "what": "review #2905 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-03T07:35:24Z",
