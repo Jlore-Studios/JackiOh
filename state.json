@@ -27737,12 +27737,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:e552f4f6-1793711654",
+        "run_id": "",
         "sha": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
         "started_at": "2026-11-03T13:14:49Z",
         "status": "queued",
         "title": "Patch: hero plates keep one size however many effects they carry",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 11
