@@ -8854,7 +8854,8 @@ mod social {
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series not over holds, each one's newest live co-op match, and whose
     /// live 1v1 the viewer may watch (friends, unblocked, live, ranked or not, seating the friend and
-    /// not the viewer; no setting of the friend's refuses it, R2615000). Each answers in the order named.
+    /// not the viewer; no setting of the friend's refuses it, R2615000), and which co-op matches seat
+    /// someone the viewer stands blocked with (R2881000). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -8950,6 +8951,22 @@ mod social {
             ]
         );
         assert!(q!(harness, t => t.presence_in_duos(&[])).is_empty());
+
+        // R2881000: the co-op matches seating someone the viewer stands blocked with, either way:
+        // `blocked` blocked the viewer, and the viewer now blocks `stranger`.
+        let teamed = coop_match(&watched.id, &blocked.id, now - 250);
+        q!(harness, t => t.duos_matches_create(&teamed));
+        q!(harness, t => t.blocks_add(&viewer.id, &stranger.id, now));
+        let games: Vec<String> = [&newer.id, &teamed.id, &"not-a-uuid".to_string(), &older.id]
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.presence_duos_blocked(&viewer.id, &games)),
+            vec![teamed.id.clone(), older.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_duos_blocked(&viewer.id, &[])).is_empty());
+        assert!(q!(harness, t => t.presence_duos_blocked("not-a-uuid", &games)).is_empty());
     }
 
     /// R1435000: the friends a sharer shared a finished match with, read as the friend's own read
