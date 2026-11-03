@@ -16009,6 +16009,8 @@
       "taken_asks": []
     },
     "2958": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T17:55:39Z",
@@ -16022,8 +16024,11 @@
         "trail": "\"command\": \"grep -n \\\"mix-blend\\\\|filter\\\\|drop-shadow\\\\|will-change\\\\|backdrop\\\" apps/web/src/cards/cosmetics.css | sed -n 1,60p | grep -n \\\"signature\\\\|cf-sig\\\\|sweep\\\\|full-art\\\" ; grep -n \\\"\\\\.c\u2026\n- Bash: {\"command\": \"sed -n 780,880p apps/web/src/cards/cosmetics.css\", \"description\": \"Read the signature CSS\"}\n- Bash: {\"command\": \"cd e2e/cypress/component && python3 - <<'EOF'\\ns=open('full-art-finishes.cy.tsx').read()\\n# experiment: twins a raster tile (256px) apart, same tile phase\\ns=s.replace(''' <div style={{ \u2026\n- Bash: {\"command\": \"grep -n \\\"viewport\\\\|WIDTHS =\\\\|FULL_ART_LAYOUT_TIERS =\\\" e2e/cypress/component/full-art-finishes.cy.tsx | head; grep -rn \\\"FULL_ART_LAYOUT_TIERS\\\" apps/web/src/cards/*.ts | head -2\", \"d\u2026\n- Bash: {\"command\": \"sed -n 40,60p e2e/cypress/component/full-art-finishes.cy.tsx; sed -n 1,20p e2e/cypress/component/full-art-finishes.cy.tsx | head -20\", \"description\": \"Read the finishes spec header and c\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|failed;|EXIT|WIRE\\\" /tmp/ws-tests.log | grep -v \\\" 0 failed\\\" | head; grep -E \\\"^test result\\\" /tmp/ws-tests.log | wc -l; tail -4 /tmp/ws-tests.log; git sta\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Workspace `cargo test --workspace --features testkit,ts`: EXIT 0, 41 result lines all 0 failed; wire tree diff = only cosmetics.ts (intended).\\n- Cypress \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/full-art-finishes.cy.tsx'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(old,s.count(old))\\n s=s.replac\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2949/e2e/artifacts/component/screenshots/full-art-finishes.cy.tsx/R2720000-control-170-classicplus-019.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2949 && grep -ln \\\"signed\\\\|cf-signature\\\\|FullArtShown\\\\|fullArtPickOf\\\\|augment\\\\|version-full-art\\\\|data-full-art\\\" e2e/cypress/component/*.tsx\", \u2026\n- Bash: {\"command\": \"cd e2e && timeout 1700 pnpm exec cypress run --component --browser chrome --spec cypress/component/card-faces.cy.tsx,cypress/component/play-screen.cy.tsx,cypress/component/signature.cy.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2949 && git worktree remove --force ../jackioh-wt/main-check && git branch -D wt/main-check && git worktree list && git status --short | grep -v \\\"^ \u2026\n- Bash: {\"command\": \"timeout 1500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-test\u2026\n- Bash: {\"command\": \"(timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -3; echo TC $?; timeout 900 pnpm --dir e2e typecheck 2>&1 | tail -3; timeout 900 pnpm --dir e2e typecheck:component 2>&1 | tail -3;\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 1500 pnpm exec vitest run src/fx src/cards/art/convention.test.ts 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head -10\", \"description\": \"Run the fx and art-\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 600 pnpm exec vitest run src/fx/flavorExits.test.ts 2>&1 | grep -E \\\"AssertionError|Expected|Received|expected|\\u00d7|\\u2713|Tests \\\" | head -20\", \"description\": \"\u2026\n- tool error: Exit code 1 /bin/bash: line 1: cd: apps/web: No such file or directory\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run src/fx/flavorExits.test.ts 2>&1 | grep -vE \\\"^\\\\s*$\\\" | grep -B3 -A25 \\\"FAIL\\\" | head -60\", \"description\": \"Show the flavorExits failure details\", \"timeo\u2026\n- Bash: {\"command\": \"grep -n \\\"^import\\\" src/fx/flavorExits.test.ts; git -C /home/runner/work/_temp/work/item-2949 log --oneline -3 -- apps/web/src/fx/ | head\", \"description\": \"Check flavorExits test imports\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2949 && timeout 600 scripts/worktree.sh main-fx origin/main > /dev/null 2>&1; cp -r apps/web/src/wasm/pkg ../jackioh-wt/main-fx/apps/web/src/wasm/ &&\u2026\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/main-fx && git branch -D wt/main-fx && git worktree list; rmdir ../jackioh-wt 2>/dev/null; cat >> .bot-notes.md <<'EOF'\\n- Fixed full-art-finish\u2026\n- Bash: {\"command\": \"git diff apps/web/src/cards/fullArtTiers.test.tsx | head -260\", \"description\": \"Review the fullArtTiers test diff\"}\n- Bash: {\"command\": \"grep -n \\\"export function proceduralArtUri\\\" -A20 apps/web/src/cards/art/svg.ts | head -30; grep -n \\\"export function artSpecFor\\\\|export function proceduralSpec\\\\|hashId(\\\" apps/web/src\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/ART.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"A look with a picture of its own, the Signature look today, draws the card's own painter re-seeded:\\n`pi\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/pictures.ts'\\ns=open(p).read()\\nold=\\\"\\\"\\\"// R2949000 (#2949): a look with a picture of its own (the Signature look) draws its card's own pai\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec eslint e2e/cypress/component/full-art-finishes.cy.tsx apps/web/src/cards/art/pictures.ts 2>&1 | tail -5; (cd apps/web && timeout 600 pnpm exec vitest run src/cards/\u2026\n- Bash: {\"command\": \"timeout 1700 cargo clippy --workspace --all-targets -- -D warnings 2>&1 | tail -4\", \"description\": \"Run workspace clippy as the harness does\", \"timeout\": 1760000}\n- Bash: {\"command\": \"export GIT_INDEX_FILE=/tmp/classify-index2; rm -f $GIT_INDEX_FILE; git read-tree HEAD && git add -A && TREE=$(git write-tree) && SHA=$(GIT_AUTHOR_NAME=tmp GIT_AUTHOR_EMAIL=tmp@example.co\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nstate='''## State\\n\\n- Run 2 (build, opus): DONE. Everything in the plan is built and \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Signature only on Full art + Animated, with its own art and motion; Full art offered on a varied set of cards\"} --> ## What changed This applies the owner's answers to #2725's questions 2 and 3, as two new rulings: R2949000 and R2949001. **Signature nee\u2026"
       },
       "issue": 2949,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T20:03:20Z",
         "from_run": "41688918059",
         "gates": [
           {
@@ -16115,7 +16120,11 @@
         "source": "build",
         "until": "2026-11-03T20:32:01Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-03T20:02:01Z",
+      "run_id": "pending:3eee4e4b-1793736168",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16134,6 +16143,9 @@
         "provider": "claude-8",
         "run": "41688918059"
       },
+      "started_at": "2026-11-03T20:03:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16147,9 +16159,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T19:36:45Z",
+    "at": "2026-11-03T20:03:20Z",
     "url": "",
-    "what": "build #2957 on muse"
+    "what": "review #2958 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-03T19:49:24Z",
