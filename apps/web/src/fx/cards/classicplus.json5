@@ -3,6 +3,7 @@
 // (tables.test.ts holds the file to the catalog). An entry is one of:
 //   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
@@ -10,7 +11,7 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "classicplus-001": "none: pending", // Doom Shroom
+  "classicplus-001": { setPiece: "vortex" }, // Doom Shroom
   "classicplus-002": "none: pending", // Groom Shroom
   "classicplus-003": "none: pending", // Second Amendment Snake
   "classicplus-004": "none: pending", // Juhan Biggest Bat
@@ -27,7 +28,7 @@
   "classicplus-012-3": "none: pending", // Fluffy Grip
   "classicplus-012-4": "none: pending", // Powder Spray
   "classicplus-012-5": "none: pending", // Anti-Waffle Shell
-  "classicplus-012-6": "none: pending", // Frozen Wastes
+  "classicplus-012-6": { setPiece: "vortex" }, // Frozen Wastes
   "classicplus-012-7": "none: pending", // Legion of the Hungry
   "classicplus-012-8": "none: pending", // Frostspatula
   "classicplus-013": "none: pending", // Mommy Barker
@@ -56,7 +57,7 @@
   "classicplus-031": "none: pending", // Fusion Lab
   "classicplus-032": "none: pending", // Otherworldly Removal
   "classicplus-032-1": "none: pending", // Execute
-  "classicplus-032-2": "none: pending", // Brawl
+  "classicplus-032-2": { cast: { motif: "wipe" } }, // Brawl
   "classicplus-032-3": "none: pending", // Blade Storm
   "classicplus-033": "none: pending", // Ivory Tower
   "classicplus-034": { aura: { look: "frost", palette: "Tech", scope: "lane" } }, // Memory Leak
@@ -107,7 +108,7 @@
   "classicplus-070": "none: pending", // Chaos Machine
   "classicplus-071": "none: pending", // Book of Buff
   "classicplus-072": "none: pending", // Book of Nerf
-  "classicplus-073": "none: pending", // Call to Chaos (Classic+ Edition)
+  "classicplus-073": { cast: { motif: "wipe" } }, // Call to Chaos (Classic+ Edition)
   "classicplus-073-1": "none: pending", // Classic Golem
   "classicplus-074": "none: pending", // Twice Forward One Step Backwards
   "classicplus-075": "none: pending", // J-lease J-Jungle EX-plorer

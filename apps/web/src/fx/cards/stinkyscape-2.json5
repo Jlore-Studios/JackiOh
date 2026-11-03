@@ -3,6 +3,7 @@
 // (tables.test.ts holds the file to the catalog). An entry is one of:
 //   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
@@ -37,7 +38,7 @@
   "stinkyscape-114": "none: pending", // Arctic Citadel
   "stinkyscape-115": "none: pending", // Scornboi
   "stinkyscape-116": "none: pending", // Megabase
-  "stinkyscape-117": "none: pending", // Core System
+  "stinkyscape-117": { setPiece: "vortex" }, // Core System
   "stinkyscape-118": "none: pending", // Secure System
   "stinkyscape-119": "none: pending", // Unsecure System
   "stinkyscape-120": "none: pending", // Wild System
@@ -80,7 +81,7 @@
   "stinkyscape-149": "none: pending", // Wildar
   "stinkyscape-150": "none: pending", // Call to Chaos (Stinky Edition)
   "stinkyscape-150-1": "none: pending", // Stinkyscape Golem
-  "stinkyscape-151": "none: pending", // Call to Chaos (Scape Edition)
+  "stinkyscape-151": { cast: { motif: "wipe" } }, // Call to Chaos (Scape Edition)
   "stinkyscape-152": "none: pending", // Sanctum
   "stinkyscape-153": "none: pending", // Stimmycheck
   "stinkyscape-154": "none: pending", // Dice of Doom
@@ -119,7 +120,7 @@
   "stinkyscape-t-axnit": "none: pending", // Axnit
   "stinkyscape-t-narcor": "none: pending", // Narcor
   "stinkyscape-t-red-narcor": "none: pending", // Red Narcor
-  "stinkyscape-t-anomaly-found": "none: pending", // Anomaly Found!
+  "stinkyscape-t-anomaly-found": { cast: { motif: "wipe" } }, // Anomaly Found!
   "stinkyscape-t-ai-01": "none: pending", // Escort Protocol
   "stinkyscape-t-ai-02": "none: pending", // Mining Subroutine
   "stinkyscape-t-ai-03": "none: pending", // Route Optimizer

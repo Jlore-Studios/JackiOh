@@ -27,6 +27,7 @@ import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
+import { planSetPiece } from "./setPieces.ts";
 import { shotCue } from "./stage.ts";
 import { entranceCues, entranceLandMs } from "./takeover.ts";
 import {
@@ -1239,8 +1240,10 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
 export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
   const motif = planCardMotif(entry, view, env);
-  const replaced = (event: GameEvent): boolean => motif?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? [])];
+  // R2800000: a board clear's set piece draws its wipe's removals in place of their own rows.
+  const setPiece = planSetPiece(entry, view, env);
+  const replaced = (event: GameEvent): boolean => motif?.replaces.has(event) === true || setPiece?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? [])];
   if (entry.sweep !== undefined) {
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;

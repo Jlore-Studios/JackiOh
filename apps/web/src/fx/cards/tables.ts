@@ -1,8 +1,9 @@
 // R2784000: every card's signature animation, one JSON5 table per set (Stinkyscape's in two, split at
 // `stinkyscape-091`), read as text and checked against the catalog once at import, so a bad entry fails
 // loudly at load naming its file and card (docs/polish/9-card-animations.md). An entry is `"none: <reason>"`,
-// `{ bespoke: "<recipe>" }` (bespoke.ts) or a motif per hook: `{ cast: { motif, palette?, row? } }`. The
-// tables are bundled data keyed by a definition the viewer reads; a hidden play never keys one (R202).
+// `{ bespoke: "<recipe>" }` (bespoke.ts), `{ setPiece: "<key>" }` (a board clear's set piece, setPieceKeys.ts,
+// R2800000) or a motif per hook: `{ cast: { motif, palette?, row? } }`. The tables are bundled data keyed by
+// a definition the viewer reads; a hidden play never keys one (R202).
 // R2787000: a hooks entry may also carry, or be only, an `aura: { look, palette?, scope }`, the standing
 // look its card wears while it holds (fx/aura/); a `zone` or `lane` aura stands in a Field card's zone.
 
@@ -16,6 +17,7 @@ import { isRecord } from "../../wire/json.ts";
 import { isAuraFieldType, isAuraLook, isAuraScope, type AuraLook, type AuraScope } from "../aura/looks.ts";
 import { isPalette, type FxPalette } from "../flavors.ts";
 import { isCardHook, isMotifName, type FxCardHook, type MotifName } from "../motifs/names.ts";
+import { isSetPieceKey, type SetPieceKey } from "../setPieceKeys.ts";
 import { isBespokeKey, type BespokeKey } from "./bespoke.ts";
 import rawClassic from "./classic.json5?raw";
 import rawClassicPlus from "./classicplus.json5?raw";
@@ -53,6 +55,7 @@ export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope
 export type FxCardEntry =
   | { kind: "none"; reason: string }
   | { kind: "bespoke"; key: BespokeKey }
+  | { kind: "setPiece"; key: SetPieceKey }
   | { kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec };
 
 const HOOK_FIELDS: readonly string[] = ["motif", "palette", "row"];
@@ -101,12 +104,18 @@ function parseEntry(value: unknown, type: string, fail: (problem: string) => nev
     if (!/^none: \S/.test(value)) fail(`a string entry must be "none: <reason>" (found ${JSON.stringify(value)})`);
     return { kind: "none", reason: value.slice("none: ".length) };
   }
-  if (!isRecord(value)) fail(`must be "none: <reason>", { bespoke } or hooks`);
+  if (!isRecord(value)) fail(`must be "none: <reason>", { bespoke }, { setPiece } or hooks`);
   if (Object.prototype.hasOwnProperty.call(value, "bespoke")) {
     const key = value.bespoke;
     if (Object.keys(value).length !== 1) fail("a bespoke entry holds nothing else");
     if (typeof key !== "string" || !isBespokeKey(key)) fail(`unknown bespoke "${String(key)}"`);
     return { kind: "bespoke", key };
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "setPiece")) {
+    const key = value.setPiece;
+    if (Object.keys(value).length !== 1) fail("a setPiece entry holds nothing else");
+    if (typeof key !== "string" || !isSetPieceKey(key)) fail(`unknown set piece "${String(key)}"`);
+    return { kind: "setPiece", key };
   }
   const hooks: Partial<Record<FxCardHook, FxHookSpec>> = {};
   let aura: FxAuraSpec | undefined;
