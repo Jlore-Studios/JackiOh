@@ -220,8 +220,19 @@
     "what": "build #2157 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-03T05:18:17Z",
-    "notes": [],
+    "at": "2026-11-03T05:24:23Z",
+    "notes": [
+      "created the label `squishy:planning`",
+      "created the label `squishy:splitting`",
+      "created the label `squishy:building`",
+      "created the label `squishy:revising`",
+      "created the label `squishy:fixing-ci`",
+      "created the label `squishy:reviewing`",
+      "created the label `squishy:reconciling`",
+      "created the label `squishy:merging`",
+      "created the label `squishy:waiting`",
+      "deleted the retired label `squishy:working`"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "providers": {
