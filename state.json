@@ -15374,7 +15374,7 @@
       }
     },
     "2888": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -15389,17 +15389,21 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-03T06:34:46Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-03T05:01:33Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "muse",
       "queued_at": "2026-11-03T04:37:30Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41579696937",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T04:42:39Z",
+      "run_id": "pending:002f5caa-1793687653",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-03T06:34:46Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15541,9 +15545,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T06:33:58Z",
+    "at": "2026-11-03T06:34:46Z",
     "url": "",
-    "what": "build #2796 on claude-4"
+    "what": "build #2888 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T06:17:44Z",
