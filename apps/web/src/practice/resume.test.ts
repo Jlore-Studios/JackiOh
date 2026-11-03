@@ -90,6 +90,15 @@ describe("R668 the practice game to resume, on the device", () => {
     expect(readPracticeResume()).toBeNull();
   });
 
+  it("R2882000 today's deal is kept as one, and a day that is not a string is malformed", () => {
+    writePracticeResume({ ...CONFIG, dailyDeal: "2026-11-03" });
+    expect(readPracticeResume()).toEqual({ ...CONFIG, dailyDeal: "2026-11-03" });
+    writePracticeResume(CONFIG);
+    expect(readPracticeResume(), "a game that is no daily deal keeps no day").toEqual(CONFIG);
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, dailyDeal: 3 }));
+    expect(readPracticeResume()).toBeNull();
+  });
+
   it("R765 keeps where the player left the game: in it, or with Save and leave", () => {
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });
