@@ -1190,6 +1190,7 @@ fn combine_objects(records: &[Script]) -> Script {
         play_allowed: fused_play_allowed(records),
         // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
         secret_modes: records.iter().any(|s| s.secret_modes),
+        secret_option_counts: records.iter().any(|s| s.secret_option_counts),
         condition_met: None,
         preview: eager_condition(records.iter().map(|s| s.preview.clone()).collect()),
         // R2321000: a fusion keeps every ingredient's counts, in ingredient order, as it previews.

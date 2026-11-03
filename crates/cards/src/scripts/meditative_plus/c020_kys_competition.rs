@@ -241,7 +241,7 @@ mod tests {
         }
 
         #[test]
-        fn r465_r1184000_the_key_reaches_no_view_and_no_event_the_chooser_sees_the_streak_the_opponent_only_a_prompt()
+        fn r465_r1184000_the_key_reaches_no_view_and_no_event_the_chooser_sees_the_streak_the_opponent_only_a_count()
          {
             let mut s = cast("kc-card-view", false);
             answer(&mut s, true);
@@ -255,7 +255,8 @@ mod tests {
             assert_eq!(mine["pending"]["streak"], json!(1));
             assert_eq!(mine["pending"]["prompt"], json!(statement(&s)));
             let theirs = js(&s.view(P2));
-            assert_eq!(theirs["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
+            // R2739000: how many answers, Stop not among them.
+            assert_eq!(theirs["pending"], json!({ "forYou": false, "pendingFor": "p1", "optionCount": 4 }));
         }
 
         #[test]

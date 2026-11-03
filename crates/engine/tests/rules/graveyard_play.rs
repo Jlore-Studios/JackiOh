@@ -602,11 +602,12 @@ mod r454_e11_play_from_the_graveyard {
         let pending = paused.pending.as_ref();
         assert_eq!(pending.map(|open| open.kind), Some(PromptKind::Discover));
         assert_eq!(pending.map(|open| open.player_id), Some(PlayerId::P1));
-        // The other seat sees a prompt is open, never its options (§10.8).
+        // The other seat sees a prompt is open, never its options (§10.8), and how many it offers
+        // (R2739000).
         assert_eq!(
             serde_json::to_value(&view_for(&paused, PlayerId::P2).pending)
                 .expect("a pending view serializes"),
-            json!({ "forYou": false, "pendingFor": "p1" })
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 })
         );
 
         let round = round_trip(&paused);
