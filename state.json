@@ -28398,7 +28398,8 @@
     "runs": [
       "2026-11-03T13:18:45Z,41642635990,claude-6,opus,review,2916,medium,stopped,stop,0,0,0,0,,0,0,,,,,none,,0",
       "2026-11-03T13:09:35Z,41629112566,claude-1,opus,revise,2920,hard,interrupted,5-hour cap,50.7,100,36162,18857769,16.7553,64,86,,,0.5,claude-1,resumed,,2",
-      "2026-11-03T13:17:43Z,41620249927,claude-8,opus,build,2801,hard,built,,93.4,508,170824,78763989,23.3218,0,41,,,1765.9,claude-8,fresh,cap,2"
+      "2026-11-03T13:17:43Z,41620249927,claude-8,opus,build,2801,hard,built,,93.4,508,170824,78763989,23.3218,0,41,,,1765.9,claude-8,fresh,cap,2",
+      "2026-11-03T13:36:07Z,41645542016,claude-6,opus,review,2916,medium,stopped,stop,0,0,0,0,,0,0,,,,,none,,0"
     ]
   },
   "version": 1
