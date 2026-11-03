@@ -13931,11 +13931,11 @@
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "41607925861",
+            "run": "41620071188",
             "tier": "strong"
           }
         ],
-        "sha": "a1d66eb2fab3c6d04fc547f3f84d884692b54fb5",
+        "sha": "df6735bcee9fd7e0eee770888cf29b07d5b5b346",
         "tiers": {
           "claude": "strong"
         }
