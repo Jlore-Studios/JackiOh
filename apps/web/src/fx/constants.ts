@@ -88,6 +88,10 @@ export const FX_WALLS_HIT_AT = 0.3;
 export const FX_WALLS_TAIL_MS = 850;
 export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
 export const FX_WALLS_TRAUMA = 0.45;
+// R2795000: Classic+ #35 Rollback rewinds the lanes from 5 to 1, each ring this fraction of D after the
+// last (all of them inside Travel to Land); Classic+ #56 Book of Pain shakes this hard at its first tear.
+export const FX_ROLLBACK_STEP = 0.08;
+export const FX_INK_TEAR_TRAUMA = 0.2;
 // R437: a mark branded onto a card; its sigil fades over FX_BRAND_TAIL_MS after the entry.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
@@ -175,9 +179,12 @@ export const FX_MOTIF_TRAUMA = {
   tithe: 0.1,
   tally: 0.15,
   snap: 0.4,
+  deal: 0,
 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
+/** R2795000: `deal` deals at most this many cards one entry. */
+export const FX_MOTIF_DEAL_MAX = 5;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most

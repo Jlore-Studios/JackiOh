@@ -22,7 +22,12 @@ Every catalog card starts as `"none: pending"` and moves up a tier in its set's 
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
 Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the marquee entrances of
 BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
-names, below).
+names, below). Classic+'s pass (#2795, R2795000) adds three Flourishes beside Crushing Walls, each for a
+card whose one event no motif reads: #35 Rollback (`rollbackSweep`: an arcane ring runs back from lane 5
+to lane 1 on the sides it rolls back, then the heroes glint), #41 KY's Constant (`constantStamp`: the new
+number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: each discarded card torn
+out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
+phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
 
 ## The motifs
 
@@ -68,6 +73,13 @@ and three parameters:
 | `tithe` | costChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202) |
 | `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
 | `snap` | trapFired | trapFired | a tight ring on the trap's own zone, then its reveal: in the card's flavor when the view names it, else the entry palette (R154, R202); a firing again is a short flare |
+
+Drawn in #2795 by the three-card rule (a new motif where at least three of a set's cards fit none;
+R2795000):
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `deal` | addedToHand, shuffledIn, fused | nothing | a gather at the resolving play's hero (else the hero the card goes to), once a play, then a card back flying from it to the hand, the library or the card a fuse merges into, landing with a sparkle, at most `FX_MOTIF_DEAL_MAX` an entry; backs only, on both seats (R202) |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -279,10 +291,15 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
-or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry
-names a motif, as that card's play through the real board's effects layer. "Play as a set piece" plays
-the same card as the fixture set piece (R2785000): its play's entry holds the board for
-`SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
+or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and every card's entry but
+`none`, an aura alone and a bespoke entrance (R2795000), as that card's play through the real board's
+effects layer: a `cast` or `cry` motif on its fixture, a card recipe on a fixture of its own
+(`recipeFixture`), and a set piece with its hook's marker, so it holds as its card's does. A `death`,
+`trigger` or `activate` hook, which the board plans nothing for yet, plays as its motif in the card's
+look and scale through the gallery's director, and a Field Spell or Field Trap stands face-up in the
+viewer's first backrow zone, wearing its aura. "Play as a set piece" plays the same card as the
+fixture set piece (R2785000): its play's entry holds the board for `SET_PIECE_HOLD_MS`, scaled and
+capped as every set piece, until a tap, a click or Space skips it.
 
 ## Set pieces
 
@@ -339,3 +356,8 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
 - `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
+- The census's `FAMILY_MOTIFS` predates #2786's motifs and #2795's `deal`: it calls a card whose events
+  one of them reads "none: no motif reads …", and it takes a hook's window's turn and draw events
+  (`turnEnded`, `manaChanged`, `drawn`) as its own. Classic+'s pass (R2795000) overrides it for each
+  such card with the motif whose Reads holds the hook's commonest own event; teaching it those motifs
+  would spare the other passes the overrides.

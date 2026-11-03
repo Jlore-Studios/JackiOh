@@ -1,15 +1,24 @@
 // R2784000: what the /dev/fx gallery (routes/dev/fx.tsx) plays: a fixture event for every motif on a
 // view's own ids, the entry it fills, and a card's table entry as a play that resolves. Pure, so the
-// motif tests plan from the same fixtures the gallery shows.
+// motif tests plan from the same fixtures the gallery shows. R2795000: every entry but `none`, an aura
+// alone and a bespoke entrance plays: a card recipe on a fixture of its own, a set piece under its hook's
+// marker, a death, trigger or activate hook as its motif, and a Field card standing with its aura.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { FLAVOR_FALLBACK } from "../../cards/flavor.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
-import { paletteLook, type FxPalette } from "../flavors.ts";
+import { CATALOG } from "../../wire/cards.ts";
+import { isCardRecipeKey, type CardRecipeKey } from "../cards/bespoke.ts";
+import type { FxCardEntry, FxHookSpec } from "../cards/tables.ts";
+import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
+import { FLAVOR_LOOKS, paletteLook, type FxPalette } from "../flavors.ts";
+import { flavorLookOf } from "../flavorSource.ts";
 import { createFxMemory } from "../memory.ts";
 import type { FxCue } from "../types.ts";
+import { motifScale, type MotifSpec } from "./build.ts";
 import { planMotif } from "./index.ts";
-import type { DrawnMotif } from "./names.ts";
+import { FX_CARD_HOOKS, isDrawnMotif, type DrawnMotif, type FxCardHook } from "./names.ts";
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
@@ -48,8 +57,9 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
  * enemy unit, conjure and rise summon a token, offering sinks the viewer's first unit as a cost, shift
  * swaps the board, bind locks an enemy zone, tether takes the first enemy unit, mirror and transmute
  * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
- * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter
- * and snap fires a hidden trap.
+ * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter,
+ * snap fires a hidden trap, and deal adds a card to the player's hand and shuffles a hidden one into
+ * their library (R2795000).
  */
 export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
   const enemy = player === view.viewer ? view.opponent : view.you;
@@ -160,6 +170,11 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
     }
     case "snap":
       return [{ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: enemy.player, row: "backrow", lane: 4 }];
+    case "deal":
+      return [
+        { type: "addedToHand", player, instanceId: "fx-dealt", defId: "core-055" },
+        { type: "shuffledIn", player, instanceId: "hidden", defId: "hidden", position: 0 },
+      ];
   }
 }
 
@@ -183,13 +198,97 @@ export function galleryCues(motif: DrawnMotif, palette: FxPalette, scale: number
   return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
 }
 
-/** A card's table entry played out: the viewer plays it, its motif's fixture resolves under it, and it resolves. */
-export function cardFixtureEvents(defId: string, motif: DrawnMotif, view: PlayerView, n = 0): GameEvent[] {
+/**
+ * R2795000: one card the gallery offers: the hook it plays (the first whose motif is drawn, its bespoke
+ * recipe or its set piece), the fixture played under it and the hook's spec.
+ */
+export type GalleryCard = { defId: string; label: string; hook: FxCardHook | "bespoke" | "setPiece"; fixture: DrawnMotif | CardRecipeKey; spec: FxHookSpec | null };
+
+/** R2795000: what the gallery plays for a card's entry; none for `none`, an aura alone, a motif not drawn and a bespoke entrance. */
+export function galleryCardOf(defId: string, entry: FxCardEntry): GalleryCard | null {
+  switch (entry.kind) {
+    case "none":
+      return null;
+    case "setPiece":
+      return { defId, label: `set piece: ${entry.key}`, hook: "setPiece", fixture: "wipe", spec: null };
+    case "bespoke":
+      return isCardRecipeKey(entry.key) ? { defId, label: `bespoke: ${entry.key}`, hook: "bespoke", fixture: entry.key, spec: null } : null;
+    case "hooks": {
+      for (const hook of FX_CARD_HOOKS) {
+        const spec = entry.hooks[hook];
+        if (spec !== undefined && isDrawnMotif(spec.motif)) return { defId, label: `${hook}: ${spec.motif}`, hook, fixture: spec.motif, spec };
+      }
+      return null;
+    }
+  }
+}
+
+/** R2795000: a card recipe's fixture events, as `player` would see its play resolve from `sourceId` on `view`. */
+export function recipeFixture(key: CardRecipeKey, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
+  const enemy = player === view.viewer ? view.opponent : view.you;
+  switch (key) {
+    case "manaCrack":
+      return [{ type: "modifierChanged", player: enemy.player, modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }];
+    case "bloodDrain":
+      return [
+        { type: "radiantSet", instanceId: "hidden", defId: "hidden", zone: { z: "hand", player } },
+        { type: "healthLost", player, amount: 3 },
+      ];
+    case "crushingWalls":
+      return motifFixture("wipe", view, sourceId, player);
+    case "rollbackSweep":
+      return [{ type: "rolledBack", player, turnsAgo: 1, sides: [view.you.player, view.opponent.player] }];
+    case "constantStamp": {
+      const hand = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+      return hand === undefined ? [] : [{ type: "numberChanged", instanceId: hand.instanceId, defId: hand.defId, key: "cost", value: 3 }];
+    }
+    case "inkTear":
+      return [
+        { type: "discarded", instanceId: "fx-discarded-1", defId: "core-055", owner: enemy.player },
+        { type: "discarded", instanceId: "fx-discarded-2", defId: "core-002", owner: enemy.player },
+      ];
+  }
+}
+
+/**
+ * R2795000: a card's gallery play: the viewer plays it, a set piece's hook is marked (R2783000), the
+ * fixture resolves under it and it resolves.
+ */
+export function galleryCardEvents(card: GalleryCard, view: PlayerView, n = 0): GameEvent[] {
   const instanceId = galleryPlayId(n);
   const player = view.viewer;
+  const { defId, fixture } = card;
+  const marker: GameEvent[] = card.hook === "setPiece" ? [{ type: "hookResolving", sourceId: instanceId, defId, controller: player, hook: "cry" }] : [];
   return [
     { type: "cardPlayed", player, instanceId, defId, costPaid: 1 },
-    ...motifFixture(motif, view, instanceId, player),
+    ...marker,
+    ...(isCardRecipeKey(fixture) ? recipeFixture(fixture, view, instanceId, player) : motifFixture(fixture, view, instanceId, player)),
     { type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 },
   ];
+}
+
+/**
+ * R2795000: a death, trigger or activate hook's motif on its fixture, in the card's look at its scale as
+ * `planCardMotif` would draw it, for the gallery's own director: the board plans those hooks nothing yet.
+ */
+export function galleryHookCues(card: GalleryCard, view: PlayerView, intensity: number, speed = 1): FxCue[] {
+  const { spec, fixture } = card;
+  if (spec === null || isCardRecipeKey(fixture)) return [];
+  const look = (spec.palette !== undefined ? paletteLook(spec.palette) : undefined) ?? flavorLookOf(card.defId, GALLERY_CARD_ID, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
+  const motif: MotifSpec = { motif: fixture, look, scale: motifScale(card.defId, view, intensity), row: spec.row ?? "replace" };
+  const entry = galleryEntry(motifFixture(fixture, view, gallerySource(view), view.viewer), view, speed);
+  return planMotif(motif, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
+}
+
+/**
+ * R2795000: the view the gallery shows for a card's play: its events, and a Field Spell or Field Trap
+ * standing face-up in the viewer's first backrow zone, so its aura shows.
+ */
+export function galleryShownView(view: PlayerView, card: GalleryCard, n = 0): PlayerView {
+  const events = galleryCardEvents(card, view, n);
+  const type = CATALOG[card.defId]?.type;
+  const slot = view.you.backrow[0];
+  if ((type !== "Field Spell" && type !== "Field Trap") || slot === null || slot === undefined || slot.faceDown) return { ...view, events };
+  const backrow = [{ ...slot, defId: card.defId, instanceId: galleryPlayId(n), type }, ...view.you.backrow.slice(1)];
+  return { ...view, you: { ...view.you, backrow }, events };
 }

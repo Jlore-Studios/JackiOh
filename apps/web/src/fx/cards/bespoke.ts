@@ -1,12 +1,16 @@
 // R502, R670, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card
-// recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts).
+// recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2795000:
+// Classic+'s Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
 import { manaCrack } from "./core/hinder.ts";
+import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
+import { constantStamp } from "./classicplus/kysConstant.ts";
+import { rollbackSweep } from "./classicplus/rollback.ts";
 
-export const CARD_RECIPES = { manaCrack, bloodDrain, crushingWalls } as const satisfies Readonly<Record<string, CardRecipe>>;
+export const CARD_RECIPES = { manaCrack, bloodDrain, crushingWalls, rollbackSweep, constantStamp, inkTear } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
 

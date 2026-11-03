@@ -1,19 +1,22 @@
 // R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,
-// tithe and tally. Like the damage motifs (damage.ts) each plays in the entry's phases (build.ts)
-// and plans nothing without an event it reads.
+// tithe and tally, and #2795's deal (R2795000). Like the damage motifs (damage.ts) each plays in the
+// entry's phases (build.ts) and plans nothing without an event it reads.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { animTestid, locateInstance, type AnimationEntry } from "../../game/animations.ts";
-import { sideOf, type Side } from "../../game/contract.ts";
+import { sideOf, testid, type Side } from "../../game/contract.ts";
 import { tid } from "../build.ts";
-import { FX_MANA_MAX_SPARKS, FX_MOTIF_TITHE_MAX } from "../constants.ts";
+import { FX_MANA_MAX_SPARKS, FX_MOTIF_DEAL_MAX, FX_MOTIF_TITHE_MAX } from "../constants.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../types.ts";
 import {
   MOTIF_TUNING,
+  flies,
+  isFirstEntry,
   motifBurst,
   motifShake,
   readEvents,
+  sourceOf,
   timesOf,
   type MotifPlanner,
   type MotifSpec,
@@ -158,6 +161,40 @@ export const tally: MotifPlanner = {
     const cues: FxCue[] = [];
     for (const h of hits) cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
     cues.push(...motifShake(spec, t.L));
+    return cues;
+  },
+};
+
+const DEAL_READS = ["addedToHand", "shuffledIn", "fused"] as const;
+
+/** Where a dealt card comes from: the resolving play's hero, else the hero it goes to; none for a fuse with no play. */
+function dealtFrom(event: GameEvent, view: PlayerView, env: FxPlanEnv): FxAnchor | null {
+  const from = sourceOf(event, view, env);
+  if (from !== null) return from;
+  return event.type === "addedToHand" || event.type === "shuffledIn" ? tid(testid.hero(sideOf(view, event.player))) : null;
+}
+
+/**
+ * deal (R2795000): a card made and handed out: a gather at the source (once a play, on its first
+ * entry of them), then a card back flying from it to the hand, the library or the card it fuses into,
+ * landing on the Land phase with a sparkle, at most FX_MOTIF_DEAL_MAX an entry. It reads the event's pile or card alone, never the card dealt (a
+ * back on both seats, R202), and its events' rows still play.
+ */
+export const deal: MotifPlanner = {
+  reads: DEAL_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, DEAL_READS).slice(0, FX_MOTIF_DEAL_MAX);
+    const first = hits[0];
+    if (first === undefined) return [];
+    const t = timesOf(entry.durationMs);
+    const from = dealtFrom(first.event, view, env);
+    const cues: FxCue[] = [];
+    if (from !== null && isFirstEntry(env, entry, DEAL_READS)) cues.push(motifBurst(spec, from, "point", t.G, MOTIF_TUNING.gather));
+    for (const h of hits) {
+      if (flies(from, h.at)) cues.push({ kind: "ghost", from, to: h.at, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    }
     return cues;
   },
 };

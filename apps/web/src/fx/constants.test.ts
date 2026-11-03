@@ -84,6 +84,8 @@ const S2 = {
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
   FX_WALLS_TRAUMA: 0.45,
+  FX_ROLLBACK_STEP: 0.08,
+  FX_INK_TEAR_TRAUMA: 0.2,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
   // MN05: Armor's shield flash (R1363).
@@ -155,8 +157,10 @@ const S2 = {
     tithe: 0.1,
     tally: 0.15,
     snap: 0.4,
+    deal: 0,
   },
   FX_MOTIF_TITHE_MAX: 5,
+  FX_MOTIF_DEAL_MAX: 5,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
