@@ -15563,12 +15563,14 @@
         "by": "`muse` (medium)",
         "sha": "8a1c60a2813a65c88c59a59dcc67e27ff2740fe0"
       },
+      "closed_at": "2026-11-03T07:23:26Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T01:57:14Z",
       "issue": 2876,
       "kind": "revise",
       "merge_owner": "muse",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
