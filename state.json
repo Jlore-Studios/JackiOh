@@ -16174,13 +16174,14 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-03T20:31:35Z",
-      "run_id": "41713586341",
+      "run_id": "pending:b6cf7287-1793741716",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 30,
-      "started_at": "2026-11-03T20:32:54Z",
+      "started_at": "2026-11-03T21:35:40Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16353,9 +16354,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T21:26:16Z",
+    "at": "2026-11-03T21:35:40Z",
     "url": "",
-    "what": "build #2962 on muse"
+    "what": "spot-check #2961 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-03T21:21:09Z",
@@ -30064,7 +30065,15 @@
         "n": 30,
         "pr": 2961,
         "queued_at": "2026-11-03T21:33:06Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:b6cf7287-1793741716",
         "sha": "a1bcc2af170bc25ac91309f1375519ac73577c83",
+        "started_at": "2026-11-03T21:35:40Z",
         "status": "queued",
         "title": "Patch: card tests use the crate's scenario helper instead of registering the catalog before every scenario",
         "tries": 0
