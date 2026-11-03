@@ -192,11 +192,19 @@ async fn write_catalog(
     // save request can never see half a catalog (§9.4, "stale catalog version is rejected"). An
     // error drops `tx` uncommitted, which rolls it back.
     let mut tx = client.begin().await?;
-    for card in entries {
-        sqlx::query(
-            "insert into public.cards
+    // One statement for every card, and a row already as the catalog has it is not rewritten, so a wake
+    // with nothing new writes no card (#2926). A duplicate id keeps its last entry, as the one-row-at-a-time
+    // loop it replaced did: one statement cannot touch a row twice. A JSON `null` cost reads as SQL NULL
+    // in a recordset, so it is put back to the jsonb `null` the loop stored.
+    let latest: IndexMap<&str, &CatalogEntry> = entries.iter().map(|card| (card.id.as_str(), card)).collect();
+    sqlx::query(
+        r#"insert into public.cards
            (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
+         select c.id, c."index", c.name, c."set", c."type", c.tags, c.rarity, c.token,
+                coalesce(c.cost, 'null'::jsonb), $2::text
+           from jsonb_to_recordset($1::jsonb)
+             as c(id text, "index" text, name text, "set" text, "type" text, tags text[],
+                  rarity text, token boolean, cost jsonb)
          on conflict (id) do update set
            card_index = excluded.card_index,
            name = excluded.name,
@@ -206,21 +214,17 @@ async fn write_catalog(
            rarity = excluded.rarity,
            token = excluded.token,
            cost = excluded.cost,
-           catalog_version = excluded.catalog_version",
-        )
-        .bind(&card.id)
-        .bind(&card.index)
-        .bind(&card.name)
-        .bind(&card.set)
-        .bind(&card.type_)
-        .bind(&card.tags)
-        .bind(&card.rarity)
-        .bind(card.token)
-        .bind(serde_json::to_string(&card.cost)?)
-        .bind(catalog_version)
-        .execute(&mut *tx)
-        .await?;
-    }
+           catalog_version = excluded.catalog_version
+         where (cards.card_index, cards.name, cards.set_id, cards.type, cards.tags, cards.rarity,
+                cards.token, cards.cost, cards.catalog_version)
+           is distinct from
+               (excluded.card_index, excluded.name, excluded.set_id, excluded.type, excluded.tags,
+                excluded.rarity, excluded.token, excluded.cost, excluded.catalog_version)"#,
+    )
+    .bind(serde_json::to_string(&latest.values().collect::<Vec<_>>())?)
+    .bind(catalog_version)
+    .execute(&mut *tx)
+    .await?;
     // SPEC §14.2: the cosmetics registry (`cosmetics.json`, R1295000) beside the catalog, in
     // migration 0045's `public.cosmetics`, so an owned cosmetic has a real foreign key. Upserted and
     // never deleted, as a card is. `chase` keeps its default: nothing reads the column, and the
