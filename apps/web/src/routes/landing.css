@@ -677,10 +677,10 @@
   color: var(--tavern-parchment);
 }
 
-/* R2875002: the news' ribbon hangs beside the quests' (22px in, 36px wide), with a red bubble on its
-   glyph counting the unclaimed entries, as the friends button's badge sits on its icon; the box's rim
-   covers the ribbon's top 12px, so the bubble starts below it. */
-.landing button.landing-news-bookmark {
+/* R2875002: the news' ribbon hangs beside the quests' (22px in, 36px wide), or in its place when no
+   quests' shows, with a red bubble on its glyph counting the unclaimed entries, as the friends button's
+   badge sits on its icon; the box's rim covers the ribbon's top 12px, so the bubble starts below it. */
+.landing .landing-quests ~ .landing-news button.landing-news-bookmark {
   left: 66px;
 }
 

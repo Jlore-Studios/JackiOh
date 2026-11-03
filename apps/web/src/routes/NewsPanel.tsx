@@ -39,7 +39,8 @@ function cosmeticTokenWords(tier: CosmeticTokenTier): string {
 function itemWords(reward: Exclude<NewsReward, { kind: "jlore" }>): string {
   switch (reward.kind) {
     case "cardPack":
-      return reward.pack === GLOBAL_PACK_NAME ? t("Card pack") : t("{set} card pack", { set: reward.pack });
+      // A set's pack reads as the packs panel names it (`packs.ts`'s `packName`).
+      return reward.pack === GLOBAL_PACK_NAME ? t("Card pack") : t("{set} pack", { set: t(reward.pack) });
     case "cardToken":
       return t("Card token");
     case "cosmeticToken":

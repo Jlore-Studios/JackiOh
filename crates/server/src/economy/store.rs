@@ -923,7 +923,12 @@ impl Tx<'_> {
     /// R2875000: marks the profile's claim of the news entry `news_id` at `at`. False, writing
     /// nothing, when it claimed it already, as the table's key refuses a second row; an id that is
     /// no slug is refused, as migration 0077's check refuses it.
-    pub async fn economy_news_claim(&mut self, profile_id: &str, news_id: &str, at: i64) -> StoreResult<bool> {
+    pub async fn economy_news_claim(
+        &mut self,
+        profile_id: &str,
+        news_id: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
         if !crate::cosmetics::is_slug(news_id) {
             return Err(refused(format!("a news id is a slug, not {news_id:?}")));
         }
@@ -2790,7 +2795,12 @@ mod fake {
     }
 
     /// A claim the profile already holds writes nothing, as Postgres's `on conflict do nothing` does.
-    pub fn news_claim(f: &mut FakeTx<'_>, profile_id: &str, news_id: &str, at: i64) -> Result<bool, StoreError> {
+    pub fn news_claim(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        news_id: &str,
+        at: i64,
+    ) -> Result<bool, StoreError> {
         let tables = call(f, "economy.newsClaims.put")?;
         if tables
             .news_claims

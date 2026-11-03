@@ -292,7 +292,10 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("NEWS_REWARD_JLORE", json!(c::NEWS_REWARD_JLORE)),
         ("NEWS_REWARD_CARD_PACKS", json!(c::NEWS_REWARD_CARD_PACKS)),
         ("NEWS_REWARD_CARD_TOKENS", json!(c::NEWS_REWARD_CARD_TOKENS)),
-        ("NEWS_REWARD_COSMETIC_TOKENS", json!(c::NEWS_REWARD_COSMETIC_TOKENS)),
+        (
+            "NEWS_REWARD_COSMETIC_TOKENS",
+            json!(c::NEWS_REWARD_COSMETIC_TOKENS),
+        ),
         ("NEWS_REWARD_COSMETIC_PACKS", json!(c::NEWS_REWARD_COSMETIC_PACKS)),
         // The going live's (#1310): the starter cards a new account owns (R1310000).
         ("STARTER_CARDS", json!(c::STARTER_CARDS)),

@@ -89,7 +89,9 @@ impl NewsReward {
         let amount = self.amount();
         match self {
             NewsReward::Jlore => json!({ "kind": "jlore", "amount": amount }),
-            NewsReward::CardPack(pack) => json!({ "kind": "cardPack", "amount": amount, "pack": pack.name() }),
+            NewsReward::CardPack(pack) => {
+                json!({ "kind": "cardPack", "amount": amount, "pack": pack.name() })
+            }
             NewsReward::CardToken => json!({ "kind": "cardToken", "amount": amount }),
             NewsReward::CosmeticToken(tier) => {
                 json!({ "kind": "cosmeticToken", "amount": amount, "tier": tier.as_str() })
@@ -500,8 +502,8 @@ mod tests {
             ("open-ended", "the summary does not end a sentence"),
             ("open-ended", "the summary holds 0 sentences"),
             ("wordy", "the summary holds 3 sentences"),
-            ("undated", "is no RFC 3339 time"),
-            ("out-of-order", "posted before the entry above it"),
+            ("undated", "postedAt \"yesterday\" is no RFC 3339 time"),
+            ("out-of-order", "it is posted before the entry above it"),
             ("versionless", "a patch names its version"),
             ("unshipped", "no patch of patches.json is \"v9.9.9\""),
             ("versioned-alert", "an alert names no version"),
@@ -518,7 +520,10 @@ mod tests {
             );
         }
         assert_eq!(problems.split("; ").count(), 17, "{problems}");
-        assert!(parse(r#"{ "news": [], "extra": 1 }"#).is_err(), "an unknown field");
+        assert!(
+            parse(r#"{ "news": [], "extra": 1 }"#).is_err(),
+            "an unknown field"
+        );
     }
 
     #[test]
@@ -577,13 +582,16 @@ mod tests {
             .map(|entry| (entry["id"].as_str().unwrap_or(""), entry["claimed"] == true))
             .collect();
         assert_eq!(rows, [("third", false), ("second", true), ("first", false)]);
-        assert_eq!(board["news"][0]["reward"], json!({ "kind": "cardToken", "amount": 1 }));
+        assert_eq!(
+            board["news"][0]["reward"],
+            json!({ "kind": "cardToken", "amount": 1 })
+        );
         assert_eq!(board["news"][0]["kind"], "alert");
         assert_eq!(board["news"][0]["postedAt"], at + 1);
     }
 
     #[test]
-    fn r2875003_a_left_out_reward_is_a_card_pack_for_a_patch_that_adds_or_reprints_cards_and_jlore_otherwise() {
+    fn r2875003_a_left_out_reward_is_a_pack_for_a_patch_adding_or_reprinting_cards_else_jlore() {
         let pack = NewsReward::CardPack(PackKind::Global);
         // v0.5.0 adds the Stinkyscape set; v0.5.3 reprints 19 families (R2499000).
         assert_eq!(default_reward(NewsKind::Patch, Some(&record("v0.5.0"))), pack);
