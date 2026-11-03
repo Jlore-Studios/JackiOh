@@ -14904,17 +14904,8 @@
       "verdict_rounds": 1
     },
     "2928": {
-      "action": "plan",
-      "asks": [
-        "c:6605537455"
-      ],
-      "build_next": {
-        "from_run": "41668422728",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-03T16:10:02Z",
-        "until": "2026-11-03T16:40:02Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T16:09:47Z",
         "difficulty": "hard",
@@ -14933,10 +14924,9 @@
         "reason": "planned on opus",
         "trail": " \\\"stinkyscape-144\\\" -A0 crates/cards/src/scripts/stinkyscape/c144_prepare_for_liftoff.rs \u2026\n- Bash: {\"command\": \"grep -rn \\\"pinned_decision_ms\\\" crates/ai/src crates/tools/src | head -5\", \"description\": \"Find pinned_decision_ms definition\"}\n- Bash: {\"command\": \"sed -n 380,440p crates/engine/src/testkit/scenario.rs; grep -n \\\"pub memory\\\" crates/engine/src/state.rs\", \"description\": \"Check scenario card entry fields and memory type\"}\n- Bash: {\"command\": \"grep -n \\\"pub use\\\" crates/engine/src/testkit/mod.rs | head -20; grep -rn \\\"find_instance_mut\\\\|flashback_spent\\\" crates/ai/tests/ai/*.rs | head -5\", \"description\": \"Check testkit re-exp\u2026\n- Bash: {\"command\": \"grep -ln \\\"^use jackioh_ai::\\\\*;\\\" crates/ai/tests/ai/*.rs | xargs grep -ln \\\"redact(\\\" | head -3; grep -rn \\\"pub fn redact\\\\b\\\\|pub fn redact(\\\" crates/engine/src crates/ai/src | head\",\u2026\n- Bash: {\"command\": \"grep -n \\\"redact(\\\\|^use \\\" crates/ai/tests/ai/attack_hooks.rs | head -12\", \"description\": \"See redact usage in attack_hooks tests\"}\n- Bash: {\"command\": \"grep -n \\\"^fn face_uplift\\\" -A 40 crates/ai/src/evaluate.rs | head -60\", \"description\": \"Read face_uplift\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"--out\\\\\\\"\\\\|out_dir\\\\|default.*out\\\\|training-out\\\" crates/tools/src/arena.rs | head -15\", \"description\": \"Check arena default output directory\"}\n- Bash: {\"command\": \"grep -rn \\\"out\\\\b\\\" crates/tools/src/arena.rs | grep -i \\\"arg\\\\|flag\\\\|--\\\" | head -10; grep -n \\\"fn parse\\\\|--out\\\" crates/tools/src/arena.rs crates/tools/src/main.rs | head -10\", \"desc\u2026\n- Bash: {\"command\": \"sed -n 95,110p crates/tools/src/arena.rs; grep -n \\\"fn records_path\\\" -A 12 crates/tools/src/arena.rs; grep -n \\\"^training-out\\\\|training-out\\\\|^/data\\\\|data/\\\" .gitignore | head\", \"desc\u2026\n- Bash: {\"command\": \"grep -n \\\"fn training_out\\\" -A 12 crates/tools/src/arena.rs\", \"description\": \"Read training_out default\"}\n- Bash: {\"command\": \"grep -n \\\"uncommitted\\\\|dirty\\\\|git status\\\\|porcelain\\\" crates/tools/src/gate.rs crates/tools/src/promote.rs | head -10\", \"description\": \"Check gate refuses uncommitted changes\"}\n- Bash: {\"command\": \"grep -n \\\"support\\\\|fn det\\\\|ai_options\\\\|copy\\\" crates/tools/tests/acceptance.rs | head -15\", \"description\": \"Verify acceptance test refuses helper copies\"}\n- Bash: {\"command\": \"sed -n 1015,1075p crates/tools/tests/acceptance.rs\", \"description\": \"Read shared helper list\"}\n- Bash: {\"command\": \"grep -n \\\"PICK_HOME\\\\|NONCE\\\\|const .*: &\\\\[&str\\\\]\\\" crates/tools/tests/acceptance.rs | head -10\", \"description\": \"Check other shared helper constraints\"}\n- Bash: {\"command\": \"git show 8d30b2d53 -- apps/web/src/tutorial/lessons/basics.ts | head -40; grep -n \\\"ci-scope\\\\|crates/ai\\\" scripts/ci-scope.sh | head -20\", \"description\": \"See why #2864 touched tutorial\u2026\n- Bash: {\"command\": \"sed -n 240,300p scripts/ci-scope.sh\", \"description\": \"Read ci-scope map for crates/ai\"}\n- Bash: {\"command\": \"ls apps/web/src/practice/claim.test.ts 2>&1; ls apps/web/src/tutorial/ | head -30; grep -rln \\\"Flashback\\\\|stinkyscape-021\\\\|stinkyscape-152\\\\|classic-028\\\\|classic-074\\\" apps/web/src/tu\u2026\n- Bash: {\"command\": \"grep -n \\\"Area::Ai\\\" crates/tools/src/classify.rs | head -8; grep -n \\\"fn second_stage\\\\|stage two\\\\|second stage\\\\|RandomPolicy\\\\|random policy\\\" crates/tools/src/classify.rs | head -8\"\u2026\n- Bash: {\"command\": \"sed -n 440,520p crates/tools/src/classify.rs\", \"description\": \"Read classify's diff area handling\"}\n- Bash: {\"command\": \"ls crates/cards/*.json crates/cards/data 2>/dev/null | head; python3 -I -c \\\"\\nimport json,sys\\nd=json.load(open('crates/cards/catalog.json'))\\ncards=d['cards'] if isinstance(d,dict) and\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nprint(type(d), list(d.keys())[:10] if isinstance(d,dict) else len(d))\\nids=('stinkyscape-021','stinkyscape-\u2026\n- Bash: {\"command\": \"sed -n 40,56p crates/ai/tests/ai/support.rs; grep -rln \\\"stinkyscape-\\\" crates/ai/tests/ai/*.rs | head -3\", \"description\": \"Check register_cards in AI test support\"}\n- Bash: {\"command\": \"grep -n \\\"JACKIOH_RECORD_PRACTICE_CLAIM\\\\|practice-claim.json\\\\|it(\\\\|test(\\\" apps/web/src/practice/claim.test.ts | head -20\", \"description\": \"Check claim.test.ts behavior\"}\n- Bash: {\"command\": \"grep -rn \\\"learned-parity\\\" --include=*.rs --include=*.ts crates apps | head -5\", \"description\": \"Find learned-parity fixture readers\"}\n- Bash: {\"command\": \"sed -n 330,350p crates/ai/src/learned/int.rs; sed -n 485,520p crates/ai/tests/ai/learned.rs\", \"description\": \"Read learned parity fixture semantics\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2928/.bot-plan.md\", \"content\": \"# Draft plan #2928 (opus planner, run 2)\\n\\nStatus: verified the sonnet plan against the code; writing the final plan.\u2026\n- Bash: {\"command\": \"sed -n 1,40p .github/workflows/ci.yml | grep -n -i \\\"minute\\\\|budget\\\\|timeout\\\" | head; grep -n \\\"timeout-minutes\\\" .github/workflows/ci.yml | head\", \"description\": \"Check CI job time b\u2026\n- Bash: {\"command\": \"grep -n \\\"ms_p95\\\\|msP95\\\\|edge_low\\\\|\\\\\\\"edge\\\\\\\"\\\" crates/tools/src/arena.rs | head -12\", \"description\": \"Check arena output timing fields\"}\n- Bash: {\"command\": \"sed -n 1080,1135p crates/tools/src/arena.rs; sed -n 1140,1175p crates/tools/src/arena.rs\", \"description\": \"Read arena duel line and tally structs\"}\n- Bash: {\"command\": \"sed -n 400,406p crates/ai/src/config.rs; sed -n 564,568p crates/ai/src/config.rs; sed -n 759,763p crates/ai/src/config.rs; grep -n \\\"pub backrow:\\\" crates/engine/src/state.rs | head -2\",\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2928/.bot-plan.md\", \"content\": \"# Draft plan #2928 (opus planner, run 2): final plan is the run's final message\\n\\nVerified facts (see the final plan \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2 (the AI): it adds a term to the AI's evaluation in crates/ai/src/evaluate.rs, which changes the AI's decisions\"} --> ## Goal `evaluate` counts a graveyard card that its owner may still play from there, as `playable_from_graveyard` reports it. Tha\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-03T15:52:46Z",
       "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
@@ -14949,12 +14939,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-03T13:49:29Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41668422728",
+      "run_id": "pending:bb6cd8bc-1793722903",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T15:52:46Z",
+      "started_at": "2026-11-03T16:22:20Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6605537455"
+      ]
     },
     "2929": {
       "action": "build",
@@ -15703,9 +15695,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T16:21:24Z",
+    "at": "2026-11-03T16:22:20Z",
     "url": "",
-    "what": "revise #2907 on claude-8"
+    "what": "build #2928 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T15:44:50Z",
