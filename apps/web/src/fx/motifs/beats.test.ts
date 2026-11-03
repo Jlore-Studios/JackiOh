@@ -1,7 +1,7 @@
 // R2789000: the combat keyword beats (fx/motifs/beats.ts) pinned on fixture streams built from #2783's `via`
 // and First Strike marker, each held inside its entry (R200), scaled through it (R201), silent under
 // reduced motion but for a still callout, and blind to what the view hides (R202). Planned the way FxLayer
-// plans them: remember an entry's events, then plan it.
+// plans them: remember an entry's events, then plan it. Issue #2790 pins the defensive ten the same way.
 
 import type { GameEvent, Keyword, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -16,7 +16,7 @@ import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
 import { planStage } from "../stage.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
-import { FX_BEAT_KEYWORDS, planBeats, planStillCallouts } from "./beats.ts";
+import { FX_BEAT_KEYWORDS, FX_DEFENSIVE_BEAT_KEYWORDS, planBeats, planStillCallouts } from "./beats.ts";
 
 const VIEW = fullBoardView();
 const id = (side: "you" | "opponent", index: number): string => must(VIEW[side].units[index], `${side} unit ${index}`).instanceId;
@@ -25,6 +25,8 @@ const id = (side: "you" | "opponent", index: number): string => must(VIEW[side].
 const MINE = id("you", 0);
 /** The viewer's lane-2 unit: every keyword, Windfury, Flying and Ranged included. */
 const POISONER = id("you", 1);
+/** The viewer's lane-3 unit: no keyword. */
+const MINE_3 = id("you", 2);
 const FOE = id("opponent", 0);
 const FOE_2 = id("opponent", 1);
 const FOE_3 = id("opponent", 2);
@@ -251,6 +253,156 @@ describe("R2789000 the combat keyword beats", () => {
     expect(planStage(plain.entry, plain.entry.view, plain.env).find((cue) => cue.kind === "lunge")).not.toHaveProperty("arc");
   });
 
+  it("R2784000 R2789000 Divine Shield: the ward row's pop gains only a callout, no splat, so the hit did nothing", () => {
+    const events: GameEvent[] = [{ type: "divineShieldLost", instanceId: FOE }];
+    expect(kinds(pinned(events, 0))).toEqual(["callout@0"]);
+    const cues = must(stream(events)[0], "the pop").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Divine Shield", at: cardOf(FOE), durationMs: FX_CALLOUT_MS });
+    // The ward row still draws the gold ring and shards, and no number lands.
+    const played = must(stream(events)[0], "the pop");
+    const row = planFx(played.entry, played.entry.view, played.env);
+    expect(row.filter((cue) => cue.kind === "ring")).toHaveLength(1);
+    expect(row.filter((cue) => cue.kind === "burst")).toHaveLength(1);
+    expect(row.filter((cue) => cue.kind === "splat")).toEqual([]);
+  });
+
+  it("R1361 R2789000 Armor: the absorbed amount lands as a grey splat beside the ward row's flash", () => {
+    const events: GameEvent[] = [{ type: "damageAbsorbed", sourceId: null, targetId: FOE_2, absorbed: 2, combat: false }];
+    expect(kinds(pinned(events, 0))).toEqual(["callout@0", "splat@180", "burst@180"]);
+    const cues = must(stream(events)[0], "the absorption").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Armor", at: cardOf(FOE_2), durationMs: FX_CALLOUT_MS });
+    expect(cues[1]).toMatchObject({ kind: "splat", tone: "absorb", amount: 2, at: cardOf(FOE_2) });
+    // The ward row's shield flash still draws in planFx.
+    const played = must(stream(events)[0], "the absorption");
+    const row = planFx(played.entry, played.entry.view, played.env);
+    expect(row.filter((cue) => cue.kind === "shield")).toHaveLength(1);
+    expect(row.filter((cue) => cue.kind === "splat" && cue.tone === "absorb")).toHaveLength(1);
+    // A routed hit's own combat beat draws it instead: Cleave keeps its full shield, with no Armor beat.
+    const routed: GameEvent[] = [attack(MINE, FOE_2), { type: "damageAbsorbed", sourceId: MINE, targetId: FOE_3, absorbed: 2, combat: true, via: "Cleave" }];
+    const blow = must(stream(routed)[1], "the routed absorption").beats.cues;
+    expect(blow.some((cue) => cue.kind === "callout" && cue.keyword === "Armor")).toBe(false);
+    expect(blow.some((cue) => cue.kind === "splat" && cue.tone === "absorb")).toBe(false);
+  });
+
+  it("R2789000 Indestructible: a lethal hit with no destroyed after it flashes and rings, replacing the number", () => {
+    const view = viewWith([{ kind: "Indestructible" }]);
+    const events = [attack(FOE_2, MINE), hitOf(FOE_2, MINE, 3)];
+    expect(kinds(pinned(events, 1, view))).toEqual(["callout@0", "sheen@0", "burst@0", "ring@180", "shake@180"]);
+    const cues = must(stream(events, view)[1], "the hit").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Indestructible", at: cardOf(MINE) });
+    // The damage row is replaced: no splat lands in planFx.
+    const played = must(stream(events, view)[1], "the hit");
+    expect(planFx(played.entry, played.entry.view, played.env).filter((cue) => cue.kind === "splat")).toEqual([]);
+  });
+
+  it("R2789000 Indestructible: no beat when the hit destroys the unit after all, or when it is not lethal", () => {
+    const view = viewWith([{ kind: "Indestructible" }]);
+    // A non-lethal hit draws no Indestructible beat (POISONER's Brittle crack still plays).
+    const scratch = stream([attack(FOE_2, POISONER), hitOf(FOE_2, POISONER, 3)], fullBoardView());
+    const calls = scratch.flatMap(({ beats }) => beats.cues.filter((cue) => cue.kind === "callout"));
+    expect(calls).toEqual([expect.objectContaining({ keyword: "Brittle" })]);
+    // A lethal hit the death follows draws none either: the memory already knows the destroyed.
+    const events = [attack(FOE_2, MINE), hitOf(FOE_2, MINE, 3), diedOf(MINE, FOE_2)];
+    const entries = planEntries(events, withEvents(view, events), false);
+    const hit = must(entries[1], "the hit");
+    const env = envOf();
+    env.memory.remember(events);
+    expect(planBeats(hit, hit.view, env).cues).toEqual([]);
+  });
+
+  it("R23 R2789000 Immutable: a nerf aimed at the unit bounces off a glassy shell", () => {
+    const view = viewWith([{ kind: "Immutable" }]);
+    const events: GameEvent[] = [{ type: "degraded", instanceId: MINE, defId: "core-004", change: { kind: "stats", attack: -1, health: -1 } }];
+    expect(kinds(pinned(events, 0, view))).toEqual(["callout@0", "ring@60", "burst@180"]);
+    const cues = must(stream(events, view)[0], "the nerf").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Immutable", at: cardOf(MINE) });
+    expect(cues[1]).toMatchObject({ kind: "ring", preset: "arcane" });
+    // A tune-up bounces the same way, and a plain unit's nerf draws no beat.
+    const tune: GameEvent[] = [{ type: "upgraded", instanceId: MINE, defId: "core-004", change: { kind: "stats", attack: 1, health: 1 } }];
+    expect(kinds(pinned(tune, 0, view))).toEqual(["callout@0", "ring@60", "burst@180"]);
+    expect(stream(events)[0]?.beats.cues).toEqual([]);
+  });
+
+  it("R2783001 R2789000 Reborn: a summoned with via Reborn rises from ashes in its own lane", () => {
+    const reborned: GameEvent = { type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1, via: "Reborn" };
+    expect(kinds(pinned([reborned], 0))).toEqual(["callout@0", "ghost@50", "burst@150", "ring@150"]);
+    const cues = must(stream([reborned])[0], "the return").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Reborn", at: cardOf(MINE), durationMs: FX_CALLOUT_MS });
+    expect(cues[1]).toMatchObject({ kind: "ghost", from: { kind: "testid", testid: testid.zone("you", "units", 1) }, to: cardOf(MINE) });
+    // The same arrival without `via` draws no beat.
+    const arrival: GameEvent = { type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1 };
+    expect(stream([arrival])[0]?.beats.cues).toEqual([]);
+  });
+
+  it("R385 R2789000 Brittle: damage grows cracks on the unit, and its crumble gains only a callout", () => {
+    const view = viewWith([{ kind: "Brittle", n: 2 }]);
+    const events = [attack(FOE_2, MINE), hitOf(FOE_2, MINE, 1)];
+    expect(kinds(pinned(events, 1, view))).toEqual(["callout@0", "crack@180"]);
+    const cues = must(stream(events, view)[1], "the hit").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Brittle", at: cardOf(MINE) });
+    expect(cues[1]).toMatchObject({ kind: "crack", at: cardOf(MINE) });
+    // The crumble's shatter stays the death row's: the beat is the callout, the bursts the row's.
+    const crumbled: GameEvent[] = [{ type: "crumbled", instanceId: MINE, defId: "core-004", owner: "p1", zone: "field" }];
+    expect(kinds(pinned(crumbled, 0, view))).toEqual(["callout@0"]);
+    const played = must(stream(crumbled, view)[0], "the crumble");
+    expect(planFx(played.entry, played.entry.view, played.env).filter((cue) => cue.kind === "burst").length).toBeGreaterThan(0);
+    // A plain unit's hit grows no cracks.
+    expect(stream(events)[1]?.beats.cues).toEqual([]);
+  });
+
+  it("R781001 R2789000 Immune to Spells: a Spell aimed at the unit fizzles on a rune ward", () => {
+    const view = viewWith([{ kind: "Immune to Spells" }]);
+    const spell: Extract<GameEvent, { type: "cardAnnounced" }> = { type: "cardAnnounced", player: "p2", instanceId: "s1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: [MINE] };
+    expect(kinds(pinned([spell], 0, view))).toEqual(["callout@0", "ring@0", "burst@180"]);
+    const cues = must(stream([spell], view)[0], "the fizzle").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Immune to Spells", at: cardOf(MINE) });
+    expect(cues[1]).toMatchObject({ kind: "ring", preset: "circuit" });
+    // A Unit announced at it, or the Spell aimed elsewhere, draws no beat.
+    const muster: GameEvent = { ...spell, cardType: "Unit" };
+    expect(stream([muster], view)[0]?.beats.cues).toEqual([]);
+    const elsewhere: GameEvent = { ...spell, targets: ["hero-p1"] };
+    expect(stream([elsewhere], view)[0]?.beats.cues).toEqual([]);
+  });
+
+  it("R46 R2789000 Taunt: arrival raises a dust-ring wall, and a forced attack pulls it to the attacker", () => {
+    const arrival: GameEvent[] = [{ type: "keywordGranted", instanceId: MINE_3, keyword: { kind: "Taunt" } }];
+    expect(kinds(pinned(arrival, 0))).toEqual(["callout@0", "ring@40"]);
+    const granted = must(stream(arrival)[0], "the arrival").beats.cues;
+    expect(granted[0]).toMatchObject({ kind: "callout", keyword: "Taunt", at: cardOf(MINE_3) });
+    expect(granted[1]).toMatchObject({ kind: "ring", preset: "dust" });
+    // Losing Taunt raises no wall.
+    const lost: GameEvent[] = [{ type: "keywordGranted", instanceId: FOE, keyword: { kind: "Taunt" }, lost: true }];
+    expect(stream(lost)[0]?.beats.cues).toEqual([]);
+    // A forced attack on the wall pulls it toward the attacker; an unforced one does not.
+    const forced: GameEvent[] = [{ type: "attackDeclared", attackerId: FOE_2, targetId: MINE, forced: true }];
+    expect(kinds(pinned(forced, 0))).toEqual(["callout@0", "ghost@70"]);
+    const pull = must(stream(forced)[0], "the forced attack").beats.cues;
+    expect(pull[0]).toMatchObject({ kind: "callout", keyword: "Taunt", at: cardOf(MINE) });
+    expect(pull[1]).toMatchObject({ kind: "ghost", from: cardOf(MINE), to: cardOf(FOE_2) });
+    const free: GameEvent[] = [{ type: "attackDeclared", attackerId: FOE_2, targetId: MINE, forced: false }];
+    expect(stream(free)[0]?.beats.cues).toEqual([]);
+  });
+
+  it("R2179000 R2789000 Can't attack: a cancelled attack clinks chains over the unit", () => {
+    const view = viewWith([{ kind: "Can't attack" }]);
+    const events: GameEvent[] = [{ type: "attackCancelled", attackerId: MINE, targetId: FOE, byInstanceId: "b5" }];
+    expect(kinds(pinned(events, 0, view))).toEqual(["callout@0", "ring@70", "burst@210"]);
+    const cues = must(stream(events, view)[0], "the cancellation").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Can't attack", at: cardOf(MINE) });
+    // Another unit's cancellation draws no beat.
+    expect(stream(events)[0]?.beats.cues).toEqual([]);
+  });
+
+  it("R2657000 R2789000 Can't Defend: a skipped position switch clinks chains over the unit", () => {
+    const view = viewWith([{ kind: "Can't Defend" }]);
+    const events: GameEvent[] = [{ type: "positionSwitched", instanceId: MINE, position: "ATK" }];
+    expect(kinds(pinned(events, 0, view))).toEqual(["callout@0", "ring@50", "burst@150"]);
+    const cues = must(stream(events, view)[0], "the switch").beats.cues;
+    expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Can't Defend", at: cardOf(MINE) });
+    // Another unit's switch draws no beat.
+    expect(stream(events)[0]?.beats.cues).toEqual([]);
+  });
+
   it("R2789000 several keywords on one hit stagger by FX_BEAT_STAGGER_MS, and at most FX_CALLOUTS_PER_HIT pop a callout", () => {
     // POISONER has Windfury, Flying and Ranged: three beats on its second attack.
     const events = [attack(POISONER, FOE), attack(POISONER, FOE_2)];
@@ -268,6 +420,16 @@ describe("R2789000 the combat keyword beats", () => {
       { events: [attack(MINE, FOE_2), hitOf(MINE, FOE_2, 3), hitOf(MINE, FOE_3, 2, "Cleave")], at: 2, D: 300 },
       { events: [attack(MINE, FOE_2), hitOf(MINE, FOE_2, 9, "First Strike"), diedOf(FOE_2, MINE, "First Strike")], at: 2, D: 350 },
       { events: [attack(MINE, FOE_2), hitOf(MINE, FOE_2, 3), { type: "healed", targetId: "hero-p1", amount: 3, via: "Lifesteal" }], at: 2, D: 300 },
+      {
+        events: [{ type: "damageAbsorbed", sourceId: null, targetId: FOE_2, absorbed: 2, combat: false }],
+        at: 0,
+        D: 300,
+      },
+      {
+        events: [{ type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1, via: "Reborn" }],
+        at: 0,
+        D: 250,
+      },
     ];
     for (const { events, at, D } of cases) {
       const base = must(stream(events, fullBoardView(), D)[at], "the entry").beats.cues;
@@ -295,12 +457,25 @@ describe("R2789000 the combat keyword beats", () => {
     // A hit with no keyword draws none.
     const plain = must(stream([attack(MINE, FOE_2), hitOf(MINE, FOE_2, 1)])[1], "the hit");
     expect(planStillCallouts(plain.entry, plain.entry.view, plain.env)).toEqual([]);
+    // A defensive beat keeps its still callout too: Reborn's return rises still.
+    const reborn = must(stream([{ type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1, via: "Reborn" }])[0], "the return");
+    const restill = { ...reborn.entry, durationMs: 0 };
+    const rebornStill = planStillCallouts(restill, restill.view, reborn.env);
+    expect(rebornStill).toHaveLength(1);
+    expect(rebornStill[0]).toMatchObject({ kind: "callout", keyword: "Reborn", still: true, delayMs: 0, durationMs: FX_CALLOUT_MS });
+    for (const cue of rebornStill) expectInside([cue], 0, "a still callout");
   });
 
   it("R2789000 intensity off draws nothing, still callouts included", () => {
     const events = [attack(POISONER, FOE), attack(POISONER, FOE_2)];
     const env = envOf({ intensity: FX_INTENSITY_SCALE.off });
     for (const { entry } of stream(events, fullBoardView(), undefined, env)) {
+      expect(planBeats(entry, entry.view, env)).toEqual({ cues: [], replaces: new Set() });
+      expect(planStillCallouts(entry, entry.view, env)).toEqual([]);
+    }
+    // A defensive entry draws nothing either.
+    const defensive: GameEvent[] = [{ type: "divineShieldLost", instanceId: FOE }];
+    for (const { entry } of stream(defensive, fullBoardView(), undefined, env)) {
       expect(planBeats(entry, entry.view, env)).toEqual({ cues: [], replaces: new Set() });
       expect(planStillCallouts(entry, entry.view, env)).toEqual([]);
     }
@@ -315,11 +490,20 @@ describe("R2789000 the combat keyword beats", () => {
     expect(JSON.stringify(played.flatMap(({ beats }) => beats.cues))).not.toMatch(/core-\d{3}/);
     // A damage with no `via` (which is how a view hides one) plans none.
     expect(stream([attack(MINE, FOE_2), hitOf("hidden", FOE_3, 2)]).flatMap(({ beats }) => beats.cues)).toEqual([]);
+    // A hidden target draws no defensive beat either, even on a Brittle board, and names no definition.
+    const shrouded = stream([attack(MINE, FOE_2), hitOf(MINE, "hidden", 2)], viewWith([{ kind: "Brittle", n: 2 }]));
+    expect(shrouded.flatMap(({ beats }) => beats.cues)).toEqual([]);
+    expect(JSON.stringify(shrouded.flatMap(({ beats }) => beats.cues))).not.toMatch(/core-\d{3}/);
   });
 
   it("R2789000 the nine keywords with a beat each have a callout icon", () => {
     expect(FX_BEAT_KEYWORDS).toHaveLength(9);
     for (const keyword of FX_BEAT_KEYWORDS) expect(KEYWORD_CALLOUT_ICONS[keyword]?.d, keyword).toMatch(/^M/);
+  });
+
+  it("R2789000 the ten defensive keywords with a beat each have a callout icon", () => {
+    expect(FX_DEFENSIVE_BEAT_KEYWORDS).toHaveLength(10);
+    for (const keyword of FX_DEFENSIVE_BEAT_KEYWORDS) expect(KEYWORD_CALLOUT_ICONS[keyword]?.d, keyword).toMatch(/^M/);
   });
 });
 

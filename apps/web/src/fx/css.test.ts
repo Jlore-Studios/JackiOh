@@ -322,6 +322,16 @@ describe("B40 — fx.css", () => {
     expect(fx.text).toMatch(/repeating-conic-gradient\(/);
   });
 
+  it("Issue #2790 an absorb splat paints grey steel, not a damage, heal or loss color", () => {
+    const absorb = declsFor(fx, '.fx-splat[data-tone="absorb"]');
+    const color = normValue(absorb.get("--fx-splat-color") ?? "");
+    expect(color).not.toBe("");
+    expect(color).not.toContain("var(--fx-damage)");
+    expect(color).not.toContain("var(--fx-heal)");
+    expect(color).not.toContain("var(--fx-loss)");
+    expect(color).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
   it("B40 the Divine Shield cocoon hangs off the card root's ::after with a radial gradient and a slow pulse", () => {
     const rules = rulesListing(fx, COCOON);
     expect(rules.length, COCOON).toBeGreaterThan(0);

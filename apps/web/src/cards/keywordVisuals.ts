@@ -460,4 +460,15 @@ export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, Keyword
   },
   Windfury: { d: "M8 36 H62 C84 36 84 12 66 14 M8 66 H70 C94 66 94 90 74 88", line: true },
   Ranged: { d: "M30 10 C66 26 66 74 30 90 M30 10 V90 M14 50 H84 M74 42 L86 50 L74 58", line: true },
+  // Issue #2790: the defensive keywords' callout icons, in the same 100×100 box.
+  "Divine Shield": { d: "M50 8 A42 42 0 1 0 50 92 A42 42 0 1 0 50 8 Z" },
+  Armor: { d: "M28 20 H72 V58 L50 84 L28 58 Z" },
+  Indestructible: { d: "M20 30 H80 V44 H20 Z M28 44 H72 V70 H28 Z M36 70 H64 V88 H36 Z" },
+  Immutable: { d: "M32 44 H68 V84 H32 Z M40 44 V32 A10 10 0 0 1 60 32 V44" },
+  Reborn: { d: "M20 60 L50 30 L80 60 M20 78 L50 48 L80 78", line: true },
+  Brittle: { d: "M54 4 L42 34 L58 44 L40 72 L48 96", line: true },
+  "Immune to Spells": { d: "M50 6 L88 28 V72 L50 94 L12 72 V28 Z" },
+  Taunt: { d: "M30 14 H70 V52 C70 72 60 82 50 88 C40 82 30 72 30 52 Z" },
+  "Can't Defend": { d: "M46 14 H30 V52 C30 72 38 82 44 88 Z M54 14 H70 V52 C70 72 62 82 56 88 Z" },
+  "Can't attack": { d: "M50 8 A42 42 0 1 0 50 92 A42 42 0 1 0 50 8 Z M28 28 L72 72 M72 28 L28 72" },
 };

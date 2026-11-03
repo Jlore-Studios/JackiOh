@@ -1005,13 +1005,14 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as ward", () => {
+  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as ward, plus the Divine Shield callout", () => {
     forDs("divineShieldLost", (D) => {
       const land = r(FX_MOTIF_PHASES.land * D);
       expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [
         ring("gold", cardT(ENEMY), 0, D),
         burst("shard", cardT(ENEMY), "ring", land, FLAVOR_LOOKS.Holy.colors),
         shake(0.2, land),
+        { kind: "callout", keyword: "Divine Shield", at: cardT(ENEMY), delayMs: 0, durationMs: FX_CALLOUT_MS },
       ]);
     });
   });
@@ -1336,7 +1337,6 @@ describe("B16 the recipe table, row by row", () => {
       for (const keyword of [
         { kind: "Divine Shield" },
         { kind: "Poisonous" },
-        { kind: "Taunt" },
         { kind: "Rush" },
         { kind: "Charge" },
         { kind: "Armor", n: 2 },
@@ -1349,6 +1349,22 @@ describe("B16 the recipe table, row by row", () => {
           shake(0.2, land),
         ]);
       }
+    });
+  });
+
+  it("B16 keywordGranted Taunt: the bless, a dust-ring shield wall and the Taunt callout", () => {
+    forDs("keywordGranted", (D) => {
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const holy = FLAVOR_LOOKS.Holy;
+      expectCues(plan([{ type: "keywordGranted", instanceId: MINE_3, keyword: { kind: "Taunt" } }], D), [
+        arrows("up", cardT(MINE_3), D),
+        { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+        burst("holy", cardT(MINE_3), "area", land, holy.colors),
+        shake(0.2, land),
+        ring("dust", cardT(MINE_3), travel, D),
+        { kind: "callout", keyword: "Taunt", at: cardT(MINE_3), delayMs: 0, durationMs: FX_CALLOUT_MS },
+      ]);
     });
   });
 
