@@ -15438,9 +15438,12 @@
         "by": "`claude` (strong)",
         "sha": "11f2d406774d9e4c49a2ac41c0606582ac8cad98"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T06:02:39Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2884,
       "kind": "revise",
       "last_findings": [],
