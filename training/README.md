@@ -316,7 +316,18 @@ patch shipped between two has none until the next. `.github/workflows/gather.yml
 (2,000) games of each patch as it ships, on the PC, and files them the same way, but only while the
 repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about 3 MB of
 the database however few its games, too much for the free plan at 2 to 7 patches a day, so it waits
-for the Pro plan. To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
+for the Pro plan.
+
+2,000 games are too few for the card win rates (#2888). A card's rate counts only the games where
+exactly one seat holds it (R1284000), about 150 of the 2,000 for a typical card, so its 95%
+interval is about ±8 points. `cargo jackioh stats sample-size` prints the games a run needs at
+this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
+`--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
+`crates/tools/README.md` has the formula. Pointing `gather.yml` at it, with the dispatch's
+`games` input kept as an override, is a person's change, since the bots never edit `.github/`;
+so is growing `GATHER_STRIDE` (100,000), which N passes at about 2,000 cards.
+
+To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
 `cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
 --totals-only <file>`. The training box has been given back (#682's audit,
 `reviews/2026-10-22-issue-682-subscriptions.md`), so what follows is the lane's contract for a box that
