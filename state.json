@@ -14942,6 +14942,13 @@
     "2882": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T04:13:51Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "fails easy on several lines: a new ruling and a \u00a79.9 paragraph (spec hot spot), about 20 files, and an earning gap in the issue's premise that this plan settles"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
