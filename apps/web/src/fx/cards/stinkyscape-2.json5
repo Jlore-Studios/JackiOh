@@ -51,7 +51,7 @@
   "stinkyscape-127": "none: pending", // Jlockeed's Siege Tank
   "stinkyscape-128": "none: pending", // Jlockeed's Yamato Cannon
   "stinkyscape-129": "none: pending", // Jlockeed's Missile Pod
-  "stinkyscape-130": "none: pending", // Jlockeed's Starship Retrofitting Program
+  "stinkyscape-130": { cast: { motif: "send", palette: "Tech/rocket" } }, // Jlockeed's Starship Retrofitting Program
   "stinkyscape-131": "none: pending", // Spacerace Stimulus
   "stinkyscape-132": "none: pending", // Defensive Crystal
   "stinkyscape-133": "none: pending", // Ultra Capacitor
@@ -66,10 +66,10 @@
   "stinkyscape-137-4": "none: pending", // Space Doctrine
   "stinkyscape-138": "none: pending", // Pocket Peptides
   "stinkyscape-139": "none: pending", // Wormhole
-  "stinkyscape-140": "none: pending", // Rush Token Launcher
-  "stinkyscape-141": "none: pending", // Fruit Launcher
-  "stinkyscape-142": "none: pending", // Jade Launcher
-  "stinkyscape-143": "none: pending", // Book Launcher
+  "stinkyscape-140": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Rush Token Launcher
+  "stinkyscape-141": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Fruit Launcher
+  "stinkyscape-142": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Jade Launcher
+  "stinkyscape-143": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Book Launcher
   "stinkyscape-144": "none: pending", // Prepare For Liftoff
   "stinkyscape-145": "none: pending", // Fortify Flesh
   "stinkyscape-146": "none: pending", // Flash Freeze
@@ -108,7 +108,7 @@
   "stinkyscape-175": "none: pending", // Frost Module
   "stinkyscape-176": "none: pending", // Preemptive Strike
   "stinkyscape-177": "none: pending", // Cloaking Module
-  "stinkyscape-t-dormant-starship": "none: pending", // Dormant Starship
+  "stinkyscape-t-dormant-starship": "none: its fuse and launch are the Starship's own set piece (R2801000)", // Dormant Starship
   "stinkyscape-t-drone-interceptor": "none: pending", // Drone Interceptor
   "stinkyscape-t-drone-corvette": "none: pending", // Drone Corvette
   "stinkyscape-t-shield-layer": "none: pending", // Drone Battleship (Shield Layer)
@@ -125,7 +125,7 @@
   "stinkyscape-t-ai-02": "none: pending", // Mining Subroutine
   "stinkyscape-t-ai-03": "none: pending", // Route Optimizer
   "stinkyscape-t-ai-04": "none: pending", // Predictive Shield
-  "stinkyscape-t-ai-05": "none: pending", // Launch Sequencer
+  "stinkyscape-t-ai-05": { cast: { motif: "tithe", palette: "Tech/rocket" } }, // Launch Sequencer
   "stinkyscape-t-ai-06": "none: pending", // Probe Relay
   "stinkyscape-t-ai-07": "none: pending", // Combat Subroutine
   "stinkyscape-t-ai-08": "none: pending", // Drone Uplink

@@ -35,6 +35,7 @@ import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
+import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
 import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
@@ -212,6 +213,9 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
 
         {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
         {dormant === undefined ? null : <DormantSeal />}
+
+        {/* R2801000: a Dormant Starship's hull, a plate bolted on for each piece fused into it. */}
+        {face.starship != null && !face.starship.launched ? <StarshipHull pieces={face.starship.pieces} /> : null}
 
         <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 

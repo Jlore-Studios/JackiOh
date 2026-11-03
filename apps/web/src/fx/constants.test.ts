@@ -261,6 +261,16 @@ const S2 = {
   FX_QUEST_HOLD_MS: 1_500,
   FX_QUEST_TRAUMA: 0.5,
   FX_SYSTEM_TRAUMA: 0.3,
+  FX_STARSHIP_FUSE_STAGGER_MS: 250,
+  FX_STARSHIP_FUSE_LAND_AT: 0.6,
+  FX_STARSHIP_FUSE_TRAUMA: 0.25,
+  FX_STARSHIP_COUNT_AT: [0, 0.25, 0.5],
+  FX_STARSHIP_IGNITE_AT: 0.75,
+  FX_STARSHIP_LIFT_AT: 0.45,
+  FX_STARSHIP_LAND_AT: 0.8,
+  FX_STARSHIP_BADGE_AT: { x: 0.5, y: 0.36 },
+  FX_STARSHIP_TAIL_MS: 400,
+  FX_STARSHIP_STILL_MS: 1_600,
   FX_JADE_SCALE_STEP: 0.15,
   FX_JADE_SCALE_MAX: 2,
   FX_SETTINGS_KEY: "jackioh.fx.v1",
@@ -320,6 +330,11 @@ describe("S2 the effects constants", () => {
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
       constants.FX_FIRST_STRIKE_BREAK_AT,
+      // R2801000: a fuse's landing, the launch's ignition, contrail flight and landing.
+      constants.FX_STARSHIP_FUSE_LAND_AT,
+      constants.FX_STARSHIP_IGNITE_AT,
+      constants.FX_STARSHIP_LIFT_AT,
+      constants.FX_STARSHIP_LAND_AT,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -332,6 +347,13 @@ describe("S2 the effects constants", () => {
       expect(phases[k]).toBeGreaterThan(phases[k - 1] ?? 1);
       expect(phases[k]).toBeLessThanOrEqual(1);
     }
+    // R2801000: the countdown runs in order from the hold's start, every count before the ignition, and
+    // the launch's tail stays inside FX_MAX_TAIL_MS (R200).
+    const counts = constants.FX_STARSHIP_COUNT_AT;
+    expect(counts[0]).toBe(0);
+    for (let k = 1; k < counts.length; k += 1) expect(counts[k]).toBeGreaterThan(counts[k - 1] ?? 1);
+    expect(counts[counts.length - 1]).toBeLessThan(constants.FX_STARSHIP_IGNITE_AT);
+    expect(constants.FX_STARSHIP_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
     // #1446: a Beast's streak leaves at the embers' beat and lands inside its entry.

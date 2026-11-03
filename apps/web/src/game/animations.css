@@ -1187,6 +1187,40 @@
   animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
+/* --- starshipFused / starshipLaunched: the Starship (R2801000) -------------------------- */
+/* A fuse run swells the Starship as each piece bolts on (400 ms, stretched across the run by the
+   squeeze); the effects layer flies the pieces in. The launch's set piece holds its countdown ahead of
+   the motion (board.css's `--set-piece-hold`); then the ship crouches, lifts off and lands (600 ms). */
+
+[data-animating="starshipFused"] {
+  animation-name: jk-fuse-merge;
+  animation-duration: calc(400ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
+@keyframes jk-starship-launch {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  20% {
+    transform: translateY(4%) scale(1.04, 0.94);
+  }
+  45% {
+    transform: translateY(-55%) scale(1.12);
+  }
+  80% {
+    transform: translateY(0) scale(1.02, 0.96);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+[data-animating="starshipLaunched"] {
+  animation-name: jk-starship-launch;
+  animation-duration: calc(600ms * var(--anim-scale) * var(--anim-squeeze, 1));
+  z-index: var(--z-modal);
+}
+
 /* --- positionSwitched: rotate 90 deg / back (250 ms) --------------------------------- */
 
 /* Both ends are the card's resting transforms (Card.tsx: ATK has none, DEF is

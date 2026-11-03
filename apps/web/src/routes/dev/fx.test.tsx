@@ -49,9 +49,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
     // #2793: Core's 91 entries other than `none` (76 on the board, 7 through the director, 5 recipes, 3 set
-    // pieces), then the other sets' 15 motif cards, 8 aura-only Field Spells, Crushing Walls' recipe, 5 set
-    // pieces and Training Grounds #30's `death: wipe` through the director.
-    expect(cards).toHaveLength(121);
+    // pieces), then the other sets' 21 motif cards (R2801000: Stinkyscape's six Starship cards among them),
+    // 8 aura-only Field Spells, Crushing Walls' recipe, 5 set pieces and Training Grounds #30's `death: wipe`
+    // through the director.
+    expect(cards).toHaveLength(127);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
