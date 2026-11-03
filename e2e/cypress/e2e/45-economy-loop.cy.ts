@@ -10,7 +10,8 @@
 // scripts/shard-specs.mjs's SMOKE.
 
 import { newestShippedSet, SHIPPED_SETS } from "../../../apps/web/src/wire/catalog.ts";
-import { COSMETICS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
+import { VERSION_FULL_ART_ID } from "../../../apps/web/src/cards/versions.ts";
+import { COSMETICS, COSMETIC_OFFERS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
 import {
   COSMETIC_TOKEN_CYCLE,
   GLOBAL_PACK_NAME,
@@ -99,11 +100,14 @@ const DEV_TOOL_DONE = "Done.";
 /** A slot's outcome for a new card (packs.ts `slotOutcome`). */
 const NEW_CARD_WORDS = "New card";
 
-/** R1310003: what two cosmetic bar fills from the cycle's start pay, in order. */
-const TWO_FILLS_PAY = ["rare", "epic"] as const;
+/** R1310003, R2728000: what three cosmetic bar fills from the cycle's start pay, in order. */
+const THREE_FILLS_PAY = ["rare", "epic", "legendary"] as const;
 
 /** The cosmetic token tier a cosmetic token redemption names (`POST /api/tokens/redeem-cosmetic`'s `token`). */
 const EPIC_TOKEN = "Epic";
+
+/** R2728000: the token tier that reaches a Legendary chase, the Full art version among them (R2725000). */
+const LEGENDARY_TOKEN = "Legendary";
 
 const SEED = seedFor("45-economy-loop");
 
@@ -506,37 +510,43 @@ function receiveAQuest(): void {
   });
 }
 
-/** 7. R1313000: a full art prints on its owner's own copy once owned, and on no other. */
+/**
+ * 7. R1313000, R2725000: a full art prints on its owner's own copy once owned and picked, and on no other. The 21 cards'
+ * earlier full arts are retired (an Epic token buys none), and the Full art version is a Legendary chase a Legendary
+ * token buys (R2728000), which a card wears by its own pick: with none, the setting still asks for the retired Epic.
+ */
 function earnAFullArt(loop: Loop): void {
-  let earned: FullArt | null = null;
-  let other: FullArt | null = null;
+  let earned = "";
+  let other = "";
+  let retired = "";
   read<OwnedCosmeticsBody>(econ(), "/api/cosmetics").then((owned) => {
-    // R2655000: an Epic token buys an Epic full art, one to a card; the Legendary and Mythic are chases no Epic token pays for (R2728000).
-    // R2715000: the Animated art is an Epic too, but prints the normal face, so this walks the still full art.
-    const fullArts = COSMETICS.filter((cosmetic): cosmetic is FullArt => cosmetic.kind === "fullArt").filter(
-      (cosmetic) =>
-        cosmetic.id.startsWith("full-art-") &&
-        cosmetic.rarity === "Epic" &&
-        loop.owned.has(cosmetic.card) &&
-        !owned.cards.some((entry) => entry.cardId === cosmetic.card && entry.cosmeticId === cosmetic.id),
-    );
-    [earned = null, other = null] = fullArts;
-    expect(earned, "a full art to earn, on a card the account owns").to.not.eq(null);
-    expect(other, "and another, to compare").to.not.eq(null);
+    // Two of the 21 full-art cards (each keeps its retired still Epic) the account owns, offered the Full art version.
+    const cards = COSMETICS.filter((cosmetic): cosmetic is FullArt => cosmetic.kind === "fullArt")
+      .filter((cosmetic) => cosmetic.id.startsWith("full-art-") && cosmetic.rarity === "Epic")
+      .filter(
+        (cosmetic) =>
+          loop.owned.has(cosmetic.card) &&
+          COSMETIC_OFFERS[VERSION_FULL_ART_ID]?.includes(cosmetic.card) === true &&
+          !owned.cards.some(
+            (entry) => entry.cardId === cosmetic.card && (entry.cosmeticId === VERSION_FULL_ART_ID || entry.cosmeticId.startsWith("full-art-")),
+          ),
+      );
+    [earned = "", other = ""] = cards.map((cosmetic) => cosmetic.card);
+    retired = cards[0]?.id ?? "";
+    expect(earned, "a full-art card to earn the Full art version on, owned by the account").to.not.eq("");
+    expect(other, "and another, to compare").to.not.eq("");
   });
-  const fullArt = (): FullArt => earned as unknown as FullArt;
-  const unearned = (): FullArt => other as unknown as FullArt;
 
   // Gated, an owned card whose full art the account lacks prints its normal face.
   cy.then(() => {
     openDeckGated(loop.deckId);
-    cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
+    cy.get(ts(poolCardId(earned)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
   });
 
   const paid: CosmeticStep[] = [];
   cy.intercept("POST", "**/api/dev/bar/cosmetic").as("fillCosmeticBar");
   openDevTools();
-  for (const fill of TWO_FILLS_PAY) {
+  for (const fill of THREE_FILLS_PAY) {
     read<TokensBody>(econ(), "/api/tokens").then((before) => {
       pressDevTool(DEV_TOOLS_FILL_COSMETIC_BAR, "fillCosmeticBar");
       read<TokensBody>(econ(), "/api/tokens").then((after) => {
@@ -548,36 +558,68 @@ function earnAFullArt(loop: Loop): void {
     });
   }
   cy.then(() => {
-    expect(paid, "R1310003: from the cycle's start, a Rare token then an Epic one").to.deep.eq([...TWO_FILLS_PAY]);
-    expect(COSMETIC_TOKEN_CYCLE.slice(0, TWO_FILLS_PAY.length), "COSMETIC_TOKEN_CYCLE starts as R1310003 says").to.deep.eq([
-      ...TWO_FILLS_PAY,
+    expect(paid, "R1310003, R2728000: from the cycle's start, a Rare token, an Epic one, then a Legendary one").to.deep.eq([
+      ...THREE_FILLS_PAY,
+    ]);
+    expect(COSMETIC_TOKEN_CYCLE.slice(0, THREE_FILLS_PAY.length), "COSMETIC_TOKEN_CYCLE starts as R2728000 says").to.deep.eq([
+      ...THREE_FILLS_PAY,
     ]);
   });
 
-  // R1305003, R1313000: the Epic token buys the full art, for the one card it names.
+  // R2725000: the retired still Epic is sold no more: 400, and the Epic token is kept.
   read<TokensBody>(econ(), "/api/tokens").then((before) => {
     cy.request<TokensBody>({
       method: "POST",
       url: apiUrl("/api/tokens/redeem-cosmetic"),
       headers: bearerHeaders(econ().token),
-      body: { token: EPIC_TOKEN, cosmeticId: fullArt().id, cardId: fullArt().card },
+      body: { token: EPIC_TOKEN, cosmeticId: retired, cardId: earned },
+      failOnStatusCode: false,
     }).then((response) => {
-      expect(response.status, `POST /api/tokens/redeem-cosmetic for ${fullArt().id}`).to.eq(200);
-      expect(response.body.tokens.cosmeticEpic, "§14.5: it spent the Epic token").to.eq(before.tokens.cosmeticEpic - 1);
+      expect(response.status, `R2725000: POST /api/tokens/redeem-cosmetic for the retired ${retired}`).to.eq(400);
     });
-  });
-  read<OwnedCosmeticsBody>(econ(), "/api/cosmetics").then((owned) => {
-    expect(owned.cards, "R1313000: the account owns the full art, on its card").to.deep.include({
-      cardId: fullArt().card,
-      cosmeticId: fullArt().id,
+    read<TokensBody>(econ(), "/api/tokens").then((after) => {
+      expect(after.tokens.cosmeticEpic, "and the Epic token is not spent").to.eq(before.tokens.cosmeticEpic);
     });
   });
 
-  // The next load reads the ownership again: the owned full art prints, the other still does not.
+  // R1305003, R2728000: the Legendary token buys the Full art version, for the one card it names.
+  read<TokensBody>(econ(), "/api/tokens").then((before) => {
+    cy.request<TokensBody>({
+      method: "POST",
+      url: apiUrl("/api/tokens/redeem-cosmetic"),
+      headers: bearerHeaders(econ().token),
+      body: { token: LEGENDARY_TOKEN, cosmeticId: VERSION_FULL_ART_ID, cardId: earned },
+    }).then((response) => {
+      expect(response.status, `POST /api/tokens/redeem-cosmetic for ${VERSION_FULL_ART_ID} on ${earned}`).to.eq(200);
+      expect(response.body.tokens.cosmeticLegendary, "§14.5: it spent the Legendary token").to.eq(before.tokens.cosmeticLegendary - 1);
+    });
+  });
+  read<OwnedCosmeticsBody>(econ(), "/api/cosmetics").then((owned) => {
+    expect(owned.cards, "R2725000: the account owns the Full art version, on its card").to.deep.include({
+      cardId: earned,
+      cosmeticId: VERSION_FULL_ART_ID,
+    });
+  });
+
+  // R1834001, R2725000: the card's own pick names it (the account holds it there), written to the account.
   cy.then(() => {
+    cy.request({
+      method: "PUT",
+      url: apiUrl("/api/card-picks"),
+      headers: bearerHeaders(econ().token),
+      body: { cardId: earned, fullArt: VERSION_FULL_ART_ID },
+    })
+      .its("status")
+      .should("eq", 200);
+  });
+
+  // The next load reads the ownership and the picks again: the owned, picked full art prints, the other still does not.
+  cy.then(() => {
+    cy.intercept("GET", "**/api/card-picks").as("cardPicks");
     openDeckGated(loop.deckId);
-    cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("have.attr", "data-full-art", "true");
-    cy.get(ts(poolCardId(unearned().card))).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
+    cy.wait("@cardPicks").its("response.statusCode").should("eq", 200);
+    cy.get(ts(poolCardId(earned)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("have.attr", "data-full-art", "true");
+    cy.get(ts(poolCardId(other))).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
   });
 }
 
