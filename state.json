@@ -15681,14 +15681,14 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-1",
       "queued_at": "2026-11-03T17:53:26Z",
-      "run_id": "41698823271",
+      "run_id": "pending:dd5c2387-1793733605",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 25,
-      "started_at": "2026-11-03T18:58:10Z",
+      "started_at": "2026-11-03T19:20:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15964,9 +15964,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T19:19:50Z",
+    "at": "2026-11-03T19:20:35Z",
     "url": "",
-    "what": "build #2953 on claude-6"
+    "what": "spot-check #2951 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-03T18:40:36Z",
@@ -29597,12 +29597,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-6",
+          "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:dd5c2387-1793733605",
         "sha": "a40d16827f642753b8bc3973c45b842343f50781",
-        "started_at": "2026-11-03T18:58:10Z",
+        "started_at": "2026-11-03T19:20:35Z",
         "status": "queued",
         "title": "Patch: the dungeon run's curses and Combat artifacts change its fights",
         "tries": 2
