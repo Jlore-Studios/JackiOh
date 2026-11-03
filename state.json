@@ -27997,10 +27997,6 @@
       "refused_until": "2026-11-02T00:00:00Z",
       "spent": [
         {
-          "at": "2026-10-26T15:52:23Z",
-          "minutes": 39.8
-        },
-        {
           "at": "2026-10-26T16:28:33Z",
           "minutes": 49.9
         },
@@ -28795,17 +28791,21 @@
         {
           "at": "2026-11-03T07:46:59Z",
           "minutes": 199.8
+        },
+        {
+          "at": "2026-11-03T07:47:52Z",
+          "minutes": 240.8
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-03T09:49:00Z",
-          "utilization": 0.53
+          "utilization": 0.47
         },
-        "observed_at": "2026-11-03T07:46:59Z",
+        "observed_at": "2026-11-03T07:47:52Z",
         "seven_day": {
           "resets_at": "2026-11-09T00:00:00Z",
-          "utilization": 0.61
+          "utilization": 0.59
         },
         "status": "allowed"
       }
