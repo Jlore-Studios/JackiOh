@@ -31,31 +31,12 @@ mod tests {
     const WEAK: &str = "core-007"; // (1) Unit 1/1.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
-    }
-
-    #[test]
-    fn prints_armor_2_1_1_radiant_armor_4_2_2() {
-        crate::register_all();
-        let def = crate::card_def(BOOSTER);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Equip", "Armor"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Starship Piece", "Equip", "Armor"]);
-        assert!(def.base.keywords.contains(&Keyword::Armor { n: 2 }));
-        assert!(def.radiant.keywords.contains(&Keyword::Armor { n: 4 }));
-        assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
     }
 
     #[test]

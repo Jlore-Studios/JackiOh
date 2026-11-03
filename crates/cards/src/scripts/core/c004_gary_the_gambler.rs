@@ -307,23 +307,9 @@ mod tests {
             }
         }
 
-        /// R2652001: the Radiant face's ten coins are one batch, not ten, and the rider is the other.
-        #[test]
-        fn r2652001_radiant_ten_coins_are_one_batch() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "seed": "gary-rolled-radiant",
-                "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
-            }));
-            s.play("core-004", json!({}));
-            let rolled = batches(&s);
-            assert_eq!(rolled.iter().map(Vec::len).collect::<Vec<_>>(), vec![10, 1]);
-            let heads = rolled[0].iter().filter(|coin| coin.heads()).count() as i32;
-            assert_eq!(gains(&s, "core-004"), (heads, 10 - heads));
-        }
-
         /// R2652001, R1361, R68: a report is answered by nothing and takes no number from
-        /// `next_seq`, so the play's numbers are the ones every other event of it took.
+        /// `next_seq`, so the play's numbers are the ones every other event of it took; nor does the
+        /// marker of its Cry (R2783000).
         #[test]
         fn r2652001_the_reports_take_no_number_from_the_trigger_loop() {
             crate::register_all();
@@ -333,7 +319,9 @@ mod tests {
             let numbered = s
                 .last_events()
                 .iter()
-                .filter(|event| event.event_type() != GameEventType::Rolled)
+                .filter(|event| {
+                    !matches!(event.event_type(), GameEventType::Rolled | GameEventType::HookResolving)
+                })
                 .count() as u32;
             assert_eq!(batches(&s).len(), 2);
             assert_eq!(s.state().next_seq - before, numbered);

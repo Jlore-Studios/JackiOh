@@ -5,11 +5,13 @@
 //! #1086 prices what a side has banked in public state, #1224 what its coming refreshes will or will
 //! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see. The
 //! decision's root prices each Death the seat can read by what it leaves behind (#2424; a Starship
-//! Piece's by the copy it fuses into, #2566), each turn hook by one firing (#2477, #2565), each
-//! Activate by one use (#2564; a face-up backrow card's, #2603) and each attack hook by the unit's next
-//! attack against its hookless twin's (#2688), and the rest read them (`Prices`). It reads only what
-//! the seat may know or what a determinization sampled, and nothing here reads a handicap or a
-//! difficulty (R180).
+//! Piece's by the copy it fuses into, #2566; a backrow card's, either side's, and a hand Field Spell's,
+//! #2687), each turn hook by one firing (#2477, #2565; the start of the opponent's turn too, #2689),
+//! each Activate by one use (#2564; a face-up backrow card's, #2603) and each attack hook by the unit's
+//! next attack against its hookless twin's (#2688), and the rest read them (`Prices`), counting a
+//! start-of-turn or end-of-turn firing once for each time its controller's turn runs it (Meditative #9
+//! Joint Filing's extra runs, #2689). It reads only what the seat may know or what a determinization
+//! sampled, and nothing here reads a handicap or a difficulty (R180).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -19,6 +21,7 @@ use jackioh_engine::config::{
     TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
+use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
     EngineSink, GameEvent, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind, PLAYER_IDS, Phase,
@@ -26,12 +29,13 @@ use jackioh_engine::{
     Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag, active_brittle_count,
     active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
-    effective_cost, effective_life, face_of, find_def, find_instance, find_instance_mut, first_entry_zone,
-    frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_standing_unit, is_starship_piece,
-    is_temporary_card, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
-    own_cost, pierces, pile_at, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
+    first_entry_zone, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_standing_unit,
+    is_starship_piece, is_temporary_card, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
+    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -130,9 +134,10 @@ pub(crate) fn deft_in_defense(view: &UnitView) -> bool {
     view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Deft)
 }
 
-/// R2424000: what a unit's Death leaves its controller, as a decision's root priced it (`death_prices`),
-/// and the card it prices: its definition, its face, its granted Deaths and its stat override (Trigor's
-/// Death reads its base stats), so the same card the search moves or makes later reads the same price.
+/// R2424000, R2687000: what a unit's or a backrow card's Death leaves its controller, as a decision's
+/// root priced it (`death_prices`), and the card it prices: its definition, its face, its granted Deaths
+/// and its stat override (Trigor's Death reads its base stats), so the same card the search moves or
+/// makes later reads the same price.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeathPrice {
     pub def_id: String,
@@ -163,14 +168,16 @@ impl DeathPrice {
 }
 
 /// R2424000, R2566000: whether `card`'s death leaves its controller something to price: a live Death
-/// (`death_hook_of`: a Vanilla unit has none), or, while it is a Starship Piece (`is_starship_piece`:
-/// the keyword through the layers, face-up), the copy its death fuses into its owner's Starship (R1852000).
+/// (`death_hook_of`, a unit's or a backrow card's, R2687000: a Vanilla card has none), or, while it is
+/// a Starship Piece (`is_starship_piece`: the keyword through the layers, face-up), the copy its death
+/// fuses into its owner's Starship (R1852000).
 fn leaves_behind(state: &GameState, card: &CardInstance) -> bool {
     death_hook_of(state, card).is_some() || is_starship_piece(state, card)
 }
 
-/// R2424000: what `unit`'s death leaves its controller, by `prices`, while it leaves something
-/// (`leaves_behind`, R2566000). 0 where `prices` has no entry and at a zero `death` weight.
+/// R2424000, R2687000: what `unit`'s death, a unit's or a backrow card's, leaves its controller, by
+/// `prices`, while it leaves something (`leaves_behind`, R2566000). 0 where `prices` has no entry and at
+/// a zero `death` weight.
 fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     if w.death == 0.0 {
         return 0.0;
@@ -186,14 +193,17 @@ fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: 
     }
 }
 
-/// R2477000, R2565000: what one firing of a card's start-of-turn and end-of-turn hooks gives its
-/// controller, as a decision's root priced it (`turn_hook_prices`), and the card it prices: its
-/// definition and its face, so the same card the search moves or sets later reads the same price.
+/// R2477000, R2565000, R2689000: what one firing of a card's turn hooks gives its controller, as a
+/// decision's root priced it (`turn_hook_prices`), and the card it prices: its definition and its face,
+/// so the same card the search moves or sets later reads the same price.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TurnHookPrice {
     pub def_id: String,
     pub radiant: bool,
     pub price: f64,
+    /// R2689000: what one firing of its start-of-the-opponent's-turn hook gives its controller, which no
+    /// turn-hook multiplier repeats (R821); `price` is its start-of-turn and end-of-turn hooks'.
+    pub opponent_turn: f64,
 }
 
 impl TurnHookPrice {
@@ -202,6 +212,7 @@ impl TurnHookPrice {
             def_id: card.def_id.clone(),
             radiant: card.radiant,
             price: 0.0,
+            opponent_turn: 0.0,
         }
     }
 
@@ -230,28 +241,32 @@ impl Prices {
     };
 }
 
-/// R2477000: whether the face `card` runs has a start-of-turn or an end-of-turn hook (`script_of`: a
-/// Vanilla card has none).
+/// R2477000, R2689000: whether the face `card` runs has a start-of-turn, an end-of-turn or a
+/// start-of-the-opponent's-turn hook (`script_of`: a Vanilla card has none).
 fn has_turn_hook(state: &GameState, card: &CardInstance) -> bool {
     let script = script_of(state, card);
-    script.start_of_turn.is_some() || script.end_of_turn.is_some()
+    script.start_of_turn.is_some() || script.end_of_turn.is_some() || script.start_of_opponent_turn.is_some()
 }
 
-/// R2477000: what one firing of `card`'s turn hooks gives its controller, by `prices`, while its face
-/// has one (`has_turn_hook`). 0 where `prices` has no entry and at a zero `turn_hook` weight.
+/// R2477000, R2689000: what `card`'s turn hooks give its controller, by `prices`, while its face has
+/// one (`has_turn_hook`): its start-of-turn and end-of-turn firing once for each time its controller's
+/// turn runs those hooks, 1 + the turn-hook multiplier's extra runs for that controller on `state`
+/// (`extra_runs`, floored at 0 as `queue_hooks_in_trigger_order` floors it; Meditative #9 Joint
+/// Filing, R820, R821), so a line that removes the multiplier reads the lost firings, and its
+/// start-of-the-opponent's-turn firing once, which no multiplier repeats (R821). 0 where `prices` has
+/// no entry and at a zero `turn_hook` weight.
 fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     if w.turn_hook == 0.0 {
         return 0.0;
     }
-    let price = prices
-        .turn_hooks
-        .iter()
-        .find(|entry| entry.is_for(card))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if has_turn_hook(state, card) => price,
-        _ => 0.0,
+    let Some(entry) = prices.turn_hooks.iter().find(|entry| entry.is_for(card)) else {
+        return 0.0;
+    };
+    if !has_turn_hook(state, card) {
+        return 0.0;
     }
+    let runs = 1 + extra_runs(state, card.controller, Multiplied::TurnHooks).max(0);
+    entry.price * f64::from(runs) + entry.opponent_turn
 }
 
 /// R2564000, R2603000: what one use of a card's Activate gives its controller, as a decision's root priced
@@ -267,6 +282,7 @@ pub struct ActivationPrice {
 }
 
 impl ActivationPrice {
+    /// The price `card` would hold, at 0 until it is probed.
     fn key(card: &CardInstance) -> Self {
         Self {
             def_id: card.def_id.clone(),
@@ -284,29 +300,7 @@ impl ActivationPrice {
 /// R2688000: what a unit's next attack gives its controller through its "when this attacks" and
 /// "after this attacks" hooks, as a decision's root priced it (`attack_hook_prices`), keyed as
 /// `ActivationPrice` is, its controller included since each copy attacks a different board.
-#[derive(Clone, Debug, PartialEq)]
-pub struct AttackHookPrice {
-    pub def_id: String,
-    pub radiant: bool,
-    pub controller: PlayerId,
-    pub price: f64,
-}
-
-impl AttackHookPrice {
-    /// The price `card` would hold, at 0 until it is probed.
-    fn key(card: &CardInstance) -> Self {
-        Self {
-            def_id: card.def_id.clone(),
-            radiant: card.radiant,
-            controller: card.controller,
-            price: 0.0,
-        }
-    }
-
-    fn is_for(&self, card: &CardInstance) -> bool {
-        self.def_id == card.def_id && self.radiant == card.radiant && self.controller == card.controller
-    }
-}
+pub type AttackHookPrice = ActivationPrice;
 
 /// R2564000, R2603000: what one use of `unit`'s Activate gives its controller, by `prices`, while it has
 /// an ability to use (`abilities_of`: a Vanilla card has none). 0 with `Prices::NONE`, for a card its root
@@ -774,6 +768,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 // R2477000, R2565000: what one firing of its turn hooks gives its controller, as the root
                 // priced it; either side's, since a card the seat can read is one it may price.
                 value += w.turn_hook * turn_hook_price(state, card, w, prices);
+                // R2687000: what its Death leaves its controller, as the root priced it, outside its
+                // Brittle share as a unit's is (R2424000): a crumble is a destroy, so a card that crumbles
+                // still pays it. Either side's; an enemy face-down card is not here.
+                value += w.death * death_price(state, card, w, prices);
                 // R2603000: what one use of its Activate gives its controller, as the root priced it, inside
                 // its Brittle share as a unit's is (R2564000); either side's.
                 value += brittle_share(card, w) * w.activation * activation_price(state, card, w, prices);
@@ -1107,10 +1105,11 @@ fn sandbox_step(
     Some((next.pending.is_none() && next.result.is_none()).then_some(next))
 }
 
-/// R2424000: what `unit`'s Death leaves its controller on `before`, a sandbox (R923000): the controller's
-/// evaluation after the destroy, which runs its Death, less after its remove, which does not (R923003),
-/// less the body a Reborn brings back. `None` when the counter is spent; `Some(None)` when the destroy
-/// spares the unit, or either leaves a prompt open or ends the game (`sandbox_step`).
+/// R2424000, R2687000: what `unit`'s Death leaves its controller on `before`, a sandbox (R923000),
+/// `unit` a unit or a backrow card: the controller's evaluation after the destroy, which runs its Death,
+/// less after its remove, which does not (R923003), less the body a Reborn brings back. `None` when the
+/// counter is spent; `Some(None)` when the destroy spares the card, or either leaves a prompt open or
+/// ends the game (`sandbox_step`).
 fn death_probe(
     before: &GameState,
     seat: PlayerId,
@@ -1120,13 +1119,14 @@ fn death_probe(
     let destroy = SandboxOp::Destroy {
         instance_id: unit.id.clone(),
     };
+    let mark = exit_mark(before);
     let Some(destroyed) = sandbox_step(before, seat, destroy, counter)? else {
         return Some(None);
     };
-    // A unit still on the field with its Reborn as it was is one the destroy spared (Indestructible).
-    let spared = find_instance(&destroyed, &unit.id)
-        .is_some_and(|card| card.zone.z() == ZoneName::Field && card.reborn_spent == unit.reborn_spent);
-    if spared {
+    // R174, R2687000: a card that never left the field is one the destroy spared (Indestructible); one
+    // back under the same id left all the same: a Reborn body, or a card its own Death returns
+    // (Stinkyscape #112 Job Application).
+    if !left_field_after(&destroyed, mark, &unit.id) {
         return Some(None);
     }
     let remove = SandboxOp::Remove {
@@ -1197,24 +1197,63 @@ fn spawn_hand_unit(
     Some(Some((placed, unit)))
 }
 
-/// R2424000: `death_probe` for a Unit in `seat`'s hand, placed on its field first (`spawn_hand_unit`).
+/// R923001, R2565000, R2687000: `card`, a Field Spell in `seat`'s hand, spawned into the backrow zone a
+/// play would take (`first_entry_zone`, a fresh card of its definition and face), with the state after
+/// it and the card as it stands. `None` when the counter refuses the step; `Some(None)` on a full
+/// backrow or a refused tool.
+fn spawn_hand_field_spell(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
+    let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
+        return Some(None);
+    };
+    let spawn = SandboxOp::Spawn {
+        player: seat,
+        def_id: card.def_id.clone(),
+        radiant: card.radiant.then_some(true),
+        to: SpawnZone::Field {
+            row: Row::Backrow,
+            lane: slot.lane,
+        },
+    };
+    let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
+        return Some(None);
+    };
+    let Some(set) = card_at(&placed, slot).cloned() else {
+        return Some(None);
+    };
+    Some(Some((placed, set)))
+}
+
+/// R2424000, R2687000: `death_probe` for a Unit or a Field Spell in `seat`'s hand, placed on its field
+/// (`spawn_hand_unit`) or set in its backrow (`spawn_hand_field_spell`) first.
 fn spawned_death_probe(
     world: &GameState,
     seat: PlayerId,
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<f64>> {
-    let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
+    let spawned = match card_type_of_face(world, &card.def_id, card.radiant) {
+        CardType::Unit => spawn_hand_unit(world, seat, card, counter)?,
+        CardType::FieldSpell => spawn_hand_field_spell(world, seat, card, counter)?,
+        _ => return Some(None),
+    };
+    let Some((placed, spawned)) = spawned else {
         return Some(None);
     };
-    death_probe(&placed, seat, &unit, counter)
+    death_probe(&placed, seat, &spawned, counter)
 }
 
 /// R2424000: the Death prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe world
-/// (R185), each card once: every unit on either field whose Death is live, the seat's first, then each Unit
-/// in the seat's hand with one (R923001). R2566000: last, each Starship Piece with none, so pieces never take
-/// the nodes a Death drew. On a sandbox copy (R923000), automatic turn end off (R345, R82), no price passed
-/// (R923003), at most `AI_DEATH_PROBE_NODES` nodes from `counter`.
+/// (R185), each card once: every unit on either field whose Death is live, the seat's first, then
+/// (R2687000) every backrow card with one the seat can read (`readable_by`: never a face-down enemy card),
+/// the seat's first, then each Unit and Field Spell in the seat's hand with one (R923001). R2566000: last,
+/// each Starship Piece with none, so pieces never take the nodes a Death drew. On a sandbox copy (R923000),
+/// automatic turn end off (R345, R82), no price passed (R923003), at most `AI_DEATH_PROBE_NODES` nodes
+/// from `counter`.
 pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
     if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1223,12 +1262,24 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
         .into_iter()
         .chain(active_units_of(world, seat.opponent()))
         .map(|unit| (unit, false));
+    // R2687000: then the backrow cards the seat can read, its own and then the enemy's, never a Unit
+    // standing there (one of the units above, R1081000) nor a face-down enemy card (R185).
+    let backrow = [seat, seat.opponent()]
+        .into_iter()
+        .flat_map(|player| world.players[player].backrow.iter().flatten())
+        .filter(|card| readable_by(world, card, seat) && !is_standing_unit(world, card))
+        .map(|card| (card, false));
     let hand = world.players[seat]
         .hand
         .iter()
-        .filter(|card| card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit)
+        .filter(|card| {
+            matches!(
+                card_type_of_face(world, &card.def_id, card.radiant),
+                CardType::Unit | CardType::FieldSpell
+            )
+        })
         .map(|card| (card, true));
-    let listed: Vec<(&CardInstance, bool)> = field.chain(hand).collect();
+    let listed: Vec<(&CardInstance, bool)> = field.chain(backrow).chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
     for pieces in [false, true] {
         for &(card, in_hand) in &listed {
@@ -1267,8 +1318,14 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
     priced
 }
 
-/// R2477000: the two hooks a turn fires for its player's cards (§6.2, R62), in the order a turn meets them.
-const TURN_HOOKS: [HookName; 2] = [HookName::StartOfTurn, HookName::EndOfTurn];
+/// R2477000, R2689000: the hooks a turn fires for a card's controller (§6.2, R62): the start and the
+/// end of that controller's own turn, then the start of the opponent's, which the opponent's turn
+/// queues after its own player's hooks (R68).
+const TURN_HOOKS: [HookName; 3] = [
+    HookName::StartOfTurn,
+    HookName::EndOfTurn,
+    HookName::StartOfOpponentTurn,
+];
 
 /// R2477000: `before` after one firing of `holder`'s `hook`, queued as its controller's turn would queue
 /// it (`queue_hook`, R68) and drained by the resolution loop (`settle`), where the decision stands:
@@ -1322,17 +1379,18 @@ fn hook_firing_price(
     ))
 }
 
-/// R2477000, R2565000: what one firing of each turn hook of `owner`'s card `instance_id`, in its backrow
-/// or on its field, gives `owner` on `before`, a sandbox (R923000), the hooks' prices summed
-/// (`hook_firing_price`), each fired on `before` alone. `None` when the counter is spent; `Some(None)`
-/// when no hook of it is priced.
+/// R2477000, R2565000, R2689000: what one firing of each turn hook of `owner`'s card `instance_id`, in
+/// its backrow or on its field, gives `owner` on `before`, a sandbox (R923000), as (its start-of-turn
+/// and end-of-turn hooks' prices summed, its start-of-the-opponent's-turn hook's) (`hook_firing_price`),
+/// each fired on `before` alone. `None` when the counter is spent; `Some(None)` when no hook of it is
+/// priced.
 fn turn_hook_probe(
     before: &GameState,
     owner: PlayerId,
     instance_id: &str,
     counter: &dyn NodeCounter,
-) -> Option<Option<f64>> {
-    let mut total: Option<f64> = None;
+) -> Option<Option<(f64, f64)>> {
+    let mut total: Option<(f64, f64)> = None;
     for hook in TURN_HOOKS {
         let Some(holder) = trigger_holders_with_hook(before, hook, Some(owner))
             .into_iter()
@@ -1344,21 +1402,26 @@ fn turn_hook_probe(
             continue;
         };
         if let Some(price) = hook_firing_price(before, &holder, hook, counter)? {
-            total = Some(total.unwrap_or(0.0) + price);
+            let (own, opponent) = total.unwrap_or((0.0, 0.0));
+            total = Some(if hook == HookName::StartOfOpponentTurn {
+                (own, opponent + price)
+            } else {
+                (own + price, opponent)
+            });
         }
     }
     Some(total)
 }
 
-/// R2477000, R2565000: `turn_hook_probe` for a Field Spell or a Unit in `seat`'s hand, set or placed
-/// first (R923001's spawn): a Field Spell in the backrow zone a
-/// set would take (`first_entry_zone`; a full backrow prices nothing), a Unit as `spawn_hand_unit` does.
+/// R2477000, R2565000, R2689000: `turn_hook_probe` for a Field Spell or a Unit in `seat`'s hand, set or
+/// placed first (R923001's spawn): a Field Spell as `spawn_hand_field_spell` sets it (a full backrow
+/// prices nothing), a Unit as `spawn_hand_unit` does.
 fn spawned_turn_hook_probe(
     world: &GameState,
     seat: PlayerId,
     card: &CardInstance,
     counter: &dyn NodeCounter,
-) -> Option<Option<f64>> {
+) -> Option<Option<(f64, f64)>> {
     match card_type_of_face(world, &card.def_id, card.radiant) {
         CardType::Unit => {
             let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
@@ -1367,22 +1430,7 @@ fn spawned_turn_hook_probe(
             turn_hook_probe(&placed, seat, &unit.id, counter)
         }
         CardType::FieldSpell => {
-            let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
-                return Some(None);
-            };
-            let spawn = SandboxOp::Spawn {
-                player: seat,
-                def_id: card.def_id.clone(),
-                radiant: card.radiant.then_some(true),
-                to: SpawnZone::Field {
-                    row: Row::Backrow,
-                    lane: slot.lane,
-                },
-            };
-            let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
-                return Some(None);
-            };
-            let Some(set) = card_at(&placed, slot).cloned() else {
+            let Some((placed, set)) = spawn_hand_field_spell(world, seat, card, counter)? else {
                 return Some(None);
             };
             turn_hook_probe(&placed, seat, &set.id, counter)
@@ -1391,11 +1439,12 @@ fn spawned_turn_hook_probe(
     }
 }
 
-/// R2477000, R2565000: the turn-hook prices a decision of `seat`'s passes (`Prices`), probed on `world`
-/// (R185), each card once, the seat's own copy first: its field and backrow cards with a turn hook, then the
-/// enemy's units and the backrow cards the seat can read (`readable_by`), each priced as its controller's,
-/// then each Field Spell or Unit in the seat's hand with one (R923001). Probed as `death_prices` is, at
-/// most `AI_TURN_HOOK_PROBE_NODES` nodes from `counter`.
+/// R2477000, R2565000, R2689000: the turn-hook prices a decision of `seat`'s passes (`Prices`), probed on
+/// `world` (R185), each card once, the seat's own copy first: its field and backrow cards with a turn hook
+/// (`TURN_HOOKS`, a start-of-the-opponent's-turn hook among them), then the enemy's units and the backrow
+/// cards the seat can read (`readable_by`), each priced as its controller's, then each Field Spell or Unit
+/// in the seat's hand with one (R923001). Probed as `death_prices` is, at most `AI_TURN_HOOK_PROBE_NODES`
+/// nodes from `counter`.
 pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<TurnHookPrice> {
     if AI_EVAL.turn_hook == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1453,7 +1502,11 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
         match probed {
             None => break,
             Some(None) => {}
-            Some(Some(price)) => priced.push(TurnHookPrice { price, ..key }),
+            Some(Some((price, opponent_turn))) => priced.push(TurnHookPrice {
+                price,
+                opponent_turn,
+                ..key
+            }),
         }
     }
     priced
@@ -1593,6 +1646,39 @@ fn probe_turns<P>(
     priced
 }
 
+/// R2564000, R2688000: the root probe `activation_prices` and `attack_hook_prices` share. Nothing is
+/// priced, and no node is spent, at a zero `weight`, while a prompt is open, once the game is over,
+/// outside `seat`'s own main phase, or when `has` holds on neither field; else `price` runs over
+/// `probe_turns` on a copy with both players' automatic turn end off (R345), within `nodes` of `counter`.
+fn root_prices<P>(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    weight: f64,
+    has: fn(&GameState, PlayerId) -> bool,
+    nodes: usize,
+    price: PriceTurn<P>,
+) -> Vec<P> {
+    if weight == 0.0
+        || world.pending.is_some()
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return Vec::new();
+    }
+    let own = has(world, seat);
+    if !own && !has(world, seat.opponent()) {
+        return Vec::new();
+    }
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, nodes);
+    probe_turns(&start, seat, own, &probes, price)
+}
+
 /// R2564000, R2603000: the activation prices a decision of `seat`'s passes (`Prices`), probed on `world`
 /// (R185): one use of the Activate of each unit acting on either field and each card acting face-up in
 /// either backrow, each once. The enemy's are tried at the start of its next turn, the seat's at the start
@@ -1603,24 +1689,15 @@ pub fn activation_prices(
     seat: PlayerId,
     counter: &dyn NodeCounter,
 ) -> Vec<ActivationPrice> {
-    if AI_EVAL.activation == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
-        return Vec::new();
-    }
-    let own = has_activate_card(world, seat);
-    if !own && !has_activate_card(world, seat.opponent()) {
-        return Vec::new();
-    }
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
-    let probes = create_sub_counter(counter, AI_ACTIVATION_PROBE_NODES);
-    probe_turns(&start, seat, own, &probes, price_uses)
+    root_prices(
+        world,
+        seat,
+        counter,
+        AI_EVAL.activation,
+        has_activate_card,
+        AI_ACTIVATION_PROBE_NODES,
+        price_uses,
+    )
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
@@ -1759,24 +1836,15 @@ pub fn attack_hook_prices(
     seat: PlayerId,
     counter: &dyn NodeCounter,
 ) -> Vec<AttackHookPrice> {
-    if AI_EVAL.attack_hook == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
-        return Vec::new();
-    }
-    let own = has_attack_hook_unit(world, seat);
-    if !own && !has_attack_hook_unit(world, seat.opponent()) {
-        return Vec::new();
-    }
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
-    let probes = create_sub_counter(counter, AI_ATTACK_HOOK_PROBE_NODES);
-    probe_turns(&start, seat, own, &probes, price_attacks)
+    root_prices(
+        world,
+        seat,
+        counter,
+        AI_EVAL.attack_hook,
+        has_attack_hook_unit,
+        AI_ATTACK_HOOK_PROBE_NODES,
+        price_attacks,
+    )
 }
 
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end

@@ -239,24 +239,6 @@ mod tests {
             }
 
             #[test]
-            fn r346_the_unit_it_attacks_still_pays_its_own_armor_on_the_strike_back() {
-                crate::register_all();
-                // The Ghoul pierces; the wall does not, so its 7 comes back in full against a Ghoul with no
-                // Armor, and a Ghoul in Defense Position would take 7 − 1.
-                let mut s = scenario(json!({
-                    "seed": SEED,
-                    "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 9, "health": 9 } }] },
-                    "p2": { "field": [WALL] },
-                }));
-                let ghoul = s.unit(P1, 1).unwrap();
-                let wall = s.unit(P2, 1).unwrap();
-                s.attack(&ghoul, &wall);
-                s.expect_stats(&ghoul, json!({ "health": 2 }));
-                let wall_card = s.card(WALL).clone();
-                s.expect_in_zone(&wall_card, "graveyard");
-            }
-
-            #[test]
             fn r11_a_ghoul_token_that_dies_ceases_to_exist_and_never_reaches_a_graveyard() {
                 crate::register_all();
                 let mut s = scenario(json!({

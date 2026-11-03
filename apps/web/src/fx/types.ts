@@ -1,6 +1,6 @@
 // The effects layer's contract (docs/polish/1-animations.md, Surface S1).
 
-import type { CardType, GameEvent, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
+import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
 
 /** A point in fractions of a box's width and height. */
@@ -33,7 +33,12 @@ export type FxPreset =
   | "void"
   | "confetti"
   | "blood"
-  | "frost";
+  | "frost"
+  | "leaf"
+  | "circuit"
+  | "crumb"
+  | "star"
+  | "exhaust";
 
 export type FxSpread = "point" | "area" | "ring";
 export type FxSplatTone = "damage" | "heal" | "loss";
@@ -93,6 +98,11 @@ export type FxRaysCue = { kind: "rays"; tone: FxRayTone; at: FxAnchor; delayMs: 
 export type FxSheenCue = { kind: "sheen"; at: FxAnchor; delayMs: number; durationMs: number };
 /** A card BACK flying between two anchors. It never carries a card identity (R202). */
 export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs: number; durationMs: number };
+/**
+ * R2789000: a combat keyword's icon popping over `at` for `durationMs` (the shared callout of the keyword
+ * beats, fx/motifs/callout.ts). `still` draws it as a static icon, for reduced motion.
+ */
+export type FxCalloutCue = { kind: "callout"; keyword: KeywordKind; at: FxAnchor; delayMs: number; durationMs: number; still?: true };
 export type FxArrowsCue = { kind: "arrows"; direction: "up" | "down"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxBannerCue = { kind: "banner"; text: string; tone: FxBannerTone; delayMs: number; durationMs: number };
 export type FxResultCue = { kind: "result"; outcome: FxOutcome; text: string; delayMs: number; durationMs: number };
@@ -135,6 +145,32 @@ export type FxFogCue = {
   delayMs: number;
   durationMs: number;
 };
+/**
+ * R2722001: a Mythic's takeover, its look a marquee card's own or the shared prismatic one. The board
+ * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
+ * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
+ * the effects' tail (R200).
+ */
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
+/**
+ * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
+ * twisting into a spiral that swallows what the wipe takes) or a `fold` (its edges folding inward into
+ * black, the light coming back at `at`). `holdMs` is when the cards are swallowed, `spin` which way the
+ * spiral turns, and `side` the one side it darkens (null: both). It names no card (R202).
+ */
+export type SetPieceShape = "vortex" | "fold";
+export type FxSetPieceCue = {
+  kind: "setPiece";
+  shape: SetPieceShape;
+  tint: FxTint;
+  spin: 1 | -1;
+  side: "you" | "opponent" | null;
+  at: FxAnchor;
+  holdMs: number;
+  delayMs: number;
+  durationMs: number;
+};
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -144,6 +180,13 @@ export type FxZoneCue = {
   delayMs: number;
   durationMs: number;
 };
+
+/**
+ * R2800000: a card on the board drawn toward `to` (the card itself: it sinks where it stands) as a set
+ * piece swallows it; a `conceal` hides it at the swallow. The stage undoes it at `durationMs`, or when
+ * the board shows its next view.
+ */
+export type FxPullCue = { kind: "pull"; testid: string; to: FxAnchor; delayMs: number; durationMs: number };
 
 /** B46–B48 stage cues come from `stage.ts`, not the S7 recipe table. `hold` waits for board catch-up (BUILD M5-T4); `durationMs` is a safety cap (R200). */
 export type FxHoldCue = {
@@ -165,6 +208,8 @@ export type FxLungeCue = {
   durationMs: number;
   /** #1442: a Ranged attacker fires from where it stands. */
   still?: true;
+  /** R2789000: a Flying attacker's lunge arcs over the lane. */
+  arc?: true;
 };
 
 export type FxCanvasCue = FxBurstCue | FxProjectileCue | FxShotCue | FxCrackCue | FxRingCue;
@@ -173,6 +218,7 @@ export type FxDomCue =
   | FxRaysCue
   | FxSheenCue
   | FxGhostCue
+  | FxCalloutCue
   | FxArrowsCue
   | FxBannerCue
   | FxResultCue
@@ -183,8 +229,10 @@ export type FxDomCue =
   | FxChaosCue
   | FxRollCue
   | FxFogCue
-  | FxZoneCue;
-export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue;
+  | FxZoneCue
+  | FxTakeoverCue
+  | FxSetPieceCue;
+export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 
 export type FxRecipe =
@@ -242,6 +290,11 @@ export type FxPlay = {
   step: number;
   /** Public event types and counts, including the planned event (R202). */
   seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
+  /**
+   * R2784000: the public ids its damage, destroyed, exiled and bounced events landed on, oldest first,
+   * the planned entry's included (at most FX_MEMORY_HITS); absent before the first. A chain hops on from the last.
+   */
+  hits?: readonly string[];
 };
 
 export type FxMemory = {
@@ -252,6 +305,10 @@ export type FxMemory = {
   resolving(): FxPlay | undefined;
   /** R502: whether this very `cardPlayed` (the object remembered) was a cast on draw. */
   castOnDraw(event: GameEvent): boolean;
+  /** R2789000: the last FX_MEMORY_RECENT events, the planned entry's last. */
+  recent(): readonly GameEvent[];
+  /** R2789000: the targets `attackerId` declared attacks on since the last `turnStarted`, oldest first. */
+  attacksThisTurn(attackerId: string): readonly string[];
   clear(): void;
 };
 

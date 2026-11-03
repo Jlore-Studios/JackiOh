@@ -7,13 +7,26 @@
 // must hold the head the result names, descend from the commit the work started at, change no
 // forbidden path, and fast-forward the branch on GitHub.
 //
-// The review rule (`review_rule.py`): a commit ships when its lane's final audit approved it
-// (one strong model for a medium or hard item, one medium model for an easy item), and no
-// model's rejection of it stands. A weak approval never ships anything. Votes are
-// kept per commit, one per review, with the tier of the seat that cast them (`_vote`), from the
-// plan's seats, never from the model job. A pull request whose commit has that gets auto-merge,
-// which merges it once the required CI checks pass; one still short of it waits in
-// `bot:cross-review` for a review run.
+// The review rule (`review_rule.py`): a commit ships when its lane's final audit approved it (one
+// medium or strong model for a medium item, one strong model for a hard item, #2748), from any
+// subscription, its builder's own run's reviewer included (2026-11-02), and no model's rejection
+// of it stands.
+// A weak approval never ships anything. Votes are kept per commit, one per review, with the tier
+// of the seat that cast them and its subscription (`_vote`), and the head's builder's
+// subscription, from the plan's seats and provider, never from the model job. A pull request
+// whose commit has that gets auto-merge, which merges it once the required CI checks pass; one
+// still short of it waits in `bot:cross-review` for a review run.
+//
+// With `own_review_run` (#2748, 2026-11-02; `ownreview.go`) a build or revision that changes code
+// pushes it, opens its pull request as a draft and hands its lane to the change's own review run on
+// the same subscription (`handOn`); that run's approval is the one its votes record (`OwnReview`),
+// which marks the pull request ready and turns auto-merge on.
+//
+// A final audit that asks for changes makes the auditor's subscription the owner of the fix, which
+// it makes in a revision of its own, whose own run's reviewer's approval ships it (2026-11-02); the
+// subscription whose approval ships a head is its merge owner, which a CI fix goes to first
+// (#2748, section 4). An after-merge spot-check's verdict is recorded, and its findings open one
+// follow-up issue (`SpotCheck`, section 5).
 //
 // A commit that meets the rule is recorded as cleared (`_clear`). When `main` then leaves it with
 // conflicts, the revision that resolves them carries the clearance (`_carry`) if it started from
@@ -41,6 +54,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	usagemod "github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/vault"
 )
 
@@ -65,7 +79,7 @@ var NoResult = "the model job left no result: it failed before the model started
 	"step, the install or the CLI setup), or it was cancelled"
 
 // A label a split's sub-issue may not be given from the model's answer: a bot's own, or one
-// the harness or a person sets (`human`, a difficulty, a priority, a method).
+// the harness or a person sets (`human`, `tracking`, a difficulty, a priority, a method).
 func reservedLabel(name string) bool {
 	lowered := strings.ToLower(name)
 	build := config.LabelBuild
@@ -77,7 +91,7 @@ func reservedLabel(name string) bool {
 		prefixes = append(prefixes, o.LabelPrefix)
 	}
 	prefixes = append(prefixes, "difficulty:", "priority:", "method:")
-	if lowered == config.LabelHuman {
+	if lowered == config.LabelHuman || lowered == config.LabelTracking {
 		return true
 	}
 	for _, p := range prefixes {
@@ -128,6 +142,9 @@ type Deliverer struct {
 	Chain      bool
 	// RatingNote is `self.rating_note`: the sentence `_item` had from `_apply_rating`, "" before.
 	RatingNote string
+	// OwnReviewPR is the pull request whose own review run this build or revision reserved
+	// (`handOn`, #2748), 0 for none: its handoff and session go on there.
+	OwnReviewPR int
 }
 
 // NewDeliverer is Deliverer(...).
@@ -190,6 +207,7 @@ func (x *Deliverer) Run() *pyjson.Object {
 	minutes, _ := py.Float(py.Or(x.Result.Get("minutes"), 0))
 	tokens := pyjson.Obj(x.Result.Get("tokens"))
 	cost, _ := py.Float(py.Or(x.Result.Get("cost_usd"), 0))
+	readings := x.usageReadings()
 	x.Ctx.Store.Update(func(s *pyjson.Object) any {
 		var spent *float64
 		if cost > 0 {
@@ -197,6 +215,9 @@ func (x *Deliverer) Run() *pyjson.Object {
 		}
 		providers.NoteUsage(s, x.Provider.ID, pyjson.Obj(usage), py.OrStr(resetAt, ""), x.Ctx.Now(),
 			minutes, tokens, spent)
+		// The run's readings for the usage history (#2749), in the same write: the loop never sees
+		// the newest reading here without them.
+		usagemod.Spool(s, readings...)
 		return nil
 	}, "usage "+x.Provider.ID)
 	x.machineDisk()
@@ -211,6 +232,7 @@ func (x *Deliverer) Run() *pyjson.Object {
 	default:
 		return pyjson.New("status", "nothing", "log", []any{"nothing was planned"})
 	}
+	x.recordRun() // its row for the usage history, as it ended (#2749)
 	x.Chain_()
 	return pyjson.New("status", x.Result.Get("status"), "log", pyjson.ListOf(x.Log))
 }

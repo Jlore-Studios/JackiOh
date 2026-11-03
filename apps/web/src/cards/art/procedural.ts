@@ -59,7 +59,8 @@ export type ArtSpec = {
   skyScheme: SkyScheme;
   sky: { from: string; to: string; angle: number };
   glow: { cx: number; cy: number; r: number; color: string; opacity: number };
-  ridges: readonly { d: string; fill: string; opacity: number }[];
+  /** R2715001: each with the part of the picture it is, which a moving picture moves on its own beat. */
+  ridges: readonly { d: string; fill: string; opacity: number; role: RidgeRole }[];
   emblem: Glyph;
   /** A second, smaller glyph in the corner furthest from the emblem, or null. */
   accent: Glyph | null;
@@ -72,9 +73,20 @@ export type ArtSpec = {
   motif: MotifId | null;
   /** The motif's glyphs, drawn over the composition and under the emblem; empty without one. */
   motifGlyphs: readonly MotifGlyphSpec[];
+  /**
+   * R2724000: where the composition's subject lies in `ridges` as `[from, to)` (a figure without
+   * its two hills, a burst's or sigil's every layer, none of a landscape's); `artSvg` ignores it.
+   */
+  subjectRidges: readonly [number, number];
 };
 
 export const ART_BOX = 100;
+/**
+ * R2715001: what part of the picture a ridge is: behind the subject (the backdrop, a family twist's
+ * under layer, a circuits pattern, a figure's hills), the subject itself (the rest of the composition),
+ * or over it (a waves pattern, a twist's over layer).
+ */
+export type RidgeRole = "back" | "subject" | "over";
 const RAY_COUNT_MIN = 7;
 const RAY_COUNT_MAX = 11;
 const RADIANT_SALT = 0x9e3779b9;
@@ -424,6 +436,8 @@ function buildLayer(build: Build, cx: number, shoulderY: number, half: number, n
   return "";
 }
 
+/** R2724000: a figure's first two layers are its hills, ground and not subject. */
+const FIGURE_GROUND_LAYERS = 2;
 const FIGURE_STANCE: Readonly<Record<string, { from: number; to: number; scale: number; drop: number }>> = {
   centre: { from: 44, to: 56, scale: 1, drop: 0 },
   left: { from: 29, to: 37, scale: 0.92, drop: 0 },
@@ -1469,10 +1483,19 @@ export function artSpec(
         : [];
   const circuitsUnder = drawn?.pattern === "circuits" ? pattern : [];
   const wavesOver = drawn?.pattern === "waves" ? pattern : [];
-  const geometry: Geometry = {
-    ...composed,
-    layers: [...behind, ...twist.under, ...circuitsUnder, ...composed.layers, ...wavesOver, ...twist.over],
-  };
+  // R2715001: each layer's part of the picture, which moves nothing in the still one.
+  const backLayers = composition === "figure" ? FIGURE_GROUND_LAYERS : 0;
+  const roled = (layers: readonly Layer[], role: RidgeRole): (Layer & { role: RidgeRole })[] => layers.map((layer) => ({ ...layer, role }));
+  const layers = [
+    ...roled([...behind, ...twist.under, ...circuitsUnder, ...composed.layers.slice(0, backLayers)], "back"),
+    ...roled(composed.layers.slice(backLayers), "subject"),
+    ...roled([...wavesOver, ...twist.over], "over"),
+  ];
+  const geometry: Geometry = { ...composed, layers };
+  // R2724000: the composition's own layers follow the backdrop, the twist under it and the circuits.
+  const subjectFrom = behind.length + twist.under.length + circuitsUnder.length;
+  const subjectTo = subjectFrom + composed.layers.length;
+  const ground = composition === "figure" ? FIGURE_GROUND_LAYERS : composition === "landscape" ? composed.layers.length : 0;
   const motes = scatterMotes(rng, geometry.motes, colors.mote);
   const corner = accentCorner(geometry.emblem);
   const glowOpacity = radiant ? Math.min(1, geometry.glow.opacity + RADIANT_GLOW_BOOST) : geometry.glow.opacity;
@@ -1504,7 +1527,7 @@ export function artSpec(
       color: colors.glow,
       opacity: round2(glowOpacity),
     },
-    ridges: geometry.layers.map((layer) => ({ d: layer.d, fill: colors.fills[layer.fill], opacity: round2(layer.opacity) })),
+    ridges: layers.map((layer) => ({ d: layer.d, fill: colors.fills[layer.fill], opacity: round2(layer.opacity), role: layer.role })),
     emblem: {
       glyph: palette.emblem.glyph,
       x: round2(geometry.emblem.x),
@@ -1531,5 +1554,6 @@ export function artSpec(
     rays: radiant ? radiantRays(seed) : [],
     motif,
     motifGlyphs,
+    subjectRidges: [Math.min(subjectFrom + ground, subjectTo), subjectTo],
   };
 }

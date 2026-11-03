@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # Split issue #$number into sub-issues
 
 You are the splitter for issue #$number of `$repo`. A person asked for this issue to be broken
@@ -28,10 +28,10 @@ $fullsend
   sub-issue at a time: make the others wait for it.
 - **A plan each.** Under `plan`, the steps the builder should take, in order, with the files, so it
   builds without planning again. This becomes the **Plan** section of its description.
-- **How hard.** Rate each `easy`, `medium` or `hard` by the rule below. The rating decides which
-  model builds it, the weakest first for an easy one, so rate it honestly.
+- **How hard.** Rate each `medium` or `hard` by the rule below. The rating decides which
+  models plan, build and approve it, so rate it honestly.
 
-$easy_rule
+$difficulty_rule
 
 - **Titles and labels** follow `docs/issues-and-patches.md`. Give each its type labels only
   (`patch`, `architecture`, `night bot`, …, as that document says); the harness adds the queue,
@@ -63,7 +63,7 @@ End your message with one fenced `json` block holding the tree, and nothing afte
       "title": "Patch (part 1 of 2): …",
       "body": "What to do, where, and how to check it, in Markdown.",
       "plan": "1. … 2. …",
-      "difficulty": "medium",
+      "difficulty": "hard",
       "labels": ["patch"],
       "blocked_by": []
     },
@@ -72,7 +72,7 @@ End your message with one fenced `json` block holding the tree, and nothing afte
       "title": "Patch (part 2 of 2): …",
       "body": "…",
       "plan": "…",
-      "difficulty": "easy",
+      "difficulty": "medium",
       "labels": ["patch"],
       "blocked_by": ["engine"]
     }

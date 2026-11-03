@@ -185,6 +185,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   boardReplaced: { type: "boardReplaced", player: "p1" },
   // Issue #2652 (R2652001).
   rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
+  // Issue #2783 (R2783000).
+  hookResolving: { type: "hookResolving", sourceId: "c1", defId: "core-001", controller: "p1", hook: "cry" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -334,6 +336,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   boardReplaced: null,
   // Issue #2652 (R2652001): one panel over the board for the whole batch of coins or dice.
   rolled: "roll",
+  // Issue #2783 (R2783000): a marker; the hook's own events carry the effects.
+  hookResolving: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -472,10 +476,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   held: ["jk-exile-fade", 350, "card-<instanceId>"],
   boardReplaced: ["jk-swap-cross", 500, "board"],
   rolled: ["jk-banner", 1200, "turn-banner"],
+  hookResolving: ["jk-loss-pop", 0, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 65 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) carry fx with the listed recipe and the other 28 carry none", () => {
+  it("B1 exactly the 65 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) carry fx with the listed recipe and the other 29 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(65);
@@ -490,9 +495,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 28 rows without an effect have no fx value at all", () => {
+  it("B1 the 29 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(28);
+    expect(bare).toHaveLength(29);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 
@@ -643,7 +648,23 @@ describe("B2 subscribeSignals", () => {
 
     queue.enqueue(longStream(2), fullBoardView());
 
-    expect(kinds(seen)).toEqual(["idle"]);
+    // R2789000: an entry that would have played signals `still` for the effects layer's callouts.
+    expect(kinds(seen).filter((kind) => kind !== "still")).toEqual(["idle"]);
+  });
+
+  it("R2789000 reduced motion emits still per entry with a row duration, in order, and idle after them", () => {
+    const clock = fakeClock();
+    const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: true, settings: at(1) });
+    const seen = listen(queue);
+
+    queue.enqueue([MANA, DAMAGE, GAME_OVER], fullBoardView());
+
+    expect(kinds(seen)).toEqual(["still", "still", "idle"]);
+    expect(seen.flatMap((signal) => (signal.kind === "still" ? [signal.entry.type] : []))).toEqual(["manaChanged", "damage"]);
+    expect(seen.flatMap((signal) => (signal.kind === "still" ? [signal.entry.durationMs] : []))).toEqual([0, 0]);
+    // Nothing is held: no timer, no entry in flight.
+    expect(clock.schedule).not.toHaveBeenCalled();
+    expect(queue.inFlight()).toBeNull();
   });
 
   it("B2 an empty enqueue emits idle and no start", () => {
@@ -723,7 +744,7 @@ describe("B2 subscribeSignals", () => {
 
 describe("B3 default settings", () => {
   it("B3 the default settings schedule exactly what a queue with no settings option schedules", () => {
-    expect(DEFAULT_FX_SETTINGS).toEqual({ speed: 1, intensity: "normal", motion: "system" });
+    expect(DEFAULT_FX_SETTINGS).toEqual({ speed: 1, intensity: "normal", motion: "system", bigMoments: "full" });
 
     const injected = fakeClock();
     const plain = fakeClock();
@@ -893,7 +914,7 @@ describe("B5 the motion reduce setting", () => {
     expect(queue.animating().size).toBe(0);
     expect(queue.idle()).toBe(true);
     expect(onSettled).toHaveBeenCalledTimes(1);
-    expect(kinds(seen)).toEqual(["idle"]);
+    expect(kinds(seen).filter((kind) => kind !== "still")).toEqual(["idle"]);
   });
 
   it("B5 reduce ignores the speed setting: nothing is scheduled at any speed", () => {

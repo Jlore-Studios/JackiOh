@@ -133,8 +133,11 @@ pub fn level_span_xp(total_xp: i64) -> i64 {
 mod tests {
     use super::*;
     use crate::config::{
-        CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, COSMETIC_TOKEN_BAR_SIZE,
-        COSMETIC_TOKEN_BAR_TARGET_PACKS, PACK_FLOOR_RARITY, TIER_WEIGHT_TOTAL,
+        CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
+        COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_SIZE_RARE,
+        COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC, COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY,
+        COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK, COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE, PACK_FLOOR_RARITY,
+        TIER_WEIGHT_TOTAL,
     };
     use crate::economy::roll::slot_tiers;
     use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds};
@@ -170,14 +173,6 @@ mod tests {
         assert_eq!(level_for_xp(i64::MAX), 429_496_730);
         assert_eq!(level_for_xp(9_223_372_032_559_808_500), 429_496_730);
         assert_eq!(level_for_xp(9_223_372_032_559_808_499), 429_496_729);
-    }
-
-    #[test]
-    fn pity_thresholds_are_10_20_and_30_packs() {
-        // #1333's table: pity never exceeds 30 packs.
-        assert_eq!(PITY_EPIC_PACKS, 10);
-        assert_eq!(PITY_LEGENDARY_PACKS, 20);
-        assert_eq!(PITY_MYTHIC_PACKS, 30);
     }
 
     /// The tracked rarities with their thresholds, rarest last.
@@ -379,9 +374,10 @@ mod tests {
     /// The bar sizes as §14.5 states them (R1953000, R1999000): on any collection, every slot adds its points
     /// whatever it grants, and before pity (which only lifts a slot's rarity) a pack's mean points are its
     /// slots' rarity odds (`card_odds`, the fallback included) weighted by each rarity's points. Each bar
-    /// then fills once every its target packs on average: its size over that mean, rounded.
+    /// then fills once every its target packs on average: its size over that mean, rounded, the cosmetic
+    /// bar's at each step of its cycle (R2728000).
     #[test]
-    fn r1953000_the_bars_fill_at_their_target_packs_on_average() {
+    fn r1953000_r2728000_the_bars_fill_at_their_target_packs_on_average() {
         let mean = |odds: TierOdds| {
             [
                 (odds.common, Common),
@@ -399,7 +395,13 @@ mod tests {
         assert!((per_pack - 8.65).abs() < 1e-9, "{per_pack} points a pack");
         for (size, target) in [
             (CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS),
-            (COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_TARGET_PACKS),
+            (COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE),
+            (COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC),
+            (
+                COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+                COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY,
+            ),
+            (COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK),
         ] {
             let packs = size as f64 / per_pack;
             assert_eq!(

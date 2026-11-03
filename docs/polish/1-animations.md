@@ -260,7 +260,9 @@ export const FX_MANA_MAX_SPARKS = 10;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
-export const FX_LEGENDARY_TRAUMA = 0.5;
+export const FX_LEGENDARY_TRAUMA = 0.7;  // 0.5 until R2722001
+export const FX_TAKEOVER_TAIL_MS = 700;      // R2722001: a Mythic's takeover lasts D + this, inside FX_MAX_TAIL_MS
+export const FX_TAKEOVER_TRAUMA = 1;        // R2722001: the takeover's shake as its card lands
 export const FX_TRAP_TRAUMA = 0.4;
 export const FX_RESULT_TRAUMA = 0.9;
 export const FX_LETHAL_LEAD_MAX_MS = 600;     // the killing blow replayed before the result plays in at most this (R200)
@@ -304,9 +306,10 @@ export const FX_TEXT = {
 ```ts
 export type FxIntensity = "off" | "low" | "normal" | "high";
 export type FxMotion = "system" | "reduce";
-export type FxSettings = { speed: number; intensity: FxIntensity; motion: FxMotion };
+export type FxBigMoments = "full" | "short" | "off"; // R2785000: how long a set piece holds the game
+export type FxSettings = { speed: number; intensity: FxIntensity; motion: FxMotion; bigMoments: FxBigMoments };
 
-export const DEFAULT_FX_SETTINGS: FxSettings;          // { speed: 1, intensity: "normal", motion: "system" }
+export const DEFAULT_FX_SETTINGS: FxSettings;          // { speed: 1, intensity: "normal", motion: "system", bigMoments: "full" }
 export function normalizeSpeed(speed: unknown): number; // non-finite → 1; clamps to [FX_SPEED_MIN, FX_SPEED_MAX]
 export function normalizeFxSettings(raw: unknown): FxSettings; // field by field; unknown values → defaults
 export function loadFxSettings(storage?: Storage | null): FxSettings;   // reads FX_SETTINGS_KEY in try/catch
@@ -351,12 +354,15 @@ export type RunnerSignal =
   | { kind: "start"; entry: AnimationEntry } // an entry went in flight (durationMs > 0 only)
   | { kind: "idle" }                         // emitted each time the pump fires onSettled
   | { kind: "drain"; entries: readonly AnimationEntry[] } // drain() ran; the in-flight entry, then the waiting ones, it cut short
+  | { kind: "skip"; entry: AnimationEntry }  // R2785000: skip() ended this set piece, which was in flight
   | { kind: "reset" };                       // reset() ran
 
 export type AnimationQueue = {
   /* …every existing member unchanged… */
   /** Lifecycle signals for the effects layer. Synchronous; returns its own unsubscribe. */
   subscribeSignals(listener: (signal: RunnerSignal) => void): () => void;
+  /** R2785000: ends the set piece in flight at once and starts the next entry; false, doing nothing, when none holds. */
+  skip(): boolean;
 };
 
 export type AnimationQueueOptions = {
@@ -382,6 +388,7 @@ Runner semantics:
   - Run `fitBudget` against `burstBudgetMs / normalizeSpeed(s.speed)`, then `pump()`.
 - In `pump`: when an entry becomes `current`, emit `start` right after `notify()`. When the queue runs dry and `settle()` fires `onSettled`, emit `idle` after it.
 - `drain()` emits `drain` after its `notify`/`settle`. `reset()` emits `reset`.
+- R2785000: `skip()` ends a set piece in flight. It bumps the epoch, so the entry's timer does nothing, emits `skip` and pumps the next entry, as the timer would have; the FX layer cuts the set piece's effects (`director.cut()`). It returns false and does nothing when the entry in flight is no set piece.
 - `schedule` is still called exactly once per non-zero entry. The FX layer never calls it.
 
 Every `ANIMATIONS` row keeps its `animation`, `durationMs`, `testid` and `target` byte-for-byte and adds
@@ -856,7 +863,7 @@ Planner (slice C):
 - **B9** `planFx` multiplies every burst `count` and every shake `trauma` by `FX_INTENSITY_SCALE[intensity]`, so low < normal < high, and returns `[]` at intensity 0. *Observed:* counts compared across three envs.
 - **B10** A non-combat `damage` whose source resolves to a different element than its target plans a `projectile` from source to target, and its spark burst, splat and shake all sit at `delayMs === flightMs`. Combat damage plans no projectile and impacts at 0. *Observed:* `cues.test.ts`.
 - **B11** `damage` plans a `damage` splat with the event's amount at the target and a `spark` burst. The shake is the amount's tier's `shakePx` in `game/damageFeel.ts`'s `DAMAGE_FEEL` (#57): none below Moderate, and the same on a unit as on a hero. *Observed:* amounts 1, 3, 6 and 20 on a unit and on a hero.
-- **B12** A `damage` whose source unit in the planning view has Poisonous adds a `poison` burst at the target and flies a `poison` projectile. *Observed:* `fullBoardView()`, whose second unit has every keyword.
+- **B12** A `destroyed` whose `via` is Poisonous (R2789000) adds a `poison` burst at the dying card at 0; a Poisonous source's `damage` adds none and flies its flavor's shot as any source does (the guess from the planning view's keywords is gone). *Observed:* `cues.test.ts`, `fullBoardView()`, whose second unit has every keyword.
 - **B13** A non-combat damage source resolves in this order: a rendered instance, then the zone of a trap remembered from an earlier `trapFired`, then the hero of the player remembered from its `cardPlayed`, then nothing (no projectile). *Observed:* four cases with `createFxMemory`.
 - **B14** `summoned` into units plans a dust `ring` and a `dust` burst at the zone. A readable Legendary or Mythic def adds `rays` in its tone, a `gold` or `prismatic` burst and `FX_LEGENDARY_TRAUMA`. Attack + health ≥ `FX_SLAM_STATS_MIN` adds slam trauma. A backrow set, or an unknown or `"hidden"` def, plans only the dust burst. *Observed:* `env.card` stubs per rarity.
 - **B15** A `cardPlayed` paired with its own `summoned` in the same entry plans nothing itself. An unpaired `cardPlayed` plans an `arcane` burst at the played card for the viewer, or at `hand-opponent`. *Observed:* `cues.test.ts`.
@@ -887,7 +894,7 @@ Director and layer (slice D):
 - **B34** The director learns the display's refresh as the shortest raw interval of at least `FX_ADAPT_MIN_INTERVAL_MS` it has seen (the first frame after a wake, timed from the wake, counts for nothing), capped at `FX_ADAPT_DISPLAY_MAX_MS`. A window is slow once its raw frame times add up to more than `FX_ADAPT_WINDOW` frames at `max(FX_ADAPT_SLOW_MS, FX_ADAPT_SLOW_FACTOR × refresh)`, checked every frame so a stall trips it at once; the capacity then halves, never below `FX_PARTICLE_CAP_MIN`. `FX_ADAPT_RECOVER_WINDOWS` healthy windows in a row double a lowered capacity, never above the one it started at. A steady 30 Hz display is not slow. `capacityFor(390) === FX_PARTICLE_CAP_MOBILE` and `capacityFor(1280) === FX_PARTICLE_CAP`. *Observed:* `director.test.ts` with 16, 24, 25, 33.4, 40, 66.8 and 300 ms frames.
 - **B35** The shake reaches the board only through the sink. `boardShakeSink` writes CSS `translate`/`rotate` on `[data-testid="board"]` while trauma > 0 and restores the prior inline values when the shake ends. *Observed:* a fake sink in `director.test.ts`; a real board's style in `fx-layer.cy.tsx`.
 - **B36** R200: on each `start`, `FxLayer` writes `--anim-squeeze` (durationMs / table duration, 3 decimals) on its parent and removes it on `idle`, `drain` and `reset`. It plans `planFx(entry, entry.view, env)` after `memory.remember(entry.events)`. Mounting it changes no `schedule` call the runner makes. *Observed:* `FxLayer.test.tsx`, with a fake-scheduled queue compared against an identical queue that has no layer.
-- **B37** Under reduced motion (the media query or the setting), or with intensity "off", `FxLayer` renders `fx-layer` with `data-fx="off"`, no canvas and no cues. Otherwise it renders `data-fx="on"` with `fx-canvas` and `fx-dom`. Nothing it renders carries a `data-animating` of its own, and rendering `Game` in jsdom logs no `console.error`. *Observed:* `FxLayer.test.tsx`.
+- **B37** With intensity "off", `FxLayer` renders `fx-layer` with `data-fx="off"`, no canvas, no `fx-dom` and no cues. Under reduced motion (the media query or the setting) it renders `data-fx="off"`, no canvas and no cues but a keyword's still callout (R2789000): an `fx-dom` with `data-still="true"` that holds only that. Otherwise it renders `data-fx="on"` with `fx-canvas` and `fx-dom`. Nothing it renders carries a `data-animating` of its own, and rendering `Game` in jsdom logs no `console.error`. *Observed:* `FxLayer.test.tsx`.
 - **B38** `FxLayer` plays `planResult` when the shown view's `result` goes from null to set during the mount, but not when it mounts already finished. It plays `planHandover` when `view.viewer` changes. *Observed:* `FxLayer.test.tsx` rerenders with a `measure` seam, counting `[data-fx="result"]` and `[data-fx="banner"]`.
 
 DOM effects and CSS (slice E):
@@ -941,6 +948,12 @@ Visual pass 2 (stage effects), and the review that followed it:
   clamped to [`FX_LUNGE_MIN_PX`, `FX_LUNGE_MAX_PX`], and throws a spark burst at the target at
   `FX_LUNGE_CONTACT_AT·D`. Without the layer, jk-lunge falls back to BUILD's straight lunge.
   *Observed:* `stage.test.tsx`.
+- **R2800000** Pulled cards. A board clear's set piece (`fx/setPieces.ts`, `docs/polish/9-card-animations.md`)
+  sends a `pull` for each card its wipe takes: the director marks it `data-fx-pulled` and writes
+  `--fx-pull-x/y`, the line from its centre to the set piece's (zero when it sinks in place), and
+  board.css draws it in over the hold; an "after" `conceal` at the swallow keeps it hidden. Both are
+  stage effects, undone by `release()` or `FX_HOLD_MAX_MS`. *Observed:* `stage.test.tsx`,
+  `setPieces.test.ts`.
 - **B49** The killing blow. A finished view no longer drains the runner — the burst that ended the
   game plays out first — so the layer keeps drained entries only when a drain (a seat hand-over) cut
   them short and plays `planLethal` before `planResult`, which waits `leadMs`. *Observed:* `cues.test.ts`,

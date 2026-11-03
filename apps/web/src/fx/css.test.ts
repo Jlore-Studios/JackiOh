@@ -177,10 +177,13 @@ const DOM_KINDS = {
   walls: "fx-walls-close",
   brand: "fx-brand-slam",
   shield: "fx-shield-flash",
+  callout: "fx-callout-pop",
   chaos: "fx-chaos-in",
   roll: "fx-roll-in",
   fog: "fx-fog-roll",
   zone: "fx-zone-wave",
+  takeover: "fx-takeover-in",
+  setPiece: "fx-set-piece-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');

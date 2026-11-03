@@ -6,7 +6,7 @@ import { useId, type CSSProperties, type ReactElement } from "react";
 
 import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
-import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
+import { useFxSettings, type FxBigMoments, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
 import { LOCALES, parseLocale, setLocale, t, useLocale, useLocaleSettled } from "../i18n/i18n.ts";
 
@@ -15,6 +15,13 @@ const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
   { value: "low", label: "Low" },
   { value: "normal", label: "Normal" },
   { value: "high", label: "High" },
+];
+
+/** R2785000: how long a set piece holds the board. */
+const BIG_MOMENTS: readonly { value: FxBigMoments; label: string }[] = [
+  { value: "full", label: "Full" },
+  { value: "short", label: "Short" },
+  { value: "off", label: "Off" },
 ];
 
 /** The readout rounds the speed to hundredths: "0.25×", never "0.2500000001×". */
@@ -138,12 +145,23 @@ export function FxControls(): ReactElement {
           if (next !== undefined) set({ intensity: next.value });
         }}
       />
+      <SelectRow
+        label={t("Big moments")}
+        hint={t("The biggest moments hold the board for a beat; a tap, a click or Space skips one. Short holds them briefly, Off not at all.")}
+        testId="setting-fxBigMoments"
+        value={settings.bigMoments}
+        options={BIG_MOMENTS}
+        onChange={(value) => {
+          const next = BIG_MOMENTS.find((option) => option.value === value);
+          if (next !== undefined) set({ bigMoments: next.value });
+        }}
+      />
     </>
   );
 }
 
 /** A card presentation switch in Task 6's words (cards/settings.ts), so the panel and the module agree. */
-function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" | "setWatermarks" }): ReactElement {
+function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" | "setWatermarks" | "rarityFoil" }): ReactElement {
   const settings = useCardSettings();
   const hintId = useId();
   const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === setting);
@@ -170,6 +188,11 @@ function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | 
       </p>
     </div>
   );
+}
+
+/** R2721000: the Mythic's rarity foil, off by default. */
+export function RarityFoilSwitch(): ReactElement {
+  return <CardSettingSwitch setting="rarityFoil" />;
 }
 
 /** Task 6's animated foil on Mythic and Radiant faces. */

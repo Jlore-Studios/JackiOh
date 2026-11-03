@@ -30,6 +30,7 @@ import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
+import type { ChoiceHover } from "./choiceHover.ts";
 import Board from "./Board.tsx";
 import { useMarkBoardShown } from "./boardShown.ts";
 import ConfirmConcede from "./ConfirmConcede.tsx";
@@ -44,25 +45,35 @@ import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
+  SET_PIECE_SKIP_HINT_MS,
+  TAKEOVER_SET_PIECE,
   animTestid,
   createAnimationQueue,
+  entranceEntries,
+  leadMs,
   newEventsSince,
   planEntries,
   slamEntries,
   type AnimationEntry,
   type AnimationQueue,
+  type SetPieceClaimer,
 } from "./animations.ts";
-import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
+import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget, type HeroAside } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
-import { createSlamResolver } from "./slamResolver.ts";
+import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
+import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import AuraLayer from "../fx/aura/AuraLayer.tsx";
+import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
+import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
+import { isTyping } from "../replay/ReplayToolbar.tsx";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
@@ -109,6 +120,8 @@ export type GameProps = {
   matchStatus?: ReactNode;
   /** Route navigation and match-series information, mounted in the board rail. */
   boardRail?: ReactNode;
+  /** DR14 (#2706): route chrome drawn beside each hero, as `boardRail` is in the rail (a dungeon run's relics). */
+  heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
   /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
@@ -123,13 +136,16 @@ export type GameProps = {
   loadouts?: SeatLoadouts | null;
   /** R738: `emit` sends this seat's aim as it changes; `opponent` is the opponent's as last relayed. */
   aim?: GameAim;
+  /** R2739001: `emit` sends the option of this seat's card picker under its pointer; `opponent` is theirs as last relayed. */
+  choiceHover?: ChoiceHover;
   /** #511: a replay's board: no drag, glow or R345 preference, and no prompt but `replayPrompt`'s. */
   replay?: boolean;
   /** R2211000: on a `replay` board, the open prompt is drawn read-only (Prompt's `readOnly`). */
   replayPrompt?: boolean;
   /**
-   * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction and its
-   * count, which the lesson teaches, where every other game's says only who goes first (Prompt.tsx).
+   * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction, its count
+   * and its panel, which the lesson teaches, where every other game's is its cards alone and says
+   * who goes first only in its accessible name (Prompt.tsx, #2738).
    */
   lesson?: boolean;
   /**
@@ -144,6 +160,11 @@ export type GameProps = {
    * on the whole page, so a second board would play the other duel's cues on the own board.
    */
   silent?: boolean;
+  /**
+   * R2785000: claims an entry as a set piece, asked before the takeover; read at each enqueue. The
+   * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
+   */
+  setPieceOf?: SetPieceClaimer;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -175,6 +196,7 @@ export default function Game({
   turnClock,
   matchStatus,
   boardRail,
+  heroAside,
   boardNotice,
   emotes,
   trackStats = false,
@@ -182,12 +204,14 @@ export default function Game({
   deckCosmetics = null,
   loadouts = null,
   aim,
+  choiceHover,
   replay = false,
   replayPrompt = false,
   lesson = false,
   lethalHint = false,
   tradeBar = true,
   silent = false,
+  setPieceOf,
 }: GameProps): ReactElement {
   useLocale();
   // R2118000: no command menu over a board.
@@ -296,9 +320,15 @@ export default function Game({
   // motion has none, and starts it as the action arrives, below).
   const inFlightSlam = inFlight?.slam;
   const inFlightMs = inFlight?.durationMs ?? 0;
+  // R2722001, R2785000: a slam's anticipation and a set piece's hold (a Mythic's takeover's) both come before the motion.
+  const inFlightLead = inFlight === null ? 0 : leadMs(inFlight);
+  const setPiece = inFlight?.setPiece;
+  const takeoverHold = setPiece?.key === TAKEOVER_SET_PIECE ? setPiece.holdMs : 0;
+  // R2800000: a board clear's set piece twists (or folds) the sides its wipe takes from, over its hold.
+  const setPieceShape = setPiece === undefined ? undefined : setPieceShapeOf(setPiece.key);
   useEffect(() => {
     if (reducedMotion || inFlightSlam === undefined) return undefined;
-    const landsAt = inFlightSlam.anticipationMs + (inFlightMs - inFlightSlam.anticipationMs) * SLAM_LAND_AT;
+    const landsAt = inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT;
     const timer = window.setTimeout(() => {
       triggerHitStopMs(inFlightSlam.hitStopMs);
       // The cracks and the crater go into the sand under the cards, and fade there (SandSurface).
@@ -308,18 +338,32 @@ export default function Game({
       if (marks.length > 0 && zone !== null && zone !== undefined) slamSand(zone, { marks });
     }, landsAt);
     return () => window.clearTimeout(timer);
-  }, [inFlightSlam, inFlightMs, reducedMotion, triggerHitStopMs]);
+  }, [inFlightSlam, inFlightMs, inFlightLead, reducedMotion, triggerHitStopMs]);
   // #185: a landing Unit's tier comes from the newest view and the catalog, read at each enqueue.
   const catalog = useContext(CatalogContext);
   const catalogRef = useRef(catalog);
   catalogRef.current = catalog;
   const slamResolver = useMemo(() => createSlamResolver(() => latest.current, () => catalogRef.current), []);
+  // R2722001: a readable Legendary's or Mythic's entrance, and a Mythic's takeover, read at each enqueue.
+  const entranceResolver = useMemo(() => createEntranceResolver(() => catalogRef.current), []);
+  /** R2722001: under Reduce motion, the viewer's own Mythic shown still over the board, and the cards already shown so. */
+  const [still, setStill] = useState<{ defId: string; instanceId: string; view: PlayerView } | null>(null);
+  const stillSeen = useRef(new Set<string>());
+  const endStill = useCallback(() => setStill(null), []);
+  const setPieceOfRef = useRef(setPieceOf);
+  setPieceOfRef.current = setPieceOf;
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
     queue.current = createAnimationQueue({
       reducedMotion,
       slamOf: slamResolver,
+      entranceOf: entranceResolver,
+      // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
+      setPieces: !silent,
+      // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
+      wipeOf: hasSetPiece,
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -372,6 +416,43 @@ export default function Game({
     };
   }, [runner]);
 
+  // R2785000: a tap or a click on the board, or Space, ends a set piece's hold at once and does
+  // nothing else: the click reaches no control, and the Space that skipped presses no focused button
+  // (its keyup, which would, is swallowed too). A key in a text field is the field's. Listening for
+  // the board's life, not the hold's, so that keyup is still heard once the hold is over.
+  useEffect(() => {
+    const element = root.current;
+    if (element === null) return undefined;
+    let swallowUp = false;
+    const onClick = (event: MouseEvent): void => {
+      if (!runner.skip()) return;
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    const isSkipKey = (event: KeyboardEvent): boolean =>
+      event.key === SHORTCUTS.skipSetPiece[0] && !event.altKey && !event.ctrlKey && !event.metaKey && !isTyping(event.target);
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!isSkipKey(event) || event.repeat || !runner.skip()) return;
+      swallowUp = true;
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    const onKeyUp = (event: KeyboardEvent): void => {
+      if (!swallowUp || event.key !== SHORTCUTS.skipSetPiece[0]) return;
+      swallowUp = false;
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    element.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keyup", onKeyUp, true);
+    return () => {
+      element.removeEventListener("click", onClick, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("keyup", onKeyUp, true);
+    };
+  }, [runner]);
+
   // A LAYOUT effect: `data-animating` has to be on the DOM by the time the click that caused the
   // action has returned, or `cy.settled()` reads a stale view as up to date.
   const seen = useRef<PlayerView | null>(null);
@@ -400,11 +481,21 @@ export default function Game({
         // #185: and the heaviest landing's, from the same capped share the queue would give it.
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
+        // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
+        // other seat's is up in the showcase already), once per card.
+        const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer,
+        )?.entrance;
+        if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }
       runner.enqueue(fresh, previous);
     }
+    if (previous !== null && previous.viewer !== view.viewer) {
+      stillSeen.current.clear();
+      setStill(null);
+    }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -573,14 +664,25 @@ export default function Game({
       data-slam-side={inFlightSlam?.side}
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
-      style={impactFeel === undefined && inFlightSlam === undefined ? undefined : {
+      data-takeover={takeoverHold > 0 ? "mythic" : undefined}
+      data-set-piece={setPiece?.key}
+      data-set-piece-shape={setPieceShape}
+      data-set-piece-sides={setPieceShape === undefined ? undefined : inFlight?.wipe?.sides.join(" ")}
+      style={impactFeel === undefined && inFlightSlam === undefined && setPiece === undefined ? undefined : {
         ...(impactFeel === undefined ? {} : {
           "--impact-number-scale": String(impactFeel.numberScale),
           "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
         }),
         ...(inFlightSlam === undefined ? {} : {
           "--slam-anticipation": `${String(inFlightSlam.anticipationMs)}ms`,
-          "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightSlam.anticipationMs) * SLAM_LAND_AT))}ms`,
+          "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
+        }),
+        ...(setPiece === undefined ? {} : {
+          "--set-piece-hold": `${String(setPiece.holdMs)}ms`,
+          "--set-piece-skip-delay": `${String(SET_PIECE_SKIP_HINT_MS)}ms`,
+        }),
+        ...(takeoverHold <= 0 ? {} : {
+          "--takeover-land-ms": `${String(Math.round(inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
         }),
       } as CSSProperties}
     >
@@ -609,6 +711,7 @@ export default function Game({
         turnClock={turnClock}
         matchStatus={matchStatus}
         boardRail={boardRail}
+        heroAside={heroAside}
         market={replay ? undefined : { legal, onAction: dispatch }}
         boardNotices={
           <>
@@ -648,9 +751,19 @@ export default function Game({
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
       {silent ? null : <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />}
+      {/* R2787000: the standing look of every Field Spell and lasting modifier the board shows, begun and
+          ended with the shown view; the newest view's events say which play added a modifier. */}
+      {silent ? null : <AuraLayer view={shown} latest={view} />}
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
       {silent ? null : <CardShowcase view={view} queue={runner} />}
+      {silent || still === null ? null : <TakeoverStill defId={still.defId} instanceId={still.instanceId} view={still.view} onDone={endStill} />}
+      {/* R2785000: the first skip control there is, faded in SET_PIECE_SKIP_HINT_MS into the hold. */}
+      {setPiece === undefined ? null : (
+        <p className="set-piece-skip" data-testid="set-piece-skip" aria-hidden="true">
+          {t("Tap to skip")}
+        </p>
+      )}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {(replay && !replayPrompt) || promptOver(shown, burst, inFlight) ? null : (
@@ -664,6 +777,8 @@ export default function Game({
           lesson={lesson}
           // R2211000: a replay's prompt is drawn as offered and sends nothing.
           readOnly={replay}
+          // R2739001: hovers go both ways until the game ends, as aims do.
+          choiceHover={shown.result === null ? choiceHover : undefined}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
           // and must be answered, so it offers none: the button would do nothing.
           onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}

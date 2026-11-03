@@ -80,7 +80,7 @@ func TestLabelsAsEachBotHasThem(t *testing.T) {
 			items = append(items, []any{k, got.Get(k)})
 		}
 		retired := []any{"method:manual", "method:use-bot", id.LabelPrefix + "approved",
-			id.LabelPrefix + "needs-review", "large patch", "Info"}
+			id.LabelPrefix + "needs-review", "large patch", "Info", "difficulty:easy", id.LabelPrefix + "working"}
 		if dump := pyjson.Dumps([]any{items, retired}); dump != want.Str("labels_dump") {
 			t.Errorf("%s: labels dump\n%s\nwant\n%s", id.Name, dump, want.Str("labels_dump"))
 		}
@@ -96,7 +96,7 @@ func TestTheNightBotsConstantsWithoutIdentity(t *testing.T) {
 		ConfigPath != ".harness/config.json" || HaltPath != ".harness/HALT" || TrustPath != ".harness/trust.txt" {
 		t.Errorf("night bot constants: %q %q %q %q %q %q", Slash, CommitPrefix, LabelBuild, ConfigPath, HaltPath, TrustPath)
 	}
-	if got := pyjson.Dumps(DifficultyLabels); got != `{"difficulty:easy": "easy", "difficulty:medium": "medium", "difficulty:hard": "hard"}` {
+	if got := pyjson.Dumps(DifficultyLabels); got != `{"difficulty:medium": "medium", "difficulty:hard": "hard"}` {
 		t.Errorf("DifficultyLabels: %s", got)
 	}
 }
@@ -113,10 +113,6 @@ func gateJSON(g *Gate) any { return []any{g.Name, g.Run, g.TimeoutMinutes, g.Mac
 func TestParseHelpersAsPython(t *testing.T) {
 	cases := load(t, "testdata/python.json").Obj("cases")
 	show := map[string]func(raw any) any{
-		"easy": func(raw any) any {
-			r := easyRule(raw)
-			return []any{r.MaxFiles, r.MaxLines, pyjson.ListOf(r.OffLimits), pyjson.ListOf(r.Generated)}
-		},
 		"gate": func(raw any) any { return gateJSON(gate(raw, "gates[0]")) },
 		"resolvers": func(raw any) any {
 			out := []any{}

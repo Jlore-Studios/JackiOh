@@ -6,14 +6,15 @@
 // the board turns into `data-animating="<eventType>"`. The effects layer (`apps/web/src/fx`,
 // docs/polish/1-animations.md) decorates this stream and paces nothing (R200).
 
-import type { GameEvent, GameEventType, PlayerId, PlayerView, Zone } from "@jackioh/shared";
+import type { CardType, GameEvent, GameEventType, PlayerId, PlayerView, Zone } from "@jackioh/shared";
 
 import type { FxDescriptor } from "../fx/types.ts";
-import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.ts";
+import { getFxSettings, normalizeSpeed, type FxBigMoments, type FxSettings } from "../fx/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
-import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
+import { firstReveal, isFaceDownSet } from "./entrance.ts";
+import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, wipeAt, type Pile, type PlayTracker, type Sweep, type Wipe, type ZoneImpact } from "./runs.ts";
 import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
 import { prefersReducedMotion } from "../settings/motion.ts";
@@ -884,6 +885,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "roll" },
     target: () => testid.banner,
   },
+  // Issue #2783 (R2783000): a card's hook begins to resolve. A marker for #2782's cues to anchor on;
+  // the hook's own events animate, so it resolves instantly on an existing keyframe, as `emoted` does.
+  hookResolving: {
+    animation: "jk-loss-pop",
+    durationMs: 0,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.controller)),
+  },
 };
 
 /**
@@ -925,6 +934,8 @@ export const CAST_BUDGET_MS = 2200;
 export const ZONE_IMPACT_MS = 700;
 /** A run of hits or heals that swept a whole side, played as one roll of fog. */
 export const SWEEP_MS = 600;
+/** R2800000: a set-piece card's run of removals, played as one entry its set piece draws (after its hold). */
+export const WIPE_MS = 600;
 
 /**
  * One unit of motion: usually one event, two for the collapsed `cardPlayed` + `summoned` pair, which BUILD
@@ -950,8 +961,14 @@ export type AnimationEntry = {
   cast?: { by: string; ordinal: number };
   zone?: ZoneImpact;
   sweep?: Sweep;
+  /** R2800000: a set-piece card's hook removed these cards in one run, which its set piece claims. */
+  wipe?: Wipe;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
+  /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
+  entrance?: EntryEntrance;
+  /** R2785000: this entry is its action's set piece and holds the game for one capped beat (`setPieceEntries`). */
+  setPiece?: EntrySetPiece;
 };
 
 /**
@@ -1017,6 +1034,167 @@ export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamReso
   });
 }
 
+/* ----- R2722001, R2722002: a Legendary's or a Mythic's entrance, and a Mythic's takeover ----- */
+
+/**
+ * R2722001: the beat a readable Mythic's takeover asks to hold its entry for, before the entry's motion
+ * starts: the effects layer draws the takeover inside the entry (it holds nothing itself, R200). Since
+ * R2785000 the takeover is a set piece (`TAKEOVER_SET_PIECE`), held by `setPieceEntries` as every one is.
+ */
+export const TAKEOVER_HOLD_MS = 1_000;
+
+/* ----- R2785000: a set piece, the one beat per action that may hold the game ----- */
+
+/** R2785000: the beat a set piece asks for at speed 1, when its claim names no other (the takeover asks `TAKEOVER_HOLD_MS`). */
+export const SET_PIECE_HOLD_MS = 2_000;
+/** R2785000: the longest a set piece holds the game, in real time, whatever it asks and whatever the speed. */
+export const SET_PIECE_HOLD_CAP_MS = 3_000;
+/** R2785000: the most a set piece asks for under Big moments' "short". */
+export const SET_PIECE_SHORT_HOLD_MS = 600;
+/** R2785000: how many set pieces one action may hold; a later claim in the same action plays with no hold. */
+export const SET_PIECES_PER_ACTION = 1;
+/** R2785000: how long into a hold the "Tap to skip" hint waits before it fades in. */
+export const SET_PIECE_SKIP_HINT_MS = 500;
+/** R2785000: the key of a Mythic's takeover (R2722001), the first set piece. */
+export const TAKEOVER_SET_PIECE = "takeover";
+
+/**
+ * R2785000: an entry's set piece. `holdMs` is its beat as held, inside the entry's `durationMs` and
+ * ahead of its motion: speed-scaled, set by Big moments and capped (`setPieceHoldMs`).
+ */
+export type EntrySetPiece = { key: string; holdMs: number };
+
+/** R2785000: what claims an entry as a set piece: its key and the beat it asks for at speed 1. */
+export type SetPieceClaim = { key: string; holdMs: number };
+
+/** R2785000: the set piece an entry is, or null. It reads only the entry, whose events are the seat's own (R202). */
+export type SetPieceClaimer = (entry: AnimationEntry) => SetPieceClaim | null;
+
+/**
+ * R2722001: a Legendary's or a Mythic's entrance in an entry, on a seat that can read the card.
+ * `reveal`: a hidden card making it as it reveals (R2722002). `anchor`: the element it centres on,
+ * the zone that flipped for a reveal (R154), or null when the entry's board draws none. A Mythic's
+ * takeover holds through the entry's `setPiece` (R2785000), not here.
+ */
+export type EntryEntrance = {
+  tier: "mythic" | "legendary";
+  instanceId: string;
+  defId: string;
+  player: PlayerId;
+  reveal: boolean;
+  anchor: string | null;
+  /**
+   * R2800000: this Mythic's own wipe in the same action is the action's set piece, so its takeover
+   * yields to it: the entrance claims no hold and draws no takeover.
+   */
+  yielded?: true;
+};
+
+/** R2722001: the public catalog's type and rarity (a token's printed one) of a readable card, or null. */
+export type EntranceResolver = (defId: string) => { type: CardType; rarity: string | undefined } | null;
+
+/** The wait inside an entry before its motion starts: a slam's anticipation and a set piece's hold (R2785000). */
+export function leadMs(entry: Pick<AnimationEntry, "slam" | "setPiece">): number {
+  return (entry.slam?.anticipationMs ?? 0) + (entry.setPiece?.holdMs ?? 0);
+}
+
+/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece. */
+export function takeoverClaim(entry: AnimationEntry): SetPieceClaim | null {
+  return entry.entrance?.tier === "mythic" ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS } : null;
+}
+
+/**
+ * R2785000: how long a set piece that asks `askedMs` at speed 1 holds the game. Big moments' "off" holds
+ * nothing and "short" at most `SET_PIECE_SHORT_HOLD_MS`; the effects speed scales it (R201), never below
+ * `MIN_ENTRY_MS` and never past `SET_PIECE_HOLD_CAP_MS`.
+ */
+export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed: number): number {
+  if (askedMs <= 0 || bigMoments === "off") return 0;
+  const beat = bigMoments === "short" ? Math.min(askedMs, SET_PIECE_SHORT_HOLD_MS) : askedMs;
+  return Math.max(MIN_ENTRY_MS, Math.min(SET_PIECE_HOLD_CAP_MS, scaleForSpeed(beat, speed)));
+}
+
+/**
+ * R2785000: gives the first entries of one action (one call) that `claimOf` claims, at most
+ * `SET_PIECES_PER_ACTION`, their `setPiece`, adding its hold to the entry's `durationMs` ahead of its
+ * motion; the queue pins it against the burst budget. A later claim in the same action, an entry that
+ * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing. R2800000: a
+ * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing.
+ */
+export function setPieceEntries(
+  entries: readonly AnimationEntry[],
+  claimOf: SetPieceClaimer,
+  opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
+): AnimationEntry[] {
+  let held = 0;
+  // R2800000: a Mythic whose own wipe in this action is a set piece yields its takeover to it.
+  const own = new Set(entries.flatMap((entry) => (entry.wipe !== undefined && claimOf(entry) !== null ? [entry.wipe.sourceId] : [])));
+  return entries.map((entry) => {
+    const entrance = entry.entrance;
+    if (entrance?.tier === "mythic" && own.has(entrance.instanceId)) return { ...entry, entrance: { ...entrance, yielded: true } };
+    if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
+    const claim = claimOf(entry);
+    const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
+    if (claim === null || holdMs <= 0) return entry;
+    held += 1;
+    return { ...entry, setPiece: { key: claim.key, holdMs }, durationMs: entry.durationMs + holdMs };
+  });
+}
+
+const isTrapType = (type: CardType): boolean => type === "Trap" || type === "Field Trap";
+
+/**
+ * R2722002: the card `event` makes its entrance for on the seat it was planned for, or null: a
+ * face-up play of a Unit or Spell (never a set, never a Trap's), a Unit put onto the field without a
+ * play, or a hidden card's first firing the seat reads. Every one names its card in the seat's own
+ * event (R202).
+ */
+function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: string; defId: string; player: PlayerId; reveal: boolean } | null {
+  switch (event.type) {
+    case "cardPlayed": {
+      if (isFaceDownSet(event)) return null;
+      const info = resolve(event.defId);
+      return info === null || isTrapType(info.type) ? null : { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
+    }
+    case "summoned":
+      return event.row === "units" && event.defId !== HIDDEN_ID ? { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false } : null;
+    case "trapFired":
+      return firstReveal(event) ? { instanceId: event.instanceId, defId: event.defId, player: event.controller, reveal: true } : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * R2722001: gives each entry where a readable Legendary or Mythic card makes its entrance its
+ * `entrance`, once per play or reveal (`seen`, kept by the queue across actions, so a played Unit's
+ * `summoned` in a batch after a prompt adds none, while its next play enters again). It holds nothing:
+ * a Mythic's entrance claims its entry as the takeover set piece (`takeoverClaim`, R2785000).
+ */
+export function entranceEntries(
+  entries: readonly AnimationEntry[],
+  resolve: EntranceResolver,
+  opts: { seen: Set<string> },
+): AnimationEntry[] {
+  return entries.map((entry) => {
+    for (const event of entry.events) {
+      const card = entranceAt(event, resolve);
+      // A face-up play is always a fresh entrance, as its intro is (R1350): a card bounced and played
+      // again keeps its id but enters again. Its own `summoned`, a reveal or a firing enter once.
+      if (card === null || (event.type !== "cardPlayed" && opts.seen.has(card.instanceId))) continue;
+      const rarity = resolve(card.defId)?.rarity;
+      if (rarity !== "Legendary" && rarity !== "Mythic") continue;
+      opts.seen.add(card.instanceId);
+      const tier = rarity === "Mythic" ? "mythic" : "legendary";
+      // A played Unit lands in the zone its own summoned names in the same entry: the entrance centres there.
+      const landing = entry.events.find((e) => e.type === "summoned" && e.row === "units" && e.instanceId === card.instanceId);
+      const anchor = targetFor(landing ?? event, entry.view);
+      return { ...entry, entrance: { tier, ...card, anchor } };
+    }
+    return entry;
+  });
+}
+
 export function pileTestid(pile: Pile): string {
   if (pile.pile === "library") return animTestid.library(pile.side);
   return pile.pile === "graveyard" ? animTestid.graveyard(pile.side) : animTestid.exile(pile.side);
@@ -1027,7 +1205,8 @@ export function pileTestid(pile: Pile): string {
  * is a batch of coins or dice whose suspense is the point (R2652001).
  */
 function pinned(entry: AnimationEntry): boolean {
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.type === "rolled";
+  // R2785000 (from R2722001's takeover): a set piece's hold is the action's one capped beat, never squeezed.
+  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.wipe !== undefined || entry.type === "rolled" || entry.setPiece !== undefined;
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
@@ -1071,13 +1250,15 @@ function castFrame(event: GameEvent, view: PlayerView): string | null {
 /**
  * Turns an event stream into entries, collapsing each `cardPlayed` + `summoned` pair; `reducedMotion` zeroes
  * every duration. `plays` remembers the plays still resolving from one batch to the next; a caller without
- * one gets a fresh tracker, which reads casts inside this batch alone.
+ * one gets a fresh tracker, which reads casts inside this batch alone. `wipeOf` names the cards with a set
+ * piece, whose hook's run of removals plays as one wipe (R2800000); by default none does.
  */
 export function planEntries(
   events: readonly GameEvent[],
   view: PlayerView,
   reducedMotion: boolean,
   plays: PlayTracker = createPlayTracker(),
+  wipeOf: (defId: string) => boolean = () => false,
 ): AnimationEntry[] {
   const out: AnimationEntry[] = [];
   const timed = (ms: number): number => (reducedMotion ? 0 : ms);
@@ -1106,6 +1287,23 @@ export function planEntries(
         sweep: sweep.sweep,
       });
       i += sweep.length;
+      continue;
+    }
+
+    // R2800000: a set-piece card's hook removing cards, one run of them, plays as one pinned entry.
+    const wiped = wipeAt(events, i, view, plays.hook(), wipeOf);
+    if (wiped !== null) {
+      const run = take(i, wiped.length);
+      plays.closeHook();
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(WIPE_MS),
+        frames: frameMap(run.map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        wipe: wiped.wipe,
+      });
+      i += wiped.length;
       continue;
     }
 
@@ -1231,6 +1429,11 @@ export type AnimationQueue = {
   drain(): void;
   /** Same as `drain`, without firing `onSettled` — for tearing the queue down. */
   reset(): void;
+  /**
+   * R2785000: a tap, a click or Space ends the set piece in flight at once and starts the next entry,
+   * as its timer would have. False, doing nothing, when the entry in flight is no set piece.
+   */
+  skip(): boolean;
   /** Called on every change to `animating()`; returns its own unsubscribe. */
   subscribe(listener: () => void): () => void;
   /** Lifecycle signals for the effects layer. Synchronous; returns its own unsubscribe. */
@@ -1245,10 +1448,16 @@ export type RunnerSignal =
   | { kind: "start"; entry: AnimationEntry } // an entry went in flight (durationMs > 0 only)
   | { kind: "idle" } // emitted each time the pump fires onSettled
   /**
+   * R2789000: an entry that plays with no duration (reduced motion) though its row has one. It holds
+   * nothing and waits for nothing; the effects layer draws its still callouts, the one effect that survives it.
+   */
+  | { kind: "still"; entry: AnimationEntry }
+  /**
    * drain() ran. `entries` are the ones it cut short, in order: the entry in flight, then every one
    * still waiting. A drained game over never plays its killing blow, so the effects layer replays it.
    */
   | { kind: "drain"; entries: readonly AnimationEntry[] }
+  | { kind: "skip"; entry: AnimationEntry } // R2785000: skip() ended this set piece, which was in flight
   | { kind: "reset" }; // reset() ran
 
 export type AnimationQueueOptions = {
@@ -1262,10 +1471,21 @@ export type AnimationQueueOptions = {
   /** A cast's own segment of the budget (issue #124, `CAST_BUDGET_MS`). */
   castBudgetMs?: number;
   minEntryMs?: number;
-  /** Read at every enqueue (R201). */
-  settings?: () => Pick<FxSettings, "speed" | "motion">;
+  /**
+   * Read at every enqueue (R201). An `intensity` of "off" takes no set piece's hold, and `bigMoments`
+   * (absent: "full") sets how long one holds (R2785000).
+   */
+  settings?: () => Pick<FxSettings, "speed" | "motion"> & Partial<Pick<FxSettings, "intensity" | "bigMoments">>;
   /** #185: the tier a landing Unit slams at, read at every enqueue. Absent: nothing slams. */
   slamOf?: SlamResolver;
+  /** R2722001: a readable card's type and rarity, for its entrance and a Mythic's takeover. Absent: none. */
+  entranceOf?: EntranceResolver;
+  /** R2785000: the set piece an entry is, asked before the takeover's claim (`takeoverClaim`). Absent: only the takeover. */
+  setPieceOf?: SetPieceClaimer;
+  /** R2785000: false on a board that plays no effects (the Duos teammate's, R2095000): no set piece holds it. */
+  setPieces?: boolean;
+  /** R2800000: the cards with a set piece, whose hook's removals play as one wipe (`planEntries`). Absent: none. */
+  wipeOf?: (defId: string) => boolean;
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
@@ -1383,6 +1603,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
   let current: AnimationEntry | null = null;
   /** The plays still resolving, across batches (issue #124): a cast can come in the batch after a prompt. */
   const plays = createPlayTracker();
+  /** R2722001: the cards whose entrance this queue has made, so each makes it once. */
+  const entered = new Set<string>();
   /** Bumped by `drain`/`reset` so a timer already in flight cannot resurrect a cleared queue. */
   let epoch = 0;
   let owed = false;
@@ -1455,7 +1677,10 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         if (settle()) signal({ kind: "idle" });
         return;
       }
-      if (next.durationMs <= 0) continue;
+      if (next.durationMs <= 0) {
+        if ((animationRow(next.type)?.durationMs ?? 0) > 0) signal({ kind: "still", entry: next });
+        continue;
+      }
       current = next;
       notify();
       // Captured before the signal, so a listener that drains or resets inside `start` leaves this
@@ -1476,12 +1701,23 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       // Read live, so a change in the settings panel applies from the next action on (R201).
       const settings = readSettings();
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
-      const planned = planEntries(events, view, reduced, plays);
+      const planned = planEntries(events, view, reduced, plays, options.wipeOf);
       const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
-      const entries = slammed.map((entry) => {
+      const scaled = slammed.map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });
+      const entranced = options.entranceOf === undefined ? scaled : entranceEntries(scaled, options.entranceOf, { seen: entered });
+      // R2785000: the action's set piece, if any entry is one; none on a silent board, reduced or with the effects off.
+      const claimOf: SetPieceClaimer = (entry) => options.setPieceOf?.(entry) ?? takeoverClaim(entry);
+      const entries =
+        options.setPieces === false
+          ? entranced
+          : setPieceEntries(entranced, claimOf, {
+              reduced: reduced || settings.intensity === "off",
+              bigMoments: settings.bigMoments ?? "full",
+              speed: settings.speed,
+            });
       if (entries.length > 0) queue.push(...entries);
       owed = true;
       const speed = normalizeSpeed(settings.speed);
@@ -1509,12 +1745,22 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       settle();
       signal({ kind: "drain", entries: cut });
     },
+    skip() {
+      const entry = current;
+      if (entry === null || entry.setPiece === undefined) return false;
+      epoch += 1; // the skipped entry's timer finds a newer epoch and does nothing
+      current = null;
+      signal({ kind: "skip", entry });
+      pump();
+      return true;
+    },
     reset() {
       epoch += 1;
       queue.length = 0;
       current = null;
       owed = false;
       plays.clear();
+      entered.clear();
       notify();
       signal({ kind: "reset" });
     },

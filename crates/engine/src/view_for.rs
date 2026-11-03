@@ -15,6 +15,9 @@
 //!     animation fields and shows `HIDDEN_ID` for that card.
 //!   - R2652000: a `rolled` batch a face-down trap made is dropped for the other player unless the trap fired
 //!     in the same action (`withheld_rolls`).
+//!   - R2783000: a `hookResolving` marker is dropped for a seat that could not read its card where it stood
+//!     as the hook began, unless that trap fired in the same action (`withheld_rolls`), and takes no room in
+//!     R168's floor; R2783001's `via` goes with a hidden card's identity.
 //!   - R764: a Glitch's reset or boards (R676, R678) takes cards out unseen, so events up to the end of its
 //!     action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id; events naming its old id follow it through `formerId`.
@@ -39,7 +42,7 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::{DRAW_OFFER_BLOCK_TURNS, VIEW_EVENT_LIMIT};
+use crate::config::{CUSTOM_ID_PREFIX, DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -72,8 +75,8 @@ use crate::wire::{
     CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
     HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
     MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
-    PlayerView, PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView,
-    Zone, ZoneName, opponent_of,
+    PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection, SideView,
+    TuningChange, UnitView, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -1607,7 +1610,8 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
     }
 }
 
-/// §10.6, R81: the other player learns that a prompt is open and whose it is, never its options.
+/// §10.6, R81: the other player learns that a prompt is open and whose it is, never its options; of a
+/// card picker whose count hides nothing, how many cards it offers (R2739000).
 fn pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
     let Some(pending) = &state.pending else {
         return mulligan_pending_view(state, viewer);
@@ -1616,6 +1620,7 @@ fn pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
         return Some(PendingView::Elsewhere(PendingElsewhereView {
             for_you: false,
             pending_for: pending.player_id,
+            option_count: shown_option_count(state, viewer, pending),
         }));
     }
     Some(prompt_view(state, viewer, pending))
@@ -1632,6 +1637,64 @@ fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -
         return None;
     }
     Some((pending.resume.def_id.clone(), pending.resume.radiant))
+}
+
+/// R2739000: the `optionCount` `viewer`'s view gives the prompt the other seat holds, or `None`. The AI's
+/// redaction (R185) keeps that many blank options where it drops the other seat's, so a world's view
+/// counts what the true one does.
+pub fn other_seats_option_count(state: &GameState, viewer: PlayerId) -> Option<i32> {
+    let pending = state
+        .pending
+        .as_ref()
+        .filter(|pending| pending.player_id != viewer)?;
+    shown_option_count(state, viewer, pending)
+}
+
+/// R2739000: how many cards the other seat's card picker offers, for the seat not holding it, or
+/// `None` (§10.6's bare notice). Only a picker the client draws as cards (a Discover, or a short
+/// `mode`, `reward` or `answer`), asked by a card this viewer may read, whose script does not read its
+/// options off a hidden zone, and whose every option is a mode or a card this viewer may read.
+fn shown_option_count(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> Option<i32> {
+    let def_id = pending.resume.def_id.as_str();
+    let asking = pending.resume.instance_id.as_deref()?;
+    let card = find_instance(state, asking)?;
+    // R81: a prompt's shape narrows a hidden asker, so a hidden or changed one shows nothing. The state
+    // holds every card tested here, so `may_read` never reaches for a replacement.
+    if card.def_id != def_id || !may_read(state, viewer, asking, &Replacements::default()) {
+        return None;
+    }
+    let scripts = crate::scripts::script_of(state, def_id);
+    if def_id.starts_with(CUSTOM_ID_PREFIX)
+        || scripts.base.secret_option_counts
+        || scripts.radiant.secret_option_counts
+    {
+        return None;
+    }
+    // R1184000: a question sequence's Stop is a button, never a card.
+    let cards: Vec<&PromptOption> = pending
+        .options
+        .iter()
+        .filter(|option| {
+            !(pending.kind == PromptKind::Answer && option.key == crate::prompts::ANSWER_STOP_KEY)
+        })
+        .collect();
+    let readable = cards.iter().all(|option| match &option.selection {
+        Selection::Mode { .. } => true,
+        Selection::Instance { instance_id } => {
+            find_instance(state, instance_id).is_some()
+                && may_read(state, viewer, instance_id, &Replacements::default())
+        }
+        _ => false,
+    });
+    let drawn = match pending.kind {
+        PromptKind::Discover => true,
+        PromptKind::Mode | PromptKind::Reward | PromptKind::Answer => cards.len() <= PROMPT_CARD_OPTION_LIMIT,
+        _ => false,
+    };
+    if !readable || !drawn || cards.is_empty() {
+        return None;
+    }
+    i32::try_from(cards.len()).ok()
 }
 
 /// The chooser's own prompt, field by field: `resume` never travels, so nothing a prompt keeps for its
@@ -1670,9 +1733,11 @@ fn mulligan_pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingV
     if mulligan_prompt_for(state, other).is_none() {
         None
     } else {
+        // R265: the mulligan shows no count, its hand being hidden.
         Some(PendingView::Elsewhere(PendingElsewhereView {
             for_you: false,
             pending_for: other,
+            option_count: None,
         }))
     }
 }
@@ -2056,6 +2121,8 @@ fn redact_event(
             let killer_hidden = nullable_at(&shown, "killerId").is_some_and(|killer| hidden(&killer));
             if hidden(&instance) {
                 shown.remove("radiant");
+                // R2783001: the keyword it died by is the card's.
+                shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             if killer_hidden {
@@ -2079,6 +2146,8 @@ fn redact_event(
                     shown.remove("embiggened");
                 }
                 shown.remove("formerId");
+                // R2783001: as the card's Reborn is.
+                shown.remove("via");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             // R1088: `sourceId`, the summoning card, may since be unreadable: hidden as `killerId` is.
@@ -2287,6 +2356,8 @@ fn redact_event(
         // R1361: the report of a hit Armor took whole names what `damage` names, and hides it alike.
         GameEventType::Damage | GameEventType::DamageAbsorbed => {
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
+                // R2783001: the hit's keyword is its source's, so it goes with the source.
+                shown.remove("via");
                 hide(&mut shown, &["sourceId"]);
             }
             if hidden(&text_at(&shown, "targetId")) {
@@ -2553,6 +2624,17 @@ fn redact_event(
             rebuild(shown)
         }
 
+        // R2783000: a marker a viewer reads at all (`withheld_rolls` drops the rest) names its card as
+        // the card itself is named now (R97); `hiddenFrom` is the engine's, so no view forwards it.
+        GameEventType::HookResolving => {
+            shown.remove("hiddenFrom");
+            let source = text_at(&shown, "sourceId");
+            if !source.is_empty() && hidden(&source) {
+                hide(&mut shown, &["sourceId", "defId"]);
+            }
+            rebuild(shown)
+        }
+
         // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
         GameEventType::ChaosRolled => {
             if !hidden(&instance) {
@@ -2634,25 +2716,32 @@ fn hidden_tuning_change() -> TuningChange {
 /// R2652000: the places, in `state.applied`'s events flattened oldest action first, of the `rolled`
 /// batches `viewer` never reads: a face-down card's in its controller's backrow, to the other player,
 /// unless that trap's own `trapFired` follows in the same action (Hearthstone's Secret). Judged inside
-/// the action that rolled, so a batch never comes into a window or leaves it after the fact.
+/// the action that rolled, so a batch never comes into a window or leaves it after the fact. R2783000:
+/// and the `hookResolving` markers of cards `viewer` could not read where they stood as the hook began
+/// (`hiddenFrom`), under the same exception for a trap that fires in that action.
 pub(crate) fn withheld_rolls(state: &GameState, viewer: PlayerId) -> IndexSet<usize> {
     let mut withheld = IndexSet::new();
     let mut base = 0;
     for entry in &state.applied {
         for (at, event) in entry.events.iter().enumerate() {
-            let GameEvent::Rolled {
-                player,
-                instance_id,
-                face_down: Some(true),
-                ..
-            } = event
-            else {
-                continue;
+            let (card_id, unread) = match event {
+                GameEvent::Rolled {
+                    player,
+                    instance_id,
+                    face_down: Some(true),
+                    ..
+                } => (instance_id, *player != viewer),
+                GameEvent::HookResolving {
+                    source_id,
+                    hidden_from: Some(hidden),
+                    ..
+                } => (source_id, hidden.contains(&viewer)),
+                _ => continue,
             };
-            let fired = entry.events[at + 1..].iter().any(|later| {
-                matches!(later, GameEvent::TrapFired { instance_id: trap, .. } if trap == instance_id)
-            });
-            if *player != viewer && !fired {
+            let fired = entry.events[at + 1..].iter().any(
+                |later| matches!(later, GameEvent::TrapFired { instance_id: trap, .. } if trap == card_id),
+            );
+            if unread && !fired {
                 withheld.insert(base + at);
             }
         }
@@ -2690,8 +2779,24 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let withheld = withheld_rolls(state, viewer);
     let read: Vec<usize> = (0..all.len()).filter(|at| !withheld.contains(at)).collect();
     let newest_from = all.len() - state.applied.last().map_or(0, |entry| entry.events.len());
-    let newest = read.iter().filter(|at| **at >= newest_from).count();
+    // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
+    // it would had no hook been marked, each marker among them beside them, and the markers just before
+    // its first event with it (a hook's marker comes before its first effect).
+    let marker = |at: &usize| matches!(all[*at], GameEvent::HookResolving { .. });
+    let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();
+    let newest = counted.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
+    let from = match counted.len().checked_sub(window) {
+        Some(skip) if skip > 0 => {
+            let first = counted[skip];
+            let mut start = read.partition_point(|at| *at < first);
+            while start > 0 && marker(&read[start - 1]) {
+                start -= 1;
+            }
+            read[start].min(newest_from)
+        }
+        _ => 0,
+    };
     let replaced = replacements_of(&all, Some(state));
     // R764: a Glitch's reset or boards (R676, R678) took cards out unseen, so a card the events up to the
     // end of its action name that the state no longer holds is not public, as a token's was (R11).
@@ -2716,8 +2821,8 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         voided: true,
         ..replaced.clone()
     };
-    read[read.len().saturating_sub(window)..]
-        .iter()
+    read.iter()
+        .filter(|at| **at >= from)
         .map(|&at| {
             redact_event(
                 state,
@@ -2794,6 +2899,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
 /// R243: the match-made definitions (`state.transient_defs`: a Fuse's, a crafted card's; R77, R102,
 /// R179) the finished view names anywhere, copied beside it since no client catalog has them. Read
 /// after redaction, so an unreadable card is the sentinel by then (R97) and its definition stays put.
+/// R2783000: a `hookResolving` marker brings in none, since it only marks a moment its card's own
+/// events and stand on the board already show; the view's definitions are the ones it had without it.
 fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardDef> {
     fn visit(value: &Value, state: &GameState, defs: &mut IndexMap<String, CardDef>) {
         match value {
@@ -2826,7 +2933,12 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
         return defs;
     }
     match serde_json::to_value(view) {
-        Ok(value) => visit(&value, state, &mut defs),
+        Ok(mut value) => {
+            if let Some(Value::Array(events)) = value.get_mut("events") {
+                events.retain(|event| event["type"].as_str() != Some("hookResolving"));
+            }
+            visit(&value, state, &mut defs)
+        }
         Err(error) => panic!("a view serializes: {error}"),
     }
     defs

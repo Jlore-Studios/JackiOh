@@ -12,7 +12,7 @@ import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, Set
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
-import { rememberRead, updateCachedRead } from "./readCache.ts";
+import { forgetRead, rememberRead, updateCachedRead } from "./readCache.ts";
 import { whileSpending } from "./spending.ts";
 
 const DEFAULT_HTTP_URL = "http://localhost:8787";
@@ -585,11 +585,18 @@ export type BarSettle = { before: number; after: number; size: number; pays: num
 /**
  * What an opening did to both token bars (R1305000, R1305001): `cosmeticPaid` is the steps the cosmetic
  * bar paid, in order (`cosmetic.pays` long), `slotPoints` each slot's points, by its rolled rarity (R1953000).
+ * The cosmetic bar's `size` is the step's it stands at after the opening (R2728000).
  */
 export type OpeningBarsAnswer = {
   card: BarSettle;
   cosmetic: BarSettle;
   cosmeticPaid: CosmeticTokenStep[];
+  /**
+   * R2728000: the size of each step the cosmetic bar's sweep crosses: each step paid, then the step
+   * it stands at after (`cosmetic.size`); `pays + 1` entries. Absent only from an answer kept before
+   * #2728 (R2124000).
+   */
+  cosmeticSizes?: number[];
   slotPoints: number[];
 };
 
@@ -674,14 +681,17 @@ export async function buyPack(token: string, pack: string): Promise<BoughtPackRe
 
 export type TokenBarState = { points: number; size: number };
 
-export type CosmeticTokenStep = "rare" | "epic" | "cosmeticPack";
+export type CosmeticTokenStep = "rare" | "epic" | "legendary" | "cosmeticPack";
 
-/** `GET /api/tokens` (R1305004); both redeem routes answer the same after they spend. */
+/**
+ * `GET /api/tokens` (R1305004); both redeem routes answer the same after they spend. The cosmetic bar's
+ * size is its current step's (R2728000).
+ */
 export type TokenBarsResponse = {
   cardBar: TokenBarState;
   cosmeticBar: TokenBarState;
   nextStep: CosmeticTokenStep;
-  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticPack: number };
+  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticLegendary: number; cosmeticPack: number };
 };
 
 export function getTokens(token: string): Promise<TokenBarsResponse> {
@@ -694,8 +704,8 @@ export async function redeemCardToken(token: string, cardId: string): Promise<To
   return answer;
 }
 
-/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
-export type CosmeticTokenTier = "Rare" | "Epic";
+/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003, R2728000). */
+export type CosmeticTokenTier = "Rare" | "Epic" | "Legendary";
 
 /** A per-card cosmetic names its card; an account one sends none. */
 export async function redeemCosmeticToken(
@@ -766,6 +776,56 @@ export async function buyChase(token: string, cosmeticId: string, cardId?: strin
     cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
   );
   rememberRead(token, keptPaths.cosmeticPacks, answer);
+  return answer;
+}
+
+// News (SPEC §14.13, #2875): the patches and alerts the server posts, each with a reward an account
+// claims once. The server decides which entries are live (R2875001), what each pays (R2875003) and
+// whether a claim lands; the client shows its answers.
+
+/** R2875003: what a news entry pays; a card pack's `pack` is `GLOBAL_PACK_NAME` or a set's name. */
+export type NewsReward =
+  | { kind: "jlore"; amount: number }
+  | { kind: "cardPack"; amount: number; pack: string }
+  | { kind: "cardToken"; amount: number }
+  | { kind: "cosmeticToken"; amount: number; tier: CosmeticTokenTier }
+  | { kind: "cosmeticPack"; amount: number };
+
+/** One live news entry (R2875001); `postedAt` is epoch ms, `version` a patch's, null for an alert. */
+export type NewsEntry = {
+  id: string;
+  kind: "patch" | "alert";
+  version: string | null;
+  title: string;
+  summary: string;
+  postedAt: number;
+  reward: NewsReward;
+  claimed: boolean;
+};
+
+/** `GET /api/news`, newest first; a claim answers the same. */
+export type NewsResponse = { news: NewsEntry[] };
+
+/** Not kept (R2125000): a count the landing shows only once the server has answered it. */
+export function getNews(token: string): Promise<NewsResponse> {
+  return apiRequest<NewsResponse>("/api/news", { token });
+}
+
+/** The kept reads a claimed reward changes, which no answer of a claim carries: dropped once it lands. */
+const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>> = {
+  jlore: [keptPaths.wallet],
+  cardPack: [keptPaths.packs],
+  cardToken: [keptPaths.tokens],
+  cosmeticToken: [keptPaths.tokens],
+  // One inventory item: the tokens' `cosmeticPack` and the cosmetic packs' `unopened`.
+  cosmeticPack: [keptPaths.tokens, keptPaths.cosmeticPacks],
+};
+
+/** `POST /api/news/:id/claim` (R2875000): a spend, so it sends an `Idempotency-Key` (R2124000). */
+export async function claimNews(token: string, id: string): Promise<NewsResponse> {
+  const answer = await spendRequest<NewsResponse>(`/api/news/${encodeURIComponent(id)}/claim`, token, {});
+  const reward = answer.news.find((entry) => entry.id === id)?.reward;
+  for (const path of reward === undefined ? [] : NEWS_REWARD_READS[reward.kind]) forgetRead(token, path);
   return answer;
 }
 
@@ -1183,6 +1243,22 @@ export function getSeriesForMatch(token: string, matchId: string): Promise<{ ser
 
 export type GrapeTier = "rotten" | "normal" | "large" | "golden" | "mythic";
 
+/**
+ * R2778000: the two ranked ladders: Constructed (the Best of 1 and Conquest queues) and All Random, each
+ * with its own rank, record, badges and leaderboard. A read that names none is Constructed's.
+ */
+export type Ladder = "constructed" | "random";
+
+/** R2778000: the ladder a queue mode's ranked games move. */
+export function ladderOfMode(mode: "bo1" | "bo3" | "random"): Ladder {
+  return mode === "random" ? "random" : "constructed";
+}
+
+/** R2778000: a ranked read's path with its ladder: Constructed's is the bare path, as before. */
+export function ladderPath(path: string, ladder: Ladder): string {
+  return ladder === "constructed" ? path : `${path}?ladder=${ladder}`;
+}
+
 /** What a player is shown as (R605, R608, R612): never the rating. */
 export type VisibleRank =
   | { tier: "raisin"; placementsPlayed: number; placementGames: number }
@@ -1197,6 +1273,8 @@ export type PeakBadge =
 /** `GET /api/ranked`. The profile id is for keys and requests; a player is only ever shown by `username` (R1436). */
 export type OwnRankResponse = {
   season: string;
+  /** R2778000: the ladder the answer reads. */
+  ladder: Ladder;
   profileId: string;
   username: string;
   rank: VisibleRank;
@@ -1205,13 +1283,16 @@ export type OwnRankResponse = {
   badges: PeakBadge[];
 };
 
-export function getOwnRank(token: string): Promise<OwnRankResponse> {
-  return apiRequest<OwnRankResponse>("/api/ranked", { token });
+/** R2778000: `GET /api/ranked` on `ladder`, Constructed unless asked. */
+export function getOwnRank(token: string, ladder: Ladder = "constructed"): Promise<OwnRankResponse> {
+  return apiRequest<OwnRankResponse>(ladderPath("/api/ranked", ladder), { token });
 }
 
 /** `GET /api/leaderboard` (R608, R612): Jlorious #1–#100, then every other tier, then the Raisins. */
 export type LeaderboardResponse = {
   season: string;
+  /** R2778000: the ladder the board shows. */
+  ladder: Ladder;
   jlorious: { position: number; profileId: string; username: string; you: boolean }[];
   tiers: {
     tier: GrapeTier;
@@ -1222,8 +1303,9 @@ export type LeaderboardResponse = {
   you: VisibleRank;
 };
 
-export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
-  return keptGet<LeaderboardResponse>(keptPaths.leaderboard, token);
+/** R2778000: `ladder`'s board, kept under its own path (`ladderPath`), so each ladder keeps its own. */
+export function getLeaderboard(token: string, ladder: Ladder = "constructed"): Promise<LeaderboardResponse> {
+  return keptGet<LeaderboardResponse>(ladderPath(keptPaths.leaderboard, ladder), token);
 }
 
 /**
@@ -1232,6 +1314,8 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
  */
 export type MatchRanksResponse = {
   ranked: boolean;
+  /** R2778000: the ladder the seats' ranks are read on, the match's mode's. */
+  ladder: Ladder;
   seats: Record<
     "p1" | "p2",
     { profileId: string; username: string; rank: VisibleRank; streak: number; you: boolean; rankBefore?: VisibleRank; rankAfter?: VisibleRank }
@@ -1371,6 +1455,11 @@ export type PublicCardStat = {
   notDrawnGames?: number;
   notDrawnWinRate?: number | null;
   drawnDelta?: number | null;
+  /**
+   * R2777000: the drawn delta kept as far as the card's games back it, read from an even game: the page's
+   * headline rate. Null when it was never seen or never unseen; absent from a server deployed before it.
+   */
+  adjustedWinRate?: number | null;
   playRate: number;
   hasEnoughGames: boolean;
   window?: PublicCardWindow;
@@ -1425,7 +1514,7 @@ export type PublicStatsCardsResponse = {
   sourceLabel: string;
   pilot: "merged" | "human" | "ai";
   pilotLabel: string;
-  mode: "all" | "bo1" | "bo3" | "random";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   modeLabel: string;
   minSample: number;
   totalGames: number;
@@ -1443,7 +1532,7 @@ export type PublicStatsCardsResponse = {
     activePatch: string;
     source: PublicStatsSource;
     pilot: "merged" | "human" | "ai";
-    mode: "all" | "bo1" | "bo3" | "random";
+    mode: "all" | "bo1" | "bo3" | "random" | "constructed";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -1536,7 +1625,7 @@ export type PublicStatsGamesResponse = {
   patch: string;
   source: PublicStatsSource;
   sourceLabel: string;
-  mode: "all" | "bo1" | "bo3" | "random";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   modeLabel: string;
   minSample: number;
   /** Every game the patch's window counted, those recorded before these figures were kept among them. */

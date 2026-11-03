@@ -69,6 +69,7 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
         } else {
             None
         },
+        via: None,
     }
 }
 

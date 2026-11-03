@@ -54,11 +54,10 @@ pub fn script_v0_5_9f() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4 (the Cry draws 1, radiant 2, R275), plus R18's "lose
-// health bypasses the cap".
+// #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4 (the Cry draws 1, radiant 2, R275).
 // The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`): a `field` setup fires no
-// Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health" is read against both caps:
-// 7 is over the base cap of 5 and the radiant cap of 3, so either face tells a clamp from a bypass.
+// Cry (R1), so the attack is a bare 12-damage instance. R18's "lose health bypasses the cap" is the
+// engine's rule (`crates/engine/tests/rules/damage.rs`), since the card adds nothing to it.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -185,22 +184,6 @@ mod tests {
             // §5.1: a Field Spell with a Cry — it went to the backrow and stayed there.
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some("core-073".to_string()));
         }
-
-        #[test]
-        fn r18_lose_health_is_not_damage_so_the_base_cap_of_4_never_sees_it() {
-            let mut s = setup(json!({
-                "seed": "core-073-r18-base",
-                "p1": { "backrow": ["core-073"], "hand": ["core-027", "core-005"], "library": ["core-035"] },
-                "p2": { "hand": ["core-005"] },
-            }));
-
-            // #27 Blood Ridden Glowy Jelly Bean: "you lose 7 health".
-            s.play("core-027", json!({}));
-
-            // Were the cap to apply, this would be 26. R18 says it does not.
-            s.expect_health(P1, 23).expect_events(json!(["healthLost"]));
-            assert!(damage_to(&s, "hero-p1").is_empty());
-        }
     }
 
     mod anti_oneshot_armor_radiant {
@@ -300,20 +283,6 @@ mod tests {
         }
 
         #[test]
-        fn the_base_cry_still_draws_exactly_1_beside_the_radiants_2() {
-            let mut s = setup(json!({
-                "seed": "core-073-base-cry-count",
-                "p1": { "hand": ["core-073", "core-005"], "library": ["core-035", "core-036", "core-037"] },
-                "p2": { "hand": ["core-005"] },
-            }));
-
-            s.play("core-073", json!({}));
-
-            assert_eq!(drawn_count(&s), 1);
-            assert_eq!(s.pile(P1, "library").len(), 2);
-        }
-
-        #[test]
         fn r386_an_upgrade_draws_2_and_a_radiant_degrade_1() {
             for (radiant, upgrade, draws) in [(false, true, 2), (true, false, 1)] {
                 let mut s = setup(json!({
@@ -351,25 +320,6 @@ mod tests {
                 s.attack("core-019", "hero");
                 s.expect_health(P1, 30 - cap);
             }
-        }
-
-        #[test]
-        fn r18_a_7_point_lose_health_goes_through_in_full_past_the_radiant_cap_of_3() {
-            let mut s = setup(json!({
-                "seed": "core-073-r18-radiant",
-                "p1": {
-                    "backrow": [{ "def": "core-073", "radiant": true }],
-                    "hand": ["core-027", "core-005"],
-                    "library": ["core-035"],
-                },
-                "p2": { "hand": ["core-005"] },
-            }));
-
-            s.play("core-027", json!({}));
-
-            // Were the cap to apply, this would be 27. R18 says it does not.
-            s.expect_health(P1, 23).expect_events(json!(["healthLost"]));
-            assert!(damage_to(&s, "hero-p1").is_empty());
         }
     }
 }

@@ -151,6 +151,8 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     boardReplaced: { type: "boardReplaced", player: "p1" },
     // Issue #2652 (R2652001).
     rolled: { type: "rolled", player: "p1", instanceId: unit, defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }] },
+    // Issue #2783 (R2783000).
+    hookResolving: { type: "hookResolving", sourceId: unit, defId: "core-004", controller: "p1", hook: "cry" },
   };
 }
 

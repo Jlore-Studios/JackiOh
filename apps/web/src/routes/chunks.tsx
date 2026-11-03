@@ -49,6 +49,8 @@ export const routeChunks = {
   hotseat: DEV_ONLY ? routeChunk(() => import("./dev/hotseat.tsx")) : null,
   // #936 B65: the four-seat Duos hotseat.
   duosDev: DEV_ONLY ? routeChunk(() => import("../duos/DevDuosRoute.tsx")) : null,
+  // R2784000: the card-animation motif gallery.
+  fxGallery: DEV_ONLY ? routeChunk(() => import("./dev/fx.tsx")) : null,
   // #936 B61–B64: the networked co-op board.
   duos: routeChunk(() => import("../duos/DuosRoute.tsx")),
   // R768000: the recent games and their replays.
@@ -63,6 +65,9 @@ export const routeChunks = {
   match: routeChunk(() => import("./match.tsx")),
   series: routeChunk(() => import("./series.tsx")),
   practice: routeChunk(() => import("./practice.tsx")),
+  // #2705: the Dungeon Run and its stats, played offline on the engine in the browser.
+  dungeon: routeChunk(() => import("../dungeon/DungeonPage.tsx")),
+  dungeonStats: routeChunk(() => import("../dungeon/DungeonStatsPage.tsx")),
   privacy: routeChunk(() => import("./privacy.tsx")),
   terms: routeChunk(() => import("./terms.tsx")),
   purchases: routeChunk(() => import("./purchases.tsx")),
@@ -83,7 +88,16 @@ export const routeChunks = {
 export type RouteChunkName = keyof typeof routeChunks;
 
 /** Intent toward these starts the engine too. */
-const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>(["practice", "play", "match", "series", "duos", "watch"]);
+const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
+  "practice",
+  "play",
+  "match",
+  "series",
+  "duos",
+  "watch",
+  "dungeon",
+  "dungeonStats",
+]);
 
 /** The chunk drawing `path` (query ignored), or null. */
 export function chunkAt(path: string): RouteChunkName | null {

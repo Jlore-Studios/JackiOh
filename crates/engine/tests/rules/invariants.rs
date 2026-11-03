@@ -181,6 +181,50 @@ fn i11_unit_tokens_in_graveyard_exile_or_held_are_flagged_and_a_spell_token_in_g
     );
 }
 
+#[test]
+fn i6_a_hook_marker_naming_a_readable_card_s_former_definition_hides_nothing() {
+    let mut state = playing("i6-hook-marker");
+    // A definition no card p2 reads carries: its one card lies in p1's library.
+    let secret = state.players[P1]
+        .library
+        .iter()
+        .map(|card| card.def_id.clone())
+        .find(|def| {
+            !state.players[P2]
+                .hand
+                .iter()
+                .chain(&state.players[P2].library)
+                .any(|card| &card.def_id == def)
+        })
+        .expect("a p1 library card p2 holds no copy of");
+    // A face-up Unit both seats read, whose hook began while it was `secret` (a Fuse or a Transform has
+    // since given it another definition): its marker is the only event in the window naming it (R2783000).
+    let public = put(&mut state, "fx-30", slot(P1, Row::Units, 1), json!({}));
+    assert_ne!(public.def_id, secret);
+    state.applied.push(AppliedAction {
+        nonce: "i6-hook-marker".to_string(),
+        events: vec![GameEvent::HookResolving {
+            source_id: public.id.clone(),
+            def_id: secret.clone(),
+            controller: P1,
+            hook: HookKind::Cry,
+            hidden_from: None,
+        }],
+    });
+    let view = view_for(&state, P2);
+    assert!(
+        serde_json::to_string(&view.events)
+            .expect("events serialize")
+            .contains(&secret),
+        "the marker reaches p2 naming {secret}"
+    );
+    let legal = legal_actions(&state, P2);
+    assert_eq!(
+        invariant("I6", hidden_information_violations(&state, P2, &view, &legal)),
+        Vec::<String>::new()
+    );
+}
+
 // I12: a switch and an attack share exertion unless the Unit has Deft (§4.1, R49, R636)
 
 fn exertion_state(seed: &str, attacker_def: &str) -> (GameState, String, String) {
@@ -240,6 +284,7 @@ fn destroyed_by(instance_id: &str, killer_id: &str) -> GameEvent {
         max_health: 1,
         killer_id: Some(killer_id.to_string()),
         radiant: None,
+        via: None,
     }
 }
 

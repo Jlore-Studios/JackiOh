@@ -2,7 +2,7 @@
 //! `docs/dungeon-run.md` that sets it. The mode has no spec section yet: a number here is the plan's,
 //! and one the plan marks a strawman is to be tuned.
 
-use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH};
+use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, LIBRARY_CAP};
 use jackioh_engine::wire::PrintedRarity;
 
 use crate::{RunByFight, RunNodeKind, RunTier};
@@ -42,6 +42,35 @@ pub const RUN_SLOT_LADDER: [[usize; 6]; 6] = [
     [1, 2, 3, 2, 1, 1],
     [0, 2, 3, 2, 1, 2],
 ];
+/// DR3: the cards any starting deck may hold before anything is extracted. Placeholders until the
+/// designer's list: the 20 Training Grounds Commons and Rares with the fewest script lines (the
+/// catalog's `loc`), in catalog order, 14 Commons and 6 Rares. The first `RUN_STARTER_SIZE` fit level
+/// 1's slots.
+pub const RUN_STARTER_CARDS: [&str; 20] = [
+    "traininggrounds-001",
+    "traininggrounds-002",
+    "traininggrounds-004",
+    "traininggrounds-006",
+    "traininggrounds-007",
+    "traininggrounds-008",
+    "traininggrounds-011",
+    "traininggrounds-017",
+    "traininggrounds-020",
+    "traininggrounds-023",
+    "traininggrounds-042",
+    "traininggrounds-043",
+    "traininggrounds-044",
+    "traininggrounds-047",
+    "traininggrounds-048",
+    "traininggrounds-050",
+    "traininggrounds-051",
+    "traininggrounds-054",
+    "traininggrounds-058",
+    "traininggrounds-059",
+];
+/// DR3, DR9, a strawman: the Embers each level of the starting deck costs from the one before it, so
+/// `RUN_LEVEL_EMBERS[0]` buys level 2. One per step of `RUN_SLOT_LADDER`.
+pub const RUN_LEVEL_EMBERS: [i64; RUN_SLOT_LADDER.len() - 1] = [10, 25, 45, 70, 100];
 /// DR3: the most artifacts a run starts with.
 pub const RUN_STARTER_ARTIFACTS_MAX: usize = 3;
 /// DR3: the most points of artifacts a run starts with.
@@ -65,6 +94,12 @@ pub const RUN_ENEMY_HEALTH: RunByFight = RunByFight {
     mini_boss: 40,
     boss: 50,
 };
+/// DR5: the enemy artifact that gives its carrier the Medium AI's resources (`AI_DIFFICULTY.medium`,
+/// R180) in a fight.
+pub const RUN_LOOMING_PRESENCE: &str = "looming-presence";
+/// DR5: the enemy artifact that gives its carrier the Hard AI's resources (`AI_DIFFICULTY.hard`, R180)
+/// in a fight. It outranks Looming Presence when an enemy carries both.
+pub const RUN_OVERWHELMING_PRESENCE: &str = "overwhelming-presence";
 /// DR5: an enemy's deck, its own cards first and the rest dealt from the pool.
 pub const RUN_ENEMY_DECK_SIZE: usize = DECK_SIZE as usize;
 /// DR5: the lowest tier of a mini-boss's drop when its content names none.
@@ -100,6 +135,9 @@ pub const RUN_PACK_SIZE: usize = 8;
 pub const RUN_KEEP: usize = 3;
 /// DR6: the most cards of a pack anyone keeps.
 pub const RUN_KEEP_MAX: usize = 5;
+/// DR6, R2701000: the most cards a run deck holds, the engine's library cap, so every fight's setup
+/// is one the engine starts. A card a full deck would gain is not gained.
+pub const RUN_DECK_MAX: usize = LIBRARY_CAP as usize;
 
 /// DR7: a campfire's heal, in percent of the run's max HP.
 pub const RUN_CAMPFIRE_HEAL_PERCENT: i32 = 30;

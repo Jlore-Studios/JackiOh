@@ -16,6 +16,7 @@ fn summoned(id: &str) -> GameEvent {
         arrived_during: None,
         exits_from: None,
         creator: None,
+        via: None,
     }
 }
 
@@ -29,6 +30,7 @@ fn destroyed(id: &str) -> GameEvent {
         max_health: 1,
         killer_id: None,
         radiant: None,
+        via: None,
     }
 }
 
@@ -39,6 +41,7 @@ fn damage(id: &str) -> GameEvent {
         amount: 1,
         combat: false,
         absorbed: 0,
+        via: None,
     }
 }
 

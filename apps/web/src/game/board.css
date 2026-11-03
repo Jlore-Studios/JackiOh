@@ -1579,25 +1579,113 @@ button.modifier-badge[data-open="true"] {
    (animations.css's jk-summon-scale), and the cards around it wobble as it hits: the landing side's
    for a Large Unit, the whole board's for a Huge one, every card for a MASSIVE one, which also flashes
    the edges of the screen. None of it plays under Reduce motion; the hit-stop and the sound do. */
+/* R2785000: a set piece. The queue holds its entry for the set piece's beat (`--set-piece-hold`), so
+   the entry's own motion waits for it as a slam's waits for its anticipation. R2722001: a Mythic's
+   takeover is one, and when its card lands (`--takeover-land-ms`) every other card on the board recoils
+   from it. None of it plays under Reduce motion, which takes no hold (a still card stands in for a
+   takeover, TakeoverStill.tsx). */
+.game:not([data-reduced-motion="true"])[data-set-piece] [data-animating] {
+  animation-delay: var(--set-piece-hold, 0ms);
+}
+
+/* R2800000: a board clear's set piece. Over its hold the vortex twists the sides its wipe takes from
+   (`data-set-piece-sides`): each lane bends by `--set-piece-bend`, -2 at the left to 2 at the right,
+   the two sides turning opposite ways into one spiral, until 90% of the hold, and then snaps flat.
+   Every card the wipe takes is drawn in along it, spun and swallowed at the vortex's centre (the
+   effects layer's `pull` sets `--fx-pull-x/y` and `data-fx-pulled`); under the fold it sinks into the
+   black where it stands. The effects layer conceals it at the swallow. None of it plays under Reduce
+   motion, which holds nothing. Transform and opacity only. */
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="1"] {
+  --set-piece-bend: -2;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="2"] {
+  --set-piece-bend: -1;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="4"] {
+  --set-piece-bend: 1;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="5"] {
+  --set-piece-bend: 2;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"][data-set-piece-sides~="you"] .field .zone[data-side="you"],
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"][data-set-piece-sides~="opponent"] .field .zone[data-side="opponent"] {
+  animation: set-piece-twist var(--set-piece-hold, 0ms) var(--ease-in-out) both;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-side="opponent"] {
+  --set-piece-turn: -1;
+}
+
+@keyframes set-piece-twist {
+  0% {
+    transform: none;
+  }
+  90% {
+    transform: translateX(calc(var(--set-piece-bend, 0) * -9%)) rotate(calc(var(--set-piece-bend, 0) * var(--set-piece-turn, 1) * 8deg)) scale(0.9);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .board .card[data-fx-pulled] {
+  animation: set-piece-swallow var(--set-piece-hold, 0ms) var(--ease-in) both;
+  animation-delay: 0ms;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="fold"] .board .card[data-fx-pulled] {
+  animation: set-piece-sink var(--set-piece-hold, 0ms) var(--ease-in-out) both;
+  animation-delay: 0ms;
+}
+
+@keyframes set-piece-swallow {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fx-pull-x, 0px), var(--fx-pull-y, 0px)) rotate(540deg) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes set-piece-sink {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.6) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="summoned"],
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="animated"] {
-  animation-delay: var(--slam-anticipation, 0ms);
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
   animation: slam-wobble-slight 220ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
   animation: impact-card-wobble 250ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
   animation: slam-wobble-hard 320ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"]::after {
@@ -1610,7 +1698,54 @@ button.modifier-badge[data-open="true"] {
   mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   animation: giga-vignette-flash 400ms var(--ease-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
+}
+
+.game:not([data-reduced-motion="true"])[data-takeover="mythic"] .board .card:not([data-animating]) {
+  animation: takeover-recoil var(--motion-slow) var(--ease-out) both;
+  animation-delay: var(--takeover-land-ms, 0ms);
+}
+
+@keyframes takeover-recoil {
+  0%, 100% { translate: 0 0; scale: 1; }
+  20% { translate: 0 7px; scale: 0.93; }
+  55% { translate: 0 -2px; scale: 1.02; }
+}
+
+/* R2722001: under Reduce motion a Mythic's entrance is this still card over the board, with no shake,
+   flash or sweep: shown, then gone (TakeoverStill.tsx). It takes no pointer event. */
+.takeover-still {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-clock);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--pal-black) 45%, transparent);
+}
+
+.takeover-still-card {
+  width: min(46vmin, 300px);
+}
+
+/* R2785000: the first skip control there is. "Tap to skip" fades in `--set-piece-skip-delay` into a set
+   piece's hold, above the effects layer; it takes no pointer event, as the tap that skips lands on the board. */
+.set-piece-skip {
+  position: fixed;
+  left: 50%;
+  bottom: 12%;
+  translate: -50% 0;
+  margin: 0;
+  z-index: var(--z-showcase);
+  pointer-events: none;
+  color: var(--text);
+  font-size: var(--type-sm);
+  animation: set-piece-skip-in var(--motion-slow) var(--ease-out) var(--set-piece-skip-delay, 0ms) both;
+}
+
+@keyframes set-piece-skip-in {
+  from { opacity: 0; }
+  to { opacity: 0.9; }
 }
 
 @keyframes slam-wobble-slight {
@@ -2364,6 +2499,14 @@ button.modifier-badge[data-open="true"] {
   }
 
   .seat > .resolving {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  /* A route's chrome beside the hero (`heroAside`: a dungeon run's relics, #2706) stands right of it,
+     where a card mid-resolution also shows; that card, drawn later, covers it while it resolves. */
+  .seat > .hero-aside {
     grid-column: 3;
     grid-row: 1;
     justify-self: start;

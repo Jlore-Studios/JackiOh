@@ -190,6 +190,26 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(root.childElementCount).toBe(1);
     expect(root.firstElementChild).toBe(second?.el);
   });
+
+  it("R2800000 a set piece mounts its shape's layers, its side, its spin and its swallow, centred on its box", () => {
+    const vortex: FxDomCue = { kind: "setPiece", shape: "vortex", tint: TINT, spin: -1, side: "opponent", at: anchor, holdMs: 2000, delayMs: 0, durationMs: 3200 };
+    const el = expectMounted(mountDomEffect(root, vortex, { at: AT }), vortex);
+    expect(el.getAttribute("data-shape")).toBe("vortex");
+    expect(el.getAttribute("data-side")).toBe("opponent");
+    expect(cssVar(el, "--fx-spin")).toBe("-1");
+    expect(cssVar(el, "--fx-hold")).toBe("2000ms");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-setPiece-dark", "fx-setPiece-spiral", "fx-setPiece-core"]);
+    // It names no card (R202): no text at all.
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+
+    const fold: FxDomCue = { ...vortex, shape: "fold", spin: 1, side: null };
+    const folded = expectMounted(mountDomEffect(root, fold, { at: AT }), fold);
+    expect(folded.getAttribute("data-side")).toBe("both");
+    expect([...folded.children].map((child) => child.className)).toEqual(["fx-setPiece-edges", "fx-setPiece-light"]);
+    expect(mountDomEffect(root, fold, {})).toBeNull();
+  });
 });
 
 /* What it refuses, and what it never does */
@@ -333,6 +353,47 @@ describe("Patch v0.2.3c — Classic+ #24 Crushing Walls' walls", () => {
 
   it("with no board to cover they mount nothing", () => {
     expect(mountDomEffect(root, WALLS, { at: null })).toBeNull();
+    expect(root.childElementCount).toBe(0);
+  });
+});
+
+describe("R2789000 — a keyword's callout", () => {
+  const callout = (keyword: Extract<FxDomCue, { kind: "callout" }>["keyword"], still = false): FxDomCue => ({
+    kind: "callout",
+    keyword,
+    at: anchor,
+    delayMs: 0,
+    durationMs: 600,
+    ...(still ? { still: true as const } : {}),
+  });
+
+  it("R2789000 a callout carries its keyword and icon, centered on its unit's box, still when asked", () => {
+    const cue = callout("Cleave");
+    const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+    expectCenteredOn(el, AT);
+    expect(el.getAttribute("data-callout")).toBe("Cleave");
+    // Not `data-keyword`, which the card's rules text matches.
+    expect(el.hasAttribute("data-keyword")).toBe(false);
+    expect(el.hasAttribute("data-still")).toBe(false);
+    const icon = el.querySelector("svg.fx-callout-icon");
+    expect(icon?.getAttribute("viewBox")).toBe("0 0 100 100");
+    expect(icon?.getAttribute("aria-hidden")).toBe("true");
+    expect(icon?.querySelectorAll("path")).toHaveLength(1);
+    expect(icon?.querySelector("path")?.getAttribute("d")).toMatch(/^M/);
+    expect(icon?.querySelector("path")?.hasAttribute("data-line")).toBe(false);
+
+    root.innerHTML = "";
+    const stillCue = callout("Ranged", true);
+    const still = expectMounted(mountDomEffect(root, stillCue, { at: AT }), stillCue);
+    expect(still.getAttribute("data-still")).toBe("true");
+    // A line icon is stroked, not filled.
+    expect(still.querySelector("path")?.getAttribute("data-line")).toBe("true");
+  });
+
+  it("R2789000 a callout with no box, or no icon for its keyword, mounts nothing", () => {
+    expect(mountDomEffect(root, callout("Cleave"), {})).toBeNull();
+    expect(mountDomEffect(root, callout("Cleave"), { at: null })).toBeNull();
+    expect(mountDomEffect(root, callout("Taunt"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
   });
 });

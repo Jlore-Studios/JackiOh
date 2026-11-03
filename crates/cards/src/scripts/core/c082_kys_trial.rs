@@ -353,8 +353,7 @@ mod tests {
         }
 
         #[test]
-        fn r247_the_chooser_s_view_shows_the_numbers_and_names_no_card_the_other_seat_sees_only_that_a_prompt_is_open(
-        ) {
+        fn r247_r2739000_the_chooser_s_view_shows_the_numbers_and_names_no_card_the_other_seat_sees_how_many() {
             crate::register_all();
             let s = trial_scenario(false, "Classic");
             let chooser = s.view(Some(P1)).pending;
@@ -373,8 +372,10 @@ mod tests {
                 assert!(option.def_id.is_none(), "option {} names no definition", option.key);
                 assert!(option.instance_id.is_none());
             }
-            // §10.6: the other seat learns that a choice is open, and whose.
-            assert_eq!(js(&watcher), json!({ "forYou": false, "pendingFor": "p1" }));
+            // §10.6: the other seat learns that a choice is open, whose, and (R2739000) how many cards it offers,
+            // the numbers being drawn from the public catalog.
+            assert_eq!(chooser.options.len(), 3);
+            assert_eq!(js(&watcher), json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 }));
         }
 
         #[test]

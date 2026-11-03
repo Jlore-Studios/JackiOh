@@ -1,17 +1,28 @@
 // What the cue planner remembers across the entries of one FxLayer mount (docs/polish/1-animations.md
 // S6): who played which card, which zone a trap fired from, the last few events (so a `cardPlayed` right
 // after its own `drawn` is a cast on draw, `castOnDraw.ts`) and the plays still resolving, innermost
-// last, for `cardFx.ts`'s recipes (#21 Hinder, #27 Blood Ridden): a `cardPlayed` opens one, its
-// `cardResolved` or `countered` closes it (R502). R202: only ids the viewer may read are kept, so every
-// hidden card looks the same to the planner.
+// last, for `cardFx.ts`'s recipes (#21 Hinder, #27 Blood Ridden) and motifs (R2784000, with the ids its
+// hits landed on): a `cardPlayed` opens one, its `cardResolved` or `countered` closes it (R502). R202:
+// only ids the viewer may read are kept, so every hidden card looks the same to the planner.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
 import { castOnDrawAt } from "./castOnDraw.ts";
-import { FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
+import { FX_MEMORY_HITS, FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
 import type { FxMemory, FxPlay, FxTrapZone } from "./types.ts";
 
 const HIDDEN_ID = "hidden";
+
+/** R2784000: the public id a hit lands on (a damage's target, a card destroyed, exiled or bounced), else null. */
+export function hitIdOf(event: GameEvent): string | null {
+  const id =
+    event.type === "damage"
+      ? event.targetId
+      : event.type === "destroyed" || event.type === "exiled" || event.type === "bounced"
+        ? event.instanceId
+        : null;
+  return id === null || id === HIDDEN_ID ? null : id;
+}
 
 function put<V>(map: Map<string, V>, key: string, value: V, limit: number): void {
   map.delete(key);
@@ -26,6 +37,8 @@ function put<V>(map: Map<string, V>, key: string, value: V, limit: number): void
 export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   const casters = new Map<string, PlayerId>();
   const traps = new Map<string, FxTrapZone>();
+  // R2789000: the targets each readable attacker declared since the turn began (Windfury's second attack, Cleave's origin).
+  const attacks = new Map<string, string[]>();
   let recent: GameEvent[] = [];
   let resolving: (FxPlay & { seen: Partial<Record<GameEvent["type"], number>> })[] = [];
   let castOnDraw = new WeakSet<GameEvent>();
@@ -45,9 +58,11 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   return {
     remember(events: readonly GameEvent[]): void {
       for (const event of events) {
+        const hit = hitIdOf(event);
         for (const play of resolving) {
           play.step += 1;
           play.seen[event.type] = (play.seen[event.type] ?? 0) + 1;
+          if (hit !== null) play.hits = [...(play.hits ?? []), hit].slice(-FX_MEMORY_HITS);
         }
         recent.push(event);
         if (recent.length > FX_MEMORY_RECENT) recent = recent.slice(recent.length - FX_MEMORY_RECENT);
@@ -63,6 +78,10 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
           if (event.instanceId !== HIDDEN_ID) {
             put(traps, event.instanceId, { player: event.controller, row: event.row, lane: event.lane }, limit);
           }
+        } else if (event.type === "attackDeclared") {
+          if (event.attackerId !== HIDDEN_ID) put(attacks, event.attackerId, [...(attacks.get(event.attackerId) ?? []), event.targetId], limit);
+        } else if (event.type === "turnStarted") {
+          attacks.clear();
         }
       }
     },
@@ -75,14 +94,22 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
     },
     resolving(): FxPlay | undefined {
       const play = resolving[resolving.length - 1];
-      return play === undefined ? undefined : { ...play, seen: { ...play.seen } };
+      if (play === undefined) return undefined;
+      return { ...play, seen: { ...play.seen }, ...(play.hits === undefined ? {} : { hits: [...play.hits] }) };
     },
     castOnDraw(event: GameEvent): boolean {
       return castOnDraw.has(event);
     },
+    recent(): readonly GameEvent[] {
+      return [...recent];
+    },
+    attacksThisTurn(attackerId: string): readonly string[] {
+      return [...(attacks.get(attackerId) ?? [])];
+    },
     clear(): void {
       casters.clear();
       traps.clear();
+      attacks.clear();
       recent = [];
       resolving = [];
       castOnDraw = new WeakSet<GameEvent>();

@@ -21,7 +21,8 @@ pub fn script() -> CardScripts {
 // #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63): the must-pass row of BUILD M4-T4 #45.
 //
 // R6: "switch then attack" is a unit that starts in Defense, switches to Attack and then attacks;
-// for every other unit the switch spends the turn, which the #20 Pointmaster controls prove.
+// for every other unit the switch spends the turn, which the engine's rule tests own
+// (`crates/engine/tests/rules/combat_positions.rs`).
 // Charge and Armor 1 are printed keywords, so the tests read them through their effect.
 #[cfg(test)]
 mod tests {
@@ -87,22 +88,6 @@ mod tests {
             );
         }
 
-        /// "§6.1 Charge lets it attack a unit on its summon turn"
-        #[test]
-        fn s6_1_charge_lets_it_attack_a_unit_on_its_summon_turn() {
-            let mut s = scenario(json!({
-                "seed": "deft-duelist",
-                "p1": { "hand": ["core-045", "core-021"] },
-                "p2": { "field": [{ "def": "core-t-felinor", "lane": 1 }], "health": 30 },
-            }));
-            s.play("core-045", json!({ "zone": 1 }));
-            s.attack("core-045", "core-t-felinor");
-
-            // 4 into a 1/1 kills it; the 1 back leaves the 4/3 at 2 health.
-            assert!(s.unit(PlayerId::P2, 1).is_none());
-            s.expect_stats("core-045", json!({ "attack": 4, "health": 2, "maxHealth": 3 }));
-        }
-
         /// "§6.1 Charge lets it attack the enemy hero on its summon turn"
         #[test]
         fn s6_1_charge_lets_it_attack_the_enemy_hero_on_its_summon_turn() {
@@ -136,43 +121,6 @@ mod tests {
             assert_eq!(position_at(&s, PlayerId::P1, 1), Some(Position::Atk));
             s.expect_health(PlayerId::P2, 26);
             s.expect_events(json!(["positionSwitched", "attackDeclared"]));
-        }
-
-        /// "R6 a plain unit that switched to Attack Position has spent its exertion and cannot attack"
-        #[test]
-        fn r6_a_plain_unit_that_switched_to_attack_position_has_spent_its_exertion_and_cannot_attack() {
-            let mut s = in_defense("core-020", false);
-            s.switch_position("core-020");
-
-            s.expect_refused_with(|s| s.attack("core-020", "hero"), "already acted");
-            s.expect_health(PlayerId::P2, 30);
-        }
-
-        /// "§4.1 a plain unit that attacked cannot then switch: one exertion, not two"
-        #[test]
-        fn s4_1_a_plain_unit_that_attacked_cannot_then_switch_one_exertion_not_two() {
-            let mut s = scenario(json!({
-                "seed": "deft-duelist",
-                "p1": { "hand": ["core-021"], "field": [{ "def": "core-020", "lane": 1 }] },
-                "p2": { "health": 30 },
-            }));
-            s.attack("core-020", "hero");
-
-            s.expect_health(PlayerId::P2, 23);
-            s.expect_refused_with(|s| s.switch_position("core-020"), "already acted");
-        }
-
-        /// "R49 is one attack and one switch, not two of either"
-        #[test]
-        fn r49_is_one_attack_and_one_switch_not_two_of_either() {
-            let mut s = from_hand(false);
-            s.play("core-045", json!({ "zone": 1 }));
-            s.attack("core-045", "hero");
-            s.switch_position("core-045");
-
-            s.expect_refused_with(|s| s.attack("core-045", "hero"), "already acted");
-            s.expect_refused_with(|s| s.switch_position("core-045"), "already acted");
-            s.expect_health(PlayerId::P2, 26);
         }
 
         /// "§8.2 the base stats are 4/3"

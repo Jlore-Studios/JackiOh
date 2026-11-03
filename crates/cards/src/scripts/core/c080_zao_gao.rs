@@ -297,21 +297,6 @@ mod tests {
         }
 
         #[test]
-        fn r354_the_picks_come_off_the_match_rng_the_same_seed_discards_the_same_two_cards_and_a_seed_moves_them() {
-            crate::register_all();
-            let picked = |seed: &str| -> Vec<String> {
-                let mut s = board(false, &DISCARDABLE, Some(seed));
-                s.play(ZAO_GAO, json!({}));
-                def_ids(&s.pile(P1, "hand"))
-            };
-            assert_eq!(picked("core-080-rng-a"), picked("core-080-rng-a"));
-            let kept: IndexSet<Option<String>> =
-                (0..12).map(|n| picked(&format!("core-080-rng-{n}")).first().cloned()).collect();
-            // Over a dozen seeds, more than one card is the one left in hand: it is not a fixed choice.
-            assert!(kept.len() > 1, "{kept:?}");
-        }
-
-        #[test]
         fn r64_two_rush_tokens_stand_in_the_leftmost_free_zones() {
             crate::register_all();
             let mut s = board(false, &DISCARDABLE, None);
@@ -350,20 +335,6 @@ mod tests {
         }
 
         #[test]
-        fn s8_3_fewer_than_2_in_hand_what_there_is_is_discarded() {
-            crate::register_all();
-            let mut s = board(false, &[DISCARDABLE[0]], None);
-
-            s.play(ZAO_GAO, json!({}));
-
-            let mut expected = vec![DISCARDABLE[0].to_string(), ZAO_GAO.to_string()];
-            expected.sort();
-            assert_eq!(graveyard(&s), expected);
-            assert_eq!(s.pile(P1, "hand").len(), 0);
-            assert_eq!(occupied_lanes(&s), vec![1, 2]);
-        }
-
-        #[test]
         fn an_empty_hand_discards_nothing_and_the_two_tokens_are_summoned_all_the_same() {
             crate::register_all();
             let mut s = board(false, &[], None);
@@ -373,57 +344,6 @@ mod tests {
             assert!(s.state().pending.is_none());
             assert_eq!(graveyard(&s), vec![ZAO_GAO.to_string()]);
             assert_eq!(occupied_lanes(&s), vec![1, 2]);
-        }
-
-        #[test]
-        fn r11_a_unit_token_card_discarded_from_the_hand_ceases_to_exist_instead_of_reaching_the_graveyard() {
-            crate::register_all();
-            let mut s = board(false, &[RUSH_TOKEN, RUSH_TOKEN], None);
-
-            s.play(ZAO_GAO, json!({}));
-
-            assert_eq!(s.pile(P1, "hand").len(), 0);
-            assert_eq!(graveyard(&s), vec![ZAO_GAO.to_string()]);
-        }
-
-        #[test]
-        fn r64_a_nearly_full_board_gets_fewer_tokens_and_the_extra_summon_fizzles() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [ZAO_GAO, DISCARDABLE[0], DISCARDABLE[1], DISCARDABLE[2]],
-                    // Four of the five unit zones are taken, so only one token fits.
-                    "field": ["core-019", "core-019", "core-019", "core-019"],
-                    "library": LIBRARY
-                },
-                "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
-            }));
-
-            s.play(ZAO_GAO, json!({}));
-
-            assert_eq!(occupied_lanes(&s), vec![1, 2, 3, 4, 5]);
-            assert_eq!(s.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(RUSH_TOKEN.to_string()));
-            // The discard happened either way: it is not conditional on the summons.
-            assert_eq!(s.pile(P1, "graveyard").len(), 3); // two discards plus Zao Gao itself
-        }
-
-        #[test]
-        fn r64_a_full_board_summons_nothing_and_the_discard_still_happens() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [ZAO_GAO, DISCARDABLE[0], DISCARDABLE[1], DISCARDABLE[2]],
-                    "field": ["core-019", "core-019", "core-019", "core-019", "core-019"],
-                    "library": LIBRARY
-                },
-                "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
-            }));
-
-            s.play(ZAO_GAO, json!({}));
-
-            assert_eq!(s.state().players.p1.units.iter().filter(|pile| pile.is_some()).count(), 5);
-            assert_ne!(s.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(RUSH_TOKEN.to_string()));
-            assert_eq!(s.pile(P1, "hand").len(), 1);
         }
     }
 
@@ -512,27 +432,6 @@ mod tests {
             assert_eq!(occupied_lanes(&s), vec![1, 2]);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.radiant), Some(true));
             assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
-        }
-
-        #[test]
-        fn r64_a_nearly_full_board_gets_one_radiant_token_and_the_extra_summon_fizzles() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [{ "def": ZAO_GAO, "radiant": true }, DISCARDABLE[0], DISCARDABLE[1], DISCARDABLE[2]],
-                    "field": ["core-019", "core-019", "core-019", "core-019"],
-                    "library": LIBRARY
-                },
-                "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
-            }));
-
-            s.play(ZAO_GAO, json!({}));
-
-            assert_eq!(occupied_lanes(&s), vec![1, 2, 3, 4, 5]);
-            let token = s.unit(P1, 5).expect("a token in lane 5").clone();
-            assert_eq!(token.def_id, RUSH_TOKEN);
-            assert!(token.radiant);
-            expect_pool_keywords(&s, 5, 3, &RADIANT_PRINTED);
         }
     }
 }

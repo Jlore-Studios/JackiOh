@@ -633,29 +633,11 @@ describe("B28 forgot password", () => {
     expect(screen.getByTestId(loginTestid.password)).toBeInTheDocument();
   });
 
-  it("R192 B28 answers a 2xx and a 429 identically, so the page never says whether an account exists", async () => {
-    const texts: string[] = [];
-    for (const answer of [
-      { status: 200, body: {} },
-      { status: 429, body: { error_code: "over_email_send_rate_limit", msg: PROVIDER_MSG } },
-    ]) {
-      cleanup();
-      window.localStorage.clear();
-      provider({ "/auth/v1/recover": answer });
-      render(<LoginRoute />);
-      await requestReset(EMAIL);
-      expect(screen.queryByTestId(loginTestid.error)).toBeNull();
-      expect(bodyText()).toContain(AUTH_NOTICES.resetSent);
-      expect(bodyText()).not.toContain(PROVIDER_MSG);
-      texts.push(bodyText());
-    }
-    expect(texts[0]).toBe(texts[1]);
-  });
-
   it("R192 B28 a provider failure reads the same neutral notice, so the form is no account oracle", async () => {
     const texts: string[] = [];
     for (const answer of [
       { status: 200, body: {} },
+      { status: 429, body: { error_code: "over_email_send_rate_limit", msg: PROVIDER_MSG } },
       { status: 500, body: { error_code: "unexpected_failure", msg: PROVIDER_MSG } },
       { status: 400, body: { error_code: "email_address_not_authorized" } },
     ]) {
@@ -666,6 +648,7 @@ describe("B28 forgot password", () => {
       await requestReset(EMAIL);
       expect(screen.queryByTestId(loginTestid.error)).toBeNull();
       expect(bodyText()).toContain(AUTH_NOTICES.resetSent);
+      expect(bodyText()).not.toContain(PROVIDER_MSG);
       texts.push(bodyText());
     }
     expect(new Set(texts).size).toBe(1);

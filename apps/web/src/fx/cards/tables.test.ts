@@ -1,0 +1,226 @@
+// R2784000: every set's effects table (fx/cards/<set>.json5) held to the catalog: every card, tokens
+// included, in catalog order, one line each under its own name, Stinkyscape split in two at 091; and
+// the loader's errors, each naming its file and card. R502, R670: the seven former `CARD_FX` cards are
+// `{ bespoke }` entries but #100 Ceaseless Void, whose `{ setPiece }` lands it with its collapse (R2800000).
+// R2787000: an entry's `aura`, and the ten Field Spells that wear one.
+
+import { describe, expect, it } from "vitest";
+
+import { CATALOG } from "../../wire/cards.ts";
+import { AURA_LOOK_NAMES, AURA_SCOPES } from "../aura/looks.ts";
+import { entranceKeyOf } from "../cardFx.ts";
+import { FX_PALETTES } from "../flavors.ts";
+import { FX_MOTIF_NAMES } from "../motifs/names.ts";
+import { SET_PIECE_KEYS } from "../setPieceKeys.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, parseFxCardTable, type FxCardFile } from "./tables.ts";
+
+const IDS = Object.keys(CATALOG);
+const SPLIT = IDS.indexOf(FX_STINKYSCAPE_SPLIT);
+
+/** The ids `file` must hold, in catalog order. */
+function expectedIds(file: FxCardFile): string[] {
+  return IDS.filter((id, i) => {
+    if (CATALOG[id]?.set !== file.set) return false;
+    if (file.file === "stinkyscape-1.json5") return i < SPLIT;
+    if (file.file === "stinkyscape-2.json5") return i >= SPLIT;
+    return true;
+  });
+}
+
+const ENTRY_LINE = /^ {2}"([^"]+)": (.+), \/\/ (.+)$/;
+
+/** Each entry line's id, entry and name comment; any other line that is not a comment or a brace fails. */
+function linesOf(file: FxCardFile): { id: string; entry: string; name: string }[] {
+  return file.source.split("\n").flatMap((line, n) => {
+    if (line.trim() === "" || line.startsWith("//") || line === "{" || line === "}") return [];
+    const match = ENTRY_LINE.exec(line);
+    if (match === null) throw new Error(`fx/cards/${file.file}:${String(n + 1)} is not one entry with its name: ${line}`);
+    return [{ id: match[1] ?? "", entry: match[2] ?? "", name: match[3] ?? "" }];
+  });
+}
+
+const nameOf = (id: string): string => (CATALOG[id]?.name ?? "").replace(/\s+/g, " ").trim();
+
+describe("R2784000 the per-set effects tables", () => {
+  it("R2784000 every set's table holds its catalog cards in catalog order, tokens included", () => {
+    const sets = new Set(IDS.map((id) => CATALOG[id]?.set));
+    expect(new Set(FX_CARD_FILES.map((file) => file.set))).toEqual(sets);
+    for (const file of FX_CARD_FILES) {
+      expect([...parseFxCardTable(file.file, file.source).keys()], file.file).toEqual(expectedIds(file));
+    }
+    expect([...FX_CARD_TABLE.keys()]).toEqual(IDS);
+  });
+
+  it("R2784000 Stinkyscape splits at 091: the first file ends at 090, the second holds 091 to the end and every token after it", () => {
+    const [first, second] = ["stinkyscape-1.json5", "stinkyscape-2.json5"].map((name) => FX_CARD_FILES.find((file) => file.file === name));
+    if (first === undefined || second === undefined) throw new Error("Stinkyscape's two files are missing");
+    const one = expectedIds(first);
+    const two = expectedIds(second);
+    expect(one[0]).toBe("stinkyscape-001");
+    expect(one.filter((id) => /^stinkyscape-\d{3}$/.test(id)).at(-1)).toBe("stinkyscape-090");
+    expect(two[0]).toBe(FX_STINKYSCAPE_SPLIT);
+    const tokens = IDS.filter((id) => id.startsWith("stinkyscape-t-"));
+    expect(tokens.length).toBeGreaterThan(0);
+    for (const token of tokens) expect(two, token).toContain(token);
+  });
+
+  it("R2784000 each entry is one line, its comment its catalog name, and no card twice", () => {
+    for (const file of FX_CARD_FILES) {
+      const lines = linesOf(file);
+      expect(lines.map((line) => line.id), file.file).toEqual(expectedIds(file));
+      for (const line of lines) expect(line.name, `${file.file} ${line.id}`).toBe(nameOf(line.id));
+    }
+  });
+
+  it("R2784000 an unknown hook, motif, palette or recipe, or a hook on the wrong kind of card, fails, naming file and id", () => {
+    const fails = (body: string): void => {
+      expect(() => parseFxCardTable("test.json5", `{ ${body} }`)).toThrow(/^fx\/cards\/test\.json5: /);
+    };
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parseFxCardTable("test.json5", `{ ${body} }`)).toThrow(problem);
+    };
+    says(`"core-035": { spell: { motif: "bolt" } }`, /^fx\/cards\/test\.json5: core-035: unknown hook "spell"$/);
+    says(`"core-035": { cast: { motif: "zap" } }`, /core-035: unknown motif "zap" in cast/);
+    says(`"core-035": { cast: { motif: "bolt", palette: "Plaid" } }`, /core-035: unknown palette "Plaid" in cast/);
+    says(`"core-035": { cast: { motif: "bolt", row: "drop" } }`, /core-035: row in cast/);
+    says(`"core-035": { cast: { motif: "bolt", speed: 2 } }`, /core-035: unknown field "speed" in cast/);
+    says(`"core-035": { cry: { motif: "bolt" } }`, /core-035: cry is a Unit's play; this card is a Spell/);
+    says(`"classic-071": { cast: { motif: "lance" } }`, /classic-071: cast is a non-Unit's play/);
+    says(`"core-021": { bespoke: "manaSmash" }`, /core-021: unknown bespoke "manaSmash"/);
+    says(`"core-021": { bespoke: "manaCrack", cast: { motif: "bolt" } }`, /core-021: a bespoke entry holds nothing else/);
+    says(`"core-035": {}`, /core-035: names no hook/);
+    says(`"core-035": "pending"`, /core-035: a string entry must be "none: <reason>"/);
+    says(`"core-035": "none:"`, /core-035: a string entry/);
+    says(`"core-999": "none: pending"`, /core-999: not a card in the catalog/);
+    fails(`"core-035": 7`);
+    fails(`"core-035": { cast: "bolt" }`);
+    expect(() => parseFxCardTable("test.json5", "{ broken")).toThrow(/^fx\/cards\/test\.json5: \(syntax\): /);
+  });
+
+  it("R2800000 a setPiece entry names a known set piece and nothing else", () => {
+    for (const key of SET_PIECE_KEYS) {
+      expect(parseFxCardTable("test.json5", `{ "core-088": { setPiece: "${key}" } }`).get("core-088"), key).toEqual({ kind: "setPiece", key });
+    }
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parseFxCardTable("test.json5", `{ ${body} }`)).toThrow(problem);
+    };
+    says(`"core-088": { setPiece: "maelstrom" }`, /^fx\/cards\/test\.json5: core-088: unknown set piece "maelstrom"$/);
+    says(`"core-088": { setPiece: 7 }`, /core-088: unknown set piece "7"/);
+    says(`"core-088": { setPiece: "nether", cast: { motif: "wipe" } }`, /core-088: a setPiece entry holds nothing else/);
+    says(`"core-088": { setPiece: "nether", bespoke: "voidCollapse" }`, /core-088: a (bespoke|setPiece) entry holds nothing else/);
+  });
+
+  it('R2784000 #2792 a palette may name a sub-look as <Flavor>/<sub-look>; an unknown one fails, naming file and id', () => {
+    for (const palette of FX_PALETTES) {
+      const table = parseFxCardTable("test.json5", `{ "core-035": { cast: { motif: "bolt", palette: "${palette}" } } }`);
+      expect(table.get("core-035"), palette).toEqual({ kind: "hooks", hooks: { cast: { motif: "bolt", palette } } });
+    }
+    for (const bad of ["Tech/lazer", "Tech/", "/laser", "Tech/laser/x", "Brute/laser", "Plaid", "tech/laser", "toString", "Tech/toString"]) {
+      expect(() => parseFxCardTable("test.json5", `{ "core-035": { cast: { motif: "bolt", palette: "${bad}" } } }`)).toThrow(
+        `fx/cards/test.json5: core-035: unknown palette "${bad}" in cast`,
+      );
+    }
+  });
+
+  it("R2784000 every motif name the design doc gives is accepted, drawn yet or not, with any flavor's palette", () => {
+    for (const motif of FX_MOTIF_NAMES) {
+      const table = parseFxCardTable("test.json5", `{ "core-035": { cast: { motif: "${motif}", palette: "Tech", row: "keep" } } }`);
+      expect(table.get("core-035"), motif).toEqual({ kind: "hooks", hooks: { cast: { motif, palette: "Tech", row: "keep" } } });
+    }
+    expect(FX_MOTIF_NAMES).toContain("aura");
+    const hooks = parseFxCardTable("test.json5", `{ "classic-071": { cry: { motif: "lance" }, death: { motif: "nova" }, trigger: { motif: "bolt" }, activate: { motif: "aura" } } }`);
+    expect(hooks.get("classic-071")?.kind).toBe("hooks");
+  });
+
+  it("R2784000 R502 R670 R2800000 the seven former CARD_FX cards keep their recipes: six bespoke, and the Void's set piece lands with its collapse", () => {
+    const former = {
+      "core-021": { kind: "bespoke", key: "manaCrack" },
+      "core-027": { kind: "bespoke", key: "bloodDrain" },
+      "classic-045": { kind: "bespoke", key: "titanBloom" },
+      "classic-056": { kind: "bespoke", key: "tyrantSigil" },
+      "classic-080": { kind: "bespoke", key: "bigBoom" },
+      "classicplus-024": { kind: "bespoke", key: "crushingWalls" },
+    };
+    for (const [defId, entry] of Object.entries(former)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
+    expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold" });
+    expect(entranceKeyOf("core-100")).toBe("voidCollapse");
+    expect(new Set([...Object.values(former).map((entry) => entry.key), entranceKeyOf("core-100")]).size).toBe(7);
+  });
+
+  it("R2784000 the twelve examples name their motifs", () => {
+    const examples = {
+      "core-035": { kind: "hooks", hooks: { cast: { motif: "bolt" } } },
+      "classicplus-032-2": { kind: "hooks", hooks: { cast: { motif: "wipe" } } },
+      "classic-016": { kind: "hooks", hooks: { cast: { motif: "scorch", palette: "Fire" } } },
+      "classic-071": { kind: "hooks", hooks: { cry: { motif: "lance" } } },
+      "classicplus-021": { kind: "hooks", hooks: { cast: { motif: "nova" } } },
+      "classicplus-025": { kind: "hooks", hooks: { cast: { motif: "bolt" } } },
+      "meditative-078": { kind: "hooks", hooks: { cast: { motif: "vanish" } } },
+      "meditativeplus-005": { kind: "hooks", hooks: { cast: { motif: "chain" } } },
+      "stinkyscape-003": { kind: "hooks", hooks: { cast: { motif: "nova" } } },
+      "stinkyscape-097": { kind: "hooks", hooks: { cast: { motif: "barrage" } } },
+      "traininggrounds-010": { kind: "hooks", hooks: { cast: { motif: "volley" } } },
+      "traininggrounds-026": { kind: "hooks", hooks: { cast: { motif: "vanish" } } },
+    };
+    expect(Object.keys(examples)).toHaveLength(12);
+    for (const [defId, entry] of Object.entries(examples)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
+  });
+
+  it("R2787000 an aura parses alone or beside hooks, and an unknown look, scope, palette or field, or a zone aura off the field, fails", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    expect(parse(`"core-014": { aura: { look: "storm", scope: "side" } }`).get("core-014")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "storm", scope: "side" } });
+    expect(parse(`"core-035": { cast: { motif: "bolt" }, aura: { look: "ember", palette: "Fire", scope: "side" } }`).get("core-035")).toEqual({
+      kind: "hooks",
+      hooks: { cast: { motif: "bolt" } },
+      aura: { look: "ember", palette: "Fire", scope: "side" },
+    });
+    expect(parse(`"core-035": { cast: { motif: "bolt" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: { cast: { motif: "bolt" } } });
+    for (const look of AURA_LOOK_NAMES) {
+      for (const scope of AURA_SCOPES) {
+        expect(parse(`"core-018": { aura: { look: "${look}", scope: "${scope}" } }`).get("core-018"), `${look} ${scope}`).toEqual({ kind: "hooks", hooks: {}, aura: { look, scope } });
+      }
+    }
+    says(`"core-014": { aura: "storm" }`, /^fx\/cards\/test\.json5: core-014: aura must be \{ look, palette\?, scope \}$/);
+    says(`"core-014": { aura: { look: "storm", scope: "side", speed: 2 } }`, /core-014: unknown field "speed" in aura$/);
+    says(`"core-014": { aura: { look: "sparkle", scope: "side" } }`, /core-014: unknown aura look "sparkle"$/);
+    says(`"core-014": { aura: { scope: "side" } }`, /core-014: unknown aura look "undefined"$/);
+    says(`"core-014": { aura: { look: "storm", scope: "deck" } }`, /core-014: unknown aura scope "deck"$/);
+    says(`"core-014": { aura: { look: "storm", palette: "Plaid", scope: "side" } }`, /core-014: unknown palette "Plaid" in aura$/);
+    // #2792: an aura's palette may name a sub-look, as a hook's may.
+    expect(parse(`"core-014": { aura: { look: "storm", palette: "Tech/rocket", scope: "side" } }`).get("core-014")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "storm", palette: "Tech/rocket", scope: "side" } });
+    says(`"core-014": { aura: { look: "storm", palette: "Tech/lazer", scope: "side" } }`, /core-014: unknown palette "Tech\/lazer" in aura$/);
+    says(`"core-035": { aura: { look: "ember", scope: "zone" } }`, /core-035: a zone aura stands in a zone; this card is a Spell, whose aura is side or board$/);
+    says(`"core-035": { aura: { look: "ember", scope: "lane" } }`, /core-035: a lane aura stands in a zone; this card is a Spell, whose aura is side or board$/);
+    expect(parse(`"core-035": { aura: { look: "ember", scope: "side" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "ember", scope: "side" } });
+    expect(parse(`"core-035": { aura: { look: "ember", scope: "board" } }`).get("core-035")?.kind).toBe("hooks");
+    says(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "side" } }`, /core-021: a bespoke entry holds nothing else/);
+    says(`"core-035": {}`, /core-035: names no hook/);
+  });
+
+  it("R2787000 the ten example Field Spells across the sets wear their auras", () => {
+    const examples = {
+      "core-014": { look: "storm", scope: "side" },
+      "core-046": { look: "void", scope: "board" },
+      "classic-042": { look: "toxic", scope: "board" },
+      "classic-075": { look: "holy", scope: "side" },
+      "classicplus-034": { look: "frost", palette: "Tech", scope: "lane" },
+      "meditative-040": { look: "bloom", scope: "board" },
+      "meditativeplus-009": { look: "arcane", scope: "board" },
+      "stinkyscape-046": { look: "storm", scope: "lane" },
+      "stinkyscape-155": { look: "ember", scope: "zone" },
+      "traininggrounds-019": { look: "bloom", scope: "zone" },
+    };
+    expect(Object.keys(examples)).toHaveLength(10);
+    const files = new Set<string>();
+    for (const [defId, aura] of Object.entries(examples)) {
+      expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
+      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "hooks", hooks: {}, aura });
+      const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
+      if (file !== undefined) files.add(file.file);
+    }
+    expect(files.size).toBe(FX_CARD_FILES.length);
+  });
+});

@@ -279,6 +279,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     }),
     [match.sendAim, relayedAim, viewer],
   );
+  // R2739001: card-picker hovers go both ways too, and only the opponent's relay is outlined.
+  const relayedHover = match.choiceHover;
+  const choiceHover = useMemo(
+    () => ({
+      emit: match.sendChoiceHover,
+      opponent: relayedHover !== null && relayedHover.from !== viewer ? relayedHover.index : null,
+    }),
+    [match.sendChoiceHover, relayedHover, viewer],
+  );
 
   // R1834004: the viewer's side wears the deck slots its seat froze at the start (R1834002); the
   // account's choice until the first `loadouts` frame.
@@ -364,7 +373,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         </ShellPanel>
       );
     }
-    // Render's free tier can take most of a minute to wake, which `slow` says once it has.
+    // A server that has slept takes a while to start again (apps/edge), which `slow` says once it has.
     return (
       <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
         <p className="auth-hint">
@@ -442,6 +451,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       onAction={match.send}
       emotes={emotes}
       aim={aim}
+      choiceHover={choiceHover}
       trackStats
       wearCosmetics
       deckCosmetics={deckCosmetics}

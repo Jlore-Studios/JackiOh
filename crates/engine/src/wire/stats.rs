@@ -17,7 +17,9 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::config::{STATS_INTERVAL_Z, STATS_SHARE_PRECISION};
+use crate::config::{
+    ADJUSTED_WIN_RATE_CENTER, ADJUSTED_WIN_RATE_PRIOR_SPREAD, STATS_INTERVAL_Z, STATS_SHARE_PRECISION,
+};
 use crate::state::EngineError;
 use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
 use crate::wire::codes::utf16_len;
@@ -316,6 +318,43 @@ pub const DEFAULT_CARD_STATS_FILTER: CardStatsFilter = CardStatsFilter {
     patch: None,
     pilot: PilotFilter::Unified,
 };
+
+/// R377, R2777001: the match types a public figure counts: every mode, one of R257's three, or
+/// Constructed, the two modes whose decks a player built (Best of 1 and Conquest), apart from the
+/// dealt decks of All Random.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+pub enum ModeFilter {
+    #[default]
+    All,
+    Only(GameMode),
+    Constructed,
+}
+
+impl ModeFilter {
+    /// The modes it reads, as `CardStatsFilter::mode` names them: `None` for every mode.
+    pub fn modes(self) -> &'static [Option<GameMode>] {
+        match self {
+            ModeFilter::All => &[None],
+            ModeFilter::Only(GameMode::Bo1) => &[Some(GameMode::Bo1)],
+            ModeFilter::Only(GameMode::Bo3) => &[Some(GameMode::Bo3)],
+            ModeFilter::Only(GameMode::Random) => &[Some(GameMode::Random)],
+            ModeFilter::Constructed => &[Some(GameMode::Bo1), Some(GameMode::Bo3)],
+        }
+    }
+
+    /// Whether a record of `mode` counts.
+    pub fn counts(self, mode: GameMode) -> bool {
+        self.modes()
+            .iter()
+            .any(|wanted| wanted.is_none_or(|wanted| wanted == mode))
+    }
+}
+
+impl From<Option<GameMode>> for ModeFilter {
+    fn from(mode: Option<GameMode>) -> ModeFilter {
+        mode.map_or(ModeFilter::All, ModeFilter::Only)
+    }
+}
 
 /// The record sources a source filter reads. Only `dev` and `all` read a development run.
 pub fn sources_of(source: SourceFilter) -> Vec<GameSource> {
@@ -1376,11 +1415,35 @@ pub fn not_drawn(stats: &CardStats) -> Tally {
 /// the never-drawn win rate, as a fraction. `None` when either side has no games; the public
 /// page's floor is the server's (R654).
 pub fn drawn_delta(stats: &CardStats) -> Option<f64> {
-    let mut drawn = stats.played;
-    add_tally(&mut drawn, &stats.drawn_not_played);
-    let drawn = win_rate(&drawn)?;
+    let drawn = win_rate(&seen(stats))?;
     let baseline = win_rate(&not_drawn(stats))?;
     Some(drawn - baseline)
+}
+
+/// R2777000: the games a card was seen in, its drawn games (played and drawn but not played together):
+/// R2427000's drawn side, and under All Random the only games that count as the card's.
+pub fn seen(stats: &CardStats) -> Tally {
+    let mut seen = stats.played;
+    add_tally(&mut seen, &stats.drawn_not_played);
+    seen
+}
+
+/// R2777000: the adjusted win rate, as a fraction. The drawn delta (R2427000) is how far seeing the card
+/// moves its deck's win rate; this keeps as much of it as the card's own games let a reader believe and
+/// reads it from an even game: `ADJUSTED_WIN_RATE_CENTER + weight · delta`, where
+/// `weight = τ² / (τ² + SE²)`, `τ` is `ADJUSTED_WIN_RATE_PRIOR_SPREAD` and
+/// `SE² = p(1 − p) · (1/seen + 1/never drawn)` at `p = ADJUSTED_WIN_RATE_CENTER`, the delta's sampling
+/// variance at its widest. It is the posterior mean of a card's lift under a normal prior of spread
+/// `τ`, so a few games' swing is mostly discounted and many games' is mostly kept. `None` when either
+/// side has no games.
+pub fn adjusted_win_rate(stats: &CardStats) -> Option<f64> {
+    let seen = seen(stats);
+    let never = not_drawn(stats);
+    let delta = win_rate(&seen)? - win_rate(&never)?;
+    let game_variance = ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER);
+    let noise = game_variance * (1.0 / f64::from(seen.games) + 1.0 / f64::from(never.games));
+    let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
+    Some(ADJUSTED_WIN_RATE_CENTER + prior / (prior + noise) * delta)
 }
 
 /// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
@@ -2423,6 +2486,71 @@ mod tests {
             };
             assert_eq!(not_drawn(&never_played), never_played.in_deck);
             assert_eq!(drawn_delta(&never_played), None);
+        }
+
+        #[test]
+        fn r2777000_the_adjusted_win_rate_keeps_as_much_of_the_drawn_delta_as_the_games_seen_and_unseen_back()
+        {
+            // `seen` drawn games won at `seen_rate`, and as many never drawn won at `never_rate`.
+            let card = |games: i32, seen_rate: f64, never_rate: f64| {
+                let wins = |rate: f64| (f64::from(games) * rate).round() as i32;
+                CardStats {
+                    card: "a".to_string(),
+                    in_deck: tally(2 * games, wins(seen_rate) + wins(never_rate), 0),
+                    opening_hand: tally(0, 0, 0),
+                    going_first: tally(0, 0, 0),
+                    going_second: tally(0, 0, 0),
+                    played: tally(games, wins(seen_rate), 0),
+                    drawn_not_played: tally(0, 0, 0),
+                    played_radiant: tally(0, 0, 0),
+                    played_normal: tally(0, 0, 0),
+                    created_played: tally(0, 0, 0),
+                    created_not_played: tally(0, 0, 0),
+                    created_played_radiant: tally(0, 0, 0),
+                    created_played_normal: tally(0, 0, 0),
+                }
+            };
+            let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+            let weight = |games: f64| {
+                let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
+                prior / (prior + 0.25 * (2.0 / games))
+            };
+
+            // No lift reads an even game, whatever the deck's own win rate.
+            assert!(close(
+                adjusted_win_rate(&card(400, 0.7, 0.7)).unwrap(),
+                ADJUSTED_WIN_RATE_CENTER
+            ));
+            // The same +20-point lift: 40 games each side keep a sixth of it, 4,000 nearly all.
+            let small = adjusted_win_rate(&card(40, 0.6, 0.4)).unwrap();
+            let large = adjusted_win_rate(&card(4000, 0.6, 0.4)).unwrap();
+            assert!(close(small, 0.5 + weight(40.0) * 0.2));
+            assert!(close(large, 0.5 + weight(4000.0) * 0.2));
+            assert!(small < 0.54 && large > 0.69, "{small} {large}");
+            // A losing card is pulled up toward an even game just as far.
+            assert!(close(
+                adjusted_win_rate(&card(40, 0.4, 0.6)).unwrap(),
+                1.0 - small
+            ));
+            // The seen games are both drawn sides together.
+            let split = CardStats {
+                played: tally(30, 18, 0),
+                drawn_not_played: tally(10, 6, 0),
+                ..card(40, 0.6, 0.4)
+            };
+            assert_eq!(seen(&split), tally(40, 24, 0));
+            assert!(close(adjusted_win_rate(&split).unwrap(), small));
+            // No baseline or nothing seen: no adjusted rate.
+            let never_seen = CardStats {
+                played: tally(0, 0, 0),
+                ..card(40, 0.6, 0.4)
+            };
+            assert_eq!(adjusted_win_rate(&never_seen), None);
+            let always_seen = CardStats {
+                in_deck: tally(40, 24, 0),
+                ..card(40, 0.6, 0.4)
+            };
+            assert_eq!(adjusted_win_rate(&always_seen), None);
         }
 
         #[test]

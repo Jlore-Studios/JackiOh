@@ -73,7 +73,7 @@ mod tests {
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Healed { target_id, amount } if *target_id == hero => Some(*amount),
+                GameEvent::Healed { target_id, amount, .. } if *target_id == hero => Some(*amount),
                 _ => None,
             })
             .collect()

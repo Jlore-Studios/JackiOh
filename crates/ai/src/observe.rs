@@ -4,10 +4,12 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexSet;
-use jackioh_engine::view_for::{HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDDEN_POSITION};
+use jackioh_engine::view_for::{
+    HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDDEN_POSITION, other_seats_option_count,
+};
 use jackioh_engine::{
     ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
-    PendingChoice, PlayerId, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
+    PendingChoice, PlayerId, PromptOption, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
     announced_face_down_to, backrow_is_public, effective_cost, find_def, find_instance, find_instance_mut,
     handicap_of, mulligan_prompt_for, unclamped_attack, unit_view,
 };
@@ -131,6 +133,20 @@ fn instance_number(id: &str) -> f64 {
     }
 }
 
+/// R73: whether `card` was minted for `player`'s opening deck. createGame mints c1..c{n1} for p1's deck
+/// and c{n1+1}..c{n1+n2} for p2's (R184's deck sizes).
+pub(crate) fn minted_for_deck_of(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    let n1 = f64::from(handicap_of(&state.players.p1).deck_size);
+    let n2 = f64::from(handicap_of(&state.players.p2).deck_size);
+    let (low, high) = if player == PlayerId::P1 {
+        (1.0, n1)
+    } else {
+        (n1 + 1.0, n1 + n2)
+    };
+    let n = instance_number(&card.id);
+    n >= low && n <= high
+}
+
 fn by_instance_id(a: &CardInstance, b: &CardInstance) -> Ordering {
     let na = instance_number(&a.id);
     let nb = instance_number(&b.id);
@@ -172,6 +188,16 @@ fn face_down_to(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool 
     ) && backrow_hidden_from(state, card, seat)
 }
 
+/// §10.8, R265: the prompt whose options `view_for` shows `seat` in full: its own open prompt, or its
+/// own mulligan while both are open.
+fn own_prompt(state: &GameState, seat: PlayerId) -> Option<&PendingChoice> {
+    state
+        .pending
+        .as_ref()
+        .or_else(|| mulligan_prompt_for(state, seat))
+        .filter(|pending| pending.player_id == seat)
+}
+
 /// Instance ids `redact` hides from `seat`: opponent hand/library, unrevealed backrow, opponent-minted
 /// cards in own library (#87, R73), unshown cards (R312, #83), unless exposed by prompts (§10.8, R177).
 pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
@@ -203,14 +229,8 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
         }
     }
 
-    // createGame mints c1..c{n1} for p1's deck and c{n1+1}..c{n1+n2} for p2's (R184's deck sizes).
-    let n1 = f64::from(handicap_of(&state.players.p1).deck_size);
-    let n2 = f64::from(handicap_of(&state.players.p2).deck_size);
-    let low = if opp == PlayerId::P1 { 1.0 } else { n1 + 1.0 };
-    let high = if opp == PlayerId::P1 { n1 } else { n1 + n2 };
     for card in &state.players[seat].library {
-        let n = instance_number(&card.id);
-        if n >= low && n <= high {
+        if minted_for_deck_of(state, opp, card) {
             hidden.insert(card.id.clone());
         }
         // R312: a card of the seat's own library it was never shown is as hidden as the opponent's.
@@ -219,13 +239,7 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
         }
     }
 
-    let pending: Option<&PendingChoice> = state
-        .pending
-        .as_ref()
-        .or_else(|| mulligan_prompt_for(state, seat));
-    if let Some(pending) = pending
-        && pending.player_id == seat
-    {
+    if let Some(pending) = own_prompt(state, seat) {
         for option in &pending.options {
             if let Selection::Instance { instance_id } = &option.selection
                 && !find_instance(state, instance_id).is_some_and(|card| face_down_to(state, card, seat))
@@ -462,6 +476,20 @@ fn without_answer_key(resume: &mut Resume) {
     resume.data.shift_remove(ANSWER_KEY);
 }
 
+/// R2739000, R185: an option of the opponent's prompt that names nothing, its key and its mode empty, so
+/// the redaction keeps how many a card picker offers and none of what it offers.
+fn blank_option() -> PromptOption {
+    PromptOption {
+        key: String::new(),
+        label: String::new(),
+        selection: Selection::Mode {
+            option: String::new(),
+        },
+        cost: None,
+        radiant: None,
+    }
+}
+
 /// R266, R185: redacts setup's owed mulligan (R224, R265) sealed answers and returned cards (R151).
 fn scrub_owed_mulligan(resume: &mut Resume, opp: PlayerId) {
     if resume.hook != SETUP_WORK {
@@ -570,6 +598,37 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             }
             card.counters.plague = plague;
         }
+    }
+    // R2691000 (R311, R386): every other card of the seat's own library reads as its owner's list shows
+    // it (R310): the definition and face its `knownAs` recorded as it went in and its Created mark
+    // (R943), and nothing a change made inside the library wrote on it (#28's or #42's Radiant, a Nerf, a
+    // discount). A card the seat's own open prompt offers is shown to it in full there (§10.8), so it
+    // stays as it is. Redacting twice is redacting once: the record is kept.
+    let offered: IndexSet<String> = own_prompt(state, seat)
+        .map(|pending| {
+            pending
+                .options
+                .iter()
+                .filter_map(|option| match &option.selection {
+                    Selection::Instance { instance_id } => Some(instance_id.clone()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    for card in next.players[seat].library.iter_mut() {
+        if hidden.contains(&card.id) || offered.contains(&card.id) {
+            continue;
+        }
+        let Some(known) = card.known_as.clone() else {
+            continue;
+        };
+        let created = card.created;
+        to_placeholder(card);
+        card.def_id = known.def_id.clone();
+        card.radiant = known.radiant;
+        card.known_as = Some(known);
+        card.created = created;
     }
     // R1853003, R2250002: the opponent's lots and what they bought are theirs alone (the view sends the
     // viewer only the lots offered to them, indexed among themselves), so the seat reads none of it.
@@ -740,13 +799,15 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
     }
 
-    // Step 7: the opponent's prompt shows that it is open and whose it is, nothing more (R81). The
+    // Step 7: the opponent's prompt shows that it is open and whose it is, nothing more (R81), but for
+    // the count of a card picker the seat's view shows (R2739000), kept as that many blank options. The
     // same goes for its mulligan while both are open (R265, R266): that it has answered is public,
     // and what it was offered and what it kept are not.
     if let Some(pending) = next.pending.as_mut()
         && pending.player_id == opp
     {
-        pending.options = Vec::new();
+        let shown = other_seats_option_count(state, seat).unwrap_or(0);
+        pending.options = (0..shown).map(|_| blank_option()).collect();
     }
     if let Some(open) = next.mulligan.as_mut() {
         let theirs = &mut open[opp];

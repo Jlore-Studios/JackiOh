@@ -18,6 +18,7 @@ import type {
   PortraitId,
   Row,
 } from "@jackioh/shared";
+import { PROMPT_CARD_OPTION_LIMIT } from "@jackioh/engine/config";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
@@ -30,8 +31,9 @@ export type Side = "you" | "opponent";
  * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
  * while it offers this many options or fewer; more options keep the plain mode list. #2646: so is
  * every other choice of options that name no card, each option a choice card (ChoiceCard.tsx).
+ * The engine's (R2739000): it counts the other seat's backs by the same limit (OpponentChoice.tsx).
  */
-export const DISCOVER_OPTION_LIMIT = 4;
+export const DISCOVER_OPTION_LIMIT = PROMPT_CARD_OPTION_LIMIT;
 
 /**
  * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the
@@ -261,6 +263,13 @@ export type HeroEmotes = {
   onCloseMenu: () => void;
 };
 
+/**
+ * DR14 (#2706): a route's slot beside each hero, as `boardRail` is one in the rail: `own` beside the
+ * viewer's hero, `enemy` beside the opponent's. The board draws what it is handed and reads nothing
+ * of it; absent, nothing is drawn.
+ */
+export type HeroAside = { own?: ReactNode; enemy?: ReactNode };
+
 export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
@@ -280,6 +289,8 @@ export type BoardProps = {
   matchStatus?: ReactNode;
   /** Route chrome carved into the same physical side rail as the controls. */
   boardRail?: ReactNode;
+  /** Route chrome drawn beside each hero (`HeroAside`). */
+  heroAside?: HeroAside;
   /** Alerts and offers inset into the board rail, never rendered as page overlays. */
   boardNotices?: ReactNode;
   /** R1853003: the Marketplace's shop, drawn in the control bar (#2645); absent (a replay), none. */

@@ -1,83 +1,82 @@
-# One window of deploy-watch.yml's wait: polls the live server's GET /api/catalog until it serves
-# `expected` (and, when `commit` is given, is running that commit) or `seconds` pass. deploy-watch.yml
-# chains a few of these as separate jobs, so the wait for Render's deploy can run long without any
-# one job breaking CI's five-minute budget (#73).
+# Waits for a deploy to reach its server: polls the site's GET /api/catalog (R163) until the server
+# answers that it runs `commit` (its `x-deployed-commit` header, the DEPLOYED_COMMIT the Worker hands
+# the container, crates/server/src/api/catalog.rs) or `seconds` pass, and fails then, saying what it
+# last saw. promote-production.yml's deploy job and deploy-staging.yml run it after `wrangler deploy`.
 #
-# The catalog version alone cannot show that Render deployed a push: a push that leaves the catalog
-# as it was serves the same version before and after, and a service whose dashboard CATALOG_VERSION
-# is stale serves the old version from new code. The server therefore also reports the commit it was
-# deployed from in the `x-deployed-commit` header (crates/server/src/api/catalog.rs).
-name: poll live catalog
-description: Poll the live server's /api/catalog until it serves the expected catalog version, on the expected commit
+# The first request after a deploy starts the container on the new image, once the Worker has drained
+# a server still on the old one (apps/edge/src/index.ts), so an answer can take a minute or two.
+# Staging's site is behind Cloudflare Access, which lets a request through with an Access service
+# token's two headers; a refusal from Access fails at once rather than waiting out the time.
+name: wait for the live server
+description: Poll a site's /api/catalog until its server reports running the given commit
 inputs:
-  server:
-    description: the server's base URL
-    required: true
-  expected:
-    description: the catalog version main's render.yaml names
+  site:
+    description: the site's base URL, which sends /api/* to its server
     required: true
   commit:
-    description: the full git SHA the server must report running; empty checks the version only
+    description: the full git SHA the server must report running
+    required: true
+  seconds:
+    description: how long to wait before failing
+    required: true
+  access-client-id:
+    description: an Access service token's client id, for a site behind Cloudflare Access; empty sends none
     required: false
     default: ""
-  seconds:
-    description: how long this window polls
-    required: true
-outputs:
-  live:
-    description: "'true' once the server served the expected version on the expected commit"
-    value: ${{ steps.poll.outputs.live }}
-  served:
-    description: what the server served last, version and commit, or why it did not answer
-    value: ${{ steps.poll.outputs.served }}
-  served_version:
-    description: the catalog version the server served last, or why it did not answer
-    value: ${{ steps.poll.outputs.served_version }}
-  served_commit:
-    description: the commit the server reported last; empty when it reported none
-    value: ${{ steps.poll.outputs.served_commit }}
+  access-client-secret:
+    description: that service token's client secret
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
-    - id: poll
-      shell: bash
+    - shell: bash
       env:
-        SERVER: ${{ inputs.server }}
-        EXPECTED: ${{ inputs.expected }}
+        SITE: ${{ inputs.site }}
         COMMIT: ${{ inputs.commit }}
-        SECONDS_: ${{ inputs.seconds }}
+        WAIT_SECONDS: ${{ inputs.seconds }}
+        ACCESS_ID: ${{ inputs.access-client-id }}
+        ACCESS_SECRET: ${{ inputs.access-client-secret }}
+        # One request's limit: the one that starts the container waits for it to listen.
+        REQUEST_SECONDS: "120"
+        # Between two requests.
+        POLL_SECONDS: "15"
       run: |
-        deadline=$(( $(date +%s) + SECONDS_ ))
-        version="(no answer)"
-        reported=""
+        deadline=$(( $(date +%s) + WAIT_SECONDS ))
+        want=$(printf '%s' "$COMMIT" | tr 'A-F' 'a-f')
         headers=$(mktemp)
         body=$(mktemp)
-        want_commit=$(printf '%s' "$COMMIT" | tr 'A-F' 'a-f')
-        finish() {
-          shown="$version"
-          if [ "$version" != "(no answer)" ]; then shown="$version, commit ${reported:-(none reported)}"; fi
-          {
-            echo "live=$1"
-            echo "served=$shown"
-            echo "served_version=$version"
-            echo "served_commit=$reported"
-          } >> "$GITHUB_OUTPUT"
-        }
+        access=()
+        if [ -n "$ACCESS_ID" ]; then
+          access=(-H "CF-Access-Client-Id: $ACCESS_ID" -H "CF-Access-Client-Secret: $ACCESS_SECRET")
+        fi
+        seen="no answer"
         while [ "$(date +%s)" -lt "$deadline" ]; do
-          left=$(( deadline - $(date +%s) ))
-          # A free instance asleep takes about a minute to answer its first request.
-          if curl -fsS -m "$(( left < 90 ? (left < 5 ? 5 : left) : 90 ))" -D "$headers" -o "$body" "$SERVER/api/catalog" 2>/dev/null; then
-            version=$(jq -r '.version // "(no version)"' "$body")
-            reported=$(tr -d '\r' < "$headers" | awk -F': *' 'tolower($1) == "x-deployed-commit" { print tolower($2); exit }')
-            if [ "$version" = "$EXPECTED" ] && { [ -z "$want_commit" ] || [ "$reported" = "$want_commit" ]; }; then
-              # crates/server/src/bug_reports.rs: whether the server's token can file an issue.
-              reports=$(tr -d '\r' < "$headers" | awk -F': *' 'tolower($1) == "x-bug-reports" { print $2; exit }')
-              echo "live: catalog $version, commit ${reported:-(none reported)}, bug reports ${reports:-(not reported)}"
-              finish true
-              exit 0
-            fi
-          fi
-          echo "$(date -u +%H:%M:%S) serving $version on commit ${reported:-(none reported)}, waiting for $EXPECTED on commit ${want_commit:-(any)}"
-          sleep 20
+          : > "$headers"
+          : > "$body"
+          status=$(curl -sS -m "$REQUEST_SECONDS" -D "$headers" -o "$body" -w '%{http_code}' "${access[@]}" "$SITE/api/catalog" 2>/dev/null || true)
+          reported=$(tr -d '\r' < "$headers" | awk -F': *' 'tolower($1) == "x-deployed-commit" { print tolower($2); exit }')
+          case $status in
+            200)
+              version=$(jq -r '.version // "(no version)"' "$body" 2>/dev/null || echo "(not JSON)")
+              seen="catalog $version on commit ${reported:-(none reported)}"
+              if [ "$reported" = "$want" ]; then
+                echo "$SITE serves $seen"
+                exit 0
+              fi
+              ;;
+            301 | 302 | 303 | 307 | 401 | 403)
+              # Access sends a request it does not let through to its sign-in page, or refuses it.
+              if [ "${#access[@]}" -gt 0 ]; then
+                echo "::error::$SITE/api/catalog answered $status: Cloudflare Access did not accept the service token (CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET, docs/deploy-cloudflare.md)."
+                exit 1
+              fi
+              seen="HTTP $status"
+              ;;
+            *) seen="HTTP ${status:-000}" ;;
+          esac
+          echo "$(date -u +%H:%M:%S) $SITE: $seen; waiting for commit $want"
+          sleep "$POLL_SECONDS"
         done
-        finish false
+        echo "::error::$SITE did not report running $want within $WAIT_SECONDS seconds; it last answered $seen."
+        exit 1

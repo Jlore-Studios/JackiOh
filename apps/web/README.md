@@ -25,6 +25,9 @@ enforces rules and never sees hidden information.** In practice:
   both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
+  A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
+  The other seat's is its backs (`game/OpponentChoice.tsx`, R2739000) when the view's `pending` carries `optionCount`: that many of the opponent's card backs, laid out as the bare picker over the waiting notice's lighter dim and in the middle of the screen at every width (a phone docks the chooser's picker to its bottom edge), with no words or control and "Your opponent is choosing…" as the dialog's name; without it, the notice. Online, the back the opponent's pointer or focus is on is outlined in their color, still (R2739001): an engine card picker but the mulligan sends its option's index as it changes and null as it leaves, folds or closes (`game/choiceHover.ts`, `net.ts`'s `choiceHover` frame), which the server relays to the opponent alone and drops when the count is not shown; a play's own picker, a replay's, hotseat and practice send none.
+  A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -32,17 +35,19 @@ variable over weight, Latin subset, self-hosted in `public/fonts` with their lic
 `font-display: swap` behind a metric-matched local fallback, so text measures the same before and
 after a face lands, and `cards/fit.ts` refits every mounted box once `document.fonts` reports
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
-(`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
+(`public/_headers`, held by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
 The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark beside it or under it,
 the stacked logo and the mark alone each on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
 the repository's `photos/logo`, which no build reads. `scripts/brand-logo.py` draws them all, outlining
 the wordmark from the self-hosted Alegreya, so no SVG needs a font; run it by hand and commit what it
-writes.
+writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws whatever a filter touches
+at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
+no screen shows, still use filters).
 
 The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
-The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
+The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
 The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
 
@@ -107,7 +112,7 @@ A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` 
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -143,7 +148,7 @@ The view says so: a seat that still owes sees its own `pending` mulligan, one th
 present for exactly that window.
 
 - The picker (`Prompt.tsx`) keeps its testids (`prompt-modal` with `data-prompt-kind="mulligan"`,
-  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the count,
+  `prompt-option-<id>`, `prompt-submit`); its confirm reads "Ready". Under the cards,
   `mulligan-opponent-status` (`data-ready="true|false"`) says "Opponent is choosing…" or holds
   `mulligan-opponent-ready`, "Opponent is ready".
 - After Ready, until the game starts: `mulligan-waiting`, "Waiting for your opponent…", with the
@@ -272,16 +277,25 @@ which the engine sets on the viewer's own hand cards only and never at 0.
 ## Commands
 
 ```
-pnpm --dir apps/web dev          # vite dev server on :5173
-pnpm --dir apps/web build        # production build
-pnpm --dir apps/web build:e2e    # the build e2e drives: development mode, so window.__jackioh stays
-pnpm --dir apps/web typecheck    # tsc -p apps/web/tsconfig.json
-pnpm --dir apps/web test         # vitest (jsdom)
+pnpm --dir apps/web dev            # vite dev server on :5173
+pnpm --dir apps/web build          # production build, from .env.production
+pnpm --dir apps/web build:staging  # staging's: the same build with .env.staging's values over it
+pnpm --dir apps/web build:e2e      # the build e2e drives: development mode, so window.__jackioh stays
+pnpm --dir apps/web typecheck      # tsc -p apps/web/tsconfig.json
+pnpm --dir apps/web test           # vitest (jsdom)
 ```
 
-`dev`, `build`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre` scripts), which
-needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
-so run one of them (or the script) once first.
+`dev`, `build`, `build:staging`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre`
+scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
+generated `.d.ts`, so run one of them (or the script) once first.
+
+Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
+puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a
+variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,
+`public/_headers` sends the security headers, and the build fills its CSP's `connect-src` with its
+own hosts (`static-pages.ts` `connectSources`): `'self'`, its `VITE_SUPABASE_URL` and `wss://` on
+its own host, since the server shares the site's origin. `scripts/check-production-bundle.mjs`
+(`--staging` for staging's) refuses a bundle that would deploy without its settings or that CSP.
 
 The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
 `scrollTo` and a `PointerEvent` that keeps `pointerType`) and loads the engine before any test file;
@@ -301,6 +315,11 @@ the Patch notes page as Markdown, a pre-release while only staging has the versi
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
+
+`/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
+(R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
+(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
+effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -379,7 +398,8 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
                         panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
-                        own rank and links /leaderboard (R661); a queue it joined is remembered for the
+                        own rank on the ladder of the mode picked and links that ladder's /leaderboard
+                        (R661, R2778000); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
                         its join form (R767); a queue the server no longer holds ends the wait with a
@@ -407,7 +427,8 @@ routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as t
 routes/SeriesBanner.tsx the board's banner for a series game, each side's won decks as pips, and its
                         "Continue" once the game is over
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
-                        Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
+                        Grape tiers, the Raisins — and the caller's own standing, on Constructed or All
+                        Random by its switch (`?ladder=random`, R2778000); rank/rank.ts says
                         a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
@@ -426,15 +447,20 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
-                        as live previews (a full-art card's strip offers no full art and its Epic, its
-                        animated Legendary and its signed Mythic, R2655000), which equip on that card
+                        as live previews (a full-art card's strip offers no full art, its Animated art
+                        (its normal face, its art moving, R2715000), its Epic, its animated Legendary and
+                        its signed Mythic, R2655000), which equip on that card
                         alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); a locked tile or strip item a held
-                        Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
-                        POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
+                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
+                        R2730000). Only there does a locked item a held token covers offer the token
+                        (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
+                        POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
+                        POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
+                        the collection is read again;
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
@@ -443,6 +469,9 @@ routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
+routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
+                        each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
+                        once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
                         read the owned cosmetics again; the page never scrolls, its body does
@@ -455,7 +484,8 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
                         client sum); `JlorePill.tsx`, the pill in routes/nav.tsx's top bar and the
                         landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
-                        to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
+                        to after, bursts when full and restarts with the overflow, each fill on its own
+                        step's size where the answer gives one (R2728000); `RewardReveal.tsx`, a
                         filled bar's reward flown out one at a time; `OpeningBars.tsx`, the opening's
                         token bars pinned at the top of the screen, each slot's points (`slotPoints`)
                         flying from its card into them and a full bar pulsing before its reward
@@ -489,9 +519,9 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         `GET /api/packs`' price (`POST /api/packs/buy`), each shelved as a PackObject that
                         flies into the held count when bought, the button disabled with the shortfall shown
                         when the wallet (`GET /api/wallet`) is short; the token picker shows both token
-                        bars as filling bars and the cycle's next step (`GET /api/tokens`), a card token browsing
-                        unowned cards (`POST /api/tokens/redeem-card`) and the cosmetic tokens held, with a
-                        link to the Collection, where they are spent on a locked cosmetic (R1953001); the
+                        bars as filling bars and the cycle's next step (`GET /api/tokens`),
+                        the tokens held, with a link to the Collection, where each is spent from a locked
+                        item's preview (R1953001, R2730000); the
                         cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
@@ -528,7 +558,7 @@ legality comes from the `legal` array its socket sends (rule 7). Every screen he
 active account, and asks for one the way `/play` does.
 
 ```
-routes (net/navigate.ts paths, and both vercel.json route tables):
+routes (net/navigate.ts paths, and public/_redirects):
   /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
                          (accept, decline, cancel), the blocked players (unblock), the add form by
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
@@ -578,7 +608,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
                          file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
 
-The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
+The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000) and beside it the news' (R2875002), a red count of its unclaimed entries, none with no live entry (R2875001), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
@@ -821,8 +851,11 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
-  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
-  with a one-second faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
+  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral
+  fanfare: a riser into the first downbeat, a Mythic's own motif (brass and choir, picked by its id), the melody under
+  brass, tremolo strings, trombone and an orchestra hit, and an ending held to the bar line, all FluidR3's (no other
+  SoundFont). A Legendary's file runs at most 9 s and every Mythic's longer, to 12 s at most. It renders as a sting
+  with a 1.2 s faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
   (`post.loudnessOverFile`); a track without those fields renders exactly as before. A Legendary or Mythic added to a
   set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a license row:
   `music-assets.test.ts` refuses a shipped one without them.

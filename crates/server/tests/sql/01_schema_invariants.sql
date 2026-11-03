@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 68 tables of migrations 0001-0070 ==='
+\echo '=== CHECK 2: the 69 tables of migrations 0001-0077 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -85,10 +85,12 @@ declare
   -- stats-import --totals-only folded, game_record_batches (0060, R1976000), the account's
   -- per-card picks, card_cosmetic_picks (0061, R1834000), each patch's whole games,
   -- game_totals (0063, R1994000), a saved deck's earlier versions, deck_versions (0066,
-  -- R2100000), and a spend's idempotency_keys (0067, R2124000).
+  -- R2100000), a spend's idempotency_keys (0067, R2124000), and a news entry's claims, news_claims
+  -- (0077, R2875000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
-  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069 and 0070 add no table.
+  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075 and
+  -- 0076 add no table.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -103,7 +105,7 @@ declare
     'inventory_grants',
     'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
-    'player_settings',
+    'news_claims', 'player_settings',
     'player_stats', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
     'replay_shares', 'results',
     'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',
@@ -306,10 +308,11 @@ declare
   -- and both are enforced by app.deny_row_mutation() fired BEFORE UPDATE OR DELETE FOR
   -- EACH ROW. A listing cannot tell a live guard from a disabled one or from a trigger
   -- that only fires on INSERT, so the flags are asserted, not printed.
-  -- SPEC §14.11 (0045) holds the economy's six ledgers to the same rule.
+  -- SPEC §14.11 (0045) holds the economy's six ledgers to the same rule, and 0077 the news claims
+  -- (R2875000), which go only with their account as a ledger's rows do.
   ledgers constant text[] := array['collection_grants', 'match_actions', 'jlore_grants', 'inventory_grants',
                                    'economy_counter_grants', 'set_track_grants', 'quest_grants',
-                                   'cosmetic_grants'];
+                                   'cosmetic_grants', 'news_claims'];
   tbl     text;
   r       record;
 begin
@@ -1206,8 +1209,9 @@ end $$;
 -- 0064), never a Filter over the season, and the asked ids an Index Cond. Without 0064 the planner
 -- walks season_ranks_profile_idx whole and filters. The probe is pg.rs's query with its binds as
 -- literals: 36 is jlorious_floor(), Mythic Grape's index 4 x RANK_DIVISIONS_PER_TIER 3 x
--- RANK_PIPS_PER_DIVISION 3. Rolled back, rows and column statistics; ANALYZE's in-place pg_class
--- counts stay, and no later file plans a query.
+-- RANK_PIPS_PER_DIVISION 3. R2778000: the probe reads the All Random ladder, `format` between the
+-- season and the ladder in 0076's rebuilt index. Rolled back, rows and column statistics; ANALYZE's
+-- in-place pg_class counts stay, and no later file plans a query.
 begin;
 insert into public.seasons (id, patch_version, started_at) values ('check-21', 'check-21.0', now());
 insert into auth.users (id, email, email_confirmed_at)
@@ -1218,6 +1222,13 @@ insert into public.season_ranks (season_id, profile_id, games, wins, losses, dra
          null, null, now()
     from auth.users u
    where u.email like 'check-21-%';
+-- R2778000 (0076): each row on both ladders, as the split left every player of the season.
+insert into public.season_ranks (season_id, profile_id, format, games, wins, losses, draws, ladder, floor,
+                                 streak, peak_ladder, peak_jlorious, updated_at)
+  select season_id, profile_id, 'random', games, wins, losses, draws, ladder, floor, streak,
+         peak_ladder, peak_jlorious, updated_at
+    from public.season_ranks
+   where season_id = 'check-21';
 analyze public.season_ranks;
 do $$
 declare
@@ -1227,16 +1238,20 @@ declare
   line      text;
 begin
   select string_agg(profile_id::text, ',') into asked
-    from (select profile_id from public.season_ranks where season_id = 'check-21' and ladder < 36
+    from (select profile_id from public.season_ranks
+           where season_id = 'check-21' and format = 'constructed' and ladder < 36
            order by profile_id limit 2) as two;
   probe := format(
-    'select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
-            r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
-            coalesce(b.rating, p.rating) as rating, p.kind
+    'select r.season_id, r.profile_id, r.format, r.games, r.wins, r.losses, r.draws, r.ladder,
+            r.floor, r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+            coalesce(b.rating, case when r.format = ''random'' then p.random_rating else p.rating end)
+              as rating,
+            p.kind
        from public.season_ranks r
        join public.profiles p on p.id = r.profile_id
-       left join public.bot_ratings b on p.kind = ''bot'' and b.bot_id = p.id::text
-      where r.season_id = ''check-21''::text
+       left join public.bot_ratings b
+         on p.kind = ''bot'' and b.bot_id = p.id::text and b.format = r.format
+      where r.season_id = ''check-21''::text and r.format = ''random''::text
         and (r.profile_id = any(''{%s}''::uuid[]) or r.ladder >= 36)
       order by r.profile_id', asked);
   -- Local to this file's transaction, which the rollback below ends.

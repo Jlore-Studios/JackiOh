@@ -1,0 +1,47 @@
+// R2784000: the signature animation of every Meditative+ card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
+// default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
+// recipe) or "keep" (it plays over that recipe).
+{
+  "meditativeplus-001": "none: pending", // Bob's Plan
+  "meditativeplus-001-1": "none: pending", // Base Camp
+  "meditativeplus-001-2": "none: pending", // Spa Day
+  "meditativeplus-001-3": "none: pending", // Garage Sale
+  "meditativeplus-001-4": "none: pending", // Leg Day
+  "meditativeplus-001-5": "none: pending", // Star Chart
+  "meditativeplus-002": "none: pending", // NA Tech
+  "meditativeplus-003": "none: pending", // Wondrous Wand
+  "meditativeplus-004": "none: pending", // Jlockeed's Supply Drop
+  "meditativeplus-005": { cast: { motif: "chain" } }, // Spirit Lash
+  "meditativeplus-006": "none: pending", // Bloodbloom
+  "meditativeplus-007": "none: pending", // Life Mage
+  "meditativeplus-008": "none: pending", // Arch Mage
+  "meditativeplus-009": { aura: { look: "arcane", scope: "board" } }, // Magic Amplifier
+  "meditativeplus-010": "none: pending", // Medina Grifter
+  "meditativeplus-011": "none: pending", // Living Mana Potion
+  "meditativeplus-012": "none: pending", // Living Armor Potion
+  "meditativeplus-013": "none: pending", // Living Health Potion
+  "meditativeplus-014": "none: pending", // Potion Pouch
+  "meditativeplus-015": "none: pending", // Book of Potions
+  "meditativeplus-016": "none: pending", // Jazakus
+  "meditativeplus-016-1": "none: pending", // Jazakus Prime
+  "meditativeplus-017": "none: pending", // Dogpile
+  "meditativeplus-018": "none: pending", // Cognitive Offloading
+  "meditativeplus-019": "none: pending", // Grubby Gloves
+  "meditativeplus-020": "none: pending", // KY's Competition
+  "meditativeplus-020-1": "none: pending", // Lil' Kenny
+  "meditativeplus-021": "none: pending", // Harmony Spirit
+  "meditativeplus-022": "none: pending", // Mountaintop Garden
+  "meditativeplus-023": "none: pending", // Enormous Elderberry
+  "meditativeplus-024": "none: pending", // Bob, Wisconsin's Strongest Soldier
+  "meditativeplus-025": "none: pending", // KY's Intuition
+  "meditativeplus-026": "none: pending", // Scratch Pad
+}

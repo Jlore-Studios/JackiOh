@@ -15,7 +15,7 @@ import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
-import { FULL_ART_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
+import { FULL_ART_STRIP_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
@@ -95,12 +95,13 @@ function tokensOf(def: CardDef): CardDef[] {
 
 /**
  * R2756000: the arts a card's drill-down offers: its normal face, then each tier it has a full art of, commonest
- * first (a listed token's are its parent's, R2655002); none for a card without full art.
+ * first (a listed token's are its parent's, R2655002); none for a card without full art. R2715000: in the
+ * Collection's order, the Animated art first.
  */
 function artsOf(defId: string): DrillDownArt[] {
   if (!isFullArtCard(defId)) return [];
   const tiers = FULL_ARTS_OF_CARD.get(fullArtSource(defId));
-  return ["normal", ...FULL_ART_TIERS.filter((tier) => tiers?.has(tier) === true)];
+  return ["normal", ...FULL_ART_STRIP_TIERS.filter((tier) => tiers?.has(tier) === true)];
 }
 
 /** R2756000: `art` as the full-art pick `FullArtShown` takes for `defId`'s faces: `false` for the normal face, else that tier's (R2655000). */
@@ -138,6 +139,7 @@ type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
   | "games"
+  | "adjustedWinRate"
   | "winRate"
   | "drawnWinRate"
   | "drawnDelta"
@@ -150,11 +152,18 @@ type SortDirection = "asc" | "desc";
 type DrillDownArt = "normal" | FullArtTier;
 
 /** R2756000: each art choice's button, in English, put through `t()` where it is drawn as `SORT_LABELS` are. */
-const ART_LABELS: Record<DrillDownArt, string> = { normal: "No full art", Epic: "Epic", Legendary: "Legendary", Mythic: "Mythic" };
+const ART_LABELS: Record<DrillDownArt, string> = {
+  normal: "No full art",
+  Animated: "Animated",
+  Epic: "Epic",
+  Legendary: "Legendary",
+  Mythic: "Mythic",
+};
 
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
   "games",
+  "adjustedWinRate",
   "winRate",
   "drawnWinRate",
   "drawnDelta",
@@ -166,6 +175,7 @@ const SORT_COLUMNS: readonly SortColumn[] = [
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
+  adjustedWinRate: "Adjusted",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
   drawnDelta: "Drawn vs not drawn",
@@ -178,15 +188,44 @@ function defaultDirection(col: SortColumn): SortDirection {
   return col === "name" ? "asc" : "desc";
 }
 
+/** R2777000: an adjusted win rate to a tenth of a point, as it moves in tenths near 50%; "—" when there is none. */
+function adjustedText(rate: number | null | undefined): string {
+  return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";
+}
+
+/** R2777000: the table's default order, the adjusted win rate descending. */
+const DEFAULT_SORT: SortColumn = "adjustedWinRate";
+
 /**
  * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
- * `keyword`) is the default, win rate descending, its direction too.
+ * `keyword`) is the default, the adjusted win rate descending (R2777000), its direction too.
  */
 function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
   const asked = params.get("sort");
-  const col = asked === null ? "winRate" : SORT_COLUMNS.find((known) => known === asked);
-  if (col === undefined) return { col: "winRate", dir: "desc" };
+  const col = asked === null ? DEFAULT_SORT : SORT_COLUMNS.find((known) => known === asked);
+  if (col === undefined) return { col: DEFAULT_SORT, dir: "desc" };
   return { col, dir: params.get("dir") === "asc" ? "asc" : "desc" };
+}
+
+/**
+ * R2777001: the match types the page reads, Constructed (Best of 1 and Conquest together) first and the default,
+ * then All Random, then each constructed mode alone. No figure mixes chosen decks with dealt ones, so every mode
+ * together is not offered.
+ */
+const MODES = ["constructed", "random", "bo1", "bo3"] as const;
+type StatsMode = (typeof MODES)[number];
+const DEFAULT_MODE: StatsMode = "constructed";
+const MODE_LABELS: Record<StatsMode, string> = {
+  constructed: "Constructed",
+  random: "All Random",
+  bo1: "Best of 1",
+  bo3: "Conquest",
+};
+
+/** R2777001: the mode an address asks for; one the page does not offer (an old `all`, or none) is Constructed. */
+function modeOf(params: URLSearchParams): StatsMode {
+  const asked = params.get("mode");
+  return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
 }
 
 /** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
@@ -228,11 +267,7 @@ export default function StatsRoute(): ReactElement {
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
   const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
-  const [mode, setMode] = useState<string>(
-    ["bo1", "bo3", "random"].includes(initialParams.get("mode") ?? "")
-      ? (initialParams.get("mode") as string)
-      : "",
-  );
+  const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
 
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
@@ -291,7 +326,7 @@ export default function StatsRoute(): ReactElement {
     if (tab !== "cards") params.set("tab", tab);
     if (patch) params.set("patch", patch);
     if (search) params.set("search", search);
-    if (sortCol !== "winRate") params.set("sort", sortCol);
+    if (sortCol !== DEFAULT_SORT) params.set("sort", sortCol);
     if (sortDir !== "desc") params.set("dir", sortDir);
     if (setFilter) params.set("set", setFilter);
     if (rarityFilter) params.set("rarity", rarityFilter);
@@ -299,7 +334,7 @@ export default function StatsRoute(): ReactElement {
     if (keywordFilter) params.set("keyword", keywordFilter);
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
-    if (mode) params.set("mode", mode);
+    if (mode !== DEFAULT_MODE) params.set("mode", mode);
     if (showTokens) params.set("tokens", "1");
 
     const query = params.toString();
@@ -531,7 +566,18 @@ export default function StatsRoute(): ReactElement {
     const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
       shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
     list.sort((a, b) => {
-      if (sortCol === "winRate") {
+      if (sortCol === "adjustedWinRate") {
+        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
+        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+        const aRate = a.adjustedWinRate ?? null;
+        const bRate = b.adjustedWinRate ?? null;
+        if (aRate !== null && bRate === null) return -1;
+        if (aRate === null && bRate !== null) return 1;
+        if (aRate !== null && bRate !== null && aRate !== bRate) {
+          return (aRate - bRate) * flip;
+        }
+      } else if (sortCol === "winRate") {
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
         if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
@@ -789,13 +835,14 @@ export default function StatsRoute(): ReactElement {
                   className="stats-select"
                   data-testid={statsTestid.modeSelect}
                   value={mode}
-                  onChange={(e) => setMode(e.target.value)}
+                  onChange={(e) => setMode(modeOf(new URLSearchParams({ mode: e.target.value })))}
                   aria-label={t("Filter by match type")}
                 >
-                  <option value="">{t("All modes")}</option>
-                  <option value="bo1">{t("Best of 1")}</option>
-                  <option value="bo3">{t("Conquest")}</option>
-                  <option value="random">{t("All Random")}</option>
+                  {MODES.map((known) => (
+                    <option key={known} value={known}>
+                      {t(MODE_LABELS[known])}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -961,6 +1008,8 @@ export default function StatsRoute(): ReactElement {
                         )}
                       </button>
                       <dl className="stats-grid-figures">
+                        <dt>{t("Adjusted")}</dt>
+                        <dd>{card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}</dd>
                         <dt>{t("Win rate")}</dt>
                         <dd>
                           {card.hasEnoughGames && card.winRate !== null
@@ -1016,6 +1065,22 @@ export default function StatsRoute(): ReactElement {
                           {t("Games")} {sortCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
+                        title={t("50% plus how far drawing the card moves its deck's win rate, counted only as far as its games bear out")}
+                        aria-sort={sortCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("adjustedWinRate")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("adjustedWinRate");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Adjusted")} {sortCol === "adjustedWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
@@ -1149,6 +1214,9 @@ export default function StatsRoute(): ReactElement {
                             <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
+                          <td className="stats-td" data-testid={statsTestid.adjustedCell}>
+                            {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
+                          </td>
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
                               <div className="stats-winrate-cell">

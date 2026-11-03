@@ -261,7 +261,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
-  it("a Choose one names the card asking and says what each option does, answering with the card's own option string", () => {
+  it("a Choose one names the card asking in its dialog's name and says what each option does, answering with the card's own option string", () => {
     const onAction = vi.fn();
     const view = viewWith({
       you: emptySide("p1", { hand: [card({ instanceId: "h3", defId: "core-087" })] }),
@@ -274,8 +274,8 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
     expect(kindOfModal()).toBe("discover");
-    expect(document.querySelector(".prompt-title-source")).not.toBeNull();
-    expect(document.querySelector(".prompt-title-ask")).toHaveTextContent("Choose one");
+    expect(document.querySelector(".prompt-title")).toBeNull();
+    expect(screen.getByTestId("prompt-modal").getAttribute("aria-label")).toMatch(/: Choose one$/);
     const board = screen.getByTestId("prompt-option-board");
     expect(board).toHaveTextContent("Swap boards");
     expect(board).toHaveTextContent("Every zone changes sides");
@@ -423,8 +423,8 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       />,
     );
 
-    const title = document.querySelector(".prompt-title-ask") ?? document.querySelector(".prompt-title");
-    expect(title).toHaveTextContent("Play the normal or the Embiggened version?");
+    expect(document.querySelector(".prompt-title")).toBeNull();
+    expect(screen.getByTestId("prompt-modal").getAttribute("aria-label")).toMatch(/Play the normal or the Embiggened version\?$/);
     expect(screen.getByTestId("prompt-modal")).not.toHaveTextContent(/embiggen price/i);
     expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Normal");
     expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Embiggened");
@@ -903,7 +903,8 @@ describe("R1044 the face-down picker asks how to play it", () => {
     );
 
     expect(kindOfModal()).toBe("mode");
-    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(document.querySelector(".prompt-title")).toBeNull();
+    expect(screen.getByTestId("prompt-modal").getAttribute("aria-label")).toBe("Play it how?");
     expect(optionTestids()).toEqual([
       "prompt-option-up",
       "prompt-option-endOfThisTurn",
@@ -946,7 +947,8 @@ describe("R1044 the face-down picker asks how to play it", () => {
     );
 
     expect(kindOfModal()).toBe("mode");
-    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(document.querySelector(".prompt-title")).toBeNull();
+    expect(screen.getByTestId("prompt-modal").getAttribute("aria-label")).toBe("Play it how?");
     expect(optionTestids()).toEqual(["prompt-option-up", "prompt-option-cloaked"]);
     // #2646: each way is a choice card, its sentence the card's text.
     expect(screen.getByTestId("prompt-option-up").querySelector(".choice-card-text")?.textContent).toBe("Play it face-up");
@@ -1102,7 +1104,7 @@ describe("#1204 View the board folds a card picker to a bar", () => {
     expect(scrim).not.toHaveAttribute("data-collapsed");
     expect(modal).toHaveAttribute("aria-modal", "true");
     expect(optionTestids()).toHaveLength(3);
-    expect(screen.getByTestId("prompt-submit")).toBeInTheDocument();
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
     expect(peek()).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -1441,13 +1443,18 @@ describe("R2211000 a read-only prompt, a replay's", () => {
     expect(screen.getByTestId(testid.mulliganWaiting)).toHaveAttribute("data-returning", "1");
   });
 
-  it("R2211000 a prompt with no readOnly is the live one, unfolded, with Confirm", () => {
-    render(<Prompt view={viewWith({ pending: pendingFor("discover", DISCOVER) })} onAction={vi.fn()} />);
+  it("R2211000 a prompt with no readOnly is the live one, unfolded and bare, and one tap answers it", () => {
+    const onAction = vi.fn();
+    render(<Prompt view={viewWith({ pending: pendingFor("discover", DISCOVER) })} onAction={onAction} />);
 
     const modal = screen.getByTestId("prompt-modal");
     expect(modal).not.toHaveAttribute("data-read-only");
     expect(modal).not.toHaveAttribute("data-collapsed");
-    expect(screen.getByTestId("prompt-submit")).toBeInTheDocument();
+    expect(modal).toHaveAttribute("data-bare", "true");
+    expect(screen.queryByTestId("prompt-submit")).toBeNull();
     expect(screen.getByTestId("prompt-option-mode:core-043")).not.toHaveAttribute("aria-disabled");
+
+    fireEvent.click(screen.getByTestId("prompt-option-mode:core-043"));
+    expect(onAction).toHaveBeenCalledTimes(1);
   });
 });

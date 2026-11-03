@@ -1,8 +1,14 @@
 // Polish 1: B28 clamped DPR, B35 board shake, B40 effects draw without blocking the board.
+// R2722001: a Mythic's takeover of the board, caught mid-flight and at rest.
+// R2785000: a set piece (that takeover) skipped by Space and by a click, and the board caught up at once.
+// R2800000: each board clear's set piece (Twisting Nether's vortex, Ceaseless Void's fold, the shared vortex), mid-flight and at rest.
 // The watcher must see the splat before synchronous `getImageData`: a later read can miss R200's brief effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
+import { CATALOG } from "@jackioh/cards";
+
 import { FX_MAX_DPR } from "../../../apps/web/src/fx/constants.ts";
+import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.ts";
 
@@ -204,6 +210,172 @@ describe("Polish 1: the effects layer over a real board", () => {
         observer?.disconnect();
         stopWatching?.();
       });
+    });
+  }
+});
+
+describe("R2722001 a Mythic takes over a real board", () => {
+  it("R2722001 a Mythic's takeover mid-flight and at rest", () => {
+    cy.viewport(1280, 720);
+    const view = fullBoardView();
+    const lookup = lookupFromDefs(CATALOG);
+    const noop = (): void => undefined;
+    // Meditative #49 YileGPT, a Mythic Unit, played into the viewer's empty lane 3.
+    const events: GameEvent[] = [
+      { type: "cardPlayed", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", costPaid: 2 },
+      { type: "summoned", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", row: "units", lane: 3 },
+    ];
+    const board = (shown: PlayerView) => (
+      <CatalogContext.Provider value={lookup}>
+        <div className="app-shell app-shell--wide">
+          <Game view={shown} legal={[]} onAction={noop} />
+        </div>
+      </CatalogContext.Provider>
+    );
+    cy.mount(board(view)).then(({ rerender }) => {
+      cy.get(LAYER).should("have.attr", "data-fx", "on");
+      cy.then(() => rerender(board(withEvents(view, events))));
+    });
+    // Mid-flight: the queue holds the entry for the takeover, and its layers are over the board.
+    cy.get('[data-testid="game"]').should("have.attr", "data-takeover", "mythic");
+    cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
+    cy.get(`${FX_DOM} .fx-takeover-sweep`).should("exist");
+    cy.screenshot("takeover-mid", { capture: "viewport", overwrite: true });
+    // At rest: nothing animating, the hold over, and every layer of the takeover gone.
+    cy.get("[data-animating]", { timeout: 8_000 }).should("not.exist");
+    cy.get('[data-testid="game"]').should("not.have.attr", "data-takeover");
+    cy.get(`${FX_DOM} [data-fx="takeover"]`, { timeout: 4_000 }).should("not.exist");
+    cy.get('[data-testid="takeover-still"]').should("not.exist");
+    cy.screenshot("takeover-rest", { capture: "viewport", overwrite: true });
+  });
+});
+
+describe("R2785000 a set piece is skipped on a real board", () => {
+  const GAME = '[data-testid="game"]';
+  const skips: readonly (readonly [string, () => void])[] = [
+    ["Space", () => cy.document().trigger("keydown", { key: " " })],
+    ["a click", () => cy.get(GAME).click({ force: true })],
+  ];
+  for (const [how, skip] of skips) {
+    it(`R2785000 ${how} skips a Mythic's takeover at once`, () => {
+      cy.viewport(1280, 720);
+      const view = fullBoardView();
+      const lookup = lookupFromDefs(CATALOG);
+      const noop = (): void => undefined;
+      // Meditative #49 YileGPT, a Mythic Unit, played into the viewer's empty lane 3: the takeover set piece.
+      const events: GameEvent[] = [
+        { type: "cardPlayed", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", costPaid: 2 },
+        { type: "summoned", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", row: "units", lane: 3 },
+      ];
+      const board = (shown: PlayerView) => (
+        <CatalogContext.Provider value={lookup}>
+          <div className="app-shell app-shell--wide">
+            <Game view={shown} legal={[]} onAction={noop} />
+          </div>
+        </CatalogContext.Provider>
+      );
+      cy.mount(board(view)).then(({ rerender }) => {
+        cy.get(LAYER).should("have.attr", "data-fx", "on");
+        cy.then(() => rerender(board(withEvents(view, events))));
+      });
+      cy.get(GAME).should("have.attr", "data-set-piece", "takeover");
+      cy.get('[data-testid="set-piece-skip"]').should("contain.text", "Tap to skip");
+      cy.then(skip);
+      // At once: far inside what is left of the hold, the board has caught up and the takeover is gone.
+      cy.get("[data-animating]", { timeout: 300 }).should("not.exist");
+      cy.get(GAME).should("not.have.attr", "data-set-piece");
+      cy.get('[data-testid="set-piece-skip"]').should("not.exist");
+      cy.get(`${FX_DOM} [data-fx="takeover"]`, { timeout: 300 }).should("not.exist");
+    });
+  }
+});
+
+describe("R2800000 a board clear's set piece on a real board", () => {
+  const GAME = '[data-testid="game"]';
+  type Clear = { key: string; shape: string; defId: string; view: PlayerView; events: GameEvent[] };
+
+  /** Every Unit on the board, as the removals of `type` a wipe streams. */
+  function removals(view: PlayerView, type: "destroyed" | "exiled"): GameEvent[] {
+    return [...view.you.units, ...view.opponent.units].flatMap((u): GameEvent[] => {
+      if (u === null) return [];
+      return type === "destroyed"
+        ? [{ type, instanceId: u.instanceId, defId: u.defId, owner: u.owner, controller: u.controller, attack: u.attack, maxHealth: u.maxHealth, killerId: null }]
+        : [{ type, instanceId: u.instanceId, defId: u.defId, owner: u.owner }];
+    });
+  }
+
+  /** A Spell `defId` the viewer casts whose hook destroys every Unit. */
+  function spellClear(key: string, defId: string): Clear {
+    const view = fullBoardView();
+    const me = view.viewer;
+    return {
+      key,
+      shape: "vortex",
+      defId,
+      view,
+      events: [
+        { type: "cardPlayed", player: me, instanceId: "fx-clear", defId, costPaid: 4 },
+        { type: "hookResolving", sourceId: "fx-clear", defId, controller: me, hook: "cry" },
+        ...removals(view, "destroyed"),
+        { type: "cardResolved", player: me, instanceId: "fx-clear", defId, permanent: false, costPaid: 4 },
+      ],
+    };
+  }
+
+  /** #100 Ceaseless Void played into the viewer's emptied lane 3, its Cry exiling every other Unit. */
+  function voidClear(): Clear {
+    const full = fullBoardView();
+    const view: PlayerView = { ...full, you: { ...full.you, units: full.you.units.map((u, i) => (i === 2 ? null : u)) } };
+    const me = view.viewer;
+    return {
+      key: "voidFold",
+      shape: "fold",
+      defId: "core-100",
+      view,
+      events: [
+        { type: "cardPlayed", player: me, instanceId: "fx-void", defId: "core-100", costPaid: 0 },
+        { type: "summoned", player: me, instanceId: "fx-void", defId: "core-100", row: "units", lane: 3 },
+        { type: "hookResolving", sourceId: "fx-void", defId: "core-100", controller: me, hook: "cry" },
+        ...removals(view, "exiled"),
+        { type: "cardResolved", player: me, instanceId: "fx-void", defId: "core-100", permanent: true, costPaid: 0 },
+      ],
+    };
+  }
+
+  // #88 Twisting Nether, #100 Ceaseless Void and Classic #43 Plague Nuke (the shared vortex).
+  const clears: readonly (() => Clear)[] = [() => spellClear("nether", "core-088"), voidClear, () => spellClear("vortex", "classic-043")];
+  for (const make of clears) {
+    const { key, shape } = make();
+    it(`R2800000 ${key} mid-flight and at rest`, () => {
+      cy.viewport(1280, 720);
+      const { view, events } = make();
+      const lookup = lookupFromDefs(CATALOG);
+      const noop = (): void => undefined;
+      const board = (shown: PlayerView) => (
+        <CatalogContext.Provider value={lookup}>
+          <div className="app-shell app-shell--wide">
+            <Game view={shown} legal={[]} onAction={noop} />
+          </div>
+        </CatalogContext.Provider>
+      );
+      cy.mount(board(view)).then(({ rerender }) => {
+        cy.get(LAYER).should("have.attr", "data-fx", "on");
+        cy.then(() => rerender(board(withEvents(view, events))));
+      });
+      // Mid-flight: the queue holds the wipe, the board twists or folds, and the cards it takes are drawn in.
+      cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", key);
+      cy.get(GAME).should("have.attr", "data-set-piece-shape", shape);
+      cy.get(GAME).should("have.attr", "data-set-piece-sides", "you opponent");
+      cy.get(`${FX_DOM} [data-fx="setPiece"]`).should("have.attr", "data-shape", shape);
+      cy.get(`${BOARD} [data-fx-pulled]`).should("have.length.greaterThan", 0);
+      cy.screenshot(`set-piece-${key}-mid`, { capture: "viewport", overwrite: true });
+      // At rest: nothing animating, the hold over, and every layer of the set piece gone.
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+      cy.get(GAME).should("not.have.attr", "data-set-piece");
+      cy.get(GAME).should("not.have.attr", "data-set-piece-shape");
+      cy.get(`${FX_DOM} [data-fx="setPiece"]`, { timeout: 4_000 }).should("not.exist");
+      cy.get(`${FX_DOM} [data-fx="takeover"]`).should("not.exist");
+      cy.screenshot(`set-piece-${key}-rest`, { capture: "viewport", overwrite: true });
     });
   }
 });

@@ -13,6 +13,7 @@
     "branch_prefix": "squishy/",
     "state_branch": "squishy-state",
     "journal_branch": "squishy-journal",
+    "usage_branch": "",
     "workflow": "squishy-run.yml",
     "marker": "<!-- jackioh-squishy -->",
     "trust": ".harness/trust.txt",
@@ -27,27 +28,6 @@
   "min_minutes_for_a_call": 25,
   "max_review_cycles": 10,
   "max_self_check_rounds": 3,
-  "easy": {
-    "max_files": 10,
-    "max_lines": 400,
-    "off_limits": [
-      "SPEC.md",
-      "spec/",
-      "BUILD.md",
-      "crates/engine/src/",
-      "crates/ai/src/",
-      "crates/cards/catalog.json",
-      "crates/cards/patches/",
-      "crates/cards/src/scripts/",
-      "crates/server/migrations/",
-      "e2e/"
-    ],
-    "generated": [
-      "apps/web/src/wire/generated/",
-      "apps/web/src/wire/engineConfig.ts",
-      "apps/web/src/wire/serverConfig.ts"
-    ]
-  },
   "max_failures": 3,
   "auto_merge": true,
   "merge_method": "squash",
@@ -97,12 +77,20 @@
     "tsconfig*.json",
     "cypress.config.*",
     "scripts/",
-    "vercel.json",
-    "render.yaml",
+    "wrangler.jsonc",
+    "apps/edge/",
+    "apps/web/public/_headers",
     "crates/server/Dockerfile",
     "crates/server/migrations/"
   ],
   "upload_transcripts": false,
+  "resume_sessions": false,
+  "hold_minutes": 0,
+  "spot_check_every": 0,
+  "fullsend_adopt": false,
+  "fullsend_send_backs": 0,
+  "own_review_run": false,
+  "usage_history": false,
   "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
     { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },

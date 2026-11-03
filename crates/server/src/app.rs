@@ -91,6 +91,9 @@ pub struct App {
     /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
     /// (`economy::spend_slots`).
     pub spends: crate::economy::spend_slots::SpendSlots,
+    /// SPEC §14.13, R2875000: the news entries this build ships (`news.json`, checked at boot by
+    /// `economy::news::parse`), oldest first. A field so a test can post its own.
+    pub news: Vec<crate::economy::news::NewsEntry>,
 }
 
 // The clock
@@ -368,6 +371,14 @@ pub static ROUTES: &[Route] = &[
         "/api/dev/quests/:questId/complete",
         AuthLevel::Active,
         h!(api::quests::dev_complete_quest),
+    ),
+    // api/news.rs (#2875)
+    ("GET", "/api/news", AuthLevel::Active, h!(api::news::get_news)),
+    (
+        "POST",
+        "/api/news/:newsId/claim",
+        AuthLevel::Active,
+        h!(api::news::post_claim_news),
     ),
     // api/practice.rs (#1303)
     (
@@ -894,7 +905,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::e2e::post_reseed),
     ),
-    // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
+    // api/health.rs (#861): the Worker reads /healthz's commit, and its daily cron requests /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
@@ -948,6 +959,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
 
     let bug_reports = crate::bug_reports::BugReports::from_env(&env);
     let ci_runs = api::ci_runs::CiRuns::from_env(&env);
+    let news = crate::economy::news::shipped().map_err(|error| anyhow!("news.json: {error}"))?;
     let app = Arc::new(App {
         env,
         db,
@@ -981,6 +993,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
         practice_settles: tokio::sync::watch::Sender::new(0),
         spends: crate::economy::spend_slots::SpendSlots::default(),
+        news,
     });
 
     if app.env.e2e {
@@ -1118,9 +1131,9 @@ fn init_logging() {
 /// `stop_loops` can abort them on shutdown (#861).
 fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     // §9.5: the matchmaker's sweeper and the reaper; R260, R263: the series sweeper runs the pick
-    // clock and starts a game a restart left unstarted. The retention purge runs once now, since a
-    // free instance may sleep before an hour is up. R1454: with `LADDER_BOTS=on`, the bot pool is
-    // sized once now and then hourly.
+    // clock and starts a game a restart left unstarted. The retention purge runs once now, since the
+    // container sleeps after ten idle minutes (apps/edge). R1454: with `LADDER_BOTS=on`, the bot pool
+    // is sized once now and then hourly.
     let mut running = vec![
         (
             "matchmaker",
@@ -1298,6 +1311,7 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
             "seasonId" = %opened.season.id,
             opened = ?opened.opened,
             reset = ?opened.reset,
+            random_reset = ?opened.random_reset,
         ),
         Err(error) => tracing::error!(event = "season.open_failed", message = %format!("{error:?}")),
     }

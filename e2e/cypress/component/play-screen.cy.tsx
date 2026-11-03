@@ -66,6 +66,7 @@ function serveFixtures(): void {
     "/api/queue/population": { gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } },
     "/api/ranked": {
       season: "v0.2",
+      ladder: "constructed",
       profileId: "5d0c7a1e-0b9f-4c55-9a3e-6f2d8b1c4e70",
       username: "Max#3",
       rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
@@ -141,7 +142,7 @@ function expectOnlineFirst(): void {
   });
 }
 
-const WAYS = [playTestid.practice, playTestid.together, playTestid.replays] as const;
+const WAYS = [playTestid.practice, playTestid.dungeon, playTestid.together, playTestid.replays] as const;
 
 describe("#1578 the Play hub is one screen", () => {
   // The validator and the catalog are Rust WebAssembly (docs/v0.3.0/SURFACE.md §10.3); load them first.

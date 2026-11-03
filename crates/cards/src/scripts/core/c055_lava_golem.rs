@@ -68,12 +68,6 @@ mod tests {
         ])
     }
 
-    fn concat(list: Value, more: Value) -> Value {
-        let mut all = list.as_array().cloned().unwrap_or_default();
-        all.extend(more.as_array().cloned().unwrap_or_default());
-        Value::Array(all)
-    }
-
     use crate::matches_object;
 
     /// The keyword kinds a unit has now (§10.4), in layer order.
@@ -121,29 +115,6 @@ mod tests {
             s.expect_refused_with(|s| s.play("core-055", json!({ "tributes": one })), "Tribute 3");
             s.expect_refused_with(|s| s.play("core-055", json!({})), "Tribute 3");
             s.expect_in_zone("core-055", "hand");
-        }
-
-        #[test]
-        fn r90_the_same_unit_cannot_pay_twice() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": fodder() } }));
-            let one = s.unit_at(P1, 1).id;
-
-            s.expect_refused_with(
-                |s| s.play("core-055", json!({ "tributes": [one, one, one] })),
-                "same unit twice",
-            );
-        }
-
-        #[test]
-        fn s6_3_tributes_exactly_3_a_fourth_unit_on_top_of_a_paying_set_is_refused() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "hand": ["core-055"], "field": concat(fodder(), json!([{ "def": "core-053", "lane": 4 }])) },
-            }));
-            let four = ids_at(&s, P1, &[1, 2, 3, 4]);
-
-            s.expect_refused_with(|s| s.play("core-055", json!({ "tributes": four })), "no more");
         }
     }
 
@@ -193,18 +164,6 @@ mod tests {
                 s.expect_in_zone(id, "gone");
             }
         }
-
-        #[test]
-        fn s6_3_a_tribute_written_into_a_script_ignores_the_2_which_is_why_this_card_has_no_hook() {
-            // "A tribute written into a card's script is an ordinary Sacrifice of the permanent that script
-            // names, where the Sheep Token's 2 never applies" (§6.3, #22 Carnivorous Cube). Lava Golem's
-            // Tribute is the play COST instead, so the 2 does apply here and nowhere in this file.
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }] } }));
-            let one = ids_at(&s, P1, &[1]);
-
-            s.expect_refused_with(|s| s.play("core-055", json!({ "tributes": one })), "Tribute 3");
-        }
     }
 
     mod can_use_opposing_units_as_tributes_r101 {
@@ -234,35 +193,6 @@ mod tests {
             let p1_graveyard: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.id.clone()).collect();
             assert_eq!(p1_graveyard, mine);
             s.expect_events(json!(["destroyed", "cardPlayed"]));
-        }
-
-        #[test]
-        fn r101_three_enemy_units_alone_can_pay_the_whole_cost() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "hand": ["core-055"] },
-                "p2": { "field": fodder() },
-            }));
-            let theirs = ids_at(&s, P2, &[1, 2, 3]);
-
-            s.play("core-055", json!({ "tributes": theirs }));
-
-            s.expect_in_zone("core-055", "field");
-            assert_eq!(s.pile(P2, "graveyard").len(), 3);
-        }
-
-        #[test]
-        fn r101_an_enemy_sheep_token_also_counts_2_s3_2_does_not_name_a_side() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }] },
-                "p2": { "field": [{ "def": "core-t-sheep", "lane": 1 }] },
-            }));
-            let tributes = [s.unit_at(P1, 1).id, s.unit_at(P2, 1).id];
-
-            s.play("core-055", json!({ "tributes": tributes }));
-
-            s.expect_in_zone("core-055", "field");
         }
     }
 

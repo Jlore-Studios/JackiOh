@@ -553,10 +553,11 @@ pub fn zone_of(slot: impl Into<ZoneSlot>) -> Zone {
     }
 }
 
-/// True when this def is a unit token, which ceases to exist off the field (R11).
+/// True when this def is a unit token, which ceases to exist off the field (R11). A card set face-down
+/// by its Cloaked is read as its printed card, so a set Unit token is one still (R783008, R2855000).
 pub fn is_unit_token(state: &GameState, instance: &CardInstance) -> bool {
     let def = def_of(Some(state), &instance.def_id);
-    def.token && card_type_of(state, instance) == CardType::Unit
+    def.token && crate::alt_play::priced_type_of(state, instance) == CardType::Unit
 }
 
 /// The X/X (and Bread Token Armor X) a token was summoned with, kept while `setStatsAll` replaces

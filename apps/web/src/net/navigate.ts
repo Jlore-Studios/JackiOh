@@ -206,16 +206,16 @@ export function useSearch(): string {
  * The address `index.html`, `public/robots.txt` and `public/.well-known/security.txt` spell, which
  * `static-pages.ts` replaces with the build's own (#696): staging's, and a build's with no `VITE_SITE_ORIGIN`.
  */
-export const SITE_ORIGIN = "https://jackioh.vercel.app";
+export const SITE_ORIGIN = "https://staging.jackioh.com";
 
 export function originOf(configured: unknown): string {
   return typeof configured === "string" && configured.length > 0 ? configured.replace(/\/+$/u, "") : SITE_ORIGIN;
 }
 
 /**
- * jackioh.com in production (`.env.production`), the Vercel host on staging (`vercel.json`'s build
- * command). Read here, not at load: Vite's config loader runs this file with no `import.meta.env`, so
- * `static-pages.ts` calls `originOf` instead.
+ * The address this bundle is served from: jackioh.com in production (`.env.production`),
+ * staging.jackioh.com on staging (`.env.staging`). Read here, not at load: Vite's config loader runs
+ * this file with no `import.meta.env`, so `static-pages.ts` calls `originOf` instead.
  */
 export function siteOrigin(): string {
   const configured: unknown = import.meta.env.VITE_SITE_ORIGIN;
@@ -223,7 +223,7 @@ export function siteOrigin(): string {
 }
 
 /**
- * Client routes live in one table. `vercel.json` and `apps/web/vercel.json` must match it or
+ * Client routes live in one table. `public/_redirects` must serve every screen in it or
  * `net/deploy-routes.test.ts` fails; other paths are real 404s.
  */
 export const paths = {
@@ -268,6 +268,10 @@ export const paths = {
   shop: "/shop",
   /** #1665, R1665000: the odds and pity of every pack, public like the terms; the account's counters need a session. */
   purchases: "/purchases",
+  /** #2705, docs/dungeon-run.md DR14: the Dungeon Run, a single-player run played offline in the Sandbox. */
+  dungeon: "/dungeon",
+  /** #2705: the Sandbox's stats and leaderboards, on the device. */
+  dungeonStats: "/dungeon/stats",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games. */
@@ -278,6 +282,8 @@ export const paths = {
   duos: (matchId: string): string => `/duos/${matchId}`,
   /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
   duosDev: "/dev/duos",
+  /** R2784000: the card-animation motif gallery; production serves a 404 there, as at `hotseat`. */
+  fxGallery: "/dev/fx",
 } as const;
 
 function idUnder(path: string, first: string): string | null {

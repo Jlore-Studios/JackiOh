@@ -1,0 +1,146 @@
+// R2784000: the signature animation of every Meditative card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
+// default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
+// recipe) or "keep" (it plays over that recipe).
+{
+  "meditative-001": "none: pending", // Disruptive Disruptor
+  "meditative-002": "none: pending", // Rampaging Rhino
+  "meditative-003": "none: pending", // Jlockwork Machine
+  "meditative-004": "none: pending", // Juicy Kumquat Melon
+  "meditative-005": "none: pending", // Death by 1000 cuts
+  "meditative-006": "none: pending", // Me no Likey
+  "meditative-007": "none: pending", // Introspection
+  "meditative-008": "none: pending", // Reach the Summit
+  "meditative-009": "none: pending", // Joint Filing
+  "meditative-010": "none: pending", // Double Counting
+  "meditative-011": "none: pending", // Double Header
+  "meditative-012": "none: pending", // Fear Mongerer
+  "meditative-013": "none: pending", // Gatling Pea
+  "meditative-014": "none: pending", // Prime Time
+  "meditative-015": "none: pending", // Smelly Steven
+  "meditative-016": "none: pending", // Trenful Trickster
+  "meditative-017": "none: pending", // True Craft a Card
+  "meditative-018": "none: pending", // Expedition12
+  "meditative-019": "none: pending", // Expedition123
+  "meditative-019-1": "none: pending", // Temporal Rift
+  "meditative-020": "none: pending", // Aestheticize the Game
+  "meditative-021": "none: pending", // API Key Fishing
+  "meditative-022": "none: pending", // Mind Games
+  "meditative-022-1": "none: pending", // Fortify Mind
+  "meditative-023": "none: pending", // Golly Bob Howdy
+  "meditative-024": "none: pending", // Polymorph
+  "meditative-025": "none: pending", // Blue-Eyes White Felinor
+  "meditative-026": "none: pending", // Alternate Fate
+  "meditative-027": "none: pending", // Clip-Farming Lawyer
+  "meditative-028": "none: pending", // Shade-iris
+  "meditative-028-1": "none: pending", // Ancient Curse
+  "meditative-029": "none: pending", // Forbiddenous Factory
+  "meditative-030": "none: pending", // Fickle E-Kitten
+  "meditative-030-1": "none: pending", // Love Bomb
+  "meditative-031": "none: pending", // The Conductor
+  "meditative-032": "none: pending", // Spiritually 中国
+  "meditative-033": "none: pending", // First Day of 学校
+  "meditative-034": "none: pending", // 高考
+  "meditative-035": "none: pending", // RCTA (CN)
+  "meditative-036": "none: pending", // CN Peptides
+  "meditative-037": "none: pending", // CN in a Bottle
+  "meditative-038": "none: pending", // H1B Printer
+  "meditative-039": "none: pending", // 赌石 Addict
+  "meditative-039-1": "none: pending", // Auspicious Rock
+  "meditative-039-2": "none: pending", // Jade
+  "meditative-039-3": "none: pending", // Dud
+  "meditative-039-4": "none: pending", // Red Jade
+  "meditative-039-5": "none: pending", // Jade Beauty
+  "meditative-040": { aura: { look: "bloom", scope: "board" } }, // Feng Shui
+  "meditative-041": "none: pending", // CN Smuggler
+  "meditative-042": "none: pending", // CN Flea Market
+  "meditative-043": "none: pending", // CN Jade Market
+  "meditative-044": "none: pending", // CN Jade Well
+  "meditative-045": "none: pending", // Knowledge Breaker
+  "meditative-045-1": "none: pending", // Knowledge Breaker Prime
+  "meditative-046": "none: pending", // Conjure Intellect
+  "meditative-047": "none: pending", // 饕餮
+  "meditative-048": "none: pending", // Tranquility
+  "meditative-049": "none: pending", // YileGPT
+  "meditative-049-1": "none: pending", // YileGPT Prime
+  "meditative-049-2": "none: pending", // Yile's Virus
+  "meditative-049-3": "none: pending", // AI Girlfriend
+  "meditative-050": "none: pending", // CN Tech
+  "meditative-051": "none: pending", // Devin Bot
+  "meditative-052": "none: pending", // Economic Anxiety
+  "meditative-053": "none: pending", // Prestige
+  "meditative-054": "none: pending", // Money Machine
+  "meditative-055": "none: pending", // Dragon Fruit
+  "meditative-056": "none: pending", // House Party
+  "meditative-057": "none: pending", // Clip-Farming Critikal
+  "meditative-058": "none: pending", // Permanent Underclassman
+  "meditative-059": "none: pending", // Permanent Upperclassman
+  "meditative-060": "none: pending", // Eschews
+  "meditative-061": "none: pending", // Joon Jorker
+  "meditative-062": "none: pending", // Small Time Recruits
+  "meditative-063": "none: pending", // Skull of J'Nari
+  "meditative-064": "none: pending", // Traitorous Blood
+  "meditative-065": "none: pending", // Keymaster Keenus
+  "meditative-066": "none: pending", // Fiery Waraxe
+  "meditative-067": "none: pending", // Sentient Cat Ears
+  "meditative-068": "none: pending", // Catnip
+  "meditative-069": "none: pending", // The Maestro
+  "meditative-070": "none: pending", // I'M WILL BE YOUR DOOM
+  "meditative-070-1": "none: pending", // Ready… I'm
+  "meditative-071": "none: pending", // Pareto Optimality
+  "meditative-071-1": "none: pending", // The Cane
+  "meditative-072": "none: pending", // The Banisher
+  "meditative-073": "none: pending", // Plate Packer
+  "meditative-074": "none: pending", // Montaña Giant
+  "meditative-075": "none: pending", // Ever Growing Tree
+  "meditative-076": "none: pending", // Do or Die
+  "meditative-077": "none: pending", // Bulk Booster
+  "meditative-078": { cast: { motif: "vanish" } }, // Occidentless Mandate
+  "meditative-079": "none: pending", // Touched by KY
+  "meditative-080": "none: pending", // Aluneth
+  "meditative-081": "none: pending", // Deadman's Hand
+  "meditative-082": "none: pending", // Medina Outfitter
+  "meditative-083": "none: pending", // Medina Enforcer
+  "meditative-084": "none: pending", // Volatility
+  "meditative-085": "none: pending", // Playtester
+  "meditative-086": "none: pending", // Mayor Medinamogger
+  "meditative-087": "none: pending", // Tatches the Totem
+  "meditative-088": "none: pending", // The True Sheep
+  "meditative-089": "none: pending", // Jlarna
+  "meditative-090": "none: pending", // Spell Basket
+  "meditative-091": "none: pending", // Windfast
+  "meditative-091-1": "none: pending", // Windfurious Prime
+  "meditative-092": "none: pending", // Unan
+  "meditative-093": "none: pending", // Growing Felinor
+  "meditative-093-1": "none: pending", // Growing Felinor Sr
+  "meditative-093-2": "none: pending", // Growing Felinor Sr Sr
+  "meditative-093-3": "none: pending", // Growing Felinor Super Senior
+  "meditative-094": "none: pending", // Shrinking Felinor
+  "meditative-095": "none: pending", // Call to Chaos (Meditative Edition)
+  "meditative-095-1": "none: pending", // CN Golem
+  "meditative-096": "none: pending", // Meditative Journey
+  "meditative-096-1": "none: pending", // Journey Complete
+  "meditative-097": "none: pending", // Jlockeed's Evil Blueprints
+  "meditative-097-1": "none: pending", // Empty Plot
+  "meditative-097-2": "none: pending", // Wishing Well
+  "meditative-097-3": "none: pending", // School
+  "meditative-097-4": "none: pending", // Mega Church
+  "meditative-097-5": "none: pending", // Bunker
+  "meditative-097-6": "none: pending", // University
+  "meditative-097-7": "none: pending", // The Great Wall
+  "meditative-097-8": "none: pending", // Prison
+  "meditative-097-9": "none: pending", // Jlockeed's Headquarters
+  "meditative-098": "none: pending", // Showdown
+  "meditative-099": "none: pending", // Paranoia
+  "meditative-100": "none: pending", // Greaser
+  "meditative-101": "none: pending", // Gachaholic
+  "meditative-102": "none: pending", // Catboy Maid SSR+
+}

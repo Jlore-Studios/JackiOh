@@ -35,7 +35,12 @@ export const FX_MANA_MAX_SPARKS = 10;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
-export const FX_LEGENDARY_TRAUMA = 0.5;
+/** R2722001: a Legendary's or a Mythic's entrance lands this hard (0.5 until R2722001 made it bigger). */
+export const FX_LEGENDARY_TRAUMA = 0.7;
+/** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
+export const FX_TAKEOVER_TAIL_MS = 700;
+/** R2722001: the takeover's shake as its card lands, the hardest the board takes. */
+export const FX_TAKEOVER_TRAUMA = 1;
 export const FX_TRAP_TRAUMA = 0.4;
 export const FX_RESULT_TRAUMA = 0.9;
 export const FX_LETHAL_LEAD_MAX_MS = 600;     // the killing blow replayed before the result plays in at most this (R200)
@@ -59,6 +64,7 @@ export const FX_DEFAULT_SEED = 0x5eed;
 export const FX_MEMORY_LIMIT = 64;            // entries each FxMemory map keeps (oldest evicted)
 export const FX_MEMORY_RECENT = 16;           // R502: the last events the planner keeps in order (a cast on draw is read off them)
 export const FX_MEMORY_RESOLVING = 8;         // R502: the plays still resolving it keeps, innermost last
+export const FX_MEMORY_HITS = 44;             // R2784000: the hit ids each keeps, a damage and a removal of all 20 zones' cards and both heroes
 
 // R502: a cast on draw. The card bursts out of its drawer's Deck pile as its `cardPlayed` starts.
 export const FX_CAST_ON_DRAW_TRAUMA = 0.25;
@@ -127,6 +133,79 @@ export const FX_SHOT_LAUNCH_AT = 0.24;
 export const FX_SHOT_SHAKE_TRAUMA = 0.3;
 // #1443: the per-entry cap on non-combat damage shots (one volley starts together).
 export const FX_FLAVOR_VOLLEY_MAX = 4;
+// R2784000: a card's motif (fx/motifs/). Its four phases start at these fractions of the entry, as
+// FX_SLAM_AT does; its scale is the card's rarity × (1 + capped cost × step), at most FX_MOTIF_SCALE_MAX,
+// times the intensity (an X cost counts as FX_MOTIF_X_COST); each motif's shake is FX_MOTIF_TRAUMA's.
+export const FX_MOTIF_PHASES = { gather: 0, travel: 0.2, land: 0.6, linger: 0.75 } as const;
+export const FX_MOTIF_SCALE_PER_COST = 0.08;
+export const FX_MOTIF_COST_CAP = 7;
+export const FX_MOTIF_X_COST = 3;
+export const FX_MOTIF_SCALE_MAX = 2;
+export const FX_MOTIF_RARITY_SCALE = { Common: 1, Rare: 1.1, Epic: 1.25, Legendary: 1.4, Mythic: 1.6, Token: 0.9 } as const;
+export const FX_MOTIF_VOLLEY_MAX = 5;          // volley: the shots one entry fires
+export const FX_MOTIF_BARRAGE_MAX = 8;         // barrage: the hits that land one by one…
+export const FX_MOTIF_BARRAGE_STEP = 0.02;     // …this fraction of D apart, never past linger
+export const FX_MOTIF_CENTER_LANE = 3;         // nova: the lane a one-sided blast centres on
+export const FX_MOTIF_TRAUMA = {
+  bolt: 0.25,
+  volley: 0.3,
+  barrage: 0.35,
+  chain: 0.3,
+  lance: 0.4,
+  nova: 0.45,
+  wipe: 0.6,
+  vanish: 0,
+  scorch: 0.3,
+  negate: 0.25,
+  drain: 0.3,
+  bless: 0.2,
+  curse: 0.25,
+  ward: 0.2,
+  conjure: 0.3,
+  rise: 0.35,
+  offering: 0.3,
+  shift: 0.15,
+  bind: 0.2,
+  tether: 0.25,
+  mirror: 0.25,
+  transmute: 0.3,
+  flight: 0,
+  glimpse: 0.1,
+  mana: 0,
+  tithe: 0.1,
+  tally: 0.15,
+  snap: 0.4,
+} as const;
+/** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
+export const FX_MOTIF_TITHE_MAX = 5;
+// R2784000: the scales the /dev/fx gallery offers.
+export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
+// AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
+// all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS
+// with a burst (px/s, decaying by AURA_BURST_DECAY per second) and out over AURA_FADE_OUT_MS; the layer
+// remembers the source of at most AURA_SOURCES_LIMIT modifiers (oldest evicted).
+export const AURA_MAX_PER_ZONE = 2;
+export const AURA_MOTES_PER_AURA = 24;
+export const AURA_PARTICLE_SHARE = 0.25;
+export const AURA_FADE_IN_MS = 600;
+export const AURA_FADE_OUT_MS = 500;
+export const AURA_BURST_SPEED = 220;
+export const AURA_BURST_DECAY = 4;
+export const AURA_SOURCES_LIMIT = 64;
+// R2789000: the combat keyword beats (fx/motifs/beats.ts). A callout is the keyword's icon over the unit; a
+// hit's beats start FX_BEAT_STAGGER_MS apart (a later one at most FX_BEAT_STAGGER_MAX of D in), at most
+// FX_CALLOUTS_PER_HIT of them each with a callout. The fractions are of D, the lengths in ms, and all of it
+// lies inside the entry (R200).
+export const FX_CALLOUT_MS = 600;
+export const FX_CALLOUTS_PER_HIT = 2;
+export const FX_BEAT_STAGGER_MS = 60;
+export const FX_BEAT_STAGGER_MAX = 0.5;
+export const FX_BEAT_TRAUMA = 0.25;
+export const FX_FIRST_STRIKE_BREAK_AT = 0.4;   // the dying defender's counter-blow breaks off this far into the entry…
+export const FX_FIRST_STRIKE_BREAK_REACH = 0.6; // …this many card heights toward the attacker
+export const FX_PIERCE_REACH = 0.8;            // a Pierce's spear line runs this many card heights past each edge
+export const FX_FLYING_LUNGE_LIFT = 0.18;      // a Flying attacker's lunge scales up this much more, over the lane
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;

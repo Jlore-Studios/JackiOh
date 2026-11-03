@@ -33,7 +33,7 @@ use jackioh_server::db::store::{
     BotDeck, BotRow, FrozenTrio, NewBot, QueueMode, RatedGameRow, SeriesStatus, StoreError, Ticket,
 };
 use jackioh_server::env::SERVER_ONLY_ENV_VARS;
-use jackioh_server::ranked::ladder::{GrapeTier, fresh_rank, tier_bottom};
+use jackioh_server::ranked::ladder::{GrapeTier, Ladder, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::seats::Seat;
 
@@ -505,6 +505,56 @@ async fn r1453_the_closest_free_scheduled_bot_pairs() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn r2778000_an_all_random_ticket_meets_the_bot_closest_on_the_all_random_ladder() {
+    // Two bots, each close to the player on one ladder and far on the other: an All Random ticket
+    // pairs with the one close on All Random, a Best-of-1 ticket with the one close on Constructed.
+    let app = app_with_bots(true).await;
+    let close_on_random = new_bot(&app, BotSpec::rated(1400.0)).await;
+    let close_on_constructed = new_bot(&app, BotSpec::rated(1050.0)).await;
+    for (bot, rating) in [(&close_on_random, 1050.0), (&close_on_constructed, 1400.0)] {
+        let mut row = q!(app, ranked_bot(bot, Ladder::Random)).expect("the bot's All Random rating");
+        row.glicko.rating = rating;
+        q!(app, ranked_put_bot(&row));
+    }
+    let (person, _) = new_person(&app, 1000.0).await;
+    ticket(&app, &person, 1000.0, past_any_fallback(), "random").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(
+        seated(&app, &[&close_on_random, &close_on_constructed]).await,
+        vec![close_on_random.clone()]
+    );
+
+    let app = app_with_bots(true).await;
+    let close_on_random = new_bot(&app, BotSpec::rated(1400.0)).await;
+    let close_on_constructed = new_bot(&app, BotSpec::rated(1050.0)).await;
+    for (bot, rating) in [(&close_on_random, 1050.0), (&close_on_constructed, 1400.0)] {
+        let mut row = q!(app, ranked_bot(bot, Ladder::Random)).expect("the bot's All Random rating");
+        row.glicko.rating = rating;
+        q!(app, ranked_put_bot(&row));
+    }
+    let (person, _) = new_person(&app, 1000.0).await;
+    ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(
+        seated(&app, &[&close_on_random, &close_on_constructed]).await,
+        vec![close_on_constructed.clone()]
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2778000_a_new_bot_starts_both_ladders_at_its_seed_rating() {
+    let app = app_with_bots(true).await;
+    let bot = new_bot(&app, BotSpec::rated(1234.0)).await;
+    for ladder in Ladder::ALL {
+        let row = q!(app, ranked_bot(&bot, ladder)).expect("a rating on each ladder");
+        assert_eq!(row.glicko.rating, 1234.0, "{}", ladder.as_str());
+    }
+    let listed = q!(app, bots_list());
+    let row = listed.iter().find(|row| row.profile_id == bot).expect("the bot");
+    assert_eq!((row.rating, row.random_rating), (1234.0, 1234.0));
+}
+
+#[tokio::test(start_paused = true)]
 async fn r1989000_the_seed_coin_seats_the_person_and_the_bot() {
     // Between two people the older ticket's seat is the seed's coin, and a bot pairing is a coin
     // too: each round's seats match the match seed's coin, in either order, with each side playing
@@ -747,7 +797,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     let app = app_with_bots(true).await;
     let (person, token, bot, series_id) = series_in_game_1(&app).await;
     let person_before = q!(app, profiles_get_by_id(&person)).expect("the person").rating;
-    let bot_before = q!(app, ranked_bot(&bot)).expect("the bot's rating");
+    let bot_before = q!(app, ranked_bot(&bot, Ladder::Constructed)).expect("the bot's rating");
 
     // The person concedes game 1: it is recorded and rates nothing (R262).
     let (game_1, _) = concede_bot_match(&app, &person).await;
@@ -761,7 +811,10 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
         q!(app, profiles_get_by_id(&person)).expect("the person").rating,
         person_before
     );
-    assert_eq!(q!(app, ranked_bot(&bot)), Some(bot_before.clone()));
+    assert_eq!(
+        q!(app, ranked_bot(&bot, Ladder::Constructed)),
+        Some(bot_before.clone())
+    );
     let between = q!(app, series_get(&series_id)).expect("the series");
     assert_eq!(between.status, SeriesStatus::Picking, "game 2's pick phase");
     // R1989000: the bot's wins ride whichever side the coin gave it.
@@ -789,7 +842,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     assert_eq!(game["sides"][person_side]["pilot"], "human", "{game}");
     assert_eq!(game["sides"][bot_side]["botId"], bot.as_str(), "{game}");
     assert_eq!(game["sides"][bot_side]["pilot"], "ai", "{game}");
-    let bot_after = q!(app, ranked_bot(&bot)).expect("the bot's rating");
+    let bot_after = q!(app, ranked_bot(&bot, Ladder::Constructed)).expect("the bot's rating");
     assert_eq!(bot_after.games, bot_before.games + 1);
     assert!(
         bot_after.glicko.rating > bot_before.glicko.rating,
@@ -802,7 +855,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     // R640000: the series moved the bot's season row, as it moved the person's.
     let season = season_id_of(jackioh_cards::catalog_version());
     for id in [&person, &bot] {
-        let rank = q!(app, ranked_rank(&season, id)).expect("a season row");
+        let rank = q!(app, ranked_rank(&season, id, Ladder::Constructed)).expect("a season row");
         assert_eq!(rank.games, 1, "{id}");
     }
 }
@@ -1843,7 +1896,7 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
     let before = |id: &str| {
         let app = Arc::clone(&app);
         let id = id.to_string();
-        async move { q!(app, ranked_bot(&id)).expect("an R610 row") }
+        async move { q!(app, ranked_bot(&id, Ladder::Constructed)).expect("an R610 row") }
     };
     let (winner_before, loser_before) = (before(&winner).await, before(&loser).await);
 
@@ -1913,7 +1966,9 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
     // R640000: each bot's season row moved.
     for id in [&winner, &loser] {
         assert_eq!(
-            q!(app, ranked_rank(&season, id)).expect("a season row").games,
+            q!(app, ranked_rank(&season, id, Ladder::Constructed))
+                .expect("a season row")
+                .games,
             1,
             "{id}"
         );

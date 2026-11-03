@@ -11,6 +11,7 @@ import {
   HIDDEN_DEF_ID,
   LOG_LIMIT,
   MUSIC_DUCK_GAIN,
+  MUSIC_DUCK_SFX,
   PICKUP_MIN_GAP_MS,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
@@ -55,7 +56,7 @@ import {
   type FakeNode,
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
-import type { AudioEngine, PlayedCue, SfxId, VoiceKey, CardAudioTable, VoiceManifest } from "./types.ts";
+import type { AudioEngine, PlayedCue, SfxId, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
 import { must } from "../test/stubServer.ts";
 
 /* Fixtures */
@@ -484,16 +485,6 @@ describe("B5 the acceptance gate", () => {
     expect(r.engine.log()).toEqual([]);
   });
 
-  it("B5 a suspended context still accepts and logs cues, so a device with no output still records them (B46)", () => {
-    const r = rig({ factory: fakeContextFactory({ state: "suspended", resumeMode: "stay" }) });
-    unlocked(r);
-
-    expect(r.engine.state()).toBe("suspended");
-    expect(r.engine.playSfx("attack")).toBe(true);
-    expect(r.engine.playVoice("core-004", "play", 150)).toBe(true);
-    expect(r.engine.log().map((c) => c.kind)).toEqual(["sfx", "voice"]);
-  });
-
   it("B5 the log keeps only the last LOG_LIMIT accepted cues, oldest first", () => {
     const r = rig();
     unlocked(r);
@@ -794,26 +785,21 @@ describe("B9 the speech fallback", () => {
     expect(lastVoice(r)?.outcome).toBe("speech");
   });
 
-  it("B9 with no speech port a line with no file ends failed, and nothing throws", async () => {
-    const r = rig({ engine: { speech: null } });
-    unlocked(r);
+  for (const row of [
+    { defId: "core-005", line: "cast", delay: 150, fetch: "ok" },
+    { defId: "core-004", line: "death", delay: 0, fetch: "reject" },
+  ] as Array<{ defId: string; line: PlayableLineKind; delay: number; fetch: "ok" | "reject" }>) {
+    it(`B9 with no speech port a line that cannot be heard (${row.defId} ${row.line}) ends failed, and nothing throws`, async () => {
+      const r = rig({ engine: { speech: null } });
+      unlocked(r);
+      if (row.fetch === "reject") r.fetch.mode = "reject";
 
-    expect(r.engine.playVoice("core-005", "cast", 150)).toBe(true);
-    await elapse(r, 500);
+      expect(r.engine.playVoice(row.defId, row.line, row.delay)).toBe(true);
+      await elapse(r, 500);
 
-    expect(lastVoice(r)).toMatchObject({ defId: "core-005", line: "cast", outcome: "failed" });
-  });
-
-  it("B9 with no speech port a file that fails to load ends failed", async () => {
-    const r = rig({ engine: { speech: null } });
-    unlocked(r);
-    r.fetch.mode = "reject";
-
-    expect(r.engine.playVoice("core-004", "death", 0)).toBe(true);
-    await elapse(r, 500);
-
-    expect(lastVoice(r)?.outcome).toBe("failed");
-  });
+      expect(lastVoice(r)).toMatchObject({ defId: row.defId, line: row.line, outcome: "failed" });
+    });
+  }
 });
 
 describe("B10 late lines are dropped", () => {
@@ -922,6 +908,7 @@ describe("B46 a context that is not running schedules nothing", () => {
       const r = rig({ factory: fakeContextFactory({ state, resumeMode: "stay" }) });
       const audio = unlocked(r);
       const nodesAfterUnlock = audio.nodes.length;
+      expect(r.engine.state()).toBe("suspended");
 
       for (let i = 0; i < 40; i += 1) {
         tick(r, 500);
@@ -1561,6 +1548,19 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playSfx("death")).toBe(true);
     expect(duck.param("gain").targets()).toEqual([]);
     expect(r.engine.playEffect("core-066", "attack")).toBe(true);
+    expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
+  });
+
+  it("R2722000 the entrance sting plays beside an intro and no longer ducks the music; a trap's sting still does", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    writeAudioSettings({ duckMusic: true });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+    expect(MUSIC_DUCK_SFX).not.toContain("entrance");
+    expect(r.engine.playSfx("entrance", { mythic: true })).toBe(true);
+    expect(duck.param("gain").targets()).toEqual([]);
+    expect(r.engine.playSfx("trapSting")).toBe(true);
     expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
   });
 

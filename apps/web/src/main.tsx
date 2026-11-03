@@ -93,6 +93,7 @@ import "./auth/tavern.css";
 
 const HotseatRoute = routeChunks.hotseat?.Screen ?? null;
 const DevDuosRoute = routeChunks.duosDev?.Screen ?? null;
+const FxGalleryRoute = routeChunks.fxGallery?.Screen ?? null;
 const DuosRoute = routeChunks.duos.Screen;
 const ReplaysRoute = routeChunks.replays.Screen;
 const LoginRoute = routeChunks.login.Screen;
@@ -103,6 +104,8 @@ const PlayRoute = routeChunks.play.Screen;
 const MatchRoute = routeChunks.match.Screen;
 const SeriesRoute = routeChunks.series.Screen;
 const PracticeRoute = routeChunks.practice.Screen;
+const DungeonRoute = routeChunks.dungeon.Screen;
+const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
@@ -217,8 +220,9 @@ export type LoadingProps = {
 };
 
 /**
- * A holding panel. With `slow`, a wait past `GATE_SLOW_NOTICE_SECONDS` says why it may be slow (Render's
- * free tier sleeps about a minute) and offers the way out, so a server that never answers is not a trap.
+ * A holding panel. With `slow`, a wait past `GATE_SLOW_NOTICE_SECONDS` says why it may be slow (the
+ * server's container stops when idle and the next request waits for it to start, apps/edge) and offers
+ * the way out, so a server that never answers is not a trap.
  */
 export function Loading({ what, slow = false, testId, children, skeleton }: LoadingProps): ReactElement {
   const [late, setLate] = useState(false);
@@ -661,6 +665,21 @@ export function App(): ReactElement {
         </EngineGate>
       );
     }
+    // #2705: the Dungeon Run's Sandbox is offline and open to anyone, so, as practice, it has no gate.
+    if (path === paths.dungeon) {
+      return (
+        <EngineGate>
+          <DungeonRoute />
+        </EngineGate>
+      );
+    }
+    if (path === paths.dungeonStats) {
+      return (
+        <EngineGate>
+          <DungeonStatsRoute />
+        </EngineGate>
+      );
+    }
     // #920: the card creator keeps its cards on the account, so it is behind the gate like the decks.
     if (path === paths.creator) {
       return (
@@ -822,6 +841,11 @@ export function App(): ReactElement {
           <DevDuosRoute />
         </EngineGate>
       );
+    }
+    // R2784000: the motif gallery plays fixture events on a fixture board, so it never calls the engine.
+    if (path === paths.fxGallery) {
+      if (FxGalleryRoute === null) return <NotFound path={path} />;
+      return <FxGalleryRoute />;
     }
     return <NotFound path={path} />;
   })();

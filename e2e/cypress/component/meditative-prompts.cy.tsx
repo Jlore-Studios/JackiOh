@@ -6,7 +6,10 @@
 // that card shows its preview and picks nothing: a lot is read, not bought.
 // The play-time choices (R81) the set adds are a card's modes, picked in a "Choose one" before the play is sent (#617),
 // each the same sheet under the same checks: #22 Mind Games' secret (ME-SECRET), #22.1 Fortify Mind's guess at it, and
-// #98 Showdown's lane. The Created status (ME-CREATED, R943) of a card in hand draws no mark on its face (R2647000).
+// #163 Swear Loyalities' faction. A short Choose one is bare choice cards alone (#2738), with no title and so no card to
+// hold; Swear Loyalities' list of five keeps its title, which the hold reads. #98 Showdown's lane is no sheet at all
+// (#2757): each lane on offer is one oblong over its four zones, answered on the board. The Created status (ME-CREATED,
+// R943) of a card in hand draws no mark on its face (R2647000).
 // The mount is mobile-ux.cy.tsx's, with the real catalog (the market draws its lots from it); the block editor's meters
 // and face are the engine's own `craftPreview`, so the WebAssembly module loads first.
 
@@ -14,10 +17,12 @@ import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PendingOption, PlayerView } from "@jackioh/shared";
 
 import { INSPECT_HOVER, closeInspect } from "../../../apps/web/src/cards/index.ts";
+import { laneZoneTestids } from "../../../apps/web/src/game/actions.ts";
 import { testid } from "../../../apps/web/src/game/contract.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
-import { baseView, card, emptySide, pendingFor } from "../../../apps/web/src/test/fixtures.ts";
+import { LANE_PICK_OUTSET_PX } from "../../../apps/web/src/game/LanePick.tsx";
+import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit } from "../../../apps/web/src/test/fixtures.ts";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import type { CraftRecipe } from "../../../apps/web/src/wire/index.ts";
 
@@ -96,8 +101,11 @@ type Kind = {
   legal: readonly ActionBody[];
   /** A play-time choice opens from a tap on this hand card. */
   open?: string;
-  /** The card face a hold reads, and the name its preview must show. */
-  card: { selector: string; name: string };
+  /**
+   * The card face a hold reads, and the name its preview must show. A short Choose one is bare
+   * choice cards alone (#2738): no title, so no card to hold.
+   */
+  card?: { selector: string; name: string };
 };
 
 const HAND = "h1";
@@ -117,7 +125,8 @@ function choice(kind: string, defId: string, modes: readonly string[], shows = "
     view: () => baseView({ you: emptySide("p1", { hand: [card({ instanceId: HAND, defId, cost: 2 })] }) }),
     legal: modes.map((mode): ActionBody => ({ type: "play", instanceId: HAND, modes: [mode] })),
     open: ts(testid.handCard(HAND)),
-    card: { selector: `${PROMPT} ${ts("prompt-title-source")}`, name: cardName(defId) },
+    // A short Choose one is bare cards alone (#2738): no title to hold. A list keeps it.
+    ...(shows === "discover" ? {} : { card: { selector: `${PROMPT} ${ts("prompt-title-source")}`, name: cardName(defId) } }),
   };
 }
 
@@ -126,7 +135,7 @@ const KINDS: readonly Kind[] = [
   { kind: "market", shows: "market", view: marketView, legal: [], card: { selector: ts("prompt-option-mode:meditative-041"), name: cardName("meditative-041") } },
   choice("secret", "meditative-022", ["greed", "attack", "defend"]),
   choice("prediction", "meditative-022-1", ["greed", "attack", "defend"]),
-  choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"], "mode"),
+  choice("faction", "stinkyscape-163", ["Vanguard Coalition", "ETHICS", "Golden Accord", "Pegasus", "Star-jumper Core"], "mode"),
 ];
 
 function openSheet(entry: Kind): void {
@@ -243,6 +252,11 @@ describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", 
         openSheet(entry);
         cy.document().should((doc) => {
           expect(sheetProblems(doc, phone.width, phone.height, label)).to.deep.equal([]);
+          if (entry.card === undefined) {
+            // A short Choose one is its choice cards alone (#2738): no title over them.
+            expect(doc.querySelector(`${PROMPT} .prompt-title`)).to.eq(null);
+            return;
+          }
           const face = doc.querySelector<HTMLElement>(entry.card.selector);
           expect(face, `${label}: the card it shows`).to.not.eq(null);
           if (face === null) return;
@@ -253,15 +267,18 @@ describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", 
         });
       });
 
-      it(`MN09 R2617000 a hold on the ${label}'s card shows its preview on the screen while the finger is down, and picks nothing`, () => {
-        cy.viewport(phone.width, phone.height);
-        openSheet(entry);
-        hold(entry.card.selector, (preview) => {
-          expect(preview.textContent ?? "", `${label}: the preview reads the card`).to.contain(entry.card.name);
-          expectOnScreen(preview, phone.width, label);
+      if (entry.card !== undefined) {
+        const held = entry.card;
+        it(`MN09 R2617000 a hold on the ${label}'s card shows its preview on the screen while the finger is down, and picks nothing`, () => {
+          cy.viewport(phone.width, phone.height);
+          openSheet(entry);
+          hold(held.selector, (preview) => {
+            expect(preview.textContent ?? "", `${label}: the preview reads the card`).to.contain(held.name);
+            expectOnScreen(preview, phone.width, label);
+          });
+          cy.wrap(sent).should("deep.equal", []);
         });
-        cy.wrap(sent).should("deep.equal", []);
-      });
+      }
     }
   }
 });
@@ -316,4 +333,111 @@ describe("MN09 R2647000: a created card at phone width wears no Created mark, an
       cy.wrap(sent).should("deep.equal", []);
     });
   }
+});
+
+/* #2757: a Choose one of lanes, on the board */
+
+const SCREENS = [
+  { width: 1280, height: 720 },
+  { width: 360, height: 780 },
+  { width: 780, height: 360 },
+] as const;
+const LIT_LANES = ["1", "3", "4"];
+
+/** Showdown in hand with lanes 2 and 5 full, so the empty lanes R831008 offers are 1, 3 and 4. */
+function showdownView(viewer: "p1" | "p2"): PlayerView {
+  const them = viewer === "p1" ? "p2" : "p1";
+  return baseView({
+    viewer,
+    active: viewer,
+    you: emptySide(viewer, {
+      hand: [card({ instanceId: HAND, defId: "meditative-098", cost: 1 })],
+      units: [null, unit(viewer, { instanceId: "u2" }), null, null, null],
+    }),
+    opponent: emptySide(them, { hand: { count: 3 }, backrow: [null, null, null, null, faceUpBackrow(them)] }),
+  });
+}
+
+const SHOWDOWN_PLAYS: readonly ActionBody[] = LIT_LANES.map((lane): ActionBody => ({ type: "play", instanceId: HAND, modes: [`lane-${lane}`] }));
+
+/** Every way a lit lane's oblong fails to span its four zones, at most the outset beyond them, as readable lines. */
+function oblongProblems(doc: Document, label: string): string[] {
+  const oblongs = [...doc.querySelectorAll<HTMLElement>(".lane-pick-oblong")];
+  const lanes = oblongs.map((oblong) => oblong.getAttribute("data-lane") ?? "");
+  if (lanes.join(",") !== LIT_LANES.join(",")) return [`${label}: the oblongs are lanes ${lanes.join(",")}, not ${LIT_LANES.join(",")}`];
+  const problems: string[] = [];
+  for (const oblong of oblongs) {
+    const lane = Number(oblong.getAttribute("data-lane"));
+    const zones = laneZoneTestids(lane).map((id) => doc.querySelector(ts(id)));
+    const boxes = zones.flatMap((zone) => (zone === null ? [] : [rectOf(zone)]));
+    if (boxes.length !== zones.length) {
+      problems.push(`${label}: lane ${String(lane)} lacks a zone`);
+      continue;
+    }
+    const spanned = {
+      left: Math.min(...boxes.map((box) => box.left)),
+      top: Math.min(...boxes.map((box) => box.top)),
+      right: Math.max(...boxes.map((box) => box.right)),
+      bottom: Math.max(...boxes.map((box) => box.bottom)),
+    };
+    const own = rectOf(oblong);
+    const slack = LANE_PICK_OUTSET_PX + EPSILON;
+    const edges = [
+      ["left", spanned.left - own.left],
+      ["top", spanned.top - own.top],
+      ["right", own.right - spanned.right],
+      ["bottom", own.bottom - spanned.bottom],
+    ] as const;
+    for (const [edge, beyond] of edges) {
+      if (beyond < -EPSILON) problems.push(`${label}: lane ${String(lane)}'s oblong stops ${String(-beyond)} px short of its zones' ${edge}`);
+      if (beyond > slack) problems.push(`${label}: lane ${String(lane)}'s oblong runs ${String(beyond)} px past its zones' ${edge}`);
+    }
+  }
+  return problems;
+}
+
+describe("#2757 a Choose one of lanes is lit on the board, one oblong a lane", () => {
+  beforeEach(() => {
+    cy.wrap(loadWasm(), { timeout: WASM_TIMEOUT_MS });
+  });
+
+  for (const screen of SCREENS) {
+    for (const viewer of ["p1", "p2"] as const) {
+      const label = `Showdown at ${String(screen.width)}x${String(screen.height)} for ${viewer}`;
+
+      it(`#2757 ${label} opens no cards and no list, and each lit lane's oblong spans its four zones`, () => {
+        cy.viewport(screen.width, screen.height);
+        mount(showdownView(viewer), SHOWDOWN_PLAYS);
+        cy.get(ts(testid.handCard(HAND))).click();
+        cy.get(`${PROMPT}[data-lane-pick="true"]`).should("exist");
+        cy.get(ts("prompt-cards")).should("not.exist");
+        cy.get('[data-testid^="prompt-option-"]').should("not.exist");
+        cy.get(".lane-pick-oblong").should("have.length", LIT_LANES.length);
+        cy.document().should((doc) => {
+          expect(oblongProblems(doc, label)).to.deep.equal([]);
+        });
+        // A tap on a zone of a lit lane answers, and the lane is the one tapped.
+        cy.get(ts(testid.zone("you", "backrow", 3))).click();
+        cy.wrap(sent).should("deep.equal", [SHOWDOWN_PLAYS[1]]);
+      });
+    }
+  }
+
+  it("#2757 the oblong breathes, and under Reduce Motion it stands still", () => {
+    cy.viewport(1280, 720);
+    mount(showdownView("p1"), SHOWDOWN_PLAYS);
+    cy.get(ts(testid.handCard(HAND))).click();
+    cy.get(".lane-pick-oblong").first().should(($oblong) => {
+      expect(getComputedStyle($oblong[0] as Element).animationName).to.not.eq("none");
+    });
+    cy.document().then((doc) => {
+      doc.documentElement.setAttribute("data-reduce-motion", "true");
+    });
+    cy.get(".lane-pick-oblong").first().should(($oblong) => {
+      expect(getComputedStyle($oblong[0] as Element).animationName).to.eq("none");
+    });
+    cy.document().then((doc) => {
+      doc.documentElement.removeAttribute("data-reduce-motion");
+    });
+  });
 });

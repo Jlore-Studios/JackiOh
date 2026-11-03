@@ -108,17 +108,29 @@ pub fn hashed_state_text(state: &GameState) -> String {
 }
 
 /// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
-/// (R1956001) or a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000): each dresses
-/// the view and plays no part in the game, as `hash_state` leaves its `generators` out, so a trace
-/// recorded before it was sent replays as it did.
+/// (R1956001), a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000), the `hookResolving`
+/// markers (R2783000), an event's `via` (R2783001) or the other seat's count of a card picker's options
+/// (`optionCount`, R2739000): each dresses the view and plays no part in the game, as `hash_state`
+/// leaves its `generators` out, so a trace recorded before it was sent replays as it did, and one
+/// recorded on this build replays on the build before it.
 pub fn view_texts(state: &GameState) -> [String; 2] {
     [PlayerId::P1, PlayerId::P2].map(|player| {
         let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serializes");
+        if let Some(Value::Array(events)) = value.get_mut("events") {
+            events.retain(|event| !is_marker(event));
+        }
         strip_key(&mut value, "createdBy");
         strip_key(&mut value, "sourceDefId");
         strip_key(&mut value, "sourceRadiant");
+        strip_key(&mut value, "via");
+        strip_key(&mut value, "optionCount");
         canonical(&value)
     })
+}
+
+/// R2783000: whether an event's JSON is a `hookResolving` marker.
+fn is_marker(event: &Value) -> bool {
+    event["type"].as_str() == Some("hookResolving")
 }
 
 /// `value` with `key` taken out of every object in it, at any depth.
@@ -142,12 +154,16 @@ fn strip_key(value: &mut Value, key: &str) {
 /// The canonical text of a step's events, without the `creator` an `addedToHand`, a `shuffledIn` or
 /// a `transformed` names (R2089000): the game record's bookkeeping, which no rule reads and no view
 /// forwards, as `view_texts` leaves out `createdBy`, so a trace recorded before it replays as it did.
+/// Nor the `hookResolving` markers (R2783000) or an event's `via` (R2783001), which are presentation
+/// only, so a trace recorded on this build replays on the build before it too (R1956001's way).
 pub fn events_text(events: &[GameEvent]) -> String {
     let mut value = serde_json::to_value(events).expect("GameEvents serialize");
     if let Value::Array(items) = &mut value {
+        items.retain(|item| !is_marker(item));
         for item in items {
             if let Value::Object(event) = item {
                 event.remove("creator");
+                event.remove("via");
             }
         }
     }

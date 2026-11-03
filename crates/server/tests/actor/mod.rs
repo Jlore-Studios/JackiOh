@@ -3,6 +3,7 @@
 pub mod aim;
 pub mod bot_seat;
 pub mod checkpoints;
+pub mod choice_hover;
 pub mod clock;
 pub mod dealt_deck;
 pub mod duos;

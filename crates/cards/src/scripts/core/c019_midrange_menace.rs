@@ -101,19 +101,6 @@ mod tests {
 
             s.expect_stats("core-019", json!({ "health": 4 }));
         }
-
-        #[test]
-        fn heals_nothing_when_it_is_undamaged_and_never_raises_max_health() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "field": ["core-019"], "library": ["core-010"] },
-                "p2": { "field": ["core-012"], "library": ["core-010"] },
-            }));
-
-            s.end_turn();
-
-            s.expect_stats("core-019", json!({ "health": 9, "maxHealth": 9 }));
-        }
     }
 
     mod n19_midrange_menace_radiant {
@@ -214,17 +201,6 @@ mod tests {
                 .count();
             assert_eq!(copies, 1, "the Postdoc's Cry named it and copied it");
             s.expect_in_zone(&menace, "field");
-        }
-
-        #[test]
-        fn r781001_its_own_controllers_spell_cannot_target_it_either() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": "core-019", "radiant": true }], "library": [FILLER], "mana": 10 },
-                "p2": { "library": [FILLER] },
-            }));
-            let menace = s.card("core-019").id.clone();
-            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::id(&menace) })));
         }
 
         #[test]

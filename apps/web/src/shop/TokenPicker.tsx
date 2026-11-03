@@ -1,69 +1,38 @@
-// The token picker (#1309, SPEC §14.5). R1953001: a cosmetic token is spent in the Collection
-// (collection/TokenOffer.tsx), so the shop keeps no pick of one and links there. THE SERVER DECIDES
-// (CLAUDE.md rule 7): the bars, the next step and the held counts come from `GET /api/tokens`; a
-// refused redemption shows the server's words through `t()` (R711000) with nothing changed.
+// The token picker (#1309, SPEC §14.5): the bars, the next step and the held counts. R1953001, R2730000:
+// a token is spent in the Collection, a cosmetic or card token from a locked item's fullscreen preview
+// (collection/TokenOffer.tsx), so the shop keeps no pick or card browser and links there. THE SERVER
+// DECIDES (CLAUDE.md rule 7): the bars, the next step and the held counts come from `GET /api/tokens`.
 
-import { useEffect, useId, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 
-import { CATALOG } from "@jackioh/cards";
-
-import { CardDefsProvider, closeInspect } from "../cards/index.ts";
-import { readerName } from "../cards/chinese.ts";
 import FillBar from "../economy/FillBar.tsx";
-import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
-import { DEFAULT_FILTER, DEFAULT_SORT, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
-import { t, useLocale } from "../i18n/i18n.ts";
-import {
-  getCollection,
-  getTokens,
-  keptPaths,
-  redeemCardToken,
-  type CollectionResponse,
-  type TokenBarsResponse,
-} from "../net/api.ts";
+import { t } from "../i18n/i18n.ts";
+import { getTokens, keptPaths, type TokenBarsResponse } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { nextStepWords, shopTestid, tokenPoolIds, unownedCards } from "./shop.ts";
+import { nextStepWords, shopTestid } from "./shop.ts";
 import { messageOf } from "../net/errors.ts";
-import "../game/deckbuilder/deckbuilder.css";
 import "./shop.css";
 
-/**
- * The panel. `revision` is how many times the page has asked it to read again (another panel
- * changed the account); `onChanged` tells the page a redemption changed it.
- */
-export default function TokenPicker({
-  token,
-  revision = 0,
-  onChanged,
-}: {
-  token: string;
-  revision?: number;
-  onChanged?: () => void;
-}): ReactElement {
+/** The panel. `revision` is how many times the page has asked it to read again (another panel changed the account). */
+export default function TokenPicker({ token, revision = 0 }: { token: string; revision?: number }): ReactElement {
   // R2125000: a revisit starts on the answers the last visit kept and reads again behind them.
   const [bars, setBars] = useState<TokenBarsResponse | null>(
     () => cachedRead<TokenBarsResponse>(token, keptPaths.tokens) ?? null,
   );
-  const [collection, setCollection] = useState<CollectionResponse | null>(
-    () => cachedRead<CollectionResponse>(token, keptPaths.collection) ?? null,
-  );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(true);
 
   useEffect(() => {
     let canceled = false;
     setReading(true);
-    Promise.all([getTokens(token), getCollection(token)]).then(
-      ([barsAnswer, collectionAnswer]) => {
+    getTokens(token).then(
+      (barsAnswer) => {
         if (!canceled) {
           setBars(barsAnswer);
-          setCollection(collectionAnswer);
           setLoadError(null);
           setReading(false);
         }
@@ -73,12 +42,10 @@ export default function TokenPicker({
           setReading(false);
           // R2125000: a read that fails behind kept answers leaves them and says nothing; only a first visit says why.
           const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
-          const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
-          if (keptBars === undefined || keptCollection === undefined) {
+          if (keptBars === undefined) {
             setLoadError(messageOf(cause));
           } else {
             setBars(keptBars);
-            setCollection(keptCollection);
             setLoadError(null);
           }
         }
@@ -88,32 +55,6 @@ export default function TokenPicker({
       canceled = true;
     };
   }, [token, revision, attempt]);
-
-  const pickCard = (cardId: string): void => {
-    if (busy !== null) return;
-    setBusy(cardId);
-    setError(null);
-    redeemCardToken(token, cardId).then(
-      (answered) => {
-        setBars(answered);
-        onChanged?.();
-        // The collection moved too: read it back, so the unlocked card leaves the list.
-        getCollection(token).then(
-          (next) => {
-            setCollection(next);
-          },
-          (cause: unknown) => {
-            setError(messageOf(cause));
-          },
-        );
-      },
-      (cause: unknown) => {
-        setError(messageOf(cause));
-      },
-    ).finally(() => {
-      setBusy(null);
-    });
-  };
 
   return (
     <div className="form-card token-panel" data-testid={shopTestid.tokenPanel}>
@@ -137,102 +78,18 @@ export default function TokenPicker({
           </div>
         </>
       )}
-      {bars === null || collection === null ? (
+      {bars === null ? (
         loadError === null ? (
           <Skeleton variant="panel" label={t("Loading your tokens…")} testId={shopTestid.tokenLoading} />
         ) : null
       ) : (
-        <TokenBody bars={bars} collection={collection} busy={busy} onPickCard={pickCard} />
-      )}
-      {error === null ? null : (
-        <p className="notice" role="alert" data-testid={shopTestid.tokenError}>
-          {t(error)}
-        </p>
+        <TokenBody bars={bars} />
       )}
     </div>
   );
 }
 
-function TokenBody({
-  bars,
-  collection,
-  busy,
-  onPickCard,
-}: {
-  bars: TokenBarsResponse;
-  collection: CollectionResponse;
-  busy: string | null;
-  onPickCard: (cardId: string) => void;
-}): ReactElement {
-  // Browse state (filter, sort, open detail, pending confirm) lives here, apart from the server-owned reads.
-  const [filter, setFilter] = useState<PoolFilter>({ ...DEFAULT_FILTER, ownedOnly: false });
-  const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
-  const [detailCardId, setDetailCardId] = useState<string | null>(null);
-  // Whether the open detail asks before it spends the token.
-  const [asking, setAsking] = useState(false);
-  const questionId = useId();
-  const locale = useLocale();
-  const catalog = useMemo(() => ({ version: collection.catalogVersion, cards: CATALOG }), [collection.catalogVersion]);
-  const unowned = useMemo(() => unownedCards(collection), [collection]);
-  const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort, locale]);
-  const detailDef = detailCardId === null ? undefined : CATALOG[detailCardId];
-  // The detail closes behind the inspect overlay, as in the deck editor: at most one at a time.
-  const openDetail = (cardId: string): void => {
-    closeInspect();
-    setAsking(false);
-    setDetailCardId(cardId);
-  };
-  const closeDetail = (): void => {
-    setAsking(false);
-    setDetailCardId(null);
-  };
-  // The question takes Unlock's place in the detail's actions row: the detail is a modal (CardDetail.tsx),
-  // so a confirm drawn anywhere else lies under its scrim, out of Tab's reach. Cancel, which spends
-  // nothing, takes the focus.
-  const detail =
-    detailCardId === null || detailDef === undefined
-      ? null
-      : {
-          cardId: detailCardId,
-          actions: asking ? (
-            <div className="token-confirm" role="alertdialog" aria-labelledby={questionId} data-testid={shopTestid.cardDialog}>
-              <p id={questionId}>{t("Unlock {name}? This spends 1 card token.", { name: readerName(detailDef) })}</p>
-              <div className="token-confirm__actions">
-                <button
-                  type="button"
-                  data-testid={shopTestid.cardConfirm}
-                  onClick={() => {
-                    onPickCard(detailCardId);
-                    closeDetail();
-                  }}
-                >
-                  {t("Confirm")}
-                </button>
-                <button
-                  type="button"
-                  data-testid={shopTestid.cardCancel}
-                  autoFocus
-                  onClick={() => {
-                    setAsking(false);
-                  }}
-                >
-                  {t("Cancel")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              data-testid={shopTestid.cardPick(detailCardId)}
-              disabled={bars.tokens.card < 1 || busy !== null}
-              onClick={() => {
-                setAsking(true);
-              }}
-            >
-              {busy === detailCardId ? t("Redeeming…") : t("Unlock")}
-            </button>
-          ),
-        };
+function TokenBody({ bars }: { bars: TokenBarsResponse }): ReactElement {
   return (
     <>
       <FillBar
@@ -257,24 +114,6 @@ function TokenBody({
       <p className="token-held" data-testid={shopTestid.heldCard}>
         {t("Card tokens held: {count}", { count: bars.tokens.card })}
       </p>
-      {unowned.length === 0 ? (
-        <p data-testid={shopTestid.cardNone}>{t("No cards to pick.")}</p>
-      ) : (
-        <CardDefsProvider defs={CATALOG}>
-          <CardBrowser
-            catalog={catalog}
-            pool={pool}
-            filter={filter}
-            onFilter={setFilter}
-            sort={sort}
-            onSort={setSort}
-            ownedControl={false}
-            onInspect={openDetail}
-            detail={detail}
-            onCloseDetail={closeDetail}
-          />
-        </CardDefsProvider>
-      )}
       {bars.tokens.card < 1 ? (
         <p className="token-held" data-testid={shopTestid.cardHint}>
           {t("A full card token bar pays a card token.")}
@@ -288,9 +127,12 @@ function TokenBody({
       <p className="token-held" data-testid={shopTestid.heldEpic}>
         {t("Epic tokens held: {count}", { count: bars.tokens.cosmeticEpic })}
       </p>
+      <p className="token-held" data-testid={shopTestid.heldLegendary}>
+        {t("Legendary tokens held: {count}", { count: bars.tokens.cosmeticLegendary })}
+      </p>
       <p>
         <a href={paths.collection} data-testid={shopTestid.cosmeticSpend} onClick={followInApp(paths.collection)}>
-          {t("Spend cosmetic tokens on a locked cosmetic in your Collection")}
+          {t("Hold a locked card or cosmetic in your Collection to spend a token")}
         </a>
       </p>
     </>

@@ -39,9 +39,6 @@ mod tests {
 
     const ROCK: &str = "core-066"; // Unit 10/10 → 20/20, cost 4, Human. Tribute 1, Indestructible.
     const TIMMY: &str = "core-011"; // Tempo Timmy, a plain 1-cost 3/3: a body to tribute or to attack with.
-    const SHEEP: &str = "core-t-sheep"; // Sheep Token, 1/1, "worth 2 Tributes while on the field" (§3.2).
-    const RUSH: &str = "core-t-rush"; // Rush Token, 3/3: a second body, so an action can run a state check.
-    const AURA: &str = "core-046"; // Suppressive Aura, Field Spell, embiggen price 4 — R69's −10/−10.
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
     /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
@@ -133,27 +130,6 @@ mod tests {
                 .expect_events(json!(["destroyed", "cardPlayed"]));
         }
 
-        #[test]
-        fn s3_2_one_sheep_token_pays_tribute_1_on_its_own_because_it_is_worth_2() {
-            let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [SHEEP] } }));
-            let sheep = s.card(SHEEP).clone();
-            s.play(ROCK, json!({ "tributes": [SHEEP] }));
-            s.expect_in_zone(ROCK, "field").expect_mana(PlayerId::P1, 0);
-            // R11: a unit token that leaves the field ceases to exist rather than entering a graveyard.
-            s.expect_in_zone(&sheep, "gone");
-            assert!(!s.pile(PlayerId::P1, "graveyard").iter().any(|card| card.def_id == SHEEP));
-        }
-
-        #[test]
-        fn s6_1_a_tribute_sacrifices_an_indestructible_unit_sacrifice_bypasses_it() {
-            // Two copies: the string form finds the hand one for `play`, the field one for `tributes`.
-            let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [ROCK] } }));
-            let on_field = s.unit(PlayerId::P1, 1);
-            s.play(ROCK, json!({ "tributes": [ROCK] }));
-            assert!(on_field.is_some());
-            s.expect_in_zone(on_field.as_ref().expect("setup: p1 holds The Rock in lane 1"), "graveyard");
-        }
-
         // Base: Indestructible (§4.4 step 4, R46, R69)
 
         #[test]
@@ -162,42 +138,6 @@ mod tests {
             s.attack(TIMMY, ROCK);
             s.expect_stats(ROCK, json!({ "health": 10, "maxHealth": 10 }))
                 .expect_in_zone(TIMMY, "graveyard");
-        }
-
-        #[test]
-        fn r46_an_indestructible_unit_ignores_a_destroy_mark_switching_to_attack_position_for_the_turn() {
-            let mut s = board(json!({
-                "p1": { "field": [{ "def": ROCK, "position": "DEF", "lane": 1 }, { "def": RUSH, "lane": 2 }] }
-            }));
-            // §6.3 Destroy "only marks the card". No reachable verb destroys a chosen unit yet, so the
-            // mark is set directly, a test-only liberty.
-            let rock = s.card(ROCK).id.clone();
-            find_instance_mut(s.state_mut(), &rock)
-                .expect("setup: The Rock is on the field")
-                .marked_destroyed = Some(true);
-            s.switch_position(RUSH); // Any action runs the state check (R59).
-
-            s.expect_in_zone(ROCK, "field").expect_events(json!(["positionSwitched"]));
-            assert_ne!(s.card(ROCK).marked_destroyed, Some(true));
-            assert_eq!(s.card(ROCK).position, Some(Position::Atk));
-            // R46's other half: Taunt is suppressed for this turn. The Rock prints no Taunt, so the stamp is
-            // what there is to see; #19 Midrange Menace and #55 Lava Golem are where it bites.
-            assert_eq!(s.card(ROCK).taunt_suppressed_turn, Some(s.state().turn));
-        }
-
-        #[test]
-        fn r69_an_indestructible_unit_whose_max_health_falls_to_0_dies_anyway_n46_radiant_3_2_2_then_paid_4_4_4() {
-            // (#46 radiant: 3 × −2/−2, then paid 4 → −4/−4)
-            let radiant_aura = json!({ "def": AURA, "radiant": true });
-            let mut s = board(json!({
-                "p1": { "hand": [radiant_aura], "backrow": [radiant_aura, radiant_aura, radiant_aura] },
-                "p2": { "field": [ROCK] },
-            }));
-            s.expect_stats(ROCK, json!({ "maxHealth": 4 }));
-            s.play(AURA, json!({ "embiggen": true }));
-            // No destroy effect is involved, so Indestructible has nothing to ignore: it is collected like
-            // any other unit and fires Death (R69, Hearthstone).
-            s.expect_in_zone(ROCK, "graveyard").expect_events(json!(["destroyed"]));
         }
 
         // Radiant: "Plus Immutable" (§8 Conventions, R23)

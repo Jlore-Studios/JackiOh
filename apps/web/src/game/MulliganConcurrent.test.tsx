@@ -101,14 +101,15 @@ describe("R265 the mulligan picker, while the viewer still owes its answer", () 
 });
 
 describe("the mulligan picker's heading", () => {
-  it("says the viewer goes first or second, with no instruction or count under it", () => {
+  it("says the viewer goes first or second in the dialog's name, with no words around the cards", () => {
     for (const [active, words] of [
       ["p1", "You are going first"],
       ["p2", "You are going second"],
     ] as const) {
       render(<Prompt view={mulliganView({ youReady: false, opponentReady: false }, { active })} onAction={vi.fn()} />);
       const modal = screen.getByTestId("prompt-modal");
-      expect(modal.querySelector(".prompt-title")).toHaveTextContent(words);
+      expect(modal).toHaveAttribute("aria-label", words);
+      expect(modal.querySelector(".prompt-title")).toBeNull();
       expect(modal).not.toHaveTextContent("Choose the cards to keep");
       expect(modal.querySelector(".prompt-count")).toBeNull();
       cleanup();

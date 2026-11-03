@@ -1,11 +1,13 @@
 // The music director (SPEC §10.11, R631; musicPlan.ts) follows one board and only the viewer's own
 // screen (R203). It applies after the board settles and switches stations at readable cards' R204
-// moments. No card plays a theme (R822000): a readable Legendary's or Mythic's intro (R1350) is its
-// music, and R1351 stops it on result, hand-over, dynamic off or exit.
+// moments; a hidden card counts as it reveals, never as it is set (R2722002). No card plays a theme
+// (R822000): a readable Legendary's or Mythic's intro (R1350) is its music, and R1351 stops it on
+// result, hand-over, dynamic off or exit.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
 
+import { firstReveal, isFaceDownSet } from "../game/entrance.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { HIDDEN_DEF_ID, MUSIC_LOW_HEALTH_FRACTION } from "./constants.ts";
 import type { MusicRequest } from "./music.ts";
@@ -65,16 +67,20 @@ export function rotationFor(first: PlayerView): number {
   return n;
 }
 
-/** The card a cast names and who cast it, at R204's moments (a trap's at its first firing, `fired`). */
+/**
+ * The card a cast names and who cast it, at R204's moments (a trap's at its first firing, `fired`);
+ * R2722002: a Cloaked card's at its firing too, never at its face-down set.
+ */
 function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { defId: string; player: PlayerId } | null {
   if (event.type === "cardPlayed") {
-    if (event.defId === HIDDEN_DEF_ID) return null;
-    // A trap's play is its set, face down: it is cast when it fires.
+    // A trap's play is its set, face down: it is cast when it fires. R2722002: so is a Cloaked card's
+    // set (its fresh id's `formerId`, or the sentinel), whatever its own kind.
+    if (isFaceDownSet(event)) return null;
     return entryFor(lines, event.defId)?.kind === "trap" ? null : { defId: event.defId, player: event.player };
   }
   if (event.type === "trapFired") {
     // R2657001: a Field Trap firing again (`again`) reveals nothing, even to a director that missed its first firing.
-    if (event.defId === HIDDEN_DEF_ID || event.again === true || fired.has(event.instanceId)) return null;
+    if (!firstReveal(event) || fired.has(event.instanceId)) return null;
     fired.add(event.instanceId);
     return { defId: event.defId, player: event.controller };
   }

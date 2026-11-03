@@ -7,7 +7,7 @@
 //! from p2 would read its own low-numbered library cards as p1's. Every scenario-based AI test therefore
 //! puts the AI in p1's seat and keeps the scenario under 20 instances; p2's states come from real games.
 //!
-//! `det`, `ai_options` and `js` are here so no test file copies them (#1826;
+//! `det`, `ai_options`, `js` and `unit` are here so no test file copies them (#1826;
 //! crates/tools/tests/acceptance.rs refuses a copy).
 
 #![allow(dead_code)]
@@ -21,8 +21,8 @@ use jackioh_ai::{
 };
 use jackioh_engine::testkit::{
     Action, ActionBody, ActionType, CardInstance, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, GameState,
-    PLAYER_IDS, Phase, PlayerId, Rng, Value, begin_game, create_game, create_rng, json, json_as,
-    legal_actions, opponent_of, query, reduce, seat_to_act, subsystems,
+    PLAYER_IDS, Phase, PlayerId, Rng, Value, active_units_of, begin_game, create_game, create_rng, json,
+    json_as, legal_actions, opponent_of, query, reduce, seat_to_act, subsystems,
 };
 
 pub use jackioh_engine::testkit::scenario;
@@ -116,6 +116,19 @@ pub fn on_field(state: &GameState, player: PlayerId, def_id: &str) -> bool {
         .units
         .iter()
         .any(|pile| pile.iter().flatten().any(|card| card.def_id == def_id))
+}
+
+/// `player`'s unit of `def_id` on the field.
+pub fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
+    active_units_of(state, player)
+        .into_iter()
+        .find(|unit| unit.def_id == def_id)
+        .expect("the unit is on the field")
+}
+
+/// `a` and `b` as equal, to the evaluation's rounding.
+pub fn close(a: f64, b: f64) {
+    assert!((a - b).abs() < 1e-9, "{a} vs {b}");
 }
 
 pub fn in_graveyard(state: &GameState, player: PlayerId, def_id: &str) -> bool {

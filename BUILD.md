@@ -82,7 +82,7 @@ jackioh/
     ai/                        jackioh-ai: the practice opponent (§9.9); generation.json, the training lanes' record
     wasm/                      jackioh-wasm: the engine, cards, AI and validator as WebAssembly for apps/web
     server/                    jackioh-server: the HTTP API and the match actors, one binary
-      Dockerfile               the image Render runs (render.yaml)
+      Dockerfile               the image the Cloudflare container runs (wrangler.jsonc)
       migrations/              profiles, invite_codes, code_attempts, cards, collection, collection_grants, loadouts,
                                loadout_decks, loadout_deck_cards, tickets, matches, match_actions, results, decks, trios,
                                series, tutorial_progress, game_records, …; compiled into the binary
@@ -166,6 +166,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `TUNE_COST_STEP` / `TUNE_ATTACK_FLOOR` / `TUNE_HEALTH_FLOOR` | 1 / 0 / 1: a cost change's size, and the floors a stats change stops at | §6.3, R386 |
 | `TUNE_HARMFUL_KEYWORDS` | Can't attack, Brittle, Untributable, Can't Defend, Crater: keywords a Nerf never removes | §6.3, R386, R442, R1220, R2657005 |
 | `TUNE_BUFF_REMOVES` / `TUNE_BUFF_ANY_KEYWORDS` / `TUNE_NERF_HAND_KEYWORDS` | Can't attack and Can't Defend, which a Buff may remove / Flashback, which a Buff may add to any card / Crater, which a Nerf may add to a Unit, Field Spell or Trap in a hand | §6.3, R2657005 |
+| `TUNE_BUFF_HAND_KEYWORDS` / `TUNE_BUFF_HAND_REMOVES` | Cloaked, which a Buff may add to a Unit, Spell or Field Spell in a hand / Crater, which a Buff may remove from a card in a hand | §6.3, R2727000, R2727001 |
 | `MIN_PLAGUE_PAYMENT` / `PLAGUE_TOKEN_MANA` | 1 / 1: a play paid with Plague Counters spends at least one, each paying (1) | §6.3 Play, R454; C #74 |
 | `PLAGUE_MULTIPLIER_NONE` | 1: a card's Plague placement multiplier when it declares none | §6.3, R471 |
 | `RANDOM_CAST_CHAIN_CAP` | 20: casts one random cast and the casts inside it may make | §6.3 Cast, R452 |
@@ -613,6 +614,7 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `held` | A permanent goes beneath the card that holds it (R1850003): it fades off the board as an exiled card does; a new holder's arrival is its own `summoned` | 350 ms | the card has left the board when the entry ends | — |
 | `boardReplaced` | An Anomaly replaces one side's board (issue #1855, R1855000): the board tilts as for `swapped`, before its cards' `exiled` and `summoned` | 500 ms | the board gains `data-animating="boardReplaced"`; both seats see it | — |
 | `rolled` | A card flipped coins or rolled dice (issue #2652, R2652001): one panel holds the batch, every coin spinning and every die tumbling at once, each landing on its kept face with Lucky's extra draws dimmed beside it, before the outcome's own entry; a face-down trap's flip reaches its controller alone (R2652000) | 1200 ms | the banner gains `data-animating="rolled"`; a batch is one entry and one panel, its result also said in the log and a live region | `roll`: a spark burst as each lands |
+| `hookResolving` | A card's Cry, Death, start- or end-of-turn hook, Whenever trigger or Activate begins to resolve (issue #2783, R2783000): a marker for the keyword and card cues of #2782 to anchor on, nothing of its own; the hook's own events animate. It reaches only a seat that could read the card | 0 ms | `hero-<side>` of its controller; nothing waits on it | — |
 
 The FX column names the effect recipe that decorates each row (`ANIMATIONS[type].fx`), specified with its cues in `docs/polish/1-animations.md`. Effects run on the `apps/web/src/fx` layer, start with their row's entry and pace nothing: the durations and acceptance cells above are unchanged, no effect carries a `data-animating` of its own, whatever trails an entry is gone within `FX_MAX_TAIL_MS` of its end, and the stage effects (a stand-in for a moved card, a hidden card, an aimed lunge) last no longer than the view swap (R200). The viewer's effects speed scales the durations (R201), and effects read only the redacted stream (R202).
 

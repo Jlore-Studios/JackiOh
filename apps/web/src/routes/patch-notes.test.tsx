@@ -1,4 +1,4 @@
-// `/patch-notes` (R388, R724000): a public route, served by vercel.json (net/deploy-routes.test.ts reads `paths`).
+// `/patch-notes` (R388, R724000): a public route, served by public/_redirects (net/deploy-routes.test.ts reads `paths`).
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

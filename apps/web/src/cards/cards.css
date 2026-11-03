@@ -241,6 +241,11 @@
 
 .cf[data-rarity="Mythic"] {
   --cf-rarity: var(--rarity-mythic);
+}
+
+/* R2721000: the rainbow is the rarity foil's, worn only while data-foil shows it; `:where` keeps
+   the old weight so the later Radiant gold edge still wins. */
+.cf[data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]) {
   --cf-edge: conic-gradient(
     from 210deg,
     #ff6ad5,
@@ -952,6 +957,17 @@
   right: calc(6cqw + 0.4cqh);
 }
 
+/* R2723000: a full-art face in the viewer's own hand prints no name banner; its name stays in its
+   words, for a screen reader and BUILD M5-T1's by-name finding, visually hidden. */
+.cf .cf-hand-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {
@@ -1276,7 +1292,7 @@
     0 0 3.5cqmin color-mix(in srgb, var(--foil-gold) 75%, transparent);
 }
 
-.cf[data-rarity="Mythic"] .cf-portrait {
+.cf[data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]) .cf-portrait {
   box-shadow:
     0 0 0 1.4cqmin #ff6ad5,
     0 0 0 2.6cqmin #94d0ff,

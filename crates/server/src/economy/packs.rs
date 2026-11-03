@@ -14,9 +14,9 @@ use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, str};
 use crate::app::App;
 use crate::config::{
-    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
-    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
-    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
+    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, GLOBAL_COSMETIC_FLOOR_RARITY,
+    GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS,
+    PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
@@ -28,7 +28,7 @@ use crate::economy::store::{
     InventoryItem, JloreGrant, JloreReason,
 };
 use crate::economy::tiers::{card_odds, cosmetic_odds};
-use crate::economy::tokens::{card_bar_points, settle_bar};
+use crate::economy::tokens::{card_bar_points, settle_bar, settle_cosmetic_bar};
 
 /// The collection ledger's reason for a card a pack unlocks: migration 0002's `pack`, one of its
 /// closed set, as `api::collection::LAUNCH_GRANT_REASON` is its `launch`.
@@ -57,7 +57,8 @@ pub struct OpenedPack {
 
 /// One token bar across an opening (R1305000): its points `before` the opening and `after` it (the
 /// overflow a pay leaves kept), its `size` and how many times it `pays` in this opening. Every
-/// opening moves both bars, since every slot adds points (R1999000).
+/// opening moves both bars, since every slot adds points (R1999000). The cosmetic bar's `size` is
+/// the size of the step it stands at after the opening (R2728000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarSettle {
@@ -69,20 +70,24 @@ pub struct BarSettle {
 
 /// What an opening did to both token bars (R1305000, R1305001), for the client to animate from where each
 /// stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the cycle's steps it paid, in
-/// order (so its length is `cosmetic.pays`), and `slot_points` are the points each slot added to each bar,
-/// in slot order, so the client sends each slot's points to the bars without counting (R1953000, R1999000).
+/// order (so its length is `cosmetic.pays`), `cosmetic_sizes` the size of each step its sweep crosses
+/// (R2728000), and `slot_points` are the points each slot added to each bar, in slot order, so the client
+/// sends each slot's points to the bars without counting (R1953000, R1999000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarsSettled {
     pub card: BarSettle,
     pub cosmetic: BarSettle,
     pub cosmetic_paid: Vec<CosmeticTokenStep>,
+    /// R2728000: the size of each step the cosmetic bar's sweep crosses: each step paid, in order,
+    /// then the step it stands at after (`cosmetic.size`), so `cosmetic.pays + 1` entries.
+    pub cosmetic_sizes: Vec<i64>,
     pub slot_points: Vec<i64>,
 }
 
 /// The inventory row a pack is counted in (§14.3): a set's under its set's name, the global
 /// pack's under no key.
-fn inventory_of(pack: PackKind) -> (InventoryItem, String) {
+pub(crate) fn inventory_of(pack: PackKind) -> (InventoryItem, String) {
     match pack {
         PackKind::Set(set) => (InventoryItem::SetPack, set.as_str().to_string()),
         PackKind::Global => (InventoryItem::GlobalPack, String::new()),
@@ -231,8 +236,9 @@ pub(crate) fn cycle_at(position: i64) -> CosmeticTokenStep {
     COSMETIC_TOKEN_CYCLE[(position % COSMETIC_TOKEN_CYCLE.len() as i64) as usize]
 }
 
-/// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5). A pack
-/// opening's bar and a dev account's fill (`api::dev::fill_bar`, R1310003) both pay through it.
+/// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5; a Legendary token among
+/// them, R2728000). A pack opening's bar and a dev account's fill (`api::dev::fill_bar`, R1310003) both
+/// pay through it.
 pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
     match cycle_at(position) {
         CosmeticTokenStep::Rare => (
@@ -242,6 +248,10 @@ pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
         CosmeticTokenStep::Epic => (
             InventoryItem::CosmeticToken,
             CosmeticRarity::Epic.as_str().to_string(),
+        ),
+        CosmeticTokenStep::Legendary => (
+            InventoryItem::CosmeticToken,
+            CosmeticRarity::Legendary.as_str().to_string(),
         ),
         CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
     }
@@ -291,9 +301,10 @@ pub fn slot_bar_points(slots: &[Slot]) -> Vec<i64> {
 }
 
 /// Both token bars' points for an opening's slots, `slot_points` each slot's to each bar
-/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size (R1305000, R1305001). Each bar's
-/// write carries `reference`, the opening's log, and every row shares `at`; `counters` is the account's
-/// before the opening. A card pack's opening and a cosmetic pack's both settle through it (R1306001).
+/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size (R1305000, R1305001), the
+/// cosmetic bar step by step at each step's own size (`settle_cosmetic_bar`, R2728000). Each bar's write
+/// carries `reference`, the opening's log, and every row shares `at`; `counters` is the account's before
+/// the opening. A card pack's opening and a cosmetic pack's both settle through it (R1306001).
 pub(crate) async fn settle_bars(
     tx: &mut Tx<'_>,
     profile_id: &str,
@@ -348,9 +359,10 @@ pub(crate) async fn settle_bars(
     }
 
     // The cosmetic token bar (R1305000, R1305001): as above, and each payout is the cycle's next
-    // step, whose stored position then advances by the payouts.
-    let (cosmetic_pays, cosmetic_remainder) =
-        settle_bar(cosmetic_bar_before, gained, COSMETIC_TOKEN_BAR_SIZE);
+    // step, paid at its own size (R2728000), whose stored position then advances by the payouts.
+    let (cosmetic_paid, cosmetic_remainder) = settle_cosmetic_bar(cosmetic_bar_before, gained, cycle_before);
+    let cosmetic_pays = delta_of(cosmetic_paid.len())?;
+    let resting = cycle_at(cycle_before + cosmetic_pays);
     if cosmetic_pays > 0 {
         grant_counter(
             tx,
@@ -409,12 +421,15 @@ pub(crate) async fn settle_bars(
         cosmetic: BarSettle {
             before: cosmetic_bar_before,
             after: cosmetic_remainder,
-            size: COSMETIC_TOKEN_BAR_SIZE,
+            size: resting.bar_size(),
             pays: cosmetic_pays,
         },
-        cosmetic_paid: (0..cosmetic_pays)
-            .map(|paid| cycle_at(cycle_before + paid))
+        cosmetic_sizes: cosmetic_paid
+            .iter()
+            .chain([&resting])
+            .map(|step| step.bar_size())
             .collect(),
+        cosmetic_paid,
         slot_points,
     })
 }

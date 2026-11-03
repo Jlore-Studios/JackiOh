@@ -2,6 +2,9 @@
 // It is aria-hidden and names nothing, so a face-down card cannot leak (CLAUDE.md rule 7).
 // R503: read the motif from the printed name or closest catalog (`useDefResolver`), keeping a
 // card's art consistent across zones.
+// R2715001: given a full-art card's motion (motion.ts), the procedural picture moves its own layers
+// (`data-art-moving`); the face decides when (CardFace, `useArtMotion`). A delivered file, a
+// Starship's art and a Legacy card's (R2724000) never move.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -9,10 +12,11 @@ import type { CardType, Tag } from "@jackioh/shared";
 
 import { useDefResolver } from "../refContext.tsx";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
+import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
-import { proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
@@ -33,6 +37,8 @@ export type CardArtProps = {
   lazy?: boolean;
   /** R2249000: a Starship in play (`FaceModel.starship`) wears its own art, never its fused definition's. */
   starship?: { pieces: number; launched: boolean } | null;
+  /** R2715001: the card's moving art, which its procedural picture draws in place of the still one; null holds it still. */
+  motion?: ArtMotion | null;
 };
 
 function classes(shape: ArtShape, className: string | undefined): string {
@@ -51,6 +57,7 @@ export function CardArt({
   className,
   lazy = false,
   starship = null,
+  motion = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -65,18 +72,17 @@ export function CardArt({
   }, [near]);
   const resolve = useDefResolver();
   const theme = themeFor(tags, type);
-  // R2170000 and R2202000: the Stinkyscape and Training Grounds sets draw their own families, and a
-  // Training Grounds Legacy card its Core card's picture, read by the Core card's name (its own after
-  // "Legacy: ", R2511000); every other card keeps R503's art.
+  // R2170000, R2202000 and R2724000: the Stinkyscape and Training Grounds sets draw their own
+  // families, and a Training Grounds Legacy card its own yard picture with its Core card's subject,
+  // read by the Core card's name (its own after "Legacy: ", R2511000); every other card keeps R503's art.
   const coreId = snapshotArtOf(defId);
   const ownName = name ?? resolve?.(defId)?.name;
   const cardName = coreId === null ? ownName : ownName?.replace(LEGACY_PREFIX, "");
-  const artId = coreId ?? defId;
   const stinky = isStinkyscapeArt(defId);
   const yard = isTrainingGroundsArt(defId);
   const motif = stinky || yard ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
-  const real = starship === null ? artUrl(artId, radiant, manifest) : null;
+  const real = starship === null ? artUrl(defId, radiant, manifest) : null;
 
   if (real !== null && real.src !== failedSrc) {
     const src = real.src;
@@ -107,10 +113,12 @@ export function CardArt({
     : starship !== null
       ? starshipArtUri(starship.pieces, starship.launched, radiant)
       : stinky
-        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant)
+        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion)
         : yard
-          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant)
-          : proceduralArtUri(artId, theme, compositionFor(type), radiant, motif);
+          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion)
+          : coreId !== null
+            ? legacyArtUri(defId, coreId, cardName, tags, type, radiant)
+            : proceduralArtUri(defId, theme, compositionFor(type), radiant, motif, motion);
   const family =
     starship !== null
       ? "starship"
@@ -118,7 +126,9 @@ export function CardArt({
         ? stinkySubject(defId, cardName, tags, type).family
         : yard
           ? yardSubject(defId, cardName, tags, type).family
-          : undefined;
+          : coreId !== null
+            ? "legacy"
+            : undefined;
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
@@ -130,6 +140,7 @@ export function CardArt({
       data-art-motif={motif ?? undefined}
       data-art-family={family}
       data-art-pending={uri === null ? "true" : undefined}
+      data-art-moving={uri !== null && starship === null && coreId === null && motion !== null ? "true" : undefined}
       aria-hidden="true"
       style={
         uri === null

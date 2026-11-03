@@ -11,7 +11,8 @@
 // own face attribute, apart from the rarity foil (`data-foil`, model.ts), so a decorative foil never blurs
 // Mythic and Radiant. R1834000: a card's picks live on the account, this store is the device's cache
 // (`cardPicksSync.ts`, `subscribeCardPickWrites`); it keeps what it is given, and the wear path and
-// `useCanEquip` apply ownership.
+// `useCanEquip` apply ownership. A Mythic face wearing its rarity foil (R2721000) wears no cosmetic
+// foil, and a Radiant face no foil, finish or border.
 
 import {
   createContext,
@@ -27,8 +28,11 @@ import {
 
 import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
+import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor, type FaceModel } from "./model.ts";
+import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
 import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
 
 export type CosmeticKind = (typeof COSMETIC_KINDS)[number];
@@ -160,9 +164,12 @@ function isPickText(value: unknown): value is string {
 /** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
 const FULL_ART_ID_PREFIX = "full-art-";
 
-/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id, known or not. */
+/** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
+export const ANIMATED_ART_ID_PREFIX = "animated-";
+
+/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id (R2715000: an Animated art's among them), known or not. */
 function isFullArtPick(value: unknown): value is boolean | string {
-  return typeof value === "boolean" || (isPickText(value) && value.startsWith(FULL_ART_ID_PREFIX));
+  return typeof value === "boolean" || (isPickText(value) && (value.startsWith(FULL_ART_ID_PREFIX) || value.startsWith(ANIMATED_ART_ID_PREFIX)));
 }
 
 function normalizeStoredPicks(raw: unknown): StoredCardPicks {
@@ -416,6 +423,7 @@ export function wornCosmetics(
   picks: CardCosmetics | null,
   card: CardPicks = NO_PICKS,
   owns: (cosmeticId: string) => boolean = () => true,
+  rarityFoil: boolean = CARD_SETTINGS_DEFAULTS.rarityFoil,
 ): Record<CardSlotKind, CosmeticId> {
   if (picks === null) {
     return { foil: DEFAULT_CARD_COSMETICS.foil, finish: DEFAULT_CARD_COSMETICS.finish, border: DEFAULT_CARD_COSMETICS.border };
@@ -427,7 +435,7 @@ export function wornCosmetics(
     return owns(picks[kind]) ? picks[kind] : DEFAULT_CARD_COSMETICS[kind];
   };
   return {
-    foil: foilFor(face, true) === "none" ? resolveCosmetic("foil", pickOf("foil")) : DEFAULT_CARD_COSMETICS.foil,
+    foil: foilFor(face, true, rarityFoil) === "none" ? resolveCosmetic("foil", pickOf("foil")) : DEFAULT_CARD_COSMETICS.foil,
     finish: face.radiant ? DEFAULT_CARD_COSMETICS.finish : resolveCosmetic("finish", pickOf("finish")),
     border: face.radiant ? DEFAULT_CARD_COSMETICS.border : resolveCosmetic("border", pickOf("border")),
   };
@@ -609,6 +617,18 @@ function useFoilSlot(wanted: boolean): boolean {
   return wanted && holds;
 }
 
+/**
+ * R2715001: whether a face's moving art may move now: it wants to (CardFace: an Animated, Legendary or
+ * Mythic face, full layout, Animated foil on, not a lazy grid face), neither the Reduce motion setting
+ * nor the system asks for reduced motion, and it holds one of the foil's slots. Its hooks run on every
+ * face.
+ */
+export function useArtMotion(wanted: boolean): boolean {
+  const panel = useSetting("reduceMotion");
+  const system = useOsReducedMotion();
+  return useFoilSlot(wanted && !panel && !system);
+}
+
 /** The attributes a face wears for its cosmetics: none at all for the defaults. */
 export type CosmeticAttributes = {
   "data-cosmetic-foil"?: CosmeticId;
@@ -624,14 +644,15 @@ export type CosmeticAttributes = {
  * foil and a moving finish or border (R1833000). Its hooks run on every face, worn or not.
  */
 export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
+  const { rarityFoil } = useCardSettings();
   const source = face.createdBy ?? face.defId;
   const card = useCardPicks(source);
   const owned = useContext(OwnershipContext);
   const theirs = useContext(TheirCopyContext);
   const wears =
     !worn && theirs !== null
-      ? wornCosmetics(face, DEFAULT_CARD_COSMETICS, theirs.cards[face.defId])
-      : wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id));
+      ? wornCosmetics(face, DEFAULT_CARD_COSMETICS, theirs.cards[face.defId], () => true, rarityFoil)
+      : wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id), rarityFoil);
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
   const moves = useFoilSlot(animates && animatedFoil);

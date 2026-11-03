@@ -9,7 +9,7 @@
 // `build:e2e`, the only builds that read `FULL_ART_GATED_KEY`). Daily only, as every spec outside
 // scripts/shard-specs.mjs's SMOKE.
 
-import { newestShippedSet } from "../../../apps/web/src/wire/catalog.ts";
+import { newestShippedSet, SHIPPED_SETS } from "../../../apps/web/src/wire/catalog.ts";
 import { COSMETICS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
 import {
   COSMETIC_TOKEN_CYCLE,
@@ -41,6 +41,8 @@ import {
   ACCOUNT_DEV_TOGGLE,
   CARD_FACE,
   COLLECTION_JLORE,
+  COLLECTION_LOCKED_CARDS,
+  COLLECTION_PREVIEW,
   COLLECTION_SCREEN,
   DEV_TOOLS,
   DEV_TOOLS_FILL_CARD_BAR,
@@ -56,9 +58,11 @@ import {
   PLAY_STATUS,
   QUESTS_QUEST,
   SHOP_WALLET,
-  TOKEN_CARD_CONFIRM,
   TOKEN_HELD_CARD,
-  TOKEN_POOL_CARDS,
+  collectionCardId,
+  collectionSetToggleId,
+  collectionTokenOfferConfirmId,
+  collectionTokenOfferId,
   collectionTrackId,
   collectionTrackLevelId,
   collectionTrackXpId,
@@ -70,7 +74,6 @@ import {
   playModeId,
   poolCardId,
   shopBuyId,
-  tokenCardPickId,
   ts,
 } from "../../support/testids.ts";
 
@@ -126,11 +129,11 @@ type TrackBody = {
 
 type TracksBody = { tracks: TrackBody[] };
 
-type CosmeticStep = "rare" | "epic" | "cosmeticPack";
+type CosmeticStep = "rare" | "epic" | "legendary" | "cosmeticPack";
 
 type TokensBody = {
   nextStep: CosmeticStep;
-  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticPack: number };
+  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticLegendary: number; cosmeticPack: number };
 };
 
 type OwnedCosmeticsBody = { cards: { cardId: string; cosmeticId: string }[]; account: string[] };
@@ -190,6 +193,8 @@ function heldOf(tokens: TokensBody, step: CosmeticStep): number {
       return tokens.tokens.cosmeticRare;
     case "epic":
       return tokens.tokens.cosmeticEpic;
+    case "legendary":
+      return tokens.tokens.cosmeticLegendary;
     case "cosmeticPack":
       return tokens.tokens.cosmeticPack;
   }
@@ -447,18 +452,21 @@ function redeemACardToken(loop: Loop): void {
   });
   cy.intercept("POST", "**/api/tokens/redeem-card").as("redeemCard");
   let picked = "";
-  cy.get(TOKEN_POOL_CARDS)
+  // The Collection's grid holds the locked cards: open Core, whose starters are only half of it.
+  cy.visitAs(econ(), routes.collectionCards());
+  cy.get(ts(collectionSetToggleId(SHIPPED_SETS[0])), { timeout: timeouts.view }).click();
+  cy.get(COLLECTION_LOCKED_CARDS, { timeout: timeouts.view })
     .first()
-    .should("not.be.disabled")
     .invoke("attr", "data-testid")
     .then((testid) => {
-      picked = String(testid).slice(poolCardId("").length);
-      expect(loop.owned.has(picked), `§14.5: the picker offers ${picked}, a card not owned`).to.eq(false);
+      picked = String(testid).slice(collectionCardId("").length);
+      expect(loop.owned.has(picked), `§14.5: the grid locks ${picked}, a card not owned`).to.eq(false);
     });
   cy.then(() => {
-    cy.get(ts(poolCardId(picked))).click();
-    cy.get(ts(tokenCardPickId(picked))).click();
-    cy.get(ts(TOKEN_CARD_CONFIRM)).click();
+    // The inspect key opens the locked card's preview, Unlock asks, and Confirm spends the token.
+    cy.get(ts(collectionCardId(picked))).focus().trigger("keydown", { key: "i" });
+    cy.get(ts(collectionTokenOfferId(picked))).click();
+    cy.get(ts(collectionTokenOfferConfirmId(picked))).click();
   });
   cy.wait("@redeemCard").then((interception) => {
     expect(interception.response?.statusCode, "POST /api/tokens/redeem-card").to.eq(200);
@@ -472,8 +480,9 @@ function redeemACardToken(loop: Loop): void {
       expect(owned.size, "and nothing else").to.eq(loop.owned.size + 1);
       loop.owned = owned;
     });
-    // The collection's re-read takes the unlocked card out of the pool.
-    cy.get(ts(poolCardId(picked)), { timeout: timeouts.view }).should("not.exist");
+    // The preview and the grid read the unlocked card as owned.
+    cy.get(ts(COLLECTION_PREVIEW)).should("have.attr", "data-owned", "true");
+    cy.get(ts(collectionCardId(picked))).should("have.attr", "data-owned", "true");
   });
 }
 
@@ -502,9 +511,11 @@ function earnAFullArt(loop: Loop): void {
   let earned: FullArt | null = null;
   let other: FullArt | null = null;
   read<OwnedCosmeticsBody>(econ(), "/api/cosmetics").then((owned) => {
-    // R2655000: an Epic token buys an Epic full art, one to a card; the Legendary and Mythic are chases no token pays for.
+    // R2655000: an Epic token buys an Epic full art, one to a card; the Legendary and Mythic are chases no Epic token pays for (R2728000).
+    // R2715000: the Animated art is an Epic too, but prints the normal face, so this walks the still full art.
     const fullArts = COSMETICS.filter((cosmetic): cosmetic is FullArt => cosmetic.kind === "fullArt").filter(
       (cosmetic) =>
+        cosmetic.id.startsWith("full-art-") &&
         cosmetic.rarity === "Epic" &&
         loop.owned.has(cosmetic.card) &&
         !owned.cards.some((entry) => entry.cardId === cosmetic.card && entry.cosmeticId === cosmetic.id),

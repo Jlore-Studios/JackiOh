@@ -4,7 +4,7 @@
 // Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop them (B9
 // checks how counts scale); the rest of a cue is S7's, compared exactly and, within a recipe, as a set.
 
-import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, MIN_ENTRY_MS, planEntries, type AnimationEntry } from "../game/animations.ts";
@@ -16,6 +16,7 @@ import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
+  FX_CALLOUT_MS,
   FX_CENTER,
   FX_CRACK_TAIL_MS,
   FX_DEATH_EMBER_AT,
@@ -28,11 +29,11 @@ import {
   FX_INTENSITY_SCALE,
   FX_LETHAL_LEAD_MAX_MS,
   FX_MANA_MAX_SPARKS,
-  FX_MANA_STAGGER_MS,
   FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_MEMORY_LIMIT,
   FX_MIND_CONTROL_FLIGHT_FRACTION,
+  FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
@@ -394,10 +395,6 @@ describe("B8 timing bounds", () => {
 describe("B9 intensity", () => {
   const LEVELS = [FX_INTENSITY_SCALE.low, FX_INTENSITY_SCALE.normal, FX_INTENSITY_SCALE.high] as const;
 
-  it("B9 the intensity scale is off 0, low 0.45, normal 1, high 1.6", () => {
-    expect(FX_INTENSITY_SCALE).toEqual({ off: 0, low: 0.45, normal: 1, high: 1.6 });
-  });
-
   it("B9 burst counts grow with intensity: every burst low <= normal <= high, and the totals strictly", () => {
     const totals = [0, 0, 0];
     for (const sample of samples()) {
@@ -586,7 +583,7 @@ describe("B12 poison", () => {
     expect(first?.keywords.some((k) => k.kind === "Poisonous")).toBe(false);
   });
 
-  it("B12 a Poisonous source fires its flavor's shot and adds a poison burst at the landing", () => {
+  it("R2789000 B12 a Poisonous source's hit plans no poison burst: it fires its flavor's shot as any source does", () => {
     forDs("damage", (D) => {
       const launch = r(FX_SHOT_LAUNCH_AT * D);
       const physical = FLAVOR_LOOKS.Physical;
@@ -594,17 +591,15 @@ describe("B12 poison", () => {
         shot(physical, cardT(POISONER), cardT(ENEMY), launch, D - launch),
         burst("spark", cardT(ENEMY), "point", D),
         splat("damage", 3, cardT(ENEMY), D, D),
-        burst("poison", cardT(ENEMY), "area", D),
         burst(physical.particle, cardT(ENEMY), "area", D),
       ]);
     });
   });
 
-  it("B12 a Poisonous source in combat adds the poison burst at 0 and flies nothing", () => {
+  it("R2789000 B12 a Poisonous source in combat plans no poison burst either: the view's keywords are no longer read", () => {
     expectCues(plan([dmg(POISONER, ENEMY, 7, true)], 300), [
       burst("spark", cardT(ENEMY), "point", 0),
       splat("damage", 7, cardT(ENEMY), 0, 300),
-      burst("poison", cardT(ENEMY), "area", 0),
       burst("dust", cardT(ENEMY, FOOT), "area", 0),
       shake(traumaForShakePx(damageFeel(7).shakePx), 0),
     ]);
@@ -616,12 +611,23 @@ describe("B12 poison", () => {
     expect(cues.find((c) => c.kind === "shot")).toMatchObject({ preset: FLAVOR_LOOKS.Hustle.particle });
   });
 
-  it("B12 Poisonous is read from the planning view: the same unit without it plans no poison", () => {
-    const view = fullBoardView();
-    const second = must(view.you.units[1], "the second unit");
-    view.you.units[1] = { ...second, keywords: second.keywords.filter((k) => k.kind !== "Poisonous") };
-    const cues = plan([dmg(POISONER, ENEMY, 3, false)], 300, { view });
-    expect(cues.some((c) => "preset" in c && c.preset === "poison")).toBe(false);
+  it("R2789000 B12 a death keyed `via: Poisonous` plans the poison burst at 0, and one with no `via` plans none", () => {
+    const died = (via?: "Poisonous"): GameEvent => ({
+      type: "destroyed",
+      instanceId: ENEMY,
+      defId: "core-008",
+      owner: "p2",
+      controller: "p2",
+      attack: 4,
+      maxHealth: 4,
+      killerId: POISONER,
+      ...(via === undefined ? {} : { via }),
+    });
+    const poisons = (cues: readonly FxCue[]): FxCue[] => cues.filter((c) => c.kind === "burst" && c.preset === "poison");
+    for (const D of [ANIMATIONS.destroyed.durationMs, ODD_D]) {
+      expect(poisons(plan([died("Poisonous")], D)).map((c) => `${c.kind}@${String(c.delayMs)}`)).toEqual(["burst@0"]);
+      expect(poisons(plan([died()], D))).toEqual([]);
+    }
   });
 });
 
@@ -765,7 +771,7 @@ describe("B14 summon", () => {
     });
   });
 
-  it("B14 a Legendary adds legendary rays from 0, a gold burst at the slam and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 a Legendary adds legendary rays from 0, a gold burst and ring at the slam and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Legendary", attack: 1, health: 1 }, D), [
@@ -773,12 +779,13 @@ describe("B14 summon", () => {
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         rays("legendary", tid(ZONE), 0, D),
         burst("gold", tid(ZONE), "area", slam),
-        shake(0.5, slam),
+        ring("gold", tid(ZONE), slam, D),
+        shake(0.7, slam),
       ]);
     });
   });
 
-  it("B14 a Mythic adds mythic rays, a prismatic burst and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 a Mythic adds mythic rays, a prismatic burst and ring and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Mythic", attack: 2, health: 2 }, D), [
@@ -786,7 +793,8 @@ describe("B14 summon", () => {
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         rays("mythic", tid(ZONE), 0, D),
         burst("prismatic", tid(ZONE), "area", slam),
-        shake(0.5, slam),
+        ring("prismatic", tid(ZONE), slam, D),
+        shake(0.7, slam),
       ]);
     });
   });
@@ -803,8 +811,8 @@ describe("B14 summon", () => {
 
   it("B14 Legendary and Mythic trauma stacks on the slam trauma", () => {
     const slam = r(FX_SLAM_AT * 250);
-    expect(shakesOf(summonCues({ rarity: "Legendary", attack: 5, health: 5 }, 250)).map(round6)).toEqual([0.56]);
-    expect(shakesOf(summonCues({ rarity: "Mythic", attack: 6, health: 6 }, 250)).map(round6)).toEqual([0.68]);
+    expect(shakesOf(summonCues({ rarity: "Legendary", attack: 5, health: 5 }, 250)).map(round6)).toEqual([0.76]);
+    expect(shakesOf(summonCues({ rarity: "Mythic", attack: 6, health: 6 }, 250)).map(round6)).toEqual([0.88]);
     // A big Mythic slams as hard as a shake goes.
     expect(shakesOf(summonCues({ rarity: "Mythic", attack: 20, health: 20 }, 250)).map(round6)).toEqual([1]);
     expect(summonCues({ rarity: "Mythic", attack: 20, health: 20 }, 250).find((c) => c.kind === "shake")?.delayMs).toBe(slam);
@@ -913,7 +921,7 @@ describe("B15 cast", () => {
       ring("arcane", handCardT(HAND), 0, 400),
     ]);
     expectCues(plan([played("p1", HAND, "core-018")], 400), [
-      burst("ember", handCardT(HAND), "area", 0),
+      burst("crumb", handCardT(HAND), "area", 0),
       ring("arcane", handCardT(HAND), 0, 400),
     ]);
   });
@@ -927,10 +935,10 @@ describe("B15 cast", () => {
       ["core-021", "void"],
       ["core-026", "holy"],
       ["core-010", "arcane"],
-      ["core-013", "frost"],
-      ["core-017", "poison"],
+      ["core-013", "circuit"],
+      ["core-017", "leaf"],
       ["core-022", "poison"],
-      ["core-018", "ember"],
+      ["core-018", "crumb"],
       ["core-004", "gold"],
       ["core-050", "confetti"],
       ["core-037", "sparkle"],
@@ -997,11 +1005,13 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 divineShieldLost: a gold ring and a shard ring burst at the card", () => {
+  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as ward", () => {
     forDs("divineShieldLost", (D) => {
+      const land = r(FX_MOTIF_PHASES.land * D);
       expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [
         ring("gold", cardT(ENEMY), 0, D),
-        burst("shard", cardT(ENEMY), "ring", 0),
+        burst("shard", cardT(ENEMY), "ring", land, FLAVOR_LOOKS.Holy.colors),
+        shake(0.2, land),
       ]);
     });
   });
@@ -1182,14 +1192,15 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 trapFired: an arcane ring, a ring burst in the card's flavor and a punch shake at 0.3 D, on the card the viewer reads", () => {
+  it("B16 trapFired: an arcane ring, a ring burst in the card's flavor and a shake on Land, as snap", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
       const holy = FLAVOR_LOOKS.Holy;
       expectCues(plan([{ type: "trapFired", instanceId: MY_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 5 }], D), [
         ring("arcane", cardT(MY_TRAP), 0, D),
         burst(holy.particle, cardT(MY_TRAP), "ring", b, holy.colors),
-        shake(0.4, b),
+        shake(0.4, land),
       ]);
     });
   });
@@ -1198,73 +1209,73 @@ describe("B16 the recipe table, row by row", () => {
     const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true };
     for (const D of [ANIMATIONS.activated.durationMs, ODD_D]) {
       const cues = plan([again], D);
-      expectCues(cues, [ring("arcane", cardT(MY_FIELD_TRAP), 0, D), burst("arcane", cardT(MY_FIELD_TRAP), "point", 0)]);
+      expectCues(cues, [ring("arcane", cardT(MY_FIELD_TRAP), 0, D), burst("arcane", cardT(MY_FIELD_TRAP), "point", 0, FLAVOR_LOOKS.Dark.colors)]);
       expect(shakesOf(cues)).toEqual([]);
     }
   });
 
-  it("#1447 a readable trap reveal uses every flavor look's colors and particle", () => {
-    const rows: Array<[string, Flavor]> = [
-      ["core-001", "Physical"],
-      ["core-019", "Brute"],
-      ["core-007", "Beast"],
-      ["core-035", "Fire"],
-      ["core-021", "Dark"],
-      ["core-026", "Holy"],
-      ["core-010", "Nerd"],
-      ["core-013", "Tech"],
-      ["core-017", "Nature"],
-      ["core-022", "Toxic"],
-      ["core-018", "Snack"],
-      ["core-004", "Hustle"],
-      ["core-050", "Clout"],
-      ["core-037", "Spirit"],
-      ["core-023", "Chaos"],
-    ];
-    expect(new Set(rows.map(([, flavor]) => flavor)), "one row per flavor").toEqual(new Set(Object.keys(FLAVOR_LOOKS)));
+  it("R154 R202 a readable trap reveal bursts in the view's card's flavor, whatever defId the event names", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
-      for (const [defId, flavor] of rows) {
-        const look = FLAVOR_LOOKS[flavor === "Chaos" ? chaosFlavor(MY_TRAP) : flavor];
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const holy = FLAVOR_LOOKS.Holy;
+      for (const defId of ["core-001", "core-019", "core-035", "core-021", "core-026", "core-023"]) {
         const fired: GameEvent = { type: "trapFired", instanceId: MY_TRAP, defId, controller: "p1", row: "backrow", lane: 5 };
         expectCues(plan([fired], D), [
           ring("arcane", cardT(MY_TRAP), 0, D),
-          burst(look.particle, cardT(MY_TRAP), "ring", b, look.colors),
-          shake(0.4, b),
+          burst(holy.particle, cardT(MY_TRAP), "ring", b, holy.colors),
+          shake(0.4, land),
         ]);
       }
     });
   });
 
-  it("#1447 a trap absent from PlayerView keeps today's reveal cue", () => {
+  it("R154 R202 a trap absent from PlayerView reveals in the default look on its zone", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const dark = FLAVOR_LOOKS.Dark;
       const zone = zoneT("opponent", "backrow", 4);
       // The catalog knows the card, but the view shows no such instance (an opponent's face-down trap).
       const fired: GameEvent = { type: "trapFired", instanceId: "face-down-1", defId: "core-021", controller: "p2", row: "backrow", lane: 4 };
-      const cues = plan([fired], D);
-      expectCues(cues, [ring("arcane", zone, 0, D), burst("arcane", zone, "ring", b), shake(0.4, b)]);
-      for (const cue of cues) expect("colors" in cue).toBe(false);
+      expectCues(plan([fired], D), [ring("arcane", zone, 0, D), burst(dark.particle, zone, "ring", b, dark.colors), shake(0.4, land)]);
     });
   });
 
   it("B16 trapFired the viewer may not read plays on its zone", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const dark = FLAVOR_LOOKS.Dark;
       const zone = zoneT("opponent", "backrow", 4);
       expectCues(plan([{ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 4 }], D), [
         ring("arcane", zone, 0, D),
-        burst("arcane", zone, "ring", b),
-        shake(0.4, b),
+        burst(dark.particle, zone, "ring", b, dark.colors),
+        shake(0.4, land),
       ]);
     });
   });
 
-  it("B16 locked: a dust ring and a dust burst at the zone", () => {
+  it("B16 locked: a dust ring at gather and a dust burst where it lands, as bind", () => {
     forDs("locked", (D) => {
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const zone = zoneT("opponent", "units", 2);
       expectCues(plan([{ type: "locked", player: "p2", row: "units", lane: 2 }], D), [
-        ring("dust", zoneT("opponent", "units", 2), 0, D),
-        burst("dust", zoneT("opponent", "units", 2), "area", 0),
+        ring("dust", zone, 0, D),
+        burst("dust", zone, "area", land, FLAVOR_LOOKS.Dark.colors),
+        shake(0.2, land),
+      ]);
+    });
+  });
+
+  it("B16 unlocked: a gold ring at gather and gold shards where it releases, as bind", () => {
+    forDs("unlocked", (D) => {
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const zone = zoneT("opponent", "units", 2);
+      expectCues(plan([{ type: "unlocked", player: "p2", row: "units", lane: 2 }], D), [
+        ring("gold", zone, 0, D),
+        burst("shard", zone, "ring", land, FLAVOR_LOOKS.Dark.colors),
+        shake(0.2, land),
       ]);
     });
   });
@@ -1296,6 +1307,8 @@ describe("B16 the recipe table, row by row", () => {
     rangedView.you.units[0] = { ...first, keywords: [...first.keywords, { kind: "Ranged" }] };
     expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], 350, { view: rangedView }), [
       burst("dust", tid(testid.card(MINE), FOOT), "point", 0),
+      // R2789000: its beat adds the keyword's callout over the shooter.
+      { kind: "callout", keyword: "Ranged", at: cardT(MINE), delayMs: 0, durationMs: FX_CALLOUT_MS },
     ]);
     const hiddenView = fullBoardView();
     const hiddenFirst = must(hiddenView.you.units[0], "your first unit");
@@ -1313,23 +1326,42 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 keywordGranted: Divine Shield rings gold, Poisonous clouds, Taunt rings dust, anything else sparks arcane", () => {
+  it("B16 keywordGranted: every grant blesses the same, as bless", () => {
     forDs("keywordGranted", (D) => {
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const holy = FLAVOR_LOOKS.Holy;
       const grant = (keyword: Extract<GameEvent, { type: "keywordGranted" }>["keyword"]) =>
         plan([{ type: "keywordGranted", instanceId: MINE_3, keyword }], D);
-      expectCues(grant({ kind: "Divine Shield" }), [ring("gold", cardT(MINE_3), 0, D), burst("holy", cardT(MINE_3), "ring", 0)]);
-      expectCues(grant({ kind: "Poisonous" }), [burst("poison", cardT(MINE_3), "area", 0)]);
-      expectCues(grant({ kind: "Taunt" }), [ring("dust", cardT(MINE_3), 0, D)]);
-      for (const keyword of [{ kind: "Rush" }, { kind: "Charge" }, { kind: "Armor", n: 2 }, { kind: "Lucky", n: 3 }] as const) {
-        expectCues(grant(keyword), [burst("arcane", cardT(MINE_3), "point", 0)]);
+      for (const keyword of [
+        { kind: "Divine Shield" },
+        { kind: "Poisonous" },
+        { kind: "Taunt" },
+        { kind: "Rush" },
+        { kind: "Charge" },
+        { kind: "Armor", n: 2 },
+        { kind: "Lucky", n: 3 },
+      ] as const) {
+        expectCues(grant(keyword), [
+          arrows("up", cardT(MINE_3), D),
+          { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+          burst("holy", cardT(MINE_3), "area", land, holy.colors),
+          shake(0.2, land),
+        ]);
       }
     });
   });
 
-  it("#1598 keywordGranted with lost set plans arrows down and a void burst, whatever the keyword", () => {
+  it("#1598 keywordGranted with lost set curses the same, whatever the keyword", () => {
     forDs("keywordGranted", (D) => {
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const dark = FLAVOR_LOOKS.Dark;
       for (const keyword of [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Poisonous" }, { kind: "Rush" }] as const) {
-        expectCues(plan([{ type: "keywordGranted", instanceId: ENEMY, keyword, lost: true }], D), [arrows("down", cardT(ENEMY), D), burst("void", cardT(ENEMY), "area", 0)]);
+        expectCues(plan([{ type: "keywordGranted", instanceId: ENEMY, keyword, lost: true }], D), [
+          arrows("down", cardT(ENEMY), D),
+          burst("void", cardT(ENEMY), "area", land, dark.colors),
+          shake(0.25, land),
+        ]);
       }
     });
   });
@@ -1431,15 +1463,18 @@ describe("B16 the recipe table, row by row", () => {
 /* B17, B18: flights and buffs */
 
 describe("B17 card flights", () => {
-  it("B17 drawn: a card back flies from library to hand over D, and a sparkle lands at D", () => {
+  it("B17 drawn: a card back flies library to hand over Travel to Land, and a sparkle lands with it, as flight", () => {
     forDs("drawn", (D) => {
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const spirit = FLAVOR_LOOKS.Spirit;
       expectCues(plan([{ type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" }], D), [
-        ghost(tid("library-you"), tid("hand-you"), D),
-        burst("sparkle", tid("hand-you"), "point", D),
+        { kind: "ghost", from: tid("library-you"), to: tid("hand-you"), delayMs: travel, durationMs: land - travel },
+        burst("sparkle", tid("hand-you"), "point", land, spirit.colors),
       ]);
       expectCues(plan([{ type: "drawn", player: "p2", instanceId: "hidden", defId: "hidden" }], D), [
-        ghost(tid("library-opponent"), tid("hand-opponent"), D),
-        burst("sparkle", tid("hand-opponent"), "point", D),
+        { kind: "ghost", from: tid("library-opponent"), to: tid("hand-opponent"), delayMs: travel, durationMs: land - travel },
+        burst("sparkle", tid("hand-opponent"), "point", land, spirit.colors),
       ]);
     });
   });
@@ -1493,23 +1528,31 @@ describe("B17 card flights", () => {
 });
 
 describe("B18 buff arrows", () => {
-  it("B18 a net-positive buff plans arrows up and sparkles", () => {
+  it("B18 a net-positive buff blesses: arrows up, a sheen and a holy burst", () => {
     forDs("buffed", (D) => {
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const holy = FLAVOR_LOOKS.Holy;
       for (const [attack, health] of [[2, 1], [0, 1], [3, -1]] as const) {
         expectCues(plan([{ type: "buffed", instanceId: MINE_3, attack, health }], D), [
           arrows("up", cardT(MINE_3), D),
-          burst("sparkle", cardT(MINE_3), "area", 0),
+          { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+          burst("holy", cardT(MINE_3), "area", land, holy.colors),
+          shake(0.2, land),
         ]);
       }
     });
   });
 
-  it("B18 a net-negative buff plans arrows down and a void burst", () => {
+  it("B18 a net-negative buff curses: arrows down and a void burst", () => {
     forDs("buffed", (D) => {
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const dark = FLAVOR_LOOKS.Dark;
       for (const [attack, health] of [[-2, 0], [-1, -1], [1, -3]] as const) {
         expectCues(plan([{ type: "buffed", instanceId: ENEMY, attack, health }], D), [
           arrows("down", cardT(ENEMY), D),
-          burst("void", cardT(ENEMY), "area", 0),
+          burst("void", cardT(ENEMY), "area", land, dark.colors),
+          shake(0.25, land),
         ]);
       }
     });
@@ -1533,37 +1576,43 @@ describe("B19 mana sparks", () => {
     return plan([{ type: "manaChanged", player, current, max: Math.max(current, 1) }], D, view === undefined ? {} : { view });
   }
 
-  it("B19 one sparkle per crystal that fills, from the planning view's current mana up", () => {
+  it("B19 one sparkle per crystal that fills, from the planning view's current mana up, landing on Land, as mana", () => {
     expect(VIEW.you.mana.current).toBe(2);
     expect(VIEW.opponent.mana.current).toBe(0);
     const D = ANIMATIONS.manaChanged.durationMs;
-    const step = Math.min(FX_MANA_STAGGER_MS, Math.floor(D / 2));
+    const travel = r(FX_MOTIF_PHASES.travel * D);
+    const land = r(FX_MOTIF_PHASES.land * D);
+    const holy = FLAVOR_LOOKS.Holy;
     expectCues(manaCues("p1", 4, D), [
-      burst("sparkle", crystal("you", 2), "point", 0),
-      burst("sparkle", crystal("you", 3), "point", step),
+      burst("sparkle", tid("mana-you"), "point", 0, holy.colors),
+      burst("sparkle", crystal("you", 2), "point", travel, holy.colors),
+      burst("sparkle", crystal("you", 3), "point", travel + Math.round((land - travel) / 2), holy.colors),
+      burst("sparkle", tid("mana-you"), "point", land, holy.colors),
     ]);
-    const step3 = Math.min(FX_MANA_STAGGER_MS, Math.floor(D / 3));
+    const step3 = (land - travel) / 3;
     expectCues(manaCues("p2", 3, D), [
-      burst("sparkle", crystal("opponent", 0), "point", 0),
-      burst("sparkle", crystal("opponent", 1), "point", step3),
-      burst("sparkle", crystal("opponent", 2), "point", 2 * step3),
+      burst("sparkle", tid("mana-opponent"), "point", 0, holy.colors),
+      burst("sparkle", crystal("opponent", 0), "point", travel, holy.colors),
+      burst("sparkle", crystal("opponent", 1), "point", travel + Math.round(step3), holy.colors),
+      burst("sparkle", crystal("opponent", 2), "point", travel + Math.round(2 * step3), holy.colors),
+      burst("sparkle", tid("mana-opponent"), "point", land, holy.colors),
     ]);
   });
 
   it("B19 at most FX_MANA_MAX_SPARKS sparks, however far mana rises", () => {
     const cues = manaCues("p1", 30, 150);
-    expect(cues).toHaveLength(FX_MANA_MAX_SPARKS);
-    const indices = cues.map((c) => (c.kind === "burst" && c.at.kind === "crystal" ? c.at.index : -1));
-    expect(indices).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    const crystals = cues.filter((c) => c.kind === "burst" && c.at.kind === "crystal");
+    expect(crystals).toHaveLength(FX_MANA_MAX_SPARKS);
+    expect(crystals.map((c) => (c.kind === "burst" && c.at.kind === "crystal" ? c.at.index : -1))).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
-  it("B19 delays increase and stay inside D, compressing when D is short", () => {
+  it("B19 delays increase and stay inside D, spreading Travel to Land however short D is", () => {
     for (const D of [MIN_ENTRY_MS, 150, 400, ODD_D]) {
       const cues = manaCues("p2", 10, D);
       const delays = cues.map((c) => c.delayMs);
-      expect(delays, `D=${D}`).toHaveLength(10);
-      const step = Math.min(FX_MANA_STAGGER_MS, Math.floor(D / 10));
-      expect(delays, `D=${D}`).toEqual(delays.map((_, i) => Math.min(D, i * step)));
+      expect(delays, `D=${D}`).toHaveLength(FX_MANA_MAX_SPARKS + 2);
+      expect(delays[0], `D=${D}`).toBe(0);
+      expect(delays[delays.length - 1], `D=${D}`).toBe(r(FX_MOTIF_PHASES.land * D));
       for (let i = 1; i < delays.length; i += 1) expect(delays[i], `D=${D}`).toBeGreaterThan(delays[i - 1] ?? 0);
       for (const delay of delays) expect(delay).toBeLessThanOrEqual(D);
     }
@@ -1579,7 +1628,14 @@ describe("B19 mana sparks", () => {
   it("B19 the old value comes from the planning view, not the event's max", () => {
     const view = fullBoardView();
     view.you = emptySide("p1", { mana: { current: 5, max: 7 } });
-    expectCues(manaCues("p1", 6, 150, view), [burst("sparkle", crystal("you", 5), "point", 0)]);
+    const travel = r(FX_MOTIF_PHASES.travel * 150);
+    const land = r(FX_MOTIF_PHASES.land * 150);
+    const holy = FLAVOR_LOOKS.Holy;
+    expectCues(manaCues("p1", 6, 150, view), [
+      burst("sparkle", tid("mana-you"), "point", 0, holy.colors),
+      burst("sparkle", crystal("you", 5), "point", travel, holy.colors),
+      burst("sparkle", tid("mana-you"), "point", land, holy.colors),
+    ]);
     expect(manaCues("p1", 5, 150, view)).toEqual([]);
   });
 });
@@ -1633,9 +1689,10 @@ describe("B20 turn banners", () => {
 
 /* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`. */
+/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's `still` (R2789000). */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
+  callout: ["still"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1649,6 +1706,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   rays: ["kind", "tone", "at", "delayMs", "durationMs"],
   sheen: ["kind", "at", "delayMs", "durationMs"],
   ghost: ["kind", "from", "to", "delayMs", "durationMs"],
+  callout: ["kind", "keyword", "at", "delayMs", "durationMs"],
   arrows: ["kind", "direction", "at", "delayMs", "durationMs"],
   banner: ["kind", "text", "tone", "delayMs", "durationMs"],
   result: ["kind", "outcome", "text", "delayMs", "durationMs"],
@@ -1663,6 +1721,9 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   roll: ["kind", "title", "die", "items", "delayMs", "durationMs"],
   fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
+  takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
+  setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
+  pull: ["kind", "testid", "to", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {

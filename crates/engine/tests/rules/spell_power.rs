@@ -92,6 +92,7 @@ fn heals_on(s: &Scenario, target_id: &str) -> Vec<i32> {
             GameEvent::Healed {
                 target_id: healed,
                 amount,
+                ..
             } if healed == target_id => Some(*amount),
             _ => None,
         })

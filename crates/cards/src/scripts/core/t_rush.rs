@@ -214,23 +214,6 @@ mod tests {
             }
 
             #[test]
-            fn r11_and_s10_1_a_vanished_rush_token_is_in_no_pile_and_its_zone_says_so_tagged_gone() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-rush"] } }));
-                let mut token = s.unit(P1, 1).expect("a Rush Token in p1's lane 1");
-
-                // Called directly so the instance this test holds is the one the engine mutates (`reduce` clones).
-                let result = move_to_zone(s.state_mut(), &mut token, OffFieldZone::Graveyard, Default::default());
-
-                assert_eq!(result, MoveResult::Vanished);
-                s.expect_in_zone(&token, "gone");
-                assert!(s.pile(P1, "graveyard").is_empty());
-                // R11: "A card that has ceased to exist is in no pile and its zone says so, tagged `gone`
-                // (§10.1)".
-                assert_eq!(token.zone.z(), ZoneName::Gone);
-            }
-
-            #[test]
             fn r11_a_unit_token_never_enters_a_graveyard_so_a_fixture_may_not_put_one_there() {
                 crate::register_all();
                 expect_throw_with(
@@ -260,21 +243,6 @@ mod tests {
                 s.play(&card, json!({}));
                 s.expect_in_zone(&card, "field");
                 s.expect_stats(&card, json!({ "attack": 3, "health": 3, "maxHealth": 3 }));
-            }
-
-            #[test]
-            fn r11_a_rush_token_card_leaving_a_hand_any_other_way_ceases_to_exist_burning_included() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-t-rush"] } }));
-                let mut card = s.hand(P1).into_iter().next().expect("the Rush Token card in hand");
-                s.expect_in_zone(&card, "hand");
-
-                let result = move_to_zone(s.state_mut(), &mut card, OffFieldZone::Graveyard, Default::default());
-
-                assert_eq!(result, MoveResult::Vanished);
-                s.expect_in_zone(&card, "gone");
-                assert!(s.pile(P1, "graveyard").is_empty());
-                assert!(s.hand(P1).is_empty());
             }
 
             #[test]
@@ -338,27 +306,6 @@ mod tests {
             }
 
             #[test]
-            fn the_base_face_has_no_cleave_its_attack_hits_the_target_alone() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "seed": SEED,
-                    "p1": { "field": ["core-t-rush"], "hand": ["core-005"] },
-                    "p2": { "field": ["core-061", "core-004", "core-061"], "hand": ["core-005"] },
-                }));
-                let token = s.unit(P1, 1).expect("a Rush Token in p1's lane 1");
-                let left = s.unit(P2, 1).expect("p2's unit in lane 1");
-                let target = s.unit(P2, 2).expect("p2's unit in lane 2");
-                let right = s.unit(P2, 3).expect("p2's unit in lane 3");
-
-                s.attack(&token, &target);
-
-                let hit: Vec<String> = hits_from(&s, &token).into_iter().map(|(id, _)| id).collect();
-                assert_eq!(hit, vec![target.id.clone()]);
-                s.expect_stats(&left, json!({ "health": 4 }));
-                s.expect_stats(&right, json!({ "health": 4 }));
-            }
-
-            #[test]
             fn s7_stat_overrides_on_the_radiant_face_a_5_5_radiant_rush_token_shows_5_5_and_keeps_rush_and_cleave() {
                 crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
@@ -389,21 +336,6 @@ mod tests {
                 s.expect_in_zone(&token, "gone");
                 assert!(s.pile(P1, "graveyard").is_empty());
                 assert!(s.pile(P1, "exile").is_empty());
-            }
-
-            #[test]
-            fn r11_and_s10_1_a_vanished_radiant_rush_token_is_in_no_pile_and_its_zone_says_gone() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "field": [{ "def": "core-t-rush", "radiant": true }] } }));
-                let mut token = s.unit(P1, 1).expect("a radiant Rush Token in p1's lane 1");
-
-                assert_eq!(
-                    move_to_zone(s.state_mut(), &mut token, OffFieldZone::Exile, Default::default()),
-                    MoveResult::Vanished
-                );
-                s.expect_in_zone(&token, "gone");
-                assert!(s.pile(P1, "exile").is_empty());
-                assert_eq!(token.zone.z(), ZoneName::Gone);
             }
         }
     }

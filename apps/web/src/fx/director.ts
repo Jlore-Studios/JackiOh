@@ -9,6 +9,7 @@ import {
   FX_ADAPT_SLOW_FACTOR,
   FX_ADAPT_SLOW_MS,
   FX_ADAPT_WINDOW,
+  FX_FLYING_LUNGE_LIFT,
   FX_LUNGE_MAX_PX,
   FX_LUNGE_MIN_PX,
   FX_LUNGE_STANDOFF,
@@ -63,6 +64,12 @@ export type FxDirector = {
   play(cues: readonly FxCue[]): void;
   /** Removes all effects and resets the shake sink. */
   clear(): void;
+  /**
+   * R2785000: a skipped set piece cuts to its end. Its stage cues still waiting land now, so the board
+   * stands as the entry would leave it, and every other effect goes at once, the shake with them; the
+   * stand-ins and concealment stay until the board shows the next view, as ever (R200).
+   */
+  cut(): void;
   /** Removes a pending or active turn banner and its rays once the player acts. */
   dismissBanner(): void;
   /** Clears stand-ins, concealment and lunges for a newer board view (B46–B48). */
@@ -78,7 +85,7 @@ export type FxDirector = {
 };
 
 type PendingCue = { cue: FxCue; due: number };
-type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string };
+type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string; key?: string };
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
 function defaultViewport(): FxViewportEvents {
@@ -114,7 +121,7 @@ function mirrorAnimating(source: Element, copy: Element): () => void {
 }
 
 function isStageCue(cue: FxCue): cue is FxStageCue {
-  return cue.kind === "hold" || cue.kind === "conceal" || cue.kind === "lunge";
+  return cue.kind === "hold" || cue.kind === "conceal" || cue.kind === "lunge" || cue.kind === "pull";
 }
 
 function defaultElement(testid: string): HTMLElement | null {
@@ -229,7 +236,10 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "fracture":
       case "walls":
       case "brand":
-      case "shield": {
+      case "shield":
+      case "callout":
+      case "takeover":
+      case "setPiece": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };
@@ -260,8 +270,19 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         return false;
       });
     }
+    // R2789000: one callout of a keyword over a unit at a time: a repeat (Cleave's second neighbour) takes the first's place.
+    const key = cue.kind === "callout" ? `${cue.keyword}@${cue.at.kind === "testid" ? cue.at.testid : cue.at.kind}` : undefined;
+    if (key !== undefined) {
+      mounted = mounted.filter((item) => {
+        if (item.key !== key) return true;
+        item.effect.remove();
+        return false;
+      });
+    }
     const effect = mountDomEffect(domRoot, cue, boxes);
-    if (effect !== null) mounted.push({ effect, expiresAt, kind: cue.kind, ...(cue.kind === "rays" ? { tone: cue.tone } : {}) });
+    if (effect !== null) {
+      mounted.push({ effect, expiresAt, kind: cue.kind, ...(cue.kind === "rays" ? { tone: cue.tone } : {}), ...(key === undefined ? {} : { key }) });
+    }
   };
 
   const stage = (cue: FxStageCue, due: number, at: number): void => {
@@ -331,10 +352,13 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const aim = (x: string, y: string): void => {
           attacker.style.setProperty("--fx-lunge-x", x);
           attacker.style.setProperty("--fx-lunge-y", y);
+          // R2789000: a Flying attacker's lunge arcs over the lane, lifted toward the viewer.
+          if (cue.arc === true) attacker.style.setProperty("--fx-lunge-lift", String(FX_FLYING_LUNGE_LIFT));
           staged.push({
             undo: () => {
               attacker.style.removeProperty("--fx-lunge-x");
               attacker.style.removeProperty("--fx-lunge-y");
+              attacker.style.removeProperty("--fx-lunge-lift");
             },
             expiresAt,
           });
@@ -357,6 +381,27 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const extents = (ux * (a.width + b.width) + uy * (a.height + b.height)) / 2;
         const reach = Math.min(FX_LUNGE_MAX_PX, Math.max(FX_LUNGE_MIN_PX, distance - extents * FX_LUNGE_STANDOFF));
         aim(`${((dx / distance) * reach).toFixed(1)}px`, `${((dy / distance) * reach).toFixed(1)}px`);
+        return;
+      }
+      case "pull": {
+        // R2800000: a card a set piece swallows is drawn toward its centre (or sinks where it stands); board.css moves it.
+        const card = element(cue.testid);
+        if (card === null) return;
+        const from = boxOfElement(card);
+        const to = measure(cue.to);
+        const dx = from === null || to === null ? 0 : to.x + to.width / 2 - (from.x + from.width / 2);
+        const dy = from === null || to === null ? 0 : to.y + to.height / 2 - (from.y + from.height / 2);
+        card.setAttribute("data-fx-pulled", "true");
+        card.style.setProperty("--fx-pull-x", `${dx.toFixed(1)}px`);
+        card.style.setProperty("--fx-pull-y", `${dy.toFixed(1)}px`);
+        staged.push({
+          undo: () => {
+            card.removeAttribute("data-fx-pulled");
+            card.style.removeProperty("--fx-pull-x");
+            card.style.removeProperty("--fx-pull-y");
+          },
+          expiresAt,
+        });
         return;
       }
     }
@@ -507,11 +552,11 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     return hasWork();
   };
 
-  const clear = (): void => {
+  /** Drops every effect but the stage's: the pending cues, the mounted ones, the canvas and the shake. */
+  const dropEffects = (): void => {
     pending = [];
     for (const item of mounted) item.effect.remove();
     mounted = [];
-    releaseStaged();
     particles.clear();
     canvasFx.clear();
     shake.reset();
@@ -519,6 +564,11 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     shakeSink.clear();
     surface?.clear();
     painted = false;
+  };
+
+  const clear = (): void => {
+    dropEffects();
+    releaseStaged();
   };
 
   const loop = createFrameLoop({
@@ -553,6 +603,14 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       if (added > 0) loop.wake();
     },
     clear,
+    cut(): void {
+      if (disposed) return;
+      const at = now();
+      const landing = pending.flatMap((item) => (isStageCue(item.cue) ? [item.cue] : []));
+      dropEffects();
+      for (const cue of landing) stage(cue, at, at);
+      if (hasWork()) loop.wake();
+    },
     dismissBanner(): void {
       pending = pending.filter((item) => item.cue.kind !== "banner");
       if (!mounted.some((item) => item.kind === "banner")) return;

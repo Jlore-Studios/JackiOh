@@ -1,0 +1,134 @@
+// R2784000: the signature animation of every Stinkyscape, from stinkyscape-091 to the end, its stinkyscape-t-* tokens included card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
+// default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
+// recipe) or "keep" (it plays over that recipe).
+{
+  "stinkyscape-091": "none: pending", // The Propagation's Wasp
+  "stinkyscape-092": "none: pending", // The Propagation's Hornet
+  "stinkyscape-093": "none: pending", // Patcher Nanobots
+  "stinkyscape-094": "none: pending", // Tmack Trav
+  "stinkyscape-095": "none: pending", // Faction: Vanguard Coalition
+  "stinkyscape-096": "none: pending", // Ocean Tsunami
+  "stinkyscape-097": { cast: { motif: "barrage" } }, // Asteroid Field
+  "stinkyscape-098": "none: pending", // Hull Booster
+  "stinkyscape-099": "none: pending", // No-No Words
+  "stinkyscape-100": "none: pending", // AP Rounds
+  "stinkyscape-101": "none: pending", // Overdrive Module
+  "stinkyscape-102": "none: pending", // Book of Nono-Words
+  "stinkyscape-103": "none: pending", // Vxyl
+  "stinkyscape-104": "none: pending", // Reflective Plating
+  "stinkyscape-105": "none: pending", // Disintegrex
+  "stinkyscape-106": "none: pending", // Warpfield Amplifier
+  "stinkyscape-107": "none: pending", // RR-5000
+  "stinkyscape-108": "none: pending", // Trila 3
+  "stinkyscape-109": "none: pending", // xxFreshJack
+  "stinkyscape-110": "none: pending", // iKwzki
+  "stinkyscape-111": "none: pending", // Shockwave447
+  "stinkyscape-112": "none: pending", // Job Application
+  "stinkyscape-112-1": "none: pending", // Paycheck
+  "stinkyscape-113": "none: pending", // A Very Dandy Lad
+  "stinkyscape-114": "none: pending", // Arctic Citadel
+  "stinkyscape-115": "none: pending", // Scornboi
+  "stinkyscape-116": "none: pending", // Megabase
+  "stinkyscape-117": { setPiece: "vortex" }, // Core System
+  "stinkyscape-118": "none: pending", // Secure System
+  "stinkyscape-119": "none: pending", // Unsecure System
+  "stinkyscape-120": "none: pending", // Wild System
+  "stinkyscape-121": "none: pending", // System Schematic
+  "stinkyscape-122": "none: pending", // Vamp Rounds
+  "stinkyscape-123": "none: pending", // Gokugains
+  "stinkyscape-124": "none: pending", // Jlockeed's Shipbuilding Grant
+  "stinkyscape-125": "none: pending", // Jlockeed's Spacerace Propaganda
+  "stinkyscape-126": "none: pending", // Jlockeed's Permanent Procurement Lobbying
+  "stinkyscape-127": "none: pending", // Jlockeed's Siege Tank
+  "stinkyscape-128": "none: pending", // Jlockeed's Yamato Cannon
+  "stinkyscape-129": "none: pending", // Jlockeed's Missile Pod
+  "stinkyscape-130": "none: pending", // Jlockeed's Starship Retrofitting Program
+  "stinkyscape-131": "none: pending", // Spacerace Stimulus
+  "stinkyscape-132": "none: pending", // Defensive Crystal
+  "stinkyscape-133": "none: pending", // Ultra Capacitor
+  "stinkyscape-134": "none: pending", // Felinor Containment Chamber
+  "stinkyscape-135": "none: pending", // Sacked
+  "stinkyscape-135-1": "none: pending", // Sack
+  "stinkyscape-136": "none: pending", // Magic Module
+  "stinkyscape-137": "none: pending", // Starfleet Commander
+  "stinkyscape-137-1": "none: pending", // Land Doctrine
+  "stinkyscape-137-2": "none: pending", // Sea Doctrine
+  "stinkyscape-137-3": "none: pending", // Air Doctrine
+  "stinkyscape-137-4": "none: pending", // Space Doctrine
+  "stinkyscape-138": "none: pending", // Pocket Peptides
+  "stinkyscape-139": "none: pending", // Wormhole
+  "stinkyscape-140": "none: pending", // Rush Token Launcher
+  "stinkyscape-141": "none: pending", // Fruit Launcher
+  "stinkyscape-142": "none: pending", // Jade Launcher
+  "stinkyscape-143": "none: pending", // Book Launcher
+  "stinkyscape-144": "none: pending", // Prepare For Liftoff
+  "stinkyscape-145": "none: pending", // Fortify Flesh
+  "stinkyscape-146": "none: pending", // Flash Freeze
+  "stinkyscape-147": "none: pending", // IN33DH3
+  "stinkyscape-147-1": "none: pending", // IN33DH3 Prime
+  "stinkyscape-147-2": "none: pending", // Wardrum Blob
+  "stinkyscape-148": "none: pending", // Alteran Reach
+  "stinkyscape-148-1": "none: pending", // Edge of the Universe
+  "stinkyscape-149": "none: pending", // Wildar
+  "stinkyscape-150": "none: pending", // Call to Chaos (Stinky Edition)
+  "stinkyscape-150-1": "none: pending", // Stinkyscape Golem
+  "stinkyscape-151": { cast: { motif: "wipe" } }, // Call to Chaos (Scape Edition)
+  "stinkyscape-152": "none: pending", // Sanctum
+  "stinkyscape-153": "none: pending", // Stimmycheck
+  "stinkyscape-154": "none: pending", // Dice of Doom
+  "stinkyscape-155": { aura: { look: "ember", scope: "zone" } }, // Comet Crash
+  "stinkyscape-156": "none: pending", // Catalyst Comet
+  "stinkyscape-157": "none: pending", // The Gauntlet
+  "stinkyscape-158": "none: pending", // Stratos Swarm
+  "stinkyscape-159": "none: pending", // Faction: ETHICS
+  "stinkyscape-160": "none: pending", // Faction: Golden Accord
+  "stinkyscape-161": "none: pending", // Faction: Pegasus
+  "stinkyscape-162": "none: pending", // Faction: Star-Jumper Core
+  "stinkyscape-163": "none: pending", // Swear Loyalities
+  "stinkyscape-164": "none: pending", // The Syndicate
+  "stinkyscape-165": "none: pending", // The Trade Union
+  "stinkyscape-166": "none: pending", // Scanning Probe Mk1
+  "stinkyscape-167": "none: pending", // Scanning Probe Mk2
+  "stinkyscape-168": "none: pending", // Drone Hanger
+  "stinkyscape-169": "none: pending", // Tiny Asteroid
+  "stinkyscape-170": "none: pending", // Medium Asteroid
+  "stinkyscape-171": "none: pending", // Large Asteroid
+  "stinkyscape-172": "none: pending", // Huge Asteroid
+  "stinkyscape-173": "none: pending", // Abandoned Spice Tower
+  "stinkyscape-174": "none: pending", // Aerelret
+  "stinkyscape-175": "none: pending", // Frost Module
+  "stinkyscape-176": "none: pending", // Preemptive Strike
+  "stinkyscape-177": "none: pending", // Cloaking Module
+  "stinkyscape-t-dormant-starship": "none: pending", // Dormant Starship
+  "stinkyscape-t-drone-interceptor": "none: pending", // Drone Interceptor
+  "stinkyscape-t-drone-corvette": "none: pending", // Drone Corvette
+  "stinkyscape-t-shield-layer": "none: pending", // Drone Battleship (Shield Layer)
+  "stinkyscape-t-propagation-layer": "none: pending", // Drone Battleship (Propagation Layer)
+  "stinkyscape-t-meltdown-layer": "none: pending", // Drone Battleship (Meltdown Layer)
+  "stinkyscape-t-reknite": "none: pending", // Reknite
+  "stinkyscape-t-korrelite": "none: pending", // Korrelite
+  "stinkyscape-t-gellium": "none: pending", // Gellium
+  "stinkyscape-t-axnit": "none: pending", // Axnit
+  "stinkyscape-t-narcor": "none: pending", // Narcor
+  "stinkyscape-t-red-narcor": "none: pending", // Red Narcor
+  "stinkyscape-t-anomaly-found": { cast: { motif: "wipe" } }, // Anomaly Found!
+  "stinkyscape-t-ai-01": "none: pending", // Escort Protocol
+  "stinkyscape-t-ai-02": "none: pending", // Mining Subroutine
+  "stinkyscape-t-ai-03": "none: pending", // Route Optimizer
+  "stinkyscape-t-ai-04": "none: pending", // Predictive Shield
+  "stinkyscape-t-ai-05": "none: pending", // Launch Sequencer
+  "stinkyscape-t-ai-06": "none: pending", // Probe Relay
+  "stinkyscape-t-ai-07": "none: pending", // Combat Subroutine
+  "stinkyscape-t-ai-08": "none: pending", // Drone Uplink
+  "stinkyscape-t-ai-09": "none: pending", // Honeypot
+  "stinkyscape-t-ai-10": "none: pending", // Salvage Protocol
+}

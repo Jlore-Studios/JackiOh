@@ -1,9 +1,11 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, and R1363 shields.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers
+// and R2800000 set pieces.
 
+import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -54,6 +56,15 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** R2722001: a takeover's layers, bottom to top (fx.css). */
+const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
+
+/** R2800000: each set piece shape's layers, bottom to top (fx.css). */
+const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
+  vortex: ["dark", "spiral", "core"],
+  fold: ["edges", "light"],
+};
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -235,6 +246,26 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       el.setAttribute("data-size", cue.size);
       break;
     }
+    case "callout": {
+      // R2789000: a keyword's icon over the unit, one svg of one path. `data-callout`, not `data-keyword`, which the
+      // card's rules text matches; it names the keyword, never the card (R202).
+      const at = boxes.at ?? null;
+      const icon = KEYWORD_CALLOUT_ICONS[cue.keyword];
+      if (at === null || icon === undefined) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-callout", cue.keyword);
+      if (cue.still === true) el.setAttribute("data-still", "true");
+      const svg = doc.createElementNS(SVG_NS, "svg");
+      svg.setAttribute("class", "fx-callout-icon");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("aria-hidden", "true");
+      const path = doc.createElementNS(SVG_NS, "path");
+      path.setAttribute("d", icon.d);
+      if (icon.line === true) path.setAttribute("data-line", "true");
+      svg.appendChild(path);
+      el.appendChild(svg);
+      break;
+    }
     case "chaos": {
       el.setAttribute("data-text", t(cue.title));
       chaosLines(doc, el, cue.lines);
@@ -262,6 +293,39 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       el.setAttribute("data-direction", cue.direction);
       el.setAttribute("data-text", cue.text);
       tintVars(el, cue.tint);
+      break;
+    }
+    case "takeover": {
+      // R2722001: the board's darkening, a card-shaped silhouette (never a face, R202) sweeping into
+      // `at`, and the rays and the shockwave from there once the card lands at `--fx-land`.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-look", cue.look);
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
+      for (const part of TAKEOVER_PARTS) {
+        const child = doc.createElement("div");
+        child.className = `fx-takeover-${part}`;
+        el.appendChild(child);
+      }
+      break;
+    }
+    case "setPiece": {
+      // R2800000: a board clear's vortex or fold, centred on `at`; the cards it swallows are the stage's (`pull`).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-shape", cue.shape);
+      el.setAttribute("data-side", cue.side ?? "both");
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-spin", String(cue.spin));
+      el.style.setProperty("--fx-hold", `${Math.max(0, cue.holdMs)}ms`);
+      for (const part of SET_PIECE_PARTS[cue.shape]) {
+        const child = doc.createElement("div");
+        child.className = `fx-setPiece-${part}`;
+        el.appendChild(child);
+      }
       break;
     }
   }
@@ -320,6 +384,7 @@ export function standInCopy(source: Element): HTMLElement {
   }
   copy.style.removeProperty("--fx-lunge-x");
   copy.style.removeProperty("--fx-lunge-y");
+  copy.style.removeProperty("--fx-lunge-lift");
   copy.classList.add("fx-hold-card");
   return copy;
 }

@@ -142,6 +142,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   boardReplaced: 500,
   // Issue #2652 (R2652001).
   rolled: 1200,
+  // Issue #2783 (R2783000): a marker, resolved at once.
+  hookResolving: 0,
 };
 
 /* One event of every type, so the table can be exercised end to end. */
@@ -276,6 +278,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
   boardReplaced: { type: "boardReplaced", player: "p1" },
   rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
+  hookResolving: { type: "hookResolving", sourceId: "c1", defId: "core-001", controller: "p1", hook: "cry" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -340,7 +343,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(93);
+    expect(rows).toHaveLength(94);
   });
 
   it("gives every row an animation name and a testid template", () => {

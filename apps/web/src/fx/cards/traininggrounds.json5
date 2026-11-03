@@ -1,0 +1,75 @@
+// R2784000: the signature animation of every Training Grounds card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
+// default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
+// recipe) or "keep" (it plays over that recipe).
+{
+  "traininggrounds-001": "none: pending", // Spikey Steven
+  "traininggrounds-002": "none: pending", // Personal Trainer
+  "traininggrounds-003": "none: pending", // Group leader
+  "traininggrounds-004": "none: pending", // Boulder Fist Ogre
+  "traininggrounds-005": "none: pending", // Midlane Menace
+  "traininggrounds-006": "none: pending", // Chosen by the Sun
+  "traininggrounds-007": "none: pending", // Chosen by the Moon
+  "traininggrounds-008": "none: pending", // Clobberer
+  "traininggrounds-009": "none: pending", // Ravager
+  "traininggrounds-010": { cast: { motif: "volley" } }, // Fan of Knives
+  "traininggrounds-011": "none: pending", // Thwomp
+  "traininggrounds-012": "none: pending", // Fortify
+  "traininggrounds-013": "none: pending", // Explosive Runes
+  "traininggrounds-014": "none: pending", // Explosive Trap
+  "traininggrounds-015": "none: pending", // In a hurry
+  "traininggrounds-016": "none: pending", // Celestial Caller
+  "traininggrounds-017": "none: pending", // Flaming Felinor
+  "traininggrounds-018": "none: pending", // Knife Juggler
+  "traininggrounds-019": { aura: { look: "bloom", scope: "zone" } }, // Extra Rations
+  "traininggrounds-020": "none: pending", // Recruitment Posters
+  "traininggrounds-021": "none: pending", // Flame Tongue Totem
+  "traininggrounds-022": "none: pending", // Right-Hand Felinor
+  "traininggrounds-023": "none: pending", // Quadrupling Felinors
+  "traininggrounds-024": "none: pending", // Goliath Situation
+  "traininggrounds-025": "none: pending", // Trigor
+  "traininggrounds-026": { cast: { motif: "vanish" } }, // Path of Exile
+  "traininggrounds-027": "none: pending", // Hopeful Jelly Bean
+  "traininggrounds-028": "none: pending", // Occidental
+  "traininggrounds-029": "none: pending", // Oriental
+  "traininggrounds-030": { death: { motif: "wipe" } }, // Floodgates
+  "traininggrounds-031": "none: pending", // Level Up!
+  "traininggrounds-032": "none: pending", // Selfless Protector
+  "traininggrounds-033": "none: pending", // Guerilla Felinor
+  "traininggrounds-034": "none: pending", // Dino-size
+  "traininggrounds-035": "none: pending", // Corpse Recycler
+  "traininggrounds-036": "none: pending", // Training Dummy
+  "traininggrounds-037": "none: pending", // Seance
+  "traininggrounds-038": "none: pending", // Tutorial Master
+  "traininggrounds-039": "none: pending", // Call to Chaos (Training-Grounds Edition)
+  "traininggrounds-039-1": "none: pending", // Training-Grounds Golem
+  "traininggrounds-040": "none: pending", // Goetzmann Game Design
+  "traininggrounds-041": "none: pending", // Legacy: Bigot
+  "traininggrounds-042": "none: pending", // Legacy: Stockpile
+  "traininggrounds-043": "none: pending", // Legacy: Mr. Vanilla
+  "traininggrounds-044": "none: pending", // Legacy: Duplicating Felinors
+  "traininggrounds-045": "none: pending", // Legacy: Jlockeed's Weapons
+  "traininggrounds-046": "none: pending", // Legacy: Hit Job
+  "traininggrounds-047": "none: pending", // Legacy: Midrange Menace
+  "traininggrounds-048": "none: pending", // Legacy: Jlockeed Shredder-10
+  "traininggrounds-049": "none: pending", // Legacy: Reoccurring Dream
+  "traininggrounds-050": "none: pending", // Legacy: Glowy Jelly Bean
+  "traininggrounds-051": "none: pending", // Legacy: Big Felinor
+  "traininggrounds-052": "none: pending", // Legacy: Snom Bunny Mind Control
+  "traininggrounds-053": "none: pending", // Legacy: Prejudiced Postdoc
+  "traininggrounds-054": "none: pending", // Legacy: The Rock
+  "traininggrounds-055": "none: pending", // Legacy: Reminisce
+  "traininggrounds-056": "none: pending", // Legacy: Corpse Eater
+  "traininggrounds-057": "none: pending", // Legacy: Recycling Initiative
+  "traininggrounds-058": "none: pending", // Legacy: True Strike
+  "traininggrounds-059": "none: pending", // Legacy: Fig of Life
+  "traininggrounds-060": "none: pending", // Legacy: Rush Token Farm
+}

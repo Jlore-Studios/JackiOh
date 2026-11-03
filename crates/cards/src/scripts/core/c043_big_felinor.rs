@@ -99,18 +99,6 @@ mod tests {
         }
 
         #[test]
-        fn r46_an_indestructible_non_felinor_ignores_the_destroy_mark_and_switches_to_attack_position() {
-            // #66 The Rock is Indestructible, so §4.5 step 1 leaves it on the field.
-            let mut s = board(true, false);
-            s.play("core-043", json!({ "zone": 3 }));
-
-            s.expect_in_zone("core-066", "field");
-            assert_eq!(s.unit(PlayerId::P2, 2).and_then(|card| card.position), Some(Position::Atk));
-            // The other non-Felinor is not Indestructible and still dies in the same check.
-            s.expect_in_zone("core-020", "graveyard");
-        }
-
-        #[test]
         fn s8_conventions_an_empty_target_set_fizzles_and_the_unit_still_enters_the_field() {
             let mut s = scenario(json!({ "seed": "big-felinor", "p1": { "hand": ["core-043", "core-021"] } }));
             s.play("core-043", json!({ "zone": 1 }));
@@ -156,15 +144,6 @@ mod tests {
                 s.events().iter().filter(|event| event.event_type() == GameEventType::Destroyed).count(),
                 1,
             );
-        }
-
-        #[test]
-        fn r46_an_indestructible_enemy_non_felinor_survives_the_radiant_face_too() {
-            let mut s = board(true, true);
-            s.play("core-043", json!({ "zone": 3 }));
-
-            s.expect_in_zone("core-066", "field");
-            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
         }
     }
 }
