@@ -217,7 +217,9 @@ describe("R2784000 the per-set effects tables", () => {
     const files = new Set<string>();
     for (const [defId, aura] of Object.entries(examples)) {
       expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
-      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "hooks", hooks: {}, aura });
+      // #2793: Core's pass gave #14 and #46 a cast beside their auras.
+      const entry = FX_CARD_TABLE.get(defId);
+      expect(entry?.kind === "hooks" ? entry.aura : entry, defId).toEqual(aura);
       const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
       if (file !== undefined) files.add(file.file);
     }
