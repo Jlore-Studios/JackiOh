@@ -14982,6 +14982,13 @@
     "2884": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T04:04:31Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least-sure line was whether per-reason counts could reuse practice_seeds, but settled stores only paid/refused, early refusals store nothing, and the prune deletes rows, so a new table (a database migration) is unavoidable"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
