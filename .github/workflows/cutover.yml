@@ -536,7 +536,8 @@ jobs:
           umask 077
           pooler="https://api.supabase.com/v1/projects/$STAGING_REF/config/database/pooler"
           auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json")
-          size=$(curl -sS --fail-with-body "${auth[@]}" "$pooler" | jq -r 'if type == "array" then map(.default_pool_size) | max else .default_pool_size end')
+          # No size set reads as null: the compute's default, 15.
+          size=$(curl -sS --fail-with-body "${auth[@]}" "$pooler" | jq -r '(if type == "array" then map(.default_pool_size) | max else .default_pool_size end) // 15')
           echo "staging's pooler: $size clients"
           if [ "$size" -lt "$STAGING_POOL" ]; then
             curl -sS --fail-with-body "${auth[@]}" -X PATCH "$pooler" -d "{\"default_pool_size\": $STAGING_POOL}" > /dev/null
