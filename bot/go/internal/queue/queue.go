@@ -973,7 +973,8 @@ func Stop(ctx *hctx.Context, number int, by string) string {
 		record := stateItem(s, number)
 		record.Set("stop_requested", true).Set("stopped_by", by).Set("stopped_at", clock.ISO(ctx.Now())).
 			Set("forced", false).Set("pending_request", false)
-		record.Pop("hold") // out of the queue, it waits for no owner (its `bot:waiting` is off)
+		record.Pop("hold")       // out of the queue, it waits for no owner (its `bot:waiting` is off)
+		record.Pop(BuildNextKey) // nor keeps its planner's lane for a build (#2903)
 		if reserved {
 			record.Pop(OwnReviewKey)
 		}
