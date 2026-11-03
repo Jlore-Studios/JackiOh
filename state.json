@@ -16006,17 +16006,14 @@
     "what": "build #2957 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-03T19:11:36Z",
+    "at": "2026-11-03T19:28:59Z",
     "notes": [
-      "delivered review #2951 on claude-6 (run 41698823271): stopped",
-      "delivered review #2954 on claude-3 (run 41698482136): approved",
-      "delivered plan #2953 on claude-6 (run 41694841904): planned",
-      "started build #2953 on claude-6 (run 41702257788)",
-      "started review #2951 on claude-1 (run 41702374108)",
-      "started plan #2957 on muse (run 41702504126)",
+      "delivered plan #2957 on muse (run 41702504126): planned",
+      "delivered review #2951 on claude-1 (run 41702374108): stopped",
+      "could not deliver revise #2920 on claude-4 (run 41694561747), try 1 of 3 (GitHubError: GET /repos/Jlore-Studios/JackiOh/pulls/2920: HTTP 503: Service Unavailable\n): it is tried again next tick (2 more)",
+      "started build #2957 on muse (run 41704893411)",
       "nothing more to start: nothing is queued",
-      "pruned 7 plan file(s) older than 7 days",
-      "#2957: typed it Task"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16720,7 +16717,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T19:11:36Z",
+  "loop_tick": "2026-11-03T19:28:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
