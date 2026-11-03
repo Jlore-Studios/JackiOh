@@ -161,8 +161,8 @@ func TestAppendCreatesThenAddsAndRetriesARace(t *testing.T) {
 		slept++
 	}
 	Append(g, 12, RunMarker+"\n## one\n", sleep)
-	if !g.branches[Branch] || !strings.Contains(g.files[[2]string{Branch, "vercel.json"}][0], `"deploymentEnabled": false`) {
-		t.Fatal("the branch starts with its vercel.json")
+	if !g.branches[Branch] {
+		t.Fatal("the first append makes the branch")
 	}
 	g.conflicts = 1
 	Append(g, 12, RunMarker+"\n## two\n", sleep)

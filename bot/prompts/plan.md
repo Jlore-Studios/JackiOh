@@ -68,7 +68,7 @@ not change goes to the people (below). Use exactly these sections:
 7. **Open questions.** Anything only a person can decide. If the task cannot be done without
    that, say so first, before the Goal. If nobody but a person can do it at all (every change it
    needs is under `.github/`, `.harness/`, `.squishy/` or `bot/`, which the bot may not change, or
-   it is a secret, a token, a dashboard setting such as GitHub's, Vercel's, Render's, Supabase's
+   it is a secret, a token, a dashboard setting such as GitHub's, Supabase's
    or Cloudflare's, or an account), make the plan's first line, before **Goal**,
    `**Human required:** <what a person must do, and where>`, and still write the plan, for the
    person who does it. The harness then hands the issue to the people (`human required`, the
