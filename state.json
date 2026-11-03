@@ -15358,10 +15358,14 @@
     "what": "review #2935 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-03T15:03:01Z",
+    "at": "2026-11-03T15:11:41Z",
     "notes": [
-      "delivered revise #2917 on muse (run 41642513159): approved",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 114h 54m; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 85h 54m"
+      "delivered build #2927 on claude-7 (run 41652523525): built",
+      "delivered build #2924 on muse (run 41652059899): built",
+      "started review #2936 on muse (run 41661946856)",
+      "started review #2935 on claude-7 (run 41662069914)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 114h 43m; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 85h 43m",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16067,7 +16071,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T15:03:01Z",
+  "loop_tick": "2026-11-03T15:11:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
