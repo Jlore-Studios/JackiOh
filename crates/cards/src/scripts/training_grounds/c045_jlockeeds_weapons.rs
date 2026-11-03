@@ -60,6 +60,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     fn lane(s: &Scenario, player: PlayerId, at: i32) -> CardInstance {
         match s.unit(player, at) {
             Some(unit) => unit,
@@ -75,7 +77,6 @@ mod tests {
 
             #[test]
             fn gives_allied_units_3_attack_while_it_is_on_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["traininggrounds-045"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
                     "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
@@ -89,7 +90,6 @@ mod tests {
 
             #[test]
             fn grants_first_strike_so_a_4_health_ally_kills_bigot_and_takes_nothing_back_s4_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["traininggrounds-045"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
                     "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
@@ -106,7 +106,6 @@ mod tests {
 
             #[test]
             fn covers_a_unit_summoned_after_it_rush_included_s10_4_layer_5_r83() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["traininggrounds-045"], "hand": ["core-015", "core-005"], "library": ["core-005"] },
                     "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
@@ -130,7 +129,6 @@ mod tests {
 
             #[test]
             fn takes_the_whole_aura_away_when_it_is_destroyed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": ["traininggrounds-045"],
@@ -161,7 +159,6 @@ mod tests {
 
             #[test]
             fn gives_6_attack_and_keeps_both_keywords_s8_conventions_only_the_number_changes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [{ "def": "traininggrounds-045", "radiant": true }],
@@ -183,7 +180,6 @@ mod tests {
 
             #[test]
             fn covers_a_unit_summoned_after_it_at_6_rush_included() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [{ "def": "traininggrounds-045", "radiant": true }],
@@ -209,7 +205,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gives_4_attack_and_a_degrade_2() {
             for (upgrade, attack) in [(true, 4), (false, 2)] {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "backrow": ["traininggrounds-045"], "field": ["core-008"] } }));
                 let moved = if upgrade {
                     crate::upgrade_number(&mut s, "traininggrounds-045", "attack")
@@ -226,7 +221,6 @@ mod tests {
     /// R1081000: a Unit standing in the backrow is one of "your units": it gets the +3 attack.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_is_one_of_your_units() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "backrow": [{ "def": "traininggrounds-045", "lane": 1 }], "field": ["core-008"], "hand": ["core-005"] },
             "p2": { "hand": ["core-005"] }

@@ -56,6 +56,8 @@ pub fn script_v0_4_9() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -68,19 +70,18 @@ mod tests {
     const ANCHOR: &str = "core-010";
 
     /// The ids a query answers, in its order.
-    fn ids<T: std::borrow::Borrow<CardDef>>(defs: Vec<T>) -> Vec<String> {
+    fn ids_of_defs<T: std::borrow::Borrow<CardDef>>(defs: Vec<T>) -> Vec<String> {
         defs.iter().map(|def| <T as std::borrow::Borrow<CardDef>>::borrow(def).id.clone()).collect()
     }
 
     /// The non-token KY cards, the pool the Notebook shuffles from (§5.1).
     fn ky_pool() -> Vec<String> {
-        ids(crate::query::query(&json_as(json!({ "tags": ["KY"] }))))
+        ids_of_defs(crate::query::query(&json_as(json!({ "tags": ["KY"] }))))
     }
 
     /// p1 plays the Notebook on `radiant`'s face, its `cards` stepped `step` times, with `seed`, and
     /// returns the scenario and the cards its play put in the library.
     fn shuffled(seed: &str, radiant: bool, step: i32) -> (Scenario, Vec<CardInstance>) {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": "core-051-1", "radiant": radiant }, ANCHOR], "library": LIBRARY },
@@ -139,7 +140,7 @@ mod tests {
 
         #[test]
         fn r1828002_across_30_seeds_no_ky_token_is_shuffled_in() {
-            let tokens = ids(crate::query::query(&json_as(json!({ "tags": ["KY", "Token"] }))));
+            let tokens = ids_of_defs(crate::query::query(&json_as(json!({ "tags": ["KY", "Token"] }))));
             assert_eq!(
                 tokens,
                 [
@@ -168,7 +169,6 @@ mod tests {
 
         #[test]
         fn r11_a_spell_token_goes_to_the_graveyard_like_any_spell() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-051-1"], "library": LIBRARY } }));
 
             s.play("core-051-1", json!({})).expect_in_zone("core-051-1", "graveyard");
@@ -217,7 +217,7 @@ mod tests {
         #[test]
         fn s5_1_the_whole_non_token_catalog_leaves_it_out_and_holds_n51_that_generates_it() {
             crate::register_all();
-            let all = ids(crate::query::query(&json_as(json!({}))));
+            let all = ids_of_defs(crate::query::query(&json_as(json!({}))));
 
             assert!(!all.contains(&"core-051-1".to_string()));
             assert!(all.contains(&"core-051".to_string()));
@@ -231,7 +231,7 @@ mod tests {
             // the generator: §8.8 #34, #38, #45, #79, #87; §8.9 (#1187) #20 and #25 but not its token #20.1;
             // §8.10 (#1884) #25 but not its token #4.2.
             assert_eq!(
-                ids(crate::query::pool("core-057", &json_as(json!({ "tags": ["KY"] })))),
+                ids_of_defs(crate::query::pool("core-057", &json_as(json!({ "tags": ["KY"] })))),
                 vec![
                     "core-031".to_string(),
                     "core-051".to_string(),
@@ -249,20 +249,20 @@ mod tests {
                     "stinkyscape-025".to_string(),
                 ]
             );
-            assert!(!ids(crate::query::query(&json_as(json!({ "tags": ["KY"] })))).contains(&"core-051-1".to_string()));
+            assert!(!ids_of_defs(crate::query::query(&json_as(json!({ "tags": ["KY"] })))).contains(&"core-051-1".to_string()));
         }
 
         #[test]
         fn r60_it_is_reachable_only_by_a_query_that_names_the_token_pool_itself_s5_1() {
             crate::register_all();
-            assert!(ids(crate::query::query(&json_as(json!({ "tags": ["Token"] })))).contains(&"core-051-1".to_string()));
+            assert!(ids_of_defs(crate::query::query(&json_as(json!({ "tags": ["Token"] })))).contains(&"core-051-1".to_string()));
             assert_eq!(
-                ids(crate::query::query(&json_as(json!({ "defId": "core-051-1" })))),
+                ids_of_defs(crate::query::query(&json_as(json!({ "defId": "core-051-1" })))),
                 vec!["core-051-1".to_string()]
             );
             // A cost or type filter that does not ask for tokens still cannot reach it.
             assert!(
-                !ids(crate::query::query(&json_as(json!({ "type": "Spell", "cost": 1 })))).contains(&"core-051-1".to_string())
+                !ids_of_defs(crate::query::query(&json_as(json!({ "type": "Spell", "cost": 1 })))).contains(&"core-051-1".to_string())
             );
         }
     }

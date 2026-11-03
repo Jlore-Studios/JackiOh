@@ -59,6 +59,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// Reach the radiant face by setting the flag on the hand instance, the state §5.2's `set_radiant`
     /// leaves behind on a card in hand (R60), so the play that follows is a real one.
     fn make_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
@@ -75,7 +77,6 @@ mod tests {
 
         #[test]
         fn destroys_the_target_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046", "core-010"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
@@ -91,7 +92,6 @@ mod tests {
 
         #[test]
         fn r46_an_indestructible_unit_ignores_the_destroy_mark_and_survives() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046", "core-010"], "mana": 4 },
                 // #66 The Rock is Indestructible (§8.3 row 66).
@@ -107,7 +107,6 @@ mod tests {
 
         #[test]
         fn destroys_an_ally_as_readily_as_an_enemy_target_unit_is_narrowed_to_neither_side() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046", "core-010"], "field": ["core-012"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
@@ -122,7 +121,6 @@ mod tests {
 
         #[test]
         fn fizzles_with_no_unit_on_the_board_and_the_spell_still_counts_as_played_s8_conventions() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["traininggrounds-046", "core-010"], "mana": 4 }, "p2": {} }));
 
             s.play("traininggrounds-046", json!({}));
@@ -138,7 +136,6 @@ mod tests {
 
         #[test]
         fn s3_1_also_destroys_the_units_adjacent_to_the_target_on_its_own_side() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046"], "field": ["core-011", "core-025", "core-012"], "mana": 4 },
                 // lanes 1-4: the target sits in lane 2, so lanes 1 and 3 are adjacent and lane 4 is not.
@@ -163,7 +160,6 @@ mod tests {
 
         #[test]
         fn s3_1_never_reaches_across_the_center_line() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046"], "field": ["core-011", "core-025", "core-012"], "mana": 4 },
                 "p2": { "field": ["core-002", "core-019", "core-020"] }
@@ -184,7 +180,6 @@ mod tests {
 
         #[test]
         fn r46_spares_an_indestructible_neighbour_and_kills_the_rest() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046"], "mana": 4 },
                 "p2": { "field": [{ "def": "core-025", "radiant": true }, "core-019", "core-012"] }
@@ -203,7 +198,6 @@ mod tests {
 
         #[test]
         fn s3_1_on_its_side_cuts_both_ways_an_ally_target_takes_your_own_neighbours_with_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046"], "field": ["core-011", "core-025", "core-012"], "mana": 4 },
                 "p2": { "field": ["core-002", "core-019", "core-020"] }
@@ -224,7 +218,6 @@ mod tests {
 
         #[test]
         fn kills_the_target_alone_when_its_neighbouring_lanes_are_empty() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["traininggrounds-046", "core-010"], "mana": 4 },
                 "p2": { "field": [{ "def": "core-019", "lane": 3 }] }

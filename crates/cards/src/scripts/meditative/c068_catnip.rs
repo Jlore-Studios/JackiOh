@@ -70,7 +70,6 @@ mod tests {
 
     #[test]
     fn r33_face_down_only_its_controller_reads_it() {
-        crate::register_all();
         let s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [set_catnip(false, 3)] },
@@ -82,7 +81,6 @@ mod tests {
 
     #[test]
     fn r1063_after_the_opponent_s_spell_resolves_it_animates_a_5_5() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [set_catnip(false, 2)] },
@@ -96,7 +94,6 @@ mod tests {
 
     #[test]
     fn r1063_a_spell_cast_counts() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [set_catnip(false, 2)] },
@@ -175,7 +172,6 @@ mod tests {
 
     #[test]
     fn r1063_already_a_unit_a_later_spell_does_nothing() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [set_catnip(false, 2)] },
@@ -190,7 +186,6 @@ mod tests {
 
     #[test]
     fn radiant_10_10_taunt() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [set_catnip(true, 2)] },

@@ -68,7 +68,6 @@ mod tests {
     }
 
     fn secure_board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [{ "def": SECURE, "radiant": radiant }, BOOK_OF_STATS, FILLER],

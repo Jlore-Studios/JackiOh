@@ -82,6 +82,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, JOURNEY_COMPLETE, JOURNEY_KEY};
+    use crate::ids;
     use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
@@ -125,10 +126,6 @@ mod tests {
             .id
     }
 
-    fn ids(cards: Vec<CardInstance>) -> Vec<String> {
-        cards.into_iter().map(|card| card.id).collect()
-    }
-
     /// The Journey Completes in p1's library.
     fn completes(s: &Scenario) -> Vec<CardInstance> {
         s.pile(P1, "library")
@@ -168,7 +165,7 @@ mod tests {
                 // order the answer lists them in, so this listing still means Pointmaster, then the 7/7.
                 s.answer(json!([seven, pointmaster]));
 
-                assert_eq!(ids(s.pile(P1, "exile")), vec![pointmaster.clone(), seven.clone()]);
+                assert_eq!(ids(&s.pile(P1, "exile")), vec![pointmaster.clone(), seven.clone()]);
                 let library = s.pile(P1, "library");
                 assert_eq!(library.len(), 4);
                 let completes = completes(&s);
@@ -222,14 +219,14 @@ mod tests {
                     &[POINTMASTER, MENACE, FILLER],
                     json!([FILLER, FILLER]),
                 );
-                let library = ids(s.pile(P1, "library"));
+                let library = ids(&s.pile(P1, "library"));
                 s.play(ID, json!({}));
                 assert_eq!(js(&open(&s).kind), json!("pick"));
                 s.answer(json!([]));
 
                 assert!(s.state().pending.is_none());
                 assert!(s.pile(P1, "exile").is_empty());
-                assert_eq!(ids(s.pile(P1, "library")), library);
+                assert_eq!(ids(&s.pile(P1, "library")), library);
                 assert_eq!(shuffled_in(&s), 0);
                 assert_eq!(s.hand(P1).len(), 3);
                 s.expect_in_zone(ID, "graveyard");
@@ -270,7 +267,7 @@ mod tests {
                 s.answer(json!([token, menace]));
 
                 s.expect_in_zone(token.as_str(), "gone");
-                assert_eq!(ids(s.pile(P1, "exile")), vec![menace.clone()]);
+                assert_eq!(ids(&s.pile(P1, "exile")), vec![menace.clone()]);
                 let completes = completes(&s);
                 assert_eq!(completes.len(), 1);
                 assert_eq!(
@@ -296,7 +293,7 @@ mod tests {
                     GameEvent::LibraryOverflow { player, def_id, outcome: LibraryOverflowOutcome::NotCreated, .. }
                         if *player == P1 && def_id == JOURNEY_COMPLETE
                 )));
-                assert_eq!(ids(s.pile(P1, "exile")), vec![pointmaster, menace]);
+                assert_eq!(ids(&s.pile(P1, "exile")), vec![pointmaster, menace]);
             }
 
             #[test]
@@ -313,7 +310,7 @@ mod tests {
                 assert_eq!(open(&s).max, 3);
                 s.answer(json!(picks));
 
-                assert_eq!(ids(s.pile(P1, "exile")), picks);
+                assert_eq!(ids(&s.pile(P1, "exile")), picks);
                 let completes = completes(&s);
                 assert_eq!(completes.len(), 1);
                 assert_eq!(completes[0].memory.get(JOURNEY_KEY), Some(&json!(picks)));

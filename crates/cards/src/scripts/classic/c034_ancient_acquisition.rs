@@ -46,6 +46,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const ACQUIRE: &str = "classic-034";
     const RECURRING: &str = "classic-047"; // C #47 Recurring Felinor, (2) Unit: "Cry: Cast Ancient Acquisition."
     const FILLER: &str = "core-005"; // (1) Spell, a spare card (§2.5).
@@ -222,7 +224,6 @@ mod tests {
 
             #[test]
             fn only_your_own_graveyard_the_opponents_graveyard_and_your_exile_are_untouched() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ACQUIRE, FILLER], "graveyard": [MENACE], "exile": [VANILLA] },
                     "p2": { "hand": [FILLER], "graveyard": [SEVEN, FELINORS] },
@@ -268,7 +269,6 @@ mod tests {
 
             #[test]
             fn r70_cast_by_c_47_recurring_felinor_the_returns_are_still_its_casters() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RECURRING, FILLER], "graveyard": [MENACE, VANILLA] },
                     "p2": { "hand": [FILLER] },
@@ -323,7 +323,6 @@ mod tests {
 
             #[test]
             fn only_your_own_piles_the_opponents_piles_are_untouched() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": ACQUIRE, "radiant": true }, FILLER], "graveyard": [MENACE], "exile": [VANILLA] },
                     "p2": { "hand": [FILLER], "graveyard": [SEVEN], "exile": [FELINORS] },

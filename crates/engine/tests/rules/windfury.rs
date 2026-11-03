@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{deft_duelist, plain, windfurier};
 use crate::rules::fixtures::harness::{act, act_result, new_game, put, slot};
 
-fn input(body: ActionBody, player_id: PlayerId) -> ActionInput {
+fn player_input(body: ActionBody, player_id: PlayerId) -> ActionInput {
     ActionInput { body, player_id }
 }
 
@@ -15,9 +15,9 @@ fn input(body: ActionBody, player_id: PlayerId) -> ActionInput {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, input(ActionBody::Mulligan { keep }, PlayerId::P1));
+    state = act(&state, player_input(ActionBody::Mulligan { keep }, PlayerId::P1));
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(&state, input(ActionBody::Mulligan { keep }, PlayerId::P2));
+    state = act(&state, player_input(ActionBody::Mulligan { keep }, PlayerId::P2));
     state
 }
 
@@ -40,7 +40,7 @@ fn unit_at_mut(state: &mut GameState, player: PlayerId, lane: i32) -> &mut CardI
 }
 
 fn attack_body(state: &GameState, lane: i32) -> ActionInput {
-    input(
+    player_input(
         ActionBody::Attack {
             attacker_id: unit_in(state, PlayerId::P1, lane).id.clone(),
             target_id: "hero-p2".to_string(),
@@ -144,7 +144,7 @@ mod r636_windfury {
         expect_refusal(
             act_result(
                 &state,
-                input(
+                player_input(
                     ActionBody::SwitchPosition {
                         instance_id: wind.id.clone(),
                     },
@@ -168,7 +168,7 @@ mod r636_windfury {
         let instance_id = unit_in(&state, PlayerId::P1, 1).id.clone();
         state = act(
             &state,
-            input(ActionBody::SwitchPosition { instance_id }, PlayerId::P1),
+            player_input(ActionBody::SwitchPosition { instance_id }, PlayerId::P1),
         );
         // An effect flips it back to Attack Position (R20, no exertion): the switch it made already spent the turn's.
         let card = unit_in(&state, PlayerId::P1, 1).clone();
@@ -189,7 +189,7 @@ mod r636_windfury {
         expect_refusal(
             act_result(
                 &state,
-                input(
+                player_input(
                     ActionBody::Attack {
                         attacker_id: wind.id.clone(),
                         target_id: "hero-p2".to_string(),
@@ -214,8 +214,8 @@ mod r636_windfury {
         );
         state = attack_hero(&state, 1);
         state = attack_hero(&state, 1);
-        state = act(&state, input(ActionBody::EndTurn, PlayerId::P1));
-        state = act(&state, input(ActionBody::EndTurn, PlayerId::P2));
+        state = act(&state, player_input(ActionBody::EndTurn, PlayerId::P1));
+        state = act(&state, player_input(ActionBody::EndTurn, PlayerId::P2));
         assert_eq!(state.active, PlayerId::P1);
         assert_eq!(
             unit_in(&state, PlayerId::P1, 1).exertion,

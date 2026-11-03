@@ -8,14 +8,7 @@ use jackioh_engine::testkit::PlayerId::P1;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{answer, ask_controller, note, notes, playing, round_trip};
-use crate::rules::fixtures::harness::sink_for;
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{by, sink_for};
 
 fn five() -> Vec<RandomEntry> {
     (0..5)

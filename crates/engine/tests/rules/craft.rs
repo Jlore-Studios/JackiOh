@@ -12,7 +12,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::craft::register_craft_fixtures;
-use crate::rules::fixtures::harness::{act, act_logged, setup_catalog, sink_for};
+use crate::rules::fixtures::harness::{act, act_logged, by, setup_catalog, sink_for};
 use crate::rules::fixtures::prompt_harness::{
     AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, open_as, round_trip,
 };
@@ -20,13 +20,6 @@ use crate::rules::fixtures::prompts::register_prompt_fixtures;
 
 fn action(literal: Value) -> Action {
     json_as(literal)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
 }
 
 /// A minimal valid Unit recipe at the given cost, all the budget in stats.

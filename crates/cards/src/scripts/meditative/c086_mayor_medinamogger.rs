@@ -33,6 +33,8 @@ mod tests {
 
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -49,7 +51,6 @@ mod tests {
 
             #[test]
             fn r1200_while_it_acts_plays_are_offered_without_targets_and_the_view_flags_it() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [BURN, FILLER], "field": [MAYOR] },
                     "p2": { "hand": [FILLER], "field": [GRUNT] },
@@ -74,7 +75,6 @@ mod tests {
 
             #[test]
             fn r1200_a_declared_target_is_drawn_when_the_play_resolves() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "mayor-burn",
                     "p1": { "hand": [BURN, FILLER], "field": [MAYOR] },
@@ -121,7 +121,6 @@ mod tests {
 
             #[test]
             fn r1200_choices_return_once_the_mayor_leaves() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BURN, FILLER], "field": [MAYOR] },
                     "p2": { "hand": [FILLER], "field": [GRUNT] },
@@ -173,7 +172,6 @@ mod tests {
 
             #[test]
             fn the_radiant_mayor_flags_random_targets_too() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MAYOR, "radiant": true }] },
                     "p2": { "hand": [FILLER] },

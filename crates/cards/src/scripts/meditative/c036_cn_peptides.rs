@@ -70,6 +70,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -182,7 +184,6 @@ mod tests {
 
             #[test]
             fn cannot_be_played_with_no_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "peptides-no-unit",
                     "p1": { "hand": [PEPTIDES, FILLER], "library": filler(4) },

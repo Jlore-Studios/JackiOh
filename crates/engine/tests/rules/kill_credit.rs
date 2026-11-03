@@ -34,7 +34,7 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
         .clone()
 }
 
-fn input(player: PlayerId, body: ActionBody) -> ActionInput {
+fn player_input(player: PlayerId, body: ActionBody) -> ActionInput {
     ActionInput {
         body,
         player_id: player,
@@ -76,7 +76,7 @@ mod r42_r412_with_kill_credit {
             json!({}),
         );
         let mut play = recorder(&state);
-        let ended = play.play(input(PlayerId::P1, ActionBody::EndTurn));
+        let ended = play.play(player_input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(
             destroyed(&ended.events),
             vec![(victim.id.clone(), Some(credited.id.clone()))]
@@ -108,7 +108,7 @@ mod r42_r412_with_kill_credit {
             slot(PlayerId::P2, Row::Units, 1),
             json!({}),
         );
-        let result = recorder(&state).play(input(PlayerId::P1, ActionBody::EndTurn));
+        let result = recorder(&state).play(player_input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(
             destroyed(&result.events),
             vec![(victim.id.clone(), Some(striker.id.clone()))]
@@ -132,7 +132,7 @@ mod r42_r412_with_kill_credit {
             slot(PlayerId::P2, Row::Units, 4),
             json!({}),
         );
-        let result = recorder(&state).play(input(PlayerId::P1, ActionBody::EndTurn));
+        let result = recorder(&state).play(player_input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(
             destroyed(&result.events),
             vec![(victim.id.clone(), Some(striker.id.clone()))]
@@ -155,7 +155,7 @@ mod r42_r412_with_kill_credit {
             json!({}),
         );
         let mut play = recorder(&state);
-        let ended = play.play(input(PlayerId::P1, ActionBody::EndTurn));
+        let ended = play.play(player_input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(
             destroyed(&ended.events),
             vec![(victim.id.clone(), Some(credited.id.clone()))]

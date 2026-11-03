@@ -27,6 +27,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -165,7 +167,6 @@ mod tests {
 
             #[test]
             fn s7_a_rush_token_summoned_by_n15_is_a_3_3_whose_rush_comes_through_unitview_s10_4_layer_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-015"] } }));
                 s.play("core-015", json!({}));
 
@@ -181,7 +182,6 @@ mod tests {
 
             #[test]
             fn s7_stat_overrides_a_rush_token_summoned_as_5_5_n95_shows_5_5_and_keeps_rush_and_cost_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let token = summon_rush_token(&mut s, json!({ "statsOverride": { "attack": 5, "health": 5 } }));
 
@@ -197,7 +197,6 @@ mod tests {
 
             #[test]
             fn r11_a_rush_token_that_dies_in_combat_ceases_to_exist_and_never_reaches_a_graveyard_or_exile() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-rush"] }, "p2": { "field": ["core-025"] } }));
                 let token = s.unit(P1, 1).expect("a Rush Token in p1's lane 1");
                 assert!(is_unit_token(s.state(), &token));
@@ -232,7 +231,6 @@ mod tests {
 
             #[test]
             fn r11_a_rush_token_card_sits_in_a_library_and_a_hand_and_is_drawn_and_played_normally_n75() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-015"], "library": ["core-t-rush"] } }));
                 let card = s.pile(P1, "library").into_iter().next().expect("the Rush Token card in the library");
                 s.expect_in_zone(&card, "library");
@@ -264,7 +262,6 @@ mod tests {
 
             #[test]
             fn r74_r275_a_radiant_rush_token_reads_6_6_with_rush_and_cleave() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "field": [{ "def": "core-t-rush", "radiant": true }] } }));
                 let token = s.unit(P1, 1).expect("a radiant Rush Token in p1's lane 1");
 
@@ -307,7 +304,6 @@ mod tests {
 
             #[test]
             fn s7_stat_overrides_on_the_radiant_face_a_5_5_radiant_rush_token_shows_5_5_and_keeps_rush_and_cleave() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let token = summon_rush_token(
                     &mut s,
@@ -322,7 +318,6 @@ mod tests {
 
             #[test]
             fn r11_a_radiant_rush_token_that_dies_in_combat_ceases_to_exist_just_as_the_base_face_does() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": "core-t-rush", "radiant": true }] },

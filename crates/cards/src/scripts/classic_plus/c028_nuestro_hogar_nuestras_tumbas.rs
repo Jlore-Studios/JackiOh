@@ -31,6 +31,8 @@ mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -135,7 +137,6 @@ mod tests {
 
             #[test]
             fn s4_5_a_bounce_is_no_death_flood_returns_it_and_nothing_is_healed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FLOOD, FILLER], "mana": 5 },
                     "p2": { "hand": [FILLER], "field": [HOGAR], "health": 20 },
@@ -148,7 +149,6 @@ mod tests {
 
             #[test]
             fn s4_5_an_exile_is_no_death_ceaseless_void_exiles_it_and_nothing_is_healed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": VOID, "costOverride": 0 }, FILLER] },
                     "p2": { "hand": [FILLER], "field": [HOGAR], "health": 20 },
@@ -161,7 +161,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_moves_heal_by_1_it_heals_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MENACE] },
                     "p2": { "hand": [FILLER], "field": [HOGAR], "health": 20 },
@@ -174,7 +173,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_moves_it_the_other_way_it_heals_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MENACE] },
                     "p2": { "hand": [FILLER], "field": [HOGAR], "health": 20 },
@@ -191,7 +189,6 @@ mod tests {
 
             #[test]
             fn is_a_6_8_with_taunt_reborn_and_divine_shield() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "field": [{ "def": HOGAR, "radiant": true }] } }));
                 s.expect_stats(HOGAR, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
                 let mut kinds = keywords(&s, HOGAR);
@@ -209,7 +206,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_steps_from_6_it_heals_7() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MENACE, MENACE] },
                     "p2": { "hand": [FILLER], "field": [{ "def": HOGAR, "radiant": true }], "health": 20 },

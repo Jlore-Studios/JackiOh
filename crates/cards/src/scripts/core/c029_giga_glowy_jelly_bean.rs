@@ -113,6 +113,8 @@ pub fn script_v0_5_9f() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -309,7 +311,6 @@ mod tests {
 
         /// p1 holds one GIGA and has one in the deck, with `mana` left to Float.
         fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
-            crate::register_all();
             let s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": "core-029", "radiant": radiant }, "core-005"],

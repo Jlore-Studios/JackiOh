@@ -74,6 +74,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const SLIME: &str = "classic-027";
@@ -266,7 +268,6 @@ mod tests {
 
             #[test]
             fn r471_a_placement_of_1_on_it_puts_2_as_one_placement_one_counterchanged_carrying_placed_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X] },
                     "p2": { "hand": [ANCHOR] },
@@ -284,7 +285,6 @@ mod tests {
 
             #[test]
             fn a_placement_of_n_puts_2n_a_radiant_outbreak_s_2_put_4_on_top_of_what_it_had() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR],
@@ -307,7 +307,6 @@ mod tests {
 
             #[test]
             fn whoever_places_them_the_opponent_s_placement_on_it_is_doubled_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ANCHOR], "field": [SLIME] },
@@ -322,7 +321,6 @@ mod tests {
 
             #[test]
             fn r471_r689_each_one_token_placement_on_it_puts_2_each_its_own_placement_one_answer_lands_all_five() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK_OF_PLAGUE, ANCHOR], "field": [SLIME, VANILLA] },
                     "p2": { "hand": [ANCHOR] },
@@ -342,7 +340,6 @@ mod tests {
 
             #[test]
             fn s6_3_vanilla_a_vanilla_copy_has_no_text_so_a_placement_of_1_on_it_puts_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": POSTDOC, "radiant": true }, OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X] },
                     "p2": { "hand": [ANCHOR] },
@@ -363,7 +360,6 @@ mod tests {
 
             #[test]
             fn r78_its_tokens_reset_when_it_leaves_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FLOOD, ANCHOR], "field": [{ "def": SLIME, "counters": { "plague": 4 } }] },
                     "p2": { "hand": [ANCHOR] },
@@ -378,7 +374,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_makes_it_3_a_degrade_1() {
-                crate::register_all();
                 let mut up = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X, X] },
                     "p2": { "hand": [ANCHOR] },
@@ -437,7 +432,6 @@ mod tests {
 
             #[test]
             fn is_a_2_2_and_a_placement_of_1_on_it_puts_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": SLIME, "radiant": true }], "library": [X, X, X, X] },
                     "p2": { "hand": [ANCHOR] },
@@ -454,7 +448,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_on_the_radiant_face_steps_3_to_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": SLIME, "radiant": true }], "library": [X, X, X, X, X] },
                     "p2": { "hand": [ANCHOR] },

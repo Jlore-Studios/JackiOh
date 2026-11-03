@@ -40,6 +40,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use jackioh_engine::zones::{ZoneSlot, lock_zone};
 
     const P1: PlayerId = PlayerId::P1;
@@ -49,7 +51,6 @@ mod tests {
 
     /// p1 plays Devin Bot (`radiant_face`) with an otherwise empty board.
     fn played(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -75,7 +76,6 @@ mod tests {
 
     /// p1 with `field` already on the board and Devin Bot in hand.
     fn board(seed: &str, field: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [BOT, FILLER], "field": field, "library": filler(3) },
@@ -231,7 +231,6 @@ mod tests {
 
             #[test]
             fn r1080_r129_a_full_board_refuses_the_play() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "devin-full-board",
                     "p1": {
@@ -248,7 +247,6 @@ mod tests {
 
             #[test]
             fn its_death_brings_nothing_back_and_fires_no_cry() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "devin-reborn",
                     "p1": {

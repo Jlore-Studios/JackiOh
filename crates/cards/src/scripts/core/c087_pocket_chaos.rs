@@ -91,6 +91,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -162,7 +164,6 @@ mod tests {
 
         #[test]
         fn r73_swaps_the_two_heroes_health_and_leaves_each_hero_s_armor_where_it_was() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "health": 12, "armor": 2, "mana": 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
@@ -181,7 +182,6 @@ mod tests {
 
         #[test]
         fn then_adds_a_pocket_chaos_to_the_opponent_s_hand_and_exiles_this_one() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "health": 12, "mana": 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
@@ -207,7 +207,6 @@ mod tests {
 
         #[test]
         fn the_base_face_draws_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "library": [GARY, RENO] },
@@ -223,7 +222,6 @@ mod tests {
 
         #[test]
         fn r73_swaps_the_board_lane_by_lane_in_both_rows_control_changes_ownership_does_not() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": {
@@ -265,7 +263,6 @@ mod tests {
 
         #[test]
         fn r33_a_swapped_face_down_trap_stays_face_down_and_only_its_new_controller_may_read_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "backrow": [{ "def": SHEEPISH, "lane": 2 }] },
@@ -288,7 +285,6 @@ mod tests {
 
         #[test]
         fn r88_locks_stay_with_their_zones_so_a_card_whose_destination_is_locked_bounces_home() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "field": [{ "def": GARY, "lane": 1 }] },
@@ -312,7 +308,6 @@ mod tests {
 
         #[test]
         fn r73_swaps_the_libraries_whole_and_in_order_and_each_swapped_card_changes_owner_r12() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "library": [GARY], "mana": 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
@@ -337,7 +332,6 @@ mod tests {
 
         #[test]
         fn s6_3_a_play_naming_no_swap_mode_fizzles_that_clause_the_gift_and_the_exile_still_happen() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "health": 12, "mana": 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)
@@ -362,7 +356,6 @@ mod tests {
 
         #[test]
         fn may_skip_adding_it_the_swap_and_the_exile_still_happen_the_opponent_gains_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": CHAOS, "radiant": true }, FILLER], "health": 12, "library": [GARY], "mana": 10 }, // (4): keep mana after the play
@@ -398,7 +391,6 @@ mod tests {
 
         #[test]
         fn gift_is_still_an_option_and_the_radiant_copy_hands_over_a_base_one() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": CHAOS, "radiant": true }, FILLER], "library": [GARY], "mana": 10 }, // (4): keep mana after the play
@@ -421,7 +413,6 @@ mod tests {
 
         #[test]
         fn skipping_the_gift_does_not_skip_the_board_swap_either() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": {
@@ -496,7 +487,6 @@ mod tests {
 
         #[test]
         fn r312_a_swapped_library_is_unknown_to_its_new_owner_on_both_sides() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [CHAOS, FILLER], "library": [GARY], "mana": 10 }, // (4): keep mana after the play so the turn does not auto-end (R82)

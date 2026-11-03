@@ -1,10 +1,10 @@
-// R2725003, R2725004: a card's versions and augments in a real browser. apps/web's vitest suite proves the
+// R2725003, R2725004, R2949000: a card's versions and augments in a real browser. apps/web's vitest suite proves the
 // attributes each look wears (cards/fullArtTiers.test.tsx) and the stylesheet's colors (cards/cosmetics.test.tsx);
 // what only a layout and style engine can say is measured here. Part 1's two versions, the normal face and Full art,
-// on one Unit and one Spell, base and Radiant, each bare and with an augment stack (Animated, Signature and, on the
-// Unit, a foil): every part keeps clear of every other, the Signature on the normal face stays inside its art window
-// and off the words, a Radiant face keeps its gold frame and its art's Radiant paint under every look, and under
-// Reduce motion nothing moves.
+// and the Signature look (Full art with Animated and Signature, R2949000), on one Unit and one Spell, base and
+// Radiant, the normal face bare and with Animated, the Unit with a foil: every part keeps clear of every other, only
+// the Signature look signs and it draws a picture of its own, a Radiant face keeps its gold frame and its art's
+// Radiant paint under every look, and under Reduce motion nothing moves.
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) shown in a look by `FullArtShown`, as the Collection's preview
 // shows one, so the looks stand side by side with no pick written. No `FullArtOwned` is mounted, so every cosmetic
@@ -28,15 +28,29 @@ const CARDS = [
 
 /** The Unit wears a foil under its augment stack. */
 const FOIL = "foil-rainbow";
+/** R2949000: what Signature needs beside it, and itself. */
 const STACK = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] as const;
 
-/** Each version, bare and with the stack. */
+/** The normal face bare and with Animated, Full art bare, and the Signature look. */
 const LOOKS = [
   { name: "normal", pick: false, augments: [] },
-  { name: "normal-stack", pick: false, augments: STACK },
+  { name: "normal-animated", pick: false, augments: [AUGMENT_ANIMATED_ID] },
   { name: "full", pick: VERSION_FULL_ART_ID, augments: [] },
-  { name: "full-stack", pick: VERSION_FULL_ART_ID, augments: STACK },
+  { name: "signature", pick: VERSION_FULL_ART_ID, augments: STACK },
 ] as const;
+
+type Point = { x: number; y: number };
+type Shot = { width: number; height: number; data: Uint8ClampedArray; scale: number };
+
+/** The grid the art windows are sampled on, in CSS pixels, and the inset from their edges (animated-art.cy.tsx's). */
+const SAMPLE_STEP_PX = 6;
+const SAMPLE_INSET_PX = 3;
+/** A channel must differ this much for a point to count as different: more than compression noise. */
+const PIXEL_DELTA_MIN = 4;
+/** R2949000: the share of the upper half of the art window that must differ between Full art and the Signature look. */
+const PICTURE_SHARE_MIN = 0.2;
+/** Enough room for the faces to mount and the art to draw. */
+const SETTLE_TIMEOUT_MS = 8_000;
 
 /** The inspect-sized and hand-sized full faces card-faces.cy.tsx measures (B15). */
 const WIDTHS = [270, 170] as const;
@@ -86,6 +100,51 @@ function boxes(cf: HTMLElement, selector: string): DOMRect[] {
     .map((element) => element.getBoundingClientRect());
 }
 
+/** The viewport as Chrome painted it, decoded to RGBA, with the device pixels per CSS pixel (animated-art.cy.tsx's). */
+function screenshot(name: string): Cypress.Chainable<Shot> {
+  let path = "";
+  return cy
+    .screenshot(name, {
+      capture: "viewport",
+      overwrite: true,
+      disableTimersAndAnimations: false,
+      onAfterScreenshot: (_el, props) => {
+        path = props.path;
+      },
+    })
+    .then(() => cy.readFile(path, null))
+    .then((bytes: Uint8Array) => cy.window().then((win) => ({ bytes, innerWidth: win.innerWidth })))
+    .then(({ bytes, innerWidth }) =>
+      cy.wrap(
+        (async (): Promise<Shot> => {
+          const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+          const canvas = document.createElement("canvas");
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const ctx = canvas.getContext("2d");
+          if (ctx === null) throw new Error("this browser has no 2D canvas");
+          ctx.drawImage(bitmap, 0, 0);
+          return { width: bitmap.width, height: bitmap.height, data: ctx.getImageData(0, 0, bitmap.width, bitmap.height).data, scale: bitmap.width / innerWidth };
+        })(),
+        { log: false },
+      ),
+    );
+}
+
+function pixelAt(shot: Shot, { x, y }: Point): [number, number, number] {
+  const at = (Math.round(y * shot.scale) * shot.width + Math.round(x * shot.scale)) * 4;
+  return [shot.data[at] ?? -1, shot.data[at + 1] ?? -1, shot.data[at + 2] ?? -1];
+}
+
+/** The offsets of the sampling grid over the upper half of an art window `box`, clear of the signature below its middle. */
+function upperOffsets(box: DOMRect): Point[] {
+  const points: Point[] = [];
+  for (let y = SAMPLE_INSET_PX; y < box.height / 2; y += SAMPLE_STEP_PX) {
+    for (let x = SAMPLE_INSET_PX; x < box.width - SAMPLE_INSET_PX; x += SAMPLE_STEP_PX) points.push({ x, y });
+  }
+  return points;
+}
+
 describe("R2725003 a card's versions and augments on real faces", () => {
   beforeEach(() => {
     __resetSettingsForTests();
@@ -102,7 +161,7 @@ describe("R2725003 a card's versions and augments on real faces", () => {
   });
 
   for (const width of WIDTHS) {
-    it(`R2725003 every look keeps its parts apart, the Signature on its art, at ${width}px`, () => {
+    it(`R2725003 R2949000 every look keeps its parts apart, and only the Signature look signs, at ${width}px`, () => {
       cy.mount(<Faces width={width} />);
       cy.document().should((doc) => {
         for (const { id, why } of CARDS) {
@@ -115,22 +174,16 @@ describe("R2725003 a card's versions and augments on real faces", () => {
               expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
               expect(cf.getAttribute("data-full-art"), where).to.eq(full ? "true" : null);
               expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
-              // The foil wears under the stack on the Unit's base faces; a Radiant face wears none.
+              // The foil wears under the augments on the Unit's base faces; a Radiant face wears none.
               if (id === CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
+              // R2949000: the Signature look alone signs, and draws a picture of its own.
+              const signed = look.name === "signature";
+              expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(signed ? "signature" : null);
               const signature = boxes(cf, ".cf-signature");
-              expect(signature.length, `${where}: the signature`).to.eq(look.augments.length > 0 ? 1 : 0);
+              expect(signature.length, `${where}: the signature`).to.eq(signed ? 1 : 0);
               for (const box of signature) {
                 expect(box.left, `${where}: the signature inside`).to.be.at.least(face.left - 0.5);
                 expect(box.right, `${where}: the signature inside`).to.be.at.most(face.right + 0.5);
-                if (!full) {
-                  // R2725003: on the normal face it is the art window's.
-                  const frame = boxes(cf, ".cf-art-frame")[0];
-                  expect(frame, `${where}: the art window`).to.not.eq(undefined);
-                  if (frame !== undefined) {
-                    expect(box.top, `${where}: in the window`).to.be.at.least(frame.top - 0.5);
-                    expect(box.bottom, `${where}: in the window`).to.be.at.most(frame.bottom + 0.5);
-                  }
-                }
                 for (const selector of PARTS) {
                   for (const part of boxes(cf, selector)) {
                     expect(overlaps(box, part), `${where}: the signature covers ${selector}`).to.eq(false);
@@ -166,12 +219,57 @@ describe("R2725003 a card's versions and augments on real faces", () => {
             ).to.eq(0);
             if (look.augments.length > 0) {
               expect(cf.getAttribute("data-art-motion"), `${where}: the art holds still`).to.eq("static");
+            }
+            if (look.name === "signature") {
               const text = cf.querySelector(".cf-signature text")?.getBoundingClientRect();
               expect(text?.width ?? 0, `${where}: the name is drawn`).to.be.greaterThan(0);
             }
           }
         }
       }
+    });
+  });
+
+  it("R2949000 the Signature look draws a picture of its own on a Unit and a Spell, base and Radiant", () => {
+    // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
+    writeCardSettings({ animatedFoil: false });
+    cy.mount(<Faces width={170} />);
+    cy.get('.cf[data-art-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", CARDS.length * 2 * 2);
+    cy.get('[data-art-moving="true"]').should("not.exist");
+    cy.get("[data-face] .cf-art[data-art-pending]").should("not.exist");
+    cy.get('.cf-art[data-art-picture="signature"]').should("have.length", CARDS.length * 2);
+    cy.document().its("fonts.status").should("eq", "loaded");
+    const taken: { windows?: Map<string, [DOMRect, DOMRect]> } = {};
+    cy.document().then((doc) => {
+      const windows = new Map<string, [DOMRect, DOMRect]>();
+      for (const { id } of CARDS) {
+        for (const radiant of [false, true]) {
+          const art = (look: string): DOMRect => {
+            const box = faceIn(doc, id, look, radiant).querySelector(".cf-art")?.getBoundingClientRect();
+            if (box === undefined) throw new Error(`no art window for ${id} ${look}`);
+            return box;
+          };
+          windows.set(`${id} ${radiant ? "Radiant" : "base"}`, [art("full"), art("signature")]);
+        }
+      }
+      taken.windows = windows;
+    });
+    screenshot("signature-picture").then((shot) => {
+      const shares: Record<string, number> = {};
+      for (const [where, [full, signature]] of taken.windows ?? new Map<string, [DOMRect, DOMRect]>()) {
+        expect(Math.round(full.width), `${where}: the two windows match`).to.eq(Math.round(signature.width));
+        const offsets = upperOffsets(full);
+        expect(offsets.length, `${where}: sampled points`).to.be.greaterThan(20);
+        const differing = offsets.filter((offset) => {
+          const a = pixelAt(shot, { x: full.left + offset.x, y: full.top + offset.y });
+          const b = pixelAt(shot, { x: signature.left + offset.x, y: signature.top + offset.y });
+          return a.some((channel, i) => Math.abs(channel - (b[i] ?? -1)) >= PIXEL_DELTA_MIN);
+        });
+        shares[where] = differing.length / offsets.length;
+        expect(shares[where], `${where}: the Signature look's picture differs from Full art's`).to.be.at.least(PICTURE_SHARE_MIN);
+      }
+      expect(Object.keys(shares).length, "every card and face sampled").to.eq(CARDS.length * 2);
+      cy.task("layout:report", { spec: "card-versions", shares });
     });
   });
 });

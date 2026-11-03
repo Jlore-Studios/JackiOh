@@ -94,6 +94,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -408,7 +410,6 @@ mod tests {
 
             #[test]
             fn the_newest_permanent_with_no_open_zone_for_it_nothing_is_recruited_not_an_older_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": CURSE, "radiant": true }, STOCKPILE],

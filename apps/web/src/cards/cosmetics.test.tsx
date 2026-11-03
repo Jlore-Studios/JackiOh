@@ -58,8 +58,9 @@ import {
   type CosmeticKind,
 } from "./cosmetics.ts";
 import { FullArtOwned, OwnCopy } from "./fullArt.ts";
-import { AUGMENT_ANIMATED_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
-import { FULL_ART_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
+import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
+import { FULL_ART_MOTION, SIGNATURE_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
+import { artSeedOf } from "./art/pictures.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
@@ -1438,6 +1439,18 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
       const markup = particleMarkup(artMotionFor(id), id);
       expect(markup, id).not.toBe("");
       for (const hex of hexes(markup)) expect(inRadiantGold(hex), `${id}'s particles: #${hex}`).toBe(false);
+    }
+  });
+
+  it("R2949000 the Signature look's colours are clear of the Radiant gold window", () => {
+    // Its motion's particles, the signature's ink, on every card it is offered on, placed by the look's own seed.
+    const cards = Object.keys(CATALOG).filter((id) => offeredOn(AUGMENT_SIGNATURE_ID, id));
+    expect(cards.length).toBeGreaterThan(0);
+    for (const id of cards) {
+      const markup = particleMarkup(SIGNATURE_MOTION, artSeedOf(id, "signature"));
+      const colors = hexes(markup);
+      expect(colors.length, id).toBeGreaterThan(0);
+      for (const hex of colors) expect(inRadiantGold(hex), `${id}'s Signature particles: #${hex}`).toBe(false);
     }
   });
 });

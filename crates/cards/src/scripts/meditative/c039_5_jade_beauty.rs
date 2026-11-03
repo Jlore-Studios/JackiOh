@@ -48,6 +48,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -79,7 +81,6 @@ mod tests {
 
     #[test]
     fn r963_end_of_turn_allures_and_the_next_start_steals_summoning_sick() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
@@ -101,7 +102,6 @@ mod tests {
 
     #[test]
     fn r963_no_room_destroys_core_081_firing_its_death_and_core_003_reborn() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [FILLER],
@@ -149,7 +149,6 @@ mod tests {
 
     #[test]
     fn r963_core_066_stays() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [FILLER],
@@ -177,7 +176,6 @@ mod tests {
 
     #[test]
     fn r963_a_unit_bounced_meanwhile_is_not_taken() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [FILLER, FLOOD], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
@@ -197,7 +195,6 @@ mod tests {
 
     #[test]
     fn r963_lands_after_the_beauty_is_gone() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [AUDIT, FILLER], "field": [{ "def": FANATIC, "lane": 3 }], "library": LIBRARY },
@@ -218,7 +215,6 @@ mod tests {
 
     #[test]
     fn r781001_cant_attack_and_core_016_hit_job_cannot_target_it() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [HIT_JOB, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
@@ -237,7 +233,6 @@ mod tests {
 
     #[test]
     fn r781001_r23_classicplus_072_book_of_nerf_cannot_target_it() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [NERF, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },

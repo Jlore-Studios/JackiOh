@@ -11,7 +11,7 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 | Purpose | The team sees main as it is now | What players use |
 | Address | https://staging.jackioh.com, behind Cloudflare Access: only the team signs in | https://jackioh.com |
 | Worker | `jackioh-staging` (`wrangler.jsonc` `env.staging`) | `jackioh` (`wrangler.jsonc`'s top level) |
-| Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, by hand: `/promote` on the production issue, once the super run passed (`promote-production.yml`) |
+| Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, once a day: the commit the daily super run on `main` passed, or sooner on `/promote` (`promote-production.yml`) |
 | Game server | one `jackioh-staging-server` container | one `jackioh-server` container |
 | Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project) | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi` (section 8) |
 | Routing and headers | `apps/web/public/_redirects` and `_headers`, `wrangler.jsonc` | the same |
@@ -27,8 +27,8 @@ from different commits, and production's server no longer runs a day ahead of it
 
 `main` stays the only branch anyone merges into. `production` is a pointer to "the commit of main
 that is live on jackioh.com". Nothing but `.github/workflows/promote-production.yml` moves it, by
-merging a pull request whose head is a green commit of main that the super run passed, so its files
-always equal that commit's.
+merging a pull request whose head is a green commit of main that the super run passed, on `main` or on
+the pull request, so its files always equal that commit's.
 
 ## 2. How a commit reaches each site
 
@@ -37,18 +37,28 @@ always equal that commit's.
 2. CI runs again on the push to main. When it passes, `deploy-staging.yml` checks out that commit
    (or main's newest green commit, if a newer one already passed, so staging never goes backwards),
    builds the web with `apps/web/.env.staging`, checks the bundle, and runs `wrangler deploy --env
-   staging`, which builds the server's image on the runner and deploys the Worker, the static files
-   and the container together. It then polls `https://staging.jackioh.com/api/catalog` (through
-   Access, with a service token) until the server reports the commit in `x-deployed-commit`.
-3. Production moves only when someone asks (section 2.1): a `/promote` on the open issue labeled
-   `production merge`. `promote-production.yml` then takes the newest commit of `main` whose
-   push-to-main CI run succeeded (or the one named), and opens a pull request from
-   `promote/<date>-<sha>` into `production` listing the commits.
-4. The daily super run (`super.yml`) runs on that pull request: every fuzz seed, the full AI gates,
-   golden, the daily tests, coverage, every e2e spec, the db rehearsal and the notebooks. When every
-   job passed, `promote-production.yml` merges the pull request with a merge commit. When one failed,
-   it says so on the issue and the pull request waits, and super's report opens "CI: super run failed
-   on a production candidate" for the night bot, as `priority:high` and `difficulty:hard`.
+   staging`, which deploys the Worker, the static files and the container together. The server's
+   image is `scripts/server-image.sh`'s: named by what it is built from, so it is pushed to
+   Cloudflare's registry once (from CI's `deploy-image`, or built on CI's layer cache) and a commit
+   that changes none of it reuses it; the WASM modules likewise come from GitHub's cache when
+   nothing under `crates/` changed. It then polls `https://staging.jackioh.com/api/catalog`
+   (through Access, with a service token) until the server reports the commit in
+   `x-deployed-commit`.
+3. Once a day the super run (`super.yml`, its `schedule`) runs on `main`: every fuzz seed, the full
+   AI gates, golden, the daily tests, coverage, every e2e spec, the db rehearsal and the notebooks.
+   When every job passed, its completion wakes `promote-production.yml`, which promotes the commit it
+   tested (the daily promotion, section 2.1): a pull request from `promote/<date>-<sha>` into
+   `production` listing the commits, opened with the Actions token so that super does not run on it a
+   second time, and merged at once with a merge commit. When a job failed, super's report opens "CI:
+   daily super run failed" for the night bot as `priority:high`, and production waits for the next
+   run on `main` that passes. A promotion or a deploy that fails opens "CI: production promotion
+   failed" for Squishy, also `priority:high`.
+4. Sooner, by hand: a `/promote` on the open issue labeled `production merge` takes the newest commit
+   of `main` whose push-to-main CI run succeeded (or the one named) and opens the same pull request,
+   with the bot's token, so the super run runs on it. When every job passed, `promote-production.yml`
+   merges it. When one failed, it says so on the issue and the pull request waits, and super's report
+   opens "CI: super run failed on a production candidate" for the night bot, as `priority:high` and
+   `difficulty:hard`.
 5. The merging run's `deploy` job checks out `production`, builds the web with
    `apps/web/.env.production`, refuses the bundle if a public setting is missing
    (`apps/web/scripts/check-production-bundle.mjs`), runs `wrangler deploy`, and then checks the live
@@ -59,15 +69,19 @@ The first request after a deploy finds the old server still running (a container
 started with), so the Worker stops it and starts the new one: every live match rebuilds from its
 seed and log when its sockets return (SPEC §9.5), as after any restart.
 
-### 2.1 The production issue: promote, skip-super and cancel
+### 2.1 The production issue: the daily promotion, promote, skip-super and cancel
 
-Production is manual (#2750; the owner's call of 2026-11-02): no clock and no green run moves it. One
+Production promotes itself once a day, from the daily super run on `main` (the owners' call of
+2026-11-03; it was by hand only from 2026-11-02, #2750): each run on `main` that passes every job is
+promoted once, and a red one promotes nothing until the night bot's fix lets the next one pass. One
 issue labeled `production merge` stays open for good. Its title says where production stands
 ("Production: 4 commits on main are not live yet", "the super run is testing 1a2b3c4 (#2901)", "the
 super run failed on 1a2b3c4 (#2901)", "everything on main is live"). The first line of its body is
 a hidden state line; leave it alone. Under it the issue lists every pull request on `main` that is
 not on production yet, with its push-to-main CI (passed, failed, running) and where it stands for
-production (in the open promotion, the next `/promote`, waits for CI).
+production (in the open promotion, the next `/promote`, waits for CI). Its state line also keeps
+the last super run on `main` it promoted from (`daily`), so a `/cancel` of a daily promotion stays
+cancelled until the next day's run.
 
 Each catalog version is also a GitHub release (`.github/workflows/releases.yml`): a pre-release, "on
 staging", while only `main` holds it, and a release once a merge brings it to `production`, the newest
@@ -83,10 +97,14 @@ Anyone with write access comments on the issue:
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
 Each command is acknowledged with a 👍 (😕 when refused) and a reply saying what came of it. A newer
-`/promote` closes the open pull request as superseded. After a red super run the pull request stays
-open: re-running the run's failed jobs (the run's page, Re-run failed jobs) merges it once they pass,
-and a `/promote` once the fix is on `main` tests the newer commit instead. `/hold`, `/resume` and
-`/delay`, from the old daily countdown, are answered that production moves only on `/promote`.
+`/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded; the
+daily promotion of a commit an open `/promote` already carries leaves it to its own super run. After a
+red super run the pull request stays open: re-running the run's failed jobs (the run's page, Re-run
+failed jobs) merges it once they pass, and the next daily run that passes, or a `/promote` once the
+fix is on `main`, takes the newer commit instead. `/hold`, `/resume` and `/delay`, from the old daily
+countdown, are answered that there is nothing to hold: production follows the super run. To stop the
+daily promotion for a while, disable `promote-production.yml` (Actions -> promote production -> the
+menu -> Disable workflow), which stops `/promote` too.
 Actions -> promote production -> Run workflow does the same as `/promote` for its `sha`, or as
 `/skip-super` when its `skip_super_reason` is filled; its `redeploy` deploys production as it is.
 Staging takes no command: it deploys every green commit of main. `scripts/promote-production.sh`
@@ -94,9 +112,9 @@ holds the rules and the label (`RELEASE_LABEL`).
 
 ### 2.2 The rules the promotion enforces
 
-- The candidate must be on `main` and have a successful push-to-main CI run, and its promotion pull
-  request a super run in which every job passed, unless a person merged it with `/skip-super` and a
-  reason.
+- The candidate must be on `main` and have a successful push-to-main CI run, and a super run in
+  which every job passed, on `main` (the daily promotion) or on its promotion pull request, unless a
+  person merged it with `/skip-super` and a reason.
 - `production` only receives merges of green main commits: if someone committed to `production`,
   the run fails and changes nothing. It never force-pushes.
 - Promoting an older commit than `production` already has is a no-op, not a rollback.
@@ -130,12 +148,13 @@ every visitor, and the repository is public.
 
 Production keeps serving from Render until step 6 verifies the new server, so do these in order.
 
-**Actions -> cutover** (`.github/workflows/cutover.yml`) runs steps 3 and 6's secrets, the copy and
-the dropping of staging's keep-alive, one `step` a run, so no secret passes through a person: each
-value goes from Render's `jackioh-server` or a repository secret straight to where it is used. It
-needs only `RENDER_API_KEY` and `CLOUDFLARE_API_TOKEN`, which the repository holds, and for production
-`PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key and
-session pooler URI). The URI may keep Supabase's `[YOUR-PASSWORD]`, with the password itself in
+**Actions -> cutover** (`.github/workflows/cutover.yml`) ran steps 3 and 6's secrets, the copy and
+the dropping of staging's keep-alive, one `step` a run, so no secret passed through a person: each
+value went from Render's `jackioh-server` or a repository secret straight to where it was used. Those
+steps read Render, and left the file with it (step 7; they are in its history); what still runs there
+is `check-production`, `production-auth`, `email`, `stats-logins` and `dev-stats`. For production it
+reads `PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key
+and session pooler URI). The URI may keep Supabase's `[YOUR-PASSWORD]`, with the password itself in
 `PRODUCTION_DB_PASSWORD`, which, when set, replaces any password the URI holds; the workflow
 percent-encodes it. Step `check-production` writes nothing and says whether those secrets are a secret
 key and an address that reaches JackiOh-Production. The commands below are what it does, for doing it
@@ -143,9 +162,9 @@ by hand.
 
 ### Step 1: Merge
 
-Production moves only on a `/promote` (section 2.1), so nothing promotes it before its secrets exist
-as long as nobody asks; until step 6, don't. (Before 2026-11-02 production merged by itself once a
-day, and this step held it with `/hold`.) Merge the pull request. Its first green CI run on main
+Production moved only on a `/promote` during the move (section 2.1), so nothing promoted it before
+its secrets existed. (Before 2026-11-02 production merged by itself once a day, and this step held it
+with `/hold`; since 2026-11-03 the daily promotion moves it again.) Merge the pull request. Its first green CI run on main
 starts `deploy-staging.yml`, which creates `jackioh-staging`. That first deploy's server cannot start
 until step 3 gives it its secrets, so its live check fails once: expected.
 
@@ -248,16 +267,20 @@ later, so Render would stop billing:
    held and opened straight into the repository secret `CODE_PEPPER` (section 3), and deleted the
    Blueprint and the service. The owners deleted the Render workspace's card and the Vercel project.
 2. The repository secrets `RENDER_DEPLOY_HOOK_URL`, `RENDER_API_KEY` and `VERCEL_DEPLOY_HOOK_URL` are
-   deleted, so cutover's steps that read Render (`staging-secrets`, `production-secrets`, `copy`,
-   `after-cutover`, `delete-render`) cannot run again; `production-auth` and `email` still can.
+   deleted, and cutover's steps that read Render (`staging-secrets`, `drop-ping`,
+   `production-secrets`, `copy`, `after-cutover`, `delete-render`) left `cutover.yml`;
+   `check-production`, `production-auth`, `email`, `stats-logins` and `dev-stats` still run.
 
 ## 5. Day-to-day operation
 
 - **Normal day:** merge to main as usual. Staging updates within minutes of CI passing; production
-  stays as it is until someone asks.
-- **Ship to production:** `/promote` on the production issue. The super run tests the pull request
-  (an hour or so) and it merges and deploys once every job passed. A red job goes to the night bot as
-  `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer commit.
+  takes the commit the daily super run on main passed, the same afternoon (section 2.1). A red daily
+  run goes to the night bot as `priority:high`, and production waits for the next one that passes; a
+  promotion or deploy that fails goes to Squishy.
+- **Ship to production sooner:** `/promote` on the production issue. The super run tests the pull
+  request (an hour or so) and it merges and deploys once every job passed. A red job goes to the night
+  bot as `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer
+  commit.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main, then `/promote`. If the super run is
   red for a reason the fix does not touch and it cannot wait, `/skip-super <why>` merges it at once,
   and the issue records who and why.
@@ -266,7 +289,9 @@ later, so Render would stop billing:
   the deploy rebuilds the web and the server from that commit, and the first request restarts the
   server on it. Workers & Pages -> the Worker -> Deployments -> Rollback is quicker for the Worker
   and its static files, but check in the deployment's details that it took the container's image
-  back too before relying on it. Either way, nobody `/promote`s until the fix has merged.
+  back too before relying on it. Either way, nobody `/promote`s until the fix has merged, and the
+  next daily promotion deploys main as it stands: if the revert cannot be on main before the next
+  daily super run passes, disable `promote-production.yml` until it is (section 2.1).
 - **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
   workflow on deploy staging, or promote production with **redeploy**).
 - **Deploy staging by hand:** Actions -> deploy staging -> Run workflow. With no `sha` it deploys
@@ -331,9 +356,11 @@ once a day and opens a `human` issue once the period's spend, or its projection,
   server's boot (step 5, item 7 measures it). A wake with nothing new reads the migration ledger
   once and writes the catalog in one statement that rewrites no unchanged row (#2926), a handful of
   round trips where it was about 1,100; the saving is not yet timed (step 5, item 7).
-- **Every deploy builds the image.** `wrangler deploy` runs `docker build` on a fresh runner, so a
-  deploy takes as long as a cold release build of the server. Caching the build's layers between
-  runs is the next improvement.
+- **A deploy whose image is new still waits for its rollout.** Since 2026-11-03 neither deploy
+  compiles the server when the registry or CI has its image (`scripts/server-image.sh`), and a
+  promotion of a commit staging already ran pushes nothing. The registry keeps the newest ten tags
+  (and whatever a site runs), so a Worker rolled back further than that finds no image: promote a
+  revert instead.
 - **Containers are in beta** on Cloudflare: limits and behaviour can change; read their changelog
   when something surprises you.
 
@@ -377,8 +404,10 @@ key. Resend's free plan sends 100 a day; its dashboard (Emails) shows each one s
 **The copy,** at section 4's step 6, with nobody promoting production meanwhile: Supabase's own way
 between projects, the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the
 empty production project, both through their session pooler URIs as `postgres`, held in a file outside
-the repository (`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, does it all,
-refuses a production project that is not empty, and rolls the whole copy back when the counts differ:
+the repository (`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, did it all,
+refusing a production project that was not empty and rolling the whole copy back when the counts
+differed (it read staging's address from Render, so it left the file with Render; it is in the file's
+history):
 
 ```
 supabase db dump --db-url "$STAGING_DB_URL" -f roles.sql --role-only

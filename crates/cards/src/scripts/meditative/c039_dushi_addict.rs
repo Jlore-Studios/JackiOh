@@ -38,6 +38,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -46,7 +48,6 @@ mod tests {
 
     #[test]
     fn r1_the_cry_adds_a_base_rock_hidden_from_the_opponent() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
 
         s.play(ID, json!({}));
@@ -62,7 +63,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_it() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
             "p2": { "hand": [FILLER] },

@@ -43,7 +43,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use crate::def_ids;
-    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -51,7 +52,6 @@ mod tests {
 
     #[test]
     fn x_3_adds_three_base_rocks() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
 
         s.play(ID, json!({ "x": 3 }));
@@ -62,7 +62,6 @@ mod tests {
 
     #[test]
     fn r348_x_0_and_x_above_mana_are_refused() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
         let mana = s.view(P1).you.mana.current;
 
@@ -73,7 +72,6 @@ mod tests {
 
     #[test]
     fn the_hand_cap_burns_the_rest() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -90,7 +88,6 @@ mod tests {
 
     #[test]
     fn radiant_rocks_are_radiant() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER] },

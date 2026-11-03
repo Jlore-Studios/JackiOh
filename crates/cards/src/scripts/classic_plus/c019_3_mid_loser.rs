@@ -65,6 +65,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -105,7 +107,6 @@ mod tests {
 
     fn from_hand(radiant_face: bool) -> impl Fn(&str) -> Scenario {
         move |seed: &str| {
-            crate::register_all();
             scenario(json!({
                 "seed": seed,
                 "p1": { "hand": [{ "def": MID, "radiant": radiant_face }, FILLER], "library": DECK },
@@ -151,7 +152,6 @@ mod tests {
         #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
             for (radiant_face, size) in [(false, 4), (true, 8)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MID, "lane": 1, "radiant": radiant_face }], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -220,7 +220,6 @@ mod tests {
             fn s4_5_tails_on_a_damaged_mid_loser_can_kill_it_at_the_state_check_heads_saves_it() {
                 // The opponent's Tesla, its 4 stepped down to 3, answers the summon: a 4/4 left at 1 health.
                 let tesla = |seed: &str| -> Scenario {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "seed": seed,
                         "p1": { "hand": [MID, FILLER], "library": DECK },
@@ -249,7 +248,6 @@ mod tests {
 
             #[test]
             fn r1_a_copy_flips_nothing_carnivorous_cube_s_copies_of_an_eaten_mid_loser_are_plain_4_4s() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CUBE, HIT_JOB, FILLER], "field": [{ "def": MID, "lane": 1 }], "mana": 6, "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -281,7 +279,6 @@ mod tests {
             fn r411_league_of_losers_summon_fires_it() {
                 let mut s = seeded(
                     |seed| {
-                        crate::register_all();
                         scenario(json!({
                             "seed": seed,
                             "p1": { "hand": [LEAGUE, FILLER], "library": DECK },

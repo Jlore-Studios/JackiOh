@@ -66,7 +66,6 @@ mod tests {
     ];
 
     fn added_card(seed: &str, radiant: bool) -> CardInstance {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": COMET, "radiant": radiant }, FILLER] },
@@ -94,7 +93,6 @@ mod tests {
 
         #[test]
         fn r1867010_the_comet_is_in_its_casters_deck_afterwards_not_the_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "comet-deck",
                 "p1": { "hand": [COMET, FILLER], "library": [FILLER, FILLER] },
@@ -133,7 +131,6 @@ mod tests {
         fn r1867010_s_147_joins_the_pool() {
             let mut seen_s147 = 0;
             for seed in 0..200 {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": format!("comet-preview-{seed}"),
                     "p1": { "hand": [COMET, FILLER] },
@@ -163,7 +160,6 @@ mod tests {
 
         #[test]
         fn r1867010_the_card_is_radiant_and_the_comet_goes_back_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "comet-radiant",
                 "p1": { "hand": [{ "def": COMET, "radiant": true }, FILLER], "library": [FILLER] },

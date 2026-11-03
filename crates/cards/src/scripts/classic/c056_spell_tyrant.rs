@@ -70,6 +70,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -104,7 +106,7 @@ mod tests {
             .collect()
     }
 
-    fn ids(s: &Scenario, def_ids: &[&str]) -> Vec<String> {
+    fn instance_ids(s: &Scenario, def_ids: &[&str]) -> Vec<String> {
         def_ids.iter().map(|def_id| s.card(*def_id).id.clone()).collect()
     }
 
@@ -116,7 +118,6 @@ mod tests {
 
             #[test]
             fn cry_offers_you_the_spells_of_your_graveyard_no_field_spell_no_unit_up_to_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TYRANT, FILLER], "graveyard": [STOCKPILE, VANILLA, MANA_WELL, SPEK, FRIENDS, LUNAR], "library": DECK },
                     "p2": { "hand": [FILLER] },
@@ -131,7 +132,7 @@ mod tests {
                     .as_array()
                     .map(|options| options.iter().map(|option| option["selection"].clone()).collect())
                     .unwrap_or_default();
-                let expected: Vec<Value> = ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR])
+                let expected: Vec<Value> = instance_ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR])
                     .into_iter()
                     .map(|instance_id| json!({ "pick": "instance", "instanceId": instance_id }))
                     .collect();
@@ -141,13 +142,12 @@ mod tests {
 
             #[test]
             fn legalactions_offers_only_spells_at_most_3_and_an_answer_naming_anything_else_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TYRANT, FILLER], "graveyard": [STOCKPILE, VANILLA, MANA_WELL, SPEK, FRIENDS, LUNAR], "library": DECK },
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(TYRANT, json!({}));
-                let spells = ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
+                let spells = instance_ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
                 let answers: Vec<Value> = legal_actions(s.state(), P1)
                     .iter()
                     .map(js)
@@ -165,9 +165,9 @@ mod tests {
                         );
                     }
                 }
-                let vanilla = ids(&s, &[VANILLA]);
-                let well = ids(&s, &[MANA_WELL]);
-                let four = ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
+                let vanilla = instance_ids(&s, &[VANILLA]);
+                let well = instance_ids(&s, &[MANA_WELL]);
+                let four = instance_ids(&s, &[STOCKPILE, SPEK, FRIENDS, LUNAR]);
                 s.expect_refused(|s| s.answer(json!(vanilla)));
                 s.expect_refused(|s| s.answer(json!(well)));
                 s.expect_refused(|s| s.answer(json!(four)));
@@ -176,13 +176,12 @@ mod tests {
 
             #[test]
             fn r70_casts_each_pick_in_turn_free_and_counted_as_played_and_exiles_each_after_it_resolves() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TYRANT, FILLER], "graveyard": [STOCKPILE, SPEK, FRIENDS], "library": DECK, "health": 20 },
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = ids(&s, &[STOCKPILE, FRIENDS]);
+                let picks = instance_ids(&s, &[STOCKPILE, FRIENDS]);
                 s.answer(json!(picks));
                 assert_eq!(played(&s), vec![TYRANT, STOCKPILE, FRIENDS]);
                 assert_eq!(cards_played_this_turn(s.state(), P1), 3);
@@ -199,20 +198,18 @@ mod tests {
 
             #[test]
             fn r221_the_picks_are_cast_in_the_order_the_graveyard_holds_them_oldest_first_however_the_answer_lists_them() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TYRANT, FILLER], "graveyard": [SPEK, STOCKPILE, FRIENDS], "library": DECK },
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = ids(&s, &[FRIENDS, SPEK]);
+                let picks = instance_ids(&s, &[FRIENDS, SPEK]);
                 s.answer(json!(picks));
                 assert_eq!(played(&s), vec![TYRANT, SPEK, FRIENDS]);
             }
 
             #[test]
             fn up_to_you_may_cast_fewer_or_none_and_the_rest_stay_in_your_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [STOCKPILE, SPEK], "library": DECK }, "p2": { "hand": [FILLER] } }));
                 s.play(TYRANT, json!({}));
                 s.answer(json!([]));
@@ -222,18 +219,16 @@ mod tests {
 
             #[test]
             fn fewer_than_3_spells_there_the_pick_offers_those_there() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [STOCKPILE, VANILLA], "library": DECK }, "p2": { "hand": [FILLER] } }));
                 s.play(TYRANT, json!({}));
                 assert_eq!(js(&s.state().pending)["max"], 1);
-                let picks = ids(&s, &[STOCKPILE]);
+                let picks = instance_ids(&s, &[STOCKPILE]);
                 s.answer(json!(picks));
                 s.expect_in_zone(STOCKPILE, "exile");
             }
 
             #[test]
             fn none_there_nothing_is_asked_and_nothing_is_cast() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [VANILLA, MANA_WELL] }, "p2": { "hand": [FILLER] } }));
                 s.play(TYRANT, json!({}));
                 assert!(s.state().pending.is_none());
@@ -243,13 +238,12 @@ mod tests {
 
             #[test]
             fn r70_a_cast_spells_choices_are_yours_asked_as_its_cast_begins_then_the_next_pick_is_cast() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TYRANT, FILLER], "graveyard": [LUNAR, STOCKPILE], "library": DECK },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = ids(&s, &[LUNAR, STOCKPILE]);
+                let picks = instance_ids(&s, &[LUNAR, STOCKPILE]);
                 s.answer(json!(picks));
                 assert_eq!(js(&s.state().pending)["playerId"], "p1");
                 let menace = s.card(MENACE).id.clone();
@@ -261,13 +255,12 @@ mod tests {
 
             #[test]
             fn a_cast_paused_on_its_choice_survives_a_round_trip_the_frozen_state_answers_to_the_same_game() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TYRANT, FILLER], "graveyard": [LUNAR, STOCKPILE], "library": DECK },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
                 s.play(TYRANT, json!({}));
-                let picks = ids(&s, &[LUNAR, STOCKPILE]);
+                let picks = instance_ids(&s, &[LUNAR, STOCKPILE]);
                 s.answer(json!(picks));
                 let pending = s.state().pending.clone();
                 assert!(pending.is_some());
@@ -298,7 +291,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [PILE_ON], "library": full }, "p2": { "hand": [FILLER] } }));
                 s.expect_in_zone(PILE_ON, "graveyard");
                 s.play(TYRANT, json!({}));
-                let picks = ids(&s, &[PILE_ON]);
+                let picks = instance_ids(&s, &[PILE_ON]);
                 s.answer(json!(picks));
                 assert_eq!(played(&s), vec![TYRANT, PILE_ON]);
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(VANILLA.to_string()));
@@ -327,7 +320,6 @@ mod tests {
 
             #[test]
             fn casts_every_spell_in_your_graveyard_as_the_cry_begins_oldest_first_with_no_choice_and_exiles_each() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": TYRANT, "radiant": true }, FILLER],
@@ -346,7 +338,6 @@ mod tests {
 
             #[test]
             fn a_spell_a_cast_puts_in_the_graveyard_is_not_cast_zao_gaos_discarded_lunar_eclipse_stays_there() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TYRANT, "radiant": true }, LUNAR, VANILLA], "graveyard": [ZAO_GAO] },
                     "p2": { "hand": [FILLER] },
@@ -358,7 +349,6 @@ mod tests {
 
             #[test]
             fn r70_a_cast_spells_choices_are_still_yours() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TYRANT, "radiant": true }, FILLER], "graveyard": [LUNAR] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -373,7 +363,6 @@ mod tests {
 
             #[test]
             fn with_no_spell_in_your_graveyard_it_casts_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": TYRANT, "radiant": true }, FILLER], "graveyard": [VANILLA] }, "p2": { "hand": [FILLER] } }));
                 s.play(TYRANT, json!({}));
                 assert_eq!(played(&s), vec![TYRANT]);

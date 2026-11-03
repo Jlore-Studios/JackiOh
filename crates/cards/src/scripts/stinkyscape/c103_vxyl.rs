@@ -58,7 +58,6 @@ mod tests {
     }
 
     fn vxyl_board(radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "hand": [{ "def": VXYL, "radiant": radiant }, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -97,7 +96,6 @@ mod tests {
 
         #[test]
         fn its_hit_destroys_the_unit_it_damages() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [VXYL] },
                 "p2": { "hand": [FILLER], "field": [GENN] },

@@ -86,7 +86,7 @@ or, when you could not build it:
 
 or, when nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or
 `bot/`, which the harness puts back; a secret or a token; a setting in a dashboard, such as
-GitHub's, Vercel's, Render's, Supabase's or Cloudflare's; an account), the same line with
+GitHub's, Supabase's or Cloudflare's; an account), the same line with
 `"human_required": true` and, in `question`, exactly what a person must do:
 
     <!-- bot: {"status": "blocked", "human_required": true, "question": "What a person must do, and where"} -->

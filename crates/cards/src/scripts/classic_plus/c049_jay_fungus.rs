@@ -33,6 +33,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -140,7 +142,6 @@ mod tests {
 
         #[test]
         fn s2_3_two_fungi_stack_on_one_card_costmod_adds_up_2_then_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [FUNGUS, FUNGUS], "hand": [THREE], "library": [ONE, ONE] },
                 "p2": { "hand": [ONE], "library": [ONE, ONE] },

@@ -71,7 +71,6 @@ mod tests {
 
         #[test]
         fn r1860003_end_of_turn_heals_your_hero_past_30_and_each_of_your_units_including_itself() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [ANCHOR],
@@ -101,7 +100,6 @@ mod tests {
 
         #[test]
         fn r1860003_undamaged_cards_take_no_heal() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "health": 30, "field": [CAPSULE], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -114,7 +112,6 @@ mod tests {
 
         #[test]
         fn heal_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "health": 20, "field": [CAPSULE], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -132,7 +129,6 @@ mod tests {
 
         #[test]
         fn r1860003_radiant_end_of_turn_heals_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [ANCHOR],

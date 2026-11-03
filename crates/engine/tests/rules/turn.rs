@@ -7,17 +7,13 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, in_hand, new_game, next_nonce, put, round_trip, set_library,
+    act, act_result, both, events_of_type, ids, in_hand, new_game, next_nonce, put, round_trip, set_library,
     sink_for, slot,
 };
 use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, x_bolt};
 
 fn action(body: Value) -> Action {
     json_as(body)
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn says(error: &Option<String>, text: &str) -> bool {

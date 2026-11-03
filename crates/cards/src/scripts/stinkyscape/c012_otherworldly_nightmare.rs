@@ -63,7 +63,6 @@ mod tests {
 
         #[test]
         fn adds_a_death_a_pain_and_a_scream_in_that_order() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [NIGHTMARE, FILLER] }, "p2": { "hand": [FILLER] } }));
 
             s.play(NIGHTMARE, json!({}));
@@ -92,7 +91,6 @@ mod tests {
 
         #[test]
         fn adds_all_three_radiant_and_no_execute_brawl_or_blade_storm() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": NIGHTMARE, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER] },

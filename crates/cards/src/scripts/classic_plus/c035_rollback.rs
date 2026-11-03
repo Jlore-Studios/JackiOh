@@ -61,7 +61,10 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
+    use crate::ids;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -142,10 +145,6 @@ mod tests {
         s.unit(seat, lane).map(|card| card.def_id)
     }
 
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
-    }
-
     fn event_ids(events: &[GameEvent]) -> Vec<String> {
         events
             .iter()
@@ -191,7 +190,6 @@ mod tests {
 
         #[test]
         fn r81_legalactions_offers_one_play_per_n_on_the_base_face_and_per_n_and_side_on_the_radiant_face() {
-            crate::register_all();
             let s = scenario(json!({ "p1": { "hand": [ROLLBACK, radiant_rollback()] } }));
             let hand = s.hand(P1);
             let (plain, shiny) = (hand.first().map(|card| card.id.clone()), hand.get(1).map(|card| card.id.clone()));
@@ -216,7 +214,6 @@ mod tests {
 
         #[test]
         fn r419_each_turn_s_start_records_both_sides_piles_dormant_cards_too_backrow_zones_and_locks_before_anything_else_and_keeps_board_history_depth() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [BIG_FELINOR, { "def": FIENDER, "stack": true }], "backrow": [SHEEPISH, SPATULA], "library": filler() },
                 "p2": { "field": [TIMMY], "backrow": [SHEEPISH], "library": filler() },
@@ -369,7 +366,6 @@ mod tests {
 
         #[test]
         fn r419_step_1_a_full_hand_burns_the_card_s2_4_r4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ROLLBACK], "field": [VANILLA], "library": filler() },
                 "p2": { "hand": (0..10).map(|_| TIMMY).collect::<Vec<_>>(), "field": [VANILLA], "library": filler() },
@@ -831,7 +827,6 @@ mod tests {
 
         #[test]
         fn r562_with_fewer_turns_recorded_than_n_it_goes_back_as_far_as_the_history_goes() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ROLLBACK], "field": [VANILLA], "library": filler() },
                 "p2": { "hand": [TIMMY], "field": [VANILLA], "library": filler() },
@@ -887,7 +882,6 @@ mod tests {
 
         #[test]
         fn r562_with_no_snapshot_at_all_nothing_is_restored_and_nothing_is_reported() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [ROLLBACK], "field": [VANILLA] }, "p2": { "field": [TIMMY] } }));
             play_rollback(&mut s, &["1"]);
             assert!(of_type(s.last_events(), GameEventType::RolledBack).is_empty());

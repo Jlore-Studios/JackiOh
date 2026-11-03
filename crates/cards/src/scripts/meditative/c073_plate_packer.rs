@@ -33,7 +33,6 @@ mod tests {
 
     #[test]
     fn r1064_gains_one_per_point_of_armor() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [PACKER, FILLER],
@@ -56,7 +55,6 @@ mod tests {
 
     #[test]
     fn no_armor_no_gain() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [PACKER, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -67,7 +65,6 @@ mod tests {
 
     #[test]
     fn r1_summoned_no_cry() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": ["core-069", FILLER],
@@ -88,7 +85,6 @@ mod tests {
 
     #[test]
     fn r386_per_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [PACKER, FILLER], "armor": 4 },
             "p2": { "hand": [FILLER] },
@@ -100,7 +96,6 @@ mod tests {
 
     #[test]
     fn radiant_two_per_point() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": PACKER, "radiant": true }, FILLER],

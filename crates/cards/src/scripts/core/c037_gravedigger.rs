@@ -57,6 +57,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const GRAVEDIGGER: &str = "core-037";
@@ -73,7 +75,6 @@ mod tests {
 
     /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

@@ -88,6 +88,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -208,7 +210,6 @@ mod tests {
 
             #[test]
             fn cry_exiles_your_whole_deck_then_discards_your_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WIND, ECLIPSE, MR_TOKEN], "library": [VANILLA, MENACE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -229,7 +230,6 @@ mod tests {
 
             #[test]
             fn r393_the_discards_land_in_your_graveyard_before_the_aura_starts_so_they_are_playable() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WIND, ECLIPSE, MR_TOKEN], "library": [VANILLA] },
                     "p2": { "hand": [STOCKPILE] },
@@ -307,7 +307,6 @@ mod tests {
 
             #[test]
             fn r3_with_no_deck_every_draw_is_fatigue() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WIND, ECLIPSE], "library": [VANILLA, VANILLA] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
@@ -335,7 +334,6 @@ mod tests {
 
             #[test]
             fn no_event_carries_a_deck_position() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WIND, ECLIPSE], "library": [VANILLA, MENACE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -414,7 +412,6 @@ mod tests {
 
             #[test]
             fn the_same_cry_exiles_your_deck_discards_your_hand_into_your_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": WIND, "radiant": true }, ECLIPSE, MR_TOKEN], "library": [VANILLA, MENACE] },
                     "p2": { "hand": [STOCKPILE] },

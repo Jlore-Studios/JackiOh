@@ -112,6 +112,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -144,7 +146,6 @@ mod tests {
 
     /// p1 with a filler in hand and room for more; p2 holds a filler.
     fn quiet(seed: &str) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [FILLER], "library": filler(4) },
@@ -213,7 +214,6 @@ mod tests {
             fn r1149001_drawing_it_casts_it_and_adds_a_random_radiant_chinese_card() {
                 // Stockpile draws the bottle on top of the library: it is cast, adds its card, and the
                 // draw repeats (R58), so Stockpile's two draws bring two fillers besides.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "bottle-draw",
                     "p1": {
@@ -241,7 +241,6 @@ mod tests {
             #[test]
             fn r1149001_a_full_hand_casts_it_and_burns_the_new_card() {
                 // Ten in hand: the turn draw casts it anyway and burns the card it adds (§2.4, R4).
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "bottle-burn",
                     "p1": {
@@ -296,7 +295,6 @@ mod tests {
 
             #[test]
             fn r926_r1149001_it_costs_1_and_declares_a_cry() {
-                crate::register_all();
                 let s = scenario(json!({
                     "seed": "bottle-cost",
                     "p1": {
@@ -536,7 +534,6 @@ mod tests {
 
             #[test]
             fn the_new_card_costs_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "bottle-radiant",
                     "p1": {

@@ -3,6 +3,7 @@
 // portrait is a deck's pick (R641, R1827000), so it has no button. R2655000: a full art's Equip picks
 // that tier on its card (`fullArtPickOf`). R2725000: a version's Equip wears it on its card, an augment's layers it
 // on whichever version the card wears, each keeping the other (`writeCardVersion`). The wear path decides what is worn.
+// R2949000: Signature has no Equip on a card that does not wear the Full art version and Animated, which it needs.
 
 import type { ReactElement } from "react";
 
@@ -22,7 +23,7 @@ import {
   type DeckSlotKind,
 } from "../cards/cosmetics.ts";
 import { fullArtIdOf, fullArtPickOf } from "../cards/fullArt.ts";
-import { augmentPicksOf, augmentsOf, lookOf, versionPickOf } from "../cards/versions.ts";
+import { AUGMENT_SIGNATURE_ID, augmentPicksOf, augmentsOf, lookOf, signatureFits, versionPickOf } from "../cards/versions.ts";
 import { t } from "../i18n/i18n.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
@@ -97,6 +98,7 @@ export default function EquipButton({
   // An account cosmetic sits on no card: "" is no card's id, so it reads no picks.
   const card = useCardPicks(cardId ?? "");
   if (target === null) return null;
+  if (target.store === "augment" && target.id === AUGMENT_SIGNATURE_ID && !signatureFits(card.fullArt, card.augments)) return null;
   const equipped = holds(target, account, card);
   return (
     <button

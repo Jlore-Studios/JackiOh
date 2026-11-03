@@ -49,6 +49,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const DUD: &str = "meditative-039-3";
@@ -74,7 +76,6 @@ mod tests {
 
     #[test]
     fn r18_loses_2_health_through_armor() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER], "armor": 5 },
             "p2": { "hand": [FILLER] },
@@ -88,7 +89,6 @@ mod tests {
 
     #[test]
     fn r960_adds_one_base_dud_jade_or_red_jade() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "rock-roll",
             "p1": { "hand": [ID, FILLER] },
@@ -111,7 +111,6 @@ mod tests {
 
     #[test]
     fn a_full_hand_burns_the_roll() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "rock-burn",
             "p1": { "hand": [ID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
@@ -153,7 +152,6 @@ mod tests {
 
     #[test]
     fn r18_a_hero_immunity_does_not_stop_it() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -199,7 +197,6 @@ mod tests {
 
     #[test]
     fn life_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER] },
             "p2": { "hand": [FILLER] },

@@ -1,7 +1,7 @@
 //! R465, #42, B5 E18: answer key never leaves engine; `redact` (R185) strips it from AI observation.
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_ai::{AiOptions, decide, redact};
+use jackioh_ai::{AI_KY_TEST_ACCURACY, AiOptions, DecisionReason, decide, redact};
 use jackioh_engine::testkit::{
     ANSWER_KEY, ActionBody, CardScripts, EngineSink, GameEvent, GameState, HookOptions, PlayerId, PromptKind,
     Script, Selection, answer_key_of, create_rng, effects, hash_state, hook, json, json_as, legal_actions,
@@ -222,5 +222,112 @@ mod r1870002_the_ai_answers_kys_last_exam {
             );
             assert!(legal_actions(&state, PlayerId::P1).contains(&decision.action));
         }
+    }
+}
+
+// #2929, R1563005: C+ #42 KY's Test's Easy problem, a four-digit sum or difference, is worked out from the
+// statement the redacted prompt shows, at once and with no search, as KY's Competition's questions are
+// (R1184002): right `AI_KY_TEST_ACCURACY` of the time, a miss one of the wrong answers, never the key.
+mod r1563005_the_ai_works_out_kys_tests_easy_problem {
+    use super::*;
+
+    const KYS_TEST: &str = "classicplus-042";
+
+    /// p1's main phase with KY's Test cast and Easy chosen: its problem open for p1.
+    fn easy_problem(seed: &str) -> GameState {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [KYS_TEST, "core-005"] },
+            "p2": { "hand": ["core-005"] },
+        }));
+        s.play(KYS_TEST, json!({}));
+        let offer = clone(s.state());
+        let choice_id = offer
+            .pending
+            .as_ref()
+            .map(|pending| pending.id.clone())
+            .unwrap_or_default();
+        act(
+            &offer,
+            PlayerId::P1,
+            ActionBody::Answer {
+                choice_id,
+                selection: vec![Selection::Mode {
+                    option: "Easy".to_string(),
+                }],
+            },
+        )
+    }
+
+    /// The right answer to the problem open in `state`, read where only the engine reads it.
+    fn right_answer(state: &GameState) -> ActionBody {
+        ActionBody::Answer {
+            choice_id: state
+                .pending
+                .as_ref()
+                .map(|pending| pending.id.clone())
+                .unwrap_or_else(|| panic!("a problem")),
+            selection: vec![Selection::Mode {
+                option: key_of(state).unwrap_or_else(|| panic!("its key")),
+            }],
+        }
+    }
+
+    #[test]
+    fn r465_r1563005_the_easy_problem_is_answered_at_once_right_when_the_right_letter_is_not_first_and_the_key_is_never_read()
+     {
+        let state = easy_problem("r2929-ky-test-0");
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Answer)
+        );
+        assert_ne!(
+            key_of(&state).as_deref(),
+            Some("A"),
+            "the right letter is not the first"
+        );
+        let answer = |state: &GameState| {
+            decide(
+                state,
+                PlayerId::P1,
+                &mut AiOptions::new(create_rng("r2929-ky-test-decide", 0)),
+            )
+            .unwrap_or_else(|| panic!("a decision"))
+        };
+        let decision = answer(&state);
+        assert_eq!(decision.reason, DecisionReason::Prompt);
+        assert_eq!(decision.stats.nodes, 0, "no search");
+        assert_eq!(decision.action, right_answer(&state));
+        // A twin keyed to the first letter answers alike: the AI reads the statement, never the key.
+        let mut twin = state.clone();
+        if let Some(pending) = twin.pending.as_mut() {
+            pending.resume.data.insert(ANSWER_KEY.to_string(), json!("A"));
+        }
+        assert_eq!(answer(&twin).action, decision.action);
+    }
+
+    #[test]
+    fn r1563005_the_easy_problem_is_answered_right_at_ai_ky_test_accuracy() {
+        let trials = 200;
+        let mut right = 0;
+        for n in 0..trials {
+            let state = easy_problem(&format!("r2929-ky-test-rate-{n}"));
+            let decision = decide(
+                &state,
+                PlayerId::P1,
+                &mut AiOptions::new(create_rng(&format!("r2929-ky-test-rate-ai-{n}"), 0)),
+            )
+            .unwrap_or_else(|| panic!("a decision"));
+            assert_eq!(decision.stats.nodes, 0, "no search");
+            if decision.action == right_answer(&state) {
+                right += 1;
+            }
+        }
+        let rate = f64::from(right) / f64::from(trials);
+        assert!(
+            (rate - AI_KY_TEST_ACCURACY).abs() < 0.06,
+            "{rate} against {AI_KY_TEST_ACCURACY}"
+        );
     }
 }
