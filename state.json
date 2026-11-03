@@ -15269,11 +15269,6 @@
       "owner": "muse",
       "owner_since": "2026-11-03T07:50:13Z",
       "owner_why": "it planned it",
-      "paused": {
-        "at": "2026-11-03T07:47:22Z",
-        "interrupt": "budget",
-        "provider": "muse"
-      },
       "pending_request": false,
       "planned_at": "2026-11-03T07:47:09Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
