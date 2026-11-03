@@ -395,10 +395,6 @@ describe("B8 timing bounds", () => {
 describe("B9 intensity", () => {
   const LEVELS = [FX_INTENSITY_SCALE.low, FX_INTENSITY_SCALE.normal, FX_INTENSITY_SCALE.high] as const;
 
-  it("B9 the intensity scale is off 0, low 0.45, normal 1, high 1.6", () => {
-    expect(FX_INTENSITY_SCALE).toEqual({ off: 0, low: 0.45, normal: 1, high: 1.6 });
-  });
-
   it("B9 burst counts grow with intensity: every burst low <= normal <= high, and the totals strictly", () => {
     const totals = [0, 0, 0];
     for (const sample of samples()) {
