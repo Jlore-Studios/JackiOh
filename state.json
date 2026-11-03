@@ -29583,6 +29583,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-03T16:45:01Z,claude-6,ping,before,41676316978,37,2026-11-03T18:00:00Z,,,allowed,70,,"
+    ],
+    "runs": [
+      "2026-11-03T16:45:05Z,41676316978,claude-6,opus,review,2935,medium,stopped,stop,0,0,0,0,,37,37,,,,,none,,0"
     ]
   },
   "version": 1
