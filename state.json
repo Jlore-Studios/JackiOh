@@ -12820,7 +12820,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-02T05:07:30Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:2627e57c-1793685818",
+      "run_id": "41587580025",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-03T06:04:11Z",
       "stop_requested": false,
