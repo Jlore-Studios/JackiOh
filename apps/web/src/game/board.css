@@ -114,16 +114,24 @@
 }
 
 /* `flex-direction` and `flex-wrap` are stated because src/index.css has a landing-page `.hero`
-   (a column) that would otherwise leak into the board's hero; a row that wraps is what fits a
-   phone-width seat without pushing the badges past its edge. */
+   (a column) that would otherwise leak into the board's hero. The plate keeps one fixed size per
+   layout (#2877): the portrait, the seat label and the Heroic Power always fit it, and the seat's
+   effects live in the tray hung off it, out of flow, so gaining or losing one never moves the
+   plate, the seat or the field. */
 .hero {
+  --hero-h: 50px;
+  --hero-w: calc(44px + 22ch + 46px);
+
   position: relative;
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 7px;
+  width: var(--hero-w);
+  height: var(--hero-h);
   min-width: 0;
+  overflow: visible;
   padding: 3px 10px 3px 4px;
   border: 1px solid var(--line-bright);
   /* Round at a pill's height, but a hero whose power and badges wrap to a second line stays a
@@ -210,12 +218,16 @@
   background: var(--pal-brass-800);
 }
 
+/* #2877: one fixed width used or not, so the "Used" mark's coming and going never moves the
+   plate. The mark itself is an overlay hung off the chip's corner (below), out of flow. */
 .power-button,
 .power-tag {
+  position: relative;
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 4px;
-  max-width: 14ch;
+  width: 14ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -250,10 +262,18 @@
 }
 
 .power-used {
+  /* #2877: a corner tag on the chip, first in its DOM order so assistive tech still reads it
+     first; absolute, so the chip keeps one width used or not. It sits inside the chip's corner:
+     the chip's `overflow: hidden` (which the name's ellipsis needs) clips anything hung outside
+     the padding box. */
+  position: absolute;
+  top: 0;
+  right: 0;
   flex: none;
   padding: 0 5px;
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-pill);
+  background: var(--bg-raised);
   color: var(--text);
   font-size: var(--type-xs-em);
   font-weight: 700;
@@ -324,6 +344,82 @@ button.modifier-badge[data-open="true"] {
   font-size: var(--type-sm);
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+/* #2877: the hero's status tray (`HeroTray.tsx`): the seat's modifiers, secrets and Rift flag in
+   one row hung off the plate, out of flow, toward the field — above your hero, below the
+   opponent's — so the plate keeps one size however many effects the seat carries. Only the tray
+   itself is raised, over the mat and never under it: raising the whole seat hid the name of a
+   card lifted over the seat's empty lower half (B45), and every seat holds a tray. */
+.hero-tray {
+  position: absolute;
+  z-index: var(--z-popover);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.hero-you .hero-tray {
+  bottom: calc(100% + 2px);
+}
+
+.hero-opponent .hero-tray {
+  top: calc(100% + 2px);
+}
+
+/* One row, however many entries the seat carries: the wrappers never wrap, and every chip has a
+   fixed width with an ellipsis. The base is the tablet's 14ch; the desktop and phone queries
+   below widen and narrow it. */
+.hero-tray .modifiers {
+  flex-wrap: nowrap;
+}
+
+.hero-tray .modifier-badge {
+  flex: none;
+  max-width: 14ch;
+}
+
+/* The overflow list (`tray-list-<side>`) reads like a badge bubble, one entry a row. */
+.hero-tray-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* #2877: the Jade Counter (R961) and the Credits (R1840005) ride on the portrait as health and
+   armor do (`emotes.css` anchors those): Jade top left, Credits top right, at the badges'
+   overlay metrics, so gaining or spending one never moves the plate. */
+.hero-portrait .hero-jade,
+.hero-portrait .hero-credits {
+  position: absolute;
+  top: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  font-size: var(--type-2xs-em);
+}
+
+.hero-portrait .hero-jade {
+  left: -6px;
+}
+
+.hero-portrait .hero-credits {
+  right: -6px;
+}
+
+@media (min-width: 1025px) {
+  /* #2877: the desktop plate has the bar's wider padding, and its tray the widest chips. */
+  .hero {
+    --hero-w: calc(44px + 22ch + 50px);
+  }
+
+  .hero-tray .modifier-badge {
+    max-width: 18ch;
+  }
 }
 
 /* ------------------------------------------------------------------------- mana and piles --- */
@@ -2665,6 +2761,8 @@ button.modifier-badge[data-open="true"] {
   }
 
   .hero {
+    --hero-h: 48px;
+    --hero-w: calc(44px + 22ch + 29px);
     gap: 5px;
     padding: 2px 8px 2px 3px;
   }
@@ -2677,6 +2775,11 @@ button.modifier-badge[data-open="true"] {
   }
 
   .modifier-badge {
+    max-width: 12ch;
+  }
+
+  /* #2877: the phone tray's chips match every other badge there. */
+  .hero-tray .modifier-badge {
     max-width: 12ch;
   }
 
@@ -2789,7 +2892,9 @@ button.modifier-badge[data-open="true"] {
     /* Four field rows and your hand (1.24) stacked; the opponent's hand sits beside their seat.
        The 90px cap keeps each card of a seven-card fan 44px wide at 390px (B30). */
     --card-h: clamp(44px, 10.6vh, 92px);
-    --card-h: clamp(44px, calc((100cqh - 312px) / 5.24), 90px);
+    /* #2877: the budget holds both seats' fixed tray channels too, 18px past the padding the
+       seats already had. */
+    --card-h: clamp(44px, calc((100cqh - 348px) / 5.24), 90px);
     --card-w: calc(var(--card-h) * 0.72);
     /* #2876: a field card is a tile a little wider than it is tall and fills its zone, as on a
        phone held sideways (`--card-w: calc(var(--card-h) * 1.25)` there, whose faces already
@@ -2842,6 +2947,17 @@ button.modifier-badge[data-open="true"] {
   .board > .seat-opponent {
     grid-column: 1;
     grid-row: 1;
+    /* #2877: the opponent's tray hangs below the plate, off the plate and out of flow, but the
+       field's zones pack edge to edge with only the seat's padding and the board's gap between
+       them — so the seat reserves a fixed channel for the tray, which never reaches a zone.
+       The channel is constant: the plate, the seat and the field never move however many
+       effects the seat carries. */
+    padding-bottom: 22px;
+  }
+
+  /* #2877: your tray hangs above your plate; your seat reserves its channel the same way. */
+  .board > .seat-you {
+    padding-top: 22px;
   }
 
   .board > .hand-opponent {
@@ -2893,7 +3009,7 @@ button.modifier-badge[data-open="true"] {
      duos.css's own budget, for its taller rail, the stronger rule. */
   .board:where(:has(> .control-bar > .board-rail)) {
     --board-rail-phone-h: 62px;
-    --card-h: clamp(44px, calc((100cqh - 312px - var(--board-rail-phone-h)) / 5.24), 90px);
+    --card-h: clamp(44px, calc((100cqh - 348px - var(--board-rail-phone-h)) / 5.24), 90px);
   }
 
   .board .control-bar .control {

@@ -428,7 +428,9 @@ describe("Board", () => {
       expect(badge.classList.contains("hero-credits")).toBe(true);
       expect(screen.getByTestId(testid.hero(side)).contains(badge)).toBe(true);
     }
-    expect(document.querySelector("[data-testid^='tray-']")).toBeNull();
+    // #2877's hero tray (`tray-<side>`, `tray-more-<side>`, `tray-list-<side>`) reuses the
+    // prefix; the Resource tray's names were `tray-card-*` and `tray-count-*`, which stay gone.
+    expect(document.querySelector("[data-testid^='tray-card-'], [data-testid^='tray-count-']")).toBeNull();
   });
 
   it("writes the log from view.events without naming a drawn card", () => {
