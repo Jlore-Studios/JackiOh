@@ -15870,9 +15870,11 @@
         "sha": "2f81e55a49f0139927c42330f11796ad6a00441a"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T06:04:59Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-03T07:55:29Z",
         "family": "claude",
@@ -15882,6 +15884,7 @@
         "reason": "`claude-2` stops mid-call: 7-day usage is 90%, at or over its 90% cap; it resets at 2026-11-07T05:00:00Z",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 2793,
       "kind": "review",
       "live": "reviewing",
