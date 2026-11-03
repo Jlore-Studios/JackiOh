@@ -29474,6 +29474,7 @@
         "every": 5,
         "head": "a34a38cf7b36e13fbbc69d13a279042a375a0fca",
         "issue": 2888,
+        "last_why": "stopped: #2909 was closed",
         "merged_at": "2026-11-03T09:35:02Z",
         "n": 5,
         "pr": 2909,
@@ -29484,12 +29485,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:d84c79b1-1793698643",
+        "run_id": "",
         "sha": "f887a784229ff9160550bbd5e705c0e9728ef976",
         "started_at": "2026-11-03T09:38:04Z",
         "status": "queued",
         "title": "Patch: size the gather run from the deckable card count",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 5
