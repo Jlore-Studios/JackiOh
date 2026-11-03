@@ -14595,17 +14595,8 @@
       }
     },
     "2922": {
-      "action": "plan",
-      "asks": [
-        "c:6605478329"
-      ],
-      "build_next": {
-        "from_run": "41668027922",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-03T16:35:29Z",
-        "until": "2026-11-03T17:05:29Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T16:35:13Z",
         "difficulty": "hard",
@@ -14624,10 +14615,9 @@
         "reason": "planned on opus",
         "trail": "y test\"}\n- Bash: {\"command\": \"sed -n 1,12p spec/rulings/R2701000.md; grep -rn \\\"R2701000\\\\|R2702000\\\\|R2706000\\\" spec/15-dungeon-run.md | head -3; ls spec/pending/; grep -l \\\"2821\\\" spec/pending/* 2>/dev/null\", \"desc\u2026\n- Bash: {\"command\": \"for f in spec/pending/*.md; do echo \\\"== $f $(grep -c '^\\\\*\\\\*\\\\[\\\\[R' $f)\\\"; done; cat spec/pending/2827.md | cut -c1-400\", \"description\": \"Inspect pending files with several paragraphs\u2026\n- Bash: {\"command\": \"cat spec/pending/2739.md | cut -c1-300\", \"description\": \"Read a two-paragraph pending file\"}\n- Bash: {\"command\": \"grep -rn \\\"placeholder.json\\\" crates scripts apps/web/src --include=*.rs --include=*.ts --include=*.sh --include=*.py | head\", \"description\": \"Check whether placeholder.json format is ch\u2026\n- Bash: {\"command\": \"sed -n 100,200p crates/engine/tests/rules/hero_floor.rs\", \"description\": \"Read hero_floor tests using hit helper\"}\n- Bash: {\"command\": \"head -20 crates/engine/tests/rules.rs; head -20 crates/engine/tests/rules_2.rs; sed -n 155,170p crates/engine/tests/rules/mod.rs; grep -n \\\"pub fn vanilla_deck\\\" -A 12 crates/engine/test\u2026\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main; git log --oneline -1 origin/main 2>/dev/null; ls target 2>/dev/null | head -3; ls ../ 2>/dev/null | head\", \"description\": \"Check origin/main and bu\u2026\n- Bash: {\"command\": \"grep -rn \\\"heroFloor\\\\|hero_floor\\\" docs crates/engine/README.md crates/run/README.md apps/web/README.md 2>/dev/null | head\", \"description\": \"Check docs listing handicap fields\"}\n- Bash: {\"command\": \"sed -n 822,835p crates/run/src/lib.rs; sed -n 15,30p crates/run/src/fight.rs | head -3; sed -n 1,10p crates/run/src/tests.rs; sed -n 418,441p crates/run/src/tests.rs\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"grep -n \\\"heroHealth\\\\|hero_health\\\\|Handicap\\\" crates/engine/README.md | head -5; grep -rn \\\"M4\\\\|second stage\\\" spec/15-dungeon-run.md spec/README.md | head\", \"description\": \"Check eng\u2026\n- Bash: {\"command\": \"ls apps/web/src/wire/generated | wc -l; ls apps/web/src/wire/generated | grep -i index; grep -rn \\\"generated/\\\" scripts/*.sh 2>/dev/null | head -5; grep -rln \\\"readdirSync.*generated\\\\|g\u2026\n- Bash: {\"command\": \"grep -rln \\\"wire/generated\\\" crates --include=*.rs | grep -v \\\"src/.*\\\\.rs$\\\" | head; grep -rn \\\"wire/generated\\\" crates/engine/tests/*.rs crates/tools/src/*.rs 2>/dev/null | head -5\", \"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 1: a new engine rules fact (Handicap.hero_armor in crates/engine/\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 1: a new engine rules fact (Handicap.hero_armor in crates/engine/\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count plan words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2922/.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"\\\"\\\"**Departures from the earlier plan:** only the full `Handicap` literals n\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 1: a new engine rules fact (Handicap.hero_armor in crates/engine/\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; awk '/```/{f=!f; next} f' .bot-plan.md | wc -w\", \"description\": \"Count plan words incl. and in code\"}\n- Bash: {\"command\": \"awk '/^## /{if(name)print name, n; name=$0; n=0; next}{n+=NF}END{print name,n}' .bot-plan.md\", \"description\": \"Word count by plan section\"}\n- Bash: {\"command\": \"sed -n '/^13\\\\./,/^## Tests/p' .bot-plan.md\", \"description\": \"Show spec steps text for trimming\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2922/.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n if a not in s: print(\\\"MISSING:\\\", a[:70]); return\\n s=s.replace\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"limit\": 20}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"offset\": 20}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"old_string\": \"**Departures from the earlier plan:**\\n- The literal list is corrected: `TUTORIAL_HUMAN`, `cr\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"old_string\": \" - After `side.hero.health = hero_health;`, add `side.hero.armor = handicap.hero_armor.unwrap\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"old_string\": \" - `run_fight_setup`'s doc cites R2922001 and drops \\\"`content` is not read yet\\u2026\\\".\\n - \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"old_string\": \"5. The engine route. Rejected: an `ownHealth` effect past the run's HP. It would work, since \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2922/.bot-plan.md\", \"old_string\": \"`b7`, `b8` and every other existing test pass unchanged. Also run:\\n- `cargo test -p jackioh-\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2922/.bot-plan.md'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n if a not in s: print(\\\"MISSING:\\\", a[:80]); return\\n s=s.replace\u2026\n- Bash: {\"command\": \"cat .bot-plan.md\", \"description\": \"Print the final plan\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 1: a new engine rules fact (Handicap.hero_armor in crates/engine/src, with a ruling), and rule 3: engine, run crate and web types must agree\"} --> ## Goal Curses now make each fight's enemy stronger, and held Combat artifacts help the human, through the\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-03T15:50:25Z",
       "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
@@ -14640,12 +14630,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-03T13:47:11Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41668027922",
+      "run_id": "pending:25525a37-1793723780",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T15:50:25Z",
+      "started_at": "2026-11-03T16:36:58Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6605478329"
+      ]
     },
     "2923": {
       "action": "build",
@@ -15717,9 +15709,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T16:24:58Z",
+    "at": "2026-11-03T16:36:58Z",
     "url": "",
-    "what": "build #2941 on muse"
+    "what": "build #2922 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-03T16:07:34Z",
