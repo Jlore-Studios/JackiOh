@@ -15598,16 +15598,14 @@
     "what": "plan #2930 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-03T17:15:26Z",
+    "at": "2026-11-03T17:36:38Z",
     "notes": [
-      "delivered review #2935 on claude-6 (run 41681146978): stopped",
-      "delivered review #2904 on claude-3 (run 41681009967): stopped",
-      "delivered revise #2907 on claude-8 (run 41673356692): approved",
-      "started review #2904 on claude-3 (run 41683473050)",
-      "started plan #2949 on claude-8 (run 41683611055)",
-      "started plan #2929 on claude-7 (run 41683744701)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is busy; `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-03T19:20:00Z; it can start a build or a plan again in 56m; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 112h 36m; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 83h 36m",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered review #2904 on claude-3 (run 41683473050): stopped",
+      "delivered review #2946 on muse (run 41673014791): approved",
+      "started plan #2930 on claude-3 (run 41686765645)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days",
+      "#2907: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16313,7 +16311,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T17:15:26Z",
+  "loop_tick": "2026-11-03T17:36:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
