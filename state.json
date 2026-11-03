@@ -14768,17 +14768,8 @@
       ]
     },
     "2925": {
-      "action": "plan",
-      "asks": [
-        "c:6605527393"
-      ],
-      "build_next": {
-        "from_run": "41648595678",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-03T14:13:52Z",
-        "until": "2026-11-03T14:43:52Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T14:13:43Z",
         "difficulty": "medium",
@@ -14797,10 +14788,9 @@
         "reason": "planned on sonnet",
         "trail": "=*.tsx . | grep -v test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2925/apps/web/src && sed -n 395,500p routes/practice.test.tsx; sed -n 1300,1335p routes/practice.test.tsx; sed -n 1380,1520p routes/practice.test.tsx\u2026\n- Bash: {\"command\": \"grep -n \\\"showOfferDraw\\\\|offer-draw\\\\|data-showcase\\\\|data-speaking\\\" game/*.tsx game/*.ts | grep -v \\\"test\\\\.\\\" | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"function routeHost\\\\|function settle\\\\|function renderRoute\\\\|function visit\\\\|holdAiSteps\\\\|aiToAct\\\" routes/practice.test.tsx | head -40\"}\n- Bash: {\"command\": \"grep -n \\\"setHold\\\\|setBoardBusy\\\\|holds\\\\|aiToAct\\\\|pacing\\\\|aiStep\\\" practice/controller.ts | head -80\"}\n- Bash: {\"command\": \"sed -n 150,380p routes/practice.test.tsx\"}\n- Bash: {\"command\": \"sed -n 215,285p practice/controller.ts\"}\n- Bash: {\"command\": \"grep -rn \\\"showcase\\\" --include=*.ts --include=*.tsx -il . | grep -v \\\"test\\\\.\\\" | head -20; grep -rn \\\"\\\\\\\"data-showcase\\\\\\\"\\\\|data-showcase\\\\|dataset.showcase\\\\|'showcase'\\\" --include=\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2925 && grep -rn \\\"useVoiceHold\\\\|useShowcaseHold\\\\|useMarkHold\\\\|useBoardBusy\\\\|useControllerState\\\" --include=*.md --include=*.ts --include=*.tsx -\u2026\n- Bash: {\"command\": \"grep -n \\\"ai-table\\\\|aiTable\\\\|AI-table\\\" -r apps/web/README.md docs scripts 2>/dev/null | head; ls apps/web; grep -n \\\"practice/\\\" apps/web/README.md | head -20; cat scripts/ci-scope.sh\u2026\n- Bash: {\"command\": \"sed -n 655,700p apps/web/README.md; grep -n \\\"fight\\\" apps/web/README.md | head -20; sed -n 1,12p apps/web/src/audio/useVoiceSpeaking.ts\"}\n- Bash: {\"command\": \"grep -n \\\"DR5\\\\|practice game\\\\|pac\\\" spec/15-dungeon-run.md | head -30; grep -n \\\"9.9\\\\|paced\\\\|pacing\\\\|showcase\\\" spec/09-architecture.md | head -30\"}\n- Bash: {\"command\": \"sed -n 1,12p spec/15-dungeon-run.md; grep -n \\\"DR5\\\\|fight screen\\\\|Fight screen\\\\|#2706\\\\|R2706000\\\\|B22\\\\|B25\\\\|rail\\\" spec/15-dungeon-run.md | head -20; grep -n \\\"R2706000\\\" spec/ruli\u2026\n- Bash: {\"command\": \"grep -rln \\\"09-architecture\\\" crates apps e2e scripts 2>/dev/null | grep -v node_modules | head; sed -n 160,166p spec/09-architecture.md | cut -c1-400; git log --oneline -5 -- spec/09-ar\u2026\n- Bash: {\"command\": \"git show --stat c7145e4d9 | head -30; git show --stat d7804ec1a | head -30; ls docs/patches 2>/dev/null | head; ls spec/pending | head -30\"}\n- Bash: {\"command\": \"git log --oneline --all -i --grep=\\\"2883\\\" | head -5; git log --oneline -3 -S\\\"showOfferDraw={false}\\\" -- apps/web/src/routes/practice.tsx\"}\n- Bash: {\"command\": \"git show --stat 635e3a8a6 | tail -20; git show 635e3a8a6 -- spec | head -40\"}\n- Bash: {\"command\": \"grep -n \\\"Offer draw\\\\|showOfferDraw\\\" apps/web/README.md | cut -c1-500; grep -n \\\"dungeon/fight\\\\|FightScreen\\\\|fight\\\" apps/web/README.md | cut -c1-300 | head -20; grep -n \\\"pace=fast\\\u2026\n- Bash: {\"command\": \"sed -n 194,203p apps/web/README.md; sed -n 738,760p apps/web/README.md; grep -n \\\"dungeon\\\" apps/web/README.md | cut -c1-200 | head -20; cat apps/web/src/practice/practice.css | grep -n \u2026\n- Bash: {\"command\": \"sed -n 1635,1665p apps/web/src/practice/practice.css; grep -rn \\\"practice-table\\\" apps/web/src --include=*.tsx --include=*.css | grep -v test | head\"}\n- Bash: {\"command\": \"grep -n \\\"async function settle\\\" -A 22 apps/web/src/routes/practice.test.tsx; sed -n 625,700p apps/web/src/game/Board.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"settle\\\" apps/web/src/routes/practice.test.tsx | head -5; grep -rn \\\"function settle\\\\|const settle\\\" apps/web/src/test apps/web/src/routes/practice.test.tsx | head\"}\n- Bash: {\"command\": \"cat apps/web/src/test/settle.ts; sed -n 1,80p apps/web/src/test/helpers.test.ts | head -80\"}\n- Bash: {\"command\": \"sed -n 83,125p apps/web/src/practice/controller.ts; grep -n \\\"RunTimer\\\\|setInterval\\\\|setTimeout\\\" apps/web/src/dungeon/fight/RunTimer.tsx | head\"}\n- Bash: {\"command\": \"cd apps/web && grep -rln \\\"README.md\\\" src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"readdirSync\\\\|import.meta.glob\\\" src/practice/*.test.ts | head -5; cat vitest.confi\u2026\n- Bash: {\"command\": \"head -30 spec/INDEX.md | cut -c1-200; sed -n 1,60p spec/README.md | cut -c1-300\"}\n- Bash: {\"command\": \"grep -rn \\\"Offer draw\\\" docs --include=*.md -l | head; grep -rn \\\"FightScreen\\\" docs crates/run/README.md apps/web/README.md 2>/dev/null | cut -c1-200 | head; ls spec/rulings | grep -c .\u2026\n- Bash: {\"command\": \"sed -n 286,352p apps/web/src/practice/controller.ts\"}\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/dungeon/fight/testids.ts; grep -n \\\"stubPhoneBar\\\" -A 25 apps/web/src/routes/practice.test.tsx | head -50\"}\n- Bash: {\"command\": \"cat apps/web/src/test/phoneBar.ts | head -40; grep -n \\\"match-menu-panel\\\\|matchMenu\\\" apps/web/src/game/testids.ts apps/web/src/game/contract.ts 2>/dev/null | head -5\"}\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3; grep -n '\\\"test\\\"\\\\|\\\"typecheck\\\"' apps/web/package.json; ls target 2>/dev/null | head -3\"}\n- Bash: {\"command\": \"sed -n 10,30p apps/web/package.json\"}\n- Bash: {\"command\": \"grep -n \\\"spec check. fails when\\\" spec/README.md | cut -c1-1800\"}\n- Bash: {\"command\": \"cd apps/web/src && grep -rn \\\"control-offer-draw\\\" --include=*.ts --include=*.tsx . | head; grep -rn \\\"practice.css\\\" --include=*.test.ts --include=*.test.tsx . | head -5\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2925/.bot-plan.md\", \"content\": \"# Draft plan #2925 (planner notes)\\n\\nFound:\\n- practice.tsx has useBoardBusy (398-411), useMarkHold/useVoiceHold/useS\u2026\n- Bash: {\"command\": \"grep -n \\\"PracticeController\\\\b\\\\|createPracticeController\\\\|useEffect\\\" routes/practice.tsx | head -20; grep -n \\\"PracticeController\\\\b\\\\|useEffect\\\\|PracticeControllerState\\\" dungeon/f\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Web-only (apps/web): moves five hooks into one module and calls them from two screens, plus tests and docs; no engine, AI, migration or cross-crate contract, about 11 files.\"} --> ## Goal A dungeon fight's AI is paced as practice's is, and its board has no\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-03T13:54:38Z",
       "owner_why": "it plans it",
@@ -14813,12 +14803,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-03T13:48:59Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41648595678",
+      "run_id": "pending:bcdfb1b5-1793715439",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T13:54:38Z",
+      "started_at": "2026-11-03T14:17:47Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6605527393"
+      ]
     },
     "2926": {
       "action": "plan",
@@ -15137,9 +15129,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T14:17:04Z",
+    "at": "2026-11-03T14:17:47Z",
     "url": "",
-    "what": "build #2923 on muse"
+    "what": "build #2925 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-03T13:50:15Z",
