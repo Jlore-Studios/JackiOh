@@ -123,6 +123,9 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(badges).toContain("pointer-events: none;");
     expect(phone).toMatch(/\.app-shell--wide\s*>\s*\.game\[data-rail-top="true"\]\s*\{[^}]*display:\s*grid;/);
     expect(phone).toMatch(/\.game\[data-rail-top="true"\]\s*>\s*\.turn-banner\s*\{[^}]*grid-row:\s*1;/);
+    // The finished-game chip is in-flow, so it takes a row of its own under the board instead of
+    // auto-placing beside the rail and crushing the one-line ranks.
+    expect(phone).toMatch(/\.game\[data-rail-top="true"\]\s*>\s*:is\(\[data-testid="result-overlay"\], \.trade-bar\)\s*\{[^}]*grid-row:\s*3;/);
     expect(phone).toMatch(/\.hero\s*\{[^}]*--hero-h:\s*44px;/);
   });
 });

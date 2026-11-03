@@ -3184,6 +3184,15 @@ button.modifier-badge[data-open="true"] {
     min-height: 0;
   }
 
+  /* A finished game's chip form is in-flow under the board (animations.css) while the panel form
+     is fixed, and the Trade bar rides the game root fixed too (TradeControl.tsx): as the grid's
+     children they take a row of their own under the board instead of auto-placing into row 1
+     beside the rail, where the chip would crush the one-line ranks. */
+  .game[data-rail-top="true"] > :is([data-testid="result-overlay"], .trade-bar) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
   /* One line: the rank line takes what Back and the pill leave and does not wrap. Its words ("Ranked ·"
      and each seat's rank name) are visually hidden and the crests lose their pip row (aria-hidden
      decoration), the shield carrying the rank; the words stay in the page for a screen reader, and a
