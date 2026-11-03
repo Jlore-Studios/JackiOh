@@ -144,12 +144,13 @@ every visitor, and the repository is public.
 
 Production keeps serving from Render until step 6 verifies the new server, so do these in order.
 
-**Actions -> cutover** (`.github/workflows/cutover.yml`) runs steps 3 and 6's secrets, the copy and
-the dropping of staging's keep-alive, one `step` a run, so no secret passes through a person: each
-value goes from Render's `jackioh-server` or a repository secret straight to where it is used. It
-needs only `RENDER_API_KEY` and `CLOUDFLARE_API_TOKEN`, which the repository holds, and for production
-`PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key and
-session pooler URI). The URI may keep Supabase's `[YOUR-PASSWORD]`, with the password itself in
+**Actions -> cutover** (`.github/workflows/cutover.yml`) ran steps 3 and 6's secrets, the copy and
+the dropping of staging's keep-alive, one `step` a run, so no secret passed through a person: each
+value went from Render's `jackioh-server` or a repository secret straight to where it was used. Those
+steps read Render, and left the file with it (step 7; they are in its history); what still runs there
+is `check-production`, `production-auth`, `email`, `stats-logins` and `dev-stats`. For production it
+reads `PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key
+and session pooler URI). The URI may keep Supabase's `[YOUR-PASSWORD]`, with the password itself in
 `PRODUCTION_DB_PASSWORD`, which, when set, replaces any password the URI holds; the workflow
 percent-encodes it. Step `check-production` writes nothing and says whether those secrets are a secret
 key and an address that reaches JackiOh-Production. The commands below are what it does, for doing it
@@ -262,16 +263,20 @@ later, so Render would stop billing:
    held and opened straight into the repository secret `CODE_PEPPER` (section 3), and deleted the
    Blueprint and the service. The owners deleted the Render workspace's card and the Vercel project.
 2. The repository secrets `RENDER_DEPLOY_HOOK_URL`, `RENDER_API_KEY` and `VERCEL_DEPLOY_HOOK_URL` are
-   deleted, so cutover's steps that read Render (`staging-secrets`, `production-secrets`, `copy`,
-   `after-cutover`, `delete-render`) cannot run again; `production-auth` and `email` still can.
+   deleted, and cutover's steps that read Render (`staging-secrets`, `drop-ping`,
+   `production-secrets`, `copy`, `after-cutover`, `delete-render`) left `cutover.yml`;
+   `check-production`, `production-auth`, `email`, `stats-logins` and `dev-stats` still run.
 
 ## 5. Day-to-day operation
 
 - **Normal day:** merge to main as usual. Staging updates within minutes of CI passing; production
-  stays as it is until someone asks.
-- **Ship to production:** `/promote` on the production issue. The super run tests the pull request
-  (an hour or so) and it merges and deploys once every job passed. A red job goes to the night bot as
-  `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer commit.
+  takes the commit the daily super run on main passed, the same afternoon (section 2.1). A red daily
+  run goes to the night bot as `priority:high`, and production waits for the next one that passes; a
+  promotion or deploy that fails goes to Squishy.
+- **Ship to production sooner:** `/promote` on the production issue. The super run tests the pull
+  request (an hour or so) and it merges and deploys once every job passed. A red job goes to the night
+  bot as `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer
+  commit.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main, then `/promote`. If the super run is
   red for a reason the fix does not touch and it cannot wait, `/skip-super <why>` merges it at once,
   and the issue records who and why.
@@ -280,7 +285,9 @@ later, so Render would stop billing:
   the deploy rebuilds the web and the server from that commit, and the first request restarts the
   server on it. Workers & Pages -> the Worker -> Deployments -> Rollback is quicker for the Worker
   and its static files, but check in the deployment's details that it took the container's image
-  back too before relying on it. Either way, nobody `/promote`s until the fix has merged.
+  back too before relying on it. Either way, nobody `/promote`s until the fix has merged, and the
+  next daily promotion deploys main as it stands: if the revert cannot be on main before the next
+  daily super run passes, disable `promote-production.yml` until it is (section 2.1).
 - **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
   workflow on deploy staging, or promote production with **redeploy**).
 - **Deploy staging by hand:** Actions -> deploy staging -> Run workflow. With no `sha` it deploys
@@ -391,8 +398,10 @@ key. Resend's free plan sends 100 a day; its dashboard (Emails) shows each one s
 **The copy,** at section 4's step 6, with nobody promoting production meanwhile: Supabase's own way
 between projects, the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the
 empty production project, both through their session pooler URIs as `postgres`, held in a file outside
-the repository (`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, does it all,
-refuses a production project that is not empty, and rolls the whole copy back when the counts differ:
+the repository (`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, did it all,
+refusing a production project that was not empty and rolling the whole copy back when the counts
+differed (it read staging's address from Render, so it left the file with Render; it is in the file's
+history):
 
 ```
 supabase db dump --db-url "$STAGING_DB_URL" -f roles.sql --role-only
