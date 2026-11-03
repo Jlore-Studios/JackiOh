@@ -29136,6 +29136,7 @@
         "every": 5,
         "head": "c44f4a80f12d9450ed8a3f87dd08be10cc110549",
         "issue": 2927,
+        "last_why": "stopped: #2935 was closed",
         "merged_at": "2026-11-03T16:05:15Z",
         "n": 15,
         "pr": 2935,
@@ -29146,12 +29147,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:7dfd0784-1793722956",
+        "run_id": "",
         "sha": "46b50bf36d30c4e2890999e2bd644bc591feccbe",
         "started_at": "2026-11-03T16:23:12Z",
         "status": "queued",
         "title": "Patch: the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
-        "tries": 0
+        "tries": 1
       },
       {
         "approver": {},
