@@ -13543,7 +13543,7 @@
       "verdict_rounds": 1
     },
     "2904": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "cleared": {
         "approver": {
@@ -13565,19 +13565,20 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2725,
-      "kind": "revise",
-      "live": "revising",
+      "kind": "review",
+      "live": "reviewing",
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "queued_at": "2026-11-03T15:05:02Z",
-      "run_id": "41665463911",
+      "run_id": "pending:43fed5dd-1793723835",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
+      "spot_check": true,
       "spot_check_n": 20,
-      "started_at": "2026-11-03T15:35:23Z",
+      "started_at": "2026-11-03T16:37:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15709,9 +15710,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T16:36:58Z",
+    "at": "2026-11-03T16:37:51Z",
     "url": "",
-    "what": "build #2922 on claude-4"
+    "what": "spot-check #2904 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T16:07:34Z",
@@ -29190,7 +29191,15 @@
         "n": 20,
         "pr": 2904,
         "queued_at": "2026-11-03T16:24:08Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:43fed5dd-1793723835",
         "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
+        "started_at": "2026-11-03T16:37:51Z",
         "status": "queued",
         "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
         "tries": 0
