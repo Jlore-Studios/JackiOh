@@ -258,8 +258,18 @@ describe("R2789000 the combat keyword beats", () => {
     const cues = must(stream(events)[1], "the second attack").beats.cues;
     expect(cues.filter((cue) => cue.kind === "callout")).toHaveLength(FX_CALLOUTS_PER_HIT);
     expect(cues.filter((cue) => cue.kind === "callout").map((cue) => (cue.kind === "callout" ? cue.keyword : ""))).toEqual(["Windfury", "Flying"]);
-    // The first attack has Flying and Ranged: two callouts, the second staggered.
-    expect(kinds(must(stream(events)[0], "the first attack").beats.cues)).toEqual(["callout@0", "callout@60"]);
+    // The first attack has Flying and Ranged: two callouts, the second staggered; R2791000: and
+    // POISONER's Charge and Rush dash behind them, staggered third and fourth, with no callout left.
+    expect(kinds(must(stream(events)[0], "the first attack").beats.cues)).toEqual([
+      "callout@0",
+      "callout@60",
+      "shot@120",
+      "burst@258",
+      "shake@258",
+      "shot@175",
+      "burst@280",
+      "shake@280",
+    ]);
   });
 
   it("R201 R2789000 speed scales every beat: the same cues at 0.5, 1 and 2, each within 4 ms of its scaled time", () => {
@@ -317,8 +327,8 @@ describe("R2789000 the combat keyword beats", () => {
     expect(stream([attack(MINE, FOE_2), hitOf("hidden", FOE_3, 2)]).flatMap(({ beats }) => beats.cues)).toEqual([]);
   });
 
-  it("R2789000 the nine keywords with a beat each have a callout icon", () => {
-    expect(FX_BEAT_KEYWORDS).toHaveLength(9);
+  it("R2789000 the nine keywords with a beat each have a callout icon, R2791000 the ten tempo ones", () => {
+    expect(FX_BEAT_KEYWORDS).toHaveLength(19);
     for (const keyword of FX_BEAT_KEYWORDS) expect(KEYWORD_CALLOUT_ICONS[keyword]?.d, keyword).toMatch(/^M/);
   });
 });
