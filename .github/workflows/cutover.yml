@@ -554,10 +554,12 @@ jobs:
           supabase db dump --db-url "$staging" -f roles.sql --role-only
           # A role's setting only a superuser may make, which Supabase's postgres is not (the first real
           # run, 41540999815, stopped at `log_min_messages`): left out, and named. The rest are named too.
-          superuser='^ALTER ROLE .* SET "?(log_[a-z_]+|session_preload_libraries|auto_explain\.[a-z_]+)"? '
-          { grep -E "$superuser" roles.sql || true; } | sed -E 's/^ALTER ROLE ("?[^ "]+"?) .*SET "?([a-z_.]+)"?.*/  left out of roles.sql: \1 sets \2/'
+          # Grants on a parameter (GRANT SET ON PARAMETER …), which need the grant option on it, go too.
+          superuser='^(ALTER ROLE .* SET "?(log_[a-z_]+|session_preload_libraries|auto_explain\.[a-z_]+)"? |(GRANT|REVOKE) .* ON PARAMETER )'
+          { grep -E "$superuser" roles.sql || true; } | sed -E "s/'[^']*'/'…'/g; s/^/  left out of roles.sql: /"
           sed -i -E "/$superuser/d" roles.sql
-          { grep -E '^ALTER ROLE .* SET ' roles.sql || true; } | sed -E 's/^ALTER ROLE ("?[^ "]+"?) .*SET "?([a-z_.]+)"?.*/  roles.sql: \1 sets \2/'
+          # What is left, every quoted value blanked (a password's hash among them).
+          grep -vE '^(--|$)' roles.sql | sed -E "s/'[^']*'/'…'/g; s/^/  roles.sql: /"
           supabase db dump --db-url "$staging" -f schema.sql
           supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
             -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
