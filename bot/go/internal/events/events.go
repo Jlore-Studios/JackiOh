@@ -24,10 +24,13 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stepup"
@@ -479,6 +482,10 @@ func Execute(ctx *hctx.Context, command *commands.Command, thread *pyjson.Object
 	if verb == "rebuild" {
 		return stepup.RebuildRequest(ctx, number, by)
 	}
+	if verb == "handoff" {
+		// Release it from its owner and any hold (#2748): to anyone, at a difficulty, or to people.
+		return plan.Handoff(ctx, number, by, command.Args)
+	}
 	if verb == "review" {
 		if !isPR {
 			return "`review` asks for a review run of one of my pull requests; on an issue, " +
@@ -830,12 +837,65 @@ func DropWip(ctx *hctx.Context, number int) {
 	}, fmt.Sprintf("wip #%d closed", number))
 }
 
-// OnPullClosed is on_pull_closed.
+// OnPullClosed is on_pull_closed. A bot pull request merged into the default branch is counted
+// for the after-merge spot-check too (`SpotCheckMerge`).
 func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 	pull := payload.Obj("pull_request")
 	if !queue.LabelNames(pull)[config.LabelPR] {
 		return []string{"ignored: not a bot pull request"}
 	}
+	notes := onPullClosed(ctx, pull)
+	if said := SpotCheckMerge(ctx, pull); said != "" {
+		notes = append(notes, said)
+	}
+	return notes
+}
+
+// SpotCheckMerge counts a merged bot pull request for the after-merge spot-check (#2748, section
+// 5; `spotcheck.Merged`): every `spot_check_every`th medium one merged into the default branch,
+// none of a follow-up issue's, is queued for a strong model's review of the change as it merged.
+// What it queued, or "".
+func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
+	cfg := ctx.Cfg
+	if !cfg.SpotChecks() || !pull.Truthy("merged") || !pyjson.Equal(pull.Obj("base").Get("ref"), cfg.DefaultBranch) {
+		return ""
+	}
+	number := py.MustInt(py.Item(pull, "number"))
+	state := ctx.Store.Load()
+	record := state.Obj("items").Obj(strconv.Itoa(number)).Copy()
+	issue := 0
+	if linked := threads.LinkedIssue(pull); linked != nil {
+		issue = *linked
+	}
+	difficulty := queue.DifficultyOf(queue.LabelNames(pull), py.OrStr(record.Get("difficulty"), ""))
+	followUp, reconcile := false, false
+	if issue != 0 {
+		thread := pyjson.New()
+		herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(issue) })
+		issueRecord := state.Obj("items").Obj(strconv.Itoa(issue))
+		followUp = spotcheck.IsFollowUp(issueRecord, py.OrStr(thread.Get("body"), ""))
+		if queue.IsFullsend(queue.ModeOf(queue.LabelNames(thread)), issueRecord) {
+			difficulty = "hard" // a fullsend tree's reconcile is a strong model's (#505)
+			reconcile = true    // and never counted
+		}
+	}
+	merge := spotcheck.Merge{PR: number, Issue: issue, Title: py.OrStr(pull.Get("title"), ""),
+		SHA: py.OrStr(pull.Get("merge_commit_sha"), ""), Head: py.OrStr(pull.Obj("head").Get("sha"), ""),
+		Difficulty: difficulty, FollowUp: followUp, Reconcile: reconcile, Record: record}
+	var queued *pyjson.Object
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		queued = spotcheck.Merged(s, merge, cfg.SpotCheckEvery, ctx.Now())
+		return nil
+	}, fmt.Sprintf("spot-check count #%d", number))
+	if queued == nil {
+		return ""
+	}
+	return fmt.Sprintf("#%d is medium or hard merge %d, so it is queued for an after-merge spot-check (one in %d)",
+		number, py.MustInt(queued.Get("n")), cfg.SpotCheckEvery)
+}
+
+// onPullClosed is on_pull_closed's own work on a closed bot pull request.
+func onPullClosed(ctx *hctx.Context, pull *pyjson.Object) []string {
 	issue := threads.LinkedIssue(pull)
 	number := py.MustInt(py.Item(pull, "number"))
 	ctx.Store.Update(func(s *pyjson.Object) any {
@@ -845,6 +905,13 @@ func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 		return nil
 	}, fmt.Sprintf("closed #%d", number))
 	DropWip(ctx, number)
+	// Merged or closed, it is in CI or the merge queue no more (#2748).
+	herr.Catch[*herr.GitHubError](func() { queue.NotMerging(ctx, number, queue.LabelNames(pull)) })
+	// The Claude sessions kept for its runs (#2748), and on a merge its issue's, which closes.
+	sessions.DropItem(ctx, number, fmt.Sprintf("#%d was closed", number))
+	if pull.Truthy("merged") && issue != nil && *issue != 0 {
+		sessions.DropItem(ctx, *issue, fmt.Sprintf("#%d merged", number))
+	}
 	if pull.Truthy("merged") {
 		// merged: approved and green, so its strikes are over
 		herr.Catch[*herr.GitHubError](func() { stepup.Clear(ctx, number) })
@@ -907,7 +974,7 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 			continue
 		}
 		record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
-		if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelWorking) || record.Truthy("stop_requested") {
+		if intersects(names, config.LabelBlocked, config.LabelRevise) || config.IsLive(names) || record.Truthy("stop_requested") {
 			out = append(out, fmt.Sprintf("#%d: blocked, stopped or already queued; left alone", number))
 			continue
 		}
@@ -959,12 +1026,27 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 		if pull.Truthy("auto_merge") {
 			herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(py.Item(pull, "node_id"))) })
 		}
+		queue.NotMerging(ctx, number, names)
 		ctx.GH.CreateComment(number, fmt.Sprintf("%s (%s) after %d tries at ", failed, link, fixes)+
 			"fixing it, so I stopped. It needs a person.")
 		return fmt.Sprintf("#%d: blocked after %d CI fixes", number, fixes)
 	}
 	answer := queue.QueueRevise(ctx, number, ctx.Cfg.BotLogin, false, "ci", false,
 		pyjson.New("ci_run_id", run.Get("id"), "ci_sha", sha, "ci_fixes", fixes+1), nil)
+	// The last approver owns the merge (#2748, section 4): the subscription whose approval shipped
+	// this head fixes it, ahead of its new work (`plan.Pairs`), held for it a while or handed off
+	// as any owner's work (`plan.Owning`). Its fix is a new head, which its own run's reviewer's
+	// approval at the item's tier ships (`reviewrule`, 2026-11-02).
+	owner := py.OrStr(record.Get("merge_owner"), "")
+	if owner != "" && pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			plan.Own(s, number, owner, fmt.Sprintf("its approval shipped `%s`, and the last approver "+
+				"owns the merge, so it fixes what CI found", py.SliceTo(sha, 12)), ctx.Now())
+			return nil
+		}, fmt.Sprintf("ci fix #%d is %s's", number, owner))
+		answer += fmt.Sprintf(" `%s`, whose approval shipped this head, owns the merge, so it fixes "+
+			"it first; the fix is a new commit, which ships once its own run's reviewer approves it.", owner)
+	}
 	ctx.GH.CreateComment(number, fmt.Sprintf("%s (%s). %s", failed, link, answer))
 	return fmt.Sprintf("#%d: queued a CI fix", number)
 }
@@ -1006,8 +1088,8 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	}
 	names := queue.LabelNames(pull)
 	record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
-	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelWorking, config.LabelReady, config.LabelPersonMerges) ||
-		queue.IsHuman(names) || record.Truthy("stop_requested") {
+	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelReady, config.LabelPersonMerges) ||
+		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
 	}
 	sha := py.OrStr(pull.Obj("head").Get("sha"), "")

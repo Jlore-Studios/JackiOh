@@ -53,7 +53,6 @@ body:
       description: A choice here becomes its `difficulty:*` label; with none, the bot's planner rates it.
       options:
         - Not sure (the planner rates it)
-        - easy
         - medium
         - hard
       default: 0

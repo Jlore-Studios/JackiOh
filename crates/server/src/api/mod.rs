@@ -18,6 +18,7 @@ pub mod economy;
 pub mod game_records;
 pub mod health;
 pub mod http;
+pub mod news;
 pub mod practice;
 pub mod quests;
 pub mod queue;
