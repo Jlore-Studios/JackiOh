@@ -114,16 +114,24 @@
 }
 
 /* `flex-direction` and `flex-wrap` are stated because src/index.css has a landing-page `.hero`
-   (a column) that would otherwise leak into the board's hero; a row that wraps is what fits a
-   phone-width seat without pushing the badges past its edge. */
+   (a column) that would otherwise leak into the board's hero. The plate keeps one fixed size per
+   layout (#2877): the portrait, the seat label and the Heroic Power always fit it, and the seat's
+   effects live in the tray hung off it, out of flow, so gaining or losing one never moves the
+   plate, the seat or the field. */
 .hero {
+  --hero-h: 50px;
+  --hero-w: calc(44px + 22ch + 46px);
+
   position: relative;
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 7px;
+  width: var(--hero-w);
+  height: var(--hero-h);
   min-width: 0;
+  overflow: visible;
   padding: 3px 10px 3px 4px;
   border: 1px solid var(--line-bright);
   /* Round at a pill's height, but a hero whose power and badges wrap to a second line stays a
@@ -210,12 +218,16 @@
   background: var(--pal-brass-800);
 }
 
+/* #2877: one fixed width used or not, so the "Used" mark's coming and going never moves the
+   plate. The mark itself is an overlay hung off the chip's corner (below), out of flow. */
 .power-button,
 .power-tag {
+  position: relative;
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 4px;
-  max-width: 14ch;
+  width: 14ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -250,10 +262,16 @@
 }
 
 .power-used {
+  /* #2877: a corner tag on the chip, first in its DOM order so the chip's clip never takes it
+     and assistive tech still reads it first; absolute, so the chip keeps one width used or not. */
+  position: absolute;
+  top: -8px;
+  right: -4px;
   flex: none;
   padding: 0 5px;
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-pill);
+  background: var(--bg-raised);
   color: var(--text);
   font-size: var(--type-xs-em);
   font-weight: 700;
@@ -324,6 +342,85 @@ button.modifier-badge[data-open="true"] {
   font-size: var(--type-sm);
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+/* #2877: the hero's status tray (`HeroTray.tsx`): the seat's modifiers, secrets and Rift flag in
+   one row hung off the plate, out of flow, toward the field — above your hero, below the
+   opponent's — so the plate keeps one size however many effects the seat carries. The seat keeps
+   its stacking over the field, so the opponent's tray paints over the mat, never under it. */
+.seat:has(.hero-tray) {
+  z-index: var(--z-popover);
+}
+
+.hero-tray {
+  position: absolute;
+  z-index: var(--z-popover);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.hero-you .hero-tray {
+  bottom: calc(100% + 2px);
+}
+
+.hero-opponent .hero-tray {
+  top: calc(100% + 2px);
+}
+
+/* One row, however many entries the seat carries: the wrappers never wrap, and every chip has a
+   fixed width with an ellipsis. The base is the tablet's 14ch; the desktop and phone queries
+   below widen and narrow it. */
+.hero-tray .modifiers {
+  flex-wrap: nowrap;
+}
+
+.hero-tray .modifier-badge {
+  flex: none;
+  max-width: 14ch;
+}
+
+/* The overflow list (`tray-list-<side>`) reads like a badge bubble, one entry a row. */
+.hero-tray-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* #2877: the Jade Counter (R961) and the Credits (R1840005) ride on the portrait as health and
+   armor do (`emotes.css` anchors those): Jade top left, Credits top right, at the badges'
+   overlay metrics, so gaining or spending one never moves the plate. */
+.hero-portrait .hero-jade,
+.hero-portrait .hero-credits {
+  position: absolute;
+  top: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  font-size: var(--type-2xs-em);
+}
+
+.hero-portrait .hero-jade {
+  left: -6px;
+}
+
+.hero-portrait .hero-credits {
+  right: -6px;
+}
+
+@media (min-width: 1025px) {
+  /* #2877: the desktop plate has the bar's wider padding, and its tray the widest chips. */
+  .hero {
+    --hero-w: calc(44px + 22ch + 50px);
+  }
+
+  .hero-tray .modifier-badge {
+    max-width: 18ch;
+  }
 }
 
 /* ------------------------------------------------------------------------- mana and piles --- */
@@ -2665,6 +2762,8 @@ button.modifier-badge[data-open="true"] {
   }
 
   .hero {
+    --hero-h: 48px;
+    --hero-w: calc(44px + 22ch + 29px);
     gap: 5px;
     padding: 2px 8px 2px 3px;
   }
@@ -2677,6 +2776,11 @@ button.modifier-badge[data-open="true"] {
   }
 
   .modifier-badge {
+    max-width: 12ch;
+  }
+
+  /* #2877: the phone tray's chips match every other badge there. */
+  .hero-tray .modifier-badge {
     max-width: 12ch;
   }
 
