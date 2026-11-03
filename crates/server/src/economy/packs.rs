@@ -87,7 +87,7 @@ pub struct BarsSettled {
 
 /// The inventory row a pack is counted in (§14.3): a set's under its set's name, the global
 /// pack's under no key.
-fn inventory_of(pack: PackKind) -> (InventoryItem, String) {
+pub(crate) fn inventory_of(pack: PackKind) -> (InventoryItem, String) {
     match pack {
         PackKind::Set(set) => (InventoryItem::SetPack, set.as_str().to_string()),
         PackKind::Global => (InventoryItem::GlobalPack, String::new()),

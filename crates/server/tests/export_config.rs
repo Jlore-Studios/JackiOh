@@ -287,6 +287,13 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("QUEST_XP_PER_JLORE", json!(c::QUEST_XP_PER_JLORE)),
         ("QUEST_REPLACES_PER_DAY", json!(c::QUEST_REPLACES_PER_DAY)),
         ("ECONOMY_LIVE", json!(c::ECONOMY_LIVE)),
+        // #2875's news (§14.13, R2875001, R2875003): how long an entry lives and what each reward pays.
+        ("NEWS_TTL_DAYS", json!(c::NEWS_TTL_DAYS)),
+        ("NEWS_REWARD_JLORE", json!(c::NEWS_REWARD_JLORE)),
+        ("NEWS_REWARD_CARD_PACKS", json!(c::NEWS_REWARD_CARD_PACKS)),
+        ("NEWS_REWARD_CARD_TOKENS", json!(c::NEWS_REWARD_CARD_TOKENS)),
+        ("NEWS_REWARD_COSMETIC_TOKENS", json!(c::NEWS_REWARD_COSMETIC_TOKENS)),
+        ("NEWS_REWARD_COSMETIC_PACKS", json!(c::NEWS_REWARD_COSMETIC_PACKS)),
         // The going live's (#1310): the starter cards a new account owns (R1310000).
         ("STARTER_CARDS", json!(c::STARTER_CARDS)),
         // The pack roll's (#1301): the global pack's name.
@@ -359,9 +366,9 @@ fn every_name_is_listed_once() {
     assert_eq!(
         // Count verified across features: #936, S7, Duos (#946), SPEC §14 economy (#1298, #1333, #1483, #1339, R1313000, #1301, #1306, R1310000, #1661, R1661001, R1935000, R2101000, R2210000).
         // #2728: four per-step cosmetic bar sizes and four targets in place of COSMETIC_TOKEN_BAR_SIZE and
-        // COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000).
+        // COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000). #2875: NEWS_TTL_DAYS and five news rewards.
         listed,
-        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6,
+        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -379,7 +386,8 @@ fn every_name_is_listed_once() {
          (R1339000), #1661's GLOBAL_COSMETIC_ROLL_WEIGHT and GLOBAL_COSMETIC_FLOOR_RARITY \
          (R1661001), CI_RUNS_CACHE_TTL_SECONDS (R1935000), RANK_STREAK_FLAME_LENGTH (R2101000), \
          QUEST_REPLACES_PER_DAY (R2210000) and #2728's four per-step cosmetic bar sizes and four \
-         targets in place of COSMETIC_TOKEN_BAR_SIZE and COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000)"
+         targets in place of COSMETIC_TOKEN_BAR_SIZE and COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000), \
+         and #2875's NEWS_TTL_DAYS and five NEWS_REWARD_* amounts (R2875001, R2875003)"
     );
 }
 
