@@ -29529,6 +29529,9 @@
       "2026-11-03T15:26:26Z,claude-1,stream,call,41657217022,38,2026-11-03T19:20:00Z,,,allowed,40,,",
       "2026-11-03T15:27:26Z,claude-1,stream,call,41657217022,39,2026-11-03T19:20:00Z,,,allowed,40,,",
       "2026-11-03T15:28:26Z,claude-1,stream,call,41657217022,40,2026-11-03T19:20:00Z,,,allowed,40,,"
+    ],
+    "runs": [
+      "2026-11-03T15:28:30Z,41657217022,claude-1,sonnet+opus,build,2932,medium,interrupted,5-hour cap,37.5,0,0,0,,10,40,,,44.2,claude-1,fresh,,1"
     ]
   },
   "version": 1
