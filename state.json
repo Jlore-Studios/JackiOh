@@ -16037,6 +16037,18 @@
     "2907": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "at": "2026-11-03T08:57:23Z",
+        "built_by": "claude-8",
+        "by": "`claude` (strong)",
+        "sha": "eca56e408d72d4e4f8d2390433c3e92bd4fa7c65"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T06:22:06Z",
@@ -16052,6 +16064,7 @@
       "issue": 2794,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-03T08:19:49Z",
