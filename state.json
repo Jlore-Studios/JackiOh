@@ -17761,6 +17761,10 @@
         {
           "at": "2026-11-03T06:19:12Z",
           "minutes": 20.0
+        },
+        {
+          "at": "2026-11-03T07:45:59Z",
+          "minutes": 43.8
         }
       ],
       "tokens_spent": [
@@ -18414,16 +18418,22 @@
           "cost": 7.4294,
           "input": 153,
           "output": 122166
+        },
+        {
+          "at": "2026-11-03T07:45:59Z",
+          "cache": 32765420,
+          "cost": 11.7412,
+          "input": 272,
+          "output": 124026
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-03T09:00:00Z",
-          "utilization": 1.0
+          "utilization": 0.97
         },
-        "observed_at": "2026-11-03T07:19:19Z",
-        "rejected_resets_at": "2026-11-03T09:00:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-03T07:45:59Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
@@ -29060,7 +29070,32 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-03T07:29:33Z,claude-5,ping,before,41595864147,70,2026-11-03T10:30:00Z,37,2026-11-09T09:00:00Z,allowed_warning,40,60,"
+      "2026-11-03T07:29:33Z,claude-5,ping,before,41595864147,70,2026-11-03T10:30:00Z,37,2026-11-09T09:00:00Z,allowed_warning,40,60,",
+      "2026-11-03T06:15:59Z,claude-1,ping,before,41587660170,73,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:16:30Z,claude-1,stream,call,41587660170,74,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:17:00Z,claude-1,stream,call,41587660170,75,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:17:30Z,claude-1,stream,call,41587660170,76,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:18:01Z,claude-1,stream,call,41587660170,77,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:18:46Z,claude-1,stream,call,41587660170,78,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:19:46Z,claude-1,stream,call,41587660170,79,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:21:01Z,claude-1,stream,call,41587660170,80,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:21:46Z,claude-1,stream,call,41587660170,81,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:22:31Z,claude-1,stream,call,41587660170,82,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:23:46Z,claude-1,stream,call,41587660170,83,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:25:31Z,claude-1,stream,call,41587660170,84,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:26:31Z,claude-1,stream,call,41587660170,85,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:28:31Z,claude-1,stream,call,41587660170,86,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:30:01Z,claude-1,stream,call,41587660170,87,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:30:46Z,claude-1,stream,call,41587660170,88,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:32:01Z,claude-1,stream,call,41587660170,89,2026-11-03T09:00:00Z,,,allowed,100,,",
+      "2026-11-03T06:32:31Z,claude-1,stream,call,41587660170,90,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:34:01Z,claude-1,stream,call,41587660170,91,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:34:46Z,claude-1,stream,call,41587660170,92,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:35:31Z,claude-1,stream,call,41587660170,93,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:36:01Z,claude-1,stream,call,41587660170,94,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:46:02Z,claude-1,stream,call,41587660170,95,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:47:47Z,claude-1,stream,call,41587660170,96,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T06:58:47Z,claude-1,stream,call,41587660170,97,2026-11-03T09:00:00Z,,,allowed_warning,100,,"
     ],
     "runs": [
       "2026-11-03T07:29:33Z,41595864147,claude-5,opus,build,2797,hard,interrupted,5-hour cap,0,0,0,0,,70,70,37,37,1577.7,claude-1,none,cap,0"
