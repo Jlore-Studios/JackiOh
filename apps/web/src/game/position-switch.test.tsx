@@ -70,6 +70,24 @@ describe("#37 positionSwitched turns the card between its two resting transforms
   });
 });
 
+describe("#2876 a phone held upright draws field cards as tiles that fill their zones", () => {
+  it("the phone block names the tile cap, sizes zones, and lifts the 0.72 cap for field cards", () => {
+    const start = board.indexOf("@media (max-width: 600px) {");
+    expect(start, "board.css has a phone portrait block").toBeGreaterThan(-1);
+    const end = board.indexOf("@media (max-width: 380px) {");
+    expect(end, "the narrow-phone block follows the phone portrait block").toBeGreaterThan(start);
+    const phone = board.slice(start, end);
+    expect(phone).toContain("--field-tile-max: 1.25;");
+    expect(phone).toMatch(/\.zone\s*\{[^}]*container-type:\s*size;/);
+    const tile = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(tile, "board.css has a phone `.zone > .card` rule").toBeDefined();
+    if (tile === undefined) return;
+    expect(tile).toContain("--tile-w: min(100%, calc(100cqh * var(--field-tile-max)))");
+    expect(tile).toContain("max-width: 100%");
+    expect(tile).toMatch(/--def-scale:\s*min\(1,\s*tan\(atan2\(/);
+  });
+});
+
 describe("#2330 a DEF card is scaled only as far as its zone needs", () => {
   it("the inline scale is the lane's --def-scale: on a phone worked out from its zone (#2556), 1 on a desktop or a tablet", () => {
     expect(renderUnit("DEF").style.transform).toContain("scale(var(--def-scale, 1))");
