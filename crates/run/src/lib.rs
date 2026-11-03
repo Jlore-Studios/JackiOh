@@ -150,9 +150,13 @@ pub struct RunPassiveDef {
     #[serde(default)]
     pub tier: Option<RunTier>,
     /// What it does on the map. A Combat or Enemy artifact has none: Looming and Overwhelming Presence
-    /// act as `run_fight_setup`'s handicaps, and Combat artifacts change no fight yet (M4).
+    /// act as `run_fight_setup`'s handicaps, and a Combat artifact acts through its `fight_effect`.
     #[serde(default)]
     pub effect: Option<RunEffect>,
+    /// R2922001: what a Combat artifact does in a fight, once per level; no other kind's is read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fight_effect: Option<RunFightEffect>,
     /// Any starting deck may take it; extracted artifacts join these.
     #[serde(default)]
     pub starter: bool,
@@ -200,6 +204,27 @@ pub enum RunEffect {
     },
 }
 
+/// R2922001: what a curse or a Combat artifact does to a fight, as a change to one seat's handicap.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum RunFightEffect {
+    /// The enemy's hero starts with this much more health.
+    EnemyHealth { n: i32 },
+    /// The enemy's opening hand holds this many more cards (R182).
+    EnemyOpeningCards { n: i32 },
+    /// The enemy has this many more crystals every turn: its `manaBonus` and `manaCap` both rise (R181).
+    EnemyMana { n: i32 },
+    /// The human's opening hand holds this many more cards (R182).
+    OwnOpeningCards { n: i32 },
+    /// The human's hero starts with this much Armor (R2922000).
+    OwnArmor { n: i32 },
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",
@@ -237,7 +262,8 @@ pub struct RunEventOption {
     pub artifact: bool,
 }
 
-/// DR8: a curse tier, taken at the start. Its points raise the score. It changes no fight yet (M4).
+/// DR8: a curse tier, taken at the start. Its points raise the score. Its `fight_effect` strengthens
+/// every fight's enemy (R2922001).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",
@@ -250,6 +276,10 @@ pub struct RunCurseDef {
     pub name: String,
     pub text: String,
     pub points: i32,
+    /// R2922001: what it does to every fight's enemy, once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fight_effect: Option<RunFightEffect>,
 }
 
 /// Pseudo cards and temporary bosses, artifacts, blessings, events and curses, until the designer's

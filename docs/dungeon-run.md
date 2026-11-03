@@ -156,7 +156,7 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 
 Curses are tiers, chosen at the start of a run, like Slay the Spire's Ascension levels. Each is worth
 points, as Hades' Heat is, and stacking more of them is the challenge. Curse points raise the score, and so
-the permanent currency a run pays.
+the permanent currency a run pays. Each curse also makes every fight's enemy stronger (§15.9, R2922001).
 
 ## DR9. Score, currencies and leaderboards
 
@@ -216,7 +216,7 @@ Each line is one issue; the first playable run is M1 to M3, in the Sandbox.
 | M1 | The run's core, offline: seeds, the map, the states, the packs, extraction, the slots, artifact points, curse tiers, the score and the stats, on placeholder content. **Built:** `crates/run` | — |
 | M2 | Run fights: the carried HP, Looming and Overwhelming Presence, Radiant and buffed run cards in a game's setup | M1 |
 | M3 | The Sandbox screen: the map, the tiles, the packs, the artifact tray, the timer, local leaderboards | M1, M2 |
-| M4 | Artifacts in fights (Combat) and on the map (Economic) | M2, M3 |
+| M4 | Artifacts in fights (Combat) and on the map (Economic). **Built:** Combat artifacts and curses in `run_fight_setup` (#2922) | M2, M3 |
 | M5 | The tiles in full: shop, campfire, events, chests, shrines | M3 |
 | M6 | The Campaign: the account's unlocks, Embers and levels, checked runs, leaderboards | M1 |
 | M7 | Ghosts: snapshots and friends | M6 |
