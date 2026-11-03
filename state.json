@@ -16190,12 +16190,12 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-03T08:37:03Z",
-      "run_id": "41612614864",
+      "run_id": "pending:33c8b33e-1793699551",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 5,
-      "started_at": "2026-11-03T09:38:04Z",
+      "started_at": "2026-11-03T09:53:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16595,9 +16595,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T09:52:15Z",
+    "at": "2026-11-03T09:53:08Z",
     "url": "",
-    "what": "build #2881 on claude-3"
+    "what": "spot-check #2909 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-03T09:32:26Z",
@@ -29617,9 +29617,9 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:33c8b33e-1793699551",
         "sha": "f887a784229ff9160550bbd5e705c0e9728ef976",
-        "started_at": "2026-11-03T09:38:04Z",
+        "started_at": "2026-11-03T09:53:08Z",
         "status": "queued",
         "title": "Patch: size the gather run from the deckable card count",
         "tries": 1
