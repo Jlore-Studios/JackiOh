@@ -247,6 +247,14 @@ describe("R2791000 the tempo keyword beats", () => {
     expect(kinds(pinned(flow, 2))).toEqual(["callout@0", "burst@150"]);
     const back = must(stream(flow)[2], "the draw").beats.cues;
     expect(back[1]).toMatchObject({ kind: "burst", preset: "sparkle", at: { kind: "testid", testid: "hand-you" } });
+    // Only the trade's own first draw answers: a later unrelated draw for the same player,
+    // with the trade's own draw between, plans nothing — even across a turn boundary.
+    const later: GameEvent = { type: "drawn", player: "p1", instanceId: "cZ", defId: "core-055" };
+    expect(must(stream([...flow, later])[3], "the later draw").beats.cues).toEqual([]);
+    const nextTurn: GameEvent[] = [...flow, { type: "turnStarted", player: "p2", turn: 4 }, later];
+    expect(must(stream(nextTurn)[4], "the next-turn draw").beats.cues).toEqual([]);
+    // A draw after a trade with no shuffle between answers nothing either.
+    expect(must(stream([traded, drawn])[1], "the unshuffled draw").beats.cues).toEqual([]);
     // The other seat's trade swirls region to region and names no card.
     const foeOut = must(stream([{ type: "traded", player: "p2" }])[0], "the trade").beats.cues;
     expect(foeOut[1]).toMatchObject({

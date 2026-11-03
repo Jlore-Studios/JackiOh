@@ -587,14 +587,28 @@ function tradableOutBeat(event: Extract<GameEvent, { type: "traded" }>, ctx: Ctx
 
 /**
  * R2791000: Tradable's drawn card swirling out: a sparkle over the hand region where the trade's
- * shuffle put it, once a `traded` then a `shuffledIn` for the drawer stands in the history. No
- * second ghost: the `flight` motif owns the flight.
+ * shuffle put it, only on the trade's own first draw. A Trade is one immediate action — the
+ * `shuffledIn` after its `traded` and the `drawn` after that (R1838001) — so the two most recent
+ * same-player trade events before this draw must be that `traded` then that `shuffledIn`, with no
+ * draw of theirs between: anything looser fires on a later unrelated draw within memory. No
+ * instance link is read: the trade's ids are hidden per zone (R202). No second ghost: the
+ * `flight` motif owns the flight.
  */
 function tradableInBeat(event: Extract<GameEvent, { type: "drawn" }>, ctx: Ctx): Beat[] {
-  const tradedAt = ctx.history.findIndex((past) => past.type === "traded" && past.player === event.player);
-  if (tradedAt < 0) return [];
-  const shuffled = ctx.history.slice(tradedAt + 1).some((past) => past.type === "shuffledIn" && past.player === event.player);
-  if (!shuffled) return [];
+  let last: GameEvent | undefined;
+  let prev: GameEvent | undefined;
+  for (let i = ctx.history.length - 1; i >= 0; i -= 1) {
+    const past = ctx.history[i];
+    if (past === undefined) continue;
+    if (past.type !== "traded" && past.type !== "shuffledIn" && past.type !== "drawn") continue;
+    if (past.player !== event.player) continue;
+    if (last === undefined) last = past;
+    else {
+      prev = past;
+      break;
+    }
+  }
+  if (last?.type !== "shuffledIn" || prev?.type !== "traded") return [];
   const side = sideOf(ctx.view, event.player);
   const handRegion = tid(animTestid.hand(side));
   const spec = looking(FLAVOR_LOOKS.Spirit, ctx.env, "keep");
