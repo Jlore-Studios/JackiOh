@@ -4,11 +4,12 @@
 //! verified token's profile and never on a field of the request.
 //!
 //! `GET /api/card-picks` answers `{ cards }` by card id, each id as it was written. `PUT` changes one
-//! card's picks (`{ cardId, foil?, finish?, border?, fullArt? }`): a key left out keeps its pick, `null`
-//! clears it. R1834001: an id must be one the account owns on that card; `fullArt` is a boolean or a full
-//! art's id (R2655000), `full-art-…` or the card's Animated art's `animated-…` (R2715000), `true` needing
-//! the card's still Epic full art owned and an id one of the card's own, owned; else 400 and nothing is
-//! written.
+//! card's picks (`{ cardId, foil?, finish?, border?, fullArt?, augments? }`): a key left out keeps its pick,
+//! `null` clears it. R1834001: an id must be one the account owns on that card; `fullArt` is a boolean or a
+//! full art's id (R2655000), `full-art-…` or the card's Animated art's `animated-…` (R2715000), or a version's
+//! `version-…` (R2725000), `true` needing the card's still Epic full art owned and an id one of the card's own,
+//! or a version the card is offered, owned; `augments` is a list of distinct augment ids (`augment-…`), each
+//! offered on the card and owned there (R2725001); else 400 and nothing is written.
 //!
 //! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they moved to
 //! the account. A card the account already holds a row for is never touched, so a newer device's pick
@@ -23,10 +24,11 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, now_ms, ok_of, str
 use crate::app::App;
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
 use crate::cosmetics::{
-    self, ANIMATED_ART_ID_PREFIX, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal, full_art_of, is_slug, owns,
+    self, ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal,
+    VERSION_ID_PREFIX, full_art_of, is_slug, owns,
 };
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
-use crate::loadout::{CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
+use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
 
 /// A card a deck may hold: in the catalog, and no token.
 fn is_playable(app: &App, card_id: &str) -> bool {
@@ -35,7 +37,8 @@ fn is_playable(app: &App, card_id: &str) -> bool {
 
 /// What a write of `card_id`'s full-art pick comes to against the account's ledger (R2655000):
 /// `false` always passes, `true` when the card has an Epic full art the account owns, and an id
-/// when it is one of the card's full arts and the account owns it there.
+/// when it is one of the card's full arts, or a version the card is offered (R2725001), and the account
+/// owns it there.
 fn check_full_art(card_id: &str, pick: &FullArtPick, owned: &OwnedCosmetics) -> Result<(), PickRefusal> {
     let registry = cosmetics::registry();
     match pick {
@@ -46,19 +49,44 @@ fn check_full_art(card_id: &str, pick: &FullArtPick, owned: &OwnedCosmetics) -> 
             Some(_) => Err(PickRefusal::NotOwned),
         },
         FullArtPick::Id(id) => {
-            cosmetics::check_pick(registry, owned, CosmeticKind::FullArt, id, Some(card_id))
+            let kind = if id.starts_with(VERSION_ID_PREFIX) {
+                CosmeticKind::Version
+            } else {
+                CosmeticKind::FullArt
+            };
+            cosmetics::check_pick(registry, owned, kind, id, Some(card_id))
         }
     }
 }
 
+/// R2725000: whether `id` is an augment's well-shaped id, as a card pick's `augments` lists one.
+fn is_augment_id(id: &str) -> bool {
+    is_id_shape(id) && id.starts_with(AUGMENT_ID_PREFIX)
+}
+
+/// R2725000: an `augments` value as a `PUT` or an upload sends it: a list of distinct well-shaped augment ids.
+fn augments_pick_of(value: &Value) -> Option<Vec<String>> {
+    let mut ids: Vec<String> = Vec::new();
+    for item in value.as_array()? {
+        let id = item.as_str().filter(|id| is_augment_id(id))?;
+        if ids.iter().any(|held| held == id) {
+            return None;
+        }
+        ids.push(id.to_string());
+    }
+    Some(ids)
+}
+
 /// A `fullArt` value as a `PUT` or an upload sends it: a boolean, or a well-shaped full art's id,
-/// `full-art-…` (R2655000) or `animated-…` (R2715000).
+/// `full-art-…` (R2655000) or `animated-…` (R2715000), or a version's, `version-…` (R2725000).
 fn full_art_pick_of(value: &Value) -> Option<FullArtPick> {
     match value {
         Value::Bool(on) => Some(FullArtPick::On(*on)),
         Value::String(id)
             if is_id_shape(id)
-                && (id.starts_with(FULL_ART_ID_PREFIX) || id.starts_with(ANIMATED_ART_ID_PREFIX)) =>
+                && [FULL_ART_ID_PREFIX, ANIMATED_ART_ID_PREFIX, VERSION_ID_PREFIX]
+                    .iter()
+                    .any(|prefix| id.starts_with(prefix)) =>
         {
             Some(FullArtPick::Id(id.clone()))
         }
@@ -119,6 +147,12 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
         full_art_pick_of,
         "a boolean or a full-art id",
     )?;
+    let augments = change_of(
+        &req.body,
+        AUGMENTS_KEY,
+        augments_pick_of,
+        "an array of augment ids",
+    )?;
 
     // R2378000: the account's turn first, so a burst waits here holding no database
     // connection, not on the economy lock below.
@@ -138,6 +172,16 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
         check_full_art(&card_id, pick, &owned)
             .map_err(|refusal| bad_request(refusal.message(FULL_ART_SETTING)))?;
     }
+    for id in augments.iter().flatten().flatten() {
+        cosmetics::check_pick(
+            cosmetics::registry(),
+            &owned,
+            CosmeticKind::Augment,
+            id,
+            Some(&card_id),
+        )
+        .map_err(|refusal| bad_request(refusal.message(AUGMENTS_KEY)))?;
+    }
     let held = tx.economy_card_picks_get(&profile.id).await?;
     let mut picks = held
         .into_iter()
@@ -154,6 +198,9 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
     if let Some(pick) = full_art {
         picks.full_art = pick;
     }
+    if let Some(ids) = augments {
+        picks.augments = ids.unwrap_or_default();
+    }
     tx.economy_card_picks_put(&profile.id, &picks, now_ms()).await?;
     let cards = tx.economy_card_picks_get(&profile.id).await?;
     tx.commit().await?;
@@ -166,10 +213,13 @@ fn is_id_shape(id: &str) -> bool {
 }
 
 /// One entry of an upload, read whole or refused: a card id, and each pick a well-shaped id, the
-/// full art's a boolean or a well-shaped id (R2655000).
+/// full art's a boolean or a well-shaped id (R2655000), the augments a list of distinct augment ids (R2725000).
 fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
-    let refused =
-        || bad_request("every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt? }");
+    let refused = || {
+        bad_request(
+            "every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt?, augments? }",
+        )
+    };
     let fields: &Map<String, Value> = entry.as_object().ok_or_else(refused)?;
     let card_id = fields
         .get("cardId")
@@ -191,13 +241,19 @@ fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
         None | Some(Value::Null) => {}
         Some(value) => picks.full_art = Some(full_art_pick_of(value).ok_or_else(refused)?),
     }
+    match fields.get(AUGMENTS_KEY) {
+        None | Some(Value::Null) => {}
+        Some(value) => picks.augments = augments_pick_of(value).ok_or_else(refused)?,
+    }
     Ok(picks)
 }
 
 /// R1834000: what of an uploaded entry can be kept: an id this build does not know stays, as the
 /// device kept it; one it knows is kept only where the account owns it on the card, under its kind.
 /// A full art switched on stays unless the card's Epic full art is known and not owned; a full art's
-/// id stays unless it is known and is another card's or not owned (R2655000).
+/// id stays unless it is known and is another card's or not owned (R2655000), a version's unless it is known
+/// and not offered there or not owned (R2725001). An augment stays only where the card is offered it and owns
+/// it: no device held one before the picks moved to the account (R2725000).
 fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
     let registry = cosmetics::registry();
     for kind in CARD_SLOT_KINDS {
@@ -222,6 +278,10 @@ fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
     if dropped {
         picks.full_art = None;
     }
+    let card_id = picks.card_id.clone();
+    picks.augments.retain(|id| {
+        cosmetics::check_pick(registry, owned, CosmeticKind::Augment, id, Some(&card_id)).is_ok()
+    });
     picks
 }
 
@@ -278,6 +338,7 @@ mod tests {
             finish: Some("border-standard".to_string()),
             border: Some("border-standard".to_string()),
             full_art: Some(FullArtPick::On(false)),
+            augments: Vec::new(),
         };
         let kept = keepable(picks.clone(), &none);
         assert_eq!(kept.foil.as_deref(), Some("foil-from-a-newer-client"));

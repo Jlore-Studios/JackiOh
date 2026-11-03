@@ -42,7 +42,8 @@ export type FxPreset =
   | "exhaust";
 
 export type FxSpread = "point" | "area" | "ring";
-export type FxSplatTone = "damage" | "heal" | "loss";
+/** Issue #2790: `absorb` is Armor's grey splat of the amount it took whole (R1361). */
+export type FxSplatTone = "damage" | "heal" | "loss" | "absorb";
 export type FxRayTone = "legendary" | "mythic" | "radiant" | "holy" | "victory";
 export type FxBannerTone = "you" | "opponent" | "muted";
 export type FxOutcome = "victory" | "defeat" | "draw";
@@ -93,7 +94,7 @@ export type FxShotCue = {
 export type FxCrackCue = { kind: "crack"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxRingCue = { kind: "ring"; preset: FxPreset; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxShakeCue = { kind: "shake"; trauma: number; delayMs: number };
-/** `amount` is the event's positive amount; the tone gives the sign ("−" for damage and loss, "+" for heal). */
+/** `amount` is the event's positive amount; the tone gives the sign ("−" for damage, loss and absorb, "+" for heal). */
 export type FxSplatCue = { kind: "splat"; tone: FxSplatTone; amount: number; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxRaysCue = { kind: "rays"; tone: FxRayTone; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxSheenCue = { kind: "sheen"; at: FxAnchor; delayMs: number; durationMs: number };

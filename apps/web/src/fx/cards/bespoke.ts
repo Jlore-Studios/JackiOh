@@ -22,6 +22,9 @@ import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { terminusRift } from "./stinkyscape/terminusRift.ts";
+import { celestialCall } from "./traininggrounds/celestialCaller.ts";
+import { dinoStomp } from "./traininggrounds/dinoSize.ts";
+import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
 
 export const CARD_RECIPES = {
   manaCrack,
@@ -42,6 +45,9 @@ export const CARD_RECIPES = {
   duoBond,
   flashFreeze,
   stratosSwarm,
+  celestialCall,
+  dinoStomp,
+  gameDesign,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;

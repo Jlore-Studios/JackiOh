@@ -12,7 +12,7 @@ import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { baseView, emptySide, faceDownBackrow, pendingFor, unit, withEvents } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 
 const END_TURN: ActionBody = { type: "endTurn" };
@@ -486,5 +486,68 @@ describe("R821000 a Plague Counter placement is answered by a click on the board
     fireEvent.click(screen.getByTestId(testid.zone("opponent", "units", 2)));
     fireEvent.click(screen.getByTestId(testid.hero("opponent")));
     expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("a half-built play or attack is dropped at the turn change (#2924)", () => {
+  const attacker = (): PlayerView =>
+    baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1" }), null, null, null, null] }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+    });
+  const attack: ActionBody = { type: "attack", attackerId: "u1", targetId: "e1" };
+
+  it("drops the selected attacker when the turn changes and keeps it dropped next turn", () => {
+    const onAction = vi.fn();
+    const first = attacker();
+    const { rerender } = render(<Game view={first} legal={[attack]} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId(testid.card("e1"))).toHaveAttribute("data-glow");
+
+    rerender(<Game view={{ ...attacker(), active: "p2", turn: 4 }} legal={[]} onAction={onAction} />);
+    expect(screen.getByTestId(testid.card("u1"))).not.toHaveAttribute("data-selected");
+
+    rerender(<Game view={{ ...attacker(), turn: 5 }} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId(testid.card("u1"))).not.toHaveAttribute("data-selected");
+    expect(screen.getByTestId(testid.card("e1"))).not.toHaveAttribute("data-glow");
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("closes a play's own picker when the view moves to the opponent's turn", () => {
+    const onAction = vi.fn();
+    const mine = baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }) });
+    const plays: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 2 } },
+    ];
+    const { rerender } = render(<Game view={mine} legal={plays} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-source", "play");
+
+    rerender(<Game view={{ ...mine, active: "p2", turn: 4 }} legal={[]} onAction={onAction} />);
+    expect(screen.queryByTestId("prompt-scrim")).toBeNull();
+  });
+
+  it("keeps the selected attacker through view updates within the same turn", () => {
+    const onAction = vi.fn();
+    const first = attacker();
+    const { rerender } = render(<Game view={first} legal={[attack]} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+
+    rerender(<Game view={{ ...first, clockMs: 59000 }} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+
+    rerender(<Game view={{ ...first, clockMs: 59000, pending: waitingPending }} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+
+    rerender(<Game view={{ ...first, clockMs: 59000, pending: null }} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
   });
 });

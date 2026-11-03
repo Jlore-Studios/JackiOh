@@ -1188,6 +1188,32 @@ impl BotRow {
     }
 }
 
+/// R1555000: what the kickoff reads of a bot before it loads any (no decks, trio or cosmetics).
+/// Server-only.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BotState {
+    /// The bot's profile, which is also its R610 bot id.
+    pub profile_id: String,
+    /// The match it is in, as for a profile (§9.5).
+    pub in_match_id: Option<String>,
+    /// Whether it grinds now (migration 0053).
+    pub grinding: bool,
+    /// Epoch ms it was retired (R1454), or none while it is in the pool.
+    pub retired_at: Option<i64>,
+}
+
+impl From<&BotRow> for BotState {
+    fn from(bot: &BotRow) -> Self {
+        BotState {
+            profile_id: bot.profile_id.clone(),
+            in_match_id: bot.in_match_id.clone(),
+            grinding: bot.grinding,
+            retired_at: bot.retired_at,
+        }
+    }
+}
+
 /// R1834006: one person's seat of a match, as `cosmetics-fit` reads what people wear: the loadout
 /// it froze, the deck it played, when the match began and when the person's account was made
 /// (epoch ms). Never a bot's.
@@ -2431,6 +2457,11 @@ impl Tx<'_> {
     /// R1454: every ladder bot, retired ones included, oldest profile first (ties on id).
     pub async fn bots_list(&mut self) -> StoreResult<Vec<BotRow>> {
         dispatch!(self, bots_list())
+    }
+
+    /// R1555000: every ladder bot's `BotState`, retired ones included, in `bots_list`'s order.
+    pub async fn bots_states(&mut self) -> StoreResult<Vec<BotState>> {
+        dispatch!(self, bots_states())
     }
 
     /// R1454: a new bot in one write: an `active` profile of kind `bot` made at `created_at`, with

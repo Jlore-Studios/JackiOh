@@ -61,6 +61,14 @@ sends (`stinkyscape/markLook.ts`), as its brand row does:
 | #146 Flash Freeze | `flashFreeze` | it freezes the whole board in one breath and no motif reads `marked`: at its first freeze a frost wave across both sides lane by lane into one ring over the board, a sheen and a burst on each Unit frozen, in the freeze mark's cyan |
 | #158 Stratos Swarm | `stratosSwarm` | conjure's circle lands one Unit, where the Swarm fills the board: each Stratos streaking in on a `Tech/rocket` trail from its caster's hero to the zone it fills, one shake a play |
 
+Training Grounds' pass (#2799) adds three more on the same terms (`fx/cards/traininggrounds/`):
+
+| Card | Recipe | Why bespoke |
+|---|---|---|
+| #16 Celestial Caller | `celestialCall` | its Cry calls a Sun and a Moon at once, in two looks one motif's palette cannot hold: a beam from the Caller into each, landing in Holy's radiant sunburst for the Sun and Spirit's shaft of moonlight for the Moon |
+| #34 Dino-size | `dinoStomp` | no motif reads `numberChanged`, its one event, and no other card of the set shows one: rising arrows over the unit set to 10/10, then a stomp of dust at its foot and a heavy shake |
+| #40 Goetzmann Game Design | `gameDesign` | the set's Mythic, its designer's card, which `send` undersells: a card drafted at the board's centre in Mythic rays and Nerd's pixel sub-look, dealt into the caster's hand pile |
+
 ## The motifs
 
 A motif is a pure planner, `(spec, entry, view, env) => FxCue[]`, built from the cue kinds the effects
@@ -279,8 +287,9 @@ Stinkyscape is split so its two set passes merge without conflicts.
 
 ### A set's pass
 
-A set's pass (#2782's parts, Core's #2793 the first) fills its table from `cargo jackioh fx census`
-(#2788), overriding the census's suggestion only with a reason, and leaves two files beside it:
+A set's pass (#2782's parts, Core's #2793 the first, then Training Grounds' #2799) fills its table from
+`cargo jackioh fx census` (#2788), overriding the census's suggestion only with a reason, and leaves two
+files beside it, the test built from the passes' shared kit (`src/test/setPass.ts`):
 
 - `fx/cards/<set>.test.ts` holds the table to the pass: at least `FX_SET_PASS_FLOOR` of the set's
   non-token cards wear an entry other than `none`, every Spell, Field Spell, Trap and Field Trap has a

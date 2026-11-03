@@ -3,17 +3,24 @@
 // and the run is a fake `Dungeon` whose `act` records what the screen sends it.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
 import type { RunAction, RunContent, RunFightSetup, RunState } from "@jackioh/run";
 import type { CustomCard } from "@jackioh/shared";
 
-import { PRACTICE_PACING_FAST } from "../../practice/config.ts";
+import {
+  PRACTICE_PACING_FAST,
+  PRACTICE_SHOWCASE_HOLD_MAX_MS,
+  PRACTICE_VOICE_HOLD_MAX_MS,
+  type PracticePacing,
+} from "../../practice/config.ts";
 import type { PracticeHost } from "../../practice/host.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "../../practice/protocol.ts";
 import { baseView, emptySide } from "../../test/fixtures.ts";
+import { stubPhoneBar } from "../../test/phoneBar.ts";
+import { settle } from "../../test/settle.ts";
 import type { Dungeon } from "../store.ts";
 import { FightScreen } from "./FightScreen.tsx";
 import { fightTestid } from "./testids.ts";
@@ -65,19 +72,19 @@ const CONTENT = {
 
 const LOST: RunAction = { type: "fightOver", won: false, hp: 0, damageDealt: 4, healingDone: 0, cardsDrawn: 5, turns: 3 };
 
-function snapshotFor(result: PracticeSnapshot["view"]["result"] = null): PracticeSnapshot {
+function snapshotFor(result: PracticeSnapshot["view"]["result"] = null, aiToAct = false): PracticeSnapshot {
   return {
     view: baseView({
       viewer: "p1",
       turn: 1,
-      active: "p1",
+      active: aiToAct ? "p2" : "p1",
       phase: "main",
       you: emptySide("p1"),
       opponent: emptySide("p2", { hand: { count: 4 } }),
       result,
     }),
-    legal: result === null ? [{ type: "endTurn" }, { type: "concede" }] : [],
-    aiToAct: false,
+    legal: result === null && !aiToAct ? [{ type: "endTurn" }, { type: "concede" }] : [],
+    aiToAct,
     error: null,
   };
 }
@@ -87,10 +94,14 @@ type FightHost = {
   requests: PracticeRequestBody[];
   starts(): PracticeStartConfig[];
   reports(): number;
+  aiSteps(): number;
 };
 
-/** The worker, scripted: a conceded game is lost; `runReport` answers each of `reports` in turn, then the action. */
-function fightHost(reports: ("action" | "error")[] = []): FightHost {
+/**
+ * The worker, scripted: a conceded game is lost; `runReport` answers each of `reports` in turn, then the
+ * action. With `aiToAct` the game starts on the AI's turn, and an `aiStep` is answered with the AI done.
+ */
+function fightHost(reports: ("action" | "error")[] = [], aiToAct = false): FightHost {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
   const host: PracticeHost = {
@@ -99,7 +110,7 @@ function fightHost(reports: ("action" | "error")[] = []): FightHost {
       id += 1;
       const mine = id;
       let response: PracticeResponse = { id: mine, type: "snapshot", snapshot: snapshotFor() };
-      if (body.type === "start") response = { id: mine, type: "started", snapshot: snapshotFor(), defs: {}, aiSeat: "p2" };
+      if (body.type === "start") response = { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct), defs: {}, aiSeat: "p2" };
       if (body.type === "act" && body.action.type === "concede") {
         response = { id: mine, type: "snapshot", snapshot: snapshotFor({ winner: "p2", reason: "concede" }) };
       }
@@ -118,6 +129,7 @@ function fightHost(reports: ("action" | "error")[] = []): FightHost {
     requests,
     starts: () => requests.flatMap((body) => (body.type === "start" ? [body.config] : [])),
     reports: () => requests.filter((body) => body.type === "runReport").length,
+    aiSteps: () => requests.filter((body) => body.type === "aiStep").length,
   };
 }
 
@@ -139,8 +151,8 @@ function fakeDungeon(
   } as unknown as Dungeon;
 }
 
-function renderFight(host: FightHost, dungeon: Dungeon): void {
-  render(<FightScreen dungeon={dungeon} hostFactory={host.factory} pacing={PRACTICE_PACING_FAST} />);
+function renderFight(host: FightHost, dungeon: Dungeon, pacing: PracticePacing = PRACTICE_PACING_FAST): void {
+  render(<FightScreen dungeon={dungeon} hostFactory={host.factory} pacing={pacing} />);
 }
 
 /** Only the confirmation dialog's Concede sends the action. */
@@ -160,6 +172,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  document.body.removeAttribute("data-speaking");
+  document.body.removeAttribute("data-showcase");
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   window.localStorage.clear();
 });
@@ -308,5 +323,64 @@ describe("B25, B26 the fight's end goes to the run", () => {
     fireEvent.click(proceed);
     expect(screen.getByTestId(fightTestid.actRefusal)).toHaveTextContent("the run is not in a fight");
     expect(proceed).toBeEnabled();
+  });
+});
+
+describe("#2925 a fight paces the AI as practice does", () => {
+  const GAP = 40;
+  const SLOW: PracticePacing = { firstActionMs: GAP, actionGapMs: GAP, promptAnswerMs: GAP };
+  /** What the page marks while the AI's last card is held up, and while a voice line plays, with each one's cap. */
+  const MARKS = [
+    { name: "a card held up", attribute: "data-showcase", value: "played", capMs: PRACTICE_SHOWCASE_HOLD_MAX_MS },
+    { name: "a voice line", attribute: "data-speaking", value: "core-011-play", capMs: PRACTICE_VOICE_HOLD_MAX_MS },
+  ];
+
+  /** A fight that starts on the AI's turn, with the mark already on the page so the first gap waits. */
+  async function markedFight({ attribute, value }: { attribute: string; value: string }): Promise<FightHost> {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const host = fightHost([], true);
+    document.body.setAttribute(attribute, value);
+    renderFight(host, fakeDungeon(vi.fn(() => null)), SLOW);
+    await settle({ ticks: 10 });
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    return host;
+  }
+
+  it.each(MARKS)("#2925 the fight's AI waits while $name is marked $attribute, and goes once it clears", async (mark) => {
+    const host = await markedFight(mark);
+
+    await settle({ advance: GAP + 1 });
+    expect(host.aiSteps(), "no step while the mark stands").toBe(0);
+
+    document.body.removeAttribute(mark.attribute);
+    await settle({ advance: GAP + 1 });
+    expect(host.aiSteps(), "the mark cleared, so the AI plays on").toBe(1);
+  });
+
+  it.each(MARKS)("#2925 a $attribute mark nobody clears holds the fight's AI for its cap and no longer", async (mark) => {
+    const host = await markedFight(mark);
+
+    await settle({ advance: mark.capMs - 1 });
+    expect(host.aiSteps(), "held by the mark").toBe(0);
+
+    await settle({ advance: 1 + GAP });
+    expect(host.aiSteps(), "the cap ran out, so the AI plays on").toBe(1);
+  });
+
+  it("#2925 a fight's board draws no Offer draw on the desktop bar, and Concede stays", async () => {
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+    expect(screen.getByTestId("concede")).toBeInTheDocument();
+  });
+
+  it("#2925 on a phone, a fight's ⋯ menu holds Concede and no Offer draw", async () => {
+    onTestFinished(stubPhoneBar(true));
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    expect(screen.getByTestId("match-menu-panel").contains(screen.getByTestId("concede"))).toBe(true);
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
   });
 });

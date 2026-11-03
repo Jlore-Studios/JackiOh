@@ -1,7 +1,8 @@
-//! Generates `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json` (#1295, SPEC §11, R1295000, R633).
+//! Generates `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json` (#1295, SPEC §11, R1295000, R633),
+//! and each version's and augment's offer as the cards it takes (R2725001).
 
 use jackioh_server::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
-use jackioh_server::cosmetics::{CosmeticKind, CosmeticRarity, shipped};
+use jackioh_server::cosmetics::{CosmeticKind, CosmeticRarity, offered, shipped, shipped_defs};
 
 /// The generated file, relative to this crate.
 const OUTPUT: &str = concat!(
@@ -16,7 +17,9 @@ fn json(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).unwrap_or_else(|error| panic!("cosmetics.json: {error}"))
 }
 
-/// The file's text: the header, the kinds, the rarities, the id cap, then one line per entry.
+/// The file's text: the header, the kinds, the rarities, the id cap, then one line per entry, then each
+/// version's and augment's offered cards, sorted, as `offered` takes them (R2725001), so the client never
+/// reads an offer's clauses itself.
 fn render() -> String {
     let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
     let mut out = String::from(HEADER);
@@ -39,6 +42,17 @@ fn render() -> String {
         out.push_str(&format!("  {},\n", json(cosmetic)));
     }
     out.push_str("] as const;\n");
+    out.push_str("export const COSMETIC_OFFERS: Readonly<Record<string, readonly string[]>> = {\n");
+    for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind.is_offered()) {
+        let mut cards: Vec<&str> = shipped_defs()
+            .keys()
+            .map(String::as_str)
+            .filter(|card| offered(cosmetic, Some(card)))
+            .collect();
+        cards.sort_unstable();
+        out.push_str(&format!("  {}: {},\n", json(&cosmetic.id), json(&cards)));
+    }
+    out.push_str("};\n");
     out
 }
 

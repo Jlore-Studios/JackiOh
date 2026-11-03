@@ -8,6 +8,9 @@
 //! The files are compiled into the binary with `include_str!` (SURFACE §11.3), so the Docker image
 //! needs no migrations directory at run time. `tests/store/migrations_pinned.rs` proves that every
 //! `.sql` file in the directory is in [`MIGRATIONS`] and that none of them changed.
+//!
+//! A boot with nothing pending (every wake from sleep, the image's `release`) costs one transaction,
+//! the one that ensures the ledger and reads it, not a locked transaction per file (#2926).
 
 use anyhow::{anyhow, bail};
 use sqlx::{Connection, PgConnection, Postgres, Transaction};
@@ -321,6 +324,14 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0077_news_claims.sql",
         include_str!("../../migrations/0077_news_claims.sql"),
     ),
+    (
+        "0078_practice_claim_counts.sql",
+        include_str!("../../migrations/0078_practice_claim_counts.sql"),
+    ),
+    (
+        "0079_card_versions.sql",
+        include_str!("../../migrations/0079_card_versions.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
@@ -367,6 +378,12 @@ pub fn rewritten(filename: &str) -> &'static [&'static str] {
         .unwrap_or(&[])
 }
 
+/// Whether a ledger row's `previous` checksum stands for `filename`, whose text now sums to `sum`:
+/// its own, or one of its `rewritten` earlier versions.
+fn accepted(filename: &str, previous: &str, sum: &str) -> bool {
+    previous == sum || rewritten(filename).contains(&previous)
+}
+
 /// FNV-1a, so a changed file that was already applied is reported instead of silently skipped.
 /// Over the UTF-16 code units of the text, as 8 lower-case hex digits: the same function as the
 /// state hash's (SURFACE §5.2), so every checksum an existing ledger holds matches.
@@ -383,6 +400,18 @@ fn list_migrations() -> Vec<(&'static str, &'static str)> {
         .collect();
     entries.sort_by(|a, b| a.0.cmp(b.0));
     entries
+}
+
+/// Whether `ledger` (every `(filename, checksum)` row of `app.migrations`) holds each listed
+/// migration with an `accepted` checksum: nothing pending, nothing edited. Rows for files this binary
+/// does not list are ignored, as the per-file loop ignores them.
+pub fn fully_applied(ledger: &[(String, String)]) -> bool {
+    list_migrations().into_iter().all(|(filename, sql)| {
+        ledger
+            .iter()
+            .find(|(name, _)| name == filename)
+            .is_some_and(|(_, previous)| accepted(filename, previous, &checksum(sql)))
+    })
 }
 
 /// The message of a database error without sqlx's "error returned from database: " prefix; any
@@ -421,15 +450,31 @@ pub async fn migrate(connection_string: &str) -> anyhow::Result<Vec<String>> {
     Ok(applied)
 }
 
-/// The ledger, then one locked transaction per file.
+/// The ledger, read in the same locked transaction, then, only when a file is pending or edited, one locked
+/// transaction per file.
 async fn run_migrations(client: &mut PgConnection, applied: &mut Vec<String>) -> anyhow::Result<()> {
-    {
+    // The fast path (#2926): a boot with nothing new (every wake from sleep) reads the ledger once, in the
+    // transaction that ensures it, instead of taking the lock again for each of the files. With the lock
+    // held no other runner is applying a file, and a file's ledger row is inserted in the transaction that
+    // runs its SQL, so a file in this read has landed. One that is not (pending), or whose checksum
+    // differs (edited), falls through to the loop below, which applies it or raises the error: it stays
+    // the only path that applies anything. The read is inside the transaction because a lone statement
+    // over sqlx's prepared protocol commits twice, and a wake's cost is round trips.
+    let ledger: Vec<(String, String)> = {
         let mut tx = locked(client).await?;
         sqlx::raw_sql(LEDGER)
             .execute(&mut *tx)
             .await
             .map_err(|e| anyhow!(error_message(&e)))?;
+        let ledger = sqlx::query_as("select filename, checksum from app.migrations")
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| anyhow!(error_message(&e)))?;
         tx.commit().await.map_err(|e| anyhow!(error_message(&e)))?;
+        ledger
+    };
+    if fully_applied(&ledger) {
+        return Ok(());
     }
 
     for (filename, sql) in list_migrations() {
@@ -445,7 +490,7 @@ async fn run_migrations(client: &mut PgConnection, applied: &mut Vec<String>) ->
                 .await
                 .map_err(|e| anyhow!(error_message(&e)))?;
         if let Some(previous) = previous {
-            if previous != sum && !rewritten(filename).contains(&previous.as_str()) {
+            if !accepted(filename, &previous, &sum) {
                 bail!(
                     "{filename} was already applied but its contents changed ({previous} -> {sum}). \
                      Migrations are append-only: add a new file instead of editing this one."
