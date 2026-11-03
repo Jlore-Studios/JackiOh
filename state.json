@@ -14444,16 +14444,27 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/README.md",
+            "apps/web/src/fx/cards/bespoke.ts",
+            "apps/web/src/fx/motifs/gallery.ts",
+            "apps/web/src/routes/dev/fx.test.tsx"
+          ],
+          "from": "c2bcafb4e682e82b6c1246d1d093c64edec65b94",
+          "main": "35844cd8b76e362c1af00eba5e3531588e7c06dd"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "41652766379",
+            "run": "41680873658",
             "tier": "strong"
           }
         ],
-        "sha": "c2bcafb4e682e82b6c1246d1d093c64edec65b94",
+        "sha": "a62bb459d8c45bdd5b49b28c1cd0afa53d33626d",
         "tiers": {
           "claude": "strong"
         }
