@@ -43,6 +43,11 @@
 #   after-cutover       once https://jackioh.com/api/catalog answers from Cloudflare (x-deployed-commit):
 #                       suspends Render's jackioh-server, which then bills nothing (section 4, step 7.1),
 #                       and gives staging's project its own Site URL and Redirect URLs, infra/supabase.tf's.
+#   delete-render       once after-cutover has run: prints Render's CODE_PEPPER encrypted to `public_key`
+#                       (its only readable copy: a Worker's secret cannot be read back), for a person to
+#                       decrypt into the repository secret CODE_PEPPER; then deletes the Blueprint and the
+#                       suspended jackioh-server, the owners' call of 2026-11-03 (section 4, step 7.1).
+#                       production-auth and email never read Render, so they still run afterwards.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
 # and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
@@ -70,11 +75,16 @@ on:
           - email
           - copy
           - after-cutover
+          - delete-render
       dry_run:
         description: "copy, production-auth, email and after-cutover: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
+      public_key:
+        description: "delete-render only: an RSA public key (SPKI DER, base64) that CODE_PEPPER is encrypted to in the log"
+        required: false
+        type: string
 
 env:
   CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
@@ -110,6 +120,7 @@ jobs:
           rust: "false"
 
       - name: read jackioh-server's settings from Render, and staging's database address
+        if: ${{ inputs.step != 'production-auth' && inputs.step != 'email' }}
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
@@ -570,6 +581,50 @@ jobs:
           jq -n --arg site "$STAGING_SITE" --arg urls "$STAGING_REDIRECTS" '{site_url: $site, uri_allow_list: $urls}' |
             curl -fsS "${auth[@]}" -X PATCH "$config" --data-binary @- > /dev/null
           curl -fsS "${auth[@]}" "$config" | jq -r '"staging'"'"'s sign-in now: site_url \(.site_url), redirects \(.uri_allow_list)"' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Render deleted, its CODE_PEPPER kept
+        if: ${{ inputs.step == 'delete-render' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PUBLIC_KEY: ${{ inputs.public_key }}
+          SITE: https://jackioh.com
+        run: |
+          set -euo pipefail
+          umask 077
+          commit=$(curl -fsS -D - -o /dev/null --max-time 60 "$SITE/api/catalog" | tr -d '\r' |
+            awk -F': ' 'tolower($1) == "x-deployed-commit" { print $2 }')
+          [ -n "$commit" ] || { echo "::error::$SITE/api/catalog names no x-deployed-commit: production is not on Cloudflare"; exit 1; }
+          id=$(cat "$RUNNER_TEMP/render.id")
+          render() {
+            curl -fsS --retry 3 --max-time 60 -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Accept: application/json" "$@"
+          }
+          state=$(render "https://api.render.com/v1/services/$id" | jq -r .suspended)
+          [ "$state" = suspended ] || { echo "::error::Render's $RENDER_SERVICE is $state: run after-cutover first"; exit 1; }
+
+          # CODE_PEPPER, encrypted to the key a person holds (RSA-OAEP, SHA-256), so only they can read it.
+          [ -n "$PUBLIC_KEY" ] || { echo "::error::public_key is empty: CODE_PEPPER must be kept before Render goes"; exit 1; }
+          base64 -d <<<"$PUBLIC_KEY" > "$RUNNER_TEMP/key.der"
+          openssl pkey -pubin -inform DER -in "$RUNNER_TEMP/key.der" -out "$RUNNER_TEMP/key.pem"
+          pepper=$(jq -r '.CODE_PEPPER // empty' "$RUNNER_TEMP/render.json")
+          [ -n "$pepper" ] || { echo "::error::Render holds no CODE_PEPPER"; exit 1; }
+          sealed=$(printf %s "$pepper" | openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/key.pem" \
+            -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 | base64 -w0)
+          echo "CODE_PEPPER (${#pepper} characters), sealed: $sealed"
+
+          blueprints=$(render "https://api.render.com/v1/blueprints?limit=100" |
+            jq -r '.[] | (.blueprint // .) | select((.repo // "") | test("JackiOh"; "i")) | .id')
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would delete Render's Blueprint(s) ${blueprints:-none} and $RENDER_SERVICE ($id)"
+            exit 0
+          fi
+          for blueprint in $blueprints; do
+            render -X DELETE "https://api.render.com/v1/blueprints/$blueprint" > /dev/null
+            echo "deleted Render's Blueprint $blueprint"
+          done
+          render -X DELETE "https://api.render.com/v1/services/$id" > /dev/null
+          echo "deleted Render's $RENDER_SERVICE ($id)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}
