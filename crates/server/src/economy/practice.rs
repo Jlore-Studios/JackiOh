@@ -47,6 +47,49 @@ pub enum ClaimRefusal {
     ResultMismatch,
 }
 
+/// How a practice claim ended, as migration 0078's `practice_claim_counts` counts it by UTC day
+/// (#2884): paid, or refused for one reason. A claim whose seed burned counts once, by the settle
+/// that marked it paid or refused ([[R2422000]]); a refusal before the burn counts once per request.
+/// A new refusal joins [`ClaimBucket::name`], [`ClaimBucket::ALL`] and a new migration's
+/// `practice_claim_counts_outcome_check`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClaimBucket {
+    Paid,
+    Refused(ClaimRefusal),
+}
+
+impl ClaimBucket {
+    /// Every bucket: paid, then each refusal in its declaration order.
+    pub const ALL: &[ClaimBucket] = &[
+        ClaimBucket::Paid,
+        ClaimBucket::Refused(ClaimRefusal::EconomyOff),
+        ClaimBucket::Refused(ClaimRefusal::UnknownSeed),
+        ClaimBucket::Refused(ClaimRefusal::AlreadyClaimed),
+        ClaimBucket::Refused(ClaimRefusal::Expired),
+        ClaimBucket::Refused(ClaimRefusal::DoesNotFold),
+        ClaimBucket::Refused(ClaimRefusal::NotFinished),
+        ClaimBucket::Refused(ClaimRefusal::Voided),
+        ClaimBucket::Refused(ClaimRefusal::ResultMismatch),
+    ];
+
+    /// The bucket's `outcome`: `paid`, or the refusal as its answer names it.
+    pub fn name(self) -> &'static str {
+        match self {
+            ClaimBucket::Paid => "paid",
+            ClaimBucket::Refused(reason) => match reason {
+                ClaimRefusal::EconomyOff => "economy_off",
+                ClaimRefusal::UnknownSeed => "unknown_seed",
+                ClaimRefusal::AlreadyClaimed => "already_claimed",
+                ClaimRefusal::Expired => "expired",
+                ClaimRefusal::DoesNotFold => "does_not_fold",
+                ClaimRefusal::NotFinished => "not_finished",
+                ClaimRefusal::Voided => "voided",
+                ClaimRefusal::ResultMismatch => "result_mismatch",
+            },
+        }
+    }
+}
+
 /// The result a claim says the human had, read from the seat they ended in (R677).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
