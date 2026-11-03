@@ -30054,6 +30054,7 @@
         "every": 5,
         "head": "a368a8dd912d8ef1ce8362db509eb6f078bfb899",
         "issue": 2930,
+        "last_why": "stopped: #2961 was closed",
         "merged_at": "2026-11-03T21:33:06Z",
         "n": 30,
         "pr": 2961,
@@ -30064,12 +30065,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:b6cf7287-1793741716",
+        "run_id": "",
         "sha": "a1bcc2af170bc25ac91309f1375519ac73577c83",
         "started_at": "2026-11-03T21:35:40Z",
         "status": "queued",
         "title": "Patch: card tests use the crate's scenario helper instead of registering the catalog before every scenario",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 30
