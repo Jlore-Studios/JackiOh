@@ -16530,6 +16530,14 @@
         "sha": "21dcb308e84b59f498166000e9feef9f1feadd16",
         "tiers": {}
       }
+    },
+    "2913": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-03T05:03:54Z",
+      "issue": 2790,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
