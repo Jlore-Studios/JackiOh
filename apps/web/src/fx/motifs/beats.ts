@@ -478,11 +478,31 @@ function brittleCrackBeat(event: Extract<GameEvent, { type: "damage" }>, ctx: Ct
 }
 
 /**
- * Brittle: the shatter on its death (R385). Only Brittle crumbles, so the event alone keys it;
- * the holder is the row's target, so a pile stands in off the board. The death row draws the
- * shatter itself, so the beat is the callout alone.
+ * Whether the view shows `instanceId` as Brittle: a unit's keywords, or a backrow card's (a
+ * Brittle Trap crumbles where it stands, and `unitOf` sees no backrow card). R202 draws nothing
+ * beyond what the view shows, so a crumble the view does not show as Brittle draws no beat.
+ */
+function brittleShown(view: PlayerView, instanceId: string): boolean {
+  const unit = unitOf(view, instanceId);
+  if (unit !== null) return hasKeyword(unit.keywords, "Brittle");
+  for (const side of [view.you, view.opponent]) {
+    for (const slot of side.backrow) {
+      if (slot !== null && slot.faceDown === false && slot.instanceId === instanceId) {
+        return hasKeyword(slot.keywords ?? [], "Brittle");
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Brittle: the shatter on its death (R385). The engine only ever crumbles a Brittle count, but
+ * the beat still keys on the keywords the view shows (R202), as the crack beat does; the holder
+ * is the row's target, so a pile stands in off the board. The death row draws the shatter
+ * itself, so the beat is the callout alone.
  */
 function brittleShatterBeat(event: Extract<GameEvent, { type: "crumbled" }>, ctx: Ctx): Beat[] {
+  if (!brittleShown(ctx.view, event.instanceId)) return [];
   const tgt = targetFor(event, ctx.view);
   if (tgt === null) return [];
   return [{ keyword: "Brittle", event, holder: tid(tgt), replaces: false, plan: () => [] }];

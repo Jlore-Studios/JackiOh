@@ -376,6 +376,10 @@ describe("R2789000 the combat keyword beats", () => {
     expect(planFx(played.entry, played.entry.view, played.env).filter((cue) => cue.kind === "burst").length).toBeGreaterThan(0);
     // A plain unit's hit grows no cracks.
     expect(stream(events)[1]?.beats.cues).toEqual([]);
+    // A crumble the view does not show as Brittle draws no beat (R202): the death row alone.
+    // MINE_3 carries no keyword, so this is the flavorExits pin's stream staying silent.
+    const plainCrumble: GameEvent[] = [{ type: "crumbled", instanceId: MINE_3, defId: "core-017", owner: "p1", zone: "field" }];
+    expect(stream(plainCrumble)[0]?.beats.cues).toEqual([]);
   });
 
   it("R81 R2789000 Immune to Spells: gaining the keyword raises a rune ward", () => {
