@@ -110,6 +110,14 @@ export type GameProps = {
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
   resultForm?: ResultForm;
+  /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
+  enemyLabel?: string;
+  /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */
+  controlExtras?: ReactNode;
+  /** The route's way back to its own result dialog from the board's result chip (practice). */
+  onOpenResult?: () => void;
+  /** The chip's `practice-outcome` button that opens the route's result dialog. */
+  openResultTestId?: string;
   /** R345: pins the R82 preference this board sends; the tutorial's lessons are written around R82. */
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
@@ -188,6 +196,10 @@ export default function Game({
   error,
   resultActions,
   resultForm = "panel",
+  enemyLabel,
+  controlExtras,
+  onOpenResult,
+  openResultTestId,
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   matchStatus,
@@ -703,6 +715,8 @@ export default function Game({
         highlight={highlight}
         animating={animating}
         animated={animated}
+        enemyLabel={enemyLabel}
+        controlExtras={controlExtras}
         turnClock={turnClock}
         matchStatus={matchStatus}
         boardRail={boardRail}
@@ -798,6 +812,8 @@ export default function Game({
             actions={resultActions}
             animating={animating.get(testid.result)}
             theirHand={theirHandOf(shown)}
+            onOpenResult={onOpenResult}
+            openResultTestId={openResultTestId}
           />
         </WearerProvider>
       ) : null}

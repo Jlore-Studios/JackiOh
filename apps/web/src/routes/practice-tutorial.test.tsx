@@ -452,7 +452,8 @@ describe("R1108000 a lesson's board prints no full art", () => {
   it("R1108000 a practice game's hand prints the same card in full art", async () => {
     visit("?seed=art1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost({ defs: heroDefs() }));
-    await screen.findByTestId(practiceTestid.hud);
+    // No practice-hud above the board (#2878): the game itself is the start gate.
+    await screen.findByTestId("game");
     const faces = vanillaFaces();
     expect(faces.length).toBeGreaterThan(0);
     for (const face of faces) expect(face.getAttribute("data-full-art")).toBe("true");
