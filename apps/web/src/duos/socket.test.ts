@@ -556,3 +556,22 @@ describe("#1664 a finished view carries the seat's economy", () => {
     expect(h.client.snapshot().economy).toBeNull();
   });
 });
+
+// R2881000: how many friends watch the game, on both seats' sockets
+
+describe("R2881000 a co-op seat hears how many friends watch", () => {
+  it("R2881000 a watchers frame sets the seat's watcher count; one not a whole count is no frame", () => {
+    const h = connected();
+    expect(h.client.snapshot().watchers).toBe(0);
+    h.socket().deliver({ type: "watchers", count: 2 });
+    expect(h.client.snapshot().watchers).toBe(2);
+    h.socket().deliver({ type: "watchers", count: 0 });
+    expect(h.client.snapshot().watchers).toBe(0);
+    for (const count of [1.5, -1, "3", null]) {
+      expect(parseDuosFrame(JSON.stringify({ type: "watchers", count }))).toBeNull();
+      h.socket().deliver({ type: "watchers", count });
+    }
+    expect(h.client.snapshot().watchers).toBe(0);
+    expect(parseDuosFrame(JSON.stringify({ type: "watchers", count: 1 }))).toEqual({ type: "watchers", count: 1 });
+  });
+});

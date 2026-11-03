@@ -568,7 +568,9 @@ routes (net/navigate.ts paths, and public/_redirects):
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
                          Chat (always), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
-                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out
+                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out;
+                         with &coop=1 (a friend whose `duos` is true) the co-op seat's views on DuosBoard,
+                         drawn as a co-op replay step is (R2881000)
   /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)

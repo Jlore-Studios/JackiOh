@@ -41,6 +41,13 @@ scale (`fx/cards/core/flourish.ts`) and drawn over the event rows (`keep`):
 | #97 Zephrys | `perfectWish` | its "perfect" card blows in from the far side: a star from the other hero into the caster's hand pile in Mythic rays |
 | #99 Craft a Card | `fusionForge` | its Discovered Units fuse off the board and no motif reads `fused`: two halves forged at the board's centre, the card flying on into the hand |
 
+Classic+'s pass (#2795, R2795000) adds three Flourishes beside Crushing Walls, each for a
+card whose one event no motif reads: #35 Rollback (`rollbackSweep`: an arcane ring runs back from lane 5
+to lane 1 on the sides it rolls back, then the heroes glint), #41 KY's Constant (`constantStamp`: the new
+number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: each discarded card torn
+out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
+phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
+
 ## The motifs
 
 A motif is a pure planner, `(spec, entry, view, env) => FxCue[]`, built from the cue kinds the effects
@@ -428,4 +435,6 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
 - `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
 - The census's `FAMILY_MOTIFS` knows only damage, removal, return and cost, so for a draw, a buff, a
   summon, a card dealt or a modifier it says `none: no motif reads …`; a set pass maps that event to
-  the motif whose Reads column names it (#2796's `meditative.md` does, card by card).
+  the motif whose Reads column names it (#2796's `meditative.md` does, card by card, as Classic+'s
+  `classicplus.md` does, R2795000). It also takes a hook's window's turn and draw events (`turnEnded`,
+  `manaChanged`, `drawn`) as the hook's own, which Classic+'s pass overrides with the hook's own event.
