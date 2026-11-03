@@ -422,7 +422,9 @@ with `MATCH_VOIDED_CLOSE_CODE`.
 
 A friend's live co-op game is watched over the same socket and hello (R2881000): when the hello's match is
 no 1v1 match, `social::watch` reads it as a `duos_matches` row, live, holding the friend in a1 or a2 and the
-watcher in neither, so the friend's own teammate is refused. The co-op actor (`duos/actor.rs`, its
+watcher in neither, so the friend's own teammate is refused, and with no block either way between the watcher
+and the friend's teammate, whose duel the seat's view holds (`POST /api/blocks` lets such a watcher go too,
+`social::watch::revoke_blocked`). The co-op actor (`duos/actor.rs`, its
 `// Watchers` section) then keeps the 1v1 actor's rules: one `SPECTATORS_PER_MATCH` for the game, both seats'
 watchers counted together; `view {view, legal: []}` frames of the friend's seat's `duos_view_for`, with the
 clock as that seat was shown it, each `SPECTATE_DELAY_MS` late, and nothing else the seat is sent (no ping,

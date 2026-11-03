@@ -3006,6 +3006,73 @@ mod r2881000_watching_a_coop_game {
         assert!(counts(&a1).is_empty(), "{:?}", a1.frames());
     }
 
+    /// A watcher of one seat is shown its teammate's duel (§13.6), so a block between the watcher and
+    /// the friend's teammate, either way, refuses the hello and ends a watch already running (§9.4);
+    /// the teammate ending a friendship with the watcher does not, as no friendship with them was asked.
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_block_with_the_friends_teammate_forbids_the_watch_and_ends_one_running() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let shunned = account(&h.app, 4, "Sid").await;
+        let shunner = account(&h.app, 5, "Sal").await;
+        let fan = account(&h.app, 6, "Fay").await;
+        let mutual = account(&h.app, 7, "Mo").await;
+        for who in [&shunned, &shunner, &fan, &mutual] {
+            befriend(&h.app, who, &h.host).await;
+        }
+        befriend(&h.app, &mutual, &h.guest).await;
+        // The teammate blocks one of the host's friends; another blocks the teammate.
+        block(&h.app, &h.guest, &shunned).await;
+        block(&h.app, &shunner, &h.guest).await;
+
+        for who in [&shunned, &shunner] {
+            let client = watch(&h, who, &h.host).await;
+            assert_forbidden(&client).await;
+        }
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 0);
+
+        let first = watch(&h, &fan, &h.host).await;
+        let second = watch(&h, &mutual, &h.host).await;
+        assert_admitted(&first);
+        assert_admitted(&second);
+
+        // The teammate unfriends a watcher of the host's seat: still the host's friend, it watches on.
+        let (status, body) = api(
+            &h.app,
+            "DELETE",
+            &format!("/api/friends/{}", mutual.id),
+            &h.guest.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+        assert!(
+            second.close_code().is_none(),
+            "an unfriend of the teammate ends no watch"
+        );
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 2);
+
+        // The teammate blocks a watcher mid-watch: it goes.
+        block(&h.app, &h.guest, &fan).await;
+        settle().await;
+        assert_let_go(&first).await;
+        assert!(second.close_code().is_none(), "the other still watches");
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(1)), "{:?}", seat.frames());
+        }
+
+        // A watcher blocks the teammate mid-watch: it goes too.
+        block(&h.app, &mutual, &h.guest).await;
+        settle().await;
+        assert_let_go(&second).await;
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(0)), "{:?}", seat.frames());
+        }
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 0);
+    }
+
     #[tokio::test(start_paused = true)]
     async fn r2881000_a_full_coop_game_is_forbidden_to_one_watcher_more() {
         let h = duos("easy").await;

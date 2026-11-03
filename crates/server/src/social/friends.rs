@@ -25,7 +25,7 @@ use crate::app::App;
 use crate::config::MAX_FRIENDS;
 use crate::db::store::{ChallengeState, FriendRequestRow, Profile, StoreError, Tx};
 use crate::social::presence::{Standing, Status, standings};
-use crate::social::watch::revoke_between;
+use crate::social::watch::{revoke_between, revoke_blocked};
 use crate::social::{PlayerRef, created, iso, no_content, not_found, param, profiles_by_id, refused};
 use crate::username::sign_in_name;
 
@@ -349,8 +349,9 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
         release_room(&mut tx, &challenge.room_code).await?;
     }
     tx.commit().await?;
-    // B46, B50: and a watch either way ends at once.
-    let watchers = revoke_between(app, &me, &target);
+    // B46, B50: and a watch either way ends at once, a co-op one of the other's teammate's seat too
+    // (R2881000).
+    let watchers = revoke_blocked(app, &me, &target);
     // R1351000: and a match in memory between the two relays neither one's emotes from now on.
     let matches_muted = app.matches.mute_emotes_between(&me, &target);
     log_info(

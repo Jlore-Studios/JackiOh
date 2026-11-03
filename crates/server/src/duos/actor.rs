@@ -1827,9 +1827,10 @@ impl DuosActor {
         self.lock().spectate.watchers.len()
     }
 
-    /// B50, B46: revokes matching watchers (unfriended, blocked, a deleted account), sending forbidden
-    /// and closing with R148's 4403; updates both people's count (B51). Answers how many.
-    pub fn revoke_watchers(&self, revoked: &dyn Fn(&str, &str) -> bool) -> usize {
+    /// B50, B46: revokes the watchers for which `revoked(watcher's account, its friend's, the friend's
+    /// teammate's)` holds (unfriended, blocked, a deleted account), sending forbidden and closing with
+    /// R148's 4403; updates both people's count (B51). Answers how many.
+    pub fn revoke_watchers(&self, revoked: &dyn Fn(&str, &str, &str) -> bool) -> usize {
         let gone: Vec<DuosWatcher> = {
             let mut core = self.lock();
             let row = &self.shared.row;
@@ -1837,7 +1838,13 @@ impl DuosActor {
             let (gone, kept): (Vec<DuosWatcher>, Vec<DuosWatcher>) =
                 std::mem::take(&mut core.spectate.watchers)
                     .into_iter()
-                    .partition(|watcher| revoked(&watcher.profile_id, friends[watcher.home]));
+                    .partition(|watcher| {
+                        revoked(
+                            &watcher.profile_id,
+                            friends[watcher.home],
+                            friends[1 - watcher.home],
+                        )
+                    });
             core.spectate.watchers = kept;
             if !gone.is_empty() && !core.stopped {
                 tracing::info!(event = "duos.watcher.revoked", matchId = %self.match_id_str(), revoked = gone.len(), watchers = core.spectate.watchers.len());

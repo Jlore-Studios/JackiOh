@@ -360,8 +360,9 @@ impl DuosRegistry {
         self.get(match_id).map_or(0, |actor| actor.watcher_count())
     }
 
-    /// B50, B46: drops revoked watchers in memory; returns count evicted.
-    pub fn revoke_watchers(&self, revoked: impl Fn(&str, &str) -> bool) -> usize {
+    /// B50, B46: drops revoked watchers in memory, `revoked` taking the watcher's account, its
+    /// friend's and the friend's teammate's; returns count evicted.
+    pub fn revoke_watchers(&self, revoked: impl Fn(&str, &str, &str) -> bool) -> usize {
         let actors: Vec<DuosActor> = lock(&self.actors).values().cloned().collect();
         actors.iter().map(|actor| actor.revoke_watchers(&revoked)).sum()
     }

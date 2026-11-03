@@ -823,6 +823,32 @@ mod b47_status {
         assert_eq!(friend["watchable"], json!(false), "{friend}");
     }
 
+    /// A watcher of a co-op seat is shown its teammate's duel (§13.6), so a block between the viewer
+    /// and the friend's teammate, either way, offers no Watch.
+    #[tokio::test]
+    async fn r2881000_a_coop_friend_is_not_watchable_by_one_standing_blocked_with_their_teammate() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        let gus = account(&app, 3, "Gus").await;
+        let cyd = account(&app, 4, "Cyd").await;
+        let dov = account(&app, 5, "Dov").await;
+        for viewer in [&ada, &cyd, &dov] {
+            befriend(&app, viewer, &bea).await;
+        }
+        let match_id = duos_match(&app, &bea, &gus).await;
+        // Bea's teammate Gus blocks Ada, and Cyd blocks Gus; Dov stands blocked with neither.
+        block(&app, &gus, &ada).await;
+        block(&app, &cyd, &gus).await;
+
+        for (viewer, watchable) in [(&ada, false), (&cyd, false), (&dov, true)] {
+            let friend = friend_entry(&lists(&app, viewer).await, &bea.id);
+            assert_eq!(friend["matchId"], json!(match_id), "{friend}");
+            assert_eq!(friend["duos"], json!(true), "{friend}");
+            assert_eq!(friend["watchable"], json!(watchable), "{}: {friend}", viewer.name);
+        }
+    }
+
     /// Every store method the fake is asked to run from here on, by name, in order.
     async fn record_store_calls(app: &App) -> Arc<std::sync::Mutex<Vec<String>>> {
         let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -934,6 +960,7 @@ mod b47_status {
             "presence.inSeries",
             "presence.inDuos",
             "presence.watchable",
+            "presence.duosBlocked",
         ] {
             assert_eq!(
                 five_friends.iter().filter(|method| *method == set_based).count(),
