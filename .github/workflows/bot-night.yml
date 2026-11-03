@@ -411,6 +411,21 @@ jobs:
           path: .cache/emsdk
           key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
 
+      # Mergiraf, the merge driver a conflict's merge uses (#2948, bot/go/internal/resolve/
+      # mergiraf.go), as bot-cache.yml builds it from main: restored, never saved, as the Rust cache
+      # is. A miss builds it in the run, only when a merge needs it; the machine keeps each user's
+      # build in that user's cache.
+      - name: The pinned Mergiraf
+        id: mergiraf
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
+        working-directory: bot
+        run: harness mergiraf | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-') && steps.mergiraf.outputs.version != ''
+        with:
+          path: ${{ steps.mergiraf.outputs.dir }}/bin
+          key: mergiraf-${{ runner.os }}-${{ runner.arch }}-${{ steps.mergiraf.outputs.version }}
+
       # Only the CLI of the subscription plan chose, and only on GitHub's runners. The provider
       # and CLI come from plan's outputs, which providers.json decides; the model never sets them.
       - name: Install the claude CLI

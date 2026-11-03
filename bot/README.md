@@ -888,10 +888,13 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   merges the TypeScript, TSX, JavaScript, JSON and YAML files the root `.gitattributes` gives it
   (`merge=mergiraf`; lockfiles and generated files keep git's own merge) during the merge itself:
   when a test-merge shows such a file would conflict, the work job registers the pinned release in
-  that worktree's own config (the one on PATH at that version, else one an earlier job built in the
-  machine user's cache, else built now from its source on crates.io, its checksum held to the pinned
-  one; `resolve.MergirafVersion`, `MergirafSHA256`), and anything that fails is logged in the run's
-  steps and the merge is git's own. A person's clone has no such driver, so git merges those files
+  that worktree's own config (the one on PATH at that version, else the one in the machine user's
+  cache, else built now from its source on crates.io, its checksum held to the pinned one;
+  `resolve.MergirafVersion`, `MergirafSHA256`), and anything that fails is logged in the run's steps
+  and the merge is git's own. On GitHub's runners that cache is restored from the entry
+  `bot-cache.yml` builds once from main (`harness mergiraf --install`, keyed on the version), which
+  the model jobs never save, as with the Rust cache; on the machine an earlier job's build stays in
+  its user's cache. A person's clone has no such driver, so git merges those files
   as it always did. Then the conflicted files `resolvers` in the config names: `spec/INDEX.md`
   takes `main`'s version (the daily spec fold rewrites it), and the golden traces are blessed again
   from the merged tree (`cargo jackioh golden bless`) once nothing else is conflicted, since that
