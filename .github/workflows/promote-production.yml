@@ -1,11 +1,15 @@
-# Moves production, by hand only (#2750; the owner made it manual on 2026-11-02). Someone comments
-# `/promote` on the open issue labeled `production merge` (or runs this from the Actions tab); the script
-# opens a pull request of a commit of main into production; the daily super run (super.yml) tests it;
-# and it merges once every one of that run's jobs passed, then deploys production to jackioh.com, the
-# site and its game server together. Nothing else moves production: no clock, no green run on main.
-# docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is the logic (read its header
-# first) and apps/web/src/net/promote-production.test.ts holds it. Staging is deploy-staging.yml's,
-# which deploys every green commit of main by itself.
+# Moves production once a day by itself, and sooner on request, never past a red super run (#2750;
+# daily since 2026-11-03, the owners' call). The daily promotion: when super.yml's daily run on main
+# passes every job, the script merges the commit it tested into production (through a pull request
+# super does not run on again) and deploys it to jackioh.com, the site and its game server together.
+# A red run on main is the night bot's to fix (super.yml's `report`, `priority:high`), and production
+# waits for the next run that passes. Sooner: someone comments `/promote` on the open issue labeled
+# `production merge` (or runs this from the Actions tab); the script opens a pull request of a commit of
+# main into production, super runs on it, and it merges once every one of that run's jobs passed. A
+# promotion or a deploy that fails is Squishy's (`report` below). docs/deploy-cloudflare.md is the
+# plan; scripts/promote-production.sh is the logic (read its header first) and
+# apps/web/src/net/promote-production.test.ts holds it. Staging is deploy-staging.yml's, which
+# deploys every green commit of main by itself.
 #
 # The `jackioh` Worker serves what the `production` branch holds, and nothing else. This workflow is
 # the only thing that moves it, and only by merging a pull request whose head is a commit of main
@@ -17,11 +21,11 @@
 # Three ways in:
 #   issue_comment      `/promote [sha]` (or `/fast-forward`), `/skip-super <reason>` or `/cancel` on the
 #                      production issue, from someone GitHub calls an owner, member or collaborator.
-#                      `/hold`, `/resume` and `/delay` are answered that production no longer merges by
-#                      itself.
-#   workflow_run       a finished super run on a promotion pull request (`promote/*`): it merges when
-#                      the run passed, and says so on the issue when it did not. A green push-to-main CI
-#                      run wakes it too, to bring the issue's queue up to date; it moves nothing.
+#                      `/hold`, `/resume` and `/delay` are answered that there is nothing to hold.
+#   workflow_run       a super run on main that passed: the daily promotion. A finished super run on a
+#                      promotion pull request (`promote/*`): it merges when the run passed, and says so
+#                      on the issue when it did not. A green push-to-main CI run wakes it too, to bring
+#                      the issue's queue up to date (and to make up a dropped wake-up).
 #   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): `/promote` for the
 #                      `sha` given or main's newest green commit, or `/skip-super` when
 #                      `skip_super_reason` is filled; `redeploy` deploys production as it is.
@@ -58,8 +62,8 @@
 # apps/edge/README.md), never this repository's.
 name: promote production
 
-# No `schedule`: production moves only when someone asks (the owner's call of 2026-11-02, which
-# CLAUDE.md rule 13 asks for before a schedule goes).
+# No `schedule` of its own: the daily promotion runs off super.yml's daily run on main, whose
+# completion wakes this (`workflow_run`).
 on:
   issue_comment:
     types: [created]
@@ -99,8 +103,8 @@ jobs:
   promote:
     name: promote production
     # A workflow_run fires for every completed CI or super run, and an issue_comment for every comment
-    # in the repository; only a green push to main, a super run on a promotion pull request, or a
-    # command on the production issue gets past here. The label is `RELEASE_LABEL` in
+    # in the repository; only a green push to main, a passing super run on main, a super run on a
+    # promotion pull request, or a command on the production issue gets past here. The label is `RELEASE_LABEL` in
     # scripts/promote-production.sh, which the test holds equal. The concurrency group is the job's,
     # not the workflow's, so a comment that wakes nothing never takes the place of a run waiting its
     # turn; and every run reconciles with the super run, so one that GitHub drops from the group's
@@ -111,7 +115,9 @@ jobs:
         && ((github.event.workflow_run.name == 'CI' && github.event.workflow_run.conclusion == 'success'
             && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'
-            && startsWith(github.event.workflow_run.head_branch, 'promote/'))))
+            && startsWith(github.event.workflow_run.head_branch, 'promote/'))
+          || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'
+            && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success')))
       || (github.event_name == 'issue_comment' && !github.event.issue.pull_request
         && contains(github.event.issue.labels.*.name, 'production merge')
         && github.event.comment.user.type != 'Bot'
@@ -351,3 +357,66 @@ jobs:
           SHA: ${{ steps.deploy.outputs.sha }}
         run: |
           echo "### production is live at $SITE, its server on \`${SHA:0:12}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # A promotion that failed after a super run (the daily promotion, or a merge once a promotion's run
+  # passed) or a deploy that failed: production waits on it, so it is handed to Squishy (bot/README.md,
+  # Squishy) as `priority:high`, as super.yml hands a red run to the night bot; one bot an issue, so the
+  # two never build the same fix. One issue, PROMOTION_TITLE, opened or commented on; a deploy that
+  # passes closes it. A command or a manual run that fails is the asker's to read, and is not reported.
+  # It never checks out or runs code.
+  report:
+    name: report
+    needs: [promote, deploy]
+    if: >-
+      !cancelled() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure'
+        || (needs.promote.result == 'failure' && github.event_name == 'workflow_run'
+          && github.event.workflow_run.name == 'super'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PROMOTE: ${{ needs.promote.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+          PROMOTION_TITLE: "CI: production promotion failed"
+          # Who fixes it: Squishy (.squishy/config.json's bot_login) and its queue label.
+          SQUISHY_LOGIN: squishy-squooby
+          SQUISHY_QUEUE: "squishy:build"
+        run: |
+          set -euo pipefail
+          export TITLE=$PROMOTION_TITLE
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ "$DEPLOY" = success ]; then
+            if [ -n "$open" ]; then
+              gh issue close "$open" --repo "$REPO" --reason completed --comment "[This run]($RUN_URL) deployed production."
+              echo "closed #$open"
+            fi
+            exit 0
+          fi
+          what="the promotion"
+          [ "$PROMOTE" != success ] || what="the deploy"
+          body=$(printf '%s\n' \
+            "[promote-production run]($RUN_URL): $what failed (promote: $PROMOTE, deploy: $DEPLOY), so production did not move to what the super run passed." \
+            "" \
+            "Squishy: production waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret, Cloudflare's or GitHub's settings) is a person's: say exactly what they must do. Once it is fixed, the next daily promotion, a \`/promote\` on the production issue, or *promote production* run with \`redeploy\` moves production; a deploy that passes closes this." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/promote-production.yml\`._")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+            echo "commented on #$open"
+            [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ] || exit 0
+            number=$open
+          else
+            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
+            echo "opened $url"
+            number=${url##*/}
+          fi
+          gh issue edit "$number" --repo "$REPO" --add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE" \
+            --add-label "priority:high" --add-label "difficulty:hard" \
+            && echo "handed #$number to @$SQUISHY_LOGIN, high priority" \
+            || echo "::warning::could not hand #$number to @$SQUISHY_LOGIN"
