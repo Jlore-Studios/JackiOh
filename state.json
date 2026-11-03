@@ -15895,12 +15895,12 @@
       "kind": "review",
       "live": "reviewing",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "gpt",
       "queued_at": "2026-11-03T23:14:23Z",
-      "run_id": "41698366655",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:0c2cde78-1793748195",
+      "runs_on": "night-vm-gpt",
       "self_check_findings": [],
-      "started_at": "2026-11-03T18:55:10Z",
+      "started_at": "2026-11-03T23:23:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16521,9 +16521,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T23:15:35Z",
+    "at": "2026-11-03T23:23:46Z",
     "url": "",
-    "what": "revise #2964 on muse"
+    "what": "review #2955 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-03T23:12:56Z",
