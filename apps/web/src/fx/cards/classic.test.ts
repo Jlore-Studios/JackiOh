@@ -1,7 +1,10 @@
 // R2794000: Classic's card animations (fx/cards/classic.json5): the set's coverage floor, a `cast` entry on
 // every non-Unit and an aura on every Field Spell, its three marquee entrances (R670), and its three
 // Flourishes (fx/cards/classic/), each drawn on its play's events inside its entry (R200) and never for a
-// play the seat cannot read (R202), planned the way FxLayer plans them: remember, then plan.
+// play the seat cannot read (R202), planned the way FxLayer plans them: remember, then plan. As a set's
+// pass asks (docs/polish/9-card-animations.md, "A set's pass"), every hook names a drawn motif, every play's
+// motif draws on its gallery fixture as that card's play (none for a hidden one), and classic.md, the pass's
+// per-card table, holds one row per Classic card that matches the catalog and the table.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -9,14 +12,20 @@ import { describe, expect, it } from "vitest";
 import { planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { entranceKeyOf } from "../cardFx.ts";
+import { entranceKeyOf, planCardMotif } from "../cardFx.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SET_PASS_FLOOR } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
-import { RECIPE_FIXTURES } from "../motifs/gallery.ts";
+import { motifScale } from "../motifs/build.ts";
+import { galleryEntry, motifFixture, RECIPE_FIXTURES } from "../motifs/gallery.ts";
+import { FX_CARD_HOOKS, isDrawnMotif, type DrawnMotif } from "../motifs/names.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
 import { CARD_RECIPES, type CardRecipeKey } from "./bespoke.ts";
+import rawTable from "./classic.md?raw";
 import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+
+/** Every Classic catalog card, its token included, in catalog order. */
+const CLASSIC = Object.keys(CATALOG).filter((id) => CATALOG[id]?.set === "Classic");
 
 /** Classic's cards, its one token apart. */
 const CLASSIC_CARDS = 90;
@@ -26,6 +35,35 @@ function classicCards(): [string, FxCardEntry][] {
   const file = FX_CARD_FILES.find((candidate) => candidate.file === "classic.json5");
   if (file === undefined) throw new Error("fx/cards/classic.json5 is missing");
   return [...parseFxCardTable(file.file, file.source)].filter(([defId]) => CATALOG[defId]?.token !== true);
+}
+
+function entryOf(id: string): FxCardEntry {
+  const entry = FX_CARD_TABLE.get(id);
+  if (entry === undefined) throw new Error(`${id} has no entry`);
+  return entry;
+}
+
+/** An entry as classic.md's Entry column writes it: core.md's, a marquee entrance first. */
+function describeEntry(entry: FxCardEntry): string {
+  switch (entry.kind) {
+    case "none":
+      return `none: ${entry.reason}`;
+    case "bespoke":
+      return `bespoke ${entry.key}`;
+    case "setPiece":
+      return `setPiece ${entry.key}`;
+    case "hooks": {
+      const parts: string[] = [];
+      if (entry.entrance !== undefined) parts.push(`entrance ${entry.entrance}`);
+      for (const hook of FX_CARD_HOOKS) {
+        const spec = entry.hooks[hook];
+        if (spec === undefined) continue;
+        parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
+      }
+      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
+      return parts.join("; ");
+    }
+  }
 }
 
 function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
@@ -71,6 +109,25 @@ function fixtureCues(planned: readonly { entry: AnimationEntry; cues: FxCue[] }[
   return planned.filter(({ entry }) => !entry.events.some((event) => event.type === "cardPlayed" || event.type === "cardResolved")).flatMap(({ cues }) => cues);
 }
 
+/** The play's motif on its gallery fixture, as the board plans it once the play's `cardPlayed` is remembered. */
+function playMotif(defId: string, instanceId: string, motif: DrawnMotif) {
+  const view = fullBoardView();
+  const env = envOf();
+  env.memory.remember([played("p1", instanceId, defId)]);
+  const entry = { ...galleryEntry(motifFixture(motif, view, instanceId, "p1"), view), durationMs: 400 };
+  return planCardMotif(entry, view, env);
+}
+
+/** Each Classic card's play motif: its `cry` (a Unit) or `cast`, when a drawn motif. */
+function playMotifs(): { id: string; motif: DrawnMotif }[] {
+  return CLASSIC.flatMap((id) => {
+    const entry = entryOf(id);
+    if (entry.kind !== "hooks") return [];
+    const hook = entry.hooks[CATALOG[id]?.type === "Unit" ? "cry" : "cast"];
+    return hook !== undefined && isDrawnMotif(hook.motif) ? [{ id, motif: hook.motif }] : [];
+  });
+}
+
 /** Each Flourish and the Classic card whose entry names it. */
 const FLOURISHES: readonly (readonly [CardRecipeKey, string])[] = [
   ["pageMend", "classic-003"],
@@ -111,6 +168,50 @@ describe("R2794000 Classic's card animations", () => {
     const marquee = Object.fromEntries(classicCards().flatMap(([defId]) => (entranceKeyOf(defId) === undefined ? [] : [[defId, entranceKeyOf(defId)]])));
     expect(marquee).toEqual({ "classic-045": "titanBloom", "classic-056": "tyrantSigil", "classic-080": "bigBoom" });
     expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "hooks", hooks: { cry: { motif: "flight" } }, entrance: "titanBloom" });
+  });
+
+  it("R2794000 every Classic hook names a drawn motif", () => {
+    for (const id of CLASSIC) {
+      const entry = entryOf(id);
+      if (entry.kind !== "hooks") continue;
+      for (const [hook, spec] of Object.entries(entry.hooks)) expect(isDrawnMotif(spec.motif), `${id} ${hook} ${spec.motif}`).toBe(true);
+    }
+  });
+
+  it("R2794000 every Classic cast and cry motif draws on its gallery fixture as its card's play", () => {
+    const motifs = playMotifs();
+    expect(motifs.length).toBeGreaterThan(0);
+    for (const { id, motif } of motifs) {
+      const result = playMotif(id, "ex", motif);
+      expect(result, `${id} ${motif}`).not.toBeNull();
+      expect(result?.cues.length ?? 0, `${id} ${motif}`).toBeGreaterThan(0);
+      // R202: no cue names a definition.
+      expect(JSON.stringify(result?.cues), id).not.toMatch(/classic-\d{3}/);
+    }
+  });
+
+  it("R2794000 R202 a hidden play keys no Classic entry", () => {
+    for (const { id, motif } of playMotifs()) expect(playMotif("hidden", "hidden", motif), `${id} ${motif}`).toBeNull();
+  });
+
+  it("R2794000 classic.md has one row per Classic card, in order, with its name, type, entry, scale, census and why", () => {
+    const rows = rawTable
+      .split("\n")
+      .filter((line) => line.startsWith("| `classic-"))
+      .map((line) => line.slice(1, -1).split(" | ").map((cell) => cell.trim()));
+    expect(rows.map((row) => row[0])).toEqual(CLASSIC.map((id) => `\`${id}\``));
+    const view = fullBoardView();
+    for (const [cell, name, type, entry, scale, census, why] of rows) {
+      const id = (cell ?? "").replace(/`/g, "");
+      const def = CATALOG[id];
+      const own = entryOf(id);
+      expect(name, id).toBe(def?.name.replace(/\s+/g, " ").trim());
+      expect(type, id).toBe(def?.type);
+      expect(entry, id).toBe(describeEntry(own));
+      expect(scale, id).toBe(own.kind === "none" ? "—" : motifScale(id, view, 1).toFixed(2));
+      expect(census, id).toMatch(/\S/);
+      expect(why, id).toMatch(/\S/);
+    }
   });
 });
 
