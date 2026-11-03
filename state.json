@@ -14784,6 +14784,13 @@
     "2928": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:11:13Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's evaluation (`material` in crates/ai/src/evaluate.rs plus a new `EvalWeights` field), which moves the AI's decisions, and the share needs an arena screen and the AI gate."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
