@@ -1,15 +1,28 @@
 // R2784000: what the /dev/fx gallery (routes/dev/fx.tsx) plays: a fixture event for every motif on a
 // view's own ids, the entry it fills, and a card's table entry as a play that resolves. Pure, so the
-// motif tests plan from the same fixtures the gallery shows.
+// motif tests plan from the same fixtures the gallery shows. R2794000: a card's entry is a gallery card:
+// its play's motif, its first drawn death, trigger or activate motif (played through the gallery's own
+// director, as no play opens for a hook), its Flourish on that Flourish's fixture, or its marquee entrance.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { FLAVOR_FALLBACK } from "../../cards/flavor.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
+import { CATALOG } from "../../wire/cards.ts";
+import { entranceKeyOf } from "../cardFx.ts";
+import { isEntranceKey, type CardRecipeKey } from "../cards/bespoke.ts";
+import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
+import type { FlourishFixture } from "../cards/classic/flourish.ts";
+import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
+import { recycleLoopFixture } from "../cards/classic/recycle.ts";
+import type { EntranceKey } from "../cards/recipe.ts";
+import type { FxCardEntry } from "../cards/tables.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
 import type { FxCue } from "../types.ts";
+import { motifScale } from "./build.ts";
 import { planMotif } from "./index.ts";
-import type { DrawnMotif } from "./names.ts";
+import { isDrawnMotif, type DrawnMotif } from "./names.ts";
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
@@ -48,8 +61,8 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
  * enemy unit, conjure and rise summon a token, offering sinks the viewer's first unit as a cost, shift
  * swaps the board, bind locks an enemy zone, tether takes the first enemy unit, mirror and transmute
  * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
- * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter
- * and snap fires a hidden trap.
+ * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter,
+ * snap fires a hidden trap and recall returns a card to the hand.
  */
 export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
   const enemy = player === view.viewer ? view.opponent : view.you;
@@ -160,6 +173,8 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
     }
     case "snap":
       return [{ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: enemy.player, row: "backrow", lane: 4 }];
+    case "recall":
+      return [{ type: "addedToHand", player, instanceId: "fx-recalled", defId: "core-003" }];
   }
 }
 
@@ -192,4 +207,96 @@ export function cardFixtureEvents(defId: string, motif: DrawnMotif, view: Player
     ...motifFixture(motif, view, instanceId, player),
     { type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 },
   ];
+}
+
+/** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
+export const GALLERY_ENTRANCE_LANE = 3;
+
+/** R2794000: each Flourish's fixture, the events its play resolves with in the gallery. */
+export const FLOURISH_FIXTURES = {
+  pageMend: pageMendFixture,
+  recycleLoop: recycleLoopFixture,
+  crownSwap: crownSwapFixture,
+} as const satisfies Partial<Readonly<Record<CardRecipeKey, FlourishFixture>>>;
+
+export type FlourishKey = keyof typeof FLOURISH_FIXTURES;
+
+export function isFlourishKey(key: string): key is FlourishKey {
+  return Object.prototype.hasOwnProperty.call(FLOURISH_FIXTURES, key);
+}
+
+/** The hooks a gallery card's hook motif is read from, in order; `cast` and `cry` are its play's. */
+const GALLERY_HOOKS = ["death", "trigger", "activate"] as const;
+
+/**
+ * R2794000: what the gallery plays for one card's entry: its play (`cast` or `cry`) with that motif's
+ * fixture, a hook's motif in the hook's palette at the card's scale, a Flourish on its own fixture, or a
+ * marquee Unit's entrance as it lands.
+ */
+export type GalleryCard =
+  | { kind: "play"; defId: string; motif: DrawnMotif }
+  | { kind: "hook"; defId: string; hook: (typeof GALLERY_HOOKS)[number]; motif: DrawnMotif; palette: FxPalette }
+  | { kind: "flourish"; defId: string; key: FlourishKey }
+  | { kind: "entrance"; defId: string; key: EntranceKey };
+
+/** R2794000: the gallery card a table entry plays as, or null: a `none`, a set piece, an aura alone, a recipe with no fixture. */
+export function galleryCardOf(defId: string, entry: FxCardEntry): GalleryCard | null {
+  if (entry.kind === "bespoke") {
+    if (isFlourishKey(entry.key)) return { kind: "flourish", defId, key: entry.key };
+    return isEntranceKey(entry.key) ? { kind: "entrance", defId, key: entry.key } : null;
+  }
+  if (entry.kind !== "hooks") return null;
+  const play = (entry.hooks.cast ?? entry.hooks.cry)?.motif;
+  if (play !== undefined && isDrawnMotif(play)) return { kind: "play", defId, motif: play };
+  for (const hook of GALLERY_HOOKS) {
+    const spec = entry.hooks[hook];
+    if (spec === undefined || !isDrawnMotif(spec.motif)) continue;
+    return { kind: "hook", defId, hook, motif: spec.motif, palette: spec.palette ?? CATALOG[defId]?.flavor ?? FLAVOR_FALLBACK };
+  }
+  return null;
+}
+
+/** R2794000: a gallery card's label: its motif, its hook and motif, or its recipe's key. */
+export function galleryLabel(card: GalleryCard): string {
+  switch (card.kind) {
+    case "play":
+      return card.motif;
+    case "hook":
+      return `${card.hook} ${card.motif}`;
+    case "flourish":
+    case "entrance":
+      return card.key;
+  }
+}
+
+/**
+ * R2794000: a gallery card's play as the board would see it, under the n-th play's id: its motif's
+ * fixture, its Flourish's fixture, or its entrance's landing (a marquee Unit with a play motif lands
+ * first, then its Cry resolves). A hook card opens no play: none.
+ */
+export function galleryPlayEvents(card: GalleryCard, view: PlayerView, n = 0): GameEvent[] {
+  const instanceId = galleryPlayId(n);
+  const player = view.viewer;
+  const { defId } = card;
+  const landing = (): GameEvent[] =>
+    card.kind === "entrance" || entranceKeyOf(defId) !== undefined ? [{ type: "summoned", player, instanceId, defId, row: "units", lane: GALLERY_ENTRANCE_LANE }] : [];
+  const played: GameEvent = { type: "cardPlayed", player, instanceId, defId, costPaid: 1 };
+  const resolved: GameEvent = { type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 };
+  switch (card.kind) {
+    case "play": {
+      const [first, ...rest] = cardFixtureEvents(defId, card.motif, view, n);
+      return first === undefined ? [] : [first, ...landing(), ...rest];
+    }
+    case "flourish":
+      return [played, ...landing(), ...FLOURISH_FIXTURES[card.key](view, instanceId, player), resolved];
+    case "entrance":
+      return [played, ...landing(), resolved];
+    case "hook":
+      return [];
+  }
+}
+
+/** R2794000: a hook card's motif in its palette at its card's scale, on the motif's fixture. */
+export function galleryHookCues(card: Extract<GalleryCard, { kind: "hook" }>, view: PlayerView, intensity: number, speed = 1): FxCue[] {
+  return galleryCues(card.motif, card.palette, motifScale(card.defId, view, 1), view, intensity, speed);
 }

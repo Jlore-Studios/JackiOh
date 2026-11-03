@@ -22,7 +22,11 @@ Every catalog card starts as `"none: pending"` and moves up a tier in its set's 
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
 Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the marquee entrances of
 BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
-names, below).
+names, below). Classic's pass (#2794, R2794000) added three Flourishes, each built from the motif
+primitives in `fx/cards/classic/` over its events' own rows: #3 Book of Heal's `pageMend` (pages open
+over the caster's hero, a sparkle flies to what it heals, a Holy mend lands there), #30 Recycle's
+`recycleLoop` (the graveyard loops into the deck in Nature's leaves, once a play) and #85 King
+Wagtoggle's `crownSwap` (the two decks cross to each other's pile under a gold crown).
 
 ## The motifs
 
@@ -68,6 +72,12 @@ and three parameters:
 | `tithe` | costChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202) |
 | `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
 | `snap` | trapFired | trapFired | a tight ring on the trap's own zone, then its reveal: in the card's flavor when the view names it, else the entry palette (R154, R202); a firing again is a short flare |
+
+Drawn in #2794 (R2794000), for the cards that return one to the hand:
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `recall` | addedToHand | nothing | a card back flying from its owner's graveyard pile into the hand: a gather on the pile, the flight, the hand's sparkle as it lands; no shake. The event names no zone, so a card back from exile flies from the graveyard pile too |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -209,6 +219,9 @@ Stinkyscape is split so its two set passes merge without conflicts.
   Unit's; a `cry` on a non-Unit or a `cast` on a Unit fails the loader. `death`, `trigger` and
   `activate` are accepted and plan nothing until #2783's `hookResolving` marker lands. A Trap's
   `cast` is inert too: a firing opens no play.
+- **entrance** (R2794000): a marquee Unit's entrance (`fx/entrances.ts`, R670) beside its hooks,
+  `{ entrance: "titanBloom", cry: { motif: "flight" } }` (Classic #45 Nature Titan). Only a Unit may
+  name one, and an entrance alone stays `{ bespoke: "<key>" }`.
 - **row:** `"replace"` (the default) draws the numbers (the damage splat, an Armor flash) in place of
   the events the motif replaces; `"keep"` plays over the event's own recipe, as a bespoke recipe's
   `keep` does.
@@ -280,7 +293,10 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
 or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry
-names a motif, as that card's play through the real board's effects layer. "Play as a set piece" plays
+names a motif, as that card's play through the real board's effects layer. Since #2794 (R2794000) its card list
+holds every entry that plays something (`galleryCardOf`): a play's motif, a `death`, `trigger` or `activate`
+motif, played in the hook's palette at its card's scale through the gallery's own director (no play opens for
+a hook), a Flourish on its own fixture (`FLOURISH_FIXTURES`) and a marquee Unit's entrance as it lands. "Play as a set piece" plays
 the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
 

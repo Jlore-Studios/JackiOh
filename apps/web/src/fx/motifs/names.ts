@@ -33,12 +33,13 @@ export const FX_MOTIF_NAMES = [
   "tithe",
   "tally",
   "snap",
+  "recall",
   "aura",
 ] as const;
 
 /**
  * The motifs `MOTIF_PLANNERS` draws: #2784's damage and removal family, then #2786's life and
- * stats, board, cards and mana, and trap motifs.
+ * stats, board, cards and mana, and trap motifs, then #2794's recall (R2794000).
  */
 export const FX_DRAWN_MOTIFS = [
   "bolt",
@@ -69,6 +70,7 @@ export const FX_DRAWN_MOTIFS = [
   "tithe",
   "tally",
   "snap",
+  "recall",
 ] as const;
 
 /**

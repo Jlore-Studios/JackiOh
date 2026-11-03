@@ -1,17 +1,21 @@
 // R2784000 #2792: `/dev/fx`, the motif gallery: it offers every drawn motif, every flavor's
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
 // each plays something. R2785000: it plays a card as the fixture set piece, which holds the board
-// until a click skips it.
+// until a click skips it. R2794000: every Classic entry but Plague Nuke's set piece is a gallery card
+// that plays: its play's motif, a hook's motif, a Flourish or a marquee entrance.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
-import { GALLERY_SET_PIECE, galleryCues } from "../../fx/motifs/gallery.ts";
-import { BURST_BUDGET_MS } from "../../game/animations.ts";
+import { planCardFx, planCardMotif } from "../../fx/cardFx.ts";
+import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
+import { createFxMemory } from "../../fx/memory.ts";
+import { GALLERY_SET_PIECE, galleryCues, galleryHookCues, galleryPlayEvents } from "../../fx/motifs/gallery.ts";
+import { BURST_BUDGET_MS, planEntries } from "../../game/animations.ts";
 import { FX_DRAWN_MOTIFS } from "../../fx/motifs/names.ts";
-import { fullBoardView } from "../../test/fixtures.ts";
+import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import FxGallery, { fxGalleryTestid, galleryCards } from "./fx.tsx";
 
 afterEach(cleanup);
@@ -32,8 +36,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(optionsOf(fxGalleryTestid.scale)).toEqual(FX_GALLERY_SCALES.map(String));
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
-    // The twelve examples but #88 Twisting Nether, now a set piece, and the five board clears that take `wipe` (R2800000).
-    expect(cards).toHaveLength(16);
+    // The twelve examples but #88 Twisting Nether, now a set piece, and the five board clears that take `wipe`
+    // (R2800000), fifteen outside Classic now that a hook's motif plays (Floodgates' `death: wipe`); and
+    // Classic's 79 entries but Plague Nuke's set piece (R2794000).
+    expect(cards).toHaveLength(15 + 78);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -43,6 +49,29 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     fireEvent.change(screen.getByTestId(fxGalleryTestid.card), { target: { value: "classic-071" } });
     fireEvent.click(screen.getByTestId(fxGalleryTestid.playCard));
     expect(screen.getByTestId(fxGalleryTestid.root)).toBeInTheDocument();
+  });
+
+  it("R2794000 the gallery lists every Classic entry but Plague Nuke's set piece, and each plays", () => {
+    const listed = galleryCards();
+    const classic = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("classic-") && entry.kind !== "none" && defId !== "classic-043");
+    expect(classic).toHaveLength(78);
+    for (const [defId] of classic) expect(listed.map((card) => card.defId), defId).toContain(defId);
+    expect(listed.map((card) => card.defId)).not.toContain("classic-043");
+    const view = fullBoardView();
+    for (const card of listed) {
+      if (card.kind === "hook") {
+        expect(galleryHookCues(card, view, FX_INTENSITY_SCALE.normal).length, `${card.defId} ${card.label}`).toBeGreaterThan(0);
+        continue;
+      }
+      const events = galleryPlayEvents(card, view);
+      const env = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+      const plays = planEntries(events, withEvents(view, events), false).some((entry) => {
+        env.memory.remember(entry.events);
+        const p = { entry, view: entry.view, env, D: entry.durationMs };
+        return planCardMotif(entry, entry.view, env) !== null || entry.events.some((event) => planCardFx(event, p) !== null);
+      });
+      expect(plays, `${card.defId} ${card.label}`).toBe(true);
+    }
   });
 
   it("R2784000 #2792 every motif plays in every palette and sub-look at every scale on the fixture board", () => {

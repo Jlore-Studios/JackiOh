@@ -5,7 +5,7 @@
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { planEntries, type AnimationEntry } from "../../game/animations.ts";
+import { animTestid, planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { testid } from "../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { planCardMotif } from "../cardFx.ts";
@@ -18,7 +18,7 @@ import { createFxMemory } from "../memory.ts";
 import type { FxBurstCue, FxCue, FxPlanEnv } from "../types.ts";
 import { MOTIF_TUNING, motifScale, timesOf, type MotifSpec } from "./build.ts";
 import { galleryEntry, gallerySource, motifFixture } from "./gallery.ts";
-import { planMotif } from "./index.ts";
+import { motifReplaces, planMotif } from "./index.ts";
 import { FX_DRAWN_MOTIFS, type DrawnMotif } from "./names.ts";
 
 const SCALE = 1.5;
@@ -101,6 +101,8 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   tally: ["burst@240", "shake@240"],
   // The ring closes at gather, the reveal lands on jk-trap-flip's stop, the shake on Land.
   snap: ["ring@0", "burst@120", "shake@240"],
+  // R2794000: a gather on the graveyard pile, the back's flight to the hand and its sparkle there; no shake.
+  recall: ["burst@0", "ghost@80", "burst@240"],
 };
 
 describe("R2784000 the damage and removal motifs", () => {
@@ -483,6 +485,26 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
       expect(motif, row).not.toBeNull();
       const rows = planFx({ ...entry, events: entry.events.filter((event) => motif?.replaces.has(event) !== true) }, view, envOf());
       expect(flashes(motif?.cues ?? []) + flashes(rows), row).toBe(1);
+    }
+  });
+
+  it("R2794000 recall flies a card back from its owner's graveyard pile into the hand on either seat", () => {
+    const view = fullBoardView();
+    for (const [player, side] of [
+      ["p1", "you"],
+      ["p2", "opponent"],
+    ] as const) {
+      const entry = { ...galleryEntry([{ type: "addedToHand", player, instanceId: "fx-recalled", defId: "core-003" }], view), durationMs: 400 };
+      const cues = planMotif(specOf("recall"), entry, view, envOf());
+      const grave = { kind: "testid", testid: animTestid.graveyard(side) };
+      const hand = { kind: "testid", testid: animTestid.hand(side) };
+      expect(beats(cues), side).toEqual(PINNED.recall);
+      expect(cues[0], side).toEqual(expect.objectContaining({ kind: "burst", at: grave }));
+      expect(cues[1], side).toEqual({ kind: "ghost", from: grave, to: hand, delayMs: timesOf(400).T, durationMs: timesOf(400).L - timesOf(400).T });
+      expect(cues[2], side).toEqual(expect.objectContaining({ kind: "burst", at: hand, preset: "sparkle" }));
+      // The hand's own glint still plays: recall replaces no row, and nothing shakes.
+      expect(motifReplaces(specOf("recall"), entry, view, envOf()).size, side).toBe(0);
+      expect(cues.some((cue) => cue.kind === "shake"), side).toBe(false);
     }
   });
 });

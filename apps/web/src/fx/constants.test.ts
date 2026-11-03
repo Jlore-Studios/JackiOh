@@ -84,6 +84,8 @@ const S2 = {
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
   FX_WALLS_TRAUMA: 0.45,
+  // Classic #85 King Wagtoggle's crown swap (R2794000).
+  FX_CROWN_SWAP_TRAUMA: 0.2,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
   // MN05: Armor's shield flash (R1363).
@@ -155,6 +157,8 @@ const S2 = {
     tithe: 0.1,
     tally: 0.15,
     snap: 0.4,
+    // Issue #2794: recall (R2794000).
+    recall: 0,
   },
   FX_MOTIF_TITHE_MAX: 5,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],

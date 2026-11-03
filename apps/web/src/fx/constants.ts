@@ -88,6 +88,8 @@ export const FX_WALLS_HIT_AT = 0.3;
 export const FX_WALLS_TAIL_MS = 850;
 export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
 export const FX_WALLS_TRAUMA = 0.45;
+// R2794000: Classic #85 King Wagtoggle's crown swap shakes as the two decks land in each other's place.
+export const FX_CROWN_SWAP_TRAUMA = 0.2;
 // R437: a mark branded onto a card; its sigil fades over FX_BRAND_TAIL_MS after the entry.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
@@ -175,6 +177,7 @@ export const FX_MOTIF_TRAUMA = {
   tithe: 0.1,
   tally: 0.15,
   snap: 0.4,
+  recall: 0,
 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
