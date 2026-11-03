@@ -13237,9 +13237,7 @@
       "source": "",
       "started_at": "2026-11-02T23:43:51Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6591288136"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
         "approvals": [],
