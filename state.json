@@ -30745,7 +30745,8 @@
       "2026-11-03T22:23:09Z,claude-6,stream,call,41727316617,50,2026-11-03T23:30:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-03T22:07:38Z,41727412229,claude-8,opus,review,2961,hard,stopped,stop,0,0,0,0,,14,14,,,,,none,,0"
+      "2026-11-03T22:07:38Z,41727412229,claude-8,opus,review,2961,hard,stopped,stop,0,0,0,0,,14,14,,,,,none,,0",
+      "2026-11-03T22:23:10Z,41727316617,claude-6,opus,review,2965,hard,interrupted,5-hour cap,17.2,44,17795,2562748,1.811,45,50,,,1.1,,fresh,,2"
     ]
   },
   "version": 1
