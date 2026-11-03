@@ -15241,6 +15241,8 @@
       }
     },
     "2936": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T14:16:23Z",
@@ -15254,8 +15256,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a play or attack half-built when your turn ends is dropped, not shown again next turn\"} -->\n- ## What changed\n- [Game.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-2924/apps/web/src/game/Game.tsx) now drops a half-built play or attack when the shown view's turn, active seat, or viewer changes, the same way Escape already does. A new `selectionKey` state remembers the `turn:active:viewer` the sel\u2026\n- [Game.test.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-2924/apps/web/src/game/Game.test.tsx) gains a `#2924` describe block with three tests: selected attacker dropped across the turn change and staying dropped next turn (clicking the old target sends nothing), play zone picker gone \u2026\n- ## How it was tested\n- - `pnpm --dir apps/web test src/game/Game.test.tsx`: 26/26 pass.\n- - Negative control: with the `Game.tsx` fix temporarily reverted (manual edit plus a `/tmp` backup, then restored; no git stash), the attacker-drop and picker-close tests fail with the exact reported symptoms (`data-selected=\"true\"` persisting, the `data-prompt-source=\"play\"` zone picker staying op\u2026\n- - `pnpm --dir apps/web typecheck`: clean. `pnpm exec eslint` on both touched files: clean. `git status` shows only the two intended files.\n- ## Decisions the issue did not settle\n- None beyond the plan, which was followed without departure. Glow assertions check `data-glow` presence rather than a specific value, so they stay valid if the glow variant changes. No ruling note or spec change: no rule changes, per the plan.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2924 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2924/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2924,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T15:15:09Z",
         "from_run": "41652059899",
         "gates": [
           {
@@ -15314,8 +15319,15 @@
         "source": "build",
         "until": "2026-11-03T15:44:02Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T15:14:02Z",
+      "run_id": "pending:98234db4-1793718881",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-03T15:15:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15329,9 +15341,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T14:48:25Z",
+    "at": "2026-11-03T15:15:09Z",
     "url": "",
-    "what": "revise #2907 on claude-8"
+    "what": "review #2936 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T15:03:01Z",
