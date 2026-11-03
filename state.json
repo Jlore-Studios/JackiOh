@@ -14733,6 +14733,13 @@
     "2924": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:15:08Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-rule line holds: single-app client change in two files, no engine rules, AI, cross-crate design, migration, or 40-file scope."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
