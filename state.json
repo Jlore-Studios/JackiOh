@@ -22914,9 +22914,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-03T09:10:00Z",
-          "utilization": 0.43
+          "utilization": 0.57
         },
-        "observed_at": "2026-11-03T08:35:30Z",
+        "observed_at": "2026-11-03T08:56:31Z",
         "status": "allowed"
       }
     },
@@ -29663,7 +29663,8 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-03T08:43:16Z,claude-3,refusal,call,41605100374,100,2026-11-03T09:00:00Z,,,rejected,,,2026-11-03T09:00:00Z"
+      "2026-11-03T08:43:16Z,claude-3,refusal,call,41605100374,100,2026-11-03T09:00:00Z,,,rejected,,,2026-11-03T09:00:00Z",
+      "2026-11-03T08:41:46Z,claude-4,ping,before,41604972310,57,2026-11-03T09:10:00Z,,,allowed,50,,"
     ],
     "runs": [
       "2026-11-03T08:43:16Z,41605100374,claude-3,opus,build,2799,hard,interrupted,refusal,0.1,4,303,87840,0.2813,100,100,,,1654.6,claude-4,fresh,other,1"
