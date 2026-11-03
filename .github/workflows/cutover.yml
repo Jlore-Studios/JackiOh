@@ -48,6 +48,17 @@
 #                       decrypt into the repository secret CODE_PEPPER; then deletes the Blueprint and the
 #                       suspended jackioh-server, the owners' call of 2026-11-03 (section 4, step 7.1).
 #                       production-auth and email never read Render, so they still run afterwards.
+#   stats-logins        JackiOh-Production's two statistics logins, each with a new password of its own
+#                       (the copy brought both from staging with staging's): stats_importer, which the
+#                       development lanes file through, and stats_reader, read-only, which
+#                       winrates-refresh.yml and db-size.yml read through (R1933001). Each address is
+#                       checked, then printed encrypted to `public_key` for a person to decrypt into the
+#                       repository secrets PRODUCTION_STATS_IMPORT_DATABASE_URL and the reader's.
+#   dev-stats           staging's development statistics into JackiOh-Production (R1933001): the
+#                       totals' development rows and game_record_batches, replacing whatever production
+#                       holds of them, in one transaction whose counts must agree with staging's. Live
+#                       rows are not touched. Run it again whenever the two may have drifted: staging
+#                       files every development run, so its rows are the whole of them.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
 # and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
@@ -76,13 +87,15 @@ on:
           - copy
           - after-cutover
           - delete-render
+          - stats-logins
+          - dev-stats
       dry_run:
-        description: "copy, production-auth, email and after-cutover: show what it would do, and write nothing"
+        description: "copy, production-auth, email, after-cutover, stats-logins and dev-stats: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
       public_key:
-        description: "delete-render only: an RSA public key (SPKI DER, base64) that CODE_PEPPER is encrypted to in the log"
+        description: "delete-render and stats-logins: an RSA public key (SPKI DER, base64) the secrets are encrypted to in the log"
         required: false
         type: string
 
@@ -119,16 +132,10 @@ jobs:
         with:
           rust: "false"
 
-      - name: read jackioh-server's settings from Render, and staging's database address
-        if: ${{ inputs.step != 'production-auth' && inputs.step != 'email' }}
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      - name: the database address helper
         run: |
           set -euo pipefail
           umask 077
-          [ -n "$RENDER_API_KEY" ] || { echo "::error::RENDER_API_KEY is not set"; exit 1; }
-
           # A database URL as the session pooler's, its password masked: argv is (ref, url, pooler host
           # or ""), the URL goes to stdout and what it names to stderr.
           cat > "$RUNNER_TEMP/pooler.py" <<'EOF'
@@ -174,6 +181,15 @@ jobs:
           sys.stdout.write(url)
           EOF
 
+      - name: read jackioh-server's settings from Render, and staging's database address
+        if: ${{ contains(fromJSON('["staging-secrets", "drop-ping", "production-secrets", "copy", "after-cutover", "delete-render"]'), inputs.step) }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [ -n "$RENDER_API_KEY" ] || { echo "::error::RENDER_API_KEY is not set"; exit 1; }
           render() {
             curl -fsS --retry 3 --max-time 60 -H "Authorization: Bearer $RENDER_API_KEY" \
               -H "Accept: application/json" "https://api.render.com/v1$1"
@@ -202,7 +218,7 @@ jobs:
           rm -f "$RUNNER_TEMP/staging.url.raw"
 
       - name: production's database address
-        if: ${{ inputs.step == 'production-secrets' || inputs.step == 'check-production' || inputs.step == 'copy' }}
+        if: ${{ contains(fromJSON('["production-secrets", "check-production", "copy", "stats-logins", "dev-stats"]'), inputs.step) }}
         env:
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
@@ -625,6 +641,141 @@ jobs:
           done
           render -X DELETE "https://api.render.com/v1/services/$id" > /dev/null
           echo "deleted Render's $RENDER_SERVICE ($id)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: production's statistics logins, sealed for a person
+        if: ${{ inputs.step == 'stats-logins' }}
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          PUBLIC_KEY: ${{ inputs.public_key }}
+        run: |
+          set -euo pipefail
+          umask 077
+          production=$(cat "$RUNNER_TEMP/production.url")
+          host=$(python3 -c 'import sys, urllib.parse as u; print(u.urlsplit(sys.argv[1]).hostname)' "$production")
+          q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 "${@:2}"; }
+          # training/learn.md's two logins: stats_importer acts as service_role only by `set role`, and
+          # stats_reader's every transaction is read-only. The copy brought both from staging.
+          q "$production" -c "select rolname || ': ' || case when rolconfig is null then 'no settings' else array_to_string(rolconfig, ', ') end
+            from pg_roles where rolname in ('stats_importer', 'stats_reader') order by 1" | sed 's/^/production holds /'
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would give stats_importer and stats_reader new passwords and print their addresses sealed"
+            exit 0
+          fi
+          [ -n "$PUBLIC_KEY" ] || { echo "::error::public_key is empty: the addresses are printed only sealed"; exit 1; }
+          base64 -d <<<"$PUBLIC_KEY" > "$RUNNER_TEMP/key.der"
+          openssl pkey -pubin -inform DER -in "$RUNNER_TEMP/key.der" -out "$RUNNER_TEMP/key.pem"
+
+          importer=$(openssl rand -hex 24)
+          reader=$(openssl rand -hex 24)
+          echo "::add-mask::$importer"
+          echo "::add-mask::$reader"
+          # Each password goes to the database as its SCRAM verifier, so no statement or log holds it.
+          cat > "$RUNNER_TEMP/scram.py" <<'EOF'
+          import base64, hashlib, hmac, os, sys
+          salt, rounds = os.urandom(16), 4096
+          key = hashlib.pbkdf2_hmac("sha256", sys.stdin.read().encode(), salt, rounds)
+          client = hmac.new(key, b"Client Key", "sha256").digest()
+          server = hmac.new(key, b"Server Key", "sha256").digest()
+          b = lambda v: base64.b64encode(v).decode()
+          print(f"SCRAM-SHA-256${rounds}:{b(salt)}${b(hashlib.sha256(client).digest())}:{b(server)}")
+          EOF
+          scram() { printf %s "$1" | python3 "$RUNNER_TEMP/scram.py"; }
+          q "$production" -v importer="$(scram "$importer")" -v reader="$(scram "$reader")" <<'SQL'
+          do $$
+          begin
+            if not exists (select from pg_roles where rolname = 'stats_importer') then
+              create role stats_importer login noinherit;
+              grant service_role to stats_importer;
+            end if;
+            if not exists (select from pg_roles where rolname = 'stats_reader') then
+              create role stats_reader login;
+              grant service_role to stats_reader;
+              alter role stats_reader set default_transaction_read_only = on;
+            end if;
+          end
+          $$;
+          alter role stats_importer password :'importer';
+          alter role stats_reader password :'reader';
+          SQL
+
+          for login in stats_importer stats_reader; do
+            case "$login" in stats_importer) pw=$importer ;; *) pw=$reader ;; esac
+            url="postgresql://$login.$PRODUCTION_REF:$pw@$host:5432/postgres"
+            echo "::add-mask::$url"
+            # The pooler may take a moment to see a new password.
+            for wait in 5 10 20 0; do
+              if held=$(q "$url" -c "set role service_role; select 'read-only ' || current_setting('default_transaction_read_only') || ', ' || count(*) || ' card rows in reach' from public.card_totals"); then
+                break
+              fi
+              [ "$wait" = 0 ] && { echo "::error::$login cannot sign in to JackiOh-Production"; exit 1; }
+              sleep "$wait"
+            done
+            sealed=$(printf %s "$url" | openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/key.pem" \
+              -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 | base64 -w0)
+            echo "$login signs in: $held"
+            echo "$login sealed: $sealed"
+          done
+
+      - name: development statistics into JackiOh-Production
+        if: ${{ inputs.step == 'dev-stats' }}
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          STAGING_STATS: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [ -n "$STAGING_STATS" ] || { echo "::error::STATS_IMPORT_DATABASE_URL is not set"; exit 1; }
+          production=$(cat "$RUNNER_TEMP/production.url")
+          q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 "${@:2}"; }
+          mkdir -p "$RUNNER_TEMP/dev" && cd "$RUNNER_TEMP/dev"
+          tables=(card_totals game_totals record_totals game_record_batches)
+          dev() { case "$1" in game_record_batches) echo "true" ;; *) echo "source = 'dev'" ;; esac; }
+
+          # Both sides' columns in the same order, or the rows would land in the wrong ones.
+          columns="select string_agg(table_name || '(' || cols || ')', ' ' order by table_name) from (
+            select table_name, string_agg(column_name, ',' order by ordinal_position) as cols
+            from information_schema.columns where table_schema = 'public'
+            and table_name in ('card_totals', 'game_totals', 'record_totals', 'game_record_batches') group by 1) t"
+          # As service_role (stats_importer inherits nothing), inside a transaction, which keeps one
+          # connection even through a transaction pooler.
+          a=$(q "$STAGING_STATS" -c "begin read only" -c "set local role service_role" -c "$columns" -c "commit")
+          b=$(q "$production" -c "$columns")
+          [ "$a" = "$b" ] || { echo "::error::the statistics tables differ: staging $a, production $b"; exit 1; }
+
+          # Staging's, in one snapshot.
+          copies=(-c "begin isolation level repeatable read read only" -c "set local role service_role")
+          for t in "${tables[@]}"; do
+            copies+=(-c "\\copy (select * from public.$t where $(dev "$t")) to '$t.tsv'")
+          done
+          copies+=(-c "commit")
+          q "$STAGING_STATS" "${copies[@]}"
+          counts=()
+          for t in "${tables[@]}"; do
+            n=$(grep -c . "$t.tsv" || true)
+            counts+=("$t=$n")
+          done
+          games=$(q "$STAGING_STATS" -c "set role service_role; select coalesce(sum((total->>'games')::bigint), 0) || ' games over ' || count(distinct patch) || ' patches' from public.game_totals where source = 'dev'")
+          echo "staging's development statistics: ${counts[*]} ($games)"
+          echo "production holds now: $(q "$production" -c "select (select count(*) from public.card_totals where source = 'dev') || ' development card rows, '
+            || (select count(*) from public.game_record_batches) || ' batches'")"
+
+          # Production's development rows replaced by staging's, the counts checked before commit.
+          load=()
+          check="do \$\$ begin"
+          for t in "${tables[@]}"; do
+            load+=(-c "delete from public.$t where $(dev "$t")" -c "\\copy public.$t from '$t.tsv'")
+            n=$(grep -c . "$t.tsv" || true)
+            check+=" if (select count(*) from public.$t where $(dev "$t")) <> $n then raise exception '$t holds a different count'; end if;"
+          done
+          check+=" end \$\$"
+          last=()
+          [ "$DRY_RUN" = true ] && last=(-c rollback)
+          psql "$production" -X -q --single-transaction -v ON_ERROR_STOP=1 "${load[@]}" -c "$check" "${last[@]}"
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry run: staging's development statistics loaded into JackiOh-Production and agreed, then rolled back"
+            exit 0
+          fi
+          echo "JackiOh-Production now holds $(q "$production" -c "select coalesce(sum((total->>'games')::bigint), 0) || ' development games over ' || count(distinct patch) || ' patches' from public.game_totals where source = 'dev'"), as staging does" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}
