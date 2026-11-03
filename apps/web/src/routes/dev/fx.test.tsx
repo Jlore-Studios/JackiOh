@@ -1,7 +1,8 @@
 // R2784000 #2792: `/dev/fx`, the motif gallery: it offers every drawn motif, every flavor's
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
-// each plays something; #2793: every Core entry other than `none` plays as its card's play. R2785000:
-// it plays a card as the fixture set piece, which holds the board until a click skips it.
+// each plays something; #2793 #2799: every Core and Training Grounds entry other than `none` plays as its
+// card's play. R2785000: it plays a card as the fixture set piece, which holds the board until a click
+// skips it.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -26,6 +27,35 @@ function optionsOf(testid: string): string[] {
   return [...screen.getByTestId(testid).querySelectorAll("option")].map((option) => option.value);
 }
 
+/** #2793: a set's `count` entries other than `none` each have a gallery play, and each draws its motif, recipe or set piece. */
+function expectEveryEntryPlays(prefix: string, count: number): void {
+  const view = fullBoardView();
+  const intensity = FX_INTENSITY_SCALE.normal;
+  const set = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith(prefix) && entry.kind !== "none");
+  expect(set).toHaveLength(count);
+  expect(galleryCards().filter((card) => card.defId.startsWith(prefix)).map((card) => card.defId)).toEqual(set.map(([defId]) => defId));
+  for (const [defId, entry] of set) {
+    const play = galleryPlayOf(defId, entry);
+    if (play === null) throw new Error(`${defId} has no gallery play`);
+    if (play.kind === "director") {
+      expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
+      continue;
+    }
+    // Planned as the board's effects layer plans it: remember, then plan.
+    const events = galleryCardEvents(defId, play, view, 1);
+    const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
+    const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
+    let drawn = false;
+    for (const planned of entries) {
+      env.memory.remember(planned.events);
+      if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+      if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
+      if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+    }
+    expect(drawn, `${defId} ${play.kind}`).toBe(true);
+  }
+}
+
 describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
   it("R2784000 #2792 the gallery lists every drawn motif, palette and sub-look, scale and example", () => {
     render(<FxGallery />);
@@ -39,9 +69,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
     // #2793: Core's 91 entries other than `none` (76 on the board, 7 through the director, 5 recipes, 3 set
-    // pieces), then the other sets' 15 motif cards, 8 aura-only Field Spells, Crushing Walls' recipe, 5 set
-    // pieces and Training Grounds #30's `death: wipe` through the director.
-    expect(cards).toHaveLength(121);
+    // pieces), then the other sets' 13 motif cards, 7 aura-only Field Spells, Crushing Walls' recipe and 5
+    // set pieces, and #2799: Training Grounds' 51.
+    expect(cards).toHaveLength(168);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -67,31 +97,11 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
   });
 
   it("R2784000 #2793 the gallery has a play for every Core entry other than none, and each plays its motif, recipe or set piece", () => {
-    const view = fullBoardView();
-    const intensity = FX_INTENSITY_SCALE.normal;
-    const core = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("core-") && entry.kind !== "none");
-    expect(core).toHaveLength(91);
-    expect(galleryCards().filter((card) => card.defId.startsWith("core-")).map((card) => card.defId)).toEqual(core.map(([defId]) => defId));
-    for (const [defId, entry] of core) {
-      const play = galleryPlayOf(defId, entry);
-      if (play === null) throw new Error(`${defId} has no gallery play`);
-      if (play.kind === "director") {
-        expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
-        continue;
-      }
-      // Planned as the board's effects layer plans it: remember, then plan.
-      const events = galleryCardEvents(defId, play, view, 1);
-      const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
-      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
-      let drawn = false;
-      for (const planned of entries) {
-        env.memory.remember(planned.events);
-        if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
-        if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
-        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
-      }
-      expect(drawn, `${defId} ${play.kind}`).toBe(true);
-    }
+    expectEveryEntryPlays("core-", 91);
+  });
+
+  it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {
+    expectEveryEntryPlays("traininggrounds-", 51);
   });
 
   it("R2784000 #2793 the gallery plays a card of each kind, a Field Spell standing in the backrow with its aura", () => {

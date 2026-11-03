@@ -186,6 +186,10 @@ export const FX_TIDE_TRAUMA = 0.35;
 export const FX_WISH_TRAUMA = 0.3;
 export const FX_FORGE_TRAUMA = 0.4;
 export const FX_FORGE_REACH = 0.2;
+// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land.
+export const FX_CELESTIAL_TRAUMA = 0.35;
+export const FX_DINO_STOMP_TRAUMA = 0.55;
+export const FX_GAME_DESIGN_TRAUMA = 0.45;
 // #2793: the share of a set's non-token cards its pass gives an entry other than `none`.
 export const FX_SET_PASS_FLOOR = 0.55;
 // R2784000: the scales the /dev/fx gallery offers.

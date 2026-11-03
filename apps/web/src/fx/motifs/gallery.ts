@@ -248,7 +248,8 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * `view`: Hinder adds the next-refresh rider to the other player, Blood Ridden Glowy Jelly Bean makes the
  * viewer's first hand card Radiant at a life price, Crushing Walls takes wipe's fixture, Transmogulate
  * turns the viewer's first hand card into a Legendary, Zephrys adds its card to the hand and Craft a
- * Card adds its crafted card, then fuses it.
+ * Card adds its crafted card, then fuses it; #2799: Celestial Caller summons a Sun in lane 2 and a Moon
+ * in lane 4, Dino-size sets the viewer's first unit to 10/10 and Goetzmann Game Design adds its card.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -265,6 +266,20 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "addedToHand", player, instanceId: "fx-fused", defId: "core-055" },
     { type: "fused", instanceIds: ["fx-half-a", "fx-half-b"], resultInstanceId: "fx-fused", defId: "core-055" },
   ],
+  celestialCall: (_view, _instanceId, player) => [
+    { type: "summoned", player, instanceId: "fx-sun", defId: "traininggrounds-006", row: "units", lane: 2 },
+    { type: "summoned", player, instanceId: "fx-moon", defId: "traininggrounds-007", row: "units", lane: 4 },
+  ],
+  dinoStomp: (view) => {
+    const mine = unitsOf(view.you)[0];
+    return mine === undefined
+      ? []
+      : [
+          { type: "numberChanged", instanceId: mine.instanceId, defId: mine.defId, key: "attack", value: 10 },
+          { type: "numberChanged", instanceId: mine.instanceId, defId: mine.defId, key: "health", value: 10 },
+        ];
+  },
+  gameDesign: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-designed", defId: "core-055" }],
 };
 
 /**

@@ -320,7 +320,8 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
 (`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
-effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
+effects table (`fx/cards/<set>.json5`) is not `none` (a motif, a recipe, a set piece or an aura), as that card's play. It
+calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
