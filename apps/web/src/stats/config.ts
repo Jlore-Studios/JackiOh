@@ -79,6 +79,12 @@ export const SET_STATS_CARDS_LISTED = 10;
 /** R1966000: decimal places of a set's win rates and change (they differ by tenths) and of a card's standard errors from 50%. */
 export const SET_STATS_DIGITS = 1;
 
+/** R2895000: decimal places of a percent at each end of a card's Adjusted range, a tenth of a point, as Adjusted reads. */
+export const ADJUSTED_RANGE_DIGITS = 1;
+
+/** R2895000: decimal places of a percent at each end of a card's Win rate range, a whole point, as Win rate reads. */
+export const WIN_RATE_RANGE_DIGITS = 0;
+
 /** R1973002: the games, live and AI, a patch needs before the patch picker offers it. */
 export const STATS_PATCH_MIN_GAMES = 1000;
 

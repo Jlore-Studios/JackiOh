@@ -1437,13 +1437,30 @@ pub fn seen(stats: &CardStats) -> Tally {
 /// `τ`, so a few games' swing is mostly discounted and many games' is mostly kept. `None` when either
 /// side has no games.
 pub fn adjusted_win_rate(stats: &CardStats) -> Option<f64> {
+    adjusted_posterior(stats).map(|(mean, _)| mean)
+}
+
+/// R2895000: the 95% interval of the adjusted win rate, `(low, high)` as fractions: R2777000's posterior,
+/// `adjusted ± STATS_INTERVAL_Z · √(weight · SE²)`, its variance `weight · SE²` being `τ²·SE² / (τ² + SE²)`.
+/// It is never wider than `± STATS_INTERVAL_Z · τ` and narrows to the drawn delta's own `± z · SE` as the
+/// games pile up. A credible interval under R2777000's prior, not a frequentist one. `None` when the
+/// adjusted win rate is.
+pub fn adjusted_interval(stats: &CardStats) -> Option<(f64, f64)> {
+    let (mean, variance) = adjusted_posterior(stats)?;
+    let half = STATS_INTERVAL_Z * variance.sqrt();
+    Some((mean - half, mean + half))
+}
+
+/// R2777000, R2895000: the posterior of a card's lift read from an even game, `(mean, variance)`.
+fn adjusted_posterior(stats: &CardStats) -> Option<(f64, f64)> {
     let seen = seen(stats);
     let never = not_drawn(stats);
     let delta = win_rate(&seen)? - win_rate(&never)?;
     let game_variance = ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER);
     let noise = game_variance * (1.0 / f64::from(seen.games) + 1.0 / f64::from(never.games));
     let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
-    Some(ADJUSTED_WIN_RATE_CENTER + prior / (prior + noise) * delta)
+    let weight = prior / (prior + noise);
+    Some((ADJUSTED_WIN_RATE_CENTER + weight * delta, weight * noise))
 }
 
 /// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
@@ -2488,28 +2505,30 @@ mod tests {
             assert_eq!(drawn_delta(&never_played), None);
         }
 
+        /// R2777000, R2895000: `games` drawn games won at `seen_rate`, and as many never drawn won at `never_rate`.
+        fn seen_and_unseen(games: i32, seen_rate: f64, never_rate: f64) -> CardStats {
+            let wins = |rate: f64| (f64::from(games) * rate).round() as i32;
+            CardStats {
+                card: "a".to_string(),
+                in_deck: tally(2 * games, wins(seen_rate) + wins(never_rate), 0),
+                opening_hand: tally(0, 0, 0),
+                going_first: tally(0, 0, 0),
+                going_second: tally(0, 0, 0),
+                played: tally(games, wins(seen_rate), 0),
+                drawn_not_played: tally(0, 0, 0),
+                played_radiant: tally(0, 0, 0),
+                played_normal: tally(0, 0, 0),
+                created_played: tally(0, 0, 0),
+                created_not_played: tally(0, 0, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(0, 0, 0),
+            }
+        }
+
         #[test]
         fn r2777000_the_adjusted_win_rate_keeps_as_much_of_the_drawn_delta_as_the_games_seen_and_unseen_back()
         {
-            // `seen` drawn games won at `seen_rate`, and as many never drawn won at `never_rate`.
-            let card = |games: i32, seen_rate: f64, never_rate: f64| {
-                let wins = |rate: f64| (f64::from(games) * rate).round() as i32;
-                CardStats {
-                    card: "a".to_string(),
-                    in_deck: tally(2 * games, wins(seen_rate) + wins(never_rate), 0),
-                    opening_hand: tally(0, 0, 0),
-                    going_first: tally(0, 0, 0),
-                    going_second: tally(0, 0, 0),
-                    played: tally(games, wins(seen_rate), 0),
-                    drawn_not_played: tally(0, 0, 0),
-                    played_radiant: tally(0, 0, 0),
-                    played_normal: tally(0, 0, 0),
-                    created_played: tally(0, 0, 0),
-                    created_not_played: tally(0, 0, 0),
-                    created_played_radiant: tally(0, 0, 0),
-                    created_played_normal: tally(0, 0, 0),
-                }
-            };
+            let card = seen_and_unseen;
             let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
             let weight = |games: f64| {
                 let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
@@ -2551,6 +2570,48 @@ mod tests {
                 ..card(40, 0.6, 0.4)
             };
             assert_eq!(adjusted_win_rate(&always_seen), None);
+        }
+
+        #[test]
+        fn r2895000_the_adjusted_interval_is_its_posterior_never_wider_than_the_prior_and_narrowing_with_games()
+         {
+            let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+            let widest = STATS_INTERVAL_Z * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
+            // The posterior's spread: the weight times the delta's sampling variance, at an even game.
+            let half = |games: f64| {
+                let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
+                let noise = 0.25 * (2.0 / games);
+                STATS_INTERVAL_Z * (prior / (prior + noise) * noise).sqrt()
+            };
+
+            // R2777000's examples: +20 points over 40 games each side, 53.3% (44.4% to 62.3%); over 4,000,
+            // 69.0% (66.9% to 71.2%).
+            let mut last = widest;
+            for (games, low, high) in [(40, 0.444, 0.623), (4000, 0.669, 0.712)] {
+                let card = seen_and_unseen(games, 0.6, 0.4);
+                let rate = adjusted_win_rate(&card).unwrap();
+                let (from, to) = adjusted_interval(&card).unwrap();
+                assert!(close(rate - from, half(f64::from(games))), "{games}: {from}");
+                assert!(close(to - rate, half(f64::from(games))), "{games}: {to}");
+                assert!(
+                    (from - low).abs() < 5e-4 && (to - high).abs() < 5e-4,
+                    "{games}: {from} {to}"
+                );
+                // It holds the rate, is never wider than the prior's own ± z·τ, and narrows with games.
+                assert!(from < rate && rate < to);
+                assert!(to - rate < widest && to - rate < last, "{games}: {}", to - rate);
+                last = to - rate;
+            }
+            // A handful of games keeps nearly the prior's whole width; no lift is centred on an even game.
+            let (from, to) = adjusted_interval(&seen_and_unseen(2, 0.5, 0.5)).unwrap();
+            assert!(close(from + to, 2.0 * ADJUSTED_WIN_RATE_CENTER));
+            assert!(to - ADJUSTED_WIN_RATE_CENTER > 0.95 * widest, "{to}");
+            // No adjusted rate, no interval.
+            let never_seen = CardStats {
+                played: tally(0, 0, 0),
+                ..seen_and_unseen(40, 0.6, 0.4)
+            };
+            assert_eq!(adjusted_interval(&never_seen), None);
         }
 
         #[test]
