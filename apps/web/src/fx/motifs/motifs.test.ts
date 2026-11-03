@@ -107,6 +107,10 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   radiance: ["sheen@80", "burst@240", "rays@240", "shake@240"],
   // A sheen over the healed unit, a ring burst and ring closing as it lands, the afterglow; no shake.
   mend: ["sheen@80", "burst@240", "ring@240", "burst@300"],
+  // #2796: a gather at the receiver's hero (no play resolves), then a back into the hand and one into the deck.
+  deal: ["burst@0", "ghost@80", "burst@240", "ghost@80", "burst@240"],
+  // #2796: with no play there is no caster to bolt from: the ring closes on the modifiers, then the afterglow.
+  seal: ["ring@240", "burst@240", "burst@300", "shake@240"],
 };
 
 describe("R2784000 the damage and removal motifs", () => {

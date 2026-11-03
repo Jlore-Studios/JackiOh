@@ -86,6 +86,10 @@ const S2 = {
   FX_WALLS_TRAUMA: 0.45,
   FX_ROLLBACK_STEP: 0.08,
   FX_INK_TEAR_TRAUMA: 0.2,
+  // #2796: Meditative's Flourishes.
+  FX_JADE_CRACK_TRAUMA: 0.3,
+  FX_HARMONY_TRAUMA: 0.15,
+  FX_CN_SWEEP_TRAUMA: 0.35,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
   // MN05: Armor's shield flash (R1363).
@@ -160,8 +164,11 @@ const S2 = {
     send: 0,
     radiance: 0.15,
     mend: 0,
+    deal: 0,
+    seal: 0.2,
   },
   FX_MOTIF_TITHE_MAX: 5,
+  FX_MOTIF_DEAL_MAX: 5,
   // Issue #2793: Core's flourishes, and a set pass's floor.
   FX_TIDE_TRAUMA: 0.35,
   FX_WISH_TRAUMA: 0.3,
@@ -362,6 +369,10 @@ describe("S2 the effects constants", () => {
       constants.FX_RESULT_TRAUMA,
       constants.FX_TAKEOVER_TRAUMA,
       constants.FX_BEAT_TRAUMA,
+      // #2796: Meditative's Flourishes.
+      constants.FX_JADE_CRACK_TRAUMA,
+      constants.FX_HARMONY_TRAUMA,
+      constants.FX_CN_SWEEP_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);

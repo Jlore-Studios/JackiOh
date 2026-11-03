@@ -217,9 +217,11 @@ describe("R2784000 the per-set effects tables", () => {
     const files = new Set<string>();
     for (const [defId, aura] of Object.entries(examples)) {
       expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
-      // #2793: Core's pass gave #14 and #46 a cast beside their auras; R2795000: Classic+'s, #34 Memory Leak its bind.
+      // A set's pass may give the card hooks beside its aura (#2793 gave Core #14 and #46 a cast, #2796
+      // Meditative #40 and Meditative+ #9, R2795000 Classic+ #34 its bind); the aura stays the example's.
       const entry = FX_CARD_TABLE.get(defId);
-      expect(entry?.kind === "hooks" ? entry.aura : entry, defId).toEqual(aura);
+      expect(entry?.kind, defId).toBe("hooks");
+      expect(entry?.kind === "hooks" ? entry.aura : undefined, defId).toEqual(aura);
       const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
       if (file !== undefined) files.add(file.file);
     }

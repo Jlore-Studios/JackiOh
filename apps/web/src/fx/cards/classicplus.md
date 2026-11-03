@@ -11,7 +11,7 @@ floor.
   for a `none`.
 - **Census**: the "Suggested" cell of `cargo jackioh fx census` (#2788) for the card, run on the engine of
   `0312164cd` (200 seeded games and 19 forced ones), or `not in census` for the tokens it never played.
-  Its families predate the motifs of #2786 and #2793 and read damage, removals, counters, costs and
+  Its families predate the motifs of #2786, #2793 and #2796 and read damage, removals, counters, costs and
   returns only.
 - **Why**: where the entry follows the census, and why it overrides it where it does.
 
@@ -44,7 +44,7 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-012-7` | Legion of the Hungry | Spell | none: token (one census play) | — | vanish | one census play, too few to earn a token an entry |
 | `classicplus-012-8` | Frostspatula | Field Spell | none: token (two census plays) | — | vanish | two census plays, too few to earn a token an entry |
 | `classicplus-013` | Mommy Barker | Unit | death send | 1.51 | none: vanilla | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; its death plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
-| `classicplus-014` | Forever& | Spell | cast glimpse | 1.35 | none: no motif reads modifierChanged | its play makes only modifierChanged, which no motif reads; glimpse holds its cast, drawing nothing in a game yet |
+| `classicplus-014` | Forever& | Spell | cast seal | 1.35 | none: no motif reads modifierChanged | its play lays a player modifier (modifierChanged), which seal (#2796) reads |
 | `classicplus-015` | Conjure Rush Token | Spell | cast conjure | 1.08 | none: no motif reads keywordGranted | the census predates the motifs of #2786 and #2793; conjure reads the hook's commonest own event |
 | `classicplus-016` | Conjure Rush Token+ | Spell | cast conjure | 1.28 | none: no motif reads keywordGranted | the census predates the motifs of #2786 and #2793; conjure reads the hook's commonest own event |
 | `classicplus-017` | Conjure Rush Token++ | Spell | cast conjure | 1.65 | vanish | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which conjure reads |
@@ -94,7 +94,7 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-049` | Jay Fungus | Unit | trigger tithe | 1.28 | bolt | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which tithe reads; its trigger plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
 | `classicplus-050` | Adaptive Growth | Spell | cast bless | 1.35 | wipe | the census predates the motifs of #2786 and #2793; bless reads the hook's commonest own event |
 | `classicplus-051` | Jlockeed's J15 Fighter | Unit | none: vanilla | — | none: vanilla | the census agrees |
-| `classicplus-052` | Jlockeed's Permanent Defense Contract | Spell | cast glimpse Tech/laser | 1.45 | none: no motif reads modifierChanged | its play makes only modifierChanged, which no motif reads; glimpse holds its cast, drawing nothing in a game yet |
+| `classicplus-052` | Jlockeed's Permanent Defense Contract | Spell | cast seal Tech/laser | 1.45 | none: no motif reads modifierChanged | its play lays a player modifier (modifierChanged), which seal (#2796) reads |
 | `classicplus-053` | Book of Tokens | Spell | cast conjure Nerd/ink | 1.35 | none: no motif reads summoned | the census predates the motifs of #2786 and #2793; conjure reads the hook's commonest own event |
 | `classicplus-054` | Book of Books | Spell | cast send Nerd/ink | 1.35 | bolt | no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `classicplus-055` | Book of Greed | Spell | cast send Nerd/ink | 1.35 | none: no motif reads addedToHand | no census family reads addedToHand and shuffledIn, which send (#2793) reads |
@@ -135,7 +135,7 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-t-ai-04` | Chain of Thought | Spell | none: token (one census play) | — | none: no motif reads addedToHand | one census play, too few to earn a token an entry |
 | `classicplus-t-ai-05` | Autocomplete | Spell | none: token (two census plays) | — | none: no motif reads addedToHand | two census plays, too few to earn a token an entry |
 | `classicplus-t-ai-06` | Datacenter Fire | Spell | cast nova | 1.04 | nova | the census agrees |
-| `classicplus-t-ai-07` | Alignment Tax | Spell | none: token (no motif reads modifierChanged) | — | none: no motif reads modifierChanged | its play makes only modifierChanged, which no motif reads |
+| `classicplus-t-ai-07` | Alignment Tax | Spell | cast seal | 0.97 | none: no motif reads modifierChanged | its play lays a player modifier (modifierChanged), which seal (#2796) reads, in 3 census windows |
 | `classicplus-t-ai-08` | Rate Limit | Trap | none: token (one census play) | — | none: vanilla | one census play, too few to earn a token an entry |
 | `classicplus-t-ai-09` | Refusal | Trap | cast negate | 0.97 | negate | the census agrees; a Trap's cast draws nothing in a game yet |
 | `classicplus-t-ai-10` | Fine-Tuning | Field Spell | cast bless Tech/hologram; trigger bless Tech/hologram; aura arcane zone Tech/hologram | 1.04 | bolt | the census predates the motifs of #2786 and #2793; bless reads the hook's commonest own event; its trigger plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |

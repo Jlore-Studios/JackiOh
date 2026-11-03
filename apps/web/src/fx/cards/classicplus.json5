@@ -32,7 +32,7 @@
   "classicplus-012-7": "none: token (one census play)", // Legion of the Hungry
   "classicplus-012-8": "none: token (two census plays)", // Frostspatula
   "classicplus-013": { death: { motif: "send" } }, // Mommy Barker
-  "classicplus-014": { cast: { motif: "glimpse" } }, // Forever&
+  "classicplus-014": { cast: { motif: "seal" } }, // Forever&
   "classicplus-015": { cast: { motif: "conjure" } }, // Conjure Rush Token
   "classicplus-016": { cast: { motif: "conjure" } }, // Conjure Rush Token+
   "classicplus-017": { cast: { motif: "conjure" } }, // Conjure Rush Token++
@@ -82,7 +82,7 @@
   "classicplus-049": { trigger: { motif: "tithe" } }, // Jay Fungus
   "classicplus-050": { cast: { motif: "bless" } }, // Adaptive Growth
   "classicplus-051": "none: vanilla", // Jlockeed's J15 Fighter
-  "classicplus-052": { cast: { motif: "glimpse", palette: "Tech/laser" } }, // Jlockeed's Permanent Defense Contract
+  "classicplus-052": { cast: { motif: "seal", palette: "Tech/laser" } }, // Jlockeed's Permanent Defense Contract
   "classicplus-053": { cast: { motif: "conjure", palette: "Nerd/ink" } }, // Book of Tokens
   "classicplus-054": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Books
   "classicplus-055": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Greed
@@ -123,7 +123,7 @@
   "classicplus-t-ai-04": "none: token (one census play)", // Chain of Thought
   "classicplus-t-ai-05": "none: token (two census plays)", // Autocomplete
   "classicplus-t-ai-06": { cast: { motif: "nova" } }, // Datacenter Fire
-  "classicplus-t-ai-07": "none: token (no motif reads modifierChanged)", // Alignment Tax
+  "classicplus-t-ai-07": { cast: { motif: "seal" } }, // Alignment Tax
   "classicplus-t-ai-08": "none: token (one census play)", // Rate Limit
   "classicplus-t-ai-09": { cast: { motif: "negate" } }, // Refusal
   "classicplus-t-ai-10": { cast: { motif: "bless", palette: "Tech/hologram" }, trigger: { motif: "bless", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // Fine-Tuning

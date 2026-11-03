@@ -12,6 +12,9 @@ import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
 import { constantStamp } from "./classicplus/kysConstant.ts";
 import { rollbackSweep } from "./classicplus/rollback.ts";
+import { jadeCrack } from "./meditative/auspiciousRock.ts";
+import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
+import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 
 export const CARD_RECIPES = {
   manaCrack,
@@ -23,6 +26,9 @@ export const CARD_RECIPES = {
   rollbackSweep,
   constantStamp,
   inkTear,
+  jadeCrack,
+  cnSweep,
+  harmonyWave,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;

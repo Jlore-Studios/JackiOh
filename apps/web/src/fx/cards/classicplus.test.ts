@@ -46,6 +46,7 @@ const TOKENS_WITH_ENTRIES = [
   "classicplus-075-1",
   "classicplus-076-1",
   "classicplus-t-ai-06",
+  "classicplus-t-ai-07",
   "classicplus-t-ai-09",
   "classicplus-t-ai-10",
 ];
@@ -181,7 +182,7 @@ describe("R2795000 Classic+'s card animation table", () => {
     }
   });
 
-  it("R2795000 the tokens given entries are the twenty-one the pass lists", () => {
+  it("R2795000 the tokens given entries are the twenty-two the pass lists", () => {
     const tokens = ENTRIES.filter(([defId, entry]) => isToken(defId) && entry.kind !== "none").map(([defId]) => defId);
     expect(tokens).toEqual(TOKENS_WITH_ENTRIES);
     expect(ENTRIES.filter(([defId]) => isToken(defId))).toHaveLength(38);
