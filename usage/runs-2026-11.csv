@@ -370,3 +370,9 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-03T10:24:02Z,41618536291,claude-8,opus,review,2909,medium,stopped,stop,0,0,0,0,,0,0,,,,,none,,0
 2026-11-03T10:24:54Z,41608046406,claude-4,opus,revise,2906,hard,approved,,35,25,7003,1567050,21.8011,62,9,,,26.2,claude-4,resumed,,2
 2026-11-03T10:21:41Z,41607925861,claude-7,opus,review,2911,hard,approved,,33.8,58,22993,2503670,8.9424,6,25,,,3.9,,fresh,,3
+2026-11-03T10:44:02Z,41608169224,claude-3,opus,build,2799,hard,built,,55.1,4,10006,327460,10.9185,2,25,,,1679,claude-3,resumed,,1
+2026-11-03T10:57:45Z,41618453833,muse,muse-spark-1.3-contributor,review,2917,medium,approved,,36.5,0,0,0,,1,3,69,70,1.6,,none,,1
+2026-11-03T10:54:25Z,41608299088,claude-1,opus,build,2797,hard,built,,42.9,265,93754,26727155,9.4345,7,41,,,1681.8,claude-8,fresh,cap,1
+2026-11-03T11:09:00Z,41620162550,muse,muse-spark-1.3-contributor,revise,2913,medium,approved,,35.1,0,0,0,,1,5,70,71,1.8,,none,,2
+2026-11-03T11:17:57Z,41614528620,claude-3,opus,build,2881,hard,built,,61.4,114,22059,5844226,2.4844,21,28,,,366.3,claude-3,fresh,,1
+2026-11-03T11:15:13Z,41609989443,claude-1,opus,revise,2907,hard,approved,,47.3,238,98497,15329567,9.0296,22,60,,,16.8,claude-8,fresh,cap,4
