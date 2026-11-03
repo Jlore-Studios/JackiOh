@@ -14634,6 +14634,13 @@
     "2922": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:13:08Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Rule 1: starting Armor is a new `Handicap` field read by `create_game` in crates/engine/src, with a ruling; the change also spans engine, run and the web's wire types (rule 3)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
