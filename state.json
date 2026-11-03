@@ -28338,10 +28338,10 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-03T09:20:00Z",
-          "utilization": 0.89
+          "resets_at": "2026-11-03T14:40:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-11-03T08:57:06Z",
+        "observed_at": "2026-11-03T09:47:15Z",
         "status": "allowed"
       }
     },
@@ -29914,7 +29914,8 @@
       "2026-11-03T07:39:20Z,claude-6,stream,call,41594504439,13,2026-11-03T11:40:00Z,,,allowed,50,,",
       "2026-11-03T09:15:44Z,claude-6,stream,call,41594504439,15,2026-11-03T11:40:00Z,,,allowed,70,,",
       "2026-11-03T09:16:14Z,claude-6,stream,call,41594504439,16,2026-11-03T11:40:00Z,,,allowed,70,,",
-      "2026-11-03T09:17:14Z,claude-6,stream,call,41594504439,17,2026-11-03T11:40:00Z,,,allowed,70,,"
+      "2026-11-03T09:17:14Z,claude-6,stream,call,41594504439,17,2026-11-03T11:40:00Z,,,allowed,70,,",
+      "2026-11-03T09:40:05Z,claude-8,ping,before,41612614864,0,2026-11-03T14:40:00Z,,,allowed,85,,"
     ],
     "runs": [
       "2026-11-03T09:19:57Z,41604854212,muse,muse-spark-1.3-contributor,review,2909,medium,approved,,39.6,0,0,0,,66,72,65,67,1.9,,none,,1",
