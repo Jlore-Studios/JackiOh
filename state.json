@@ -16143,6 +16143,7 @@
     "2908": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -16157,21 +16158,25 @@
       },
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-03T05:04:55Z",
+      "feedback_since": "2026-11-03T08:23:51Z",
       "issue": 2802,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-03T08:22:15Z",
+      "round_tier": "medium",
       "run_id": "41602974594",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-03T08:23:51Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
