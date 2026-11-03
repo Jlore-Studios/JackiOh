@@ -5,13 +5,46 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import type { AnimationEntry } from "../../game/animations.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
+import { bind, conjure, mirror, offering, rise, shift, tether, transmute } from "./board.ts";
 import { readEvents, type MotifPlanner, type MotifSpec } from "./build.ts";
 import { barrage, bolt, chain, lance, nova, scorch, volley } from "./damage.ts";
+import { flight, glimpse, mana, tally, tithe } from "./hand.ts";
+import { bless, curse, drain, ward } from "./life.ts";
 import type { DrawnMotif } from "./names.ts";
 import { negate, vanish, wipe } from "./removal.ts";
+import { snap } from "./trap.ts";
 
 /** One planner per drawn motif; a missing one fails `typecheck`. */
-export const MOTIF_PLANNERS: { readonly [M in DrawnMotif]: MotifPlanner } = { bolt, volley, barrage, chain, lance, nova, wipe, vanish, scorch, negate };
+export const MOTIF_PLANNERS: { readonly [M in DrawnMotif]: MotifPlanner } = {
+  bolt,
+  volley,
+  barrage,
+  chain,
+  lance,
+  nova,
+  wipe,
+  vanish,
+  scorch,
+  negate,
+  drain,
+  bless,
+  curse,
+  ward,
+  conjure,
+  rise,
+  offering,
+  shift,
+  bind,
+  tether,
+  mirror,
+  transmute,
+  flight,
+  glimpse,
+  mana,
+  tithe,
+  tally,
+  snap,
+};
 
 export function planMotif(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0) || !(entry.durationMs > 0) || !(spec.scale > 0)) return [];
