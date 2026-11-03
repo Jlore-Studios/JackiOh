@@ -30159,12 +30159,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:e35aa3ab-1793742687",
+        "run_id": "",
         "sha": "a1bcc2af170bc25ac91309f1375519ac73577c83",
         "started_at": "2026-11-03T21:51:52Z",
         "status": "queued",
         "title": "Patch: card tests use the crate's scenario helper instead of registering the catalog before every scenario",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 30
