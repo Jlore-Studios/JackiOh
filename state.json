@@ -16006,11 +16006,11 @@
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "41600428787",
+            "run": "41608046406",
             "tier": "strong"
           }
         ],
-        "sha": "12dbaf2e760efc1822015dedfd686c1afaa58735",
+        "sha": "9e9d564d6990e7a4257d764b1a58754d494ad498",
         "tiers": {
           "claude": "strong"
         }
