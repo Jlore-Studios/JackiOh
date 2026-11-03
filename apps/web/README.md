@@ -273,7 +273,7 @@ hidden visually, the crests and the names carrying it), and the control bar keep
 between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by height; the seats are one
 fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
 A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
-stack hung off the zone's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
+stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
 never turns it; the Activate control keeps its 44px tap band, the marks let a tap through.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,

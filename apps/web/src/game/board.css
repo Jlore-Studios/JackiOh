@@ -3089,17 +3089,22 @@ button.modifier-badge[data-open="true"] {
     transform: translateY(-10px);
   }
 
-  /* #2932: a field card's Activate control and keyword marks hang off the zone's top-left corner,
+  /* #2932: a field card's Activate control and keyword marks hang off the card's top-left corner,
      outside the face (game/FieldBadges.tsx), so the face keeps its whole width for the name, art,
      cost, attack and health: the card is not made wider to fit them. The stack is a sibling of the
-     card, as the switch is, anchored to the zone's edge rather than the card's, so DEF's rotation
-     never turns or moves it. It overlaps the zone by 2px, clear of the name box (which starts
-     about 4px in), and the zone left of it is under it by what hangs out. Marks stack down the
-     edge and fold into the face's own "+n". */
+     card, as the switch is, so DEF's rotation never turns or moves it; its corner is the card's own,
+     worked out from the card's size below (the zone centres the card, so the card's top-left is the
+     zone's middle less half the card). It overlaps the card by 2px, clear of the name box (which
+     starts about 4px in), and the zone left of it is under it by what hangs out. Marks stack down
+     the edge and fold into the face's own "+n". */
   .board .zone > .field-badges {
+    /* The card's own size, repeated here so `cqw`/`cqh` read this stack's container (its zone, as
+       the card's do): a custom property set on the zone would read the lane instead. */
+    --field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));
+    --field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));
     position: absolute;
-    top: 0;
-    right: calc(100% - 2px);
+    top: calc((100cqh - var(--field-card-h)) / 2);
+    right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);
     z-index: var(--z-popover);
     display: flex;
     flex-direction: column;

@@ -3,10 +3,11 @@
 // name, art, cost, attack and health (board.css, "Phone portrait"; the card is not made wider).
 //
 // The stack is a sibling of the card root, as the switch (`SwitchButton`, Card.tsx) is, so DEF's
-// rotation never turns or moves it: it is placed off the zone's edge, not the card's. It draws view
-// data only (CLAUDE.md rule 7): the control is `ActivateControls`, which decides nothing, and the
-// marks are `KeywordIcons`, the face's own, with the same "+n" fold. Card.tsx renders it only for a
-// field card on the phone layout (`usePhonePortrait`); every other card keeps both on its face.
+// rotation never turns or moves it: its corner is still the card's own top-left (board.css works it
+// out from the card's size; the zone centres the card). It draws view data only (CLAUDE.md rule 7):
+// the control is `ActivateControls`, which decides nothing, and the marks are `KeywordIcons`, the
+// face's own, with the same "+n" fold. Card.tsx renders it only for a field card on the phone layout
+// (`usePhonePortrait`); every other card keeps both on its face.
 
 import type { ReactElement } from "react";
 

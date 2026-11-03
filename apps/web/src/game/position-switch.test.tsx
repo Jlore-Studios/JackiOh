@@ -107,12 +107,18 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(lane).toContain("grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));");
   });
 
-  it("the badges hang off the zone's corner, the match bar rides the top strip, and the seats are thinner", () => {
+  it("the badges hang off the card's corner, the match bar rides the top strip, and the seats are thinner", () => {
     const phone = phoneBlock();
     const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
     expect(badges, "the phone block places `.field-badges`").toBeDefined();
     expect(badges).toContain("position: absolute;");
-    expect(badges).toContain("right: calc(100% - 2px);");
+    // The stack's corner is the card's own top-left, worked out from the card's size (the zone
+    // centres the card): never the zone's bare corner, so it tracks the card on a tall phone too.
+    expect(badges).toContain("--field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));");
+    expect(badges).toContain("--field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));");
+    expect(badges).toContain("top: calc((100cqh - var(--field-card-h)) / 2);");
+    expect(badges).toContain("right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);");
+    expect(badges).not.toContain("top: 0;");
     // It hangs over the zone beside it, whose switch sits at that corner: only the Activate control takes a press.
     expect(badges).toContain("pointer-events: none;");
     expect(phone).toMatch(/\.app-shell--wide\s*>\s*\.game\[data-rail-top="true"\]\s*\{[^}]*display:\s*grid;/);
