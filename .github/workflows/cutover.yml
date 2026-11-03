@@ -39,7 +39,7 @@
 #                       and data, the four statistics tables' live rows alone and none of
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
 #                       auth.users counted on both sides, which must agree. With `dry_run` (the default)
-#                       it dumps and counts and writes nothing.
+#                       it loads the whole copy the same way and rolls it back, so nothing stays.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
 # and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
@@ -552,6 +552,12 @@ jobs:
 
           mkdir -p "$RUNNER_TEMP/copy" && cd "$RUNNER_TEMP/copy"
           supabase db dump --db-url "$staging" -f roles.sql --role-only
+          # A role's setting only a superuser may make, which Supabase's postgres is not (the first real
+          # run, 41540999815, stopped at `log_min_messages`): left out, and named. The rest are named too.
+          superuser='^ALTER ROLE .* SET "?(log_[a-z_]+|session_preload_libraries|auto_explain\.[a-z_]+)"? '
+          { grep -E "$superuser" roles.sql || true; } | sed -E 's/^ALTER ROLE ("?[^ "]+"?) .*SET "?([a-z_.]+)"?.*/  left out of roles.sql: \1 sets \2/'
+          sed -i -E "/$superuser/d" roles.sql
+          { grep -E '^ALTER ROLE .* SET ' roles.sql || true; } | sed -E 's/^ALTER ROLE ("?[^ "]+"?) .*SET "?([a-z_.]+)"?.*/  roles.sql: \1 sets \2/'
           supabase db dump --db-url "$staging" -f schema.sql
           supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
             -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
@@ -569,11 +575,6 @@ jobs:
             for file in roles.sql schema.sql data.sql; do echo "$file: $(du -h "$file" | cut -f1)"; done
             for table in $stats; do echo "$table: $(wc -l < "$table.csv") live rows"; done
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          if [ "$DRY_RUN" = true ]; then
-            echo "dry run: nothing written to JackiOh-Production" | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
           copies=()
           for table in $stats; do copies+=(-c "\\copy public.$table from '$table.csv' csv"); done
           # The last statement of the one transaction: counts that differ roll the whole copy back.
@@ -581,8 +582,16 @@ jobs:
           # shellcheck disable=SC2016
           check=$(printf 'do $check$ begin if (%s) <> %s then raise exception %s; end if; end $check$' \
             "$counts" "'$profiles $matches $users'" "'the counts differ from staging''s: $from'")
+          # A dry run loads everything, checks the counts, and rolls it all back (psql then warns that
+          # its closing COMMIT finds no transaction), so a load that would fail fails here first.
+          last=()
+          [ "$DRY_RUN" = true ] && last=(-c rollback)
           psql "$production" -X -q --single-transaction -v ON_ERROR_STOP=1 -f roles.sql -f schema.sql \
-            -c 'set session_replication_role = replica' -f data.sql "${copies[@]}" -c "$check"
+            -c 'set session_replication_role = replica' -f data.sql "${copies[@]}" -c "$check" "${last[@]}"
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry run: the whole copy loaded and its counts agreed, then rolled back; JackiOh-Production holds $(q "$production" "select count(*) from information_schema.tables where table_schema = 'public'") public tables" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           read -r profiles matches users <<<"$(q "$production" "$counts")"
           echo "JackiOh-Production holds $profiles profiles, $matches matches, $users users, as staging does" | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f ./*.sql ./*.csv
