@@ -15822,7 +15822,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-03T18:14:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:7bc24682-1793730728",
+      "run_id": "41694841904",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-03T18:32:44Z",
       "stop_requested": false,
