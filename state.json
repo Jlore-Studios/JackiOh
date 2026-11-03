@@ -16226,6 +16226,7 @@
       "run_id": "41604854212",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 5,
       "started_at": "2026-11-03T08:38:57Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -29499,8 +29500,33 @@
     ]
   },
   "spot_checks": {
-    "checks": [],
-    "count": 4
+    "checks": [
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "a34a38cf7b36e13fbbc69d13a279042a375a0fca",
+        "issue": 2888,
+        "merged_at": "2026-11-03T09:35:02Z",
+        "n": 5,
+        "pr": 2909,
+        "queued_at": "2026-11-03T09:35:02Z",
+        "sha": "f887a784229ff9160550bbd5e705c0e9728ef976",
+        "status": "queued",
+        "title": "Patch: size the gather run from the deckable card count",
+        "tries": 0
+      }
+    ],
+    "count": 5
   },
   "statistics": {
     "at": "2026-11-03T09:27:09Z"
