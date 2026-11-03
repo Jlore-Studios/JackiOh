@@ -15540,6 +15540,8 @@
       }
     },
     "2939": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T14:17:47Z",
@@ -15553,8 +15555,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md | head -80 && git status --short | head\", \"description\": \"Read bot notes and status\"}\n- Bash: {\"command\": \"sed -n 80,400p .bot-notes.md; echo ----; cat .bot-journal.md | head -40; ls node_modules | head -3; ls apps/web/node_modules 2>/dev/null | head -3\", \"description\": \"Rest of notes and jou\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2925/apps/web/src/routes/practice.tsx\", \"offset\": 370, \"limit\": 140}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2925/apps/web/src/dungeon/fight/FightScreen.tsx\"}\n- Bash: {\"command\": \"sed -n 1,110p apps/web/src/routes/practice.tsx; grep -n \\\"useVoiceHold\\\\|useShowcaseHold\\\\|useBoardBusy\\\\|useControllerState\\\\|useSyncExternalStore\\\\|PRACTICE_IDLE_STATE\\\\|PracticeContro\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2925/apps/web/src/practice/aiTable.ts\", \"content\": \"// The hooks that pace the AI at a practice table (SPEC \\u00a79.9): the practice route\\n// (`route\u2026\n- Bash: {\"command\": \"cd apps/web/src/routes && sed -n 496p practice.tsx | cat -A | head -1 && sed -n 412p practice.tsx | cat -A && sed -i '434,496d;393,412d' practice.tsx && sed -n 385,430p practice.tsx\", \"d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2925 && python3 - <<'EOF'\\np='apps/web/src/routes/practice.tsx'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,\u2026\n- said: Now FightScreen.tsx.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/dungeon/fight/FightScreen.tsx'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"// The board is the p\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/dungeon/fight/FightScreen.tsx'\\ns=open(p).read()\\na=\\\"\\\"\\\"// emotes and `Game`, with no Offer draw (R188). The worker holds the game; the page holds sn\u2026\n- Bash: {\"command\": \"grep -o \\\"\\\\[\\\\[\\u00a715[^]]*\\\\]\\\\]\\\" spec/09-architecture.md | sort | uniq -c | head; python3 - <<'EOF'\\np='spec/09-architecture.md'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert\u2026\n- Bash: {\"command\": \"grep -n \\\"controller.ts\\\\|showOfferDraw\\\\|data-speaking\\\\|Offer draw\\\" apps/web/README.md | head -20; grep -n \\\"Offer draw\\\" apps/web/src/practice/practice.css; grep -n \\\"routes/practice\u2026\n- Bash: {\"command\": \"sed -n 195,202p apps/web/README.md; sed -n 668,676p apps/web/README.md; sed -n 744,756p apps/web/README.md; grep -n \\\"control-offer-draw\\\" apps/web/src/practice/practice.css; \", \"descrip\u2026\n- Bash: {\"command\": \"sed -n 1635,1655p apps/web/src/practice/practice.css\", \"description\": \"View CSS comment\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for a,b in pairs:\\n assert s.count(a)==1,(p,a)\\n s=s.replace(a,b)\\n open(p,'w').write(s)\\nedit('apps/web/README.md',[\\n(\\\"\\\"\\\"\u2026\n- said: Now the test file.\n- Bash: {\"command\": \"cat > .bot-notes.tmp <<'EOF'\\nEOF\\nrm .bot-notes.tmp; cat apps/web/src/dungeon/fight/FightScreen.test.tsx | sed -n 1,200p; wc -l apps/web/src/dungeon/fight/FightScreen.test.tsx\", \"descri\u2026\n- said: Now look at the practice hold tests and the helpers I'll reuse.\n- Bash: {\"command\": \"sed -n 1380,1495p apps/web/src/routes/practice.test.tsx; cat apps/web/src/test/settle.ts; cat apps/web/src/test/phoneBar.ts; sed -n 200,312p apps/web/src/dungeon/fight/FightScreen.test.t\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/dungeon/fight/FightScreen.test.tsx'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,b)\\nrep('import { afterEach, b\u2026\n- Bash: {\"command\": \"(time timeout 580 pnpm --dir apps/web test src/dungeon/fight/FightScreen.test.tsx 2>&1 | tail -60)\", \"description\": \"Run fight screen tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"F=apps/web/src/dungeon/fight/FightScreen.tsx && cp $F /tmp/FightScreen.bak && sed -i '/^ useVoiceHold(controller);$/d;/^ useShowcaseHold(controller);$/d;/^ showOfferDraw={false}$/d' $F &\u2026\n- said: All six new tests fail without the change, and the file is restored. Now the wider gate, typecheck, eslint and spec check.\n- Bash: {\"command\": \"grep -c \\\"useVoiceHold(controller)\\\" apps/web/src/dungeon/fight/FightScreen.tsx; (pnpm --dir apps/web exec vitest run src/dungeon src/routes/practice src/test/helpers.test.ts src/replay \u2026\n- Bash: {\"command\": \"git status --short; (time timeout 590 cargo jackioh spec check 2>&1 | tail -15)\", \"description\": \"Check git status and run spec check\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -3; grep -rln \\\"README.md\\\\|practice.css\\\\|09-architecture\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"routes/practice.tsx.*u\u2026\n- Bash: {\"command\": \"grep -n \\\"useBoardBusy\\\\|useVoiceHold\\\\|useShowcaseHold\\\" docs/polish/3-ai.md | head; (pnpm --dir apps/web exec vitest run src/typescale.test.ts src/net/ci-scope.test.ts src/palette.test\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nhead='''## State\\n\\nBuilt on `sonnet` (run 2, after the plan). All of the plan is done and checked; nothing is left but the final \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a dungeon fight waits for the AI's shown card and voice line, and drops Offer draw, as practice does\"} --> A dungeon fight now paces the AI the way practice does: it waits while the AI's card is held up and while its voice line plays. The fight board no\u2026"
       },
       "issue": 2925,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T15:33:16Z",
         "from_run": "41652293007",
         "gates": [
           {
@@ -15646,7 +15651,11 @@
         "source": "build",
         "until": "2026-11-03T16:01:15Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-03T15:31:15Z",
+      "run_id": "pending:94d0c4a9-1793719961",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15665,6 +15674,9 @@
         "provider": "claude-6",
         "run": "41652293007"
       },
+      "started_at": "2026-11-03T15:33:16Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15678,9 +15690,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T15:15:51Z",
+    "at": "2026-11-03T15:33:16Z",
     "url": "",
-    "what": "review #2935 on claude-7"
+    "what": "review #2939 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-03T15:11:41Z",
