@@ -15282,13 +15282,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "41665204808",
+            "tier": "medium"
+          }
+        ],
         "sha": "c927c030782ee5fbe6cd720ae35b36ca8b915e06",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2938": {
