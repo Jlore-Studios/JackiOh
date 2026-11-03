@@ -15574,6 +15574,7 @@
       "merge_owner": "muse",
       "merged": true,
       "self_check_findings": [],
+      "spot_check_n": 2,
       "votes": {
         "approvals": [
           "muse"
@@ -28669,7 +28670,7 @@
   },
   "spot_checks": {
     "checks": [],
-    "count": 1
+    "count": 2
   },
   "statistics": {
     "at": "2026-11-03T06:52:56Z"
