@@ -1,0 +1,2 @@
+at,github_slots_used,aws_slots_used,plan_lanes_used,queued_plan_medium,queued_plan_hard,queued_plan_unrated,queued_build_medium,queued_build_hard,queued_build_unrated,queued_revise_medium,queued_revise_hard,queued_revise_unrated,queued_review_medium,queued_review_hard,queued_review_unrated,oldest_wait_min,github_slots,aws_slots,plan_lanes,queued,held_for_owner
+2026-11-03T05:30:08Z,8,6,3,0,5,0,1,0,0,0,0,0,0,0,0,1466,8,6,6,6,0
