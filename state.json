@@ -12880,6 +12880,7 @@
     "2799": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12891,7 +12892,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -100; echo ---; wc -l .bot-journal.md; git log --oneline -3\", \"description\": \"Read bot notes and journal size\"}\n- Bash: {\"command\": \"sed -n 100,400p .bot-notes.md | grep -n \\\"## State\\\\|## Log\\\" ; grep -n \\\"^## \\\" .bot-notes.md; cat .bot-journal.md | head -135\", \"description\": \"Find state section and read journal\"}\n- said: You've hit your 5-hour limit \u00b7 resets 9am (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
