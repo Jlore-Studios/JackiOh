@@ -15466,7 +15466,9 @@
         "tier": "medium",
         "why": "No engine-rules, AI, cross-crate, migration, or 40-file signal: both failed jobs are web-side (component layout + web unit tests)."
       },
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-03T16:24:58Z",
@@ -15476,12 +15478,16 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 2952,
       "provider": "muse",
+      "question": "",
+      "round_tier": "medium",
       "run_id": "41673980376",
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-11-03T16:24:58Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2942": {
       "failures": 0,
