@@ -16549,7 +16549,7 @@
       "started_at": "2026-11-03T09:51:21Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [],
         "builder": "muse",
