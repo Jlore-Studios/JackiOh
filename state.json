@@ -13705,11 +13705,16 @@
       "last_findings": [],
       "live": "revising",
       "merge_owner": "claude-1",
+      "paused": {
+        "at": "2026-11-03T13:09:16Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-03T12:56:28Z",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "41640169016",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -13734,7 +13739,7 @@
       "started_at": "2026-11-03T12:58:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
