@@ -14116,21 +14116,24 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
+            "apps/web/README.md",
+            "apps/web/src/fx/cards/bespoke.ts",
+            "apps/web/src/fx/motifs/gallery.ts",
             "apps/web/src/routes/dev/fx.test.tsx"
           ],
-          "from": "c5ca8221e784f96f870671af77fa3a6d152c5151",
-          "main": "0312164cd5cc56f16211d3bb0f42b5310649934f"
+          "from": "ab0d4e9f6dd9b4e2f620559c43730ffc2b150074",
+          "main": "b0e465602a388222016a02b080e0f57de1da7e26"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "41619978169",
+            "run": "41629190810",
             "tier": "strong"
           }
         ],
-        "sha": "ab0d4e9f6dd9b4e2f620559c43730ffc2b150074",
+        "sha": "408c2b31f0568b0838c570778345b1efa5dd91b3",
         "tiers": {
           "claude": "strong"
         }
