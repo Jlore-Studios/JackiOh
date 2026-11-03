@@ -30636,6 +30636,9 @@
       "2026-11-03T23:16:07Z,claude-4,stream,call,41736367277,42,2026-11-04T00:20:00Z,,,allowed,50,,",
       "2026-11-03T23:25:22Z,claude-4,stream,call,41736367277,43,2026-11-04T00:20:00Z,,,allowed,100,,",
       "2026-11-03T23:41:31Z,gpt,refusal,call,41740099449,,,,,rejected,100,100,2026-11-04T00:41:31Z"
+    ],
+    "runs": [
+      "2026-11-03T23:41:31Z,41740099449,gpt,gpt-5.6-sol,review,2955,medium,interrupted,refusal,2,0,0,0,,,,,,19.1,gpt,none,,1"
     ]
   },
   "version": 1
