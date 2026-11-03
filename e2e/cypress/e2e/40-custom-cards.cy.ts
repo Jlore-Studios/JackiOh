@@ -166,7 +166,9 @@ function startWithCardInHand(customId: string, attempt = 0): Cypress.Chainable<s
   cy.visitAs(me(), `${routes.practice()}?${params.toString()}`);
   cy.get(ts(PRACTICE_DECK), { timeout: timeouts.view }).select("saved:1");
   cy.get(ts(PRACTICE_START), { timeout: timeouts.view }).should("not.be.disabled").click();
-  cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("exist");
+  // No HUD above the board (#2878): the enemy hero's seat names the AI.
+  cy.get(ts("hero-opponent"), { timeout: BOOT_TIMEOUT }).should("contain.text", "AI");
+  cy.get(ts(PRACTICE_HUD)).should("not.exist");
   cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
   return practiceHandle().then((handle) => {
     const hand = handle.view?.you.hand;
