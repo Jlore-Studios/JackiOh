@@ -16597,14 +16597,9 @@
     "what": "spot-check #2961 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-03T21:59:08Z",
+    "at": "2026-11-03T22:11:07Z",
     "notes": [
-      "delivered review #2961 on claude-8 (run 41725622980): stopped",
-      "delivered build #2953 on claude-6 (run 41702257788): built",
-      "started review #2965 on claude-6 (run 41727316617)",
-      "started review #2961 on claude-8 (run 41727412229)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered review #2961 on claude-8 (run 41727412229): stopped"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17308,7 +17303,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T21:59:08Z",
+  "loop_tick": "2026-11-03T22:11:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
