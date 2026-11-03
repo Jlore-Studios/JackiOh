@@ -22,7 +22,10 @@ Every catalog card starts as `"none: pending"` and moves up a tier in its set's 
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
 Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the marquee entrances of
 BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
-names, below).
+names, below), and the Flourishes of the set passes, each built from the motifs' cue helpers
+(`fx/motifs/build.ts`): Meditative #39.1 Auspicious Rock's `jadeCrack`, #32 Spiritually 中国's
+`cnSweep` and Meditative+ #21 Harmony Spirit's `harmonyWave` (#2796, `fx/cards/meditative/`,
+`fx/cards/meditativeplus/`; their per-card table is `fx/cards/meditative.md`).
 
 ## The motifs
 
@@ -68,6 +71,13 @@ and three parameters:
 | `tithe` | costChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202) |
 | `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
 | `snap` | trapFired | trapFired | a tight ring on the trap's own zone, then its reveal: in the card's flavor when the view names it, else the entry palette (R154, R202); a firing again is a short flare |
+
+Drawn in #2796, Meditative's pass, since three or more of its cards fit no motif above:
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `deal` | addedToHand, shuffledIn, fused | nothing | a gather at the caster's hero (the receiver's with no play), then a card back flying to each hand, deck or card dealt, at most `FX_MOTIF_DEAL_MAX` an entry, landing with a sparkle; no shake |
+| `seal` | modifierChanged (an add) | nothing | a bolt from the resolving play's hero to the seat's modifiers, a ring closing on them and a slow afterglow |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -279,9 +289,11 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
-or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry
-names a motif, as that card's play through the real board's effects layer. "Play as a set piece" plays
-the same card as the fixture set piece (R2785000): its play's entry holds the board for
+or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and every card's entry
+(#2796): a cast, a cry, a card recipe (on `RECIPE_FIXTURES`' events) or an aura plays as that card's
+play through the real board's effects layer, a death, trigger or activate motif plays through the
+gallery's own director, and a Field card's aura stands in the first backrow zone. "Play as a set
+piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
 
 ## Set pieces
@@ -339,3 +351,6 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
 - `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
+- The census's `FAMILY_MOTIFS` knows only damage, removal, return and cost, so for a draw, a buff, a
+  summon, a card dealt or a modifier it says `none: no motif reads …`; a set pass maps that event to
+  the motif whose Reads column names it (#2796's `meditative.md` does, card by card).

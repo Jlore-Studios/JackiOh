@@ -101,6 +101,10 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   tally: ["burst@240", "shake@240"],
   // The ring closes at gather, the reveal lands on jk-trap-flip's stop, the shake on Land.
   snap: ["ring@0", "burst@120", "shake@240"],
+  // #2796: a gather at the receiver's hero (no play resolves), then a back into the hand and one into the deck.
+  deal: ["burst@0", "ghost@80", "burst@240", "ghost@80", "burst@240"],
+  // #2796: with no play there is no caster to bolt from: the ring closes on the modifiers, then the afterglow.
+  seal: ["ring@240", "burst@240", "burst@300", "shake@240"],
 };
 
 describe("R2784000 the damage and removal motifs", () => {

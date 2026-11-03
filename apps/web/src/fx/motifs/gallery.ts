@@ -1,15 +1,25 @@
 // R2784000: what the /dev/fx gallery (routes/dev/fx.tsx) plays: a fixture event for every motif on a
-// view's own ids, the entry it fills, and a card's table entry as a play that resolves. Pure, so the
+// view's own ids, the entry it fills, and every card's table entry (#2796): a cast, a cry, a card recipe
+// or an aura as a play that resolves on the board, a death, trigger or activate motif through the
+// gallery's own director, and a Field card's aura standing in the first backrow zone. Pure, so the
 // motif tests plan from the same fixtures the gallery shows.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { FLAVOR_FALLBACK } from "../../cards/flavor.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
-import { paletteLook, type FxPalette } from "../flavors.ts";
+import { CATALOG } from "../../wire/cards.ts";
+import { isAuraFieldType, type AuraLook } from "../aura/looks.ts";
+import { isCardRecipeKey, type CardRecipeKey } from "../cards/bespoke.ts";
+import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
+import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
+import { FLAVOR_LOOKS, paletteLook, type FxPalette } from "../flavors.ts";
+import { flavorLookOf } from "../flavorSource.ts";
 import { createFxMemory } from "../memory.ts";
 import type { FxCue } from "../types.ts";
+import { motifScale } from "./build.ts";
 import { planMotif } from "./index.ts";
-import type { DrawnMotif } from "./names.ts";
+import { FX_CARD_HOOKS, isDrawnMotif, type DrawnMotif, type FxCardHook } from "./names.ts";
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
@@ -49,7 +59,8 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
  * swaps the board, bind locks an enemy zone, tether takes the first enemy unit, mirror and transmute
  * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
  * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter
- * and snap fires a hidden trap.
+ * and snap fires a hidden trap. Deal adds a card to the player's hand and shuffles a hidden one into
+ * their deck, and seal lays a modifier on the enemy seat.
  */
 export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
   const enemy = player === view.viewer ? view.opponent : view.you;
@@ -160,6 +171,13 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
     }
     case "snap":
       return [{ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: enemy.player, row: "backrow", lane: 4 }];
+    case "deal":
+      return [
+        { type: "addedToHand", player, instanceId: "fx-dealt", defId: "core-055" },
+        { type: "shuffledIn", player, instanceId: "hidden", defId: "hidden", position: 0 },
+      ];
+    case "seal":
+      return [{ type: "modifierChanged", player: enemy.player, modifierId: "fx-sealed", added: true }];
   }
 }
 
@@ -183,13 +201,128 @@ export function galleryCues(motif: DrawnMotif, palette: FxPalette, scale: number
   return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
 }
 
-/** A card's table entry played out: the viewer plays it, its motif's fixture resolves under it, and it resolves. */
-export function cardFixtureEvents(defId: string, motif: DrawnMotif, view: PlayerView, n = 0): GameEvent[] {
+/**
+ * #2796: one card the gallery plays: the hook its entry draws first and that hook's motif and palette,
+ * the card recipe its bespoke entry names, or, for an entry that is only an aura, its aura's look.
+ */
+export type GalleryCard =
+  | { defId: string; hook: FxCardHook; fixture: DrawnMotif; palette?: FxPalette }
+  | { defId: string; hook: "bespoke"; fixture: CardRecipeKey }
+  | { defId: string; hook: "aura"; fixture: AuraLook };
+
+/**
+ * #2796: what the gallery plays of a card's entry: a card recipe, else the first hook (in
+ * FX_CARD_HOOKS order) whose motif is drawn, else its aura; none for a `none`, a set piece (its play is
+ * "Play as a set piece"), an entrance and a hooks entry that draws nothing.
+ */
+export function galleryCardOf(defId: string, entry: FxCardEntry): GalleryCard | null {
+  if (entry.kind === "bespoke") return isCardRecipeKey(entry.key) ? { defId, hook: "bespoke", fixture: entry.key } : null;
+  if (entry.kind !== "hooks") return null;
+  for (const hook of FX_CARD_HOOKS) {
+    const spec = entry.hooks[hook];
+    if (spec === undefined || !isDrawnMotif(spec.motif)) continue;
+    return spec.palette === undefined ? { defId, hook, fixture: spec.motif } : { defId, hook, fixture: spec.motif, palette: spec.palette };
+  }
+  return entry.aura === undefined ? null : { defId, hook: "aura", fixture: entry.aura.look };
+}
+
+/**
+ * #2796: each card recipe's fixture events, as `player` would meet them playing it from `sourceId`:
+ * Hinder lays the next-refresh modifier on the enemy, Blood Ridden makes the first hand card Radiant and
+ * costs its caster 3, Crushing Walls destroys every unit, Auspicious Rock costs 2 and rolls a Jade into
+ * the hand, Spiritually 中国 turns every viewer's hand card into one CN card and summons a CN Unit, and
+ * Harmony Spirit sets every unit to 3/3.
+ */
+export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, sourceId: string, player: PlayerId) => GameEvent[] } = {
+  manaCrack: (view, _sourceId, player) => {
+    const enemy = player === view.viewer ? view.opponent : view.you;
+    return [{ type: "modifierChanged", player: enemy.player, modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }];
+  },
+  bloodDrain: (view, _sourceId, player) => {
+    const card = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+    if (card === undefined) return [];
+    return [
+      { type: "radiantSet", instanceId: card.instanceId, defId: card.defId, zone: { z: "hand", player } },
+      { type: "healthLost", player, amount: 3 },
+    ];
+  },
+  crushingWalls: (view, sourceId, player) => motifFixture("wipe", view, sourceId, player),
+  jadeCrack: (_view, _sourceId, player) => [
+    { type: "healthLost", player, amount: 2 },
+    { type: "addedToHand", player, instanceId: "fx-jade", defId: "meditative-039-2" },
+  ],
+  cnSweep: (view, _sourceId, player) => {
+    const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+    return [
+      ...hand.map((card, k): GameEvent => ({
+        type: "transformed",
+        instanceId: card.instanceId,
+        fromDefId: card.defId,
+        toDefId: "meditative-036",
+        newInstanceId: `fx-cn-${String(k)}`,
+      })),
+      { type: "summoned", player, instanceId: "fx-cn-unit", defId: "meditative-041", row: "units", lane: 1 },
+    ];
+  },
+  harmonyWave: (view) =>
+    [...unitsOf(view.you), ...unitsOf(view.opponent)].flatMap((unit): GameEvent[] => [
+      { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
+      { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
+    ]),
+};
+
+/**
+ * #2796: whether the card plays as a play resolving on the board (a cast, a cry, a card recipe or an
+ * aura), not through the gallery's own director.
+ */
+export function galleryPlaysOnBoard(card: GalleryCard): boolean {
+  return card.hook === "cast" || card.hook === "cry" || card.hook === "bespoke" || card.hook === "aura";
+}
+
+/** The fixture events that resolve under the card's play, as `player` would meet them from `sourceId`: its recipe's or its motif's, none for an aura alone. */
+export function galleryFixture(card: GalleryCard, view: PlayerView, instanceId: string, player: PlayerId): GameEvent[] {
+  if (card.hook === "bespoke") return RECIPE_FIXTURES[card.fixture](view, instanceId, player);
+  if (card.hook === "aura") return [];
+  return motifFixture(card.fixture, view, instanceId, player);
+}
+
+/** A card's table entry played out: the viewer plays it, its recipe's or its motif's fixture resolves under it, and it resolves. */
+export function galleryCardEvents(card: GalleryCard, view: PlayerView, n = 0): GameEvent[] {
   const instanceId = galleryPlayId(n);
   const player = view.viewer;
+  const { defId } = card;
   return [
     { type: "cardPlayed", player, instanceId, defId, costPaid: 1 },
-    ...motifFixture(motif, view, instanceId, player),
+    ...galleryFixture(card, view, instanceId, player),
     { type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 },
   ];
+}
+
+/**
+ * #2796: a hook's motif on its fixture, in the card's palette (its entry's, else its flavor's) at the
+ * card's scale: how the board will play a death, trigger or activate motif once #2783's
+ * `hookResolving` reaches the motifs. None for a card recipe or an aura, which play on the board.
+ */
+export function galleryHookCues(card: GalleryCard, view: PlayerView, intensity: number, speed = 1): FxCue[] {
+  if (card.hook === "bespoke" || card.hook === "aura") return [];
+  const look = (card.palette !== undefined ? paletteLook(card.palette) : undefined) ?? flavorLookOf(card.defId, GALLERY_CARD_ID, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
+  const spec = { motif: card.fixture, look, scale: motifScale(card.defId, view, intensity), row: "replace" } as const;
+  const entry = galleryEntry(motifFixture(card.fixture, view, gallerySource(view), view.viewer), view, speed);
+  return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
+}
+
+/**
+ * #2796: the view the board shows for the n-th play of `card`: its events, and, for a Field card whose
+ * entry wears an aura, the card itself standing face-up in the viewer's first backrow zone (when that
+ * zone shows a face-up card), so the aura layer draws it.
+ */
+export function galleryShownView(view: PlayerView, card: GalleryCard, n = 0): PlayerView {
+  const shown: PlayerView = { ...view, events: galleryCardEvents(card, view, n) };
+  const entry = FX_CARD_TABLE.get(card.defId);
+  const type = CATALOG[card.defId]?.type;
+  const slot = view.you.backrow[0];
+  if (entry?.kind !== "hooks" || entry.aura === undefined || type === undefined || !isAuraFieldType(type)) return shown;
+  if (slot === null || slot === undefined || slot.faceDown) return shown;
+  const backrow = [{ ...slot, defId: card.defId, instanceId: galleryPlayId(n), type }, ...view.you.backrow.slice(1)];
+  return { ...shown, you: { ...view.you, backrow } };
 }

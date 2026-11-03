@@ -5,8 +5,11 @@ import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts"
 import { bloodDrain } from "./core/bloodRidden.ts";
 import { manaCrack } from "./core/hinder.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
+import { jadeCrack } from "./meditative/auspiciousRock.ts";
+import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
+import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 
-export const CARD_RECIPES = { manaCrack, bloodDrain, crushingWalls } as const satisfies Readonly<Record<string, CardRecipe>>;
+export const CARD_RECIPES = { manaCrack, bloodDrain, crushingWalls, jadeCrack, cnSweep, harmonyWave } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
 
