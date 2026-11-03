@@ -216,6 +216,12 @@ export const FX_FIRST_STRIKE_BREAK_AT = 0.4;   // the dying defender's counter-b
 export const FX_FIRST_STRIKE_BREAK_REACH = 0.6; // …this many card heights toward the attacker
 export const FX_PIERCE_REACH = 0.8;            // a Pierce's spear line runs this many card heights past each edge
 export const FX_FLYING_LUNGE_LIFT = 0.18;      // a Flying attacker's lunge scales up this much more, over the lane
+// R2791000: the tempo keyword beats (fx/motifs/beats.ts). A Stack landing bursts up-right of the
+// pile top; a Deft feint sidesteps this many card widths; a Charge landing's speed lines spread
+// this far across the hand region they leave from.
+export const FX_STACK_LAND = { x: 0.62, y: 0.35 } as const;
+export const FX_DEFT_FEINT_STEP = 0.18;
+export const FX_CHARGE_LINE_SPREAD = 0.22;
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;
@@ -285,6 +291,14 @@ export const FX_SPEED_MAX = 3;                 // …to three times the table's 
 export const FX_SPEED_DEFAULT = 1;
 export const FX_SPEED_STEP = 0.25;             // the settings panel's slider moves by this
 export const FX_INTENSITY_SCALE = { off: 0, low: 0.45, normal: 1, high: 1.6 } as const;
+// R2785000: the beat a quest's set piece asks for at speed 1, scaled and capped by `setPieceHoldMs`.
+export const FX_QUEST_HOLD_MS = 1_500;
+// R2785000: a quest's set piece lands this hard; a system's Signature this hard.
+export const FX_QUEST_TRAUMA = 0.5;
+export const FX_SYSTEM_TRAUMA = 0.3;
+// R961: the jade tally grows this much per step, at most this big.
+export const FX_JADE_SCALE_STEP = 0.15;
+export const FX_JADE_SCALE_MAX = 2;
 export const FX_SETTINGS_KEY = "jackioh.fx.v1";
 export const FX_CENTER = { x: 0.5, y: 0.45 } as const;     // viewport anchor for banners and shuffles
 export const FX_TEXT = {
@@ -306,6 +320,8 @@ export const FX_TEXT = {
   turnCutShort: "Turn cut short",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */
   autopilot: "The AI takes the turn",
+  /** R2785000: a quest's set-piece banner, the system's climax. */
+  questComplete: "Quest complete",
   /** R1843000: a full tally removes a player. */
   votedOut: "Voted out",
   /** R1843002: a player escaped the universe. */

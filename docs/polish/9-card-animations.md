@@ -280,10 +280,12 @@ and a card its hits already reached dies under its own row, so a lethal bolt fli
 
 A **beat** is #2782's smallest tier: a short decoration inside the entry of the event it keys on (at most
 about 400 ms at speed 1), holding nothing and reading no card. The nine combat keywords each have one
-(`fx/motifs/beats.ts`, ruling R2789000), planned by `planFx` after the cast cues and built from the
+(`fx/motifs/beats.ts`, ruling R2789000), and the ten tempo and card keywords one more each (ruling
+R2791000), planned by `planFx` after the cast cues and built from the
 helpers of `fx/motifs/build.ts` (`CueSpec` is the part of a motif's spec they read). The beats key on the
 `via` of #2783's events (R2783001), and on the keywords the view shows on an attacker for the three that
-act when it attacks.
+act when it attacks; the tempo beats key on the existing events plus the keywords and ids the view
+shows, a landing on the played card's hand keywords, never a hidden card.
 
 | Keyword | Keyed on | Beat |
 |---|---|---|
@@ -296,9 +298,20 @@ act when it attacks.
 | Poisonous | `destroyed`, `via: Poisonous` | the callout over the poisoner; the poison burst is the death recipe's (`sourceIsPoisonous`'s guess from the view is gone) |
 | Ranged | `attackDeclared` by a Ranged unit | the callout; the flavor shot stays `stage.ts`'s |
 | Flying | `attackDeclared` by a Flying unit | the callout; the lunge carries `arc`, and the director sets `--fx-lunge-lift` (`FX_FLYING_LUNGE_LIFT`) so `jk-lunge` lifts toward the viewer |
+| Charge | `summoned`, the played card's hand keywords showing Charge | speed lines (`FX_CHARGE_LINE_SPREAD`) and a forward lean at the enemy hero as it lands, then a dash on its first attack that turn |
+| Rush | `summoned`, the played card's hand keywords showing Rush | as Charge, but the lean points at the first enemy unit, never the hero (skipped when none shows); its own first-attack dash |
+| Equip | `fused`, the kept result on the field with no ingredient there | the equipment flies from the hand region onto its host and snaps on, with a gold ring; the stat tick-up stays the `bless` row's |
+| Tradable | `traded`, then the trade's `shuffledIn` and `drawn` | the card swirls hand region to library; the drawn card answers with a sparkle over the hand region, no second ghost (`flight` owns the flight) |
+| Stack | `summoned` into an occupied slot | a gold burst at `FX_STACK_LAND` and a `zone` count pulse of the new pile total at `FX_ZONE_COUNT_AT` |
+| Spell Damage | non-combat `damage`/`damageAbsorbed` while a Spell resolves, first entry | the hit burns hotter, with a `+N` sigil (the view's total) over the source |
+| Lucky | `rolled` with extra draws | a leaf burst and a gold ring over the roll panel at each extra roll's `rollLandAt`, the kept face the panel's own highlight |
+| Deft | `attackDeclared` after a same-turn `positionSwitched` | two Spirit bolts feinting out `FX_DEFT_FEINT_STEP` and back, under a sheen |
+| Flashback | `cardPlayed` with `from: "graveyard"`, then its `exiled` | the card rises from the graveyard pile in a ghost frame, then dissolves at the exile pile once its graveyard play is in the history |
+| Temporary | `discarded`, the hand card's Temporary count | the hourglass count over the hand card, dissolving in smoke and embers |
 
 **The callout** (`fx/motifs/callout.ts`) is the shared cue every keyword part of #2782 uses: the keyword's
-icon (`KEYWORD_CALLOUT_ICONS`, `cards/keywordVisuals.ts`) pops over a unit for `FX_CALLOUT_MS`
+icon (`KEYWORD_CALLOUT_ICONS`, `cards/keywordVisuals.ts`: the nine combat icons plus R2791000's ten
+tempo ones) pops over a unit for `FX_CALLOUT_MS`
 (`.fx-callout`, a badge on the unit's top edge). A repeat of one keyword over a unit takes the first's place.
 
 **Several keywords on one hit:** each fires its beat, `FX_BEAT_STAGGER_MS` apart (scaled with the speed,

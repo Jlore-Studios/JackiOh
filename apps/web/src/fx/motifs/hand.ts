@@ -147,7 +147,7 @@ export const tithe: MotifPlanner = {
   },
 };
 
-const TALLY_READS = ["counterChanged", "questProgressed"] as const;
+const TALLY_READS = ["counterChanged", "questProgressed", "jadeChanged"] as const;
 
 /** tally: a quest's or a counter's tick: a sparkle where the card stands. */
 export const tally: MotifPlanner = {

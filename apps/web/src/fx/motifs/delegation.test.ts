@@ -68,14 +68,14 @@ const DELEGATED: readonly Delegated[] = [
   {
     recipe: "buff",
     events: () => [{ type: "upgraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: 1, health: 1 } }],
-    motif: "bless",
-    flavor: "Holy",
+    motif: "transmute",
+    flavor: "Nerd",
   },
   {
     recipe: "buff",
     events: () => [{ type: "degraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: -1, health: -1 } }],
-    motif: "curse",
-    flavor: "Dark",
+    motif: "transmute",
+    flavor: "Nerd",
   },
   // Issue #2790: `armor` and `shieldBreak` still route through `ward`, but their entries now
   // carry beat callouts too, so `planFx`-equals-`planMotif` no longer holds for them; beats.test.ts

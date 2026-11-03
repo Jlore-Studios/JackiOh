@@ -13,9 +13,12 @@ import type { FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
+import { SYSTEM_MOMENTS, type SystemMoment } from "../systemMoments.ts";
 import type { FxCue } from "../types.ts";
 import { planMotif } from "./index.ts";
 import { isDrawnMotif, type DrawnMotif } from "./names.ts";
+
+export { SYSTEM_MOMENTS, type SystemMoment };
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
@@ -198,6 +201,74 @@ export function galleryCues(motif: DrawnMotif, palette: FxPalette, scale: number
   if (look === undefined) return [];
   const spec = { motif, look, scale: scale * intensity, row: "replace" } as const;
   return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
+}
+
+/**
+ * One system moment's fixture events off `fullBoardView` ids (own units, hand, heroes), mirroring
+ * `motifFixture`: a quest ticks and completes on the viewer's third unit, jade and credits tick by
+ * the hero, Market lots move between the hero, the Marketplace and the hand, ballots drop from the
+ * viewer's first unit onto its hero, and the transform family transmutes the viewer's third unit.
+ */
+export function systemMomentFixture(moment: SystemMoment, view: PlayerView): GameEvent[] {
+  const mine = unitsOf(view.you);
+  const third = mine[2] ?? mine[0];
+  const first = mine[0];
+  const foe = unitsOf(view.opponent)[0];
+  const hand = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+  switch (moment) {
+    case "questProgressed":
+      return third === undefined ? [] : [{ type: "questProgressed", player: view.viewer, instanceId: third.instanceId, quest: "fx-quest", progress: 1, goal: 3 }];
+    case "questCompleted":
+      return third === undefined ? [] : [{ type: "questCompleted", player: view.viewer, instanceId: third.instanceId, quest: "fx-quest" }];
+    case "jadeChanged":
+      return [{ type: "jadeChanged", player: view.viewer, value: 3 }];
+    case "marketCreditsChanged":
+      return [{ type: "marketCreditsChanged", player: view.viewer, value: 5 }];
+    case "marketBought":
+      return [{ type: "marketBought", player: view.viewer, instanceId: "fx-bought", defId: "core-002", credits: 2 }];
+    case "marketSold":
+      return [{ type: "marketSold", player: view.viewer, instanceId: hand?.instanceId ?? "fx-sold", defId: hand?.defId ?? "core-002", credits: 1 }];
+    case "voteCast":
+      return first === undefined
+        ? []
+        : [{ type: "voteCast", player: view.viewer, instanceId: first.instanceId, defId: first.defId, votes: 1, needed: 3 }];
+    case "votedOut":
+      return first === undefined ? [] : [{ type: "votedOut", player: view.opponent.player, ballots: [{ instanceId: first.instanceId, defId: first.defId }] }];
+    case "starscapeTravelled":
+      return [{ type: "starscapeTravelled", player: view.viewer, node: 1, reward: "draw" }];
+    case "fled":
+      return [{ type: "fled", player: view.opponent.player, opponent: "draw" }];
+    case "glitched":
+      return [{ type: "glitched", player: view.viewer, outcome: "swap" }];
+    case "awakened":
+      return third === undefined ? [] : [{ type: "awakened", player: view.viewer, instanceId: third.instanceId, defId: third.defId }];
+    case "boardReplaced":
+      return [{ type: "boardReplaced", player: view.viewer }];
+    case "rolledBack":
+      return [{ type: "rolledBack", player: view.viewer, turnsAgo: 1, sides: [view.viewer] }];
+    case "fengShui":
+      return first === undefined || foe === undefined
+        ? []
+        : [{ type: "fengShui", instanceId: first.instanceId, sourceId: foe.instanceId, player: view.viewer, outcome: "positive" }];
+    case "transformed":
+      return third === undefined
+        ? []
+        : [{ type: "transformed", instanceId: third.instanceId, fromDefId: third.defId, toDefId: "token-sheep", newInstanceId: "fx-double" }];
+    case "fused": {
+      const second = mine[1];
+      return first === undefined || second === undefined
+        ? []
+        : [{ type: "fused", instanceIds: [first.instanceId, second.instanceId], resultInstanceId: "fx-fused", defId: "core-088" }];
+    }
+    case "upgraded":
+      return third === undefined
+        ? []
+        : [{ type: "upgraded", instanceId: third.instanceId, defId: third.defId, change: { kind: "stats", attack: 1, health: 1 } }];
+    case "degraded":
+      return third === undefined
+        ? []
+        : [{ type: "degraded", instanceId: third.instanceId, defId: third.defId, change: { kind: "stats", attack: -1, health: -1 } }];
+  }
 }
 
 /**

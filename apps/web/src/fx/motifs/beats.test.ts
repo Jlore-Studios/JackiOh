@@ -41,6 +41,12 @@ function viewWith(keywords: readonly Keyword[]): PlayerView {
   return view;
 }
 
+/** The board with one unit lane emptied: R2791000's Stack answers an occupied landing slot, so a non-Stack `summoned` pin lands here. */
+function openLane(view: PlayerView, lane: number): PlayerView {
+  view.you.units[lane - 1] = null;
+  return view;
+}
+
 const attack = (attackerId: string, targetId: string): GameEvent => ({ type: "attackDeclared", attackerId, targetId, forced: false });
 const hitOf = (sourceId: string | null, targetId: string, amount: number, via?: Extract<GameEvent, { type: "damage" }>["via"], combat = true): GameEvent => ({
   type: "damage",
@@ -352,14 +358,17 @@ describe("R2789000 the combat keyword beats", () => {
   });
 
   it("R2783001 R2789000 Reborn: a summoned with via Reborn rises from ashes in its own lane", () => {
-    const reborned: GameEvent = { type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1, via: "Reborn" };
-    expect(kinds(pinned([reborned], 0))).toEqual(["callout@0", "ghost@50", "burst@150", "ring@150"]);
-    const cues = must(stream([reborned])[0], "the return").beats.cues;
+    // Lane 5 stands open: R2791000's Stack answers an occupied landing slot, and a Reborn
+    // return lands in an empty lane live. The holder is still MINE's card, which the view shows.
+    const view = openLane(fullBoardView(), 5);
+    const reborned: GameEvent = { type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 5, via: "Reborn" };
+    expect(kinds(pinned([reborned], 0, view))).toEqual(["callout@0", "ghost@50", "burst@150", "ring@150"]);
+    const cues = must(stream([reborned], view)[0], "the return").beats.cues;
     expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Reborn", at: cardOf(MINE), durationMs: FX_CALLOUT_MS });
-    expect(cues[1]).toMatchObject({ kind: "ghost", from: { kind: "testid", testid: testid.zone("you", "units", 1) }, to: cardOf(MINE) });
+    expect(cues[1]).toMatchObject({ kind: "ghost", from: { kind: "testid", testid: testid.zone("you", "units", 5) }, to: cardOf(MINE) });
     // The same arrival without `via` draws no beat.
-    const arrival: GameEvent = { type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1 };
-    expect(stream([arrival])[0]?.beats.cues).toEqual([]);
+    const arrival: GameEvent = { type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 5 };
+    expect(stream([arrival], view)[0]?.beats.cues).toEqual([]);
   });
 
   it("R385 R2789000 Brittle: damage grows cracks on the unit, and its crumble gains only a callout", () => {
@@ -451,8 +460,18 @@ describe("R2789000 the combat keyword beats", () => {
     const cues = must(stream(events)[1], "the second attack").beats.cues;
     expect(cues.filter((cue) => cue.kind === "callout")).toHaveLength(FX_CALLOUTS_PER_HIT);
     expect(cues.filter((cue) => cue.kind === "callout").map((cue) => (cue.kind === "callout" ? cue.keyword : ""))).toEqual(["Windfury", "Flying"]);
-    // The first attack has Flying and Ranged: two callouts, the second staggered.
-    expect(kinds(must(stream(events)[0], "the first attack").beats.cues)).toEqual(["callout@0", "callout@60"]);
+    // The first attack has Flying and Ranged: two callouts, the second staggered; R2791000: and
+    // POISONER's Charge and Rush dash behind them, staggered third and fourth, with no callout left.
+    expect(kinds(must(stream(events)[0], "the first attack").beats.cues)).toEqual([
+      "callout@0",
+      "callout@60",
+      "shot@120",
+      "burst@258",
+      "shake@258",
+      "shot@175",
+      "burst@280",
+      "shake@280",
+    ]);
   });
 
   it("R201 R2789000 speed scales every beat: the same cues at 0.5, 1 and 2, each within 4 ms of its scaled time", () => {
@@ -521,8 +540,10 @@ describe("R2789000 the combat keyword beats", () => {
     // A hit with no keyword draws none.
     const plain = must(stream([attack(MINE, FOE_2), hitOf(MINE, FOE_2, 1)])[1], "the hit");
     expect(planStillCallouts(plain.entry, plain.entry.view, plain.env)).toEqual([]);
-    // A defensive beat keeps its still callout too: Reborn's return rises still.
-    const reborn = must(stream([{ type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 1, via: "Reborn" }])[0], "the return");
+    // A defensive beat keeps its still callout too: Reborn's return rises still. Lane 5
+    // stands open, as in its pin: Stack answers an occupied landing slot, not this return.
+    const rebornView = openLane(fullBoardView(), 5);
+    const reborn = must(stream([{ type: "summoned", player: "p1", instanceId: MINE, defId: "core-004", row: "units", lane: 5, via: "Reborn" }], rebornView)[0], "the return");
     const restill = { ...reborn.entry, durationMs: 0 };
     const rebornStill = planStillCallouts(restill, restill.view, reborn.env);
     expect(rebornStill).toHaveLength(1);
@@ -569,8 +590,8 @@ describe("R2789000 the combat keyword beats", () => {
     expect(swallowed.flatMap(({ beats }) => beats.cues)).toEqual([]);
   });
 
-  it("R2789000 the nine keywords with a beat each have a callout icon", () => {
-    expect(FX_BEAT_KEYWORDS).toHaveLength(9);
+  it("R2789000 the nine keywords with a beat each have a callout icon, R2791000 the ten tempo ones", () => {
+    expect(FX_BEAT_KEYWORDS).toHaveLength(19);
     for (const keyword of FX_BEAT_KEYWORDS) expect(KEYWORD_CALLOUT_ICONS[keyword]?.d, keyword).toMatch(/^M/);
   });
 

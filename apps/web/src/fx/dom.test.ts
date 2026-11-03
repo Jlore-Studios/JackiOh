@@ -403,7 +403,9 @@ describe("R2789000 — a keyword's callout", () => {
   it("R2789000 a callout with no box, or no icon for its keyword, mounts nothing", () => {
     expect(mountDomEffect(root, callout("Cleave"), {})).toBeNull();
     expect(mountDomEffect(root, callout("Cleave"), { at: null })).toBeNull();
-    expect(mountDomEffect(root, callout("Rush"), { at: AT })).toBeNull();
+    // Rush had no icon when this probed it; R2791000 gave it one, and Issue #2790 gave
+    // Taunt one, so the iconless probe moves to Cloaked, which neither lane iconified.
+    expect(mountDomEffect(root, callout("Cloaked"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
   });
 });

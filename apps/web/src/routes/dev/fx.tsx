@@ -18,15 +18,21 @@ import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
+import { planFx } from "../../fx/cues.ts";
+import { createFxMemory } from "../../fx/memory.ts";
 import { motifScale } from "../../fx/motifs/build.ts";
 import {
+  SYSTEM_MOMENTS,
   galleryCardEvents,
   galleryCues,
+  galleryEntry,
   galleryFieldView,
   galleryPlayId,
   galleryPlayOf,
   gallerySetPiece,
+  systemMomentFixture,
   type GalleryCardPlay,
+  type SystemMoment,
 } from "../../fx/motifs/gallery.ts";
 import { FX_DRAWN_MOTIFS, isDrawnMotif, type DrawnMotif } from "../../fx/motifs/names.ts";
 import { useFxSettings } from "../../fx/settings.ts";
@@ -47,7 +53,13 @@ export const fxGalleryTestid = {
   play: "fx-gallery-play",
   playCard: "fx-gallery-play-card",
   playSetPiece: "fx-gallery-play-set-piece",
+  moment: "fx-gallery-moment",
+  playMoment: "fx-gallery-play-moment",
 } as const;
+
+function isSystemMomentName(name: string): name is SystemMoment {
+  return (SYSTEM_MOMENTS as readonly string[]).includes(name);
+}
 
 /** What a card's option says it plays: its motif, its recipe, a set piece or its aura. */
 function playLabel(play: GalleryCardPlay): string {
@@ -101,6 +113,7 @@ export default function FxGallery(): ReactElement {
   const [palette, setPalette] = useState<FxPalette>("Fire");
   const [scale, setScale] = useState<number>(1);
   const [defId, setDefId] = useState<string>(cards[0]?.defId ?? "");
+  const [moment, setMoment] = useState<SystemMoment>(SYSTEM_MOMENTS[0] ?? "questProgressed");
   // Each card play is a new view whose events the board has not seen, so its effects layer plays them.
   const [shown, setShown] = useState<PlayerView>(base);
   const plays = useRef(0);
@@ -149,6 +162,15 @@ export default function FxGallery(): ReactElement {
     plays.current += 1;
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
     setShown(withEvents(galleryFieldView(card.defId, base), galleryCardEvents(card.defId, card.play, base, plays.current)));
+  };
+  // R2784000: every system moment through the real planner, on the gallery director.
+  const playMoment = (): void => {
+    const events = systemMomentFixture(moment, base);
+    if (events.length === 0) return;
+    const entry = galleryEntry(events, base, settings.speed);
+    const memory = createFxMemory();
+    memory.remember(entry.events);
+    director.current?.play(planFx(entry, base, { intensity, card: () => undefined, memory }));
   };
 
   return (
@@ -226,6 +248,25 @@ export default function FxGallery(): ReactElement {
           </button>
           <button type="button" data-testid={fxGalleryTestid.playSetPiece} onClick={() => playCard(true)}>
             Play as a set piece
+          </button>
+          <label style={ROW}>
+            Moment
+            <select
+              data-testid={fxGalleryTestid.moment}
+              value={moment}
+              onChange={(event) => {
+                if (isSystemMomentName(event.target.value)) setMoment(event.target.value);
+              }}
+            >
+              {SYSTEM_MOMENTS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" data-testid={fxGalleryTestid.playMoment} onClick={playMoment}>
+            Play moment
           </button>
         </form>
       </div>

@@ -185,6 +185,10 @@ const S2 = {
   FX_FIRST_STRIKE_BREAK_REACH: 0.6,
   FX_PIERCE_REACH: 0.8,
   FX_FLYING_LUNGE_LIFT: 0.18,
+  // Issue #2791: the tempo keyword beats (R2791000).
+  FX_STACK_LAND: { x: 0.62, y: 0.35 },
+  FX_DEFT_FEINT_STEP: 0.18,
+  FX_CHARGE_LINE_SPREAD: 0.22,
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },
@@ -254,6 +258,11 @@ const S2 = {
   FX_COUNTER_TRAUMA: 0.25,
   FX_REWIND_TRAUMA: 0.35,
   FX_INTENSITY_SCALE: { off: 0, low: 0.45, normal: 1, high: 1.6 },
+  FX_QUEST_HOLD_MS: 1_500,
+  FX_QUEST_TRAUMA: 0.5,
+  FX_SYSTEM_TRAUMA: 0.3,
+  FX_JADE_SCALE_STEP: 0.15,
+  FX_JADE_SCALE_MAX: 2,
   FX_SETTINGS_KEY: "jackioh.fx.v1",
   FX_CENTER: { x: 0.5, y: 0.45 },
   FX_TEXT: {
@@ -269,6 +278,7 @@ const S2 = {
     diceRolled: "Dice roll",
     turnCutShort: "Turn cut short",
     autopilot: "The AI takes the turn",
+    questComplete: "Quest complete",
     votedOut: "Voted out",
     escaped: "Escaped the universe",
     victory: "Victory",
