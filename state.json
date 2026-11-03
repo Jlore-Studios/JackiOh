@@ -29675,7 +29675,8 @@
       "2026-11-03T08:41:46Z,claude-4,ping,before,41604972310,57,2026-11-03T09:10:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-03T08:43:16Z,41605100374,claude-3,opus,build,2799,hard,interrupted,refusal,0.1,4,303,87840,0.2813,100,100,,,1654.6,claude-4,fresh,other,1"
+      "2026-11-03T08:43:16Z,41605100374,claude-3,opus,build,2799,hard,interrupted,refusal,0.1,4,303,87840,0.2813,100,100,,,1654.6,claude-4,fresh,other,1",
+      "2026-11-03T08:41:46Z,41604972310,claude-4,opus,revise,2906,hard,interrupted,5-hour cap,0,0,0,0,,57,57,,,1.8,claude-4,none,,0"
     ]
   },
   "version": 1
