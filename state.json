@@ -29169,6 +29169,7 @@
         "every": 5,
         "head": "98dc08c430b014676e8de2d13897e3dd1eda6c7e",
         "issue": 2725,
+        "last_why": "stopped: #2904 was closed",
         "merged_at": "2026-11-03T16:24:08Z",
         "n": 20,
         "pr": 2904,
@@ -29179,12 +29180,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:43fed5dd-1793723835",
+        "run_id": "",
         "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
         "started_at": "2026-11-03T16:37:51Z",
         "status": "queued",
         "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 20
