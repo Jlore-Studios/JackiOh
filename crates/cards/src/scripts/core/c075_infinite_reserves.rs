@@ -58,8 +58,8 @@ pub fn script_v0_4_12c() -> CardScripts {
 }
 
 // #75 Infinite Reserves — SPEC §8.3, BUILD M4-T4.
-// The empty-library draw is `library: []` plus `startTurn()` (§2.2); the control without the card
-// takes R3's fatigue.
+// The empty-library draw is `library: []` plus `startTurn()` (§2.2); R3's fatigue without the card is
+// the engine's (`crates/engine/tests/rules/draw.rs`).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -146,6 +146,24 @@ mod tests {
 
             s.expect_refused_with(|s| s.play("core-055", json!({ "tributes": one })), "Tribute 3");
         }
+
+        #[test]
+        fn s6_3_two_sheep_pay_4_for_a_cost_of_3_and_nothing_smaller_would_do() {
+            // Dropping either Sheep leaves 2, under the cost, so the pair is minimal even though it
+            // overshoots — the one case §6.3's Sheep clause creates.
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }, { "def": "core-t-sheep", "lane": 2 }] },
+            }));
+            let sheep = ids_at(&s, P1, &[1, 2]);
+
+            s.play("core-055", json!({ "tributes": sheep }));
+
+            s.expect_in_zone("core-055", "field");
+            for id in &sheep {
+                s.expect_in_zone(id, "gone");
+            }
+        }
     }
 
     mod can_use_opposing_units_as_tributes_r101 {

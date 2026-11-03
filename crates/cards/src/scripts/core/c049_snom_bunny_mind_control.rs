@@ -58,7 +58,7 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
 }
 
 // #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4, R15.
-// Props: #25, #20, #45, #11, #8, #15, #41, and #14 Jlockeed's Weapons.
+// Props: #25, #45, #8, #15, #41, and #14 Jlockeed's Weapons.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

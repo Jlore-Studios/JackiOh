@@ -21,7 +21,8 @@ pub fn script() -> CardScripts {
 // #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63): the must-pass row of BUILD M4-T4 #45.
 //
 // R6: "switch then attack" is a unit that starts in Defense, switches to Attack and then attacks;
-// for every other unit the switch spends the turn, which the #20 Pointmaster controls prove.
+// for every other unit the switch spends the turn, which the engine's rule tests own
+// (`crates/engine/tests/rules/combat_positions.rs`).
 // Charge and Armor 1 are printed keywords, so the tests read them through their effect.
 #[cfg(test)]
 mod tests {

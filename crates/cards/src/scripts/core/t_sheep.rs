@@ -30,8 +30,8 @@ pub fn script() -> CardScripts {
 
 // T-sheep Sheep Token (SPEC §7; §3.2, §6.3, R11, R41, R74). BUILD M4-T4's token row. The `mod`s below prove
 // the base and radiant behavior, asserting the worth through `tribute_value_of` and `legal_tribute_units`.
-// §6.3's second half is proved end to end with #22 Carnivorous Cube, the one card that tributes from its own
-// text (R41).
+// §6.3's second half, a tribute a card's script writes being an ordinary Sacrifice where the 2 never applies
+// (R41), is the engine's (`crates/engine/tests/rules/tribute.rs`).
 #[cfg(test)]
 mod tests {
     use super::*;
