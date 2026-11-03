@@ -62,7 +62,6 @@ mod tests {
 
     #[test]
     fn r1179001_steals_one_random_card_of_the_opponents_hand_as_yours() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GRIFTER, FILLER] },
             "p2": { "hand": [MENACE], "library": [VANILLA, VANILLA] },
@@ -78,7 +77,6 @@ mod tests {
 
     #[test]
     fn r1179001_an_empty_hand_steals_nothing_and_draws_no_random_number() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GRIFTER, FILLER] },
             "p2": { "hand": [], "library": [VANILLA, VANILLA] },
@@ -108,7 +106,6 @@ mod tests {
 
     #[test]
     fn r97_the_opponent_sees_only_that_a_card_left() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GRIFTER, FILLER] },
             "p2": { "hand": [MENACE, VANILLA], "library": [FILLER, FILLER] },
@@ -134,7 +131,6 @@ mod tests {
 
     #[test]
     fn r70_a_cast_grifter_steals_too() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA] },
             "p2": { "hand": [MENACE], "library": [VANILLA, VANILLA] },
@@ -177,7 +173,6 @@ mod tests {
 
     #[test]
     fn r386_cards_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GRIFTER, FILLER] },
             "p2": { "hand": [MENACE, VANILLA], "library": [FILLER, FILLER] },
@@ -191,7 +186,6 @@ mod tests {
 
     #[test]
     fn radiant_the_stolen_card_costs_0() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": GRIFTER, "radiant": true }, FILLER] },
             "p2": { "hand": [MENACE], "library": [VANILLA, VANILLA] },

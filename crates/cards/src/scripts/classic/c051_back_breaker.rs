@@ -34,6 +34,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -100,7 +102,6 @@ mod tests {
 
             #[test]
             fn s3_2_stack_it_may_be_played_onto_an_occupied_unit_zone_the_card_beneath_dormant_r13_and_resuming_when_it_leaves() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BACK_BREAKER, HIT_JOB, STOCKPILE], "field": [VANILLA], "library": spare_library(), "mana": 10 },
                     "p2": spare(),
@@ -141,7 +142,6 @@ mod tests {
             /// R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated): it stays.
             #[test]
             fn r1081000_a_unit_standing_in_the_backrow_is_no_backrow_card_and_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "field": [BACK_BREAKER], "hand": [HIT_JOB, STOCKPILE], "library": spare_library() },
                     "p2": with_spare(json!({ "field": [{ "def": VANILLA, "lane": 1 }], "backrow": [GOING_LONG] })),
@@ -155,7 +155,6 @@ mod tests {
 
             #[test]
             fn s4_5_a_combat_death_fires_it_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": with_spare(json!({ "field": [BACK_BREAKER], "backrow": [MANA_WELL] })),
                     "p2": with_spare(json!({ "field": [MENACE], "backrow": [GOING_LONG] })),
@@ -168,7 +167,6 @@ mod tests {
 
             #[test]
             fn s6_3_a_tribute_is_a_death_tributed_for_the_rock_its_death_fires() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "field": [BACK_BREAKER], "backrow": [MANA_WELL], "hand": [THE_ROCK, STOCKPILE], "library": spare_library(), "mana": 10 },
                     "p2": with_spare(json!({ "backrow": [GOING_LONG] })),
@@ -181,7 +179,6 @@ mod tests {
 
             #[test]
             fn r46_indestructible_backrow_cards_stay_heroic_power_lockdown_in_too_deep() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "field": [BACK_BREAKER], "backrow": [HEROIC_POWER, IN_TOO_DEEP], "hand": [HIT_JOB, STOCKPILE], "library": spare_library() },
                     "p2": with_spare(json!({ "backrow": [LOCKDOWN, MANA_WELL] })),
@@ -208,7 +205,6 @@ mod tests {
 
             #[test]
             fn r383_an_animated_card_stands_in_the_unit_row_and_is_spared() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "field": [BACK_BREAKER], "hand": [HIT_JOB, STOCKPILE], "library": spare_library() },
                     "p2": with_spare(json!({ "backrow": [TESLA, MANA_WELL] })),
@@ -230,7 +226,6 @@ mod tests {
 
             #[test]
             fn s8_6_a_bounce_or_an_exile_is_no_death_nothing_fires() {
-                crate::register_all();
                 let mut bounced = scenario(json!({
                     "p1": { "field": [BACK_BREAKER], "backrow": [MANA_WELL], "hand": [FLOOD, STOCKPILE], "library": spare_library(), "mana": 10 },
                     "p2": with_spare(json!({ "backrow": [GOING_LONG] })),
@@ -276,7 +271,6 @@ mod tests {
 
             #[test]
             fn r89_enemy_is_the_opponent_of_the_player_it_died_under_on_p2s_side_it_takes_p1s_backrow() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": with_spare(json!({ "backrow": [MANA_WELL] })),

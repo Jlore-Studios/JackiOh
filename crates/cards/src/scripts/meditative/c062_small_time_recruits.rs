@@ -71,7 +71,6 @@ mod tests {
 
     #[test]
     fn r1061_draws_three_different_cost_1_units() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [SMALL], "library": ["core-008", "core-011", "core-003", "core-086", "core-005", "core-020", "classicplus-069"] },
             "p2": { "hand": [FILLER] },
@@ -103,7 +102,6 @@ mod tests {
 
     #[test]
     fn r66_r1061_the_cost_is_read_in_the_deck() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [SMALL], "library": ["core-020", "core-008", "core-005", "core-011"] },
             "p2": { "hand": [FILLER] },
@@ -123,7 +121,6 @@ mod tests {
 
     #[test]
     fn r1061_an_x_cost_unit_is_never_drawn() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [SMALL], "library": ["classicplus-069", "core-008", "core-011", "core-003"] },
             "p2": { "hand": [FILLER] },
@@ -136,7 +133,6 @@ mod tests {
 
     #[test]
     fn r97_hidden_from_the_opponent() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [SMALL], "library": ["core-008", "core-011", "core-003"] },
             "p2": { "hand": [FILLER] },
@@ -150,7 +146,6 @@ mod tests {
 
     #[test]
     fn r386_cards_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [SMALL], "library": ["core-008", "core-011", "core-003", "core-086"] },
             "p2": { "hand": [FILLER] },
@@ -162,7 +157,6 @@ mod tests {
 
     #[test]
     fn radiant_each_drawn_unit_is_radiant() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": SMALL, "radiant": true }], "library": ["core-008", "core-011", "core-003"] },
             "p2": { "hand": [FILLER] },

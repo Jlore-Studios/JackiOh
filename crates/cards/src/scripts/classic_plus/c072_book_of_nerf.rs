@@ -35,6 +35,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -150,7 +152,6 @@ mod tests {
 
         #[test]
         fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
             s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick::id(&menace.id) })));

@@ -34,6 +34,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const STATE: &str = "classic-041";
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: Pierce. Deal 1 damage to all Units.
@@ -67,7 +69,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_4_combat_damage_never_removes_it_it_attacks_a_9_9_and_takes_nothing_back() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -89,7 +90,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_4_a_damage_effect_never_removes_it_whirlwind_deals_it_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [WHIRLWIND, FILLER] },
@@ -109,7 +109,6 @@ mod tests {
 
             #[test]
             fn r781001_immutable_no_spell_may_target_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [FLAME, HIT_JOB, FILLER], "mana": 6 },
@@ -125,7 +124,6 @@ mod tests {
 
             #[test]
             fn r46_a_destroy_effect_leaves_it_on_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [NETHER, FILLER], "mana": 4 },
@@ -142,7 +140,6 @@ mod tests {
 
             #[test]
             fn r347_r2179000_it_never_has_taunt_and_never_stands_in_defense() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE, { "def": VANILLA, "lane": 2 }] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -168,7 +165,6 @@ mod tests {
 
             #[test]
             fn s6_1_an_exile_removes_it_no_destroy_is_involved_so_indestructible_does_not_help() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [LAG, FILLER], "library": [FILLER, FILLER] },
@@ -184,7 +180,6 @@ mod tests {
 
             #[test]
             fn s6_1_a_bounce_removes_it_to_its_controllers_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
                     "p2": { "hand": [FLOOD, FILLER] },
@@ -200,7 +195,6 @@ mod tests {
 
             #[test]
             fn s6_3_a_tribute_removes_it_sacrifice_bypasses_indestructible_and_counts_as_a_death() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CUBE, FILLER], "field": [STATE] }, "p2": { "hand": [FILLER] } }));
                 let state = s.card(STATE).id.clone();
 
@@ -216,7 +210,6 @@ mod tests {
 
             #[test]
             fn r275_the_radiant_face_is_a_6_6_with_indestructible_immutable_and_lifesteal() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }] },
                     "p2": { "hand": [FILLER] },
@@ -228,7 +221,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_8_its_damage_to_the_enemy_hero_heals_your_hero_the_amount_dealt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }], "health": 20 },
                     "p2": { "hand": [FILLER] },
@@ -242,7 +234,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_8_its_damage_to_a_unit_heals_you_too_and_the_strike_back_still_deals_it_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }], "health": 10 },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -258,7 +249,6 @@ mod tests {
 
             #[test]
             fn r2179000_set_up_in_defense_it_stands_in_attack_and_has_no_taunt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }] },
                     "p2": { "hand": [FILLER, WHIRLWIND] },
@@ -273,7 +263,6 @@ mod tests {
 
             #[test]
             fn r46_a_destroy_effect_leaves_the_radiant_face_on_the_field_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }] },
                     "p2": { "hand": [NETHER, FILLER], "mana": 4 },

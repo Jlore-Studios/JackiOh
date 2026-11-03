@@ -57,6 +57,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P2: PlayerId = PlayerId::P2;
 
     const FACTORY: &str = "meditative-029";
@@ -83,7 +85,6 @@ mod tests {
 
     /// p1 plays the Factory (base unless `radiant_face`).
     fn played(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -99,7 +100,6 @@ mod tests {
 
     /// The Factory standing with no counters (as placed, never through its Cry).
     fn standing() -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": "factory-standing",
             "p1": {
@@ -196,7 +196,6 @@ mod tests {
 
             #[test]
             fn numbers_read_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "factory-param",
                     "p1": { "hand": [FACTORY, FILLER], "library": filler(6), "mana": 4 },

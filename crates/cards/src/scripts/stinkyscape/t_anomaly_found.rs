@@ -587,7 +587,6 @@ mod tests {
         const PROBE: &str = "stinkyscape-166";
 
         fn scanned(seed: &str, misses: i32) -> (Scenario, Option<CardInstance>) {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": seed,
                 "p1": {
@@ -705,7 +704,6 @@ mod tests {
         }
 
         fn found(seed: &str, held: bool) -> Option<String> {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": seed,
                 "p1": { "hand": [PROBE], "mana": 10, "library": [FILLER, FILLER, FILLER] },

@@ -24,6 +24,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const SPRAY: &str = "classicplus-012-4";
     const MENACE: &str = "core-019"; // 9/9
     const POINTMASTER: &str = "core-020"; // 7/1
@@ -34,7 +36,6 @@ mod tests {
     use crate::merged;
 
     fn spray(radiant: bool, p1: Value, p2: Value) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": SPRAY, "radiant": radiant }, FILLER], "field": [MENACE] }), p1),
             "p2": merged(json!({ "hand": [FILLER], "field": [MENACE, POINTMASTER] }), p2),
@@ -100,7 +101,6 @@ mod tests {
 
         #[test]
         fn r386_the_damage_reads_through_param_an_upgrade_deals_4() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SPRAY, FILLER] }, "p2": { "hand": [FILLER] } }));
             step_param(s.card_mut(SPRAY), "damage", 1);
             s.play(SPRAY, json!({}));

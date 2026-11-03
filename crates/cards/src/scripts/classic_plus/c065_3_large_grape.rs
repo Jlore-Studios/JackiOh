@@ -41,6 +41,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -73,7 +75,6 @@ mod tests {
 
     #[test]
     fn r386_a_degrade_makes_the_drawn_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
         assert!(!crate::can_upgrade_number(&s, GRAPE, "setCost"));
         assert_eq!(crate::degrade_number(&mut s, GRAPE, "setCost"), 1);
@@ -87,7 +88,6 @@ mod tests {
 
         #[test]
         fn an_enemy_unit_takes_5_then_you_draw_1_that_costs_0() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
             let targets = pick::unit_at(&s, P2, 1);
             s.play(GRAPE, json!({ "targets": targets }));
@@ -106,7 +106,6 @@ mod tests {
 
         #[test]
         fn the_enemy_hero_takes_5_spell_damage_2_makes_it_7() {
-            crate::register_all();
             let mut plain = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER] } }));
             plain.play(GRAPE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             plain.expect_health(P2, 25);
@@ -121,7 +120,6 @@ mod tests {
 
         #[test]
         fn r19_a_friendly_unit_is_healed_5_and_your_hero_5_past_30() {
-            crate::register_all();
             let mut unit = scenario(json!({
                 "p1": { "hand": [GRAPE, FILLER], "field": [{ "def": MENACE, "damage": 6 }], "library": [DECK_B] },
                 "p2": { "hand": [FILLER] }
@@ -160,7 +158,6 @@ mod tests {
 
         #[test]
         fn r65_an_x_cost_card_it_draws_is_free_to_play_its_x_still_chosen_buff_billy_played_for_1_with_1_mana_left_costs_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [BILLY] }, "p2": { "hand": [FILLER] } }));
             s.play(GRAPE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             assert_eq!(s.card(BILLY).cost_override, Some(0));
@@ -172,7 +169,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_makes_it_6_and_2_draws_a_degrade_4() {
-            crate::register_all();
             let mut up = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_A, DECK_B] }, "p2": { "hand": [FILLER] } }));
             step_param(up.card_mut(GRAPE), "amount", 1);
             step_param(up.card_mut(GRAPE), "draw", 1);
@@ -192,7 +188,6 @@ mod tests {
 
         #[test]
         fn an_enemy_takes_10_you_draw_2_and_each_costs_0() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [radiant_grape(), FILLER], "library": [DECK_A, DECK_B] },
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE }] }
@@ -206,7 +201,6 @@ mod tests {
 
         #[test]
         fn r19_a_friend_is_healed_10() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [radiant_grape(), FILLER], "library": [DECK_A, DECK_B] },
                 "p2": { "hand": [FILLER] }
@@ -217,7 +211,6 @@ mod tests {
 
         #[test]
         fn r58_a_cast_on_draw_card_casts_free_with_no_prompt_r682_its_chain_s_repeat_brings_no_price_the_grape_s_own_draw_does() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [radiant_grape(), FILLER], "library": [HINDER, DECK_A, DECK_B] },
                 "p2": { "hand": [FILLER] }

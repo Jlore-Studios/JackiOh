@@ -60,6 +60,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -279,7 +281,6 @@ mod tests {
 
             #[test]
             fn r129_an_empty_last_board_hotseat_a_first_game_fizzles_no_prompt_no_random_draw_the_spell_still_played() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PORTAL, FILLER] }, "p2": { "hand": [FILLER] } }));
                 let cursor = s.state().rng_cursor;
                 let played = s.state().counters.played;
@@ -477,7 +478,6 @@ mod tests {
 
             #[test]
             fn r129_an_empty_board_adds_nothing_and_draws_no_random_number() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PORTAL, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER] },

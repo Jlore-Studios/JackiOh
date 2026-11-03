@@ -72,6 +72,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -123,7 +125,6 @@ mod tests {
 
         #[test]
         fn an_x_card_keeps_its_cost() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "health": 20,

@@ -14,7 +14,9 @@ use crate::rules::fixtures::generation::{
     Run, advance, answer, asker, asker_answers, body, cheap_unit, clear_asker_answers, deck_spell,
     field_trap, frozen, hand_card, pile_on, plain_trap, playing, pricy_unit, replayed, x_unit,
 };
-use crate::rules::fixtures::harness::{events_of_type, matches_object, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, ids, matches_object, put, set_library, sink_for, slot,
+};
 
 fn run(sink: &mut EngineSink<'_>, effects: Vec<Effect>) {
     let mut ctx = make_context(
@@ -34,10 +36,6 @@ fn run(sink: &mut EngineSink<'_>, effects: Vec<Effect>) {
 fn run_on(state: &mut GameState, effects: Vec<Effect>) {
     let mut sink = sink_for(state);
     run(&mut sink, effects);
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// A card put into a player's exile, as the last one exiled.
@@ -158,7 +156,7 @@ mod e25_recruit_n_with_filters_classic_c31_c65 {
     fn r64_n_scans_each_the_first_matching_permanent_from_the_top_cost_2_or_less_units_three_of_them() {
         let mut start = playing("recruit-count");
         let state = &mut start.state;
-        let library = ids(&set_library(
+        let library = ids(set_library(
             state,
             P1,
             &[
@@ -197,7 +195,7 @@ mod e25_recruit_n_with_filters_classic_c31_c65 {
         for lane in 1..=5 {
             put(state, &body.id, slot(P1, Row::Units, lane), json!({}));
         }
-        let library = ids(&set_library(
+        let library = ids(set_library(
             state,
             P1,
             &[cheap_unit.id.clone(), plain_trap.id.clone()],
@@ -227,7 +225,7 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         for lane in 1..=3 {
             put(state, &body.id, slot(P1, Row::Units, lane), json!({}));
         }
-        let library = ids(&set_library(
+        let library = ids(set_library(
             state,
             P1,
             &[
@@ -289,7 +287,7 @@ mod e25_recruit_your_entire_deck_classic_c60 {
      {
         let mut start = playing("recruit-all-pause");
         let state = &mut start.state;
-        let library = ids(&set_library(
+        let library = ids(set_library(
             state,
             P1,
             &[
@@ -377,7 +375,7 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
     fn r690_a_scan_takes_the_first_non_x_match_past_an_x_cost_card_on_top_which_stays() {
         let mut start = playing("recruit-x-skip");
         let state = &mut start.state;
-        let library = ids(&set_library(
+        let library = ids(set_library(
             state,
             P1,
             &[x_unit.id.clone(), cheap_unit.id.clone()],
@@ -391,7 +389,7 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
     fn r690_with_only_x_cost_matches_the_scan_takes_the_first_one() {
         let mut start = playing("recruit-x-only");
         let state = &mut start.state;
-        let library = ids(&set_library(
+        let library = ids(set_library(
             state,
             P1,
             &[x_unit.id.clone(), deck_spell.id.clone()],
@@ -406,7 +404,7 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
      {
         let mut mixed = playing("recruit-all-x-mixed");
         let mixed_state = &mut mixed.state;
-        let mixed_library = ids(&set_library(
+        let mixed_library = ids(set_library(
             mixed_state,
             P1,
             &[cheap_unit.id.clone(), x_unit.id.clone(), deck_spell.id.clone()],
@@ -423,7 +421,7 @@ mod r690_recruit_skips_x_cost_cards_unless_they_are_the_only_valid_targets {
 
         let mut only = playing("recruit-all-x-only");
         let only_state = &mut only.state;
-        let only_library = ids(&set_library(
+        let only_library = ids(set_library(
             only_state,
             P1,
             &[x_unit.id.clone(), deck_spell.id.clone()],

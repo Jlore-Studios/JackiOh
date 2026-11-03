@@ -8,7 +8,7 @@ use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    Bench, events_json, in_hand, new_game, next_nonce, put, setup_catalog, slot,
+    Bench, events_json, ids, in_hand, new_game, next_nonce, put, setup_catalog, slot,
 };
 use crate::rules::fixtures::play_pipeline_a::{PA, register_play_a, with_play_a};
 
@@ -73,10 +73,6 @@ fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
 
 fn first_field(events: &[GameEvent], kind: GameEventType, key: &str) -> Option<Value> {
     events_json(events, kind).first().map(|event| event[key].clone())
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn card_id_at(state: &GameState, at: ZoneSlot) -> Option<String> {

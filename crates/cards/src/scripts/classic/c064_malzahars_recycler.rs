@@ -108,6 +108,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -286,7 +288,6 @@ mod tests {
 
             #[test]
             fn a_targeting_costs_discards_count_c_89s_two_random_ones_draw_two() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": {
                         "hand": ["classic-055", FILLER, FILLER],
@@ -309,7 +310,6 @@ mod tests {
 
             #[test]
             fn c_15_nose_hunters_random_discard_its_activates_cost_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [MENACE, FILLER],
@@ -368,7 +368,6 @@ mod tests {
 
             #[test]
             fn c_8_pickle_played_against_you_the_random_discard_is_yours_and_draws_2_behind_the_questions() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MENACE, FILLER], "backrow": [RECYCLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
                     "p2": { "hand": [PICKLE, FILLER], "library": [VANILLA, VANILLA] },
@@ -392,7 +391,6 @@ mod tests {
 
             #[test]
             fn its_draws_are_your_draws_the_second_sets_off_the_opponents_c_9_income_tax() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER, FILLER, FILLER],
@@ -425,7 +423,6 @@ mod tests {
 
             #[test]
             fn an_opponents_discard_does_not_their_zao_gao_draws_you_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [RECYCLER], "library": [VANILLA, VANILLA] },
                     "p2": { "hand": [ZAO_GAO, MENACE, VANILLA, FILLER], "library": [VANILLA] },
@@ -439,7 +436,6 @@ mod tests {
 
             #[test]
             fn s6_1_r638_a_brittle_crumble_is_no_discard_it_draws_nothing_and_a_card_in_your_hand_never_crumbles() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
@@ -538,7 +534,6 @@ mod tests {
 
             #[test]
             fn an_opponents_discard_still_draws_you_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": RECYCLER, "radiant": true }], "library": [VANILLA, VANILLA] },
                     "p2": { "hand": [ZAO_GAO, MENACE, VANILLA, FILLER] },

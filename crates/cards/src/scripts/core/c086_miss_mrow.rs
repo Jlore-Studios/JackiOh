@@ -43,6 +43,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -76,7 +78,6 @@ mod tests {
 
         #[test]
         fn cannot_attack_the_printed_keyword_is_the_catalog_s_and_combat_refuses_both_targets() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [FILLER], "field": [MROW] },
@@ -103,7 +104,6 @@ mod tests {
 
         #[test]
         fn r361_death_takes_control_of_the_unit_that_destroyed_it_into_the_same_lane_when_free_r15_and_only_that_one() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -128,7 +128,6 @@ mod tests {
 
         #[test]
         fn r361_falls_back_to_the_first_free_zone_which_mrow_s_own_death_has_freed_r15() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -159,7 +158,6 @@ mod tests {
 
         #[test]
         fn r361_a_unit_whose_cry_dealt_the_lethal_damage_destroyed_it_so_mrow_takes_that_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -180,7 +178,6 @@ mod tests {
 
         #[test]
         fn r361_takes_nothing_when_the_killer_died_in_the_same_combat_r78() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -222,7 +219,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_the_radiant_face_prints_rush_alone_so_it_may_attack_a_unit_the_turn_it_lands() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": MROW, "radiant": true }, FILLER] },
@@ -242,7 +238,6 @@ mod tests {
 
         #[test]
         fn the_radiant_face_has_no_taunt_an_enemy_attack_may_go_past_it_to_the_hero() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -256,7 +251,6 @@ mod tests {
 
         #[test]
         fn r361_radiant_the_same_death_takes_the_unit_whose_strike_back_killed_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [FILLER], "field": [{ "def": MROW, "radiant": true, "lane": 1 }] },

@@ -51,6 +51,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -82,7 +84,6 @@ mod tests {
 
             #[test]
             fn s6_3_destroys_a_damaged_enemy_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXECUTE, FILLER] },
                     "p2": { "field": [{ "def": MENACE, "damage": 1 }, TIMMY] },
@@ -95,7 +96,6 @@ mod tests {
 
             #[test]
             fn s8_7_a_damaged_unit_of_your_own_is_a_target_too() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [EXECUTE, FILLER], "field": [{ "def": TIMMY, "damage": 2 }] } }));
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(EXECUTE, json!({ "targets": targets }));
@@ -104,7 +104,6 @@ mod tests {
 
             #[test]
             fn s4_an_undamaged_unit_is_no_legal_target() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXECUTE, FILLER] },
                     "p2": { "field": [MENACE, { "def": TIMMY, "damage": 1 }] },
@@ -115,7 +114,6 @@ mod tests {
 
             #[test]
             fn s8_with_no_damaged_unit_the_spell_fizzles_and_still_counts_as_played() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [EXECUTE, FILLER] }, "p2": { "field": [MENACE] } }));
                 s.play(EXECUTE, json!({}));
                 assert!(destroyed(&s).is_empty());
@@ -145,7 +143,6 @@ mod tests {
 
             #[test]
             fn s8_7_destroys_every_damaged_enemy_unit_and_no_other() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": EXECUTE, "radiant": true }, FILLER], "field": [{ "def": TIMMY, "damage": 1 }] },
                     "p2": { "field": [{ "def": MENACE, "damage": 3 }, { "def": TIMMY, "damage": 1 }, MENACE] },
@@ -163,7 +160,6 @@ mod tests {
 
             #[test]
             fn r46_an_indestructible_one_is_knocked_down_with_no_damaged_enemy_nothing_happens() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": EXECUTE, "radiant": true }, FILLER] },
                     "p2": { "field": [{ "def": UNBREAKABLE, "damage": 2, "position": "DEF" }] },

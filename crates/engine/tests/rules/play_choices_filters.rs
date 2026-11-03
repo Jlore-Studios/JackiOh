@@ -340,7 +340,7 @@ fn on_zone(player: PlayerId, row: Row, lane: i32) -> Selection {
     Selection::Zone { player, row, lane }
 }
 
-fn ids(selections: &[Selection]) -> Vec<String> {
+fn selection_ids(selections: &[Selection]) -> Vec<String> {
     selections
         .iter()
         .filter_map(|selection| match selection {
@@ -507,7 +507,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         let combos = play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None);
         let picked: Vec<Vec<String>> = combos
             .iter()
-            .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
+            .map(|combo| selection_ids(combo.targets.as_deref().unwrap_or(&[])))
             .collect();
         assert_eq!(
             picked,
@@ -657,7 +657,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         let card = first(in_hand(&mut state, &hand_spells().id, PlayerId::P1, 1));
 
         let decl = first_decl(&state, &card);
-        let offered = ids(&legal(&state, &card, &decl));
+        let offered = selection_ids(&legal(&state, &card, &decl));
         assert!(offered.contains(&a_spell.id));
         assert!(!offered.contains(&a_unit.id));
         assert!(!offered.contains(&card.id)); // never the card that is leaving the hand
@@ -712,7 +712,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         let decl = first_decl(&state, &card);
         // Both sides, lane order within each: the ally side comes first (the chooser's own side).
         assert_eq!(
-            ids(&legal(&state, &card, &decl)),
+            selection_ids(&legal(&state, &card, &decl)),
             vec![my_trap.id.clone(), their_trap.id.clone()]
         );
 
@@ -739,7 +739,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         let card = first(in_hand(&mut state, &tagged().id, PlayerId::P1, 1));
 
         let decl = first_decl(&state, &card);
-        let offered = ids(&legal(&state, &card, &decl));
+        let offered = selection_ids(&legal(&state, &card, &decl));
         assert_eq!(offered, vec![wanted.id.clone()]); // every tag matches, and the excluded tag is absent
 
         assert_eq!(
@@ -894,7 +894,7 @@ mod r81_r90_play_choice_declarations_and_filters {
             "filter": { "side": "ally", "of": ["unit"] },
         }));
         assert_eq!(
-            ids(&legal(&state, &self_card, &unflagged)),
+            selection_ids(&legal(&state, &self_card, &unflagged)),
             vec![self_card.id.clone(), other.id.clone()]
         );
 
@@ -982,7 +982,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         let card = first(in_hand(&mut state, &any_hand().id, PlayerId::P1, 1));
 
         let decl = first_decl(&state, &card);
-        let offered = ids(&legal(&state, &card, &decl));
+        let offered = selection_ids(&legal(&state, &card, &decl));
         assert!(offered.contains(&mine.id));
         for held in &state.players.p2.hand {
             assert!(!offered.contains(&held.id));
@@ -1075,11 +1075,11 @@ mod r81_r90_play_choice_declarations_and_filters {
         let bare_decl = first_decl(&state, &bare);
         let tribal_decl = first_decl(&state, &tribal);
         assert_eq!(
-            ids(&legal(&state, &bare, &bare_decl)),
+            selection_ids(&legal(&state, &bare, &bare_decl)),
             vec![mine.id.clone(), felinor.id.clone(), theirs.id.clone()]
         );
         assert_eq!(
-            ids(&legal(&state, &tribal, &tribal_decl)),
+            selection_ids(&legal(&state, &tribal, &tribal_decl)),
             vec![felinor.id.clone()]
         );
 
@@ -1131,7 +1131,7 @@ mod r81_r90_play_choice_declarations_and_filters {
             let picked: &[Selection] = combo.targets.as_deref().unwrap_or(&[]);
             assert!(picked.len() >= 2);
             assert!(picked.len() <= 3);
-            let distinct: IndexSet<String> = ids(picked).into_iter().collect();
+            let distinct: IndexSet<String> = selection_ids(picked).into_iter().collect();
             assert_eq!(distinct.len(), picked.len());
             assert_eq!(
                 refusal(play_choices::why_choices_refused(

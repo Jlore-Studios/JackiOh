@@ -40,6 +40,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const LAR: &str = "classicplus-076";
     const PING: &str = "classicplus-076-1";
     const FILLER: &str = "core-005";
@@ -70,7 +72,6 @@ mod tests {
 
             #[test]
             fn s6_2_dying_in_combat_it_leaves_a_brother_ping_in_its_own_zone_the_leftmost_open_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [LAR] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -84,7 +85,6 @@ mod tests {
 
             #[test]
             fn r64_destroyed_by_an_effect_in_lane_3_ping_takes_the_leftmost_open_zone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": LAR, "lane": 3 }] },
                     "p2": { "hand": [FILLER] },
@@ -97,7 +97,6 @@ mod tests {
 
             #[test]
             fn r1_ping_is_summoned_so_it_fires_no_cry_and_is_not_a_play() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
                 let targets = pick::card(&s, LAR);
                 s.play(HIT_JOB, json!({ "targets": targets }));
@@ -114,7 +113,6 @@ mod tests {
 
             #[test]
             fn r64_a_granted_reborn_reserves_lars_zone_for_its_return_so_ping_goes_to_the_next_open_zone() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
                 s.card_mut(LAR).granted_keywords = reborn();
                 let targets = pick::card(&s, LAR);
@@ -125,7 +123,6 @@ mod tests {
 
             #[test]
             fn r64_a_full_row_summons_nothing_the_ping_has_nowhere_to_go() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [LAR, TIMMY, TIMMY, TIMMY, TIMMY] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -137,7 +134,6 @@ mod tests {
 
             #[test]
             fn s6_2_exiled_it_has_no_death_no_ping() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [COLLATERAL, FILLER], "field": [LAR] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
@@ -150,7 +146,6 @@ mod tests {
 
             #[test]
             fn s6_2_bounced_it_has_no_death_no_ping() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FLOOD, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
                 s.play(FLOOD, json!({}));
                 s.expect_in_zone(LAR, "hand");
@@ -163,7 +158,6 @@ mod tests {
 
             #[test]
             fn r74_its_death_summons_a_radiant_brother_ping_an_8_8() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LAR, "radiant": true }] },
                     "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] },
@@ -178,7 +172,6 @@ mod tests {
 
             #[test]
             fn s6_2_exiled_the_radiant_face_summons_nothing_either() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [COLLATERAL, FILLER], "field": [{ "def": LAR, "radiant": true }] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },

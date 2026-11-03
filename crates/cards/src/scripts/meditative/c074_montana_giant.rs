@@ -97,7 +97,6 @@ mod tests {
 
     #[test]
     fn r1065_costs_8_less_one_per_card_in_hand_itself_included() {
-        crate::register_all();
         let s = scenario(json!({ "p1": { "hand": [GIANT] }, "p2": { "hand": [FILLER] } }));
         assert_eq!(hand_cost(&s, PlayerId::P1), 7);
         let s = scenario(json!({ "p1": { "hand": [GIANT, FILLER, FILLER, FILLER] }, "p2": { "hand": [FILLER] } }));
@@ -128,7 +127,6 @@ mod tests {
 
     #[test]
     fn r1065_nine_cards_it_stays_base() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER, FILLER], "field": [{ "def": GIANT, "lane": 1 }] },
             "p2": { "hand": [FILLER] },
@@ -139,7 +137,6 @@ mod tests {
 
     #[test]
     fn r386_discount_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [GIANT] }, "p2": { "hand": [FILLER] } }));
         step_param(s.card_mut(GIANT), "discount", 1);
         assert_eq!(hand_cost(&s, PlayerId::P1), 6);

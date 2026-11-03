@@ -99,7 +99,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use crate::def_ids;
-    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -130,7 +131,6 @@ mod tests {
 
             #[test]
             fn played_first_nothing_returns() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "critikal-first",
                     "p1": { "hand": [CRITIKAL, FILLER], "library": filler(3) },
@@ -143,7 +143,6 @@ mod tests {
 
             #[test]
             fn previous_spell_returns_from_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "critikal-graveyard",
                     "p1": { "hand": [STOCKPILE, CRITIKAL, FILLER], "library": filler(4) },
@@ -178,7 +177,6 @@ mod tests {
 
             #[test]
             fn previous_unit_is_bounced_from_your_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "critikal-bounce",
                     "p1": { "hand": [VANILLA, CRITIKAL, FILLER], "library": filler(4) },
@@ -194,7 +192,6 @@ mod tests {
 
             #[test]
             fn a_previous_play_that_ceased_to_exist_returns_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "critikal-ceased",
                     "p1": { "hand": [DEFENDER, CRITIKAL, FILLER], "library": filler(4) },
@@ -229,7 +226,6 @@ mod tests {
 
             #[test]
             fn the_returned_graveyard_card_is_made_radiant() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "critikal-radiant-graveyard",
                     "p1": {
@@ -247,7 +243,6 @@ mod tests {
 
             #[test]
             fn the_bounced_unit_is_made_radiant_first() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "critikal-radiant-bounce",
                     "p1": {

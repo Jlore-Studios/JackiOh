@@ -62,7 +62,6 @@ mod tests {
 
         #[test]
         fn r1867003_a_3_4_becomes_3_8() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [SPIRIT, FILLER],
@@ -79,7 +78,6 @@ mod tests {
 
         #[test]
         fn r1867003_a_unit_with_2_health_left_of_4_becomes_3_6_with_4_left() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [SPIRIT, FILLER],
@@ -96,7 +94,6 @@ mod tests {
 
         #[test]
         fn s8_10_a_unit_immune_to_spells_cannot_be_chosen() {
-            crate::register_all();
             let s = scenario(json!({
                 "p1": { "hand": [SPIRIT, FILLER], "field": [VANILLA] },
                 "p2": { "hand": [FILLER], "field": [{ "def": IMMUNE, "radiant": true }] },
@@ -121,7 +118,6 @@ mod tests {
 
         #[test]
         fn r1867003_a_3_4_becomes_3_12() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": SPIRIT, "radiant": true }, FILLER],
@@ -138,7 +134,6 @@ mod tests {
 
         #[test]
         fn r1867003_a_unit_with_2_health_left_of_4_becomes_3_8_with_6_left() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": SPIRIT, "radiant": true }, FILLER],

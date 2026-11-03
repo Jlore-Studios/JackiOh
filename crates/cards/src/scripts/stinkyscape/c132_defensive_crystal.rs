@@ -49,7 +49,6 @@ mod tests {
 
         #[test]
         fn r1860006_death_gives_your_hero_1_armor_then_fuses() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CRYSTAL], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -66,7 +65,6 @@ mod tests {
 
         #[test]
         fn hero_armor_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CRYSTAL], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -84,7 +82,6 @@ mod tests {
 
         #[test]
         fn r1860006_radiant_death_gives_your_hero_2_armor() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],

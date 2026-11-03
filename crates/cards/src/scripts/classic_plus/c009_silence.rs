@@ -28,6 +28,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const SILENCE: &str = "classicplus-009";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt. End of turn: heal to full. Radiant: Immutable.
     const SURGERY: &str = "core-063"; // (1) Give target Unit +3/+3 and 1 random keyword.
@@ -42,7 +44,6 @@ mod tests {
     use crate::merged;
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(
                 json!({

@@ -67,6 +67,8 @@ mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -135,7 +137,6 @@ mod tests {
 
             #[test]
             fn r77_its_activate_fuses_a_random_card_into_the_chosen_hand_card_which_stays_in_hand_keeps_its_type_and_its_cost() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAB, MENACE, STOCKPILE] } }));
                 let kept = id_of(&s, MENACE);
                 let other = id_of(&s, STOCKPILE);
@@ -170,7 +171,6 @@ mod tests {
 
             #[test]
             fn the_end_of_turn_fuses_nothing_the_cry_and_the_trigger_are_gone() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAB, MENACE, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(LAB, json!({}));
                 let menace = id_of(&s, MENACE);
@@ -183,7 +183,6 @@ mod tests {
 
             #[test]
             fn the_activate_is_once_a_second_activation_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAB, MENACE, STOCKPILE] } }));
                 let menace = id_of(&s, MENACE);
                 let stockpile = hand_id_of(&s, STOCKPILE);
@@ -195,7 +194,6 @@ mod tests {
 
             #[test]
             fn r113_the_played_state_survives_json_and_the_activation_replays_to_the_same_hash() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAB, MENACE, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 let menace = id_of(&s, MENACE);
                 s.play(LAB, json!({}));
@@ -235,7 +233,6 @@ mod tests {
 
             #[test]
             fn r23_with_only_an_immutable_card_in_hand_the_activation_has_no_pick() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LAB, { "def": MENACE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -255,7 +252,6 @@ mod tests {
 
             #[test]
             fn s8_7_an_empty_hand_activating_picks_nothing_and_fuses_nothing_and_the_end_of_turn_asks_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAB] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(LAB, json!({}));
                 s.activate(LAB, json!({}));
@@ -267,7 +263,6 @@ mod tests {
 
             #[test]
             fn r97_r179_the_opponent_s_view_names_neither_the_hand_card_the_ingredient_nor_the_fused_id() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAB, MENACE] }, "p2": { "hand": [STOCKPILE] } }));
                 let menace = id_of(&s, MENACE);
                 s.play(LAB, json!({}));
@@ -301,7 +296,6 @@ mod tests {
 
             #[test]
             fn r561_the_random_card_goes_in_on_its_radiant_face_lent_to_both_forms_a_base_hand_card_shows_its_radiant_text() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": LAB, "radiant": true }, MENACE] } }));
                 let menace = id_of(&s, MENACE);
                 s.play(LAB, json!({}));
@@ -321,7 +315,6 @@ mod tests {
 
             #[test]
             fn r561_a_radiant_hand_card_shows_the_same_radiant_ingredient() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LAB, "radiant": true }, { "def": STOCKPILE, "radiant": true }] },
                 }));
@@ -340,7 +333,6 @@ mod tests {
 
             #[test]
             fn r77_its_activate_fuses_a_radiant_card_too_keeping_the_cost() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LAB, "radiant": true }, MENACE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },

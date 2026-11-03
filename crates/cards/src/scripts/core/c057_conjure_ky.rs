@@ -51,6 +51,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -131,7 +133,6 @@ mod tests {
 
         #[test]
         fn adds_3_random_ky_cards_to_your_hand() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             g.play("core-057", json!({}));
@@ -145,7 +146,6 @@ mod tests {
 
         #[test]
         fn adds_them_to_the_caster_s_hand_and_nothing_to_the_opponent_s() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             g.play("core-057", json!({}));
@@ -176,7 +176,6 @@ mod tests {
 
         #[test]
         fn adds_no_radiant_card_on_the_base_face() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             g.play("core-057", json!({}));
@@ -187,7 +186,6 @@ mod tests {
 
         #[test]
         fn s10_5_step_7_the_spell_itself_ends_in_the_graveyard() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             g.play("core-057", json!({})).expect_in_zone("core-057", "graveyard");
@@ -199,7 +197,6 @@ mod tests {
 
         #[test]
         fn adds_2_random_plus_2_random_radiant_ky_cards_the_flag_on_exactly_the_last_two() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             // The setup builder takes `radiant` on the field and the backrow only, so a radiant card that
@@ -217,7 +214,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_the_restated_clause_replaces_the_base_one_so_it_is_4_cards_and_not_7() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             g.card_mut("core-057").radiant = true;
@@ -228,7 +224,6 @@ mod tests {
 
         #[test]
         fn r74_the_two_radiant_adds_are_the_radiant_form_of_a_real_card_not_a_separate_def() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             g.card_mut("core-057").radiant = true;
@@ -244,7 +239,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_adds_4_cards_and_a_degrade_2() {
         for (upgrade, cards) in [(true, 4), (false, 2)] {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
             let moved = if upgrade {
                 crate::upgrade_number(&mut g, "core-057", "cards")
@@ -260,7 +254,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_adds_3_radiant_cards_and_a_degrade_1() {
         for (upgrade, cards) in [(true, 3), (false, 1)] {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": [{ "def": "core-057", "radiant": true }] } }));
             let moved = if upgrade {
                 crate::upgrade_number(&mut g, "core-057", "radiantCards")

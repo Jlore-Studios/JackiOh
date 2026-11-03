@@ -49,6 +49,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::collections::BTreeSet;
 
     const P1: PlayerId = PlayerId::P1;
@@ -137,7 +139,6 @@ mod tests {
 
             #[test]
             fn r101_cant_be_played_without_a_unit_to_tribute_legalactions_offers_no_play_and_the_play_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [GOLIATH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [MENACE] } }));
                 let goliath = s.card(GOLIATH).clone();
 
@@ -170,7 +171,6 @@ mod tests {
 
             #[test]
             fn r391_on_a_full_unit_row_it_may_take_the_zone_its_own_tribute_empties() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GOLIATH, ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -309,7 +309,6 @@ mod tests {
 
             #[test]
             fn each_placement_is_its_own_a_c_53_plague_crawler_that_takes_all_three_draws_three_times() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GOLIATH, ANCHOR], "field": [VANILLA, CRAWLER], "library": lib(6) },
                     "p2": { "hand": [ANCHOR] },
@@ -349,7 +348,6 @@ mod tests {
 
             #[test]
             fn r63_trample_with_rush_it_attacks_a_unit_the_turn_it_enters_and_the_excess_hits_the_hero() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GOLIATH, ANCHOR], "field": [VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [{ "def": VANILLA, "lane": 2 }], "health": 20 },

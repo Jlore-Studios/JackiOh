@@ -28,6 +28,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
@@ -35,7 +37,6 @@ mod tests {
     const TIMMY: &str = "core-011"; // 3/3.
 
     fn leg_day(radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": "leg-day",
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": [VANILLA, TIMMY] },

@@ -76,7 +76,6 @@ mod tests {
 
         #[test]
         fn r1867000_freezes_the_target_and_the_units_beside_it_in_its_row_on_its_side() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [RAY], "field": [VANILLA] },
                 "p2": { "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -99,7 +98,6 @@ mod tests {
 
         #[test]
         fn freezes_a_friendly_target_and_its_neighbours_as_readily() {
-            crate::register_all();
             let mut s = scenario(json!({
                 // A filler in hand: with nothing meaningful left the harness would end the turn,
                 // and an own-side freeze thaws at its caster's cleanup (R1174000).
@@ -119,7 +117,6 @@ mod tests {
 
         #[test]
         fn freezes_a_lone_unit_alone() {
-            crate::register_all();
             let mut s = scenario(json!({
                 // A filler in hand: with nothing meaningful left the harness would end the turn,
                 // and the freeze would thaw before the assert reads it (R1174000).
@@ -136,7 +133,6 @@ mod tests {
 
         #[test]
         fn r1867000_passes_an_immune_to_spells_neighbour_by_and_freezes_an_immutable_one() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [RAY, FILLER] },
                 "p2": {
@@ -165,7 +161,6 @@ mod tests {
 
         #[test]
         fn freezes_every_enemy_unit_and_no_friendly_one() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": RAY, "radiant": true }], "field": [VANILLA, VANILLA] },
                 "p2": { "field": [VANILLA, VANILLA, VANILLA] },
@@ -183,7 +178,6 @@ mod tests {
 
         #[test]
         fn declares_no_target() {
-            crate::register_all();
             let s = scenario(json!({
                 "p1": { "hand": [{ "def": RAY, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER] },

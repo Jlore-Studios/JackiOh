@@ -71,8 +71,11 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use crate::ids;
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const WASTES: &str = "classicplus-012-6";
     const MENACE: &str = "core-019"; // 9/9
@@ -90,7 +93,6 @@ mod tests {
     use crate::merged;
 
     fn wastes(radiant: bool, p1: Value, p2: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(
                 json!({
@@ -115,10 +117,6 @@ mod tests {
 
     fn preview_of(s: &Scenario) -> Option<i32> {
         wastes_in_hand(s).and_then(|card| card.preview).and_then(|preview| preview.first().map(|each| each.value))
-    }
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
     }
 
     mod base {

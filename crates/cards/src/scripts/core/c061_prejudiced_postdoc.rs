@@ -50,6 +50,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const POSTDOC: &str = "core-061"; // Unit, Human, 2 — 2/4 → 4/8
@@ -85,7 +87,6 @@ mod tests {
 
         #[test]
         fn r781003_the_copy_is_at_its_printed_stats_with_no_buffs_and_no_damage() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SURGERY, POSTDOC], "mana": 8 },
                 "p2": { "field": [{ "def": TIMMY, "damage": 2 }] },
@@ -108,7 +109,6 @@ mod tests {
 
         #[test]
         fn s8_3_the_copy_has_no_text_and_no_granted_keywords() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SURGERY, POSTDOC], "mana": 8 },
                 "p2": { "field": [TIMMY] },
@@ -132,7 +132,6 @@ mod tests {
 
         #[test]
         fn s10_4_auras_apply_to_the_copy_afresh_instead_of_being_copied() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [POSTDOC], "mana": 4 },
                 "p2": { "field": [PILLOW, TIMMY] },
@@ -150,7 +149,6 @@ mod tests {
 
         #[test]
         fn r23_an_immutable_target_is_legal_and_the_copy_is_the_one_that_is_made_vanilla() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [POSTDOC], "mana": 4 },
                 // A Radiant The Rock is an Immutable Human (§8.3 row 66).
@@ -172,7 +170,6 @@ mod tests {
 
         #[test]
         fn r74_the_copy_keeps_the_target_s_radiant_flag() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [POSTDOC], "mana": 4 },
                 "p2": { "field": [{ "def": TIMMY, "radiant": true }] },
@@ -190,7 +187,6 @@ mod tests {
         #[test]
         fn radiant_prejudiced_postdoc_copies_a_unit_with_no_human_tag() {
             // §5.2's in-hand swap: the card is Radiant before it is played, so its radiant Cry runs.
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": POSTDOC, "radiant": true }], "mana": 4 },
                 "p2": { "field": [SHREDDER] },
@@ -210,7 +206,6 @@ mod tests {
 
         #[test]
         fn base_postdoc_copies_a_newly_human_medina_enforcer() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [POSTDOC], "mana": 4 },
                 "p2": { "field": ["meditative-083"] },
@@ -242,7 +237,6 @@ mod tests {
 
         #[test]
         fn r90_a_human_only_declaration_refuses_a_non_human_pick() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [POSTDOC], "mana": 4 },
                 "p2": { "field": [SHREDDER] },
@@ -261,7 +255,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_a_cry_with_no_legal_target_fizzles_and_the_unit_still_enters() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [POSTDOC], "mana": 4 }, "p2": {} }));
 
             s.play(POSTDOC, json!({}));

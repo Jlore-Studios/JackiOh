@@ -89,6 +89,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -202,7 +204,6 @@ mod tests {
 
             #[test]
             fn r33_it_is_set_face_down_and_never_named_in_the_opponents_view() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ACE, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(ACE, json!({}));
                 assert_ne!(s.card(ACE).face_up, Some(true));

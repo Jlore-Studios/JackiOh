@@ -80,6 +80,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -114,7 +116,6 @@ mod tests {
 
         #[test]
         fn s5_2_a_card_in_your_hand_becomes_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GOLDEN, TIMMY] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&s, TIMMY);
             s.play(GOLDEN, json!({ "targets": targets }));
@@ -124,7 +125,6 @@ mod tests {
 
         #[test]
         fn s5_2_r22_a_unit_of_yours_converts_in_place_radiant_stats_at_once_damage_kept_no_cry() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOLDEN, FILLER], "field": [{ "def": FELINORS, "damage": 2 }] },
                 "p2": { "hand": [FILLER] }
@@ -137,7 +137,6 @@ mod tests {
 
         #[test]
         fn r33_a_face_down_trap_of_yours_is_a_legal_pick_and_becomes_radiant_face_down() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GOLDEN, FILLER], "backrow": [SHEEPISH] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&s, SHEEPISH);
             s.play(GOLDEN, json!({ "targets": targets }));
@@ -147,7 +146,6 @@ mod tests {
 
         #[test]
         fn r81_the_opponent_s_cards_are_never_offered_and_a_play_naming_one_is_refused() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GOLDEN, FILLER] }, "p2": { "hand": [FILLER], "field": [TIMMY] } }));
             let offered = serde_json::to_string(&legal_actions(s.state(), P1)).unwrap();
             assert!(!offered.contains(&s.card(TIMMY).id));
@@ -157,7 +155,6 @@ mod tests {
 
         #[test]
         fn r781001_an_immutable_card_in_play_is_no_target_and_in_hand_radiant_is_still_its_own_text() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOLDEN, TIMMY, FILLER], "field": [FELINORS] },
                 "p2": { "hand": [FILLER] },
@@ -179,7 +176,6 @@ mod tests {
 
         #[test]
         fn s6_3_a_card_that_is_already_radiant_is_left_as_it_is() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GOLDEN], "field": [{ "def": TIMMY, "radiant": true }] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&s, TIMMY);
             s.play(GOLDEN, json!({ "targets": targets }));
@@ -189,7 +185,6 @@ mod tests {
 
         #[test]
         fn r177_a_hand_card_s_change_reaches_the_opponent_redacted_and_so_does_a_no_change_on_a_radiant_one() {
-            crate::register_all();
             let mut fresh = scenario(json!({ "p1": { "hand": [GOLDEN, TIMMY] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&fresh, TIMMY);
             fresh.play(GOLDEN, json!({ "targets": targets }));
@@ -204,7 +199,6 @@ mod tests {
 
         #[test]
         fn r177_r33_a_face_down_card_s_change_reaches_the_opponent_redacted() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOLDEN, FILLER], "backrow": [{ "def": SHEEPISH, "radiant": true }] },
                 "p2": { "hand": [FILLER] }
@@ -217,7 +211,6 @@ mod tests {
 
         #[test]
         fn the_base_face_changes_only_the_pick_its_neighbours_stay_as_they_are() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GOLDEN, FILLER], "field": [DFENDER, TIMMY, FELINORS] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&s, TIMMY);
             s.play(GOLDEN, json!({ "targets": targets }));
@@ -233,7 +226,6 @@ mod tests {
 
         #[test]
         fn s3_1_a_unit_and_its_row_neighbours_on_your_side_lanes_n_1_and_n_1_become_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [radiant_golden(), FILLER],
@@ -258,7 +250,6 @@ mod tests {
 
         #[test]
         fn s3_1_an_empty_neighbouring_zone_is_nothing_the_edge_lane_has_one_neighbour() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [radiant_golden(), FILLER], "field": [{ "def": TIMMY, "lane": 1 }, { "def": FELINORS, "lane": 3 }] },
                 "p2": { "hand": [FILLER] }
@@ -271,7 +262,6 @@ mod tests {
 
         #[test]
         fn s3_1_a_backrow_pick_s_neighbours_are_its_backrow_neighbours_not_the_units_in_front() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [radiant_golden(), FILLER],
@@ -289,7 +279,6 @@ mod tests {
 
         #[test]
         fn r13_a_card_dormant_under_a_stack_pile_is_no_neighbour_only_the_top_of_the_pile_beside_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [radiant_golden(), FILLER],
@@ -305,7 +294,6 @@ mod tests {
 
         #[test]
         fn in_your_hand_the_cards_at_the_neighbouring_indices_become_radiant_and_no_others() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [radiant_golden(), DFENDER, TIMMY, FELINORS, "core-019"] }, "p2": { "hand": [FILLER] } }));
             // The Grape leaves the hand as it is played, so the hand reads D-fender, Timmy, Felinors, Menace.
             let targets = pick::card(&s, TIMMY);
@@ -323,7 +311,6 @@ mod tests {
 
         #[test]
         fn the_first_hand_card_has_one_neighbour() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [radiant_golden(), DFENDER, TIMMY, FELINORS] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&s, DFENDER);
             s.play(GOLDEN, json!({ "targets": targets }));
@@ -335,7 +322,6 @@ mod tests {
 
         #[test]
         fn r177_every_hand_change_reaches_the_opponent_redacted() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [radiant_golden(), DFENDER, TIMMY, FELINORS] }, "p2": { "hand": [FILLER] } }));
             let targets = pick::card(&s, TIMMY);
             s.play(GOLDEN, json!({ "targets": targets }));

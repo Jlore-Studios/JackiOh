@@ -86,7 +86,6 @@ mod tests {
 
         #[test]
         fn played_from_the_hand_it_does_the_same() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FREEZE, FILLER], "field": [TIMMY] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -103,7 +102,6 @@ mod tests {
 
         #[test]
         fn r1174000_yours_thaws_at_this_turns_end_the_enemys_at_the_end_of_its_controllers_next_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FREEZE, FILLER], "field": [TIMMY], "library": [FILLER, FILLER, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER, FILLER] },
@@ -133,7 +131,6 @@ mod tests {
 
         #[test]
         fn r1867009_a_unit_frozen_on_its_controllers_turn_loses_that_turns_attack() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FREEZE, FILLER], "field": [TIMMY, VANILLA] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -169,7 +166,6 @@ mod tests {
 
         #[test]
         fn played_from_the_hand_it_freezes_only_the_enemys_units() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": FREEZE, "radiant": true }, FILLER], "field": [TIMMY] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },

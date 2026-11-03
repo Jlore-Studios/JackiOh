@@ -29,7 +29,7 @@ use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions
 
 use super::fixtures::combat::stacker;
 use super::fixtures::harness::{
-    Bench, act, act_result, both, in_hand, live, live_mut, new_game, put as put_with, set_library, slot,
+    Bench, act, act_result, both, ids, in_hand, live, live_mut, new_game, put as put_with, set_library, slot,
     spread,
 };
 
@@ -1147,10 +1147,6 @@ fn attackers_declared(events: &[GameEvent]) -> Vec<String> {
             _ => None,
         })
         .collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {

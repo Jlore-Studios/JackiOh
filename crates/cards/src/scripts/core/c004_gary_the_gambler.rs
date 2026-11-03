@@ -49,6 +49,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// The Cry's buff as `(attack, health)`, read off the live instance (never off a captured one).
     fn gains(s: &Scenario, card: &str) -> (i32, i32) {
         let gary = s.card(card);
@@ -69,7 +71,6 @@ mod tests {
 
         #[test]
         fn flips_5_coins_1_attack_per_heads_and_1_max_health_per_tails_so_the_two_gains_total_5() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "core-004-base", "p1": { "hand": ["core-004"] } }));
             s.play("core-004", json!({}));
 
@@ -82,7 +83,6 @@ mod tests {
 
         #[test]
         fn a_fixed_seed_gives_fixed_stats() {
-            crate::register_all();
             let mut first = scenario(json!({ "seed": "core-004-fixed", "p1": { "hand": ["core-004"] } }));
             first.play("core-004", json!({}));
             let mut second = scenario(json!({ "seed": "core-004-fixed", "p1": { "hand": ["core-004"] } }));
@@ -93,7 +93,6 @@ mod tests {
 
         #[test]
         fn radiant_a_fixed_seed_gives_fixed_stats_10_coins_at_exactly_1_a_side() {
-            crate::register_all();
             let mut first = scenario(json!({
                 "seed": "core-004-radiant-fixed",
                 "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
@@ -115,7 +114,6 @@ mod tests {
 
         #[test]
         fn radiant_flips_10_coins_at_1_a_side_so_the_two_gains_total_10() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-004-radiant",
                 "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
@@ -312,7 +310,6 @@ mod tests {
         /// marker of its Cry (R2783000).
         #[test]
         fn r2652001_the_reports_take_no_number_from_the_trigger_loop() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "gary-rolled-seq", "p1": { "hand": ["core-004"] } }));
             let before = s.state().next_seq;
             s.play("core-004", json!({}));
@@ -347,7 +344,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_flips_6_coins_and_a_degrade_4() {
             for (upgrade, coins) in [(true, 6), (false, 4)] {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": "core-004-tuned", "p1": { "hand": ["core-004"] } }));
                 let moved = if upgrade {
                     crate::upgrade_number(&mut s, "core-004", "coins")
@@ -363,7 +359,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_makes_heads_worth_2_attack_and_tails_2_health_and_a_radiant_degrade_flips_9() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "core-004-tuned", "p1": { "hand": ["core-004"] } }));
             assert_eq!(crate::upgrade_number(&mut s, "core-004", "perHeads"), 2);
             assert_eq!(crate::upgrade_number(&mut s, "core-004", "perTails"), 2);

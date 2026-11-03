@@ -89,6 +89,8 @@ pub fn script_v0_5_9f() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -126,7 +128,6 @@ mod tests {
 
             #[test]
             fn r70_cry_casts_a_generated_ancient_acquisition_free_and_counted_as_played_returning_2_at_random_r87_it_then_lands_in_your_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FELINOR, FILLER], "graveyard": [LUNAR, GARY, VANILLA] },
                     "p2": { "hand": [FILLER] },
@@ -157,7 +158,6 @@ mod tests {
 
             #[test]
             fn cry_with_an_empty_graveyard_the_cast_asks_nothing_and_still_lands_in_your_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FELINOR, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(FELINOR, json!({}));
                 assert!(s.state().pending.is_none());
@@ -200,7 +200,6 @@ mod tests {
 
             #[test]
             fn a_field_traps_firing_counts_bread_and_butter_at_your_turns_end_returns_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [BREAD], "graveyard": [FELINOR] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
@@ -212,7 +211,6 @@ mod tests {
 
             #[test]
             fn r2657001_a_face_up_field_trap_firing_again_reveals_nothing_and_returns_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": BREAD, "faceUp": true }], "graveyard": [FELINOR] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
@@ -232,7 +230,6 @@ mod tests {
 
             #[test]
             fn a_trap_that_fires_as_it_replaces_counts_final_gambit_re_aiming_a_lethal_hit_returns_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
@@ -250,7 +247,6 @@ mod tests {
 
             #[test]
             fn your_opponents_trap_does_not_return_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VANILLA, FILLER], "graveyard": [FELINOR] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
@@ -262,7 +258,6 @@ mod tests {
 
             #[test]
             fn on_the_field_or_in_a_hand_it_does_nothing_when_your_trap_fires() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FELINOR, FILLER],
@@ -316,7 +311,6 @@ mod tests {
 
             #[test]
             fn r70_cry_casts_ancient_acquisition_on_its_base_face_2_random_returns_not_the_radiants_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FELINOR, "radiant": true }, FILLER], "graveyard": [LUNAR, GARY, VANILLA] },
                     "p2": { "hand": [FILLER] },
@@ -364,7 +358,6 @@ mod tests {
 
             #[test]
             fn your_opponents_trap_does_not_return_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VANILLA, FILLER], "graveyard": [{ "def": FELINOR, "radiant": true }] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
@@ -375,7 +368,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_makes_it_return_costing_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
