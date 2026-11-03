@@ -26070,10 +26070,6 @@
       "refused_until": "2026-11-02T02:50:00Z",
       "spent": [
         {
-          "at": "2026-10-25T14:59:11Z",
-          "minutes": 9.8
-        },
-        {
           "at": "2026-10-25T15:14:21Z",
           "minutes": 11.5
         },
@@ -26868,6 +26864,10 @@
         {
           "at": "2026-11-03T08:19:28Z",
           "minutes": 46.6
+        },
+        {
+          "at": "2026-11-03T08:57:06Z",
+          "minutes": 11.9
         }
       ],
       "tokens_spent": [
@@ -28151,14 +28151,21 @@
           "cost": 10.4189,
           "input": 297,
           "output": 100266
+        },
+        {
+          "at": "2026-11-03T08:57:06Z",
+          "cache": 4876002,
+          "cost": 2.4534,
+          "input": 75,
+          "output": 19008
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-03T09:20:00Z",
-          "utilization": 0.88
+          "utilization": 0.89
         },
-        "observed_at": "2026-11-03T08:34:43Z",
+        "observed_at": "2026-11-03T08:57:06Z",
         "status": "allowed"
       }
     },
@@ -29672,7 +29679,11 @@
   "usage_spool": {
     "readings": [
       "2026-11-03T08:43:16Z,claude-3,refusal,call,41605100374,100,2026-11-03T09:00:00Z,,,rejected,,,2026-11-03T09:00:00Z",
-      "2026-11-03T08:41:46Z,claude-4,ping,before,41604972310,57,2026-11-03T09:10:00Z,,,allowed,50,,"
+      "2026-11-03T08:41:46Z,claude-4,ping,before,41604972310,57,2026-11-03T09:10:00Z,,,allowed,50,,",
+      "2026-11-03T08:24:37Z,claude-8,ping,before,41602861266,85,2026-11-03T09:20:00Z,,,allowed,100,,",
+      "2026-11-03T08:25:30Z,claude-8,stream,call,41602861266,87,2026-11-03T09:20:00Z,,,allowed,100,,",
+      "2026-11-03T08:26:30Z,claude-8,stream,call,41602861266,88,2026-11-03T09:20:00Z,,,allowed,100,,",
+      "2026-11-03T08:27:30Z,claude-8,stream,call,41602861266,89,2026-11-03T09:20:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-03T08:43:16Z,41605100374,claude-3,opus,build,2799,hard,interrupted,refusal,0.1,4,303,87840,0.2813,100,100,,,1654.6,claude-4,fresh,other,1",
