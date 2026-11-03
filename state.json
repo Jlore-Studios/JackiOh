@@ -13169,7 +13169,7 @@
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 2
+      "verdict_rounds": 4
     },
     "2882": {
       "action": "build",
