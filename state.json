@@ -13583,13 +13583,13 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-03T15:05:02Z",
-      "run_id": "41681009967",
+      "run_id": "pending:ec7e3ac1-1793726458",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
       "spot_check": true,
       "spot_check_n": 20,
-      "started_at": "2026-11-03T17:06:48Z",
+      "started_at": "2026-11-03T17:21:29Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15617,9 +15617,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T17:07:37Z",
+    "at": "2026-11-03T17:21:29Z",
     "url": "",
-    "what": "spot-check #2935 on claude-6"
+    "what": "spot-check #2904 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T16:52:10Z",
@@ -29149,9 +29149,9 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:ec7e3ac1-1793726458",
         "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
-        "started_at": "2026-11-03T17:06:48Z",
+        "started_at": "2026-11-03T17:21:29Z",
         "status": "queued",
         "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
         "tries": 2
