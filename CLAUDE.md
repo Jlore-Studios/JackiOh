@@ -73,10 +73,10 @@ trap backrow. This file binds every agent, not only Claude.
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
-    it is; `bot/go/internal/easy` holds the easy rule), **hard** for engine rules, the AI, design across
-    crates, a migration, or about 40 files or more. Torn between two, take the harder. The bot never changes
-    your label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner
-    rates it.
+    it is): **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or more,
+    **medium** for the rest. Torn between two, take the harder. The bot never changes your label, so a wrong
+    medium is planned, built and approved by a medium model: when you cannot judge it, leave it off and the
+    planner rates it.
 12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
@@ -86,6 +86,15 @@ trap backrow. This file binds every agent, not only Claude.
     or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its
     check of the running image, and the deploy jobs poll `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
     runs. That nothing in the tree calls it is no proof it is dead (#900).
+14. A Claude session outside the bots' harness (Claude Code on the web, the desktop app, a cloud session a
+    person started) that works an issue or pull request reads its handoffs before it starts and leaves one
+    before it stops: the item's `bot-journal` file (`<issue>.md`) and the handoff comments already on it
+    first; then, at the end of every turn that pushes or leaves the work unfinished, its own comment on
+    the issue (on the pull request when there is none), edited in place, marked
+    `<!-- jackioh-session:handoff -->`, saying what was asked, what was done, what is left, what was
+    tried and failed, and every check still red by name (rule 12). `.claude/skills/handoff/SKILL.md` says
+    how. The bots' runs are exempt: the harness journals them, and their next run reads these comments
+    (#2748 section 10).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 

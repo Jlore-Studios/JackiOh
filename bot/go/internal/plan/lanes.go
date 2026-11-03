@@ -14,6 +14,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 )
 
 // Lanes is the runs that hold work now: item number (0 for a suggestion survey) -> provider id.
@@ -26,7 +27,10 @@ import (
 // `machine_limit` the machine's slots. `limit` is a pool the bots share, first come first
 // served: `shared` is how many of its slots the other bots' runs hold now (`others_on_github`).
 // `filling` are the items whose run fills another subscription's lane (`Provider.fill_in`):
-// those hold no lane of their provider's own.
+// those hold no lane of their provider's own. `in_force` is how many lanes each subscription may
+// hold for a run that starts now (`Pool.LanesAt`, #2748: a Claude account's by the 5-hour cap in
+// force, `lanes_by_cap`); one it leaves out has its own `lanes`. A count that drops below the runs
+// a subscription holds stops none of them: it only starts nothing more until they end.
 //
 // The maps may be nil (the dataclass's empty defaults): every method only reads them, and
 // `with_run` makes new ones.
@@ -39,6 +43,30 @@ type Lanes struct {
 	Machine      map[string]bool // default: frozenset()
 	Shared       int             // default: 0
 	Filling      map[int]bool    // default: field(default_factory=set)
+	InForce      map[string]int  // default: field(default_factory=dict)
+	// Reserved are the items whose lane is reserved for their own review run (#2748,
+	// `queue.OwnReviewReserved`): held by no run yet, but by the subscription it is for.
+	Reserved map[int]bool // default: field(default_factory=set)
+}
+
+// LanesInForce is how many lanes each subscription may hold for a run that starts now, by id
+// (`Pool.LanesAt`): what `Lanes.in_force` holds.
+func LanesInForce(ctx *hctx.Context, state *pyjson.Object) map[string]int {
+	pool := ctx.Cfg.Pool
+	found := map[string]int{}
+	for _, p := range pool.Ordered() {
+		found[p.ID] = pool.LanesAt(p, state, ctx.Now(), ctx.Cfg.Timezone)
+	}
+	return found
+}
+
+// LanesOf is how many lanes `provider` may hold for a run that starts now: `in_force`'s, or its
+// own `lanes`.
+func (x *Lanes) LanesOf(provider *providers.Provider) int {
+	if n, ok := x.InForce[provider.ID]; ok {
+		return n
+	}
+	return provider.Lanes
 }
 
 // Busy is the set of providers holding a run.
@@ -113,9 +141,9 @@ func (x *Lanes) Used(provider *providers.Provider) int {
 	return held
 }
 
-// Full is: it holds as many runs as its `lanes` (`used`).
+// Full is: it holds as many runs as the lanes in force for it (`lanes_of`), or more (`used`).
 func (x *Lanes) Full(provider *providers.Provider) bool {
-	return x.Used(provider) >= provider.Lanes
+	return x.Used(provider) >= x.LanesOf(provider)
 }
 
 // OnMachine is how many of the held runs are on the bot's machine.
@@ -163,9 +191,10 @@ func (x *Lanes) RoomFor(providerID string) bool {
 	return x.Free() > 0
 }
 
-// AnyRoom is plan.Lanes.any_room.
+// AnyRoom is plan.Lanes.any_room: a lane is free somewhere, or one is reserved for an own review
+// run that has not started (#2748), which that run takes.
 func (x *Lanes) AnyRoom() bool {
-	return x.Free() > 0 || x.MachineFree() > 0 || x.PlanFree() > 0
+	return x.Free() > 0 || x.MachineFree() > 0 || x.PlanFree() > 0 || len(x.Reserved) > 0
 }
 
 // PlanFree is plan.Lanes.plan_free.
@@ -195,7 +224,48 @@ func (x *Lanes) WithRun(number int, providerID string, action string, filling bo
 		fills[number] = true
 	}
 	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
-		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills}
+		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
+		InForce: x.InForce, Reserved: without(x.Reserved, number)}
+}
+
+// without is `set - {number}`.
+func without(set map[int]bool, number int) map[int]bool {
+	out := make(map[int]bool, len(set))
+	for n := range set {
+		if n != number {
+			out[n] = true
+		}
+	}
+	return out
+}
+
+// Without is these lanes with item `number`'s run, or the lane reserved for it, let go: what an own
+// review run (#2748) finds when it takes up the lane its build reserved for it.
+func (x *Lanes) Without(number int) *Lanes {
+	if _, held := x.Held[number]; !held {
+		return x
+	}
+	held := make(map[int]string, len(x.Held))
+	for n, p := range x.Held {
+		if n != number {
+			held[n] = p
+		}
+	}
+	planning := make(map[int]bool, len(x.Planning))
+	for n := range x.Planning {
+		if n != number {
+			planning[n] = true
+		}
+	}
+	fills := make(map[int]bool, len(x.Filling))
+	for n := range x.Filling {
+		if n != number {
+			fills[n] = true
+		}
+	}
+	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
+		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
+		InForce: x.InForce, Reserved: without(x.Reserved, number)}
 }
 
 // Describe is plan.Lanes.describe.
@@ -215,6 +285,9 @@ func (x *Lanes) Describe() string {
 		part := fmt.Sprintf("#%d with `%s`", n, p)
 		if x.Planning[n] {
 			part += " (planning)"
+		}
+		if x.Reserved[n] {
+			part += " (reserved for its own review)"
 		}
 		parts = append(parts, part)
 	}
@@ -259,14 +332,31 @@ func OthersOnGithub(ctx *hctx.Context) int {
 	return count
 }
 
-// WorkingThreads is every thread labelled `bot:working`, closed ones too: a run goes on after
-// someone closes its issue, and holds its lane until it ends (deliver then drops its work).
+// WorkingThreads is every thread a run holds, closed ones too: a run goes on after someone
+// closes its issue, and holds its lane until it ends (deliver then drops its work). That is every
+// thread with one of `config.HeldLabels`: a live label (`bot:building` and the rest, #2748), or
+// `bot:working` from a claim made before them. GitHub lists by one label at a time (a list of
+// several is all of them), so each is listed, and a thread with two is one thread.
 func WorkingThreads(ctx *hctx.Context) []*pyjson.Object {
-	return ctx.GH.ListIssues(config.LabelWorking, "all", 300, "")
+	seen := map[int]bool{}
+	var found []*pyjson.Object
+	for _, label := range config.HeldLabels {
+		for _, thread := range ctx.GH.ListIssues(label, "all", 300, "") {
+			number := py.MustInt(thread.Get("number"))
+			if !seen[number] {
+				seen[number] = true
+				found = append(found, thread)
+			}
+		}
+	}
+	return found
 }
 
 // ReadLanes is the lanes held by runs that are still going. A run that ended without
-// delivering holds nothing: housekeeping requeues its item.
+// delivering holds nothing: housekeeping requeues its item. A pull request whose build handed its
+// lane to its own review run (#2748, `queue.OwnReviewReserved`) holds that lane for the
+// subscription it is reserved for until the reservation runs out, so no other item takes it in
+// between; the own review run itself takes it (`Lanes.Without`).
 func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	pool := ctx.Cfg.Pool
 	machine := map[string]bool{}
@@ -277,11 +367,19 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	}
 	lanes := &Lanes{Limit: pool.MaxParallel, Held: map[int]string{}, Planning: map[int]bool{},
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
-		Filling: map[int]bool{}}
+		Filling: map[int]bool{}, InForce: LanesInForce(ctx, state), Reserved: map[int]bool{}}
 	lanes.Shared = OthersOnGithub(ctx)
 	for _, thread := range WorkingThreads(ctx) {
 		number := py.MustInt(thread.Get("number"))
 		record := recordOf(state, strconv.Itoa(number))
+		if queue.OwnReviewWaits(record) {
+			// Waiting for its own review run: no run holds it, but its lane may be reserved.
+			if eqStr(thread.Get("state"), "open") && queue.OwnReviewReserved(record, ctx.Now()) {
+				lanes.Held[number] = queue.OwnReviewOf(record).Str("provider")
+				lanes.Reserved[number] = true
+			}
+			continue
+		}
 		if RunAlive(ctx, record.Get("run_id")) {
 			lanes.Held[number] = py.OrStr(record.Get("provider"), providers.LegacyProvider)
 			if eqStr(record.Get("action"), "plan") {
@@ -343,7 +441,7 @@ func FillInFree(ctx *hctx.Context, state *pyjson.Object, provider *providers.Pro
 	kept := 0
 	for _, p := range owners {
 		if providers.Availability(p, state, ctx.Now(), cfg.Timezone, cfg.Secrets, false, true) == "" {
-			kept += max(0, p.Lanes-lanes.AllBy(p.ID))
+			kept += max(0, lanes.LanesOf(p)-lanes.AllBy(p.ID))
 		}
 	}
 	return sumLanes(owners)-held > kept

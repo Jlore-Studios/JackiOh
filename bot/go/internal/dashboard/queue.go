@@ -18,22 +18,19 @@ import (
 )
 
 // DifficultyLegend is difficulty_legend: what each difficulty may be built by, in one line above
-// the queue.
+// the queue (#2748: medium and hard).
 func DifficultyLegend(pool *providers.Pool) string {
 	names := map[string]string{}
-	for _, tier := range []string{"weak", "medium", "strong"} {
+	for _, tier := range []string{"medium", "strong"} {
 		names[tier] = waiting.TierNames(pool, tier)
 	}
-	weak := ""
-	if names["weak"] != "none" {
-		weak = ", the weak ones first (" + names["weak"] + ")"
-	}
-	return "<sub>🟢 **easy**: any model" + weak + " · 🟡 **medium**, and ⚪ **unrated** until its " +
-		"planner rates it: " +
+	return "<sub>🟡 **medium**, and ⚪ **unrated** until its planner rates it: " +
 		"a medium or strong model (" + names["medium"] + ", then " + names["strong"] + ") · 🔴 **hard**: " +
 		"a strong model only (" + names["strong"] + "). A build needs a plan first, by a medium " +
-		"or strong model (strong for a hard one); a review run of a medium or hard change " +
-		"needs a strong model; a revision that answers a strong audit stays strong.</sub>"
+		"model first (strong for a hard one); the run's own reviewer's approval at its tier ships a " +
+		"change, and one it did not approve goes to a review run, on another subscription than the " +
+		"builder's first, a medium model first for a medium change and a strong one for a hard one; a " +
+		"revision that answers a strong audit stays strong.</sub>"
 }
 
 // Step is STEP: what a run does to a queued item, as the queue says it.

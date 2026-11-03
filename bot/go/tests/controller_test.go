@@ -125,7 +125,7 @@ func TestController_TheLoopClaimsWritesThePlanAndStartsTheRunWithIt(t *testing.T
 	assertEqual(t, []any{written.Get("number"), written.Get("provider")}, []any{3, "muse"})
 	record := ctx.Store.Load().Obj("items").Obj("3")
 	assertEqual(t, []any{record.Get("run_id"), record.Get("provider")}, []any{"5002", "muse"})
-	assertIn(t, config.LabelWorking, c.LabelNames(3))
+	assertIn(t, config.LabelBuilding, c.LabelNames(3)) // its run's live label (#2748)
 	// The lock is the loop's only while it plans.
 	assertEqual(t, ctx.Store.Load().Get("planning"), nil)
 }
@@ -420,7 +420,7 @@ func TestController_APlanJobWaitsForTheLockThenPlansNothing(t *testing.T) {
 	cli.CmdPlan(ctx.Cfg, args)
 	restore()
 	assertIn(t, "the status loop is planning", out.String())
-	assertNotIn(t, config.LabelWorking, c.LabelNames(3))
+	assertFalse(t, config.IsLive(c.LabelNames(3)), c.LabelNames(3))
 }
 
 func TestController_DeliveryLeavesTheNextRunToTheLoop(t *testing.T) {
@@ -535,7 +535,7 @@ func TestController_TheLoopDeliversARunItStartedWithinATickOfItsWorkEnding(t *te
 	notes := controller.Deliver(ctx, scratch)
 	assertEqual(t, notes, []string{fmt.Sprintf("delivered build #12 on claude-1 (run %s): approved", runID)})
 	// The same delivery the run's own deliver job made: the branch and an auto-merging pull
-	// request.
+	// request (2026-11-02, #2748: claude-1's own run's approval ships it).
 	result := switchResult(t, filepath.Join(h.root, "out"))
 	assertEqual(t, h.originSHA("bot/issue-12"), result.Get("head"))
 	pulls := h.gh.ListPulls("open", "bot/issue-12", 200)
@@ -545,6 +545,7 @@ func TestController_TheLoopDeliversARunItStartedWithinATickOfItsWorkEnding(t *te
 	assertTrue(t, merging, pull.Get("node_id"))
 	number, _ := pyjson.AsInt(pull.Get("number"))
 	assertIn(t, config.LabelPR, h.gh.LabelNames(number))
+	assertIn(t, config.LabelMerging, h.gh.LabelNames(number))
 	record := ctx.Store.Load().Obj(plan.Deliveries).Obj(runID)
 	assertEqual(t, []any{record.Get("done"), record.Get("tries"), record.Get("status")}, []any{true, 1, "approved"})
 	// Delivered once only; the scratch clone is gone; the run is over.

@@ -18,9 +18,10 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// Names = ("system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split", "reconcile")
+// Names = ("system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split", "reconcile"),
+// and `spotcheck`, the after-merge spot-check's review (#2748).
 var Names = []string{"system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split",
-	"reconcile"}
+	"reconcile", "spotcheck"}
 
 // Template is Python's string.Template: `$$` is a `$`, `$name` and `${name}` are placeholders
 // (an ASCII identifier: Python's pattern is `(?a:[_a-z][_a-z0-9]*)` under re.IGNORECASE), and

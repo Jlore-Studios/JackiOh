@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/commands"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/dashboard"
@@ -25,12 +26,14 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/journal"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sweep"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/usage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/work"
 )
 
@@ -157,7 +160,18 @@ func TestSquishyCases_ItsLabelsAndNoSuggestions(t *testing.T) {
 		"squishy:fullsend", config.LabelTree, "human"} {
 		assertIn(t, name, labels)
 	}
-	assertIn(t, "Squishy", description("squishy:working"))
+	// Squishy mirrors the night bot's live labels and its retired `working` (#2748).
+	for _, name := range []string{"squishy:planning", "squishy:splitting", "squishy:building",
+		"squishy:revising", "squishy:fixing-ci", "squishy:reviewing", "squishy:reconciling",
+		"squishy:merging", "squishy:waiting"} {
+		assertIn(t, name, labels)
+		assertIn(t, "Squishy", description(name))
+	}
+	assertEqual(t, config.LiveLabels, []string{"squishy:planning", "squishy:splitting", "squishy:building",
+		"squishy:revising", "squishy:fixing-ci", "squishy:reviewing", "squishy:reconciling"})
+	assertNotIn(t, "squishy:working", labels)
+	assertIn(t, "squishy:working", config.RetiredLabels)
+	assertTrue(t, config.IsLive(setOf("squishy:working")))
 	assertIn(t, "Queued for Squishy to split into parts", description("squishy:fullsend"))
 	assertIn(t, "whose sub-issues Squishy made", description(config.LabelTree))
 	assertIn(t, "that the night bot builds", description("squishy:split-bot"))
@@ -188,6 +202,38 @@ func TestSquishyCases_ItsCommands(t *testing.T) {
 	assertNotIn(t, "`approve`", text) // it makes no suggestions to vote on (#796)
 	assertIn(t, "I do not know `approve`", commands.HelpText(bot, "approve"))
 	assertIn(t, "`/squishy help`", commands.Pointer_(bot))
+}
+
+// Squishy has `/squishy handoff` too, and holds nothing for an owner (`hold_minutes` 0, #2748):
+// its one account is all it has, so an item of its waits in the queue as it always did.
+func TestSquishyCases_ItsHandoffAndNoHold(t *testing.T) {
+	squishyCasesModule(t)
+	bot := "squishy-squooby"
+	read := [][2]string{}
+	for _, c := range commands.Parse("/squishy handoff\n/squishy handoff human\n@squishy-squooby handoff hard", bot) {
+		read = append(read, [2]string{c.Verb, c.Args})
+	}
+	assertEqual(t, read, [][2]string{{"handoff", ""}, {"handoff", "human"}, {"handoff", "hard"}})
+	assertIn(t, "| `handoff [medium\\|hard\\|human]` |", commands.HelpText(bot, ""))
+	assertIn(t, "`/squishy handoff hard`", commands.HelpText(bot, "handoff"))
+	assertIn(t, "(`squishy:waiting`)", commands.HelpText(bot, "handoff"))
+	w := newSquishyCasesWorld(t)
+	assertEqual(t, w.cfg.HoldMinutes, 0)
+	assertFalse(t, w.cfg.Holds())
+	// Its account is refused until twenty minutes on: no hold, no `squishy:waiting`, no comment.
+	w.gh.AddIssue(5, fakes.Issue{Labels: []string{config.LabelBuild}})
+	flowUpdateItem(w.ctx, 5, pyjson.New("owner", "claude-squishy"))
+	flowUpdate(w.ctx, func(s *pyjson.Object) {
+		providers.Record(s, "claude-squishy").Set("refused_until", clock.ISO(testsupport.Night.Add(20*time.Minute)))
+	})
+	planned := plan.Make(w.ctx, false, nil, "auto", nil)
+	assertEqual(t, planned.Get("action"), "none")
+	assertNotIn(t, "waiting for their owners", planned.Str("reason"))
+	assertNotIn(t, config.LabelWaiting, w.gh.LabelNames(5))
+	assertEqual(t, len(w.gh.BotComments(5)), 0)
+	// The handoff answers in Squishy's own words.
+	assertIn(t, "the next subscription that may build it", w.ask(5, "/squishy handoff")[0])
+	assertEqual(t, w.ctx.Store.Load().Obj("items").Obj("5").Get("owner"), "")
 }
 
 // ------------------------------------------------------------------ QueueCases
@@ -295,6 +341,110 @@ func TestSquishyCases_TheBuilderIsToldToRunFullsendAndItsChangeShipsLikeAnyBuild
 	}
 }
 
+// Squishy's pool holds one subscription, and an item's own lane's approval ships it (2026-11-02,
+// #2748), so its own reviewer's approval ships what it built, as before, and auto-merge turns on.
+// The head's votes name its builder's subscription, as the night bot's do.
+func TestSquishyCases_ItsOwnApprovalShipsWithNoOtherSubscription(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	build := func(request *runner.RunRequest) *runner.RunResult {
+		writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+		return runner.NewRunResult(true, squishyCasesDone)
+	}
+	planned, result := world.run(workFake(map[string]runner.Handler{"build": build,
+		"plan": func(r *runner.RunRequest) *runner.RunResult {
+			return runner.NewRunResult(true, "1. Edit src/game.txt.")
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"claude-squishy", "approved"})
+	pull := world.gh.ListPulls("open", "squishy/issue-12", 200)[0]
+	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+	assertNotIn(t, config.LabelCross, world.gh.LabelNames(pull.Int("number")))
+	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", fmt.Sprint(pull.Int("number")), "votes", "built_by"),
+		"claude-squishy")
+	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", fmt.Sprint(pull.Int("number")), "cleared", "built_by"),
+		"claude-squishy")
+}
+
+// Squishy keeps its one-run flow (`own_review_run: false`, #2748): its build reviews itself in
+// the same run and opens its pull request ready, with no own review run after it.
+func TestSquishyCases_ItKeepsItsOneRunFlow(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertFalse(t, world.cfg.OwnReviewRun)
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	r := workFake(map[string]runner.Handler{
+		"build": func(request *runner.RunRequest) *runner.RunResult {
+			writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+			return runner.NewRunResult(true, squishyCasesDone)
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }})
+	planned, result := world.run(r)
+	assertFalse(t, planned.Has("own_review_next"))
+	assertEqual(t, []any{result.Get("status"), result.Has("review_next")}, []any{"approved", false})
+	assertIn(t, "review", workRoles(r))
+	pull := world.gh.ListPulls("open", "squishy/issue-12", 200)[0]
+	assertEqual(t, pull.Get("draft"), false)
+	assertNotIn(t, "squishy:reviewing", world.gh.LabelNames(pull.Int("number")))
+	assertEqual(t, len(queue.OwnReviewsWaiting(world.ctx.Store.Load())), 0)
+	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+}
+
+// Squishy keeps no usage history (#2749): its config leaves `usage_history` off and its identity
+// names no usage branch, so its runs keep no readings, its claims note nothing for one, its
+// deliveries spool nothing, and its loop clones and pushes nothing.
+func TestSquishyCases_ItKeepsNoUsageHistory(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertEqual(t, config.Identity.UsageBranch, "")
+	assertFalse(t, world.cfg.UsageHistory)
+	assertFalse(t, world.cfg.RecordsUsage())
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	r := workFake(map[string]runner.Handler{
+		"build": func(request *runner.RunRequest) *runner.RunResult {
+			assertTrue(t, request.UsageSeen == nil, "no watch for the history")
+			writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+			result := runner.NewRunResult(true, squishyCasesDone)
+			result.Usage = pyjson.New("five_hour", pyjson.New("utilization", 0.3, "resets_at", nil))
+			return result
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }})
+	planned, result := world.run(r)
+	assertEqual(t, result.Get("status"), "approved")
+	assertFalse(t, result.Has(usage.ResultKey))
+	assertFalse(t, planned.Has(plan.UsageFacts))
+	assertFalse(t, world.ctx.Store.Load().Has(usage.SpoolKey))
+	scratch := filepath.Join(world.root, "scratch")
+	defer func(was func() string) { usage.Scratch = was }(usage.Scratch)
+	usage.Scratch = func() string { return scratch }
+	recorder := usage.NewRecorder(func(line string) { t.Errorf("Squishy's loop logged %q", line) })
+	recorder.Tick(world.ctx, usage.TickFacts{State: world.ctx.Store.Load(), Live: pyjson.New()})
+	recorder.Close(world.ctx)
+	assertEqual(t, recorder.Root(), "")
+	assertFalse(t, exists(scratch))
+}
+
+// Squishy draws no usage issue (#2749): it keeps no history, so a flush never comes to draw one, and
+// the drawing itself opens nothing.
+func TestSquishyCases_ItDrawsNoUsageIssue(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	drawn := 0
+	defer func(was func(*hctx.Context, string) string) { usage.Draw = was }(usage.Draw)
+	usage.Draw = func(ctx *hctx.Context, root string) string { drawn++; return usage.DrawIssue(ctx, root) }
+	recorder := usage.NewRecorder(func(line string) { t.Errorf("Squishy's loop logged %q", line) })
+	recorder.Tick(world.ctx, usage.TickFacts{State: world.ctx.Store.Load(), Live: pyjson.New()})
+	recorder.Flush(world.ctx)
+	recorder.Close(world.ctx)
+	assertEqual(t, drawn, 0)
+	assertEqual(t, usage.DrawIssue(world.ctx, t.TempDir()), "")
+	for _, thread := range world.gh.Threads.All() {
+		assertNotEqual(t, thread.Get("title"), usage.IssueTitle)
+	}
+	assertFalse(t, world.ctx.Store.Load().Has(dashboard.UsageIssueKey))
+}
+
 // ------------------------------------------------------------------ SplitCases
 
 // squishyCasesSplit is SplitCases.split(mode, tree=TREE): a big issue in `mode`, and the planner's
@@ -324,7 +474,8 @@ func TestSquishyCases_SplitOpensLinkedSubIssuesSquishyBuilds(t *testing.T) {
 	// Its type labels as far as the repository has them, never a reserved one, then the parent's
 	// priority, its difficulty and Squishy's queue label.
 	assertEqual(t, gh.LabelNames(engine), setOf("patch", "difficulty:hard", "priority:high", "squishy:build"))
-	assertEqual(t, gh.LabelNames(client), setOf("patch", "difficulty:easy", "priority:high", "squishy:build"))
+	// The split rated it `easy`, which is retired (#2748): it opens as medium.
+	assertEqual(t, gh.LabelNames(client), setOf("patch", "difficulty:medium", "priority:high", "squishy:build"))
 	body := gh.GetIssue(client).Str("body")
 	assertIn(t, fmt.Sprintf("Blocked by #%d.", engine), body)
 	assertIn(t, "Part of #40, split by Squishy", body)
@@ -425,6 +576,39 @@ func TestSquishyCases_FullsendLandsOnSquishysBranch(t *testing.T) {
 	assertEqual(t, fakes.Git(world.origin, "show", "refs/heads/"+onto+":src/engine.ts"), "rule")
 	assertEqual(t, world.gh.GetIssue(41).Get("state"), "closed")
 	assertEqual(t, world.gh.ListPulls("all", "", 200), []*pyjson.Object{})
+}
+
+// Squishy adopts no queued parent by itself and its reconcile sends no part back (#2748:
+// `fullsend_adopt` false, `fullsend_send_backs` 0): its fullsend tree's reconcile is told to fix
+// every part itself, and a parent queued with open sub-issues is built as it was asked.
+func TestSquishyCases_ItAdoptsNoQueuedParentAndSendsNoPartBack(t *testing.T) {
+	squishyCasesModule(t)
+	world, _ := squishyCasesSplit(t, "fullsend")
+	assertEqual(t, []any{world.cfg.FullsendAdopt, world.cfg.FullsendSendBacks, world.cfg.SendsBack()},
+		[]any{false, 0, false})
+	for _, part := range []int{41, 42} {
+		world.gh.UpdateIssue(part, pyjson.New("state", "closed"))
+	}
+	assertEqual(t, sweep.Trees(world.ctx, testsupport.Night), []string{"#40: its parts have all closed; queued its reconcile"})
+	prompts := []string{}
+	build := func(request *runner.RunRequest) *runner.RunResult {
+		prompts = append(prompts, request.Prompt)
+		writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "all of it\n")
+		return runner.NewRunResult(true, squishyCasesDone)
+	}
+	planned, _ := world.run(workFake(map[string]runner.Handler{"build": build,
+		"review": func(*runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
+	assertEqual(t, []any{planned.Get("number"), planned.Get("send_backs"), planned.Get("send_back_cap")},
+		[]any{40, []any{}, 0})
+	assertIn(t, "No part can be sent back now (this bot sends no part back): fix every part yourself", prompts[0])
+	world.gh.AddIssue(50, fakes.Issue{Title: "A tracker"})
+	world.gh.AddIssue(51)
+	world.gh.AddSubIssue(50, world.gh.GetIssue(51).Int("id"))
+	reply := world.ask(50, "/squishy build")[0]
+	assertIn(t, "Queued #50", reply)
+	assertNotIn(t, "adopted", reply)
+	assertEqual(t, world.gh.LabelNames(50), setOf("squishy:build"))
+	assertNotIn(t, "onto", world.ctx.Store.Load().Obj("items").Obj("51"))
 }
 
 func TestSquishyCases_TheNightBotsFullsendIsLeftAlone(t *testing.T) {
@@ -529,4 +713,18 @@ func TestSquishyCases_ItsSectionOfTheStatisticsIssue(t *testing.T) {
 	assertIn(t, "| Trees closed, their end state holding | 1 | 1 | 1 | 1 |", text)
 	assertIn(t, "`squishy-run.yml` workflow runs", text)
 	assertIn(t, "**Its pull requests merged** (0)", text)
+}
+
+// Squishy spot-checks nothing after a merge (`spot_check_every`: 0, #2748): its medium merges are
+// not even counted.
+func TestSquishyCases_ItSpotChecksNoMergedChange(t *testing.T) {
+	squishyCasesModule(t)
+	w := newSquishyCasesWorld(t)
+	assertEqual(t, w.cfg.SpotCheckEvery, 0)
+	assertFalse(t, w.cfg.SpotChecks())
+	for n := 1; n <= 5; n++ {
+		spotCheckClose(w.gh, w.ctx, n, true, "difficulty:medium")
+	}
+	count, prs := spotCheckCount(t, w.ctx)
+	assertEqual(t, []any{count, prs}, []any{0, []int{}})
 }

@@ -48,8 +48,9 @@ func lanesWhere(pool *providers.Pool, provider *providers.Provider) string {
 	return strings.Join(places, " and ")
 }
 
-// LaneRows is lane_rows: each subscription's lanes, in `LANE_ORDER`: how many it has, how many of
-// them its runs hold now (`plan.Lanes.used`, what the planner holds to them), whether it is switched
+// LaneRows is lane_rows: each subscription's lanes, in `LANE_ORDER`: how many it has now (the
+// lanes in force for a run that starts now, `plan.Lanes.lanes_of`: a Claude account's by its
+// 5-hour cap, #2748), how many of them its runs hold now (`plan.Lanes.used`, what the planner holds to them), whether it is switched
 // off or may start a build or a plan now (`waiting.held_by`: its usage and hours; nothing while the
 // bot is `halted`), its secret and where it runs. A fill-in's runs (`FillIn`) count in the lanes
 // they fill, the first of its `for` first; a planning run the planning lane holds counts beside its
@@ -79,7 +80,7 @@ func LaneRows(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 		}
 		rows.Set(p.ID, pyjson.New("id", p.ID, "bot", "", "claude", p.Family == "claude",
 			"where", where, "github", github, "secret", secret, "startable", startable,
-			"lanes", p.Lanes, "used", used, "off", off, "planning", planning,
+			"lanes", lanes.LanesOf(p), "used", used, "off", off, "planning", planning,
 			"runs", lanes.AllBy(p.ID), "filling", lanes.FillingBy(p.ID),
 			"fills", pyjson.ListOf(pool.FilledBy(p)), "filled", 0, "filler", ""))
 	}
@@ -449,9 +450,17 @@ func LaneLimits(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 			"to an account with room while others are capped or outside their hours.", onGitHub,
 			there, pool.MaxParallel)
 	}
+	each := "- **Each account:** its `lanes` in its bot's `providers.json`, 1 or more; the code sets no top."
+	if rule := pool.LanesByCap; rule != nil {
+		each = fmt.Sprintf("- **Each account:** on `%s`, as many as the 5-hour cap in force when a run "+
+			"starts allows (`lanes_by_cap` in `providers.json`, #2748): up to %d above %s, %d at %s or "+
+			"under, %d with no 5-hour cap or in a session's last hour; a run already going finishes "+
+			"when the count drops. Any other has its `lanes` in its bot's `providers.json`, 1 or more; "+
+			"the code sets no top.", rule.CLI, rule.High, py.Percent(rule.Line, 0), rule.Low,
+			py.Percent(rule.Line, 0), rule.High)
+	}
 	limits := []string{
-		"- **Each account:** its `lanes` in its bot's `providers.json`, 1 or more; the code sets " +
-			"no top. Each lane is a run on a GitHub runner of its own, and its runs share the " +
+		each + " Each lane is a run on a GitHub runner of its own, and its runs share the " +
 			"account's usage: each reads it before it starts and watches it while it works, so " +
 			"together they pass its cap by at most one reading each.",
 		accounts, atOnce}

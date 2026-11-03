@@ -57,8 +57,8 @@ func TestPlannersOrder(t *testing.T) {
 		return x
 	}
 	order := []*queue.Candidate{
-		c(1, "build", "easy", false, 2), c(2, "build", "hard", false, 2), c(3, "revise", "medium", false, 0),
-		c(4, "review", "medium", false, 3), c(5, "build", "medium", true, 3), c(6, "build", "easy", false, 1),
+		c(1, "build", "medium", false, 2), c(2, "build", "hard", false, 2), c(3, "revise", "medium", false, 0),
+		c(4, "review", "medium", false, 3), c(5, "build", "medium", true, 3), c(6, "build", "medium", false, 1),
 	}
 	starts := pyjson.New("6", nil)
 	sort.SliceStable(order, func(i, j int) bool { return lessByPlanner(order[i], order[j], starts) })

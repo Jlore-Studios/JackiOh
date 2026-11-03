@@ -1,4 +1,4 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Address the review of #$number
 
 You are a fresh builder for issue #$number of `$repo`, on branch `$branch` (base `$base`). An
@@ -28,7 +28,8 @@ $gate_failures
    model too and can be wrong. A finding that does not hold is answered in your report with the
    evidence, not in code.
 2. For each finding that holds, make the change that answers it. Fix every red check this change
-   caused. Keep the task's scope: do not refactor what no finding names.
+   caused, honestly: never skip, ignore or disable a test, or weaken a check, to get green
+   (CLAUDE.md rule 12). Keep the task's scope: do not refactor what no finding names.
 3. Run what proves your fixes before you stop.
 
 $gate_list

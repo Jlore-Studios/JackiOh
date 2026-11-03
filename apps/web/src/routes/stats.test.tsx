@@ -1019,6 +1019,60 @@ describe("R377 public statistics match type", () => {
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
   });
 
+  it("R2895000 Show 95% ranges puts each enough-games card's Win rate and Adjusted ranges under them, in the table and the grid", async () => {
+    const user = userEvent.setup();
+    const ranges: Record<string, object> = {
+      "core-001": { winRateLow: 0.462, winRateHigh: 0.722, adjustedLow: 0.4452, adjustedHigh: 0.6228 },
+      // Below the floor: the server's ranges are not shown, as its rates are not.
+      "core-002": { winRateLow: 0.6, winRateHigh: 0.98, adjustedLow: 0.4, adjustedHigh: 0.59 },
+      // No adjusted range from the server: none shown beside its win rate's.
+      "core-003": { winRateLow: 0.33, winRateHigh: 0.67, adjustedLow: null, adjustedHigh: null },
+    };
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, ...ranges[card.id] }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const toggle = screen.getByTestId(statsTestid.rangesToggle);
+    // Off by default: no range and no note.
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
+    expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
+    expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(window.location.search).toContain("ranges=1");
+    const row = (id: string): HTMLElement => table.querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!;
+    const shown = (scope: HTMLElement, testid: string): (string | null)[] =>
+      within(scope).queryAllByTestId(testid).map((range) => range.textContent);
+    // Adjusted to a tenth of a point, Win rate to a whole point.
+    expect(shown(row("core-001"), statsTestid.adjustedRange)).toEqual(["44.5–62.3%"]);
+    expect(shown(row("core-001"), statsTestid.winRateRange)).toEqual(["46–72%"]);
+    expect(shown(row("core-002"), statsTestid.adjustedRange)).toEqual([]);
+    expect(shown(row("core-002"), statsTestid.winRateRange)).toEqual([]);
+    expect(shown(row("core-003"), statsTestid.adjustedRange)).toEqual([]);
+    expect(shown(row("core-003"), statsTestid.winRateRange)).toEqual(["33–67%"]);
+    expect(screen.getByTestId(statsTestid.rangesNote)).toBeInTheDocument();
+
+    // The grid shows them too.
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const item = (id: string): HTMLElement => grid.querySelector<HTMLElement>(`[data-card-id="${id}"]`)!;
+    expect(shown(item("core-001"), statsTestid.adjustedRange)).toEqual(["44.5–62.3%"]);
+    expect(shown(item("core-001"), statsTestid.winRateRange)).toEqual(["46–72%"]);
+    expect(shown(item("core-002"), statsTestid.winRateRange)).toEqual([]);
+
+    // Off again: gone.
+    await user.click(screen.getByTestId(statsTestid.rangesToggle));
+    expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
+    expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
+    expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
+  });
+
   it("R377 stats page starts with the mode the URL names", async () => {
     at("/stats?mode=bo3");
     render(<StatsRoute />);

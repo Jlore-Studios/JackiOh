@@ -9,6 +9,7 @@
 package config
 
 import (
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -69,6 +70,16 @@ var PromptsDir = filepath.Join(RepoRoot, "bot", "prompts")
 // Marker: every comment, issue and PR body the harness writes carries this, so the event workflow
 // can tell the bot's own words from a person's.
 var Marker = Identity.Marker
+
+// SessionHandoffMarker marks a handoff a Claude session outside the harness leaves on an issue or
+// pull request (CLAUDE.md rule 14, `.claude/skills/handoff/SKILL.md`, #2748 section 10). Both bots
+// read it, so it is not an identity's: a claim puts the newest trusted ones in the run's journal
+// (`journal.SessionHandoffs`), and no command, vote or mention is ever read from one
+// (`commands.CommandLines`), whatever words its notes quote.
+const SessionHandoffMarker = "<!-- jackioh-session:handoff -->"
+
+// IsSessionHandoff: `body` is a session's handoff (it carries SessionHandoffMarker).
+func IsSessionHandoff(body string) bool { return strings.Contains(body, SessionHandoffMarker) }
 
 // StateBranch is STATE_BRANCH = IDENTITY.state_branch.
 var StateBranch = Identity.StateBranch
@@ -139,19 +150,28 @@ func said(name, text string) string {
 // labelDef is one entry of a label table: name: (color, description).
 type labelDef struct{ name, color, text string }
 
-// own is _OWN: the bot's own labels, by what follows the prefix.
+// own is _OWN: the bot's own labels, by what follows the prefix. The live labels (`LiveRuns`)
+// follow `build`, where `working` was until #2748.
 var own = []labelDef{
 	{"build", "1d76db", "Queued for the night bot to build"},
-	{"working", "fbca04", "The night bot is working on this now"},
+	{"planning", "fbca04", "The night bot is planning this now"},
+	{"splitting", "fbca04", "The night bot is splitting this into parts now"},
+	{"building", "fbca04", "The night bot is building this now"},
+	{"revising", "fbca04", "The night bot is revising this pull request now"},
+	{"fixing-ci", "fbca04", "The night bot is fixing this pull request's red CI or merge queue build now"},
+	{"reviewing", "fbca04", "The night bot is reviewing this pull request now"},
+	{"reconciling", "fbca04", "The night bot is reconciling this tree's parts into one pull request now"},
 	{"pr-open", "0e8a16", "The night bot opened a PR for this"},
 	{"revise", "5319e7", "Queued for the night bot to revise this PR"},
 	{"blocked", "b60205", "The night bot needs a person before it can go on"},
 	{"pr", "c5def5", "A pull request the night bot opened"},
 	{"suggestion", "d4c5f9", "An improvement the night bot suggests; add bot:build to have it built"},
-	{"cross-review", "0052cc", "A night bot pull request waiting for its review: one strong model, or a second medium one"},
-	{"needs-plan", "1d76db", "Queued for the night bot: a strong model plans it first, into the description"},
+	{"cross-review", "0052cc", "A night bot pull request waiting for its final audit (a review run)"},
+	{"needs-plan", "1d76db", "Queued for the night bot: a model of its tier plans it first, into the description"},
 	{"planned", "0075ca", "It has a plan: in its description, which the builder starts from"},
 	{"stuck", "d93f0b", "It failed every review round it had: a comment says why, for a person to review"},
+	{"merging", "0e8a16", "Approved, with auto-merge on: the night bot's pull request is in CI or the merge queue"},
+	{"waiting", "c5def5", "The night bot holds it for the subscription that owns it until that can start again: see its comment"},
 }
 
 // modeLabelDefs is _MODE_LABELS: the labels of the modes (`identity.MODES`), for a bot that has
@@ -176,7 +196,6 @@ var shared = []labelDef{
 	{"human", "ededed", "People do this: the night bot never queues, plans, builds or labels it"},
 	{"human required", "e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"},
 	{"person merges", "1d76db", "The bot builds it, but a person reviews and merges its pull request"},
-	{"difficulty:easy", "c2e0c6", "Any model may build it, the weakest first"},
 	{"difficulty:medium", "fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"},
 	{"difficulty:hard", "b60205", "Only a strong model (Opus) plans, builds and reviews it"},
 	{"priority:high", "d73a4a", "The night bot picks this up first"},
@@ -192,6 +211,9 @@ var types = []labelDef{
 	{"major version", "0052cc", "A vX.Y.0 release that changes the game or the codebase broadly, and each of its parts"},
 	{"architecture", "0e8a16", "The repository, tooling, CI, deploys and agent setup"},
 	{"night bot", "5319e7", "The night bot and Squishy themselves: bot/, .harness/, .squishy/ and their workflows"},
+	// #2748: trackers, the production countdown and the status issues; the bot comments on them
+	// and rewrites its own, but never queues, plans, builds or splits them (`LabelTracking`).
+	{"tracking", "bfd4f2", "A tracker or status issue: the bots comment on it, but never queue, plan or build it"},
 }
 
 // TypeLabels is TYPE_LABELS = tuple(_TYPES).
@@ -281,8 +303,125 @@ func labels(id *identity.Identity, prefix string, modes []string) *pyjson.Object
 // LabelBuild is LABEL_BUILD.
 var LabelBuild = LabelPrefix + "build"
 
-// LabelWorking is LABEL_WORKING.
+// LiveRuns are the kinds of run that hold an item, each with its live label, the prefix and the
+// kind (`bot:building`, #2748): while a run holds an item it carries exactly one of them, put on
+// by the claim (`plan.Claim`, from `LiveRun`) and taken off as the run is delivered. They replace
+// `bot:working` (`LabelWorking`), which said only that some run held it.
+var LiveRuns = []string{"planning", "splitting", "building", "revising", "fixing-ci", "reviewing", "reconciling"}
+
+// LiveLabels are the live labels, in `LiveRuns`' order.
+var LiveLabels = liveLabels()
+
+func liveLabels() []string {
+	out := make([]string, len(LiveRuns))
+	for i, run := range LiveRuns {
+		out[i] = LabelPrefix + run
+	}
+	return out
+}
+
+// LabelPlanning is a planning run's live label (the Needs plan stage's run).
+var LabelPlanning = LabelPrefix + "planning"
+
+// LabelSplitting is a split run's: a fullsend parent's split into parts (#505), or one of
+// Squishy's splits.
+var LabelSplitting = LabelPrefix + "splitting"
+
+// LabelBuilding is a build's: a fresh build of an issue, a fullsend part's or a one-shot's.
+var LabelBuilding = LabelPrefix + "building"
+
+// LabelRevising is a revision's of a pull request, asked for by a person, a review or a conflict.
+var LabelRevising = LabelPrefix + "revising"
+
+// LabelFixingCI is a revision's whose cause is a red CI run or the merge queue (`source` "ci").
+var LabelFixingCI = LabelPrefix + "fixing-ci"
+
+// LabelReviewing is a review run's.
+var LabelReviewing = LabelPrefix + "reviewing"
+
+// LabelReconciling is a fullsend parent's build once its parts have landed: the reconcile.
+var LabelReconciling = LabelPrefix + "reconciling"
+
+// LabelWorking is LABEL_WORKING: what a run that held an item put on until #2748, retired
+// (`RetiredLabels`). A thread that still carries it, from a claim made before, is held as ever
+// (`HeldLabels`), and the sweep moves it to the live label of the run its record names before it
+// deletes the label (`sweep.Labels`).
 var LabelWorking = LabelPrefix + "working"
+
+// HeldLabels are the labels that say a run holds a thread: the live labels, and `bot:working`
+// while any thread still carries it.
+var HeldLabels = append(slices.Clone(LiveLabels), LabelWorking)
+
+// IsLive is: a run holds the thread: one of `HeldLabels` is on it. Every reader of "a run holds
+// it" asks this, never one label.
+func IsLive(names map[string]bool) bool {
+	for _, label := range HeldLabels {
+		if names[label] {
+			return true
+		}
+	}
+	return false
+}
+
+// LiveLabel is the live label of a kind of run (one of `LiveRuns`).
+func LiveLabel(run string) string {
+	if !slices.Contains(LiveRuns, run) {
+		panic(fmt.Errorf("ValueError: %s is not a live run (%s)", py.Repr(run), strings.Join(LiveRuns, ", ")))
+	}
+	return LabelPrefix + run
+}
+
+// LiveRun is the kind of run (`LiveRuns`) that holds an item: `kind` is the item's (`build`,
+// `revise`, `review`; "" reads as a build, or a revision when `pr`), `action` the run's (`plan` for
+// a planning run), `mode` how a build is made (`queue.ModeOf`: `fullsend`, Squishy's `split`,
+// …), `source` what queued a revision (`ci`, from a red CI run or the merge queue, is a CI fix),
+// and `reconcile` whether a fullsend build merges parts already split (its tree has them).
+func LiveRun(kind, action, mode, source string, reconcile, pr bool) string {
+	if kind == "" {
+		kind = "build"
+		if pr {
+			kind = "revise"
+		}
+	}
+	switch {
+	case kind == "review":
+		return "reviewing"
+	case kind == "revise" && source == "ci":
+		return "fixing-ci"
+	case kind == "revise":
+		return "revising"
+	case action == "plan":
+		return "planning"
+	case mode == "fullsend" && reconcile:
+		return "reconciling"
+	case mode == "fullsend" || strings.HasPrefix(mode, "split"):
+		return "splitting"
+	}
+	return "building"
+}
+
+// LabelMerging is a bot pull request whose auto-merge the bot turned on (#2748): approved, and in
+// CI or `main`'s merge queue. It comes off when auto-merge goes off (`queue.HoldMerge`: a
+// revision, a hold, a stop; a block), when the pull request merges or closes, and in the sweep
+// once nothing keeps it merging (`sweep.Merging`). A pull request a person merges (`ready for
+// merge`, `person merges`) never carries it.
+var LabelMerging = LabelPrefix + "merging"
+
+// LabelWaiting is an item held for the subscription that owns it (#2748, section 1): only its
+// owner's 5-hour session keeps that one from taking it, and it can start again within
+// `hold_minutes`, so it waits for that owner, not for another subscription. The planner and the
+// sweep put it on and take it off (`plan.SyncHolds`, through `queue.SetWaiting`), the planner
+// gives a held item to nobody else (`plan.Owning`, `plan.Pairs`), and it comes off with the queue
+// label when the item leaves the queue (`queue.SetStateLabel`) or a person hands it off
+// (`plan.Handoff`).
+var LabelWaiting = LabelPrefix + "waiting"
+
+// LabelTracking is the type label of a tracker, the production countdown and the status issues
+// (#2748): the bot may comment on one and rewrite its own, but never queues, plans, builds or
+// splits it, nor adopts it as a fullsend tree: every queue path treats it as `human`
+// (`queue.IsHuman`). The status issue gets it when the dashboard finds or opens it, and the open
+// `production merge` issue from the sweep.
+var LabelTracking string = "tracking"
 
 // LabelPROpen is LABEL_PR_OPEN.
 var LabelPROpen = LabelPrefix + "pr-open"
@@ -361,14 +500,46 @@ var LabelPersonMerges string = "person merges"
 // RetiredLabels are labels the bot used to have: the sweep deletes them from the repository
 // (`sweep._labels`), so nobody puts on one that no longer does anything. #664 took the method
 // labels and `bot:approved` (`bot:build` and `human` hand an issue on), `bot:needs-review` (always
-// beside `ready for merge`), and `large patch` and `Info`, which nothing read.
+// beside `ready for merge`), and `large patch` and `Info`, which nothing read. #2748 took
+// `difficulty:easy` (`Relabelled`) and `bot:working` (`LabelWorking`: each thread that still
+// carries it gets its run's live label first).
 var RetiredLabels = []string{"method:manual", "method:use-bot", LabelPrefix + "approved",
-	LabelPrefix + "needs-review", "large patch", "Info"}
+	LabelPrefix + "needs-review", "large patch", "Info", "difficulty:easy", LabelWorking}
+
+// Relabelled is a retired label whose meaning another label carries now: before the sweep deletes
+// it, every open thread that carries it gets the other one in its place (`sweep._labels`), so what
+// it said is kept. `difficulty:easy` is `difficulty:medium` (#2748), and a person's easy label
+// becomes a person's medium label, which the bot never changes.
+var Relabelled = map[string]string{"difficulty:easy": "difficulty:medium"}
 
 // Difficulties: an item's difficulty decides which models may plan, build and review it; no label
 // counts as medium, and with several the hardest counts. Like `human`, these match whatever their
 // case.
-var Difficulties = []string{"easy", "medium", "hard"}
+var Difficulties = []string{"medium", "hard"}
+
+// RetiredDifficulties is a difficulty the bot no longer has and the one it reads as: `easy` went
+// in #2748, so an item whose label, record, plan or rating still says easy is medium.
+var RetiredDifficulties = map[string]string{"easy": "medium"}
+
+// AsDifficulty is the difficulty `name` reads as: itself for one of `Difficulties`, the one a
+// retired difficulty became (`RetiredDifficulties`), or "" for any other name.
+func AsDifficulty(name string) string {
+	if slices.Contains(Difficulties, name) {
+		return name
+	}
+	return RetiredDifficulties[name]
+}
+
+// LabelDifficulty is the difficulty a lowercased `difficulty:*` label reads as (`AsDifficulty`:
+// `difficulty:easy` is medium), and false for any other label.
+func LabelDifficulty(lowered string) (string, bool) {
+	name, ok := strings.CutPrefix(lowered, "difficulty:")
+	if !ok {
+		return "", false
+	}
+	found := AsDifficulty(name)
+	return found, found != ""
+}
 
 // DifficultyLabels is DIFFICULTY_LABELS: label -> difficulty, in DIFFICULTIES's order.
 var DifficultyLabels = difficultyLabels()
@@ -385,7 +556,8 @@ func difficultyLabels() *pyjson.Object {
 var DefaultDifficulty string = "medium"
 
 // MinTier is the weakest tier that may build an item of each difficulty (`providers.TIERS`).
-var MinTier = map[string]string{"easy": "weak", "medium": "medium", "hard": "strong"}
+// Nothing builds at weak since `difficulty:easy` went (#2748): a weak model takes no work.
+var MinTier = map[string]string{"medium": "medium", "hard": "strong"}
 
 // PartFloor is the weakest tier that may build a fullsend part (#505) of any difficulty once its
 // plan meets its plan floor, on a subscription with no seat of the part's own tier (Muse): a part
@@ -394,16 +566,17 @@ var MinTier = map[string]string{"easy": "weak", "medium": "medium", "hard": "str
 var PartFloor string = "medium"
 
 // PlanFloor is the weakest tier whose plan an item of each difficulty builds from (#317 part 6,
-// #695): a medium model plans an easy or medium item, only a strong one a hard one. An item no one
-// has rated yet (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then
-// stands only if it rates the item easy or medium (#317 part 8).
-var PlanFloor = map[string]string{"easy": "medium", "medium": "medium", "hard": "strong"}
+// #695): a medium model plans a medium item, only a strong one a hard one. An item no one has
+// rated yet (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then
+// stands only if it rates the item medium (#317 part 8); one it rates hard goes on to a strong
+// planner. The planning lane offers a medium item to the medium planners first (#2748).
+var PlanFloor = map[string]string{"medium": "medium", "hard": "strong"}
 
 // UnratedPlanFloor is UNRATED_PLAN_FLOOR.
 var UnratedPlanFloor string = "medium"
 
 // StepUpAfter is failures of an item's own (not infra, a usage pause, a halt or a stop) at one
-// difficulty before the bot raises it a step, easy to medium to hard; three more at hard block it
+// difficulty before the bot raises it a step, medium to hard; three more at hard block it
 // (#317 part 8).
 var StepUpAfter int = 3
 
@@ -460,21 +633,6 @@ func NewResolver(path string) *Resolver {
 	return &Resolver{Path: path, TimeoutMinutes: 10}
 }
 
-// EasyRule is the limits of `difficulty:easy` (`harness/easy.py`), from `easy` in
-// `.harness/config.json`: at most `max_files` files and `max_lines` lines added plus removed
-// (`generated` files aside), and nothing under `off_limits`.
-type EasyRule struct {
-	MaxFiles  int      // default: 10
-	MaxLines  int      // default: 400
-	OffLimits []string // default: ()
-	Generated []string // default: ()
-}
-
-// NewEasyRule is EasyRule(): its defaults.
-func NewEasyRule() *EasyRule {
-	return &EasyRule{MaxFiles: 10, MaxLines: 400, OffLimits: []string{}, Generated: []string{}}
-}
-
 // Partner is another bot on the same subscription, and the steps of its workflows that spend it.
 // Workflows maps a workflow to its step prefixes, each value a list of strings.
 type Partner struct {
@@ -505,7 +663,7 @@ type Config struct {
 	JobBudgetMinutes   int
 	MinMinutesForACall int
 	// MaxReviewCycles: review verdict rounds per in-run review loop, by difficulty (#725): a
-	// medium or easy item gets 3 verdicts from its lane owner, then goes to its final audit; a
+	// medium item gets 3 verdicts from its lane owner, then goes to its final audit; a
 	// hard item stays with its Opus owner for up to 10. Only rounds that end in a readable review
 	// verdict count: usage pauses, infra failures, halts and stops keep the work and pause the
 	// count.
@@ -529,6 +687,40 @@ type Config struct {
 	UploadTranscripts    bool
 	Install              *Gate
 	Gates                []*Gate
+	// ResumeSessions: a run on a Claude account keeps its own session and the next run of the
+	// item on the same account resumes it (`internal/sessions`, #2748). The config's
+	// `resume_sessions`; off when it is left out.
+	ResumeSessions bool // default: False
+	// HoldMinutes: how long a queued item waits for the subscription that owns it when only that
+	// one's 5-hour window keeps it from starting (#2748, section 1; `hold.go`, `plan.Owning`).
+	// The config's `hold_minutes`; 0, when it is left out, holds nothing.
+	HoldMinutes int // default: 0
+	// HoldExempt: the subscriptions an item never waits for (`hold_exempt`): one of them that
+	// cannot take its item hands it off at once.
+	HoldExempt []string // default: ()
+	// SpotCheckEvery: every how many merged medium bot pull requests one gets the after-merge
+	// spot-check (#2748, section 5; `internal/spotcheck`). The config's `spot_check_every`; 0,
+	// when it is left out, samples none.
+	SpotCheckEvery int // default: 0
+	// FullsendAdopt: a queued parent with open sub-issues is adopted as a fullsend tree by itself
+	// (#2748, section 2; `fullsend.go`). The config's `fullsend_adopt`; off when it is left out.
+	FullsendAdopt bool // default: False
+	// FullsendSendBacks: how many times a fullsend reconcile may send one part back to the
+	// subscription that built it (#2748, section 2). The config's `fullsend_send_backs`; 0, when
+	// it is left out, sends none back.
+	FullsendSendBacks int // default: 0
+	// OwnReviewRun: a run that changes code hands its lane to its own review run on the same
+	// subscription, which reviews, fixes and approves it (#2748, 2026-11-02; `ownreview.go`). The
+	// config's `own_review_run`; off when it is left out, as Squishy's is: one run builds, checks
+	// and reviews.
+	OwnReviewRun bool // default: False
+	// OwnReviewReserveMinutes: how long the lane stays reserved for that own review run once the
+	// build delivered (`own_review_reserve_minutes`, 30 when it is left out).
+	OwnReviewReserveMinutes int // default: 30
+	// UsageHistory: the status loop records every subscription's usage over time on the usage
+	// branch (#2749, `usage.go`, `internal/usage`). The config's `usage_history`; off when it is
+	// left out, as Squishy's is.
+	UsageHistory bool // default: False
 	// Pool is the subscriptions, from `.harness/providers.json`.
 	Pool *providers.Pool
 	// Resolvers are the conflicted files the harness resolves itself when it merges `main`
@@ -537,8 +729,6 @@ type Config struct {
 	// MaxSelfCheckRounds: self checks a self-checking builder gets before its change goes to
 	// review anyway.
 	MaxSelfCheckRounds int // default: 3
-	// Easy is what `difficulty:easy` allows (`harness/easy.py`).
-	Easy *EasyRule // default: field(default_factory=EasyRule)
 	// Controller: the status loop plans and starts the runs (`controller.py`, #1455): bot-night's
 	// gate and plan jobs run only while no loop is going. The config's `controller`.
 	Controller bool // default: False
@@ -572,7 +762,6 @@ func NewConfig() *Config {
 	return &Config{
 		Resolvers:          []*Resolver{},
 		MaxSelfCheckRounds: 3,
-		Easy:               NewEasyRule(),
 		Backend:            "cli",
 		CLIBins:            map[string]string{},
 		ServerURL:          "https://github.com",
