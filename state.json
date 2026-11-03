@@ -14384,23 +14384,28 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
+            "apps/web/README.md",
+            "apps/web/src/fx/cards/bespoke.ts",
+            "apps/web/src/fx/cards/core/flourish.ts",
+            "apps/web/src/fx/constants.test.ts",
+            "apps/web/src/fx/constants.ts",
             "apps/web/src/fx/motifs/gallery.ts",
             "apps/web/src/routes/dev/fx.test.tsx",
             "docs/polish/9-card-animations.md"
           ],
-          "from": "1e24ea190b79decca626633dead7994df0bddea1",
-          "main": "c7145e4d941c6131378b5ef01be606e08775daf8"
+          "from": "a27dd29ad281287e2076de96578bae36efca2c12",
+          "main": "4fc70e59d76f5b08db2b549c3ef619cdc6772649"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "41642365440",
+            "run": "41654756179",
             "tier": "strong"
           }
         ],
-        "sha": "a27dd29ad281287e2076de96578bae36efca2c12",
+        "sha": "5803ef67afe8acaf0a8eca968ef6b9e319be84ac",
         "tiers": {
           "claude": "strong"
         }
