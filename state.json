@@ -14809,6 +14809,13 @@
     "2929": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:10:33Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The AI: the change is to its decisions and its search (crates/ai/src/decide.rs, simulate.rs, search.rs)."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
