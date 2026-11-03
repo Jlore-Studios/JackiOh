@@ -16526,13 +16526,11 @@
     "what": "revise #2964 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-03T23:02:20Z",
+    "at": "2026-11-03T23:12:56Z",
     "notes": [
-      "delivered review #2964 on muse (run 41721697001): approved",
-      "delivered build #2940 on claude-4 (run 41720238471): built",
-      "started review #2967 on claude-4 (run 41736367277)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "CI on #2964: #2964: re-ran the failed jobs of run 41721508888",
+      "delivered review #2955 on muse (run 41698366655): built",
+      "night_run: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/2964/comments: HTTP 500: )"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17236,7 +17234,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T23:02:20Z",
+  "loop_tick": "2026-11-03T23:12:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
