@@ -1005,9 +1005,10 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
         assert!(!offered.contains(&fuser.id));
         let felinors = [felinor_a.id.clone(), felinor_b.id.clone(), felinor_c.id.clone()];
         assert!(offered.iter().all(|id| felinors.contains(id)));
+        // R2739000: a Discover of catalog cards shows the other seat how many, never which.
         assert_eq!(
             json_of(view_for(&run1.state, P2))["pending"],
-            json!({ "forYou": false, "pendingFor": "p1" })
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 })
         );
 
         let first_pick = must(first.options.first().cloned(), "an option").selection;

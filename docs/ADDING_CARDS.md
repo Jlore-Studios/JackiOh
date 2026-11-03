@@ -118,6 +118,9 @@ pub fn script() -> CardScripts {
 
 Read a declared number with `param(ctx, "draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
 ([cards README §1](../crates/cards/README.md#1-the-card-file)). A card with no script of its own for one face reuses `base`.
+A face whose Discover or Choose one, opened as it resolves, offers choices read off a zone the other seat cannot read (the
+types its library holds, the numbers on a hand card) sets `secret_option_counts: true`, so the other seat is not told how many
+it offers (R2739000).
 
 **Tests**, at the bottom of the same file (in the shape of C+ #6's; printed cost and stats need no test, `tests/cross/catalog.rs` proves them). Build every game with the testkit's `scenario()`
 after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):

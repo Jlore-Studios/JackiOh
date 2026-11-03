@@ -614,6 +614,8 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
 /// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
 /// Ten a second follows a hover from target to target and bounds what a scripted client can push.
+/// R2739001's `choiceHover` relays are coalesced per seat by the same interval, on a window of their
+/// own.
 pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
 /// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000

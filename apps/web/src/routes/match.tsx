@@ -279,6 +279,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     }),
     [match.sendAim, relayedAim, viewer],
   );
+  // R2739001: card-picker hovers go both ways too, and only the opponent's relay is outlined.
+  const relayedHover = match.choiceHover;
+  const choiceHover = useMemo(
+    () => ({
+      emit: match.sendChoiceHover,
+      opponent: relayedHover !== null && relayedHover.from !== viewer ? relayedHover.index : null,
+    }),
+    [match.sendChoiceHover, relayedHover, viewer],
+  );
 
   // R1834004: the viewer's side wears the deck slots its seat froze at the start (R1834002); the
   // account's choice until the first `loadouts` frame.
@@ -442,6 +451,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       onAction={match.send}
       emotes={emotes}
       aim={aim}
+      choiceHover={choiceHover}
       trackStats
       wearCosmetics
       deckCosmetics={deckCosmetics}

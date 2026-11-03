@@ -47,6 +47,8 @@ fn scripts_table() -> IndexMap<String, CardScripts> {
                         ))]
                     }),
                 )]),
+                // R2739000: as C+ #29's: the last board is in no view, so neither is its count.
+                secret_option_counts: true,
                 ..Script::default()
             },
             radiant: Script {

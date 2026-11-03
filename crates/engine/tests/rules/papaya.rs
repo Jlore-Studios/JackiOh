@@ -414,7 +414,7 @@ mod r831003_each_cell_is_discovered_among_3_random_cells {
     }
 
     #[test]
-    fn r97_r177_the_other_seat_sees_only_that_a_prompt_is_open_the_options_are_cells_never_cards() {
+    fn r97_r177_the_other_seat_sees_only_how_many_cells_the_options_are_cells_never_cards() {
         let mut state = game("papaya-hidden");
         let trap = put(
             &mut state,
@@ -423,9 +423,10 @@ mod r831003_each_cell_is_discovered_among_3_random_cells {
             Default::default(),
         );
         cast_now(&mut state, &curve().id, P1, false);
+        // R2739000: how many cells are on offer, never which.
         assert_eq!(
             json_of(view_for(&state, P2).pending),
-            json!({ "forYou": false, "pendingFor": "p1" })
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 })
         );
         let pending = open_as(&state, PromptKind::Mode, P1);
         assert!(

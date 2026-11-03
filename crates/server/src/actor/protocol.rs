@@ -58,6 +58,14 @@ pub struct AimMessage {
     pub aim: Option<Aim>,
 }
 
+/// R2739001: the option of the sender's own card picker under its pointer or focus, by its place in
+/// the prompt's options — `None` when it leaves. Cosmetic like R738's aim: never reaches `reduce` or
+/// the log, carries no nonce; whether the opponent may see it is the actor's call.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChoiceHoverMessage {
+    pub index: Option<i32>,
+}
+
 /// Messages accepted from a client (SURFACE §11.3).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientMessage {
@@ -65,6 +73,7 @@ pub enum ClientMessage {
     Action(ActionMessage),
     Emote(EmoteMessage),
     Aim(AimMessage),
+    ChoiceHover(ChoiceHoverMessage),
 }
 
 /// What `parse_client_message` answers when parsing fails.
@@ -180,6 +189,10 @@ pub enum ServerMessage {
     /// R738: the opponent's aim, relayed — never to the sender, never part of `PlayerView`, and only
     /// once the actor has checked that every end names something the receiver may see.
     Aim { from: PlayerId, aim: Option<Aim> },
+    /// R2739001: the option the opponent's open card picker hovers, relayed — never to the sender,
+    /// never part of `PlayerView`, and only while the receiver's view shows that picker's count
+    /// (R2739000) and `index` is under it; `null` when the hover ends.
+    ChoiceHover { from: PlayerId, index: Option<i32> },
     /// R1834002, R1834003: both seats' loadouts as the match froze them, naming no card (R1953001
     /// defaults); sent on join and reconnect before the view, and to watchers. Never in `PlayerView`
     /// (CLAUDE.md rule 7).
@@ -258,6 +271,10 @@ pub fn emote_relay_message(from: PlayerId, emote: EmoteId) -> ServerMessage {
 
 pub fn aim_relay_message(from: PlayerId, aim: Option<Aim>) -> ServerMessage {
     ServerMessage::Aim { from, aim }
+}
+
+pub fn choice_hover_relay_message(from: PlayerId, index: Option<i32>) -> ServerMessage {
+    ServerMessage::ChoiceHover { from, index }
 }
 
 /// For the holder of the prompt: the choiceId it must answer and the kind to render.
@@ -775,6 +792,20 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
                 Some(aim) => Ok(ClientMessage::Aim(AimMessage { aim })),
                 None => Err(malformed(
                     r#""aim" must be null or { source, target } of public handles"#,
+                )),
+            }
+        }
+        "choiceHover" => {
+            // R2739001: shape check only; a missing `index` (not `null`) is malformed. Whether a prompt
+            // is open and the index under its count is the actor's call (`match_actor.rs`).
+            let index = match parsed.get("index") {
+                Some(Value::Null) => Some(None),
+                value => non_negative_int(value).map(Some),
+            };
+            match index {
+                Some(index) => Ok(ClientMessage::ChoiceHover(ChoiceHoverMessage { index })),
+                None => Err(malformed(
+                    r#""index" must be null or a whole number of at least 0"#,
                 )),
             }
         }
