@@ -16370,16 +16370,13 @@
     "what": "build #2962 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-03T21:11:33Z",
+    "at": "2026-11-03T21:21:09Z",
     "notes": [
-      "CI on #2961: #2961: re-ran the failed jobs of run 41713342515",
-      "#2962 needs a plan",
-      "delivered review #2958 on claude-8 (run 41709000795): approved",
-      "started plan #2962 on muse (run 41720106523)",
-      "started build #2940 on claude-4 (run 41720238471)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days",
-      "#2962: typed it Bug"
+      "delivered plan #2962 on muse (run 41720106523): planned",
+      "delivered build #2957 on muse (run 41704893411): built",
+      "started review #2964 on muse (run 41721697001)",
+      "started build #2962 on muse (run 41721798388)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17083,7 +17080,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T21:11:33Z",
+  "loop_tick": "2026-11-03T21:21:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
