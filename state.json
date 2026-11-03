@@ -29555,5 +29555,10 @@
     "issue": 2890,
     "pinned": false
   },
+  "usage_spool": {
+    "runs": [
+      "2026-11-03T17:23:42Z,41683473050,claude-3,opus,review,2904,hard,stopped,stop,0,0,0,0,,,,,,,,none,,0"
+    ]
+  },
   "version": 1
 }
