@@ -20,6 +20,7 @@ import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx, planCardMotif } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { rollCues } from "./rolls.ts";
+import { planSystemMoment, transmuteCues } from "./systemMoments.ts";
 import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
@@ -51,7 +52,6 @@ import {
   FX_FOG_HIT_FROM,
   FX_FOG_HIT_TO,
   FX_FOG_TAIL_MS,
-  FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
   FX_LEGENDARY_TRAUMA,
@@ -673,8 +673,10 @@ const shuffle: Recipe = (event, p) => {
 
 /** B3.4: a buff's arrows fly as `bless` when it nets up, as `curse` when it nets down. */
 const buff: Recipe = (event, p) => {
-  if (event.type !== "buffed" && event.type !== "degraded" && event.type !== "upgraded") return [];
-  const net = event.type === "buffed" ? event.attack + event.health : event.type === "upgraded" ? 1 : -1;
+  // R2784000: the transform family plans through one shared transmute, never bless/curse.
+  if (event.type === "upgraded" || event.type === "degraded") return transmuteCues(p.entry, p.view, p.env);
+  if (event.type !== "buffed") return [];
+  const net = event.attack + event.health;
   if (net === 0) return [];
   return motifRow(net > 0 ? "bless" : "curse", p);
 };
@@ -686,8 +688,7 @@ const keyword: Recipe = (event, p) => {
 };
 
 const counter: Recipe = (event, p) => {
-  // Classic #90: a quest's count ticks like a counter.
-  if (event.type === "questProgressed") return [burst(p.env.intensity, "sparkle", anchor(p.tgt), "point", 0, "counterSparkle")];
+  // R2784000: a quest's count ticks as `tally` (systemMoments.ts), never as a counter.
   if (event.type !== "counterChanged") return [];
   const at = anchor(p.tgt);
   if (event.counter === "plague") return [burst(p.env.intensity, "poison", at, "area", 0, "counterPoison")];
@@ -724,30 +725,15 @@ const radiant: Recipe = (event, p) => {
 };
 
 const smoke: Recipe = (event, p) => {
+  // R2784000: `transformed` plans through one shared transmute, never its own smoke.
   if (event.type !== "transformed") return [];
-  const at = anchor(p.tgt);
-  // Centered and light: an area of big puffs read as smoke over the next lanes on a phone (integration QA).
-  return [
-    burst(p.env.intensity, "smoke", at, "point", 0, "transformSmoke"),
-    burst(p.env.intensity, "arcane", at, "point", 0, "transformArcane"),
-  ];
+  return transmuteCues(p.entry, p.view, p.env);
 };
 
 const fuse: Recipe = (event, p) => {
+  // R2784000: `fused` plans through one shared transmute, never its own projectiles.
   if (event.type !== "fused") return [];
-  const i = p.env.intensity;
-  const at = anchor(p.tgt);
-  const flight = frac(FX_FUSE_FLIGHT_FRACTION, p.D);
-  const cues: FxCue[] = [burst(i, "smoke", at, "area", 0, "fuseSmoke")];
-  for (const id of event.instanceIds) {
-    if (id === HIDDEN_ID) continue;
-    const other = locateInstance(p.view, id);
-    if (other === null || other === p.tgt) continue;
-    const from = anchor(other);
-    cues.push(burst(i, "smoke", from, "area", 0, "fuseSmoke"), projectile(i, "arcane", from, at, flight));
-  }
-  cues.push(burst(i, "arcane", at, "area", flight, "fuseArcane"));
-  return cues;
+  return transmuteCues(p.entry, p.view, p.env);
 };
 
 const mindControl: Recipe = (event, p) => {
@@ -1195,13 +1181,24 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   // R2789000: a combat keyword's beat decorates its entry, and draws a hit's row in its place where it says so.
   const beats = planBeats(entry, view, env);
   cues.push(...beats.cues);
+  // R2784000: each set's mechanics as a Signature in the motif language (systemMoments.ts), over the
+  // entry minus what a card motif, a set piece or a beat already draws, holding nothing.
+  const systemSkip = new Set<GameEvent>([
+    ...(motif?.replaces ?? []),
+    ...(setPiece?.replaces ?? []),
+    ...beats.replaces,
+  ]);
+  const system = planSystemMoment(entry, view, env, systemSkip);
+  cues.push(...system.cues);
+  const systemReplaced = (event: GameEvent): boolean =>
+    replaced(event) || beats.replaces.has(event) || system.replaces.has(event);
   for (const event of entry.events) {
     const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
     if (signature !== null) {
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;
     }
-    if (replaced(event) || beats.replaces.has(event)) continue;
+    if (systemReplaced(event)) continue;
     const recipe = animationRow(event.type)?.fx?.recipe;
     if (recipe === undefined) continue;
     const tgt = targetFor(event, view);

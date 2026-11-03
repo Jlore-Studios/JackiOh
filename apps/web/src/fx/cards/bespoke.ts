@@ -9,6 +9,9 @@ import { manaCrack } from "./core/hinder.ts";
 import { legendaryTide } from "./core/transmogulate.ts";
 import { perfectWish } from "./core/zephrys.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
+import { jadeCrack } from "./meditative/auspiciousRock.ts";
+import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
+import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 import { pageMend } from "./classic/bookOfHeal.ts";
 import { crownSwap } from "./classic/kingWagtoggle.ts";
 import { recycleLoop } from "./classic/recycle.ts";
@@ -20,6 +23,9 @@ export const CARD_RECIPES = {
   legendaryTide,
   perfectWish,
   fusionForge,
+  jadeCrack,
+  cnSweep,
+  harmonyWave,
   pageMend,
   recycleLoop,
   crownSwap,

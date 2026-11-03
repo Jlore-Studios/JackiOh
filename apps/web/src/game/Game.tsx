@@ -69,6 +69,7 @@ import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
+import { questClaim } from "../fx/systemMoments.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
@@ -365,8 +366,9 @@ export default function Game({
       // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
       setPieces: !silent,
       // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
+      // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry),
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },

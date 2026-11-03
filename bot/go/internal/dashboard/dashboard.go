@@ -60,6 +60,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/waiting"
@@ -681,7 +682,7 @@ func LanesBoxes(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	lines = append(lines, "```")
 	planning := map[int]bool{}
 	for _, l := range lanesIn(live) {
-		if l.number != 0 && pyjson.Equal(status.Record(state, l.number).Get("action"), "plan") {
+		if l.number != 0 && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
 			planning[l.number] = true
 		}
 	}

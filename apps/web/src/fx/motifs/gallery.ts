@@ -1,7 +1,9 @@
 // R2784000: what the /dev/fx gallery (routes/dev/fx.tsx) plays: a fixture event for every motif on a
-// view's own ids, the entry it fills, and a card's table entry as a play that resolves. Pure, so the
-// motif tests plan from the same fixtures the gallery shows. R2794000: it also plays a marquee Unit's
-// entrance as the Unit lands, and Classic's Flourishes on their own fixtures.
+// view's own ids, the entry it fills, and a card's table entry as a play that resolves (#2793, #2796:
+// a motif, a card recipe, a set piece or a Field card's aura on the board, and a death, trigger or
+// activate motif through the gallery's own director). Pure, so the motif tests plan from the same
+// fixtures the gallery shows. R2794000: it also plays a marquee Unit's entrance as the Unit lands, and
+// Classic's Flourishes on their own fixtures.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -19,9 +21,12 @@ import type { FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
 import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
+import { SYSTEM_MOMENTS, type SystemMoment } from "../systemMoments.ts";
 import type { FxCue } from "../types.ts";
 import { planMotif } from "./index.ts";
 import { isDrawnMotif, type DrawnMotif } from "./names.ts";
+
+export { SYSTEM_MOMENTS, type SystemMoment };
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
@@ -62,7 +67,9 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
  * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
  * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter,
  * snap fires a hidden trap, send puts a card in the hand, radiance makes the viewer's first hand card
- * Radiant, mend heals the viewer's first unit and recall returns a card to the hand.
+ * Radiant and mend heals the viewer's first unit. Deal (#2796) adds a card to the player's hand and
+ * shuffles a hidden one into their deck, seal lays a modifier on the enemy seat, and recall (R2794000)
+ * returns a card to the hand.
  */
 export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
   const enemy = player === view.viewer ? view.opponent : view.you;
@@ -183,6 +190,13 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
       const mine = unitsOf(view.you)[0];
       return mine === undefined ? [] : [{ type: "healed", targetId: mine.instanceId, amount: 3 }];
     }
+    case "deal":
+      return [
+        { type: "addedToHand", player, instanceId: "fx-dealt", defId: "core-055" },
+        { type: "shuffledIn", player, instanceId: "hidden", defId: "hidden", position: 0 },
+      ];
+    case "seal":
+      return [{ type: "modifierChanged", player: enemy.player, modifierId: "fx-sealed", added: true }];
     case "recall":
       return [{ type: "addedToHand", player, instanceId: "fx-recalled", defId: "core-003" }];
   }
@@ -206,6 +220,74 @@ export function galleryCues(motif: DrawnMotif, palette: FxPalette, scale: number
   if (look === undefined) return [];
   const spec = { motif, look, scale: scale * intensity, row: "replace" } as const;
   return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
+}
+
+/**
+ * One system moment's fixture events off `fullBoardView` ids (own units, hand, heroes), mirroring
+ * `motifFixture`: a quest ticks and completes on the viewer's third unit, jade and credits tick by
+ * the hero, Market lots move between the hero, the Marketplace and the hand, ballots drop from the
+ * viewer's first unit onto its hero, and the transform family transmutes the viewer's third unit.
+ */
+export function systemMomentFixture(moment: SystemMoment, view: PlayerView): GameEvent[] {
+  const mine = unitsOf(view.you);
+  const third = mine[2] ?? mine[0];
+  const first = mine[0];
+  const foe = unitsOf(view.opponent)[0];
+  const hand = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+  switch (moment) {
+    case "questProgressed":
+      return third === undefined ? [] : [{ type: "questProgressed", player: view.viewer, instanceId: third.instanceId, quest: "fx-quest", progress: 1, goal: 3 }];
+    case "questCompleted":
+      return third === undefined ? [] : [{ type: "questCompleted", player: view.viewer, instanceId: third.instanceId, quest: "fx-quest" }];
+    case "jadeChanged":
+      return [{ type: "jadeChanged", player: view.viewer, value: 3 }];
+    case "marketCreditsChanged":
+      return [{ type: "marketCreditsChanged", player: view.viewer, value: 5 }];
+    case "marketBought":
+      return [{ type: "marketBought", player: view.viewer, instanceId: "fx-bought", defId: "core-002", credits: 2 }];
+    case "marketSold":
+      return [{ type: "marketSold", player: view.viewer, instanceId: hand?.instanceId ?? "fx-sold", defId: hand?.defId ?? "core-002", credits: 1 }];
+    case "voteCast":
+      return first === undefined
+        ? []
+        : [{ type: "voteCast", player: view.viewer, instanceId: first.instanceId, defId: first.defId, votes: 1, needed: 3 }];
+    case "votedOut":
+      return first === undefined ? [] : [{ type: "votedOut", player: view.opponent.player, ballots: [{ instanceId: first.instanceId, defId: first.defId }] }];
+    case "starscapeTravelled":
+      return [{ type: "starscapeTravelled", player: view.viewer, node: 1, reward: "draw" }];
+    case "fled":
+      return [{ type: "fled", player: view.opponent.player, opponent: "draw" }];
+    case "glitched":
+      return [{ type: "glitched", player: view.viewer, outcome: "swap" }];
+    case "awakened":
+      return third === undefined ? [] : [{ type: "awakened", player: view.viewer, instanceId: third.instanceId, defId: third.defId }];
+    case "boardReplaced":
+      return [{ type: "boardReplaced", player: view.viewer }];
+    case "rolledBack":
+      return [{ type: "rolledBack", player: view.viewer, turnsAgo: 1, sides: [view.viewer] }];
+    case "fengShui":
+      return first === undefined || foe === undefined
+        ? []
+        : [{ type: "fengShui", instanceId: first.instanceId, sourceId: foe.instanceId, player: view.viewer, outcome: "positive" }];
+    case "transformed":
+      return third === undefined
+        ? []
+        : [{ type: "transformed", instanceId: third.instanceId, fromDefId: third.defId, toDefId: "token-sheep", newInstanceId: "fx-double" }];
+    case "fused": {
+      const second = mine[1];
+      return first === undefined || second === undefined
+        ? []
+        : [{ type: "fused", instanceIds: [first.instanceId, second.instanceId], resultInstanceId: "fx-fused", defId: "core-088" }];
+    }
+    case "upgraded":
+      return third === undefined
+        ? []
+        : [{ type: "upgraded", instanceId: third.instanceId, defId: third.defId, change: { kind: "stats", attack: 1, health: 1 } }];
+    case "degraded":
+      return third === undefined
+        ? []
+        : [{ type: "degraded", instanceId: third.instanceId, defId: third.defId, change: { kind: "stats", attack: -1, health: -1 } }];
+  }
 }
 
 /**
@@ -259,9 +341,11 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * `view`: Hinder adds the next-refresh rider to the other player, Blood Ridden Glowy Jelly Bean makes the
  * viewer's first hand card Radiant at a life price, Crushing Walls takes wipe's fixture, Transmogulate
  * turns the viewer's first hand card into a Legendary, Zephrys adds its card to the hand and Craft a
- * Card adds its crafted card, then fuses it. R2794000: Classic's Flourishes take their own fixtures
- * (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards into the
- * deck and draws one, and King Wagtoggle swaps the decks.
+ * Card adds its crafted card, then fuses it. #2796: Auspicious Rock costs its caster 2 and rolls a Jade
+ * into the hand, Spiritually 中国 turns every one of the viewer's hand cards into one CN card and
+ * summons a CN Unit, and Harmony Spirit sets every unit to 3/3. R2794000: Classic's Flourishes take their
+ * own fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
+ * into the deck and draws one, and King Wagtoggle swaps the decks.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -278,6 +362,28 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "addedToHand", player, instanceId: "fx-fused", defId: "core-055" },
     { type: "fused", instanceIds: ["fx-half-a", "fx-half-b"], resultInstanceId: "fx-fused", defId: "core-055" },
   ],
+  jadeCrack: (_view, _instanceId, player) => [
+    { type: "healthLost", player, amount: 2 },
+    { type: "addedToHand", player, instanceId: "fx-jade", defId: "meditative-039-2" },
+  ],
+  cnSweep: (view, _instanceId, player) => {
+    const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+    return [
+      ...hand.map((card, k): GameEvent => ({
+        type: "transformed",
+        instanceId: card.instanceId,
+        fromDefId: card.defId,
+        toDefId: "meditative-036",
+        newInstanceId: `fx-cn-${String(k)}`,
+      })),
+      { type: "summoned", player, instanceId: "fx-cn-unit", defId: "meditative-041", row: "units", lane: 1 },
+    ];
+  },
+  harmonyWave: (view) =>
+    [...unitsOf(view.you), ...unitsOf(view.opponent)].flatMap((unit): GameEvent[] => [
+      { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
+      { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
+    ]),
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
