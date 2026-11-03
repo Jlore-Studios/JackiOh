@@ -14858,17 +14858,8 @@
       ]
     },
     "2927": {
-      "action": "plan",
-      "asks": [
-        "c:6605556206"
-      ],
-      "build_next": {
-        "from_run": "41648871314",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-03T14:11:55Z",
-        "until": "2026-11-03T14:41:55Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T14:11:47Z",
         "difficulty": "medium",
@@ -14887,10 +14878,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the code the issue points at.\n- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; grep -n \\\"bots_list\\\\|bots_states\\\\|tickets_count_open\\\" -r crates/server/src crates/server/tests | head -80\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src/api/queue.rs\", \"offset\": 1090, \"limit\": 320}\n- Grep: {\"pattern\": \"fn bot_matches|fn bot_match_gap|fn choose_bot_pair|fn hour_of|BOT_VS_BOT|bot_match_gap_since\", \"path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src\", \"output_mode\": \"content\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src/db/pg.rs\", \"offset\": 5900, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src/bots/fallback.rs\", \"offset\": 1, \"limit\": 290}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src/db/store.rs\", \"offset\": 2380, \"limit\": 90}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src/db/fake.rs\", \"offset\": 3690, \"limit\": 80}\n- Grep: {\"pattern\": \"pub struct BotRow\", \"path\": \"/home/runner/work/_temp/work/item-2927/crates/server/src/db/store.rs\", \"output_mode\": \"content\", \"-A\": 60, \"-B\": 6}\n- Grep: {\"pattern\": \"kick_off_bot_match|r1555000_\", \"path\": \"/home/runner/work/_temp/work/item-2927\", \"output_mode\": \"content\", \"glob\": \"*.{rs,md}\"}\n- Grep: {\"pattern\": \"on_call\", \"path\": \"/home/runner/work/_temp/work/item-2927/crates/server\", \"output_mode\": \"content\", \"head_limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/tests/support/store.rs\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/tests/api/bots.rs\", \"offset\": 1760, \"limit\": 520}\n- Bash: {\"command\": \"grep -rn \\\"bot_matches\\\\b\\\" crates/ docs spec SPEC.md 2>/dev/null | grep -v \\\"^crates/server/target\\\" | head -20; grep -n \\\"macro_rules! one_tx\\\" -A18 crates/server/src/api/*.rs crates/s\u2026\n- Bash: {\"command\": \"grep -n \\\"bots\\\\.\\\\|bots_list\\\\|bots_states\\\\|bot_matches\\\\|kick_off\\\\|9\\\\.5\\\\|9\\\\.12\\\" crates/server/README.md | head -40; grep -n \\\"^## \\\\|^### \\\" spec/*9*.md 2>/dev/null | head -5; ls\u2026\n- Bash: {\"command\": \"sed -n 626,646p crates/server/README.md; sed -n 1095,1160p crates/server/tests/bots/pool.rs; grep -rn \\\"macro_rules! one_tx\\\" crates/server/src | head; cat spec/rulings/R1555000.md | hea\u2026\n- Bash: {\"command\": \"grep -rn '\\\"bots\\\\.list\\\"\\\\|bots\\\\.list\\\\b' --include=* -r crates docs spec 2>/dev/null | grep -v \\\"^crates/server/target\\\" | head; sed -n 135,175p crates/server/src/actor/contracts.rs; \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/crates/server/tests/store/contract.rs\", \"offset\": 7490, \"limit\": 140}\n- Bash: {\"command\": \"grep -n \\\"fn new_bot\\\\b\\\" -A30 crates/server/tests/store/contract.rs | head -50; grep -n \\\"^use\\\\|^ use\\\" crates/server/tests/store/contract.rs | head -50\"}\n- Bash: {\"command\": \"grep -rn \\\"bots_set_grinding\\\\|bots_claim_pair\\\" --include=*.rs --include=*.md --include=*.sql --include=*.json --include=*.toml . 2>/dev/null | grep -v \\\"/target/\\\" | grep -v \\\"tests/ap\u2026\n- Bash: {\"command\": \"grep -rn \\\"bots_list\\\\|tickets_count_open\\\" docs bot SPEC.md BUILD.md crates/*/README.md 2>/dev/null | head; grep -n \\\"ranked_bot_games_since\\\" -B2 -A25 crates/server/src/db/pg.rs | head\u2026\n- Bash: {\"command\": \"cd crates/server/tests/api && grep -n \\\"^async fn grinder\\\\|^async fn new_bot\\\\|struct BotSpec\\\\|^async fn ticket\\\\|^async fn end_bot_match\\\\|^async fn match_row\\\\|^async fn bot_row\\\\|^a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2927 && sed -n 80,135p crates/server/tests/api/bots.rs; sed -n 1565,1620p crates/server/tests/api/bots.rs; sed -n 285,300p crates/server/tests/api/ra\u2026\n- Bash: {\"command\": \"sed -n 120,200p crates/server/src/actor/registry.rs; sed -n 864,900p crates/server/src/api/queue.rs\"}\n- Bash: {\"command\": \"grep -rnw \\\"BotState\\\\|BotStates\\\\|bots_states\\\" crates apps 2>/dev/null | grep -v \\\"/target/\\\" | head; grep -n \\\"fn uuid_text_or_null\\\\|fn uuid_text\\\\b\\\\|fn ms_or_null\\\" -A8 crates/serv\u2026\n- Bash: {\"command\": \"grep -n -i \\\"fragment\\\" docs/issues-and-patches.md | head -15; ls patches 2>/dev/null | head -5; ls spec/pending | head -5; grep -n \\\"^use crate::db::store\\\\|BotRow\\\" crates/server/src/d\u2026\n- Bash: {\"command\": \"sed -n 14,40p crates/server/tests/bots/pool.rs; sed -n 1050,1075p crates/server/tests/bots/pool.rs\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A4 crates/server/Cargo.toml | head -30; ls crates/server/tests | head -20; grep -n \\\"r1555000_\\\\|both_stores\\\" crates/server/tests/store/contract.rs | head \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2927/.bot-plan.md\", \"content\": \"# Draft plan #2927 (medium)\\n\\nRead: queue.rs kick_off_bot_match (1206-1335), fallback.rs (bot_matches, gap, choose_bo\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"One crate (crates/server): one store method across the pg, fake and dispatch layers plus a reorder in one function; no engine, AI, migration or cross-crate contract, and well under 40 files.\"} --> ## Goal `kick_off_bot_match` (`crates/server/src/api/queue.\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-03T13:56:26Z",
       "owner_why": "it plans it",
@@ -14903,12 +14893,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-03T13:50:13Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41648871314",
+      "run_id": "pending:b0e1ddbe-1793715525",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T13:56:26Z",
+      "started_at": "2026-11-03T14:19:13Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6605556206"
+      ]
     },
     "2928": {
       "action": "plan",
@@ -15121,9 +15113,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T14:18:31Z",
+    "at": "2026-11-03T14:19:13Z",
     "url": "",
-    "what": "build #2926 on claude-7"
+    "what": "build #2927 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-03T13:50:15Z",
