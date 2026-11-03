@@ -1,5 +1,5 @@
-/* The practice route's own chrome: the setup screen, the loading and failure screens, the HUD
-   above the board, the think indicator, the result dialog and "Leave this game?". The board itself
+/* The practice route's own chrome: the setup screen, the loading and failure screens, the lesson
+   HUD above the board, the think indicator, the result dialog and "Leave this game?". The board itself
    is Game.tsx, unchanged, laid out and drawn by board.css and the card faces exactly as in hotseat
    and online play; this file only gives it the screen's height (see "the game screen").
 
@@ -10,20 +10,17 @@
    prefers-reduced-motion. */
 
 .practice-tier[data-tier="easy"],
-.practice-crest[data-tier="easy"],
-.practice-hud[data-difficulty="easy"] {
+.practice-crest[data-tier="easy"] {
   --tier: var(--legal);
 }
 
 .practice-tier[data-tier="medium"],
-.practice-crest[data-tier="medium"],
-.practice-hud[data-difficulty="medium"] {
+.practice-crest[data-tier="medium"] {
   --tier: var(--selected);
 }
 
 .practice-tier[data-tier="hard"],
-.practice-crest[data-tier="hard"],
-.practice-hud[data-difficulty="hard"] {
+.practice-crest[data-tier="hard"] {
   --tier: var(--opponent);
 }
 
@@ -654,7 +651,13 @@
   }
 }
 
-/* ---- the HUD above the board -------------------------------------------------------------- */
+/* ---- the HUD above the board (lessons only) ------------------------------------------------- */
+
+/* A practice game renders no `.practice-hud` element: nothing but gameplay is drawn above the
+   board (#2878). The block below styles the lesson HUD. `TutorialHud` reuses the `practice-hud`
+   classes so a lesson's board is laid out exactly as in a practice game, and this route's
+   stylesheet is what provides them (`TutorialHud` imports only `tutorial/tutorial.css`, which
+   carries no base HUD layout). */
 
 /* The HUD sticks to the top of the viewport (below), so anything scrolled into view — by the
    player's own scroll, a focus move or a test runner — lands below it rather than under it. */
@@ -1513,6 +1516,8 @@
     overflow: hidden;
   }
 
+  /* In the control bar's status row room is short: "AI is thinking…" is the orb alone, and the
+     words stay for a screen reader (the pill is the live region). */
   .practice-thinking {
     padding: 4px;
   }
@@ -1587,29 +1592,20 @@
    in hotseat and online play. Until those landed, practice carried a skin of its own (table.css)
    that relaid the board for this page alone; the integration branch dropped it once they did.
 
-   What practice still decides is the frame. board.css budgets a route whose shell holds `.game`
-   directly; here the HUD sits above, and the board is inside `.practice-table`, so the same budget
-   is given through that wrapper: the shell is exactly the visible viewport tall (`dvh`), the HUD
-   takes what it needs, and the board is a size container filling the rest, so board.css's layouts
-   size the cards off the room the board really has. */
+   What practice still decides is the frame. Nothing but gameplay is drawn above the board, so the
+   shell holds only the board: the shell is exactly the visible viewport tall (`dvh`), and the
+   board, inside `.practice-table`, is a size container filling it, so board.css's layouts size the
+   cards off the room the board really has. */
 .app-shell.practice--game:has(.practice-table > .game) {
   height: 100vh;
   height: 100dvh;
-  padding-top: max(12px, env(safe-area-inset-top));
+  gap: 0;
+  padding-top: env(safe-area-inset-top);
   overflow: hidden;
 }
 
 .practice--game > .practice-hud {
   flex: 0 0 auto;
-}
-
-/* R2379000: a game the server would not seed says so between the HUD and the board, which takes the height left. */
-.practice--game > .practice-unearned {
-  flex: 0 0 auto;
-  max-width: none;
-  margin: 0;
-  padding: 6px 12px;
-  font-size: var(--type-md);
 }
 
 .practice-table {
@@ -1631,7 +1627,48 @@
 .practice-table > .game > .board {
   flex: 1 1 auto;
   min-height: 0;
+  padding-top: 4px;
   container-type: size;
+}
+
+.practice-table .seat-opponent {
+  padding-top: 2px;
+}
+
+/* New game and Menu ride the control bar beside Concede on desktop and tablet, and the `⋯`
+   match menu's rows on the phone layouts; the menu's own rule already sizes them there. */
+.practice-table .control-bar .control-practice-new,
+.practice-table .control-bar .control-practice-menu {
+  min-height: 44px;
+}
+
+/* The AI's status beside the turn plate: the modifier chip and "AI is thinking…", one row. */
+.practice-table .board-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* R2379000: the "won't earn" line, dismissible, in the board's own notices. */
+.practice-table .practice-unearned {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: none;
+  margin: 0;
+  padding: 6px 8px 6px 12px;
+  font-size: var(--type-md);
+}
+
+.practice-table .practice-unearned > span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.practice-table .practice-unearned button {
+  flex: none;
+  min-height: 44px;
+  padding: 6px 14px;
 }
 
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
@@ -1662,9 +1699,11 @@
   }
 }
 
-/* Touch sizing (task 7's 44 px floor): the HUD's outcome chip and the result's "View the board". */
+/* Touch sizing (task 7's 44 px floor): the HUD's outcome chip, the "won't earn" line's Dismiss and
+   the result's "View the board". */
 @media (max-width: 1024px), (pointer: coarse) {
   .practice .practice-hud__outcome,
+  .practice-table .practice-unearned button,
   .app-shell.practice .practice-result__view {
     min-height: 44px;
   }

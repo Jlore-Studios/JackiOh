@@ -52,6 +52,8 @@ export type HeroProps = {
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
   emotes?: HeroEmotes;
+  /** The seat's label, drawn over `You`/`Opponent` (a practice game's `AI · Easy` on the opponent's seat). */
+  seatLabel?: string;
 };
 
 /** The portrait's hold has no overlay of its own: it opens the hero's view through Game. */
@@ -199,7 +201,7 @@ export default function Hero(props: HeroProps): ReactElement {
           <MuteMenu muted={emotes.muted} onMute={emotes.onMute} onClose={emotes.onCloseMenu} />
         )}
       </HeroPortrait>
-      <span className="hero-seat">{side === "you" ? t("You") : t("Opponent")}</span>
+      <span className="hero-seat">{props.seatLabel ?? (side === "you" ? t("You") : t("Opponent"))}</span>
 
       {hero.power !== null &&
         (side === "you" ? (
