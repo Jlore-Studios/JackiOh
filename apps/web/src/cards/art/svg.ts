@@ -5,7 +5,8 @@
 // R2715001: given a full-art card's motion (motion.ts), the same picture moves: its layers are tagged
 // by role and a `<style>` after the `<defs>` animates them, with particles over it. Given none, it is
 // the still picture, byte for byte. R2949000: given a seed other than the card's id (pictures.ts), a
-// painter draws the card's picture of that look instead, cached under that seed.
+// painter draws the card's picture of that look instead, cached under that seed. R2940001: given `sketch`,
+// the picture is drawn as the Sketch version's pencil sketch of it (pictures.ts `sketchSvg`), cached apart.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -13,6 +14,7 @@ import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
+import { sketchSvg } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
@@ -166,6 +168,19 @@ function movingKey(motion: ArtMotion | null): string {
   return motion === null ? "" : "|moving";
 }
 
+/** R2940001: what a sketched picture's memo key ends with, so the plain one keeps its key. */
+function sketchKey(sketch: boolean): string {
+  return sketch ? "|sketch" : "";
+}
+
+/** R2940001: the Starships' one seed for a Sketch's strokes: their picture is drawn from no card's id. */
+const STARSHIP_SKETCH_SEED = "starship";
+
+/** R2940001: `svg` as the face prints it: the Sketch version's pencil sketch of it when `sketch`, else itself. */
+function sketched(svg: string, sketch: boolean, radiant: boolean, seedId: string): string {
+  return sketch ? sketchSvg(svg, radiant, seedId) : svg;
+}
+
 export function proceduralArtUri(
   defId: string,
   theme: ArtThemeId,
@@ -173,23 +188,25 @@ export function proceduralArtUri(
   radiant: boolean,
   motif: MotifId | null = null,
   motion: ArtMotion | null = null,
+  sketch = false,
 ): string {
-  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}${movingKey(motion)}`;
+  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}${movingKey(motion)}${sketchKey(sketch)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = artDataUri(artSpec(defId, theme, composition, radiant, motif), motion, defId);
+  const svg = artSvg(artSpec(defId, theme, composition, radiant, motif), motion, defId);
+  const uri = `${DATA_PREFIX}${encodeSvg(sketched(svg, sketch, radiant, defId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
 /** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
-export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean): string {
-  const key = `starship|${pieces}|${launched}|${radiant}`;
+export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean, sketch = false): string {
+  const key = `starship|${pieces}|${launched}|${radiant}${sketchKey(sketch)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(starshipSvg(pieces, launched, radiant))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(sketched(starshipSvg(pieces, launched, radiant), sketch, radiant, STARSHIP_SKETCH_SEED))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
@@ -206,12 +223,14 @@ export function stinkyscapeArtUri(
   radiant: boolean,
   motion: ArtMotion | null = null,
   seedId = defId,
+  sketch = false,
 ): string {
-  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
+  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${sketchKey(sketch)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId))}`;
+  const svg = stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId);
+  const uri = `${DATA_PREFIX}${encodeSvg(sketched(svg, sketch, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
@@ -225,23 +244,25 @@ export function trainingGroundsArtUri(
   radiant: boolean,
   motion: ArtMotion | null = null,
   seedId = defId,
+  sketch = false,
 ): string {
-  const key = `${seedId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
+  const key = `${seedId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${sketchKey(sketch)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId))}`;
+  const svg = trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId);
+  const uri = `${DATA_PREFIX}${encodeSvg(sketched(svg, sketch, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
 /** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. */
-export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
-  const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}`;
+export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean, sketch = false): string {
+  const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}${sketchKey(sketch)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(legacySvg(defId, coreId, name, tags, type, radiant))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(sketched(legacySvg(defId, coreId, name, tags, type, radiant), sketch, radiant, defId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
