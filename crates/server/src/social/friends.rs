@@ -38,6 +38,9 @@ pub struct Friend {
     pub status: Status,
     pub match_id: Option<String>,
     pub watchable: bool,
+    /// R2881000: `match_id` is a co-op game, watched on the co-op board; left off while false.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub duos: bool,
     /// When the friendship began, ISO-8601.
     pub since: String,
 }
@@ -51,6 +54,7 @@ impl Friend {
             status: standing.status,
             match_id: standing.match_id,
             watchable: standing.watchable,
+            duos: standing.duos,
             since: iso(since),
         }
     }

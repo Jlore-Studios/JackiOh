@@ -225,7 +225,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) |
-| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
+| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`), whether they may be watched and, `duos: true`, whether the game holding them is a co-op one (R2881000), the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
 | `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, letting go a watch of either by the other, and muting the two's emotes in a live match between them, R1351000) and unblock |
 | `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it; records nothing while the account owes the terms (R970002) |
@@ -416,6 +416,17 @@ gets the same `error forbidden` and close the moment the two unfriend or either 
 Once the match is over, a watcher that has been sent the view with the result is closed with 1000, `the
 match is over`, and both players get the new count (R1107000); a void still closes every watcher at once
 with `MATCH_VOIDED_CLOSE_CODE`.
+
+A friend's live co-op game is watched over the same socket and hello (R2881000): when the hello's match is
+no 1v1 match, `social::watch` reads it as a `duos_matches` row, live, holding the friend in a1 or a2 and the
+watcher in neither, so the friend's own teammate is refused. The co-op actor (`duos/actor.rs`, its
+`// Watchers` section) then keeps the 1v1 actor's rules: one `SPECTATORS_PER_MATCH` for the game, both seats'
+watchers counted together; `view {view, legal: []}` frames of the friend's seat's `duos_view_for`, with the
+clock as that seat was shown it, each `SPECTATE_DELAY_MS` late, and nothing else the seat is sent (no ping,
+`clock` or `teammate` frame, `jloreCapped` or `economy`), and no loadouts; `watchers {count}` to both
+people's `/ws/duos` sockets, and again to one that reattaches; the hello answers, the malformed budget and
+the revokes of an unfriend, a block or a deleted account. A finished game's actor is reaped only once its
+watchers have had the result's view and been closed with 1000.
 
 ## Card statistics (§9.11, R376–R378, R1044000, R1044001, R1994000)
 

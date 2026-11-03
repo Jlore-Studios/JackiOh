@@ -790,7 +790,7 @@ mod b47_status {
     }
 
     #[tokio::test]
-    async fn b47_a_friend_in_a_duos_match_is_in_match_naming_it_and_not_watchable() {
+    async fn r2881000_a_friend_in_a_duos_match_is_in_match_naming_it_and_watchable() {
         let app = empty_test_app().await;
         let ada = account(&app, 1, "Ada").await;
         let bea = account(&app, 2, "Bea").await;
@@ -802,6 +802,24 @@ mod b47_status {
         let friend = friend_entry(&lists(&app, &ada).await, &bea.id);
         assert_eq!(friend["status"], "inMatch", "{friend}");
         assert_eq!(friend["matchId"], json!(match_id), "{friend}");
+        assert_eq!(friend["watchable"], json!(true), "{friend}");
+        assert_eq!(friend["duos"], json!(true), "{friend}");
+    }
+
+    #[tokio::test]
+    async fn r2881000_a_coop_friend_is_not_watchable_by_their_own_teammate() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        befriend(&app, &ada, &bea).await;
+
+        // Bea hosts and Ada joins: they are each other's teammate.
+        let match_id = duos_match(&app, &bea, &ada).await;
+
+        let friend = friend_entry(&lists(&app, &ada).await, &bea.id);
+        assert_eq!(friend["status"], "inMatch", "{friend}");
+        assert_eq!(friend["matchId"], json!(match_id), "{friend}");
+        assert_eq!(friend["duos"], json!(true), "{friend}");
         assert_eq!(friend["watchable"], json!(false), "{friend}");
     }
 
@@ -929,11 +947,15 @@ mod b47_status {
         assert_eq!(status_of(&cyd)["status"], "inMatch");
         assert_eq!(status_of(&cyd)["matchId"], json!(uuid(510)));
         assert_eq!(status_of(&cyd)["watchable"], json!(true));
+        // R2881000: a 1v1 match carries no `duos` field.
+        assert!(status_of(&cyd).get("duos").is_none(), "{}", status_of(&cyd));
         assert_eq!(status_of(&dov)["status"], "inMatch");
         assert!(status_of(&dov)["matchId"].is_null());
         assert_eq!(status_of(&dov)["watchable"], json!(false));
         assert_eq!(status_of(&eli)["status"], "inMatch");
         assert_eq!(status_of(&eli)["matchId"], json!(coop));
+        assert_eq!(status_of(&eli)["watchable"], json!(true));
+        assert_eq!(status_of(&eli)["duos"], json!(true));
         assert_eq!(status_of(&fay)["status"], "offline");
     }
 

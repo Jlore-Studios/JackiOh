@@ -221,6 +221,15 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
         <>
           {t("Co-op match")} ·{" "}
           <ConnectionLine state={match.connection} onReconnect={match.connect} />
+          {/* R2881000: the server's `watchers {count}` frame, while anyone is watching. */}
+          {match.watchers > 0 ? (
+            <>
+              {" "}·{" "}
+              <span data-testid={duosTestid.watchers} data-count={match.watchers} role="status">
+                {match.watchers === 1 ? t("A friend is watching") : t("{count} friends are watching", { count: match.watchers })}
+              </span>
+            </>
+          ) : null}
           {DEV_ONLY ? (
             <>
               {" "}· {t("match")} <code>{matchId}</code>
@@ -240,7 +249,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
       playAgain,
     }),
     // `locale`: the words are drawn in the reader's language, and follow a switch (#711).
-    [match.connection, match.connect, match.clock, match.teammate, matchId, locale, playAgain],
+    [match.connection, match.connect, match.clock, match.teammate, match.watchers, matchId, locale, playAgain],
   );
 
   if (view === null) {
