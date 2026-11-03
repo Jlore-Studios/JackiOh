@@ -28,7 +28,7 @@
   "meditativeplus-010": { cry: { motif: "tether", palette: "Hustle/cash" } }, // Medina Grifter
   "meditativeplus-011": { activate: { motif: "seal" } }, // Living Mana Potion
   "meditativeplus-012": { activate: { motif: "seal" } }, // Living Armor Potion
-  "meditativeplus-013": "none: no motif reads healed (fewer than three cards heal, so no motif is added)", // Living Health Potion
+  "meditativeplus-013": { activate: { motif: "mend" } }, // Living Health Potion
   "meditativeplus-014": { cast: { motif: "deal" } }, // Potion Pouch
   "meditativeplus-015": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Book of Potions
   "meditativeplus-016": { cry: { motif: "deal" }, death: { motif: "deal" } }, // Jazakus

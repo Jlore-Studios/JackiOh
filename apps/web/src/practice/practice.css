@@ -1642,7 +1642,9 @@
 }
 
 /* The AI declines every draw offer (R188), so in practice the button could only ever lead to
-   "Draw declined": SPEC §9.9 keeps it off this page. The action stays legal. */
+   "Draw declined": SPEC §9.9 keeps it off this page. The action stays legal. The practice route
+   draws none (`showOfferDraw={false}`, #2883); this keeps it off every other board on a practice
+   table, a dungeon fight's (FightScreen.tsx) and the component specs' among them. */
 .practice-table .control-bar .control-offer-draw {
   display: none;
 }

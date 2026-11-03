@@ -44,7 +44,7 @@
   "meditative-028-1": { cast: { motif: "bolt", palette: "Dark/curse" } }, // Ancient Curse
   "meditative-029": { cast: { motif: "deal" }, trigger: { motif: "deal" }, aura: { look: "toxic", scope: "zone" } }, // Forbiddenous Factory
   "meditative-030": { trigger: { motif: "deal", palette: "Beast/felinor" } }, // Fickle E-Kitten
-  "meditative-030-1": "none: no motif reads healed (its cast-on-draw burst and heal row play)", // Love Bomb
+  "meditative-030-1": { cast: { motif: "mend" } }, // Love Bomb
   "meditative-031": { cry: { motif: "flight" } }, // The Conductor
   "meditative-032": { bespoke: "cnSweep" }, // Spiritually 中国
   "meditative-033": { cast: { motif: "deal", palette: "Nerd/chalk" } }, // First Day of 学校
@@ -99,7 +99,7 @@
   "meditative-071-1": { aura: { look: "storm", scope: "zone" } }, // The Cane
   "meditative-072": { trigger: { motif: "vanish" } }, // The Banisher
   "meditative-073": { cry: { motif: "bless", palette: "Physical/steel" } }, // Plate Packer
-  "meditative-074": "none: no motif reads radiantSet (nothing of its own at End of turn)", // Montaña Giant
+  "meditative-074": "none: the census never saw its End of turn make it Radiant", // Montaña Giant
   "meditative-075": { cast: { motif: "deal" }, activate: { motif: "deal" }, aura: { look: "bloom", scope: "lane" } }, // Ever Growing Tree
   "meditative-076": { cast: { motif: "tether", palette: "Dark/shadow" } }, // Do or Die
   "meditative-077": { cast: { motif: "deal", palette: "Hustle/cash" } }, // Bulk Booster

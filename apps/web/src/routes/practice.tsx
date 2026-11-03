@@ -1222,6 +1222,8 @@ function PracticeScreen({
         {...(config.lesson === undefined ? {} : { autoEndTurn: true, lesson: true })}
         // R2291000: in every game against the AI (R2102000), unless the Lethal hint setting is off.
         lethalHint={lethalHintOn && snapshot.lethal === true}
+        // §9.9, R188: the AI declines every draw offer at once, so a practice game draws no Offer draw.
+        showOfferDraw={false}
       />
     </FullArtAllowed>
   );

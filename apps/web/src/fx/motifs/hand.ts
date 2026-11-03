@@ -1,8 +1,7 @@
 // R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,
-// tithe and tally, then #2796's deal (cards dealt into a hand or deck) and seal (a lasting modifier
-// laid on a seat). Like the damage motifs (damage.ts) each plays in the entry's phases (build.ts)
-// and plans nothing without an event it reads.
-
+// tithe, tally and send (#2793), then #2796's deal (cards dealt into a hand or deck) and seal (a
+// lasting modifier laid on a seat). Like the damage motifs (damage.ts) each plays in the entry's
+// phases (build.ts) and plans nothing without an event it reads.
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { animTestid, locateInstance, type AnimationEntry } from "../../game/animations.ts";
@@ -11,8 +10,8 @@ import { tid } from "../build.ts";
 import { FX_MANA_MAX_SPARKS, FX_MOTIF_DEAL_MAX, FX_MOTIF_TITHE_MAX } from "../constants.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../types.ts";
 import {
-  MOTIF_TUNING,
   flies,
+  MOTIF_TUNING,
   motifBurst,
   motifRing,
   motifShake,
@@ -162,6 +161,33 @@ export const tally: MotifPlanner = {
     const t = timesOf(entry.durationMs);
     const cues: FxCue[] = [];
     for (const h of hits) cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    cues.push(...motifShake(spec, t.L));
+    return cues;
+  },
+};
+
+const SEND_READS = ["addedToHand", "shuffledIn"] as const;
+
+/**
+ * send (#2793): a card made and sent into a hand or a deck: a gather at the caster's hero (the
+ * receiver's with no play), a card back flying to the hand or the library, and its sparkle there.
+ * The back names no card (R202); the hand's or the library's own row still plays.
+ */
+export const send: MotifPlanner = {
+  reads: SEND_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, SEND_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    const cues: FxCue[] = [];
+    for (const h of hits) {
+      if (h.event.type !== "addedToHand" && h.event.type !== "shuffledIn") continue;
+      const from = sourceOf(h.event, view, env) ?? tid(testid.hero(sideOf(view, h.event.player)));
+      cues.push(motifBurst(spec, from, "point", t.G, MOTIF_TUNING.small));
+      if (flies(from, h.at)) cues.push({ kind: "ghost", from, to: h.at, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    }
     cues.push(...motifShake(spec, t.L));
     return cues;
   },

@@ -101,6 +101,12 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   tally: ["burst@240", "shake@240"],
   // The ring closes at gather, the reveal lands on jk-trap-flip's stop, the shake on Land.
   snap: ["ring@0", "burst@120", "shake@240"],
+  // #2793: a gather at the caster's hero, a card back flying to the hand, its sparkle there; no shake.
+  send: ["burst@0", "ghost@80", "burst@240"],
+  // A sheen over the hand card, its landing, the Radiant rays once a play, the shake.
+  radiance: ["sheen@80", "burst@240", "rays@240", "shake@240"],
+  // A sheen over the healed unit, a ring burst and ring closing as it lands, the afterglow; no shake.
+  mend: ["sheen@80", "burst@240", "ring@240", "burst@300"],
   // #2796: a gather at the receiver's hero (no play resolves), then a back into the hand and one into the deck.
   deal: ["burst@0", "ghost@80", "burst@240", "ghost@80", "burst@240"],
   // #2796: with no play there is no caster to bolt from: the ring closes on the modifiers, then the afterglow.
@@ -276,7 +282,7 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
       const look = paletteLook(hook?.palette ?? "") ?? flavorLookOf(defId, "ex", fullBoardView());
       const colors = look?.colors ?? [];
       const drawn = effectCues(defId, motif);
-      const plain = effectCues("core-016", motif);
+      const plain = effectCues("core-008", motif);
       expect(colored(drawn, colors), defId).toBeGreaterThan(colored(plain, colors));
       expect(drawn, defId).not.toEqual(plain);
     }
@@ -452,6 +458,21 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
 
   it("R14 R2784000 with no play resolving, which way a rotation ran is unknown: shift draws no path for it", () => {
     expect(rotationPaths("right", null)).toEqual([]);
+  });
+
+  it("R2784000 #2793 radiance's rays play once a play: at the first card of its first Radiant entry, not on a later one", () => {
+    const view = fullBoardView();
+    const env = envOf();
+    env.memory.remember([played("p1", "ex", "core-029")]);
+    const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+    const radiant = (k: number): GameEvent => ({ type: "radiantSet", instanceId: hand[k]?.instanceId ?? "", defId: hand[k]?.defId ?? "", zone: { z: "hand", player: "p1" } });
+    const raysOf = (events: GameEvent[]): number => {
+      env.memory.remember(events);
+      const entry = { ...galleryEntry(events, view), durationMs: 400 };
+      return planMotif(specOf("radiance"), entry, view, env).filter((cue) => cue.kind === "rays").length;
+    };
+    expect(raysOf([radiant(0), radiant(1)])).toBe(1);
+    expect(raysOf([radiant(2)])).toBe(0);
   });
 
   it("R2784000 drain shows a life loss's number once: in place of its row under replace, left to the row under keep", () => {

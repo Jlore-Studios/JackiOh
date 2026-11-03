@@ -1,27 +1,24 @@
 // R2784000 #2796: Meditative's and Meditative+'s pass over every card (docs/polish/9-card-animations.md):
-// enough of each set wears an entry, every Spell, Field Spell, Trap and Field Trap plays on its `cast`,
-// every Field Spell wears an aura of its own (R2787000), a hidden play keys none of it (R202), and the
-// per-card table (meditative.md) holds every card of both tables as they are.
+// at least FX_SET_PASS_FLOOR of each set wears an entry, every Spell, Field Spell, Trap and Field Trap
+// plays on its `cast`, every Field Spell wears an aura of its own (R2787000), a hidden play keys none of
+// it (R202), and the per-card table (meditative.md) holds every card of both tables as they are.
 
-import type { GameEvent, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { planEntries } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE } from "../constants.ts";
+import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
-import { galleryCardOf, galleryFixture, galleryPlaysOnBoard, type GalleryCard } from "../motifs/gallery.ts";
+import { galleryPlayOf, motifFixture, RECIPE_FIXTURES, type GalleryCardPlay } from "../motifs/gallery.ts";
 import { FX_CARD_HOOKS } from "../motifs/names.ts";
 import type { FxPlanEnv } from "../types.ts";
 import rawTable from "./meditative.md?raw";
 import { FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
-
-/** #2796's floor: the share of each set's cards (tokens left out) whose entry is not `none`. */
-const ENTRY_FLOOR = 0.55;
 
 const FILES = ["meditative.json5", "meditativeplus.json5"] as const;
 
@@ -50,12 +47,19 @@ function planEach(events: readonly GameEvent[], view: PlayerView, plan: (entry: 
   }
 }
 
-/** The board cards of both sets: every entry the gallery plays as a play resolving on the board. */
-function boardCards(): GalleryCard[] {
+type BoardPlay = Extract<GalleryCardPlay, { kind: "board" | "recipe" }>;
+
+/** The board cards of both sets: every entry the gallery plays as its card's play over a fixture (a motif on its play, or a recipe). */
+function boardCards(): { defId: string; play: BoardPlay }[] {
   return ENTRIES.flatMap(([defId, entry]) => {
-    const card = galleryCardOf(defId, entry);
-    return card !== null && galleryPlaysOnBoard(card) ? [card] : [];
+    const play = galleryPlayOf(defId, entry);
+    return play !== null && (play.kind === "board" || play.kind === "recipe") ? [{ defId, play }] : [];
   });
+}
+
+/** The card's fixture events, as `player` would meet them from `sourceId`: its motif's or its recipe's. */
+function fixtureOf(play: BoardPlay, view: PlayerView, sourceId: string, player: PlayerId): GameEvent[] {
+  return play.kind === "board" ? motifFixture(play.motif, view, sourceId, player) : RECIPE_FIXTURES[play.key](view, sourceId, player);
 }
 
 /** An entry as meditative.md writes it: `none: <reason>`, `bespoke: <key>`, or each hook then the aura, joined by `; `. */
@@ -86,12 +90,12 @@ function rowsOf(markdown: string): string[][] {
 }
 
 describe("R2784000 #2796 Meditative's and Meditative+'s card animations", () => {
-  it("R2784000 #2796 at least ENTRY_FLOOR of each set's cards have an entry other than none", () => {
+  it("R2784000 #2796 at least FX_SET_PASS_FLOOR of each set's cards have an entry other than none", () => {
     for (const [file, table] of TABLES) {
       const cards = [...table].filter(([id]) => !isToken(id));
       const drawn = cards.filter(([, entry]) => entry.kind !== "none");
       expect(cards.length, file).toBeGreaterThan(0);
-      expect(drawn.length / cards.length, `${file}: ${String(drawn.length)} of ${String(cards.length)}`).toBeGreaterThanOrEqual(ENTRY_FLOOR);
+      expect(drawn.length / cards.length, `${file}: ${String(drawn.length)} of ${String(cards.length)}`).toBeGreaterThanOrEqual(FX_SET_PASS_FLOOR);
     }
     // The issue's counts: 57 of Meditative's 102 cards, 15 of Meditative+'s 26.
     const [meditative, plus] = TABLES.map(([, table]) => [...table].filter(([id, entry]) => !isToken(id) && entry.kind !== "none").length);
@@ -127,7 +131,7 @@ describe("R2784000 #2796 Meditative's and Meditative+'s card animations", () => 
     const cards = boardCards();
     expect(cards.length).toBeGreaterThan(0);
     for (const card of cards) {
-      const fixture = galleryFixture(card, view, "hidden", "p2");
+      const fixture = fixtureOf(card.play, view, "hidden", "p2");
       const stream: GameEvent[] = [
         { type: "cardPlayed", player: "p2", instanceId: "hidden", defId: "hidden", costPaid: 1 },
         ...fixture,
@@ -140,7 +144,7 @@ describe("R2784000 #2796 Meditative's and Meditative+'s card animations", () => 
       // A readable play draws its entry, and no cue names a card.
       const readable: GameEvent[] = [
         { type: "cardPlayed", player: "p2", instanceId: "ex", defId: card.defId, costPaid: 1 },
-        ...galleryFixture(card, view, "ex", "p2"),
+        ...fixtureOf(card.play, view, "ex", "p2"),
         { type: "cardResolved", player: "p2", instanceId: "ex", defId: card.defId, permanent: false, costPaid: 1 },
       ];
       planEach(readable, view, (entry, env) => {

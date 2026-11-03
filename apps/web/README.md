@@ -195,8 +195,9 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 - Hotseat: an offer from the seat holding the device hands it to the other seat to answer, and the
   answer hands it back to the player whose turn it is (`hotseat.ts`). Only the offer moves it: if
   the players pass the device back unanswered with the seat switch, the offerer plays on and the
-  offer lapses with the turn (R269). Practice hides the Offer draw
-  control (SPEC §9.9, R188); an offer made anyway is declined at once and reads as declined.
+  offer lapses with the turn (R269). Practice draws no Offer draw
+  control (its `Game`'s `showOfferDraw={false}`, SPEC §9.9, R188; practice.css hides it on every other
+  `.practice-table` board); an offer made anyway is declined at once and reads as declined.
 
 ## Patch v0.2.0 at the table
 
@@ -319,7 +320,7 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
 (`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and every entry of its set's
-effects table (`fx/cards/<set>.json5`, #2796): a cast, a cry, a card recipe or an aura plays as the card's play, a death,
+effects table (`fx/cards/<set>.json5`, #2793, #2796): a cast, a cry, a card recipe, a set piece or an aura plays as the card's play, a death,
 trigger or activate motif through the gallery's own director, and a Field card's aura stands in the first backrow zone.
 It calls no engine.
 

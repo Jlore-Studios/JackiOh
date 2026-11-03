@@ -1,12 +1,12 @@
 // R2784000: `/dev/fx`, the motif gallery and the review surface of every card-animation pass
 // (docs/polish/9-card-animations.md). Over the fixture board it plays any drawn motif in any flavor's
 // palette or sub-look at any gallery scale, through a director of its own as the stat showcase's, and
-// every card's table entry (#2796): a cast, a cry, a card recipe or an aura as that card's play through
-// the real board's effects layer, a Field card's aura standing in the first backrow zone, and a death,
-// trigger or activate motif through the gallery's own director; or a card as the fixture set piece
-// (R2785000), its play holding the board for the set piece's beat until a tap, a click or Space. Dev
-// only: chunks.tsx loads it behind DEV_ONLY, so a production build leaves it out and serves a 404 here,
-// as at `/dev/hotseat`.
+// any card's table entry as that card's play through the real board's effects layer (#2793: a motif,
+// a recipe, a set piece or a Field card's aura, the card standing in the backrow; a `death`, `trigger`
+// or `activate` motif, which the board does not draw yet, through the gallery's director), or as the
+// fixture set piece (R2785000), its play holding the board for the set piece's beat until a tap, a
+// click or Space. Dev only: chunks.tsx loads it behind DEV_ONLY, so a production build leaves it out and serves
+// a 404 here, as at `/dev/hotseat`.
 
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -18,15 +18,15 @@ import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
+import { motifScale } from "../../fx/motifs/build.ts";
 import {
-  galleryCardOf,
+  galleryCardEvents,
   galleryCues,
-  galleryHookCues,
+  galleryFieldView,
   galleryPlayId,
-  galleryPlaysOnBoard,
+  galleryPlayOf,
   gallerySetPiece,
-  galleryShownView,
-  type GalleryCard,
+  type GalleryCardPlay,
 } from "../../fx/motifs/gallery.ts";
 import { FX_DRAWN_MOTIFS, isDrawnMotif, type DrawnMotif } from "../../fx/motifs/names.ts";
 import { useFxSettings } from "../../fx/settings.ts";
@@ -34,7 +34,7 @@ import { createSurface } from "../../fx/surface.ts";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import Game from "../../game/Game.tsx";
-import { fullBoardView } from "../../test/fixtures.ts";
+import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import "../../fx/fx.css";
 
@@ -49,11 +49,28 @@ export const fxGalleryTestid = {
   playSetPiece: "fx-gallery-play-set-piece",
 } as const;
 
-/** #2796: every card whose table entry the gallery plays (a drawn motif on any hook, a card recipe or an aura), with what it plays. */
-export function galleryCards(): (GalleryCard & { name: string })[] {
+/** What a card's option says it plays: its motif, its recipe, a set piece or its aura. */
+function playLabel(play: GalleryCardPlay): string {
+  switch (play.kind) {
+    case "board":
+    case "director":
+      return play.motif;
+    case "recipe":
+      return play.key;
+    case "setPiece":
+      return "set piece";
+    case "aura":
+      return "aura";
+  }
+}
+
+/** #2793: every card whose table entry the gallery can play, in table order, with how it plays it. */
+export function galleryCards(): { defId: string; name: string; label: string; play: GalleryCardPlay }[] {
   return [...FX_CARD_TABLE].flatMap(([defId, entry]) => {
-    const card = galleryCardOf(defId, entry);
-    return card === null ? [] : [{ ...card, name: CATALOG[defId]?.name ?? defId }];
+    const play = galleryPlayOf(defId, entry);
+    if (play === null) return [];
+    const name = CATALOG[defId]?.name ?? defId;
+    return [{ defId, name, label: `${name} (${playLabel(play)})`, play }];
   });
 }
 
@@ -124,14 +141,14 @@ export default function FxGallery(): ReactElement {
   const playCard = (asSetPiece: boolean): void => {
     const card = cards.find((candidate) => candidate.defId === defId);
     if (card === undefined) return;
-    // A death, trigger or activate motif plays through the gallery's own director: no play resolves it on the board yet.
-    if (!galleryPlaysOnBoard(card)) {
-      director.current?.play(galleryHookCues(card, base, intensity, settings.speed));
+    // #2793: a hook the board does not draw yet plays through the gallery's director, at the card's scale.
+    if (card.play.kind === "director" && !asSetPiece) {
+      director.current?.play(galleryCues(card.play.motif, card.play.palette, motifScale(card.defId, base, 1), base, intensity, settings.speed));
       return;
     }
     plays.current += 1;
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
-    setShown(galleryShownView(base, card, plays.current));
+    setShown(withEvents(galleryFieldView(card.defId, base), galleryCardEvents(card.defId, card.play, base, plays.current)));
   };
 
   return (
@@ -199,7 +216,7 @@ export default function FxGallery(): ReactElement {
             <select data-testid={fxGalleryTestid.card} value={defId} onChange={(event) => setDefId(event.target.value)}>
               {cards.map((card) => (
                 <option key={card.defId} value={card.defId}>
-                  {card.name} ({card.hook}: {card.fixture})
+                  {card.label}
                 </option>
               ))}
             </select>
