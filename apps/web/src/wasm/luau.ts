@@ -1,23 +1,32 @@
 // The Luau browser module (#919, SPEC §12.10, R915009): `crates/wasm/luau`, the engine with the card
-// kit, which `scripts/build-wasm.sh` builds into `./pkg/luau` (git ignores it). `index.ts`
-// imports this file dynamically, so no page and no worker fetches the module until a practice game
-// with a custom card or the creator asks for it (`useLuauModule`, `checkCustomCard`).
-//
-// The module is an emscripten `MODULARIZE` factory whose boundary is C (v0.4.0's, `da817ba6`): a
-// string crosses as a pointer, copied in with `stringToNewUTF8` and read back with `UTF8ToString`,
-// every pointer freed with the module's own `jackioh_free`. A binding that would have thrown answers
-// NULL (or a negative status) and stows its message for `jackioh_last_error`. `adapt` turns all of
-// that into the very shape of the normal module's wasm-bindgen exports (`LuauBindings`), strings in
-// and strings out, throwing the stowed message, so `index.ts` calls either module the same way.
+// kit, built into `./pkg/luau` by `scripts/build-wasm.sh`. `index.ts` imports this file dynamically, so
+// nothing fetches the module until a practice game with a custom card or the creator asks for it.
+// The module is an emscripten `MODULARIZE` factory with a C boundary (v0.4.0's, `da817ba6`): strings
+// cross as pointers, each freed with `jackioh_free`, and a failing binding answers NULL (or a negative
+// status) with its message in `jackioh_last_error`. `adapt` gives it the normal module's wasm-bindgen
+// shape (`LuauBindings`), throwing that message, so `index.ts` calls either module the same way.
 
 import type { JackiohWasmLuauModule } from "./pkg/luau/jackioh_wasm_luau.js";
 
-/** The normal module's exports, as `index.ts` calls them, and the creator's check. */
 export type LuauBindings = {
   init(): void;
   catalog(): string;
   catalog_version(): string;
   carried_versions(): string;
+  run_content(customCards: string): string;
+  run_check_setup(setup: string, unlocks: string, content: string): string;
+  run_create(setup: string, unlocks: string, content: string): string;
+  run_reduce(state: string, content: string, action: string): string;
+  run_fold(file: string, content: string): string;
+  run_fight_setup(state: string, content: string): string;
+  run_fight_report(game: string, human: string): string;
+  run_score(state: string, content: string): string;
+  run_embers(score: string): string;
+  run_max_hp(state: string, content: string): string;
+  run_level_cost(level: string): string;
+  run_constants(): string;
+  run_seed(source: string): string;
+  run_daily_seed(date: string, n: string): string;
   create_game(args: string): string;
   begin_game(state: string): string;
   reduce(state: string, action: string): string;
@@ -70,11 +79,29 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
     (call: (a: number, b: number) => number) =>
     (a: string, b: string): string =>
       withArgs([a, b], ([p = 0, q = 0]) => take(call(p, q)));
+  const three =
+    (call: (a: number, b: number, c: number) => number) =>
+    (a: string, b: string, c: string): string =>
+      withArgs([a, b, c], ([p = 0, q = 0, r = 0]) => take(call(p, q, r)));
   return {
     init: () => m._init(),
     catalog: () => take(m._catalog()),
     catalog_version: () => take(m._catalog_version()),
     carried_versions: () => take(m._carried_versions()),
+    run_content: one((a) => m._run_content(a)),
+    run_check_setup: three((a, b, c) => m._run_check_setup(a, b, c)),
+    run_create: three((a, b, c) => m._run_create(a, b, c)),
+    run_reduce: three((a, b, c) => m._run_reduce(a, b, c)),
+    run_fold: two((a, b) => m._run_fold(a, b)),
+    run_fight_setup: two((a, b) => m._run_fight_setup(a, b)),
+    run_fight_report: two((a, b) => m._run_fight_report(a, b)),
+    run_score: two((a, b) => m._run_score(a, b)),
+    run_embers: one((a) => m._run_embers(a)),
+    run_max_hp: two((a, b) => m._run_max_hp(a, b)),
+    run_level_cost: one((a) => m._run_level_cost(a)),
+    run_constants: () => take(m._run_constants()),
+    run_seed: one((a) => m._run_seed(a)),
+    run_daily_seed: two((a, b) => m._run_daily_seed(a, b)),
     create_game: one((a) => m._create_game(a)),
     begin_game: one((a) => m._begin_game(a)),
     reduce: two((a, b) => m._reduce(a, b)),
@@ -123,9 +150,8 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
 let loading: Promise<LuauBindings> | null = null;
 
 /**
- * Fetch and instantiate the Luau module, then register the catalog and the official cards' scripts
- * in it (its own `init`). Idempotent; a failed fetch is not cached. `bytes`, when given, are the
- * module's (jsdom tests read them from disk, as `test/setup.ts` does the normal module's).
+ * Fetch and instantiate the Luau module and run its own `init` (the catalog and the official cards'
+ * scripts). Idempotent; a failed fetch is not cached. `bytes`: the module's, in jsdom tests.
  */
 export function loadLuauBindings(bytes?: BufferSource): Promise<LuauBindings> {
   if (loading === null) {

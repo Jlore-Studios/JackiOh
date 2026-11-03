@@ -1,20 +1,18 @@
 // Polish 1 (docs/polish/1-animations.md, S9): the effects layer, B36 to B38.
 // The layer renders as `Game` renders it, a direct child of `.game`, next to a real animation
 // runner whose `schedule` the test fires by hand; every browser API comes in through `seams`.
-// Tests read what the layer shows: `--anim-squeeze` on its parent, `data-fx` and the children of
-// its root, and the anchors it asked `measure` to resolve (how a planned cue becomes visible).
 
 import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ANIMATIONS, BURST_BUDGET_MS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
+import { ANIMATIONS, BURST_BUDGET_MS, SET_PIECE_HOLD_MS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { FX_TEXT } from "./constants.ts";
+import { FX_CALLOUT_MS, FX_TEXT } from "./constants.ts";
 import FxLayer, { type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
 import type { FxSurface } from "./surface.ts";
@@ -167,7 +165,6 @@ function fakeSeams() {
     measured,
     shakes,
     testids: (): string[] => measured.flatMap((anchor) => (anchor.kind === "testid" ? [anchor.testid] : [])),
-    /** A frame now, then one every `step` ms for `ms` of fake time. */
     pump(ms = 100, step = 10): void {
       act(() => {
         const end = t + ms;
@@ -183,7 +180,6 @@ function fakeSeams() {
 
 type Fx = ReturnType<typeof fakeSeams>;
 
-/** `<div className="game"><FxLayer …/></div>`, with a rerender that keeps the queue and seams. */
 function mountLayer(queue: AnimationQueue, view: PlayerView, fx: Fx) {
   const tree = (shown: PlayerView) => (
     <div className="game">
@@ -223,8 +219,6 @@ function p2View(over: Partial<PlayerView> = {}): PlayerView {
 /* fullBoardView's ids: your units u1..u5, the enemy's u6..u10, your hand c11..c14, your face-up
  * trap b20 in backrow lane 5. u2 carries every keyword; u10 is a 10/10. */
 const HIT: GameEvent = { type: "damage", sourceId: "u1", targetId: "u10", amount: 4, combat: true };
-
-// B36: the squeeze, planning per entry, and a runner that is not slowed at all
 
 describe("B36 — FxLayer follows the runner without pacing it", () => {
   it("R200 each start writes --anim-squeeze on the layer's parent and idle removes it", () => {
@@ -323,6 +317,46 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     expect(m.fxDom()?.childElementCount).toBe(0);
   });
 
+  it("R2785000 a skip cuts the set piece's effects at once and the next entry plays", () => {
+    const sched = fakeSchedule();
+    // The fixture set piece: the action's first hit (one per action, so the second is a plain entry).
+    const queue = createAnimationQueue({
+      schedule: sched.schedule,
+      reducedMotion: false,
+      setPieceOf: (entry) => (entry.type === "damage" ? { key: "fixture", holdMs: SET_PIECE_HOLD_MS } : null),
+    });
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fx);
+
+    act(() => queue.enqueue([HIT, HIT], view));
+    expect(queue.inFlight()?.setPiece?.key).toBe("fixture");
+    // The hold is a wait before the motion, not a slower motion.
+    expect(m.squeeze()).toBe("1.000");
+    fx.pump(50);
+    expect(m.fxDom()?.childElementCount ?? 0).toBeGreaterThan(0);
+
+    let skipped = false;
+    act(() => {
+      skipped = queue.skip();
+    });
+    expect(skipped).toBe(true);
+    // Nothing of the set piece is left on screen, and the next hit is in flight with its own squeeze.
+    expect(m.fxDom()?.childElementCount).toBe(0);
+    expect(fx.shakes.at(-1)).toBe("clear");
+    expect(queue.inFlight()?.setPiece).toBeUndefined();
+    expect(queue.inFlight()?.type).toBe("damage");
+    expect(m.squeeze()).toBe(((queue.inFlight()?.durationMs ?? 0) / ANIMATIONS.damage.durationMs).toFixed(3));
+    fx.pump(50);
+    expect(m.fxDom()?.childElementCount ?? 0).toBeGreaterThan(0);
+    // The skipped entry's timer finds nothing to end; the hit's own ends the burst.
+    act(() => sched.tick());
+    expect(queue.inFlight()?.type).toBe("damage");
+    act(() => sched.tick());
+    expect(queue.idle()).toBe(true);
+    expect(m.squeeze()).toBe("");
+  });
+
   it("B36 reset() removes the squeeze and every effect on screen", () => {
     const sched = fakeSchedule();
     const queue = queueWith(sched);
@@ -345,8 +379,7 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     const sched = fakeSchedule();
     const queue = queueWith(sched);
     const fx = fakeSeams();
-    // The layer shows an empty board, where u10 does not exist; the entry was planned over the
-    // full board, where it does.
+    // The layer shows an empty board, where u10 does not exist.
     const m = mountLayer(queue, baseView(), fx);
 
     act(() => queue.enqueue([HIT], fullBoardView()));
@@ -439,7 +472,6 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     }
     bare.flush();
 
-    // The effects really ran alongside the runner.
     expect(mostEffects).toBeGreaterThan(0);
     expect(layered.log.length).toBeGreaterThan(0);
     expect(layered.log).toEqual(bare.log);
@@ -449,7 +481,6 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
 });
 
 // B37: on and off, and nothing the layer renders can be clicked, read or waited on
-
 describe("B37 — when the layer draws, and what it never renders", () => {
   it("B37 with effects enabled it renders data-fx=\"on\", aria-hidden, and holds fx-canvas and fx-dom", () => {
     const fx = fakeSeams();
@@ -471,7 +502,7 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     expect(fxDom?.parentElement).toBe(layer);
   });
 
-  it("B37 prefers-reduced-motion switches the layer off: no canvas, no DOM root, no cue", () => {
+  it("B37 prefers-reduced-motion switches the layer off: no canvas, no cue, and an empty still DOM root (R2789000)", () => {
     setReducedMotion(true);
     const sched = fakeSchedule();
     const queue = queueWith(sched);
@@ -482,13 +513,16 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     expect(m.layer()?.getAttribute("data-fx")).toBe("off");
     expect(m.layer()?.getAttribute("aria-hidden")).toBe("true");
     expect(m.canvas()).toBeNull();
-    expect(m.fxDom()).toBeNull();
+    // R2789000: the one thing it can draw, a keyword's still callout, needs the DOM root.
+    expect(m.fxDom()?.getAttribute("data-still")).toBe("true");
+    expect(m.fxDom()?.childElementCount).toBe(0);
 
     act(() => queue.enqueue([HIT], view));
     fx.pump(500);
     expect(fx.measured).toHaveLength(0);
     expect(fx.shakes).not.toContain("apply");
-    expect(m.layer()?.childElementCount).toBe(0);
+    expect(m.layer()?.childElementCount).toBe(1);
+    expect(m.fxDom()?.childElementCount).toBe(0);
   });
 
   it("B37 the viewer's reduce-motion setting switches the layer off", () => {
@@ -498,7 +532,39 @@ describe("B37 — when the layer draws, and what it never renders", () => {
 
     expect(m.layer()?.getAttribute("data-fx")).toBe("off");
     expect(m.canvas()).toBeNull();
+    expect(m.fxDom()?.getAttribute("data-still")).toBe("true");
+    expect(m.fxDom()?.childElementCount).toBe(0);
+  });
+
+  it("R2789000 under reduced motion a keyword's callout draws still, and nothing at intensity off", () => {
+    setReducedMotion(true);
+    const cleave: GameEvent = { type: "damage", sourceId: "u1", targetId: "u7", amount: 1, combat: true, via: "Cleave" };
+    const view = fullBoardView();
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true });
+    const m = mountLayer(queue, view, fx);
+
+    act(() => queue.enqueue([cleave], view));
+    fx.pump(50);
+    expect(m.count("callout")).toBe(1);
+    const callout = m.game.querySelector<HTMLElement>('[data-fx="callout"]');
+    expect(callout?.getAttribute("data-callout")).toBe("Cleave");
+    expect(callout?.getAttribute("data-still")).toBe("true");
+    // Only the callout: no splat, no shake, no canvas, and it is gone after FX_CALLOUT_MS.
+    expect(m.fxDom()?.childElementCount).toBe(1);
+    expect(m.canvas()).toBeNull();
+    expect(fx.shakes).not.toContain("apply");
+    fx.pump(FX_CALLOUT_MS + 100);
+    expect(m.count("callout")).toBe(0);
+
+    act(() => {
+      setFxSettings({ intensity: "off" });
+    });
     expect(m.fxDom()).toBeNull();
+    act(() => queue.enqueue([cleave], view));
+    fx.pump(100);
+    expect(m.count("callout")).toBe(0);
+    expect(m.layer()?.childElementCount).toBe(0);
   });
 
   it("B37 intensity \"off\" switches the layer off and plans no cue, while the runner still animates", () => {
@@ -578,7 +644,6 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     fx.pump(120);
     check();
 
-    // The DOM effects really were there while the checks ran.
     for (const kind of ["splat", "rays", "arrows", "sheen", "banner"]) expect(kinds).toContain(kind);
   });
 
@@ -623,8 +688,6 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     }
   });
 });
-
-// B38: the view-driven sequences
 
 describe("R200 — the reduce setting stops CSS-only motion exactly as the media query does", () => {
   it("R200 the reduce setting zeroes --anim-scale on the game root, and turning it back restores it (B51)", () => {
@@ -800,7 +863,6 @@ describe("B38 — the result sequence and the hot-seat hand-over banner", () => 
   });
 });
 
-// S9 and S11: the default catalog (CatalogContext, fed by lookupFromDefs) and the surface seam.
 // Every test above overrides `seams.catalog`; these leave it out, as production does.
 
 function def(id: string, over: Partial<CardDef> = {}): CardDef {
@@ -835,7 +897,6 @@ function summon(defId: string): GameEvent {
   return { type: "summoned", player: "p1", instanceId: "c90", defId, row: "units", lane: 3 };
 }
 
-/** The production seams minus `catalog`, so the layer falls back to CatalogContext. */
 function withoutCatalog(fx: Fx): Partial<FxSeams> {
   const seams: Partial<FxSeams> = { ...fx.seams };
   delete seams.catalog;
@@ -941,12 +1002,10 @@ describe("S9 — the default catalog and the surface seam", () => {
     fx.pump(400);
 
     expect(m.rays("legendary")).toBe(0);
-    // core-019 is really Brute, and the flavor resolves off the bundled catalog: its entrance
-    // shakes the board (#1445).
+    // core-019 is Brute in the bundled catalog, so its entrance shakes the board (#1445).
     expect(fx.shakes).toContain("apply");
-    // Every measure is the landing zone: three times at its foot for the dust (the base burst
-    // plus the Brute's two), and bare for the stand-in that lands there and follows it frame by
-    // frame.
+    // Every measure is the landing zone: at its foot for the dust (the base burst plus the Brute's
+    // two), and bare for the stand-in that follows it.
     const zone = { kind: "testid", testid: "zone-you-units-3" };
     expect(fx.measured.filter((anchor) => anchor.kind === "testid" && anchor.at !== undefined)).toEqual([
       { ...zone, at: { x: 0.5, y: 1 } },

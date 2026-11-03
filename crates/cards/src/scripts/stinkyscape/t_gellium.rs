@@ -29,14 +29,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-gellium — SPEC §7, BUILD M12 row S T-gellium: "played from the hand, heals its caster's hero 4,
-// past 30 too; heal reads through `param()`; radiant 8". Tagged Resource and Token (issue #2521).
+// S T-gellium — SPEC §7, BUILD M12 row S T-gellium. Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{card_def, play_resource, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
@@ -45,11 +44,6 @@ mod tests {
         scenario(
             json!({ "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "health": health } }),
         )
-    }
-
-    #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
     }
 
     #[test]

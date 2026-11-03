@@ -9,9 +9,7 @@
 //! the chooser's alone, §10.8; `cards` tunes, so it is a resolution prompt, R386). Its step exiles each
 //! picked card in the order picked, hand order (R221) (a unit-token card ceases to exist instead, R11),
 //! then shuffles one Journey Complete (M #96.1) into your deck, Radiant on the Radiant face (R1247), its
-//! `memory.journey` the picked ids in that order (R1246); the shuffle-in is public and recorded in your
-//! list (R311), and a full deck refuses it with the cards staying in exile (R80). With nothing picked
-//! nothing happens.
+//! `memory.journey` the picked ids in that order (R1246).
 //! The Radiant face then draws `draw`, after the step (R113), or at once with an empty hand.
 
 use jackioh_engine::effects::choose_pick;
@@ -80,12 +78,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #96 Meditative Journey — SPEC §8.8 row 96, BUILD M10 row M 96: "A `pick` prompt of up to 2 hand cards
-// as it resolves; the picks are exiled and one Journey Complete remembering their ids in the order picked
-// (`shuffle_into { memory }`) is shuffled into your deck, publicly (R1246); picking none exiles nothing and
-// shuffles nothing; a full deck refuses the token and the cards stay in exile; the memory survives a JSON
-// round trip and a replay; cards reads through `param()`; radiant up to 4, a Radiant Journey Complete
-// (R1247), then draw 1, a draw even when none is picked".
+// M #96 Meditative Journey — SPEC §8.8 row 96, BUILD M10 row M 96.
 #[cfg(test)]
 mod tests {
     use super::{ID, JOURNEY_COMPLETE, JOURNEY_KEY};

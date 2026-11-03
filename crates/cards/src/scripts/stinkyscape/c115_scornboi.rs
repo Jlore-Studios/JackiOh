@@ -41,10 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #115 Scornboi — SPEC §8.10 row 115, BUILD M12 row S 115: "played for Tribute 3; at each state check a
-// Unit that is not Human and has neither keyword is exiled, both sides, a granted Human tag sparing it
-// (R1850002); radiant 24/18, only the enemy's". The layers' read (a granted tag or keyword) is the
-// engine's, proven by its tests (R1850002).
+// S #115 Scornboi — SPEC §8.10 row 115, BUILD M12 row S 115 (R1850002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -61,8 +58,6 @@ mod tests {
     const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit.
     const FILLER: &str = "core-005";
 
-    /// p1 holds Scornboi (`radiant` its face) beside three Vanillas to tribute and a Menace; p2 has a
-    /// Vanilla, a Menace, a Starship Piece and a Field Spell.
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {

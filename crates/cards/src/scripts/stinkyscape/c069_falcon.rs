@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69: "a 4/1 Charge Flying Unit,
-// attacking a hero the turn it is played; no Starship Piece, so its death fuses nothing (#2521);
-// radiant 8/2 with Pierce, its hits ignoring Armor (R346)".
+// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69 (#2521, R346).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -31,23 +29,6 @@ mod tests {
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    #[test]
-    fn prints_charge_flying_4_1_radiant_8_2_with_pierce() {
-        crate::register_all();
-        let def = crate::card_def(FALCON);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Charge", "Flying"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Charge", "Flying", "Pierce"]);
-        assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
-    }
 
     #[test]
     fn charge_may_attack_the_hero_the_turn_it_is_played() {

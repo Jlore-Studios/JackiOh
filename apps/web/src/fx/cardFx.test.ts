@@ -1,10 +1,6 @@
 // R502: the unmistakable cast on draw, and the per-card flourishes of #21 Hinder, #27 Blood Ridden
-// Glowy Jelly Bean and Classic+ #24 Crushing Walls (cardFx.ts), planned the way FxLayer plans them:
-// each entry remembered, then planned against the view the runner planned it against, from the
-// redacted stream alone.
-//
-// The last block drives the real engine (audio/test/realGame.ts) to a game where each card is cast
-// as it is drawn, and plans both seats' own redacted windows.
+// Glowy Jelly Bean and Classic+ #24 Crushing Walls (cardFx.ts), planned the way FxLayer plans them,
+// from the redacted stream alone. The last block drives the real engine (audio/test/realGame.ts).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -13,7 +9,8 @@ import { animTestid, planEntries, type AnimationEntry } from "../game/animations
 import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
-import { CARD_FX, CARD_RECIPES } from "./cardFx.ts";
+import { CARD_RECIPES } from "./cards/bespoke.ts";
+import { FX_CARD_TABLE } from "./cards/tables.ts";
 import { ENTRANCES, isEntranceKey } from "./entrances.ts";
 import {
   FX_BLOOD_FLIGHT_FRACTION,
@@ -309,11 +306,13 @@ describe("Patch v0.2.3c: Classic+ #24 Crushing Walls closes in", () => {
 
 describe("R502 the per-card table", () => {
   it("R502 one table keys each recipe by definition, and every recipe it names exists", () => {
-    expect(CARD_FX[HINDER]).toBe("manaCrack");
-    expect(CARD_FX[BLOOD]).toBe("bloodDrain");
-    expect(CARD_FX[WALLS]).toBe("crushingWalls");
-    for (const key of Object.values(CARD_FX)) {
-      expect(isEntranceKey(key) ? typeof ENTRANCES[key] : typeof CARD_RECIPES[key as "manaCrack" | "bloodDrain" | "crushingWalls"]).toBe("function");
+    expect(FX_CARD_TABLE.get(HINDER)).toEqual({ kind: "bespoke", key: "manaCrack" });
+    expect(FX_CARD_TABLE.get(BLOOD)).toEqual({ kind: "bespoke", key: "bloodDrain" });
+    expect(FX_CARD_TABLE.get(WALLS)).toEqual({ kind: "bespoke", key: "crushingWalls" });
+    for (const entry of FX_CARD_TABLE.values()) {
+      if (entry.kind !== "bespoke") continue;
+      const key = entry.key;
+      expect(isEntranceKey(key) ? typeof ENTRANCES[key] : typeof CARD_RECIPES[key]).toBe("function");
     }
   });
 
@@ -350,9 +349,7 @@ describe("R502 the per-card table", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The real engine: both seats' redacted windows
- * ------------------------------------------------------------------------------------------- */
+/* The real engine: both seats' redacted windows */
 
 const DECK_A = [
   "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-008", "core-009", "core-010", "core-011",
@@ -367,10 +364,7 @@ const DECK_B = [
 
 type Seats = { p1: PlayerView; p2: PlayerView };
 
-/**
- * The first seed whose opening turns cast `defId` on draw for p2 and leave both seats' views as
- * `settled` wants them (the rider still standing, the Radiant pick made).
- */
+/** The first seed whose opening turns cast `defId` on draw for p2 and leave both seats as `settled` wants. */
 function castOnDrawGame(defId: string, settled: (seats: Seats) => boolean): Seats {
   const seats = castOnDrawViews("r502", [DECK_A, DECK_B], defId, settled);
   if (seats === null) throw new Error(`no seed casts ${defId} on draw in its opening turns`);

@@ -1,12 +1,12 @@
-// The core runs in a module worker, or in-thread under jsdom; `request` preserves response order.
-// The in-thread host answers on a macrotask to match worker asynchrony.
-// Type-only imports keep the core out of the page bundle; the worker dynamically imports it.
-// The engine and AI are WebAssembly (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
+// The core runs in a module worker, or in-thread under jsdom (answering on a macrotask, as a worker would).
+// Type-only imports keep the core out of the page bundle. The engine and AI are WebAssembly
+// (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
 
 import { loadWasm, useLuauModule } from "../wasm/index.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
+import { messageOf } from "../net/errors.ts";
 
 export type PracticeHost = {
   request(body: PracticeRequestBody): Promise<PracticeResponse>;
@@ -24,10 +24,6 @@ const CLOSED_MESSAGE = "the practice game was closed";
 
 function failed(id: number, message: string): PracticeResponse {
   return { id, type: "failed", message };
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 function withId(body: PracticeRequestBody, id: number): PracticeRequest {

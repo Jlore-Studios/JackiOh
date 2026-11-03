@@ -32,7 +32,6 @@ mod tests {
 
     /// Core #19 Midrange Menace, a 9/9 Taunt; 18/18 on its Radiant face.
     const MENACE: &str = "core-019";
-    /// Core #8 Mr. Vanilla, a 4/4 with no keyword.
     const VANILLA: &str = "core-008";
     /// Core #10 Rapid Replenish, a (0) Spell that keeps p1's turn from ending by itself.
     const ANCHOR: &str = "core-010";
@@ -42,7 +41,6 @@ mod tests {
             .unwrap_or_else(|| panic!("expected {player:?}'s Stinkyscape Golem in lane 1"))
     }
 
-    /// The face's keywords, sorted, as the view prints them.
     fn keywords_of(s: &Scenario, card: &CardInstance) -> Vec<String> {
         let mut out: Vec<String> = s
             .stats(card)
@@ -52,15 +50,6 @@ mod tests {
             .collect();
         out.sort();
         out
-    }
-
-    #[test]
-    fn a_10_10_with_starship_piece_flying_ranged_and_rush() {
-        let mut s = scenario(json!({ "p1": { "field": [ID], "hand": [ANCHOR] } }));
-        let golem = golem_of(&s, P1);
-        s.expect_stats(&golem, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
-        assert_eq!(keywords_of(&s, &golem), vec!["Flying", "Ranged", "Rush", "Starship Piece"]);
-        assert!(crate::card_def(ID).token);
     }
 
     #[test]

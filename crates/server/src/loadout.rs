@@ -3,17 +3,13 @@
 //! enters `PlayerView`, an action, the log, a replay hash or a game record, and the engine never
 //! reads it (CLAUDE.md rule 7).
 //!
-//! R1834002: when a match starts, each seat's loadout is frozen on its row ([`freeze_loadout`]):
-//! the deck's three slots (the deck's pick, else the account's, else the kind's default) and the
-//! picks of each card in the deck, each resolved to a registry id the account owns at that moment
-//! and the kind's default otherwise, so no unknown or unowned id ever reaches another client. A card
-//! with no pick of a kind wears its default, never the account's (R1953001), so the seat's foil,
-//! finish and border are always the defaults. A row from before #1834 reads as [`Loadout::defaults`].
+//! R1834002: when a match starts, each seat's loadout is frozen on its row ([`freeze_loadout`]): the
+//! deck's three slots and each card's picks, each resolved to a registry id the account owns at that
+//! moment and the kind's default otherwise. A row from before #1834 reads as [`Loadout::defaults`].
 //!
 //! R1834003: the seat-level half travels whole, on join and on reconnect (`loadouts`). A card's own
-//! picks travel only once a card dealt from that seat's deck, still showing as what it was dealt,
-//! is in the receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]), so the frames
-//! never name a card the receiver has not seen and no decklist can be read from them (§10.8).
+//! picks travel only once a card dealt from that seat's deck, still showing as dealt, is in the
+//! receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]): no decklist can be read (§10.8).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -21,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{BackrowView, HandView, PLAYER_IDS, PlayerId, PlayerView, SideView};
 
-use crate::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, default_of, full_art_picked, owns, registry};
+use crate::cosmetics::{Cosmetic, CosmeticKind, default_of, full_art_of, full_art_picked, owns, registry};
 use crate::db::store::{BotRow, PlayerSettingValue, PlayerSettingsRow, SavedDeck, StoreResult, Tx};
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 
@@ -76,7 +72,6 @@ impl DeckSlots {
         (slots != DeckSlots::default()).then_some(slots)
     }
 
-    /// The deck's pick of `kind`, a deck slot's kind.
     pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
         match kind {
             CosmeticKind::Table => self.table.as_deref(),
@@ -130,7 +125,6 @@ impl AccountPicks {
         AccountPicks { picks, full_art }
     }
 
-    /// The account's pick of `kind`.
     pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
         self.picks.get(setting_key(kind)).map(String::as_str)
     }
@@ -151,7 +145,6 @@ pub struct SeatLoadout {
 }
 
 impl SeatLoadout {
-    /// Every kind's default in `registry`.
     pub fn defaults_of(registry: &[Cosmetic]) -> SeatLoadout {
         SeatLoadout {
             table: default_of(registry, CosmeticKind::Table).to_string(),
@@ -163,7 +156,6 @@ impl SeatLoadout {
         }
     }
 
-    /// The seat's id of `kind`, a deck or card slot's kind.
     pub fn get(&self, kind: CosmeticKind) -> &str {
         match kind {
             CosmeticKind::Table => &self.table,
@@ -217,7 +209,6 @@ impl Loadout {
         }
     }
 
-    /// The card `card_id`'s own entry, if it has one.
     pub fn card(&self, card_id: &str) -> Option<&CardPicks> {
         self.cards.iter().find(|card| card.card_id == card_id)
     }
@@ -232,7 +223,6 @@ pub struct SeatCards {
 }
 
 impl CardPicks {
-    /// The card's own pick of `kind`, a card slot's kind.
     pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
         match kind {
             CosmeticKind::Foil => self.foil.as_deref(),
@@ -242,7 +232,6 @@ impl CardPicks {
         }
     }
 
-    /// Sets the card's own pick of `kind`, a card slot's kind.
     pub fn set(&mut self, kind: CosmeticKind, id: Option<String>) {
         match kind {
             CosmeticKind::Foil => self.foil = id,
@@ -253,23 +242,18 @@ impl CardPicks {
     }
 }
 
-/// R1834002: a seat's loadout as its match starts, from the account's ledger (`owned`), its
-/// settings' picks (`account`), the deck's slots (`deck`, none for an All Random seat), its cards'
-/// own picks (`card_picks`) and the cards of its deck (`deck_cards`). Every id that leaves is one
-/// of `registry`, of its slot's kind, that the account owns where it is worn; anything else is the
-/// kind's default:
+/// R1834002: a seat's loadout as its match starts, from the account's ledger (`owned`), its settings'
+/// picks (`account`), the deck's slots (`deck`, none for an All Random seat), its cards' own picks
+/// (`card_picks`) and the cards of its deck (`deck_cards`). Every id that leaves is one of `registry`, of
+/// its slot's kind, owned where it is worn; anything else is the kind's default:
 ///
-///  - a deck slot wears the deck's pick when the deck carries one, owned, and the default when it
-///    is not (the deck's word is final, as the deck builder draws it); else the account's pick,
-///    owned; else the default;
-///  - a card slot wears its kind's default: since R1953001 a card with no pick of its own never
-///    wears the account's foil, finish or border, which nothing sets any more;
-///  - each card of the deck wears its own pick of a kind when that is owned on the card, and the
-///    default when it has none, does not own it or picks an id the registry has none of for its
-///    kind, as its owner's client draws it (R1655000, R1953001). Its full art is the one its own
-///    pick names, else its Epic when the account's Full-art cards setting is on, and prints when
-///    the account owns that full art on the card: `true` for the Epic, its id for a Legendary or a
-///    Mythic (R2655000). A card is listed only where it differs from the seat.
+///  - a deck slot wears the deck's pick when there is one and it is owned (the deck's word is final);
+///    with no pick, the account's if owned;
+///  - a card slot wears its kind's default, never the account's foil, finish or border;
+///  - each card of the deck wears its own pick of a kind when owned on the card (R1655000, R1953001); its
+///    full art is its own pick's, else its Epic when the Full-art cards setting is on, and prints when
+///    owned on the card: `true` for the still Epic, its id for a Legendary or a Mythic (R2655000) or the
+///    card's Animated art, an Epic too (R2715000). A card is listed only where it differs from the seat.
 pub fn freeze_loadout(
     registry: &[Cosmetic],
     owned: &OwnedCosmetics,
@@ -321,7 +305,9 @@ pub fn freeze_loadout(
         if let Some(full_art) =
             full_art_picked(registry, card, &pick).filter(|full_art| owns(full_art, Some(card), owned))
         {
-            entry.full_art = Some(if full_art.rarity == CosmeticRarity::Epic {
+            // R2715000: `true` is the still Epic alone; the card's Animated art, an Epic too, is its id.
+            let still = full_art_of(registry, card).is_some_and(|epic| epic.id == full_art.id);
+            entry.full_art = Some(if still {
                 FullArtPick::On(true)
             } else {
                 FullArtPick::Id(full_art.id.clone())
@@ -334,10 +320,9 @@ pub fn freeze_loadout(
     Loadout { seat, cards }
 }
 
-/// R1834002: what one seat's loadout is frozen from, read as its match starts: what the account
-/// owns, its settings' picks and its cards' own picks. A ladder bot's are its wardrobe and the picks
-/// it drew (R1834005), read off its row, so a bot's seat freezes through the same function a
-/// person's does.
+/// R1834002: what one seat's loadout is frozen from, read as its match starts. A ladder bot's are
+/// its wardrobe and the picks it drew (R1834005), read off its row, so a bot's seat freezes through
+/// the same function a person's does.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SeatPicks {
     pub owned: OwnedCosmetics,
@@ -384,10 +369,8 @@ impl SeatPicks {
     }
 }
 
-/// The cards a side of a view shows face up, each `(instance id, def id)`: its units, carried
-/// units and face-up backrow, its graveyard, exile and resolving cards, and its hand where the
-/// view lists it. A face-down card, the opponent's hand, a library, the events and the prompts
-/// name nothing here.
+/// The cards a side of a view shows face up, each `(instance id, def id)`. A face-down card, the
+/// opponent's hand, a library, the events and the prompts name nothing here.
 fn shown_cards(side: &SideView) -> impl Iterator<Item = (&str, &str)> {
     let units = side
         .units
@@ -412,11 +395,10 @@ fn shown_cards(side: &SideView) -> impl Iterator<Item = (&str, &str)> {
     units.chain(backrow).chain(piles)
 }
 
-/// R1834003: the `(seat, card)` pairs `view` shows: each card in it that was dealt from `seat`'s
-/// deck (`dealt`, `actor::engine::dealt_cards`) and still shows as the card it was dealt as,
-/// wherever it is now (a card that changed hands counts for the deck that dealt it). A card minted
-/// later and one transformed into another card name no pair, so a pair never says more about a
-/// deck than the view it is read from: a card of that deck, seen.
+/// R1834003: the `(seat, card)` pairs `view` shows: each card in it dealt from `seat`'s deck (`dealt`,
+/// `actor::engine::dealt_cards`) and still shown as the card it was dealt as, wherever it is now (a card
+/// that changed hands counts for the deck that dealt it). A card minted later or transformed names no
+/// pair, so a pair never says more than the view it is read from: a card of that deck, seen.
 pub fn shown_defs(
     view: &PlayerView,
     dealt: &BTreeMap<String, (PlayerId, String)>,
@@ -483,6 +465,7 @@ mod tests {
             default,
             starter,
             chase: false,
+            jlorious: false,
             card: None,
         }
     }
@@ -536,8 +519,6 @@ mod tests {
             ],
             true,
         );
-        // The deck's pick beats the account's; the account's fills a slot the deck leaves empty;
-        // the default fills one neither picks.
         let deck = DeckSlots {
             table: Some("table-default".to_owned()),
             field: None,
@@ -804,6 +785,67 @@ mod tests {
         assert_eq!(
             serde_json::to_value(id("full-art-core-001-signed")).ok(),
             Some(serde_json::json!("full-art-core-001-signed"))
+        );
+    }
+
+    #[test]
+    fn r2715000_an_owned_animated_art_freezes_as_its_id() {
+        // The card's Animated art, an Epic listed ahead of its still Epic.
+        let mut registry = test_registry();
+        registry.insert(
+            0,
+            Cosmetic {
+                card: Some("core-001".to_owned()),
+                rarity: CosmeticRarity::Epic,
+                ..entry("animated-core-001", CosmeticKind::FullArt, false, false)
+            },
+        );
+        let owning = |ids: &[&str]| OwnedCosmetics {
+            cards: ids
+                .iter()
+                .map(|id| CardCosmetic {
+                    card_id: "core-001".to_owned(),
+                    cosmetic_id: (*id).to_owned(),
+                })
+                .collect(),
+            account: Vec::new(),
+        };
+        let deck = cards(&["core-001", "core-002"]);
+        let frozen = |owned: &OwnedCosmetics, account_on: bool, pick: Option<FullArtPick>| {
+            let picks: Vec<CardPicks> = pick
+                .map(|pick| CardPicks {
+                    card_id: "core-001".to_owned(),
+                    full_art: Some(pick),
+                    ..CardPicks::default()
+                })
+                .into_iter()
+                .collect();
+            freeze_loadout(&registry, owned, &account(&[], account_on), None, &picks, &deck)
+                .card("core-001")
+                .and_then(|card| card.full_art.clone())
+        };
+        let animated = || Some(FullArtPick::Id("animated-core-001".to_owned()));
+        let both = owning(&["full-art-core-001", "animated-core-001"]);
+        // An owned Animated pick freezes as its id, not as `true`, whatever the setting.
+        assert_eq!(frozen(&both, false, animated()), animated());
+        assert_eq!(frozen(&both, true, animated()), animated());
+        // `true`, or the setting with no pick, still freezes the still Epic as `true`.
+        assert_eq!(
+            frozen(&both, false, Some(FullArtPick::On(true))),
+            Some(FullArtPick::On(true))
+        );
+        assert_eq!(frozen(&both, true, None), Some(FullArtPick::On(true)));
+        // The Animated art alone owns no still Epic, so `true` and the setting print nothing.
+        let animated_only = owning(&["animated-core-001"]);
+        assert_eq!(frozen(&animated_only, true, animated()), animated());
+        assert_eq!(frozen(&animated_only, true, Some(FullArtPick::On(true))), None);
+        assert_eq!(frozen(&animated_only, true, None), None);
+        // Not owned, it freezes nothing.
+        assert_eq!(frozen(&owning(&["full-art-core-001"]), true, animated()), None);
+        // It travels as its id's text.
+        assert_eq!(
+            serde_json::to_value(animated()).ok(),
+            Some(serde_json::json!("animated-core-001"))
         );
     }
 

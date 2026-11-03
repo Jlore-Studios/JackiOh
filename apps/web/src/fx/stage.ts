@@ -42,9 +42,8 @@ function attackTarget(targetId: string, view: PlayerView): string | null {
 type Ctx = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
 
 /**
- * #1442: the look of the shot `attackerId` fires, when `view` shows it with Ranged, else `null`. The
- * view decides whether it is Ranged, a forced attack as much as a chosen one, and only its public
- * `defId` and `keywords` are read (R202; CLAUDE.md rule 7). R1081000: a Unit standing in a backrow
+ * #1442: the look of the shot `attackerId` fires, when `view` shows it with Ranged, else `null`; only its
+ * public `defId` and `keywords` are read (R202; CLAUDE.md rule 7). R1081000: a Unit standing in a backrow
  * zone attacks as any Unit does, and the view carries it as its face-up slot's `unit`.
  */
 function rangedLook(attackerId: string, view: PlayerView): FlavorLook | null {
@@ -58,11 +57,18 @@ function rangedLook(attackerId: string, view: PlayerView): FlavorLook | null {
   return null;
 }
 
-/**
- * #1443: one flavor shot from `from` to `to`, leaving at jk-lunge's 24% keyframe and landing as
- * the entry ends (R200). `shotCues` builds its still lunge around this; a non-combat damage's
- * volley (cues.ts) fires it on its own.
- */
+/** R2789000: whether `view` shows `attackerId` with Flying (a Unit standing in a backrow zone included, R1081000). */
+function flies(attackerId: string, view: PlayerView): boolean {
+  for (const side of [view.you, view.opponent]) {
+    const standing = side.backrow.map((slot) => (slot !== null && slot.faceDown === false ? slot.unit : undefined));
+    for (const unit of [...side.units, ...standing]) {
+      if (unit !== null && unit !== undefined && unit.instanceId === attackerId) return hasKeyword(unit.keywords, "Flying");
+    }
+  }
+  return false;
+}
+
+/** #1443: one flavor shot, timed as in `shotCues`; a non-combat damage's volley (cues.ts) fires it on its own. */
 export function shotCue(
   look: FlavorLook,
   from: FxAnchor,
@@ -74,10 +80,7 @@ export function shotCue(
   return { kind: "shot", shot: look.projectile, colors: look.colors, preset: look.particle, from, to, delayMs, flightMs, density };
 }
 
-/**
- * #1442: a Ranged attacker stays in place (a still lunge) and its flavor's shot leaves at jk-lunge's
- * 24% keyframe and lands as the entry ends (R200); a boulder shakes the board as it lands.
- */
+/** #1442: a Ranged attacker's still lunge; its shot leaves at jk-lunge's 24% keyframe and lands as the entry ends (R200). */
 function shotCues(look: FlavorLook, attacker: string, target: string, c: Ctx): FxCue[] {
   const launch = frac(FX_SHOT_LAUNCH_AT, c.D);
   const cues: FxCue[] = [
@@ -169,7 +172,8 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       if (look !== null) return shotCues(look, attacker, target, c);
       const tuning = STAGE_TUNING.contactSpark;
       return [
-        { kind: "lunge", attacker, target, delayMs: 0, durationMs: D },
+        // R2789000: a Flying attacker's lunge arcs over the lane.
+        { kind: "lunge", attacker, target, delayMs: 0, durationMs: D, ...(flies(event.attackerId, view) ? { arc: true as const } : {}) },
         {
           kind: "burst",
           preset: "spark",
@@ -186,7 +190,6 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
   }
 }
 
-/** The layer is off at intensity 0. */
 export function planStage(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
   const cues: FxCue[] = [];

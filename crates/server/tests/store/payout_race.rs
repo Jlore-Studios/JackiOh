@@ -1,26 +1,5 @@
-//! SPEC §14.7: one account's overlapping payouts, against both stores.
-//!
-//! §14.7 says "a level pays once, as ledger rows, when its track reaches it", and [[R1301003]]
-//! serializes one account's economy writes under its lock. [`pay_game_rewards`] takes that lock
-//! before reading the account's tracks and quests; these prove two payouts that overlap still pay
-//! each level exactly once:
-//!
-//! - two payouts that each cross the same level pay it once, leaving the track's level at its XP;
-//! - two payouts that both cross `SET_TRACK_UNLOCK_LEVEL` unlock one older set each,
-//!   nearest-older first, and still pay every reached level exactly once (the second payout finds
-//!   the first payout's unlocked track active and carries its XP there too).
-//!
-//! ONE suite, TWO stores, like `contract.rs`: every case runs against `Db::Fake` always, and
-//! against `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time per
-//! database).
-//!
-//! Every pair is started before either is awaited (`tokio::join!`); the assertions are on the end
-//! state under overlap: every reached level paid once, every track's level its XP's. Note that two
-//! game payouts for one account also serialize on the account's wallet row (`jlore_grant`'s
-//! `for update`, every game paying nonzero Jlore), so on both stores they run one after the other;
-//! the account lock these tests exercise is the intended mechanism, and it is what a future
-//! zero-Jlore payout — or a lock-free reader like the dev tools — would rely on. The fake
-//! serializes transactions on its one lock (its `lock_account` is only the seams).
+//! SPEC §14.7: overlapping account payouts against both stores (R1301003).
+//! Proves levels pay once and older set tracks unlock in order under concurrent reward writes.
 
 use jackioh_engine::PlayerId;
 use jackioh_engine::wire::{SHIPPED_SETS, newest_shipped_set};
@@ -36,9 +15,7 @@ use jackioh_server::economy::track_rewards::reward_for_level;
 
 use super::contract::{PG_SERIAL, StoreHarness};
 
-/// The cases, once against each store: `memory::<case>` always (`cargo test`'s half),
-/// `postgres::<case>` when `DATABASE_URL` is set (`tests/db/run.sh`'s half). Each starts with the
-/// harness's `reset`.
+/// Runs cases against memory store and postgres when DATABASE_URL is set.
 macro_rules! both_stores {
     ($($case:ident),+ $(,)?) => {
         mod memory {
@@ -267,11 +244,8 @@ async fn overlapping_payouts_pay_each_level_once(harness: &StoreHarness) {
     );
 }
 
-/// Two overlapping payouts that both cross `SET_TRACK_UNLOCK_LEVEL` unlock one older set each,
-/// nearest-older first (one per payout, §14.7): the first payout unlocks the second-newest set, the
-/// second payout runs after the first commits, finds that track active and carrying its XP too, and
-/// unlocks the next one. Every reached level pays once, and every track's level is its XP's.
-/// Without the lock both payouts read the same stale tracks and both unlock and pay the same set.
+/// Overlapping payouts crossing `SET_TRACK_UNLOCK_LEVEL` unlock one older set each (§14.7).
+/// Lock ensures sequential execution without duplicate unlocks or stale track reads.
 async fn overlapping_payouts_unlock_one_set_once(harness: &StoreHarness) {
     let step = game_xp(GameMode::Ladder, STEP_ACTIONS, false);
     let seed_xp = total_xp_for_level(SET_TRACK_UNLOCK_LEVEL) - step;

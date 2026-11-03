@@ -1,22 +1,11 @@
 //! Chat between friends (SPEC S7, B53).
 //!
-//! - `GET /api/chat/:friendId?before=<cursor>`: `200 {messages, nextCursor}`, the newest `CHAT_PAGE`
-//!   messages of the conversation that come before `before` in `(sent at, id)` order (every one
-//!   without it), newest last; the ones sent to the caller are read from then on, and the page says
-//!   so. `nextCursor` is the cursor of the page's oldest message when the page holds `CHAT_PAGE`,
-//!   else `null` (R1384000); a `before` this server did not write is 400 before anything is read.
-//! - `POST /api/chat/:friendId` `{body}`: `201 {message}`. Only between friends neither side
-//!   blocked (else 404, the one answer for both). The body is trimmed; empty is 422 `empty`, more
-//!   than `CHAT_MAX_CHARS` characters 422 `too_long`; then each word the username filter would
-//!   refuse (R1433's `is_blocked` itself, so look-alikes and digits read as in a name) is masked
-//!   with `*`, a star per character, and the message is stored as masked. Past
-//!   `CHAT_MESSAGES_PER_MINUTE` a minute, 429; only a message that would be stored counts.
-//! - `GET /api/chat/unread`: `{unread: {[friendId]: n}}`, each friend with unread messages to the
-//!   caller.
-//! - `POST /api/chat/messages/:id/report` `{reason}`: its recipient reports a message, once (a
-//!   second report by the same player changes nothing). 204; 404 for anyone else.
-//! - The purge (`purge`) deletes every message older than `CHAT_RETENTION_DAYS`, its reports with
-//!   it, each time the retention loop runs (`api::retention::run_purge`: at boot, then hourly).
+//! - `GET /api/chat/:friendId?before=<cursor>`: `200 {messages, nextCursor}` (R1384000).
+//! - `POST /api/chat/:friendId` `{body}`: `201 {message}`, its words masked by the username filter
+//!   (R1433's `is_blocked` itself, so look-alikes and digits read as in a name).
+//! - `GET /api/chat/unread`: `{unread: {[friendId]: n}}`.
+//! - `POST /api/chat/messages/:id/report` `{reason}`: its recipient reports a message, 204.
+//! - The purge (`purge`) deletes messages older than `CHAT_RETENTION_DAYS`.
 //!
 //! No log line carries a message's body or a reason.
 
@@ -25,7 +14,6 @@ use std::sync::Arc;
 use serde::Serialize;
 use serde_json::{Value, json};
 use unicode_normalization::UnicodeNormalization;
-use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::api::collection::caller_profile;
 use crate::api::http::{
@@ -37,7 +25,7 @@ use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
 use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError};
 use crate::social::friends::are_friends;
 use crate::social::{created, iso, no_content, not_found, param, refused};
-use crate::username::is_blocked;
+use crate::username::{is_blocked, is_mark};
 
 /// S7's `ChatMessage`: `from` and `to` are profile ids; `read` is whether its recipient has read it.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -90,8 +78,7 @@ fn parse_cursor(text: &str) -> Option<ChatCursor> {
 }
 
 /// `GET /api/chat/:friendId?before=<cursor>` (B53, B58, R1384000): `200 {messages, nextCursor}`,
-/// newest last. `nextCursor` is the cursor of the page's oldest message when the page holds
-/// `CHAT_PAGE`, else `null`; a `before` this server did not write is 400, before anything is read.
+/// newest last.
 pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let friend_id = param(&req, "friendId");
@@ -249,13 +236,7 @@ pub async fn purge(app: &App) -> Result<i64, StoreError> {
     Ok(purged)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The word filter (B53): the usernames' filter (R1433), read over a message's words
-// ---------------------------------------------------------------------------------------------
-
-fn is_mark(ch: char) -> bool {
-    ch.general_category_group() == GeneralCategoryGroup::Mark
-}
 
 /// Whether the filter refuses this word: the usernames' filter (R1433) over its NFKC form, look-alike
 /// letters and digits read back both ways as in a name. A word with no letter is never matched, so a
@@ -264,9 +245,7 @@ fn is_blocked_word(word: &str) -> bool {
     word.chars().any(char::is_alphabetic) && is_blocked(&word.nfkc().collect::<String>())
 }
 
-/// B53: the message with every word the filter refuses masked, a `*` per character, so its length
-/// is unchanged. A word is a run of letters, digits, marks and `_`; everything between words is
-/// kept as written.
+/// B53: the message with every word the filter refuses masked, a `*` per character.
 pub fn mask_blocked_words(text: &str) -> String {
     fn flush(word: &mut String, out: &mut String) {
         if is_blocked_word(word) {

@@ -1,7 +1,6 @@
-// Whether a voice line is holding the voice channel right now (the engine's `speaking()`), for the
-// page's `data-speaking` mark: `Game` puts it on its root, and practice holds the AI's next step
-// while any element carries it (SPEC §9.9, routes/practice.tsx `useVoiceHold`), so the AI never
-// plays over a card that is still talking.
+// Whether a voice line holds the voice channel (the engine's `speaking()`), for `Game`'s `data-speaking`
+// mark: practice holds the AI's next step while any element carries it (SPEC §9.9, routes/practice.tsx
+// `useVoiceHold`), so the AI never plays over a card that is still talking.
 
 import { useSyncExternalStore } from "react";
 

@@ -66,10 +66,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #11.1 Frostbolt — SPEC §8.10 row S 11.1, BUILD M12 row S 11.1: "3 to a chosen Unit, which is
-// Frozen if it lives; 3 to a hero and nothing Frozen; Spell Damage adds to the hit; damage reads
-// through `param()`; radiant 5 to the target and to each Unit beside it, the neighbours not
-// Frozen" (R1867004).
+// S #11.1 Frostbolt — SPEC §8.10 row S 11.1, BUILD M12 row S 11.1 (R1867004).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

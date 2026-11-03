@@ -8,7 +8,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wire::actions::Selection;
-use crate::wire::catalog_types::{CardType, Keyword, PlayerId, PromptKind, Row, Zone, ZoneName, ZoneRef};
+use crate::wire::catalog_types::{
+    CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Zone, ZoneName, ZoneRef,
+};
 use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
 
@@ -187,6 +189,20 @@ string_union! {
     pub enum RollKind {
         Coin = "coin",
         Die = "die",
+    }
+}
+
+string_union! {
+    /// R2783000: which of a card's hooks a `hookResolving` marks (`hookResolving.hook`): its Cry (a
+    /// Spell's effect is one), its Death, a start-of-turn hook (its own turn's or the opponent's), an
+    /// end-of-turn hook, a Whenever trigger or an Activate ability.
+    pub enum HookKind {
+        Cry = "cry",
+        Death = "death",
+        StartOfTurn = "startOfTurn",
+        EndOfTurn = "endOfTurn",
+        Whenever = "whenever",
+        Activate = "activate",
     }
 }
 
@@ -380,6 +396,12 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         creator: Option<PlayerId>,
+        /// R2783001: the keyword behind this event — Reborn's return (§6.1) — for the client's cue; the
+        /// engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No rule reads it
+        /// (`as_rules_read`), and a view that hides the card hides it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        via: Option<KeywordKind>,
     },
     /// §4.4 step 5: `amount` is what got through. `absorbed` (R1360) is what the target's Armor took
     /// off this hit at step 2 — never the hero's divisors or cap, Divine Shield or Indestructible, and 0
@@ -392,6 +414,13 @@ pub enum GameEvent {
         combat: bool,
         #[serde(default, skip_serializing_if = "is_zero")]
         absorbed: i32,
+        /// R2783001: the keyword behind this event — Cleave's neighbour hit, a Trample excess, the strike
+        /// First Strike moved ahead, or a hit Pierce took past the Armor its target had — for the client's
+        /// cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No rule reads
+        /// it (`as_rules_read`), and a view that hides the card hides it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        via: Option<KeywordKind>,
     },
     HealthLost {
         player: PlayerId,
@@ -400,6 +429,12 @@ pub enum GameEvent {
     Healed {
         target_id: String,
         amount: i32,
+        /// R2783001: the keyword behind this event — Lifesteal's heal (§4.4 step 8) — for the client's cue;
+        /// the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No rule reads it
+        /// (`as_rules_read`), and a view that hides the card hides it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        via: Option<KeywordKind>,
     },
     DivineShieldLost {
         instance_id: String,
@@ -420,6 +455,13 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         radiant: Option<bool>,
+        /// R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
+        /// First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
+        /// client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No
+        /// rule reads it (`as_rules_read`), and a view that hides the card hides it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        via: Option<KeywordKind>,
     },
     EnteredGraveyard {
         instance_id: String,
@@ -623,9 +665,9 @@ pub enum GameEvent {
         lane: i32,
     },
     /// R154: `row` and `lane` say which zone flipped, so a client can point at it without being told
-    /// which card it was. `instanceId` and `defId` follow §10.8's redaction (R97) — the controller
-    /// reads them, the other player reads the sentinel — and a face-down trap is given no instance id
-    /// in the view at all, so without the lane the opponent's side has nothing to animate on.
+    /// which card it was. `instanceId` and `defId` follow §10.8's redaction (R97) on both seats alike
+    /// (R2734000) — and a face-down trap is given no instance id in the view at all, so without the
+    /// lane the opponent's side has nothing to animate on.
     TrapFired {
         instance_id: String,
         def_id: String,
@@ -966,6 +1008,12 @@ pub enum GameEvent {
         target_id: String,
         absorbed: i32,
         combat: bool,
+        /// R2783001: the keyword behind this event — the route of the hit Armor took, as on `damage` — for
+        /// the client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5).
+        /// No rule reads it (`as_rules_read`), and a view that hides the card hides it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        via: Option<KeywordKind>,
     },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M5, MB10's ME-JADE). Its BUILD M5-T4 row, `ANIMATIONS`
@@ -1171,6 +1219,25 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         face_down: Option<bool>,
     },
+    // -------------------------------------------------------------------------------------------
+    // Issue #2783: the event stream says why (R2783000, R2783001)
+    // -------------------------------------------------------------------------------------------
+    /// R2783000: the card `source_id` (of `def_id`, `""` for a Cry that runs with no card, R127)
+    /// begins to resolve its `hook` for `controller`, just before the hook's effects, a hook that
+    /// fizzles included; a continuation after a prompt has none. A marker nothing answers: it takes no
+    /// number in R68's order and moves no hash. One whose card a seat could not read where it stood as
+    /// the hook began never reaches that seat; otherwise its card is named as the card itself is (R97).
+    HookResolving {
+        source_id: String,
+        def_id: String,
+        controller: PlayerId,
+        hook: HookKind,
+        /// R2783000, R177: the seats that could not read the card where it stood as the hook began.
+        /// Engine bookkeeping: the view uses it and never forwards it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        hidden_from: Option<Vec<PlayerId>>,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1319,6 +1386,7 @@ string_union! {
         Held = "held",
         BoardReplaced = "boardReplaced",
         Rolled = "rolled",
+        HookResolving = "hookResolving",
     }
 }
 
@@ -1337,6 +1405,8 @@ impl GameEvent {
     /// `summoned` and a `transformed` without their `creator`, the game record's (§9.11). So the state a
     /// game passes through, a frontier paused on a prompt or left by a game's end included, hashes as it
     /// did before any of them existed (D14), and a recorded game's replay keeps its final hash (R768).
+    /// R2783001: a `damage`, a `damageAbsorbed`, a `healed`, a `destroyed` and a `summoned` without their
+    /// `via`, the client's cue (the `hookResolving` marker never reaches the loop at all, R2783000).
     /// Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
         match self {
@@ -1346,24 +1416,59 @@ impl GameEvent {
                 amount,
                 combat,
                 absorbed: _,
+                via: _,
             } => GameEvent::Damage {
                 source_id: source_id.clone(),
                 target_id: target_id.clone(),
                 amount: *amount,
                 combat: *combat,
                 absorbed: 0,
+                via: None,
             },
             GameEvent::DamageAbsorbed {
                 source_id,
                 target_id,
                 combat,
                 absorbed: _,
+                via: _,
             } => GameEvent::Damage {
                 source_id: source_id.clone(),
                 target_id: target_id.clone(),
                 amount: 0,
                 combat: *combat,
                 absorbed: 0,
+                via: None,
+            },
+            // R2783001: `via` is the client's, so the rules drop it.
+            GameEvent::Healed {
+                target_id,
+                amount,
+                via: _,
+            } => GameEvent::Healed {
+                target_id: target_id.clone(),
+                amount: *amount,
+                via: None,
+            },
+            GameEvent::Destroyed {
+                instance_id,
+                def_id,
+                owner,
+                controller,
+                attack,
+                max_health,
+                killer_id,
+                radiant,
+                via: _,
+            } => GameEvent::Destroyed {
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                owner: *owner,
+                controller: *controller,
+                attack: *attack,
+                max_health: *max_health,
+                killer_id: killer_id.clone(),
+                radiant: *radiant,
+                via: None,
             },
             GameEvent::ControlChanged {
                 instance_id,
@@ -1421,7 +1526,7 @@ impl GameEvent {
                 creator: None,
             },
             // R1088: `sourceId` is the client's, like `how` above, so the rules drop it, and R2089000's
-            // `creator` with it.
+            // `creator` and R2783001's `via` with it.
             GameEvent::Summoned {
                 player,
                 instance_id,
@@ -1433,6 +1538,7 @@ impl GameEvent {
                 arrived_during,
                 exits_from,
                 creator: _,
+                via: _,
             } => GameEvent::Summoned {
                 player: *player,
                 instance_id: instance_id.clone(),
@@ -1444,6 +1550,7 @@ impl GameEvent {
                 arrived_during: arrived_during.clone(),
                 exits_from: *exits_from,
                 creator: None,
+                via: None,
             },
             other => other.clone(),
         }
@@ -1545,6 +1652,7 @@ impl GameEvent {
             GameEvent::Held { .. } => GameEventType::Held,
             GameEvent::BoardReplaced { .. } => GameEventType::BoardReplaced,
             GameEvent::Rolled { .. } => GameEventType::Rolled,
+            GameEvent::HookResolving { .. } => GameEventType::HookResolving,
         }
     }
 }
@@ -1607,6 +1715,7 @@ mod tests {
             amount: 3,
             combat: false,
             absorbed: 0,
+            via: None,
         };
         let json = serde_json::to_string(&event).unwrap();
         assert_eq!(
@@ -1634,8 +1743,8 @@ mod tests {
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
-        // #2652's `rolled` (R2652001).
-        assert_eq!(GAME_EVENT_TYPES.len(), 93);
+        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 94);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1648,6 +1757,7 @@ mod tests {
             amount: 1,
             combat: true,
             absorbed: 2,
+            via: None,
         };
         let json = serde_json::to_string(&event).unwrap();
         assert_eq!(
@@ -1670,6 +1780,7 @@ mod tests {
             target_id: "hero-p2".into(),
             absorbed: 3,
             combat: false,
+            via: None,
         };
         let json = serde_json::to_string(&event).unwrap();
         assert_eq!(
@@ -1681,5 +1792,107 @@ mod tests {
         // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
         // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
+    }
+
+    /// R2783000: the marker names its card, its definition, who runs the hook and which hook; the seats
+    /// it is hidden from ride along only when there are any, for the view to use.
+    #[test]
+    fn r2783000_hook_resolving_serializes_without_its_bookkeeping() {
+        let event = GameEvent::HookResolving {
+            source_id: "c1".into(),
+            def_id: "core-001".into(),
+            controller: PlayerId::P1,
+            hook: HookKind::StartOfTurn,
+            hidden_from: None,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"hookResolving","sourceId":"c1","defId":"core-001","controller":"p1","hook":"startOfTurn"}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "hookResolving");
+        assert_eq!(GAME_EVENT_TYPES.last(), Some(&GameEventType::HookResolving));
+        let hidden = GameEvent::HookResolving {
+            source_id: "c1".into(),
+            def_id: "core-001".into(),
+            controller: PlayerId::P1,
+            hook: HookKind::StartOfTurn,
+            hidden_from: Some(vec![PlayerId::P2]),
+        };
+        assert!(
+            serde_json::to_string(&hidden)
+                .unwrap()
+                .ends_with(r#""hook":"startOfTurn","hiddenFrom":["p2"]}"#)
+        );
+        let names: Vec<&str> = HookKind::ALL.iter().map(|kind| kind.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["cry", "death", "startOfTurn", "endOfTurn", "whenever", "activate"]
+        );
+    }
+
+    /// R2783001: `via` is on the wire only when set, so an event no keyword caused reads as it did, and
+    /// the rules hold every event that carries one without it.
+    #[test]
+    fn r2783001_via_rides_the_wire_only_when_set_and_the_rules_never_read_it() {
+        let hit = |via: Option<KeywordKind>| GameEvent::Damage {
+            source_id: Some("c4".into()),
+            target_id: "c9".into(),
+            amount: 3,
+            combat: true,
+            absorbed: 0,
+            via,
+        };
+        assert_eq!(
+            serde_json::to_string(&hit(Some(KeywordKind::FirstStrike))).unwrap(),
+            r#"{"type":"damage","sourceId":"c4","targetId":"c9","amount":3,"combat":true,"via":"First Strike"}"#
+        );
+        assert!(!serde_json::to_string(&hit(None)).unwrap().contains("via"));
+        assert_eq!(hit(Some(KeywordKind::Cleave)).as_rules_read(), hit(None));
+
+        let routed = [
+            GameEvent::DamageAbsorbed {
+                source_id: None,
+                target_id: "c9".into(),
+                absorbed: 2,
+                combat: true,
+                via: Some(KeywordKind::Trample),
+            },
+            GameEvent::Healed {
+                target_id: "hero-p1".into(),
+                amount: 2,
+                via: Some(KeywordKind::Lifesteal),
+            },
+            GameEvent::Destroyed {
+                instance_id: "c9".into(),
+                def_id: "core-001".into(),
+                owner: PlayerId::P2,
+                controller: PlayerId::P2,
+                attack: 1,
+                max_health: 1,
+                killer_id: Some("c4".into()),
+                radiant: None,
+                via: Some(KeywordKind::Poisonous),
+            },
+            GameEvent::Summoned {
+                player: PlayerId::P1,
+                instance_id: "c4".into(),
+                def_id: "core-001".into(),
+                row: Row::Units,
+                lane: 1,
+                former_id: None,
+                source_id: None,
+                arrived_during: None,
+                exits_from: None,
+                creator: None,
+                via: Some(KeywordKind::Reborn),
+            },
+        ];
+        for event in routed {
+            let read = serde_json::to_value(event.as_rules_read()).unwrap();
+            assert!(read.get("via").is_none(), "{read}");
+            assert!(serde_json::to_value(&event).unwrap().get("via").is_some());
+        }
     }
 }

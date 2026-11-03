@@ -1,9 +1,7 @@
-//! Test-only cards for the two engine primitives issue #1845 builds before any Stinkyscape card uses
-//! them: hidden Nerfs (`degrade_secretly`, R1845000, R1845001; Stinkyscape #123 Gokugains' shape) and
-//! the trade offer (`trade_offer`, R1845002; #77 Yuma's). Each does it through the engine's own verbs,
-//! as a card script would, so the engine never imports `crates/cards`.
-//!
-//! Ids are prefixed `ht-` and indexed from 18450, so they collide with no other fixture file's.
+//! Test-only cards for issue #1845's two engine primitives: hidden Nerfs (`degrade_secretly`, R1845000,
+//! R1845001; Stinkyscape #123 Gokugains' shape) and the trade offer (`trade_offer`, R1845002; #77
+//! Yuma's), through the engine's own verbs. Ids are prefixed `ht-` and indexed from 18450, so they
+//! collide with no other fixture file's.
 
 use std::sync::LazyLock;
 
@@ -53,8 +51,7 @@ pub static TRADER: LazyLock<CardDef> = LazyLock::new(|| {
         json!({ "attack": 1, "health": 1, "keywords": [], "text": "trader" }),
     )
 });
-/// The trader with Lucky 1 printed (#77 Yuma's Radiant face): its offer's Discover is drawn twice
-/// (R1877001).
+/// The trader with Lucky 1 printed (#77 Yuma's Radiant face): its offer's Discover is drawn twice (R1877001).
 pub static LUCKY_TRADER: LazyLock<CardDef> = LazyLock::new(|| {
     card(
         18454,

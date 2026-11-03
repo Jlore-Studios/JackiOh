@@ -67,7 +67,8 @@ day starts the lane again should that chain stop (one run at a time). Each run:
    promotion is still open, a pass waits behind it instead ("a promotion still open"): pushing
    `ai/learn` again would close that one, so this one stays the run's artifact (`promotion.patch`) and
    the next run gates on `main` once the open one has merged.
-7. **Files the export's games** into production's card statistics (`import`, once the retrain has ended,
+7. **Files the export's games** into staging's card statistics, the JackiOh-Staging project's, since
+   production's holds live games alone (docs/deploy-cloudflare.md section 8) (`import`, once the retrain has ended,
    however it ended): `cargo jackioh stats from-selfplay` over the shards that finished, with the build
    that played them (R1676000), then `jackioh-server stats-import --totals-only` (R1976000), which adds
    their counts to the totals and keeps no row per game, so the database grows with the patches, not the
@@ -148,7 +149,8 @@ after a change to its Dockerfile), and its supervisor serving `learn.yml` (`conf
 should not sleep while it is plugged in, or a shard in the middle of its work is lost each time it
 does. Without the runner no run starts at all: its jobs wait 24 hours and fail.
 
-The stats database: a person does this once, for step 7: create a login on production's database that
+The stats database: a person does this once, for step 7: create a login on staging's database (the
+JackiOh-Staging project, which was production's until 2026-11) that
 may act as `service_role` (Supabase's SQL editor: `create role stats_importer login noinherit password
 '…'; grant service_role to stats_importer;`), and save its session-pooler connection string
 (`postgresql://stats_importer.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`,

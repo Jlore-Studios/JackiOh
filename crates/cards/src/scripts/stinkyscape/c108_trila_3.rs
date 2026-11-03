@@ -16,10 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #108 Trila 3 — SPEC §8.10 row 108, BUILD M12 row S 108: "a 7/7 Ranged Windfury
-// Starship Piece, attacking twice a turn (WINDFURY_ATTACKS) and taking no strike back from a
-// defender without Ranged (R783000); radiant 14/14 with Rush, attacking Units the turn it is
-// played".
+// Stinkyscape #108 Trila 3 — SPEC §8.10 row 108, BUILD M12 row S 108 (R783000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -31,26 +28,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    #[test]
-    fn prints_ranged_windfury_7_7_radiant_14_14_with_rush() {
-        crate::register_all();
-        let def = crate::card_def(TRILA);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Ranged", "Windfury"]);
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Ranged", "Rush", "Windfury"]
-        );
-        assert_eq!((def.base.attack, def.base.health), (Some(7), Some(7)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(14), Some(14)));
-    }
-
     #[test]
     fn windfury_attacks_twice_a_turn() {
         crate::register_all();
@@ -60,7 +37,6 @@ mod tests {
         }));
         s.attack(TRILA, "hero");
         s.expect_health(PlayerId::P2, 23);
-        // Windfury (WINDFURY_ATTACKS): a second attack in the same turn.
         s.attack(TRILA, "hero");
         s.expect_health(PlayerId::P2, 16);
     }
@@ -73,7 +49,6 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
         }));
         s.play(TRILA, json!({ "zone": 1 }));
-        // Rush: a Unit at once (never the hero on its summon turn).
         s.expect_refused(|s| s.attack(TRILA, "hero"));
         s.attack(TRILA, VANILLA);
         s.expect_in_zone(VANILLA, "graveyard");

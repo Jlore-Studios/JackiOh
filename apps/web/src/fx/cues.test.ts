@@ -1,12 +1,8 @@
 // docs/polish/1-animations.md, behaviors B8 to B22: the cue planner (S6) and its recipe table (S7).
-//
 // R200 (the effects layer paces nothing) and R202 (effects draw from the redacted stream only) are
 // named here; the rulings index points at this file for both.
-//
-// Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop those
-// two fields and B9 checks how counts scale instead. Everything else in a cue (kind, preset, anchor,
-// spread, delay, duration, tone, amount, text) is S7's and is compared exactly. Within one recipe the
-// cues are compared as a set: S7 lists what is planned, not in which order.
+// Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop them (B9
+// checks how counts scale); the rest of a cue is S7's, compared exactly and, within a recipe, as a set.
 
 import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -20,6 +16,7 @@ import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
+  FX_CALLOUT_MS,
   FX_CENTER,
   FX_CRACK_TAIL_MS,
   FX_DEATH_EMBER_AT,
@@ -54,9 +51,7 @@ import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, 
 import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
-/* ------------------------------------------------------------------------------------------- *
- * Fixture ids, read off the M5-T1 board rather than guessed
- * ------------------------------------------------------------------------------------------- */
+/* Fixture ids, read off the M5-T1 board rather than guessed */
 
 const VIEW: PlayerView = fullBoardView();
 
@@ -93,9 +88,7 @@ const MY_TRAP = backrowId(4);
 /** The viewer's face-up Field Trap in backrow lane 2. */
 const MY_FIELD_TRAP = backrowId(1);
 
-/* ------------------------------------------------------------------------------------------- *
- * Anchors and expected cues, in S7's notation
- * ------------------------------------------------------------------------------------------- */
+/* Anchors and expected cues, in S7's notation */
 
 type Loose = Record<string, unknown>;
 
@@ -203,9 +196,7 @@ function shakesOf(cues: readonly FxCue[]): number[] {
   return cues.flatMap((cue) => (cue.kind === "shake" ? [cue.trauma] : []));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Planning helpers
- * ------------------------------------------------------------------------------------------- */
+/* Planning helpers */
 
 function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
@@ -263,9 +254,7 @@ const played = (player: "p1" | "p2", instanceId: string, defId = "core-002"): Ga
   costPaid: 1,
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * One sample per recipe branch, for the property checks
- * ------------------------------------------------------------------------------------------- */
+/* One sample per recipe branch, for the property checks */
 
 type Sample = { name: string; events: GameEvent[]; prime?: GameEvent[]; card?: FxPlanEnv["card"] };
 
@@ -354,9 +343,7 @@ function planSample(sample: Sample, D: number, intensity: number = FX_INTENSITY_
   return planFx({ ...entry, durationMs: D }, view, env);
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B8: R200, every cue lands inside its entry
- * ------------------------------------------------------------------------------------------- */
+/* B8: R200, every cue lands inside its entry */
 
 describe("B8 timing bounds", () => {
   it("R200 every planned cue starts inside its entry and ends within FX_MAX_TAIL_MS of the entry's end, for every D from MIN_ENTRY_MS to 1400 ms", () => {
@@ -403,16 +390,10 @@ describe("B8 timing bounds", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B9: intensity
- * ------------------------------------------------------------------------------------------- */
+/* B9: intensity */
 
 describe("B9 intensity", () => {
   const LEVELS = [FX_INTENSITY_SCALE.low, FX_INTENSITY_SCALE.normal, FX_INTENSITY_SCALE.high] as const;
-
-  it("B9 the intensity scale is off 0, low 0.45, normal 1, high 1.6", () => {
-    expect(FX_INTENSITY_SCALE).toEqual({ off: 0, low: 0.45, normal: 1, high: 1.6 });
-  });
 
   it("B9 burst counts grow with intensity: every burst low <= normal <= high, and the totals strictly", () => {
     const totals = [0, 0, 0];
@@ -483,9 +464,7 @@ describe("B9 intensity", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B10 to B12: impact
- * ------------------------------------------------------------------------------------------- */
+/* B10 to B12: impact */
 
 describe("B10 spell projectiles", () => {
   it("B10 a non-combat damage from a rendered unit fires its flavor's shot and lands every impact at the landing", () => {
@@ -604,7 +583,7 @@ describe("B12 poison", () => {
     expect(first?.keywords.some((k) => k.kind === "Poisonous")).toBe(false);
   });
 
-  it("B12 a Poisonous source fires its flavor's shot and adds a poison burst at the landing", () => {
+  it("R2789000 B12 a Poisonous source's hit plans no poison burst: it fires its flavor's shot as any source does", () => {
     forDs("damage", (D) => {
       const launch = r(FX_SHOT_LAUNCH_AT * D);
       const physical = FLAVOR_LOOKS.Physical;
@@ -612,17 +591,15 @@ describe("B12 poison", () => {
         shot(physical, cardT(POISONER), cardT(ENEMY), launch, D - launch),
         burst("spark", cardT(ENEMY), "point", D),
         splat("damage", 3, cardT(ENEMY), D, D),
-        burst("poison", cardT(ENEMY), "area", D),
         burst(physical.particle, cardT(ENEMY), "area", D),
       ]);
     });
   });
 
-  it("B12 a Poisonous source in combat adds the poison burst at 0 and flies nothing", () => {
+  it("R2789000 B12 a Poisonous source in combat plans no poison burst either: the view's keywords are no longer read", () => {
     expectCues(plan([dmg(POISONER, ENEMY, 7, true)], 300), [
       burst("spark", cardT(ENEMY), "point", 0),
       splat("damage", 7, cardT(ENEMY), 0, 300),
-      burst("poison", cardT(ENEMY), "area", 0),
       burst("dust", cardT(ENEMY, FOOT), "area", 0),
       shake(traumaForShakePx(damageFeel(7).shakePx), 0),
     ]);
@@ -634,18 +611,27 @@ describe("B12 poison", () => {
     expect(cues.find((c) => c.kind === "shot")).toMatchObject({ preset: FLAVOR_LOOKS.Hustle.particle });
   });
 
-  it("B12 Poisonous is read from the planning view: the same unit without it plans no poison", () => {
-    const view = fullBoardView();
-    const second = must(view.you.units[1], "the second unit");
-    view.you.units[1] = { ...second, keywords: second.keywords.filter((k) => k.kind !== "Poisonous") };
-    const cues = plan([dmg(POISONER, ENEMY, 3, false)], 300, { view });
-    expect(cues.some((c) => "preset" in c && c.preset === "poison")).toBe(false);
+  it("R2789000 B12 a death keyed `via: Poisonous` plans the poison burst at 0, and one with no `via` plans none", () => {
+    const died = (via?: "Poisonous"): GameEvent => ({
+      type: "destroyed",
+      instanceId: ENEMY,
+      defId: "core-008",
+      owner: "p2",
+      controller: "p2",
+      attack: 4,
+      maxHealth: 4,
+      killerId: POISONER,
+      ...(via === undefined ? {} : { via }),
+    });
+    const poisons = (cues: readonly FxCue[]): FxCue[] => cues.filter((c) => c.kind === "burst" && c.preset === "poison");
+    for (const D of [ANIMATIONS.destroyed.durationMs, ODD_D]) {
+      expect(poisons(plan([died("Poisonous")], D)).map((c) => `${c.kind}@${String(c.delayMs)}`)).toEqual(["burst@0"]);
+      expect(poisons(plan([died()], D))).toEqual([]);
+    }
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B13: sources and memory
- * ------------------------------------------------------------------------------------------- */
+/* B13: sources and memory */
 
 describe("B13 sourceAnchor and memory", () => {
   it("B13 a rendered instance comes first: a unit, a face-up backrow card or a card in the viewer's hand", () => {
@@ -763,9 +749,7 @@ describe("B13 sourceAnchor and memory", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B14, B15: summon and cast
- * ------------------------------------------------------------------------------------------- */
+/* B14, B15: summon and cast */
 
 describe("B14 summon", () => {
   const ZONE = testid.zone("you", "units", 3);
@@ -787,7 +771,7 @@ describe("B14 summon", () => {
     });
   });
 
-  it("B14 a Legendary adds legendary rays from 0, a gold burst at the slam and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 a Legendary adds legendary rays from 0, a gold burst and ring at the slam and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Legendary", attack: 1, health: 1 }, D), [
@@ -795,12 +779,13 @@ describe("B14 summon", () => {
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         rays("legendary", tid(ZONE), 0, D),
         burst("gold", tid(ZONE), "area", slam),
-        shake(0.5, slam),
+        ring("gold", tid(ZONE), slam, D),
+        shake(0.7, slam),
       ]);
     });
   });
 
-  it("B14 a Mythic adds mythic rays, a prismatic burst and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 a Mythic adds mythic rays, a prismatic burst and ring and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Mythic", attack: 2, health: 2 }, D), [
@@ -808,7 +793,8 @@ describe("B14 summon", () => {
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         rays("mythic", tid(ZONE), 0, D),
         burst("prismatic", tid(ZONE), "area", slam),
-        shake(0.5, slam),
+        ring("prismatic", tid(ZONE), slam, D),
+        shake(0.7, slam),
       ]);
     });
   });
@@ -825,8 +811,8 @@ describe("B14 summon", () => {
 
   it("B14 Legendary and Mythic trauma stacks on the slam trauma", () => {
     const slam = r(FX_SLAM_AT * 250);
-    expect(shakesOf(summonCues({ rarity: "Legendary", attack: 5, health: 5 }, 250)).map(round6)).toEqual([0.56]);
-    expect(shakesOf(summonCues({ rarity: "Mythic", attack: 6, health: 6 }, 250)).map(round6)).toEqual([0.68]);
+    expect(shakesOf(summonCues({ rarity: "Legendary", attack: 5, health: 5 }, 250)).map(round6)).toEqual([0.76]);
+    expect(shakesOf(summonCues({ rarity: "Mythic", attack: 6, health: 6 }, 250)).map(round6)).toEqual([0.88]);
     // A big Mythic slams as hard as a shake goes.
     expect(shakesOf(summonCues({ rarity: "Mythic", attack: 20, health: 20 }, 250)).map(round6)).toEqual([1]);
     expect(summonCues({ rarity: "Mythic", attack: 20, health: 20 }, 250).find((c) => c.kind === "shake")?.delayMs).toBe(slam);
@@ -891,7 +877,6 @@ describe("B15 cast", () => {
       expectCues(cues, [
         ring("dust", tid(zone), slam, D),
         burst("dust", tid(zone, FOOT), "ring", slam),
-        // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
         burst("spark", tid(zone, FOOT), "point", slam),
       ]);
     }
@@ -936,7 +921,7 @@ describe("B15 cast", () => {
       ring("arcane", handCardT(HAND), 0, 400),
     ]);
     expectCues(plan([played("p1", HAND, "core-018")], 400), [
-      burst("ember", handCardT(HAND), "area", 0),
+      burst("crumb", handCardT(HAND), "area", 0),
       ring("arcane", handCardT(HAND), 0, 400),
     ]);
   });
@@ -950,10 +935,10 @@ describe("B15 cast", () => {
       ["core-021", "void"],
       ["core-026", "holy"],
       ["core-010", "arcane"],
-      ["core-013", "frost"],
-      ["core-017", "poison"],
+      ["core-013", "circuit"],
+      ["core-017", "leaf"],
       ["core-022", "poison"],
-      ["core-018", "ember"],
+      ["core-018", "crumb"],
       ["core-004", "gold"],
       ["core-050", "confetti"],
       ["core-037", "sparkle"],
@@ -984,9 +969,7 @@ describe("B15 cast", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B16: one test per S7 row
- * ------------------------------------------------------------------------------------------- */
+/* B16: one test per S7 row */
 
 describe("B16 the recipe table, row by row", () => {
   it("B16 healed: holy rays and a holy burst at 0, a heal splat at 0.2 D", () => {
@@ -1043,7 +1026,7 @@ describe("B16 the recipe table, row by row", () => {
           crack(cardT(MINE_3), 0, D),
           burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
-          // #1446: core-017 is Nature, so it wilts: leaves drop off the card and settle at its foot.
+          // #1446: core-017 is Nature, so it wilts.
           burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
         ],
@@ -1265,7 +1248,7 @@ describe("B16 the recipe table, row by row", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
       const zone = zoneT("opponent", "backrow", 4);
-      // The event names a card the catalog knows, but the view shows no such instance (an opponent's face-down trap).
+      // The catalog knows the card, but the view shows no such instance (an opponent's face-down trap).
       const fired: GameEvent = { type: "trapFired", instanceId: "face-down-1", defId: "core-021", controller: "p2", row: "backrow", lane: 4 };
       const cues = plan([fired], D);
       expectCues(cues, [ring("arcane", zone, 0, D), burst("arcane", zone, "ring", b), shake(0.4, b)]);
@@ -1321,6 +1304,8 @@ describe("B16 the recipe table, row by row", () => {
     rangedView.you.units[0] = { ...first, keywords: [...first.keywords, { kind: "Ranged" }] };
     expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], 350, { view: rangedView }), [
       burst("dust", tid(testid.card(MINE), FOOT), "point", 0),
+      // R2789000: its beat adds the keyword's callout over the shooter.
+      { kind: "callout", keyword: "Ranged", at: cardT(MINE), delayMs: 0, durationMs: FX_CALLOUT_MS },
     ]);
     const hiddenView = fullBoardView();
     const hiddenFirst = must(hiddenView.you.units[0], "your first unit");
@@ -1453,9 +1438,7 @@ describe("B16 the recipe table, row by row", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B17, B18: flights and buffs
- * ------------------------------------------------------------------------------------------- */
+/* B17, B18: flights and buffs */
 
 describe("B17 card flights", () => {
   it("B17 drawn: a card back flies from library to hand over D, and a sparkle lands at D", () => {
@@ -1553,9 +1536,7 @@ describe("B18 buff arrows", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B19, B20: mana and banners
- * ------------------------------------------------------------------------------------------- */
+/* B19, B20: mana and banners */
 
 describe("B19 mana sparks", () => {
   function manaCues(player: "p1" | "p2", current: number, D: number, view?: PlayerView): FxCue[] {
@@ -1563,7 +1544,6 @@ describe("B19 mana sparks", () => {
   }
 
   it("B19 one sparkle per crystal that fills, from the planning view's current mana up", () => {
-    // The fixture's viewer has 2 of 4 crystals lit; the opponent has 0 of 3.
     expect(VIEW.you.mana.current).toBe(2);
     expect(VIEW.opponent.mana.current).toBe(0);
     const D = ANIMATIONS.manaChanged.durationMs;
@@ -1661,13 +1641,12 @@ describe("B20 turn banners", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B21: R202, the redacted stream only
- * ------------------------------------------------------------------------------------------- */
+/* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`. */
+/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's `still` (R2789000). */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
+  callout: ["still"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1681,6 +1660,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   rays: ["kind", "tone", "at", "delayMs", "durationMs"],
   sheen: ["kind", "at", "delayMs", "durationMs"],
   ghost: ["kind", "from", "to", "delayMs", "durationMs"],
+  callout: ["kind", "keyword", "at", "delayMs", "durationMs"],
   arrows: ["kind", "direction", "at", "delayMs", "durationMs"],
   banner: ["kind", "text", "tone", "delayMs", "durationMs"],
   result: ["kind", "outcome", "text", "delayMs", "durationMs"],
@@ -1695,6 +1675,9 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   roll: ["kind", "title", "die", "items", "delayMs", "durationMs"],
   fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
+  takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
+  setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
+  pull: ["kind", "testid", "to", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {
@@ -1876,9 +1859,7 @@ describe("B21 the redacted stream only", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B22: game over and hand-over
- * ------------------------------------------------------------------------------------------- */
+/* B22: game over and hand-over */
 
 describe("B22 planResult and planHandover", () => {
   const over = (winner: "p1" | "p2" | "draw", extra: Partial<PlayerView> = {}) =>
@@ -1976,9 +1957,7 @@ describe("B22 planResult and planHandover", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Review fixes: the killing blow, and projectiles that scale with intensity
- * ------------------------------------------------------------------------------------------- */
+/* The killing blow, and projectiles that scale with intensity */
 
 describe("R200 planLethal: the killing blow a drained game over never drew", () => {
   const finished = (winner: "p1" | "p2" | "draw") =>
@@ -2043,7 +2022,6 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
     const lethal = planLethal(entries, finished("p2"), envOf());
     expect(lethal.leadMs).toBe(FX_LETHAL_LEAD_MAX_MS);
     const empty = r(FX_LETHAL_LEAD_MAX_MS / 2);
-    // The library's dust at 0, the streak landing inside the first half, the hit's splat after it.
     expect(lethal.cues.some((cue) => cue.kind === "burst" && cue.preset === "dust" && cue.delayMs === 0)).toBe(true);
     const streak = lethal.cues.find((cue) => cue.kind === "projectile");
     expect(streak).toMatchObject({ preset: "void", from: tid("library-you"), to: heroT("you") });

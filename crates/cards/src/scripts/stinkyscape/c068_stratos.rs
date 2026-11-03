@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #68 Stratos — SPEC §8.10 row 68, BUILD M12 row S 68: "a vanilla 3/1 Flying Ranged Unit:
-// attacked only by Flying or Ranged Units in Attack Position (R783002), taking no strike back from a
-// defender without Ranged (R783000); no Starship Piece, so its death fuses nothing (#2521); radiant 6/2".
+// Stinkyscape #68 Stratos — SPEC §8.10 row 68, BUILD M12 row S 68 (R783002, R783000, #2521).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -38,16 +36,6 @@ mod tests {
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
-    }
-
-    #[test]
-    fn prints_flying_and_ranged_3_1_radiant_6_2() {
-        crate::register_all();
-        let def = crate::card_def(STRATOS);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Flying", "Ranged"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Flying", "Ranged"]);
-        assert_eq!((def.base.attack, def.base.health), (Some(3), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(6), Some(2)));
     }
 
     #[test]

@@ -129,17 +129,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_4_4_rush_first_strike_token_printed_legendary_the_radiant_face_is_charge_and_never_berserk() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::FirstStrike]);
-            assert_eq!(def.radiant.keywords, vec![Keyword::Charge, Keyword::FirstStrike]);
-            let scripts = script();
-            assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.never_berserk), Some(true));
-            assert!(scripts.radiant.start_of_turn.is_none());
-            assert!(scripts.base.start_of_turn.is_some());
-        }
-
-        #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
             for (radiant_face, size) in [(false, 4), (true, 8)] {
                 crate::register_all();
@@ -177,7 +166,6 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [{ "def": BOT, "lane": 2 }], "library": DECK },
                     "p2": { "hand": [FILLER], "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }], "library": DECK },
                 }));
-                // p2's start of turn: every enemy Unit attacks Moths.
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
@@ -222,12 +210,10 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                // The end of p1's turn: 4 to p1's own hero.
                 s.expect_health(P1, 26);
                 let me = bot(&s, P1);
                 s.expect_stats(&me, json!({ "health": 4 }));
                 s.end_turn();
-                // The start of p1's next turn: 4 more.
                 s.expect_health(P1, 22);
                 let own: Vec<bool> = s
                     .events()

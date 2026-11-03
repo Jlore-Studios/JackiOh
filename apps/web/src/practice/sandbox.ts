@@ -1,9 +1,6 @@
 // The practice sandbox's card search and the cards its tools can name (issue #923, R923000–R923003).
-//
-// Nothing here is a rule (CLAUDE.md rule 7): the panel builds a `sandbox` action from the player's
-// picks and the engine decides; search only finds cards to offer, and a card the engine would refuse
-// (one of a set that has not shipped, R1420, or a custom card the game does not carry, R962000) is
-// simply never offered.
+// Nothing here is a rule (CLAUDE.md rule 7): the engine decides, and a card it would refuse (one of a set
+// that has not shipped, R1420, or a custom card the game does not carry, R962000) is never offered.
 
 import { setShips, type ActionBody, type CardDef, type CardDefs, type PlayerView, type SandboxOp } from "@jackioh/shared";
 
@@ -24,7 +21,7 @@ function costOf(def: CardDef): number | null {
   return null;
 }
 
-/** What a word of a search is matched against: name, both texts, id, set, type and rarity. */
+/** What a word of a search is matched against. */
 function haystack(def: CardDef): string {
   return [
     def.name,
@@ -43,9 +40,8 @@ function haystack(def: CardDef): string {
 }
 
 /**
- * R923001: the cards a search finds, at most `limit`, in catalog order. Every word of the query must
- * match: a number matches the cost, any other word a part of the name, the text (either face), the
- * id, the set, the type or the rarity. An empty query finds the first `limit` cards.
+ * R923001: at most `limit`, in catalog order. Every word of the query must match: a number the cost, any
+ * other word a part of the `haystack`.
  */
 export function searchCards(defs: readonly CardDef[], query: string, limit: number = SANDBOX_RESULTS_MAX): CardDef[] {
   const words = query.toLowerCase().split(/\s+/u).filter((word) => word.length > 0);

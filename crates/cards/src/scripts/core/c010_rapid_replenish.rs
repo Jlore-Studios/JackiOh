@@ -2,25 +2,20 @@
 //! "Combo 3: draw 6": the faces differ only in how many cards the Combo draws (§8 Conventions).
 //!
 //! Always playable needs nothing: cost 0, no target, so an unmet Combo draws nothing and the spell
-//! still counts as played and goes to the graveyard (§8 Conventions, R40, R70).
+//! still counts as played (§8 Conventions, R40, R70).
 //!
-//! THE OFF-BY-ONE: §6.2's "Combo X" is "X or more cards were played EARLIER this turn", but §10.5
-//! step 4 counts this spell before step 5 runs its script, and step 5's granted Combo draw, run before
-//! this script, can cast a cast-on-draw card (R70) that is in the count too, though played after it.
-//! §6.2 checks "at play time", so the script reads `played_earlier`, this play's own place in the
-//! controller's turn log. BUILD M4-T4: two prior plays draw nothing, three draw 3.
-//!
-//! R195, the yellow glow: `condition_met` asks `played_earlier` from the hand too (every play this
-//! turn is earlier), so the glow and the draw cannot disagree.
+//! THE OFF-BY-ONE: §6.2's "Combo X" counts cards played EARLIER, at play time, but §10.5 step 4 counts
+//! this spell, and a card step 5's granted Combo draw casts (R70) before this script runs is counted
+//! too. So the script reads `played_earlier`, this play's own place in the turn log; R195's glow asks
+//! it from the hand too, so the glow and the draw cannot disagree.
 
 use jackioh_engine::effects::draw;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-010";
 
-/// "Combo 3" (§6.2): three or more cards played earlier this turn — the declared number `combo`, a
-/// threshold, less being better (R386) — and the draw, the declared number `draw`: 3, 6 on the
-/// Radiant face. The only difference between the two faces is how many cards the met Combo draws.
+/// The Combo threshold is the declared number `combo`, less being better (R386), and the draw is
+/// `draw`: 3, 6 on the Radiant face.
 fn rapid_replenish() -> Script {
     Script {
         cry: Some(hook(|ctx| {
@@ -34,8 +29,7 @@ fn rapid_replenish() -> Script {
                 vec![]
             }
         })),
-        // R195: hand only. The condition is about a play; a Spell never sits on the field. In hand,
-        // `played_earlier` is every play this turn.
+        // R195: hand only (a Spell never sits on the field), where `played_earlier` is every play.
         condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
             ctx.zone == ConditionZone::Hand
                 && played_earlier(ctx.state, ctx.controller, ctx.self_) >= param(&ctx, "combo")
@@ -50,16 +44,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #10 Rapid Replenish — SPEC §8.1 row 10, BUILD M4-T4 must-pass: "2 prior plays → no draw; 3 →
-// draw 3; radiant 6; counts as played either way".
+// #10 Rapid Replenish — SPEC §8.1 row 10, BUILD M4-T4 must-pass.
 //
-// §6.2 counts cards played EARLIER and §10.5 step 4 has already counted this spell, so "2 prior
-// plays" and "3 prior plays" are `turnLog.cardsPlayed` of 3 and 4. "Counts as played either way"
-// (R40, R70) is proved with a second copy, which finds three earlier plays. Nothing in the other
-// libraries is cast-on-draw (#21, #27, #90.1 are), so a draw is just a draw; the last case is the
-// exception (hunt round 8): a cast-on-draw Hinder cast by /fullsend's Combo draw at §10.5 step 5 is
-// played after, not earlier (§6.2). R195's yellow glow (`conditionMet`) is in condition_active.rs
-// (README §5).
+// "2 prior plays" and "3" are `turnLog.cardsPlayed` of 3 and 4, this spell counted. No library card is
+// cast-on-draw (#21, #27, #90.1 are) but the last case's Hinder (hunt round 8). R195's yellow glow
+// (`conditionMet`) is in condition_active.rs (README §5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -95,10 +84,8 @@ mod tests {
 
             s.play(&first, json!({}));
 
-            // Combo 3 is not met at two earlier plays: no draw, and the library is untouched.
             assert_eq!(s.pile(PlayerId::P1, "library").len(), library);
             assert_eq!(s.hand(PlayerId::P1).len(), 1);
-            // It resolved and was spent all the same (§8 Conventions: the spell still counts as played).
             s.expect_in_zone(&first, "graveyard");
 
             // R40/R70: because that copy counted, the next one finds three cards played earlier.
@@ -170,7 +157,6 @@ mod tests {
             }));
             let library = s.pile(PlayerId::P1, "library").len();
 
-            // §8.1: "always playable" — cost 0, no declared choices, no Combo requirement to play it.
             s.play("core-010", json!({}));
 
             assert_eq!(s.pile(PlayerId::P1, "library").len(), library);
@@ -257,10 +243,8 @@ mod tests {
             // needs three.
             g.play("core-010", json!({}));
             let drawn_by_self = before - g.pile(PlayerId::P1, "library").len();
-            // /fullsend's Combo draw takes the Hinder (cast on draw, R70) and draws again: at most 3
-            // cards leave the library, counting a Combo draw of the cast Hinder's own. Rapid
-            // Replenish's "draw 3" does not fire, because the Hinder was cast after it was played,
-            // not earlier.
+            // /fullsend's Combo draw casts the Hinder (R70) and draws again: at most 3 cards leave. The
+            // Hinder was cast after Rapid Replenish was played, not earlier, so its "draw 3" never fires.
             assert!(drawn_by_self <= 3);
         }
     }

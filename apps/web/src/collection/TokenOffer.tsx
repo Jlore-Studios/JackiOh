@@ -1,26 +1,22 @@
-// R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown (a card's own
-// cosmetics view, the playmat, backdrop and card back tiles), in place of the shop's picker it
-// replaces. A Rare token covers Common and Rare, an Epic token Epic and below, and no token a chase,
-// a default or a starter (R1305003, §14.2), so the offer shows only where a held token covers the
-// cosmetic.
+// R1953001 (#1953): a held token, offered only in a locked item's fullscreen preview (ItemPreview.tsx,
+// R2730000), and only where a held token covers it (R1305003, §14.2): a Legendary token covers a
+// Legendary chase too, and no token a Mythic (R2728000), a default or a starter; a card token covers
+// any unowned card (§14.5).
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The held counts are `GET /api/tokens`' and the offer only
-// hides what the server would refuse: its Confirm sends `POST /api/tokens/redeem-cosmetic` and renders
-// the answer, its held counts and a re-read of what the account owns (`rereadOwnedCosmetics`), so the
-// cosmetic shows owned. A refusal shows the server's words and changes nothing.
+// THE SERVER DECIDES (CLAUDE.md rule 7): the held counts are `GET /api/tokens`' and the offer only
+// hides what the server would refuse. A refusal shows the server's words and changes nothing.
 //
-// R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place, as
-// the shop's card token does (shop/TokenPicker.tsx): "Unlock {name}? This spends 1 Epic token.", with
-// Confirm and Cancel, Cancel focused. Cancel and Escape spend nothing and put the offer back, focused.
-// The question is drawn inside the offer, so in the card view, a modal, it lies inside the modal.
+// R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place, Cancel
+// focused. The question is drawn inside the offer, so in the preview, a modal, it lies inside the modal.
 
 import { useEffect, useId, useState, type KeyboardEvent, type ReactElement } from "react";
 
 import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import { getTokens, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
+import { getTokens, redeemCardToken, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
 import { cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
 import { collectionTestid as T } from "./collection.ts";
+import { messageOf } from "../net/errors.ts";
 
 import "./tokenOffer.css";
 
@@ -28,22 +24,29 @@ import "./tokenOffer.css";
 export type HeldTokens = TokenBarsResponse["tokens"];
 
 /** The tokens that buy a cosmetic, the lowest first, so an offer spends the cheapest that covers it. */
-const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic"];
+const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic", "Legendary"];
 
 function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
-  return tier === "Rare" ? held.cosmeticRare : held.cosmeticEpic;
+  switch (tier) {
+    case "Rare":
+      return held.cosmeticRare;
+    case "Epic":
+      return held.cosmeticEpic;
+    case "Legendary":
+      return held.cosmeticLegendary;
+  }
 }
 
 /**
- * The token a locked `cosmetic` is offered for: the lowest held one whose tier covers its rarity on
- * the cosmetic's own scale (R1305003). Null for a chase, a default or a starter, and where nothing
- * held covers it or the held tokens are unread.
+ * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003), so a chase
+ * only a Legendary token covers, and a Mythic none (R2728000). Null for a default or a starter, and
+ * where nothing held covers it or the held tokens are unread.
  */
 export function offerTier(
-  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "chase">,
+  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter">,
   held: HeldTokens | null,
 ): CosmeticTokenTier | null {
-  if (held === null || cosmetic.chase || cosmetic.default || cosmetic.starter) return null;
+  if (held === null || cosmetic.default || cosmetic.starter) return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
 }
 
@@ -71,53 +74,66 @@ export function useHeldTokens(token: string | null | undefined): [HeldTokens | n
   return [held, setHeld];
 }
 
-/** What the offer's button says: the token it spends and how many of it are held. */
-function offerWords(tier: CosmeticTokenTier, count: number): string {
-  return tier === "Rare"
-    ? t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) })
-    : t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
+/** What the offer spends: a cosmetic token of `tier` on one locked cosmetic, or a card token on one unowned card. */
+export type TokenSpend =
+  | { kind: "cosmetic"; tier: CosmeticTokenTier; cosmeticId: string; cardId?: string }
+  | { kind: "card"; cardId: string };
+
+function offerWords(spend: TokenSpend, held: HeldTokens): string {
+  if (spend.kind === "card") {
+    return t("Unlock with a card token ({count} held)", { count: formatNumber(held.card) });
+  }
+  const count = heldOf(held, spend.tier);
+  switch (spend.tier) {
+    case "Rare":
+      return t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) });
+    case "Epic":
+      return t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
+    case "Legendary":
+      return t("Unlock with a Legendary token ({count} held)", { count: formatNumber(count) });
+  }
 }
 
-/** What the offer asks before it spends (R2480000): the cosmetic, and the token it spends. */
-function questionWords(tier: CosmeticTokenTier, name: string): string {
-  return tier === "Rare"
-    ? t("Unlock {name}? This spends 1 Rare token.", { name })
-    : t("Unlock {name}? This spends 1 Epic token.", { name });
+/** What the offer asks before it spends (R2480000): the item, and the token it spends. */
+function questionWords(spend: TokenSpend, name: string): string {
+  if (spend.kind === "card") {
+    return t("Unlock {name}? This spends 1 card token.", { name });
+  }
+  switch (spend.tier) {
+    case "Rare":
+      return t("Unlock {name}? This spends 1 Rare token.", { name });
+    case "Epic":
+      return t("Unlock {name}? This spends 1 Epic token.", { name });
+    case "Legendary":
+      return t("Unlock {name}? This spends 1 Legendary token.", { name });
+  }
 }
 
 /**
- * The offer on one locked cosmetic: asks first (R2480000), then spends a `tier` token on
- * `cosmeticId`, on `cardId` for a per-card one and on the account for none, then hands the answer's
- * held tokens to `onRedeemed`.
+ * The offer on one locked item, drawn only in its fullscreen preview (R2730000): asks first
+ * (R2480000), then spends the token on it and hands the answer's held tokens to `onRedeemed`.
  */
 export default function TokenOffer({
   token,
-  tier,
+  spend,
   held,
-  cosmeticId,
   name,
-  cardId,
   onRedeemed,
-  testid,
-  errorTestid,
 }: {
   token: string;
-  tier: CosmeticTokenTier;
+  spend: TokenSpend;
   held: HeldTokens;
-  cosmeticId: string;
-  /** The cosmetic's name in the reader's language, which the question names. */
+  /** The item's name in the reader's language, which the question names. */
   name: string;
-  cardId?: string;
   onRedeemed: (held: HeldTokens) => void;
-  testid: string;
-  errorTestid: string;
 }): ReactElement | null {
-  // Once redeemed the offer is spent: the cosmetic shows owned as the re-read answers. R2480000: the
+  // Once redeemed the offer is spent: the item shows owned as the re-read answers. R2480000: the
   // press asks first; `asked` puts the focus back on the offer when Cancel or Escape answers.
   const [state, setState] = useState<"ready" | "asking" | "busy" | "redeemed">("ready");
   const [asked, setAsked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const questionId = useId();
+  const id = spend.kind === "cosmetic" ? spend.cosmeticId : spend.cardId;
 
   const ask = (): void => {
     if (state !== "ready") return;
@@ -127,7 +143,7 @@ export default function TokenOffer({
   const cancel = (): void => {
     setState("ready");
   };
-  // Escape answers Cancel and nothing else: the card view closes on an Escape that reaches the window.
+  // Escape answers Cancel and nothing else: the preview closes on an Escape that reaches the window.
   const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key !== "Escape") return;
     event.stopPropagation();
@@ -138,15 +154,20 @@ export default function TokenOffer({
     if (state !== "asking") return;
     setState("busy");
     setError(null);
-    redeemCosmeticToken(token, tier, cosmeticId, cardId).then(
+    const sent =
+      spend.kind === "card"
+        ? redeemCardToken(token, spend.cardId)
+        : redeemCosmeticToken(token, spend.tier, spend.cosmeticId, spend.cardId);
+    sent.then(
       (answer) => {
         setState("redeemed");
         onRedeemed(answer.tokens);
-        rereadOwnedCosmetics();
+        // A cosmetic's ownership is the owned-cosmetics read; a card's is the collection's own re-read.
+        if (spend.kind === "cosmetic") rereadOwnedCosmetics();
       },
       (cause: unknown) => {
         setState("ready");
-        setError(cause instanceof Error ? cause.message : String(cause));
+        setError(messageOf(cause));
       },
     );
   };
@@ -159,15 +180,15 @@ export default function TokenOffer({
           className="token-offer__question"
           role="alertdialog"
           aria-labelledby={questionId}
-          data-testid={T.tokenOfferDialog(cosmeticId)}
+          data-testid={T.tokenOfferDialog(id)}
           onKeyDown={cancelOnEscape}
         >
-          <p id={questionId}>{questionWords(tier, name)}</p>
+          <p id={questionId}>{questionWords(spend, name)}</p>
           <div className="token-offer__answers">
-            <button type="button" data-testid={T.tokenOfferConfirm(cosmeticId)} onClick={redeem}>
+            <button type="button" data-testid={T.tokenOfferConfirm(id)} onClick={redeem}>
               {t("Confirm")}
             </button>
-            <button type="button" data-testid={T.tokenOfferCancel(cosmeticId)} autoFocus onClick={cancel}>
+            <button type="button" data-testid={T.tokenOfferCancel(id)} autoFocus onClick={cancel}>
               {t("Cancel")}
             </button>
           </div>
@@ -176,16 +197,16 @@ export default function TokenOffer({
         <button
           type="button"
           className="button-primary token-offer__button"
-          data-testid={testid}
+          data-testid={T.tokenOffer(id)}
           disabled={state === "busy"}
           autoFocus={asked}
           onClick={ask}
         >
-          {state === "busy" ? t("Redeeming…") : offerWords(tier, heldOf(held, tier))}
+          {state === "busy" ? t("Redeeming…") : offerWords(spend, held)}
         </button>
       )}
       {error === null ? null : (
-        <p className="notice" role="alert" data-testid={errorTestid}>
+        <p className="notice" role="alert" data-testid={T.tokenOfferError(id)}>
           {t(error)}
         </p>
       )}

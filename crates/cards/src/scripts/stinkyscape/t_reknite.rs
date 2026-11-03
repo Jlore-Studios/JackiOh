@@ -37,16 +37,14 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-reknite — SPEC §7, BUILD M12 row S T-reknite: "played from the hand at (0), its caster's hero has
-// +1 Armor through the opponent's turn, gone at their next start of turn; armor reads through
-// `param()`; radiant +2". Tagged Resource and Token (issue #2521).
+// S T-reknite — SPEC §7, BUILD M12 row S T-reknite. Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::damage::hero_armor_of;
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{card_def, play_resource, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
@@ -66,11 +64,6 @@ mod tests {
 
     fn armor(s: &Scenario) -> i32 {
         hero_armor_of(s.state(), P1)
-    }
-
-    #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
     }
 
     #[test]

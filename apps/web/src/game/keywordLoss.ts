@@ -1,7 +1,6 @@
-// #1598: which cards are animating a keyword they lose rather than one they gain.
-//
-// R46's knock-down reports the Taunt it takes as a `keywordGranted` with `lost` set. The animation
-// table keys its rows by event type, so a loss plays on the grant's row and the board writes the same
+// #1598: which cards are animating a keyword they lose rather than one they gain. R46's knock-down
+// reports the Taunt it takes as a `keywordGranted` with `lost` set. The animation table keys its rows
+// by event type, so a loss plays on the grant's row and the board writes the same
 // `data-animating="keywordGranted"` (contract.ts). The board reads the events being animated, as its
 // number pops do (`popsFrom`, Board.tsx), and a card whose `keywordGranted` in flight is a loss also
 // carries `data-lost`, which animations.css plays as the icon going. Drawn state only, never a rule
@@ -50,7 +49,6 @@ export function KeywordLossProvider({ lost, children }: { lost: ReadonlySet<stri
   return createElement(KeywordLossContext.Provider, { value: lost }, children);
 }
 
-/** Whether the card under this testid is animating a keyword it loses. */
 export function useKeywordLost(testId: string | undefined): boolean {
   const lost = useContext(KeywordLossContext);
   return testId !== undefined && lost.has(testId);

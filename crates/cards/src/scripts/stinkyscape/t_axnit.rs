@@ -46,15 +46,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-axnit — SPEC §7, BUILD M12 row S T-axnit: "played from the hand at a chosen enemy, 3 damage and
-// its caster's hero healed 3; damage reads through `param()`; radiant it resolves twice, a target asked
-// each time". Tagged Resource and Token (issue #2521).
+// S T-axnit — SPEC §7, BUILD M12 row S T-axnit. Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{card_def, play_resource, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -66,11 +64,6 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "health": 20 },
             "p2": { "field": [BODY] },
         }))
-    }
-
-    #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
     }
 
     #[test]

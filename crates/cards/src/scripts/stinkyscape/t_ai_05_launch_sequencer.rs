@@ -36,8 +36,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-AI-5 Launch Sequencer — SPEC §8.10 row T-AI-5, BUILD M12 row S T-AI-5: "its caster's next launch costs
-// (1), held with no Starship yet (R1881003), then a draw; radiant (0) and two draws".
+// S T-AI-5 Launch Sequencer — SPEC §8.10 row T-AI-5, BUILD M12 row S T-AI-5 (R1881003).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

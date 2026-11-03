@@ -1,6 +1,6 @@
 // R631 (SPEC §10.11 "Music"): the rendered music on disk, its manifest, its size cap, its license
 // record, the cards that play it, and `gen-music.mjs --check`. R1352: every Legendary's and Mythic's
-// own intro, tokens printed so included, over the sets that ship.
+// own intro, tokens printed so included, over the sets that ship; R2722000: a Mythic's outlasts them all.
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, openSync, closeSync, ftruncateSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
+import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_LEGENDARY_MAX_S, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
 import { MENU_TRACK, MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, parseMusicCards, parseMusicManifest, startTrack, stationTracks } from "./musicData.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,11 +34,7 @@ afterAll(() => {
   for (const dir of scratch) rmSync(dir, { recursive: true, force: true });
 });
 
-/**
- * R1352: the cards of `sets` that open their play with an intro of their own: every Legendary and
- * Mythic, and every token printed Legendary or Mythic. The release that ships a set (the Meditative
- * set's 22 come with MR) is what adds it to the list this is called with.
- */
+/** R1352: the cards of `sets` that open their play with an intro of their own: every Legendary and Mythic. */
 function introCards(sets: readonly SetName[]): string[] {
   return Object.entries(CATALOG)
     .filter(([, c]) => sets.includes(c.set))
@@ -49,7 +45,6 @@ function introCards(sets: readonly SetName[]): string[] {
     .map(([id]) => id);
 }
 
-/** Every set the catalog holds, shipped or not. */
 const CATALOG_SETS = [...new Set(Object.values(CATALOG).map((c) => c.set))];
 
 function check(root?: string): { status: number | null; out: string } {
@@ -75,7 +70,7 @@ describe("R631 the rendered music", () => {
     expect(total).toBeLessThanOrEqual(MUSIC_BUDGET_BYTES);
   });
 
-  it("R631 gives every station two in-game tracks, a low-health track and a match-start sting, and has the shared tracks", () => {
+  it("R631 gives every station at least two in-game tracks, a low-health track and a match-start sting, and has the shared tracks", () => {
     for (const station of MUSIC_STATIONS) {
       expect(stationTracks(station).length, station).toBeGreaterThanOrEqual(2);
       expect(MUSIC_MANIFEST.files[dangerTrack(station)]?.loop, `${station} danger`).toBe(true);
@@ -93,9 +88,8 @@ describe("R631 the rendered music", () => {
       if (t.loop) {
         // The tail past the loop's end is what lets a decoder's priming offset loop cleanly.
         expect(t.duration - (t.loopEnd ?? 0), id).toBeGreaterThan(0.25);
-        // #51: two to four minutes for whatever can play for a long stretch, the menu theme and each
-        // station's in-game and low-health tracks. A result's loop plays for a moment of the match and
-        // is shorter, though still longer than a few bars.
+        // #51: two to four minutes for whatever can play for a long stretch (the menu, a station's
+        // tracks); a result's loop plays for a moment, so it is shorter, though longer than a few bars.
         const minimum = /^(tavern|edm|lofi|epic)-(\d+|danger)$/.test(id) || id === MENU_TRACK ? 120 : 15;
         expect((t.loopEnd ?? 0) - (t.loopStart ?? 0), id).toBeGreaterThanOrEqual(minimum - 1e-6);
       }
@@ -131,7 +125,6 @@ describe("R631 the cards that play music", () => {
 
   it("R1352 gives every Legendary and Mythic of the shipped sets, tokens printed so included, an intro of its own", () => {
     const cards = introCards(SHIPPED_SETS);
-    // Cards and tokens both: a token printed Legendary or Mythic opens its play like any card.
     expect(cards.filter((id) => CATALOG[id]?.token !== true).length).toBeGreaterThan(0);
     expect(cards.filter((id) => CATALOG[id]?.token === true).length).toBeGreaterThan(0);
     for (const id of cards) expect(MUSIC_CARDS[id]?.intro, id).toBeDefined();
@@ -154,6 +147,27 @@ describe("R631 the cards that play music", () => {
       expect(track?.handoff ?? 0, id).toBeGreaterThanOrEqual(MUSIC_INTRO_MIN_S - 1e-6);
       expect(track?.duration ?? Infinity, id).toBeLessThanOrEqual(MUSIC_INTRO_MAX_S + 1e-6);
     }
+  });
+
+  it("R2722000 runs every Legendary's intro MUSIC_INTRO_LEGENDARY_MAX_S at most and every Mythic's longer than every Legendary's, each its own", () => {
+    const seconds: Record<"Legendary" | "Mythic", number[]> = { Legendary: [], Mythic: [] };
+    const hashes: string[] = [];
+    for (const [id, entry] of Object.entries(MUSIC_CARDS)) {
+      if (entry.intro === undefined) continue;
+      const card = CATALOG[id];
+      const rarity = card?.token === true ? card.printedRarity : card?.rarity;
+      const track = MUSIC_MANIFEST.files[entry.intro];
+      expect(rarity === "Legendary" || rarity === "Mythic", id).toBe(true);
+      if (track === undefined || (rarity !== "Legendary" && rarity !== "Mythic")) continue;
+      seconds[rarity].push(track.duration);
+      hashes.push(track.hash);
+    }
+    expect(seconds.Legendary.length).toBeGreaterThan(0);
+    expect(seconds.Mythic.length).toBeGreaterThan(0);
+    for (const s of seconds.Legendary) expect(s).toBeLessThanOrEqual(MUSIC_INTRO_LEGENDARY_MAX_S + 1e-6);
+    expect(Math.min(...seconds.Mythic)).toBeGreaterThan(Math.max(...seconds.Legendary));
+    for (const s of seconds.Mythic) expect(s).toBeLessThanOrEqual(MUSIC_INTRO_MAX_S + 1e-6);
+    expect(new Set(hashes).size, "no two intros render the same score").toBe(hashes.length);
   });
 
   it("R1352 refuses an intro that names a looping track or none", () => {

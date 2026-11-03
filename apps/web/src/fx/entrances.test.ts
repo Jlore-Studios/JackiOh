@@ -1,6 +1,5 @@
 // R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
-// way FxLayer plans them: each entry remembered, then planned against the view the runner planned it
-// against.
+// way FxLayer plans them. A card whose entry is a set piece lands with its set piece's entrance (R2800000).
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -9,19 +8,21 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
-import { CARD_FX } from "./cardFx.ts";
+import { entranceKeyOf } from "./cardFx.ts";
+import { FX_CARD_TABLE } from "./cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SLAM_AT } from "./constants.ts";
 import { planFx } from "./cues.ts";
-import { ENTRANCES, ENTRANCE_TRAUMA, isEntranceKey, type EntranceKey } from "./entrances.ts";
+import { ENTRANCES, ENTRANCE_TRAUMA, type EntranceKey } from "./entrances.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxCardFacts, FxCue, FxPlanEnv } from "./types.ts";
 
 type CatalogEntry = { name: string; type: string; rarity: string };
 const CATALOG = catalogJson as unknown as Record<string, CatalogEntry>;
 
-const MARQUEE: readonly (readonly [string, EntranceKey])[] = Object.entries(CARD_FX).flatMap(([defId, key]) =>
-  isEntranceKey(key) ? [[defId, key] as const] : [],
-);
+const MARQUEE: readonly (readonly [string, EntranceKey])[] = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
+  const key = entranceKeyOf(defId);
+  return key === undefined ? [] : [[defId, key] as const];
+});
 
 const LEGENDARY_FACTS: FxCardFacts = { rarity: "Legendary", attack: 6, health: 6 };
 

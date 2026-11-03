@@ -1,40 +1,9 @@
-// Keyword visuals on the board (issue #40, R438): what every keyword a unit has looks like on its
-// board minion, beside the two-letter chip that names it.
-//
-// R2577000 amends that: only a keyword that can still act while the card is on the field, or as it
-// leaves, is drawn there (`onField`). Equip, Tradable, Cloaked, Crater, Flashback, Stack and
-// Temporary are rules of the hand, the graveyard or the moment of play, so a unit on the field draws
-// neither a treatment nor a chip for them: they take no layer's slot, no loop and no room in the
-// chips' "+n" fold, and the hover preview and the inspect sheet still list them. Their drawings stay
-// in KeywordFx.tsx and keywords.css.
-//
-// `KEYWORD_VISUALS` is a total map over `KeywordKind`, so a new keyword kind does not compile until
-// it has a treatment here and its drawing in KeywordFx.tsx and keywords.css. A treatment sits on one
-// of four layers of the minion, each a plane of its own, so several compose without covering each
-// other or the attack, health and name:
-//
-//   frame  around or behind the portrait: Taunt's steel shield, Divine Shield's bubble, the Reborn
-//          echo, the Immune to Spells ward, the Indestructible plating, the Stack's card edges.
-//   veil   over the portrait's art, clipped to its oval and under the name plate and the gems:
-//          chains, cracks, venom, veins, speed streaks, runes and clockwork.
-//   glyph  a small shaped emblem in the row along the top edge, after the cost gem: blade, spear,
-//          crescent, hoofprint, lock, clover.
-//   stat   Armor's steel plate beside the health gem (a number of its own).
-//
-// Each layer holds at most so many treatments (`LAYER_CAP`), taken in `priority` order (1 first):
-// the keywords that decide what an opponent can do (Taunt, Divine Shield, Can't attack, Immune to
-// Spells, Poisonous) first, flavour last. A keyword past its layer's cap still has its chip (the
-// chips' own "+n" fold and the hover preview list every keyword), so nothing is lost, only not drawn
-// twice. And at most `AMBIENT_MAX` treatments on one unit move at a time, again by priority; the rest
-// hold still. Charge's and Rush's streaks move only while the view's `canAct` is true, as a mark of
-// the view's state and never as a claim about legality (that is `legalActions`', CLAUDE.md rule 7).
-//
-// The treatments read the view and nothing else: the unit's keywords as the view lists them (a
-// Vanilla unit's list already leaves out what it lost, and a Vanilla unit shows nothing else),
-// `canAct`, `armor` (the plate's number), `brittle` (the Brittle count as it stands; the keyword's
-// number where the view has none) and `animated` (a backrow card standing in a unit zone as a Unit,
-// R383). Under reduced motion, the OS setting or the settings panel's, every loop stops and the
-// still mark stays (keywords.css).
+// Keyword visuals on the board (issue #40, R438): what each keyword a unit has looks like on its minion, beside its
+// chip. R2577000: only a keyword that can still act on the field or as it leaves is drawn there (`onField`).
+// `KEYWORD_VISUALS` is total over `KeywordKind`: a new kind needs a treatment here and a drawing in KeywordFx.tsx and
+// keywords.css. Four layers (frame, veil, glyph, stat) hold `LAYER_CAP` treatments each by `priority` (1 first); a keyword
+// past it keeps its chip; `AMBIENT_MAX` move at once. Charge's and Rush's streaks move while the view's `canAct` is true,
+// a mark of view state, never legality (CLAUDE.md rule 7). Treatments read the view alone (`animated`: a backrow card as a Unit, R383).
 
 import type { Keyword, KeywordKind, UnitView } from "@jackioh/shared";
 
@@ -53,28 +22,20 @@ export type KeywordVisual = {
   priority: number;
   /** The shape it reads by, in words (it never rests on color alone). */
   shape: string;
-  /** The loop, or `null` for a mark that holds still (Taunt's shield, the Divine Shield bubble, Armor's plate). */
+  /** The loop, or `null` for a mark that holds still. */
   motion: KeywordMotion | null;
-  /** Whether the treatment prints the keyword's number. */
   numbered: boolean;
-  /**
-   * R2577000: whether the keyword can still change what happens while the card is on the field, or
-   * as it leaves it. A unit on the field draws neither a treatment nor a chip for one that cannot;
-   * its hover preview and inspect sheet still list it.
-   */
+  /** R2577000: whether the keyword can still act while the card is on the field or as it leaves; if not, no treatment or chip (hover and inspect still list it). */
   onField: boolean;
 };
 
-/** How many treatments each layer draws on one unit. `stat` is Armor's plate, which is always drawn. */
+/** `stat` is Armor's plate, which is always drawn. */
 export const LAYER_CAP: Readonly<Record<KeywordLayer, number>> = { frame: 4, veil: 2, glyph: 2, stat: 1 };
 
 /** How many treatments on one unit loop at once; the rest hold their still mark. */
 export const AMBIENT_MAX = 2;
 
-/**
- * Brittle's cracks deepen as its count falls: one hairline at `BRITTLE_CRACK_STAGES` or more, and
- * one more crack for each step below, down to the full web at 1 (and 0, the moment it crumbles).
- */
+/** Brittle's cracks deepen as its count falls: one hairline at this or more, the full web at 1 (and 0). */
 export const BRITTLE_CRACK_STAGES = 3;
 
 /** #2270: the Brittle count at which a card on the field crumbles at its next tick (R385); game/Card.tsx draws it a gray aura. */
@@ -351,7 +312,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     numbered: false,
     onField: false,
   },
-  // R1852000: Stinkyscape's Starship Piece, a riveted hull plate that glints.
+  // R1852000: Stinkyscape's Starship Piece.
   "Starship Piece": {
     layer: "glyph",
     priority: 34,
@@ -360,7 +321,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     numbered: false,
     onField: true,
   },
-  // R1852003: a launched Starship, a rocket nose up over its flame, riding its thrust.
+  // R1852003: a launched Starship.
   Starship: {
     layer: "glyph",
     priority: 35,
@@ -380,7 +341,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   },
 };
 
-/** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */
+/** One treatment a unit gets. */
 export type KeywordFxPlan = {
   kind: KeywordKind;
   visual: KeywordVisual;
@@ -392,7 +353,6 @@ export type KeywordFxPlan = {
   stage?: number;
 };
 
-/** What of a unit's view the treatments read. */
 export type KeywordFxSource = Pick<UnitView, "keywords" | "canAct" | "armor"> &
   Partial<Pick<UnitView, "vanilla" | "animated" | "brittle">>;
 
@@ -405,15 +365,13 @@ function numberOf(kind: KeywordKind, keywords: readonly Keyword[], source: Keywo
   return keywords.reduce((sum, keyword) => (keyword.kind === kind && "n" in keyword ? sum + (keyword.n ?? 0) : sum), 0);
 }
 
-/** R385's cracks: one at BRITTLE_CRACK_STAGES or more, the full web at 1. */
 export function brittleStage(count: number): number {
   return Math.min(BRITTLE_CRACK_STAGES, Math.max(1, BRITTLE_CRACK_STAGES + 1 - count));
 }
 
 /**
- * #2437, R2179001: the count a card's keywords give its Temporary X: the largest of its Temporary entries,
- * a plain one counting TEMPORARY_LAST_COUNT, as the engine's `temporary::temporary_number`; null with none.
- * The engine writes the count left into the keyword (`layers::card_keywords`, `with_temporary_count`).
+ * #2437, R2179001: a card's Temporary X, the largest of its Temporary entries (a plain one counts
+ * TEMPORARY_LAST_COUNT), as the engine's `temporary::temporary_number`; null with none.
  */
 export function temporaryLeft(keywords: readonly Keyword[]): number | null {
   let most: number | null = null;
@@ -425,12 +383,9 @@ export function temporaryLeft(keywords: readonly Keyword[]): number | null {
   return most;
 }
 
-/**
- * The kinds a unit's treatments come from: its keywords as the view lists them, once each, but those that do nothing on the field (`onField: false`, R2577000); Brittle
- * for a unit the view gives a Brittle count (R385); and the Animated treatment for a backrow card the
- * view says is standing as a Unit (`animated`, R383) whose keywords do not already name it, except on
- * a Vanilla unit (R243), whose text is gone.
- */
+/** The kinds a unit's treatments come from: its listed keywords once each, minus `onField: false`
+ * (R2577000); Brittle for a given count (R385); Animated for a backrow card standing as a Unit
+ * (`animated`, R383), except on a Vanilla unit (R243). */
 export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
   for (const keyword of source.keywords) {
@@ -447,11 +402,7 @@ export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   return kinds;
 }
 
-/**
- * The treatments one unit draws, in priority order: each layer's first `LAYER_CAP` kinds (Armor's
- * plate only while the view's `armor` is above 0, as the plate itself), the first `AMBIENT_MAX`
- * loops among them running and the rest still.
- */
+/** The treatments one unit draws, in priority order: each layer's first `LAYER_CAP` kinds, the first `AMBIENT_MAX` loops running. */
 export function keywordFxPlan(source: KeywordFxSource): KeywordFxPlan[] {
   const kinds = treatedKinds(source)
     .filter((kind) => kind !== "Armor" || source.armor > 0)
@@ -492,3 +443,21 @@ export function keywordFxAttributes(entry: KeywordFxPlan): Record<string, string
   if (entry.stage !== undefined) attributes["data-stage"] = String(entry.stage);
   return attributes;
 }
+
+/** R2789000: a callout's icon (fx/motifs/callout.ts): SVG path data in a 100×100 box, filled, or only stroked when `line` is set. */
+export type KeywordIcon = { d: string; line?: true };
+
+/** R2789000: the combat keywords' callout icons; a keyword with none draws no callout. */
+export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, KeywordIcon>>> = {
+  "First Strike": { d: "M50 3 L65 22 L65 60 L35 60 L35 22 Z M20 60 H80 V72 H20 Z M43 72 H57 V96 H43 Z" },
+  Cleave: { d: "M10 82 A48 48 0 0 1 90 18 A62 62 0 0 0 10 82 Z" },
+  Trample: { d: "M30 34 C30 16 70 16 70 34 L70 62 C70 71 61 73 57 66 L55 46 C55 39 45 39 45 46 L43 66 C39 73 30 71 30 62 Z" },
+  Pierce: { d: "M50 4 L64 34 L50 46 L36 34 Z M43 46 H57 V52 H43 Z M46 52 H54 V96 H46 Z" },
+  Lifesteal: { d: "M50 90 C22 70 8 54 8 34 A21 21 0 0 1 50 24 A21 21 0 0 1 92 34 C92 54 78 70 50 90 Z" },
+  Poisonous: { d: "M50 6 C60 30 78 46 78 64 A28 28 0 0 1 22 64 C22 46 40 30 50 6 Z" },
+  Flying: {
+    d: "M50 58 C38 36 20 28 4 30 C14 40 18 52 30 58 C22 60 16 66 12 72 C28 72 42 68 50 58 Z M50 58 C62 36 80 28 96 30 C86 40 82 52 70 58 C78 60 84 66 88 72 C72 72 58 68 50 58 Z",
+  },
+  Windfury: { d: "M8 36 H62 C84 36 84 12 66 14 M8 66 H70 C94 66 94 90 74 88", line: true },
+  Ranged: { d: "M30 10 C66 26 66 74 30 90 M30 10 V90 M14 50 H84 M74 42 L86 50 L74 58", line: true },
+};

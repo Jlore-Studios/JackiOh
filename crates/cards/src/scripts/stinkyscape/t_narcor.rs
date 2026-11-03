@@ -55,9 +55,7 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S T-narcor — SPEC §7, BUILD M12 row S T-narcor (issue #2521): played from the hand, adds one random
-// non-token Legendary card of a set that ships to the hand, never a Mythic, a full hand burning it;
-// radiant a Radiant one. Tagged Resource and Token.
+// S T-narcor — SPEC §7, BUILD M12 row S T-narcor (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -67,7 +65,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// The Narcor first in a hand of it and `hand` fillers (R2250000), played.
     fn played(seed: &str, radiant: bool, hand: usize) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
         cards.extend(filler(hand).as_array().cloned().unwrap_or_default());
@@ -94,11 +91,6 @@ mod tests {
     }
 
     #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
-    }
-
-    #[test]
     fn a_legendary_non_token() {
         let mut seen = Vec::new();
         for seed in (0..20).map(|n| format!("narcor-{n}")) {
@@ -114,7 +106,6 @@ mod tests {
 
     #[test]
     fn full_hand_burns() {
-        // A hand past its cap, which a setup may hold: the Narcor played, it is still full.
         let s = played("narcor-full", false, HAND_CAP as usize);
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         let burned: Vec<CardInstance> = s

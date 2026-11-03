@@ -40,9 +40,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #77 Bulk Booster — SPEC §8.8 row 77, BUILD M10 row M 77: "Adds random non-token Common cards of
-// any set, never itself, until your hand holds your hand cap (10, or 12 after M 79), counted as it
-// resolves; with a full hand, nothing and no random number (R129); radiant the cards are Radiant".
+// M #77 Bulk Booster — SPEC §8.8 row 77, BUILD M10 row M 77.
 #[cfg(test)]
 mod tests {
     use super::ID;

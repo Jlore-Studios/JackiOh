@@ -489,26 +489,26 @@
       "nonce": "a28"
     },
     {
-      "attackerId": "c72",
-      "targetId": "c76",
-      "type": "attack",
-      "playerId": "p1",
-      "nonce": "a29"
-    },
-    {
-      "attackerId": "c58",
-      "targetId": "hero-p2",
-      "type": "attack",
-      "playerId": "p1",
-      "nonce": "a30"
-    },
-    {
       "instanceId": "c57",
       "type": "play",
       "zone": {
         "lane": 5,
         "row": "units"
       },
+      "playerId": "p1",
+      "nonce": "a29"
+    },
+    {
+      "attackerId": "c72",
+      "targetId": "c76",
+      "type": "attack",
+      "playerId": "p1",
+      "nonce": "a30"
+    },
+    {
+      "attackerId": "c58",
+      "targetId": "hero-p2",
+      "type": "attack",
       "playerId": "p1",
       "nonce": "a31"
     },

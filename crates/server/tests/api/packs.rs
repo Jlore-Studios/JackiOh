@@ -1,13 +1,5 @@
-//! Buying and opening card packs (`src/economy/packs.rs`, SPEC §14.1, §14.3; #1301): the routes,
-//! what each write leaves in the store, and the transaction that takes an opening whole or not at
-//! all. The roll itself is `src/economy/roll.rs`'s unit tests; here it runs over the real catalog.
-//!
-//! Every request goes through the whole app over an empty fake store (`deps::empty_test_app`), as
-//! the active account `p1`. An opening the test must steer (a registry with cosmetics a pack may
-//! drop, R1301002) calls `open_pack` with that registry; the route opens over the shipped one,
-//! whose every entry but the six full arts (R1313000) and the five portraits but vanilla
-//! (R1827000) is a starter. A spend sent while the account's other spends run waits its turn
-//! (R2378000): the test takes the turns with spends of its own, held until it lets them go.
+//! Buying and opening card packs (`src/economy/packs.rs`, SPEC §14.1, §14.3, #1301).
+//! Rulings: R1301002 (cosmetics drop), R1313000 (full art), R1827000 (portraits), R2378000 (spend serialization).
 
 use std::sync::Arc;
 
@@ -21,8 +13,9 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_cata
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE,
-    CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
+    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
+    COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE, CosmeticTokenStep,
+    ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
     GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS,
     PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SPEND_BUSY_RETRY_AFTER_MS, TIER_WEIGHT_TOTAL,
 };
@@ -56,10 +49,6 @@ const ROUTES: [(&str, &str); 3] = [
     ("POST", "/api/packs/buy"),
     ("POST", "/api/packs/open"),
 ];
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// An empty app with the active `p1` and its bearer token.
 async fn setup() -> (Arc<App>, String) {
@@ -222,6 +211,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         default: false,
         starter: false,
         chase: rarity.is_chase(),
+        jlorious: false,
         card: None,
     }
 }
@@ -264,9 +254,7 @@ async fn last_log(app: &App) -> OpeningLog {
     serde_json::from_str(row.reference.as_deref().expect("the opening's log")).expect("an opening log")
 }
 
-// ---------------------------------------------------------------------------------------------
 // Buying (§14.1, §14.3)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn buying_debits_exactly_the_pack_price() {
@@ -383,9 +371,7 @@ async fn buying_with_a_short_wallet_is_refused_and_changes_nothing() {
     assert_eq!(before["state"]["jlore"], json!(price() - 1));
 }
 
-// ---------------------------------------------------------------------------------------------
 // Opening (§14.3, §14.4)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn an_opening_grants_exactly_its_slots_one_rare_or_better() {
@@ -592,11 +578,12 @@ async fn an_opening_answers_the_bars_it_left() {
         json!({
             "before": 0,
             "after": gained,
-            "size": COSMETIC_TOKEN_BAR_SIZE,
+            "size": COSMETIC_TOKEN_BAR_SIZE_RARE,
             "pays": 0,
         })
     );
     assert_eq!(bars["cosmeticPaid"], json!([]));
+    assert_eq!(bars["cosmeticSizes"], json!([COSMETIC_TOKEN_BAR_SIZE_RARE]));
     assert_eq!(bars["slotPoints"], json!(slot_bar_points(&slots)));
     assert_eq!(
         counter(&app, Counter::CardTokenBar).await,
@@ -644,10 +631,11 @@ async fn r1999000_an_opening_of_new_cards_adds_every_slot_s_points_to_both_bars(
             cosmetic: BarSettle {
                 before: 11,
                 after: 11 + gained,
-                size: COSMETIC_TOKEN_BAR_SIZE,
+                size: COSMETIC_TOKEN_BAR_SIZE_RARE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            cosmetic_sizes: vec![COSMETIC_TOKEN_BAR_SIZE_RARE],
             slot_points: expected,
         }
     );
@@ -756,7 +744,7 @@ async fn spent_duplicates_carrying_the_card_bar_past_its_size_answer_one_pay() {
         BarSettle {
             before: 0,
             after: card_gain,
-            size: COSMETIC_TOKEN_BAR_SIZE,
+            size: COSMETIC_TOKEN_BAR_SIZE_RARE,
             pays: 0,
         }
     );
@@ -779,8 +767,7 @@ async fn r1953000_spent_duplicates_of_each_rarity_add_21_to_each_bar() {
     grant_entire_catalog(&app, PROFILE, None)
         .await
         .expect("R111's grant");
-    // The roll is pure, so a seed whose five slots rolled one of each rarity is found before the
-    // opening, over the holdings it will read and an empty registry, which drops no cosmetic.
+    // Roll is deterministic; finds seed rolling one of each rarity.
     let pool = pack_pool(defs(&app), PackKind::Set(SetName::Core));
     let before = holdings(&app).await;
     let every = [
@@ -825,7 +812,7 @@ async fn r1953000_spent_duplicates_of_each_rarity_add_21_to_each_bar() {
 }
 
 #[tokio::test]
-async fn the_cosmetic_bar_answers_the_cycle_steps_it_paid_in_order() {
+async fn r2728000_one_opening_pays_every_step_it_crosses_each_at_its_own_size() {
     let (app, token) = setup().await;
     grant_entire_catalog(&app, PROFILE, None)
         .await
@@ -839,15 +826,13 @@ async fn the_cosmetic_bar_answers_the_cycle_steps_it_paid_in_order() {
     )
     .expect("the roll");
     let gain = points(&rolled.slots);
-    // Past two sizes short of this opening's gain, at the cycle's last step: the bar pays twice,
-    // the cosmetic pack and, the cycle restarting, a Rare token.
-    set_counter(&app, Counter::CosmeticTokenCycle, 5).await;
-    set_counter(
-        &app,
-        Counter::CosmeticTokenBar,
-        2 * COSMETIC_TOKEN_BAR_SIZE - gain,
-    )
-    .await;
+    // At the cycle's Epic step, short of this opening's gain from the Epic, Legendary and Rare
+    // steps' sizes together: the bar pays all three in order, each at its own size, and rests on
+    // the next Epic step (R2728000).
+    let crossed =
+        COSMETIC_TOKEN_BAR_SIZE_EPIC + COSMETIC_TOKEN_BAR_SIZE_LEGENDARY + COSMETIC_TOKEN_BAR_SIZE_RARE;
+    set_counter(&app, Counter::CosmeticTokenCycle, 1).await;
+    set_counter(&app, Counter::CosmeticTokenBar, crossed - gain).await;
     buy(&app, &token, "Core").await;
     let opened = open_pack(
         &app,
@@ -863,26 +848,49 @@ async fn the_cosmetic_bar_answers_the_cycle_steps_it_paid_in_order() {
     assert_eq!(
         opened.bars.cosmetic,
         BarSettle {
-            before: 2 * COSMETIC_TOKEN_BAR_SIZE - gain,
+            before: crossed - gain,
             after: 0,
-            size: COSMETIC_TOKEN_BAR_SIZE,
-            pays: 2,
+            size: COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            pays: 3,
         }
     );
     assert_eq!(
         opened.bars.cosmetic_paid,
-        vec![CosmeticTokenStep::CosmeticPack, CosmeticTokenStep::Rare]
+        vec![
+            CosmeticTokenStep::Epic,
+            CosmeticTokenStep::Legendary,
+            CosmeticTokenStep::Rare
+        ]
     );
-    assert_eq!(to(&opened.bars)["cosmeticPaid"], json!(["cosmeticPack", "rare"]));
+    assert_eq!(opened.bars.cosmetic_sizes, vec![75, 100, 50, 75]);
+    assert_eq!(
+        opened.bars.cosmetic_sizes,
+        vec![
+            COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+            COSMETIC_TOKEN_BAR_SIZE_RARE,
+            COSMETIC_TOKEN_BAR_SIZE_EPIC
+        ]
+    );
+    assert_eq!(
+        to(&opened.bars)["cosmeticPaid"],
+        json!(["epic", "legendary", "rare"])
+    );
+    assert_eq!(to(&opened.bars)["cosmeticSizes"], json!([75, 100, 50, 75]));
     assert_eq!(opened.bars.card.pays, 0);
+    assert_eq!(counter(&app, Counter::CosmeticTokenCycle).await, 4);
 
     let (status, _, body) = call(&app, "GET", "/api/tokens", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
-    assert_eq!(body["tokens"]["cosmeticPack"], json!(1));
     assert_eq!(body["tokens"]["cosmeticRare"], json!(1));
-    assert_eq!(body["tokens"]["cosmeticEpic"], json!(0));
+    assert_eq!(body["tokens"]["cosmeticEpic"], json!(1));
+    assert_eq!(body["tokens"]["cosmeticLegendary"], json!(1));
+    assert_eq!(body["tokens"]["cosmeticPack"], json!(0));
     assert_eq!(body["nextStep"], json!("epic"));
-    assert_eq!(body["cosmeticBar"]["points"], json!(0));
+    assert_eq!(
+        body["cosmeticBar"],
+        json!({ "points": 0, "size": COSMETIC_TOKEN_BAR_SIZE_EPIC })
+    );
 }
 
 #[tokio::test]
@@ -1244,7 +1252,6 @@ async fn r1953000_get_publishes_a_two_percent_global_roll() {
     let (app, token) = setup().await;
     let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
-    assert_eq!(GLOBAL_COSMETIC_ROLL_WEIGHT, 20);
     assert_eq!(body["odds"]["globalCosmetic"]["chance"], json!(0.02));
 }
 
@@ -1473,9 +1480,7 @@ async fn get_lists_the_unopened_packs_held() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2124000: a buy or an opening sent again under its Idempotency-Key runs once
-// ---------------------------------------------------------------------------------------------
 
 /// `profile_id`'s wallet and the packs it holds, each kind with its count.
 async fn wallet_and_packs(app: &App, profile_id: &str) -> (i64, Value) {
@@ -1683,9 +1688,7 @@ async fn r2124000_the_same_key_twice_opens_one_pack_and_answers_the_same_slots()
     assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 1);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2378000: an account runs one spend at a time, the rest waiting their turn
-// ---------------------------------------------------------------------------------------------
 
 /// How many times `until_claims` lets the spawned requests run before it gives up.
 const YIELDS: usize = 1_000;

@@ -1,7 +1,6 @@
-//! Flashback (#783, R783012, R783013): a card with Flashback in its owner's graveyard may be played from
-//! there once, at its cost, as a play for every rule; the play spends the keyword for good. A play from
-//! the graveyard another permission allows spends nothing. The fixtures in `fixtures/keywords_783.rs`
-//! stand in for the cards #781 prints.
+//! Flashback (#783, R783012, R783013): a card with it in its owner's graveyard may be played from there
+//! once, at its cost, as a play for every rule, spending the keyword for good; a play another permission
+//! allows spends nothing. `fixtures/keywords_783.rs` stands in for the cards #781 prints.
 
 use jackioh_engine::testkit::*;
 
@@ -61,20 +60,19 @@ mod r783012_flashback_play {
         let plain = in_graveyard(&mut state, &plain_spell().id, P1);
         let theirs = in_graveyard(&mut state, &flashback_spell().id, P2);
 
-        // Offered from its owner's graveyard with no permission on the field; a card without
-        // Flashback is not, nor is the opponent's.
+        // Offered from its owner's graveyard with no permission; not a card without Flashback, nor theirs.
         assert!(has_flashback(&state, &spell));
         assert!(!plays_of(&state, &spell.id, P1).is_empty());
         assert!(plays_of(&state, &plain.id, P1).is_empty());
         assert!(plays_of(&state, &theirs.id, P1).is_empty());
 
-        // At its cost: with less mana than that, neither offered nor allowed.
+        // At its cost: with less mana, neither offered nor allowed.
         let mut poor = state.clone();
         poor.players.p1.mana.current = 1;
         assert!(plays_of(&poor, &spell.id, P1).is_empty());
         assert!(cast_spell(&poor, &spell.id).error.is_some());
 
-        // A play: its price paid, its Cry run, counted, announced as from the graveyard (R454).
+        // A play: paid, its Cry run, counted, announced as from the graveyard (R454).
         let mana = state.players.p1.mana.current;
         let before = hero_health(&state, P2);
         let result = cast_spell(&state, &spell.id);
@@ -94,7 +92,7 @@ mod r783013_flashback_spent {
 
     #[test]
     fn r783013_spent_as_replayed_never_offered_again_unit_and_spell() {
-        // A Spell: back in the graveyard as any Spell goes, with no Flashback, never offered again.
+        // A Spell: back in the graveyard as any Spell goes, spent.
         let mut state = playing("r783013-spell");
         state.players.p1.mana.current = 10;
         let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
@@ -108,7 +106,7 @@ mod r783013_flashback_spent {
         assert!(plays_of(&state, &spell.id, P1).is_empty());
         assert!(cast_spell(&state, &spell.id).error.is_some());
 
-        // A Unit: played into a zone with its Cry, no Flashback on the field, none once it dies.
+        // A Unit: spent on the field, and still once it dies.
         let mut units = playing("r783013-unit");
         let body = in_graveyard(&mut units, &flashback_unit().id, P1);
         let before = hero_health(&units, P2);
@@ -163,8 +161,7 @@ mod r783013_flashback_spent {
 
     #[test]
     fn r783013_a_permission_that_cannot_cover_the_play_leaves_it_to_flashback_which_is_spent() {
-        // A floor above the card's price (Radiant Second Wind's shape at (3)): the play is Flashback's
-        // alone, so it spends it, and nothing offers the card again.
+        // A floor above its price (Radiant Second Wind's shape at (3)): the play is Flashback's, so spent.
         let mut state = playing("r783013-floor");
         state.players.p1.mana.current = 10;
         put(&mut state, &picky_wind().id, slot(P1, Row::Units, 1), json!({}));
@@ -179,8 +176,8 @@ mod r783013_flashback_spent {
         assert!(plays_of(&state, &spell.id, P1).is_empty());
         assert!(cast_spell(&state, &spell.id).error.is_some());
 
-        // A Plague-only permission (Corpse Plantation's shape): a play paid in mana is Flashback's and
-        // spends it; one paid with the permission's Plague Counters is the permission's and keeps it.
+        // A Plague-only permission (Corpse Plantation's shape): a play paid in mana is Flashback's, spending
+        // it; one paid in its Plague Counters is the permission's and keeps it.
         let mut grave = playing("r783013-plague");
         let field = put(
             &mut grave,

@@ -1,6 +1,4 @@
 //! Lose health: not damage, so no Armor, no hero cap and no on-damage effects (R18).
-//!
-//! Port of `packages/engine/src/effects/loseHealth.ts`.
 
 use serde::{Deserialize, Serialize};
 

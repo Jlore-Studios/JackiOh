@@ -42,11 +42,15 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
 (R185): `redact` blanks what the seat may not know (the opponent's hand (its Resources among it,
 R2250000) and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
-them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
-it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
+them (its option reads the view's `Face-down card`, R177), its own library's order, the cards in
+it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
+as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
+prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
 hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
-non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
+non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
+cards and a card of the seat's library from the opponent's deck, R73, against what the opponent shows,
+every other hidden card of its library against what the seat shows), a hidden backrow card from the
 traps alone, minus any whose live aura would change a shown stat (R602), and of the shown cost while
 an unseen trap of that cost is left (R351, R762). So two states that differ only in hidden cards give the same decision under
 the same rng. The caller reads `options.rng.cursor()` back afterwards.
@@ -85,12 +89,19 @@ Death on the field and in the seat's hand (spawned first, R923001) as its contro
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
 `kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
 fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
-(R2566000). A card's start-of-turn and end-of-turn hooks count
-by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
-such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
-enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
-R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
-before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
+(R2566000). A backrow card's Death counts the same way (R2687000): after the units, `death_prices`
+probes each backrow card the seat can read on either side (never a face-down enemy card nor a Unit
+standing there), then the hand's Units and Field Spells (set first), within the same budget, and
+`material` adds `AI_EVAL.death` of it outside the Brittle share, a crumble being a destroy. A destroy is
+read by the card having left the field (`left_field_after`), so a card its Death returns is priced.
+A card's start-of-turn, end-of-turn and start-of-the-opponent's-turn hooks count
+by one firing each (R2477000, R2565000, R2689000): at the root `turn_hook_prices` fires, within
+`AI_TURN_HOOK_PROBE_NODES`, each such hook of the units on either field, of the backrow cards the seat can
+read on either side (a face-down enemy card is never probed) and of the seat's hand's Field Spells and
+Units (set or placed first, R923001) through the engine's trigger queue, and prices it as its controller's
+evaluation after less before, each crystal gained at `next_turn_mana`; the first two count once for each
+time its controller's turn runs them (`multipliers::extra_runs`, Joint Filing's extra runs, R821), read on
+the state evaluated, and the third once; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
 A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
 (R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
@@ -112,10 +123,13 @@ lethal the solver proves is played trimmed to the actions it needs
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that
 suffix). A free play (a (0) Spell back from the graveyard under In Too Deep's reward L, R454, or The Coin)
 could otherwise open the same lethal at every decision. Each line tries its moves in move order
-(`candidates.rs`): attacks on the enemy hero, kills the attacker survives, each attacker's best kill (its
-target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own read
-(`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
-of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
+(`candidates.rs`): attacks on the enemy hero, kills the attacker survives and each attacker's best kill
+(its target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own
+read (`reply.rs`'s `trade_value`, #1779), these three ranked together by that model's values, best
+first, ties in that order (#2825): a kill by `trade_value`, a hit on the hero by `face_value`
+(`reply_face_value` of what it deals through the hero's Armor), and every hit on the hero first while
+the seat's ready attacks reach the face together (`ready_gap`); then the plays round-robin, answers, the
+Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
@@ -425,7 +439,8 @@ and any human seat the server hands it after a disconnect (§13.8).
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
+pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame;
+pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody>;
 ```
 
@@ -437,18 +452,21 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   wrapper's own fallback picked it (`decide` answered nothing the seat may send) or `decide` itself
   fell back (`DecisionReason::Fallback`); `sim_panics` and `first_sim_panic` are the panics `decide`'s
   search caught and the first one's message (#1429).
-- `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
-  and its teammate can (a round seat that has not ended, can afford it and has a place for it: an
-  open zone of its row or, failing that, any play of it the engine lists, onto a Stack, into the
-  backrow with Flying, onto an Equip host or a stack base, or into a zone its Tribute frees), when
-  the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
-  seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
-  rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
-  on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
-  An immediate pass is named only when it is worth it (R1723000): the teammate's best follow-up with
-  the card, also tried after the teammate's own best play, beats its best without it by more than the
-  card's `hand_card_value` in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost`
-  and `DUOS_PASS_MIN_GAIN`.
+- `duos_passes` names the hand cards to pass now, best first: a card its teammate can play this
+  turn whether or not the seat can play it itself (a round seat that has not ended, can afford it
+  and has a place for it: an open zone of its row or, failing that, any play of it the engine
+  lists, onto a Stack, into the backrow with Flying, onto an Equip host or a stack base, or into a
+  zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
+  teammate can afford next turn and the seat cannot; never more than the passes left or the
+  teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
+  (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe), ties by cost then
+  hand order; free-pass next-turn cards keep cost order. An immediate pass is named only when it is
+  worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
+  own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
+  hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
+  seat can play itself is named only when that gain also beats what the seat's own best bounded play
+  of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against
+  the other's.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
@@ -460,7 +478,7 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI
   never concedes (R188), so it neither offers nor confirms a team's concede.
-- `duos_gate` plays the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
+- `duos_gate_game` plays game n of the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
   (seeds `${series}:${n}`) or a team on the 1v1 gates' greedy baseline (#1760): `duos_greedy_action`
   plays each seat's own duel with `greedy_action`, never passes, and draws only on its seat's stream
   (seeds `${series}:greedy:${n}`). A matchup passes at its opponent's floor, `DUOS_GATE_WIN_FLOOR`

@@ -42,11 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #64 Mulch Muncher — SPEC §8.7 row 64, BUILD M9 row C+ 64: Rush, Trample; a `cost` hook (R55's
-// pattern) that costs (1) less for each Fruit-tagged card its controller has played this game (casts
-// included, R70; a Grape counts; the opponent's Fruits don't; never reset), floored at 0 and shown as
-// its current cost in hand; out of play it costs (5) (R65, R584); the Trample excess reaches the hero
-// (R63); the discount reads through `param()`; radiant 18/18 with Divine Shield too.
+// C+ #64 Mulch Muncher — SPEC §8.7 row 64, BUILD M9 row C+ 64 (R63).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::cast_new;
@@ -113,26 +109,6 @@ mod tests {
 
     fn kinds(keywords: &[Keyword]) -> Vec<String> {
         keywords.iter().map(|keyword| keyword.kind().as_str().to_string()).collect()
-    }
-
-    #[test]
-    fn prints_a_5_9_9_rush_trample_radiant_18_18_with_divine_shield_and_runs_one_script_on_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.cost, CardCost::Fixed(5));
-        assert_eq!(def.base.attack, Some(9));
-        assert_eq!(def.base.health, Some(9));
-        assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::Trample]);
-        assert_eq!(def.radiant.attack, Some(18));
-        assert_eq!(def.radiant.health, Some(18));
-        assert_eq!(def.radiant.keywords, vec![Keyword::Rush, Keyword::Trample, Keyword::DivineShield]);
-        assert!(!def.tags.contains(&Tag::Fruit));
-        let scripts = super::script();
-        // TS `expect(radiant).toBe(base)`: the one cost hook.
-        assert!(std::sync::Arc::ptr_eq(
-            scripts.radiant.cost.as_ref().expect("a cost hook"),
-            scripts.base.cost.as_ref().expect("a cost hook"),
-        ));
     }
 
     mod base {

@@ -2,7 +2,7 @@
 // of choice cards (ChoiceCard.tsx): each option drawn as a card with art, its label for a name and what
 // it does as its text, and no cost, stats or card id. One test per picker the issue moves, each also
 // rendered with one option past the limit, where the picker keeps its list. R2646000: an engine
-// prompt's asking card, when the view names it, titles the picker and gives each option its words.
+// prompt's asking card, when the view names it, names the picker's dialog and gives each option its words.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -126,8 +126,10 @@ describe("#2646 route 2: a play's short choices are choice cards", () => {
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", modes: ["board"] });
     cleanup();
 
-    const lanes = Array.from({ length: OVER }, (_, at) => `lane-${String(at + 1)}`);
-    renderBuild(handView("meditative-098"), playing(lanes.map((mode): ActionBody => ({ type: "play", instanceId: "h1", modes: [mode] }))));
+    // #2757: Showdown's lanes are no list now, but lit on the board; Swear Loyalities' factions are one.
+    const factions = ["Vanguard Coalition", "ETHICS", "Golden Accord", "Pegasus", "Star-jumper Core"];
+    expect(factions).toHaveLength(OVER);
+    renderBuild(handView("stinkyscape-163"), playing(factions.map((mode): ActionBody => ({ type: "play", instanceId: "h1", modes: [mode] }))));
     expectList("mode");
   });
 
@@ -227,9 +229,9 @@ describe("#2646 route 1: an engine prompt's short choices are choice cards", () 
       expect(drawn.querySelector(".choice-card-name")?.textContent).toBe(option.label);
       expect(drawn.querySelector(".choice-card-text")?.textContent).toBe(MODE_TEXT["classic-008"]?.[option.key.slice("mode:".length)]?.detail);
     }
-    // The title names the asking card once, though the engine's prompt names it too.
-    expect(modal().querySelector(".prompt-title-source")?.textContent).toBe(nameOf("classic-008"));
-    expect(modal().querySelector(".prompt-title-ask")?.textContent).toBe("choose one");
+    // The dialog's name says the asking card once, though the engine's prompt names it too.
+    expect(modal().querySelector(".prompt-title")).toBeNull();
+    expect(modal().getAttribute("aria-label")).toBe(`${nameOf("classic-008")}: choose one`);
     fireEvent.click(screen.getByTestId("prompt-option-mode:exile"));
     expect(onAction).toHaveBeenCalledWith({ type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "exile" }] });
     cleanup();
@@ -272,7 +274,9 @@ describe("#2646 route 1: an engine prompt's short choices are choice cards", () 
       ),
     );
     expectCards("reward");
-    expect(modal().querySelector(".prompt-title")?.textContent).toBe("Draw 2 cards");
+    expect(modal().querySelector(".prompt-title")).toBeNull();
+    expect(screen.queryByTestId("prompt-quest-complete")).toBeNull();
+    expect(modal().getAttribute("aria-label")).toBe("Quest complete! Draw 2 cards");
     rewards.forEach((label, at) => {
       const option = expectChoiceCard(`mode:${"AB"[at] ?? ""}`);
       expect(option.querySelector(".choice-card-name")?.textContent).toBe(`Reward ${"AB"[at] ?? ""}`);
@@ -305,7 +309,7 @@ describe("#2646 route 1: an engine prompt's short choices are choice cards", () 
     expectList("mode");
   });
 
-  it("R2646000 an engine mode prompt names its asking card in its title and reads each option's words off it", () => {
+  it("R2646000 an engine mode prompt names its asking card in its dialog's name and reads each option's words off it", () => {
     const pending: Pending = {
       ...(pendingFor("mode", [
         { key: "mode:health", label: "health" },
@@ -316,14 +320,15 @@ describe("#2646 route 1: an engine prompt's short choices are choice cards", () 
       sourceRadiant: false,
     };
     renderPending(pending);
-    expect(modal().querySelector(".prompt-title-source")?.textContent).toBe(nameOf("core-087"));
+    expect(modal().querySelector(".prompt-title")).toBeNull();
+    expect(modal().getAttribute("aria-label")).toBe(`${nameOf("core-087")}: Choose one`);
     expect(screen.getByTestId("prompt-option-mode:health").querySelector(".choice-card-text")?.textContent).toBe(MODE_TEXT["core-087"]?.health?.detail);
     cleanup();
 
-    // No asking card named (hidden from the chooser, or none): no title source and no words to read.
+    // No asking card named (hidden from the chooser, or none): the dialog's name is the ask, and no words to read.
     const { sourceDefId: _s, sourceRadiant: _r, ...unnamed } = pending;
     renderPending(unnamed);
-    expect(modal().querySelector(".prompt-title-source")).toBeNull();
+    expect(modal().getAttribute("aria-label")).toBe("Choose one");
     expect(screen.getByTestId("prompt-option-mode:health").querySelector(".choice-card-text")).toBeNull();
   });
 });

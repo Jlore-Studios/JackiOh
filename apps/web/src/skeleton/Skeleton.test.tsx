@@ -110,6 +110,24 @@ describe("R2115000 the skeleton", () => {
     expect(status).toContain("position: absolute;");
     expect(status).toContain("clip-path: inset(50%);");
   });
+
+  it("R2115000 the blocks' layer draws the JackiOh mark, still, but in a shell panel, and the mark is shipped", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const flat = (path: string): string =>
+      readFileSync(path, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\s+/g, " ");
+    const css = flat(join(here, "skeleton.css"));
+    const start = css.indexOf(".skeleton__blocks::before {");
+    expect(start).toBeGreaterThan(-1);
+    const mark = css.slice(start, css.indexOf("}", start));
+    expect(mark).toContain('url("/brand/jackioh-mark.svg")');
+    expect(mark).toContain("position: absolute;");
+    expect(mark).not.toMatch(/\banimation\b/);
+    expect(readFileSync(join(here, "..", "..", "public", "brand", "jackioh-mark.svg"), "utf8")).toContain("<svg");
+    // The shell's panels carry the logo over the skeleton, so the mark is not drawn twice.
+    expect(flat(join(here, "..", "auth", "tavern.css"))).toContain(".tavern.shell-panel .skeleton__blocks::before { content: none; }");
+  });
 });
 
 describe("R2108000 the skeleton waits a moment", () => {

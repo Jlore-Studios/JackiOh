@@ -2,23 +2,20 @@
 //! fatigue; both faces add "Cry: draw {draw}" (1, Radiant 3, R386) on top of the replacement.
 //!
 //! The replacement is a draw hook: `static_flags.infinite_reserves` is the whole of it. `draw_one`
-//! (engine/src/draw.rs) reads it off the BACKROW before taking fatigue and `add_to_hand`s the §5 index
-//! "T-rush" token (§8.3's Engine cell: a hand card, never a summon), skipping `fatigue_count` and R3's
-//! damage. The engine owns the rest: R4 (a full hand burns the token) and R11 (a unit-token card in a
-//! hand or library ceases to exist if it leaves other than drawn or played). It is a Field Spell, so
-//! §3.2 makes it public and permanent.
+//! reads it off the BACKROW before taking fatigue and `add_to_hand`s the §5 index "T-rush" token
+//! (§8.3's Engine cell: a hand card, never a summon), skipping R3's fatigue. The engine owns R4 (a
+//! full hand burns the token) and R11 (a unit-token card ceases to exist if it leaves other than
+//! drawn or played). §3.2 makes the Field Spell public and permanent.
 //!
-//! The Cry is an ordinary draw of `draw` (R1), deliberately NOT special-cased against its own flag:
-//! played on an empty library it draws Rush Token cards, since §10.5 puts the card on the field
-//! at step 4, before the Cry fires at step 5.
+//! The Cry is an ordinary draw (R1), deliberately NOT special-cased against its own flag: played on
+//! an empty library it draws Rush Token cards, since §10.5 puts the card on the field before the Cry.
 
 use jackioh_engine::effects::draw;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-075";
 
-/// The replacement both faces share, plus the Cry both faces run ("Cry: Draw {draw}"): the declared
-/// number `draw` (R386), 1 and 3 on the Radiant face.
+/// Both faces: the replacement, and the Cry drawing the declared number `draw` (R386).
 fn infinite_reserves() -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -60,12 +57,9 @@ pub fn script_v0_4_12c() -> CardScripts {
     }
 }
 
-// #75 Infinite Reserves — SPEC §8.3, BUILD M4-T4: "Empty-library draw yields a Rush Token card and
-// no fatigue damage; radiant Cry draws 3".
-//
-// The empty-library draw is `library: []` plus `startTurn()` (§2.2). Each test pairs the outcome with a
-// control: the same draw without Infinite Reserves takes R3's fatigue. The token is checked as a hand
-// card (§8.3 Engine cell), the catalog's own core-t-rush at 3/3 with no stat override, and playable.
+// #75 Infinite Reserves — SPEC §8.3, BUILD M4-T4.
+// The empty-library draw is `library: []` plus `startTurn()` (§2.2); the control without the card
+// takes R3's fatigue.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -73,7 +67,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -100,12 +93,9 @@ mod tests {
             let tokens = rush_tokens_in_hand(&s, P1);
             assert_eq!(tokens.len(), 1);
             s.expect_in_zone(&tokens[0], "hand");
-            // No fatigue: neither the counter nor the damage.
             s.expect_health(P1, 30);
             assert_eq!(s.state().players.p1.fatigue_count, 0);
-            // It came in as a draw, through the normal add-to-hand path.
             s.expect_events(json!(["turnStarted", "drawn", "addedToHand"]));
-            // A hand card, never a summon.
             assert!(s.unit(P1, 1).is_none());
         }
 
@@ -263,8 +253,6 @@ mod tests {
                 };
                 assert_eq!(moved, moved_value);
                 s.play("core-075", json!({}));
-                // §10.5 puts the card on the field before the Cry, so the Cry's own draws
-                // take the replacement: Rush Token cards, never fatigue.
                 assert_eq!(rush_tokens_in_hand(&s, P1).len(), draws as usize);
                 assert_eq!(s.state().players.p1.fatigue_count, 0);
             }

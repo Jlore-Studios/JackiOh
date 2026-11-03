@@ -21,7 +21,7 @@ import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { INSPECT_GLOSSARY, INSPECT_LIST_CARD, INSPECT_LIST_SHEET } from "../cards/inspect/testids.ts";
 import { closeInspect, costPhrase, faceDownLabel } from "../cards/index.ts";
 import { MARK_PALETTES, MARK_WORDS } from "../cards/marks.ts";
-import { CARD_FX } from "../fx/cardFx.ts";
+import { FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { CHAOS_CORE, chaosNames } from "../fx/chaos.ts";
 import { FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { HINDERED_ATTR } from "../fx/manaMarks.ts";
@@ -88,8 +88,6 @@ function renderGame(view: PlayerView): void {
   render(withCatalog(<Game view={view} legal={[]} onAction={vi.fn()} />));
 }
 
-// What a player reads.
-
 const PLACEHOLDER = /\{[A-Za-z][\w|]*\}/;
 
 const OLD_COST: readonly RegExp[] = [/\bCost \(/, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\b\d+ mana (Unit|Spell|Trap|Field|card)/i];
@@ -149,8 +147,6 @@ afterEach(() => {
     }
   }
 });
-
-// QA items.
 
 describe("QA v0.2.0, Global Cosmetic", () => {
   it("item 1: a dealt deck lists the cards its owner has seen and one back for the rest, which names and opens nothing (R433)", () => {
@@ -298,7 +294,6 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(beats).toEqual([]);
     cleanup();
 
-    // Reduced motion preserves urgency without the fuse.
     writeSettings({ reduceMotion: true });
     at.ms = 0;
     render(clock("p1"));
@@ -367,7 +362,6 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(box).not.toHaveTextContent(COUNTS);
     vi.mocked(getMe).mockReset();
 
-    // Reduced motion leaves the search beacon visible but still.
     const lobbyCss = readFileSync(join(HERE, "../routes/lobby.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     const still = /\{\s*animation: none;\s*opacity: 0\.6;\s*\}/;
     expect(lobbyCss).toMatch(new RegExp(`@media \\(prefers-reduced-motion: reduce\\) \\{\\s*\\.tavern\\.play-screen \\.play-search__ring \\s*${still.source}`));
@@ -400,8 +394,8 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       expect(screen.getByTestId(showcaseTestid.live)).toHaveTextContent(`${CAST_ON_DRAW_TEXT.opponent} ${nameOf(defId)}: ${CAST_ON_DRAW_TEXT.said}`);
       cleanup();
     }
-    expect(CARD_FX[HINDER]).toBe("manaCrack");
-    expect(CARD_FX[BLOOD]).toBe("bloodDrain");
+    expect(FX_CARD_TABLE.get(HINDER)).toEqual({ kind: "bespoke", key: "manaCrack" });
+    expect(FX_CARD_TABLE.get(BLOOD)).toEqual({ kind: "bespoke", key: "bloodDrain" });
 
     showcase([drawn("p2", "hidden", "hidden"), cast("p2", "hidden", "hidden")]);
     expect(screen.getByTestId(showcaseTestid.back)).toContainElement(screen.getByTestId(showcaseTestid.ribbon));
@@ -418,7 +412,6 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     expect(screen.getByTestId("mana-you")).toHaveAttribute(HINDERED_ATTR, "1");
     expect(document.querySelectorAll(`[data-testid="mana-opponent"] .mana-crystal[${HINDERED_ATTR}]`)).toHaveLength(0);
     cleanup();
-    // The caster sees its opponent's affected mana.
     renderGame(baseView({ opponent: emptySide("p2", { hand: { count: 3 }, mana, modifiers: [rider(2)] }) }));
     expect(document.querySelectorAll(`[data-testid="mana-opponent"] .mana-crystal[${HINDERED_ATTR}]`)).toHaveLength(2);
   });
@@ -448,7 +441,6 @@ describe("QA v0.2.0, Card Cosmetic", () => {
     expect(green?.style.getPropertyValue("--mark-rim")).toBe(MARK_PALETTES.green.rim);
     cleanup();
 
-    // Logs use visible marks and redact unseen cards.
     const events: GameEvent[] = [
       { type: "marked", instanceId: theirs.instanceId, mark: "steal", color: "purple", added: true },
       { type: "marked", instanceId: "facedown-elsewhere", mark: "doom", color: "ultraviolet", added: true },
@@ -474,7 +466,6 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       expect(screen.queryByTestId(showcaseTestid.chaos)).toBeNull();
       cleanup();
     }
-    // Logs name visible cards and use Call to Chaos for hidden ones.
     const logged: GameEvent[] = [
       { type: "chaosRolled", player: "p2", instanceId: "c95", defId: CHAOS_CORE, effects },
       { type: "chaosRolled", player: "p2", instanceId: "hidden", defId: "hidden", effects: ["Heal your hero 30"] },

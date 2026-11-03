@@ -1,15 +1,5 @@
-//! Player settings on the account (`src/api/settings.rs`, SPEC §9.1, R633, R634).
-//!
-//! The questions here are the endpoints' own: who may call them (an active account, and only about
-//! itself), what a body must look like, what a write does to what is stored (a group replaced only by
-//! a strictly later one, the others left alone), and that a time from a clock running ahead is taken
-//! as now. The merge itself is the store's and is asserted against both stores in
-//! `tests/store/contract.rs`; the database's half — RLS, the grants and the SQL function — is
-//! `tests/sql/11_player_settings.sql` and `02_rls_as_client.sql`.
-//!
-//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
-//! caller is `e2e-p1`, the other account `e2e-p2`, the pending one `e2e-pending`, and a banned
-//! account is `e2e-p2` set to `banned`. A time "now" is read from the server's wall clock.
+//! Player settings on account (`src/api/settings.rs`, SPEC §9.1, R633, R634).
+//! Covers authorization, request validation, monotonic updates, and clock handling.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -616,10 +606,7 @@ mod r633_the_body_is_checked_before_anything_is_stored {
     }
 }
 
-/// R1834001: the `cosmetics` group's six picks are checked as every write of a pick is, since a
-/// match shows them to the other seat: each, where the body names it, a text naming an id of its
-/// kind the account owns. A default or a starter is owned with no ledger row; #1833's are neither
-/// (R1833000).
+/// R1834001, #1833, R1833000: cosmetics group's picks must be owned ids of their kinds.
 mod r1834001_the_cosmetics_group_holds_owned_ids_of_their_kinds {
     use super::*;
 

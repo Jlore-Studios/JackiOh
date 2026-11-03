@@ -1,10 +1,7 @@
-//! Test-only cards for Activate (docs/classic-sets.md B3.2, R384). Each reproduces one shape of the
-//! Classic and Classic+ cards that use the keyword through the engine's own verbs (each card's own
-//! comment names its shape); the abilities a fused card carries are each read in its ingredient's
-//! place (R102). The engine does not depend on the cards crate; the real cards' tests cover the same
-//! cases again.
-//!
-//! Ids are prefixed `act-` and indexed from 4100, so they cannot collide with another fixture file's.
+//! Test-only cards for Activate (docs/classic-sets.md B3.2, R384), as the engine does not depend on
+//! the cards crate: each reproduces one shape of the Classic and Classic+ cards that use the keyword.
+//! A fused card's abilities are each read in its ingredient's place (R102). Ids are prefixed `act-`
+//! and indexed from 4100, so they cannot collide with another fixture file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -18,9 +15,8 @@ use jackioh_engine::subsystems::hero_power::{
 };
 use jackioh_engine::testkit::*;
 
-/// A Core Common at cost 0 named after `name`; a Unit is 2/2 unless `extra` names `attack` or `health`
-/// (its Radiant face doubles them), `extra`'s `keywords` go on both faces, and every other key of
-/// `extra` is written over the definition.
+/// A Core Common at cost 0; a Unit is 2/2 unless `extra` names `attack` or `health` (Radiant doubles
+/// them), `extra`'s `keywords` go on both faces, and its other keys are written over the definition.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut rest = if extra.is_object() { extra } else { json!({}) };
     let mut take = |key: &str| rest.as_object_mut().and_then(|object| object.remove(key));
@@ -65,7 +61,6 @@ pub static log_card: LazyLock<CardDef> = LazyLock::new(|| def("log", 4101, "Fiel
 /// The note log sits in p2's backrow lane 5, out of the way of every card under test.
 pub const LOG_LANE: i32 = 5;
 
-/// The log's steps, as stored (`memory.steps`), or none.
 fn steps_of(memory: &IndexMap<String, Value>) -> Vec<String> {
     match memory.get("steps").and_then(Value::as_array) {
         Some(steps) => steps
@@ -126,12 +121,10 @@ fn faces_of(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// One unit or hero.
 fn any_target() -> TargetDecl {
     TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))
 }
 
-/// An ability with no cost, targets, modes or conditions.
 fn ability(id: &str, label: &str, uses: ActivationUses, run: Hook) -> ActivationDecl {
     ActivationDecl {
         id: id.to_string(),
@@ -150,7 +143,6 @@ fn notes_hook(entries: &'static [&'static str]) -> Hook {
     hook(move |_ctx| entries.iter().map(|entry| note(*entry)).collect())
 }
 
-/// A value read back out of a card's memory as text (`undefined` when there is none).
 fn js_string<V: Borrow<Value>>(value: Option<V>) -> String {
     match value {
         None => "undefined".to_string(),
@@ -161,9 +153,7 @@ fn js_string<V: Borrow<Value>>(value: Option<V>) -> String {
     }
 }
 
-// The cards
-
-/// Classic+ #76.1's shape: "Activate: Deal 1 damage" (Radiant "Activate 2: Deal 2 damage").
+/// Classic+ #76.1's shape: "Activate: Deal 1 damage" (Radiant: Activate 2, 2 damage).
 pub static pinger: LazyLock<CardDef> = LazyLock::new(|| def("pinger", 4102, "Field Spell", json!({})));
 fn ping(uses: i32, amount: i32) -> ActivationDecl {
     ActivationDecl {
@@ -185,7 +175,7 @@ fn ping(uses: i32, amount: i32) -> ActivationDecl {
 pub static sentry: LazyLock<CardDef> =
     LazyLock::new(|| def("sentry", 4103, "Unit", json!({ "attack": 2, "health": 2 })));
 
-/// Classic #21's shape: "Activate ♾️: Tribute a Unit. Deal damage equal to its Attack to any target."
+/// Classic #21's shape: "Activate ♾️: Tribute a Unit" and deal its Attack to any target.
 pub static turtle: LazyLock<CardDef> =
     LazyLock::new(|| def("turtle", 4104, "Unit", json!({ "attack": 5, "health": 4 })));
 
@@ -211,8 +201,7 @@ pub static ghost: LazyLock<CardDef> =
 pub static merchant: LazyLock<CardDef> = LazyLock::new(|| def("merchant", 4108, "Field Spell", json!({})));
 pub const MERCHANT_PRICE: i32 = 2;
 
-/// Classic #20's shape: "Activate: Choose one: Deal 2 damage; your opponent discards a card; or choose
-/// a Unit, which is destroyed at the start of your next turn" (Radiant: all enemy Units then).
+/// Classic #20's shape: "Activate: Choose one" of damage, a discard or a doom (Radiant: all enemy Units).
 pub static punisher: LazyLock<CardDef> = LazyLock::new(|| def("punisher", 4109, "Field Spell", json!({})));
 pub const PUNISH_MODES: [&str; 3] = ["damage", "discard", "doom"];
 fn punish(radiant: bool) -> Script {
@@ -272,8 +261,7 @@ pub static asker: LazyLock<CardDef> =
 pub static scepter: LazyLock<CardDef> = LazyLock::new(|| def("scepter", 4111, "Field Spell", json!({})));
 pub const SCEPTER_KEY: &str = "stored";
 
-/// Heroic Power's shape: one ability per power, and a copy has only the one it rolled (`has`), beside
-/// one it always has. The rolled one is `memory.pick`.
+/// Heroic Power's shape: a copy has the ability it rolled (`memory.pick`) and the one it always has.
 pub static chooser: LazyLock<CardDef> = LazyLock::new(|| def("chooser", 4112, "Field Spell", json!({})));
 pub const PICK_KEY: &str = "pick";
 
@@ -301,9 +289,8 @@ pub static heroic: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// Classic #7's shape read the way the real card reads it (R102): the ability is usable once its own
-/// text has remembered something (`recalled`), and notes what it remembered, so a fusion shows which
-/// ingredient's memory each of its abilities reads.
+/// Classic #7's shape as the real card reads it (R102): usable once its text has remembered something
+/// (`recalled`); it notes what, so a fusion shows whose memory each of its abilities reads.
 pub static keeper: LazyLock<CardDef> = LazyLock::new(|| def("keeper", 4117, "Field Spell", json!({})));
 pub const KEEPER_KEY: &str = "kept";
 
@@ -319,7 +306,7 @@ pub static zapper: LazyLock<CardDef> = LazyLock::new(|| {
         }),
     )
 });
-/// A card that declares the same number, smaller, and has no ability: fused ahead of a zapper (R102).
+/// Declares the same number, smaller, with no ability: fused ahead of a zapper (R102).
 pub static spark: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "spark",
@@ -350,7 +337,7 @@ pub static high_teller: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// The tellers' script: "Activate: ask; the answer notes {tell}", read by the step the answer re-enters.
+/// The tellers' script: "Activate: ask; the answer notes {tell}", read by the step it re-enters.
 fn teller() -> CardScripts {
     faces(Script {
         activations: vec![ability(
@@ -620,7 +607,7 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             keeper.id.clone(),
             faces(Script {
                 activations: vec![ActivationDecl {
-                    // With no part path in the data, the key is the plain one (`work.partMemoryKey`).
+                    // With no part path in the data, the key is the plain one.
                     can_activate: Some(condition_hook(|c| {
                         c.self_
                             .memory

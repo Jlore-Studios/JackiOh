@@ -1,12 +1,8 @@
-//! ME-JADE (Meditative #39.2 Jade, #39.4 Red Jade, #39.5 Jade Beauty; docs/meditative-set.md M5,
-//! Group C's systems): each player's public Jade Counter, which only rises.
-//!
-//! `PlayerState.jade` starts absent (D14: a game without a Jade serializes as before) and `add_jade`
-//! writes it. Inside the same add, the counter's crossings of `JADE_BEAUTY_AT` (5: summon a Jade
-//! Beauty, R64, no Cry) and `JADE_ASCEND_AT` (10: make every Jade Beauty its player controls
-//! Radiant, or summon a Radiant one when they control none) run in that order (MD-C3, R962). Each
-//! crossing happens once a game, because the counter never falls. A full row summons nothing, and
-//! that threshold is spent all the same.
+//! ME-JADE (Meditative #39.2 Jade, #39.4 Red Jade, #39.5 Jade Beauty; docs/meditative-set.md M5):
+//! each player's public Jade Counter, which only rises, so each crossing of `JADE_BEAUTY_AT` (summon a
+//! Jade Beauty, R64, no Cry) and `JADE_ASCEND_AT` (make every Jade Beauty its player controls Radiant,
+//! or summon a Radiant one) happens once a game, in that order (MD-C3, R962). A full row summons
+//! nothing, and that threshold is spent all the same. `PlayerState.jade` starts absent (D14).
 
 use serde::{Deserialize, Serialize};
 
@@ -29,8 +25,8 @@ pub struct AddJadeArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// R961, R962, MD-C2, MD-C3: raise a player's Jade Counter by `amount` and report it with the
-/// public `jadeChanged` event. An add of 0 or less changes and reports nothing.
+/// R961, R962, MD-C2, MD-C3: raise a player's Jade Counter by `amount` (a public `jadeChanged`); an add
+/// of 0 or less changes nothing.
 pub fn add_jade(args: AddJadeArgs) -> Effect {
     Effect::new("addJade", move |ctx| {
         if args.amount <= 0 {

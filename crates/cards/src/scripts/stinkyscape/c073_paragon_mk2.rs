@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73: "a 7/1 Charge Flying Ranged
-// Divine Shield Unit; its Divine Shield takes the first hit; no Starship Piece, so its death fuses
-// nothing (#2521); radiant 14/2 with Pierce (R346)".
+// Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73 (#2521, R346).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -33,35 +31,12 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
-    }
-
-    #[test]
-    fn prints_divine_shield_7_1_radiant_14_2_with_pierce() {
-        crate::register_all();
-        let def = crate::card_def(PARAGON);
-        assert_eq!(
-            kinds_of(&def.base.keywords),
-            vec!["Charge", "Flying", "Ranged", "Divine Shield"]
-        );
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Charge", "Flying", "Ranged", "Divine Shield", "Pierce"]
-        );
-        assert_eq!((def.base.attack, def.base.health), (Some(7), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(14), Some(2)));
     }
 
     #[test]

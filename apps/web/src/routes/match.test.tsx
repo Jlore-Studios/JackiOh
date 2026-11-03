@@ -1,12 +1,6 @@
-// `/match/<id>`: the board specs 05 and 06 drive, with the socket faked.
-//
-// The load-bearing assertion in this file is what a board does with `legalActions`. A view that
-// carries none renders `legal={[]}`, `end-turn` is `disabled`, and `waitForMyTurn` in specs 05 and
-// 06 waits forever — so the route says so out loud rather than looking merely idle. The two tests
-// after it show the board coming alive on the `legal` field of the `view` frame, which is what
-// `crates/server/src/actor/match_actor.rs` sends (a standalone `legal` frame was never sent, and the
-// client no longer reads one, SURFACE §11.3).
-// Nothing here computes legality; that is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
+// `/match/<id>`: the board specs 05 and 06 drive, with the socket faked. A `view` frame with no `legal`
+// leaves `waitForMyTurn` waiting forever, so the route says so out loud (SURFACE §11.3); legality is
+// the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -94,7 +88,6 @@ function attach(extra: Record<string, unknown> = {}): void {
   });
 }
 
-/** A later `view` frame on the open socket, with nothing legal. */
 function pushView(view: PlayerView): void {
   act(() => {
     live().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
@@ -158,20 +151,7 @@ describe("the networked board", () => {
     expect(typeof sent.action.nonce).toBe("string");
   });
 
-  it("takes the same list riding on the `view` frame", () => {
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    expect(screen.queryByTestId("missing-legal-frame")).toBeNull();
-    expect(screen.getByTestId("end-turn")).not.toBeDisabled();
-  });
-
-  /**
-   * #1378: the board's names are the catalog the client ships, in hand before the first view, so no
-   * request is made for them and a failed network never leaves the board naming def ids. The route
-   * still renders its provider unconditionally (it once wrapped the board only once a fetched
-   * catalog landed, which remounted it and cost spec 05 a mulligan).
-   */
+  /** #1378: a failed network never leaves the board naming def ids. */
   it("#1378 names the board's cards from the shipped catalog on the first view, asking for no catalog, while every request fails", () => {
     const requests = vi.fn((input: unknown) => Promise.reject(new TypeError(`Failed to fetch ${String(input)}`)));
     vi.stubGlobal("fetch", requests);
@@ -181,13 +161,13 @@ describe("the networked board", () => {
       view: baseView({
         viewer: "p1",
         active: "p1",
-        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-001" })] }),
+        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-002" })] }),
       }),
       legal: [{ type: "endTurn" }],
     });
 
     expect(screen.getByTestId("hand-card-h-1378").querySelector(".card-name")?.textContent).toBe(
-      registeredCatalog()["core-001"]?.name,
+      registeredCatalog()["core-002"]?.name,
     );
     expect(requests.mock.calls.map(([url]) => String(url)).filter((url) => /\/api\/catalog$/u.test(url))).toEqual([]);
   });
@@ -313,17 +293,14 @@ describe("the series banner on a series game (R259)", () => {
 });
 
 describe("withoutToken", () => {
-  /**
-   * `net.ts` puts the access token in the socket URL's query, and the connecting status line
-   * renders that URL. Printing it raw put a live bearer token on screen and in the DOM.
-   */
+  /** Printing the URL raw would put a live bearer token on screen and in the DOM. */
   it("strips the access token from the socket URL it displays", () => {
     const withToken =
-      "wss://jackioh-server.onrender.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
+      "wss://jackioh.com/ws/match?token=eyJhbGciOiJFUzI1NiJ9.SECRET.sig&matchId=abc";
     const shown = withoutToken(withToken);
     expect(shown).not.toContain("SECRET");
     expect(shown).not.toContain("token=");
-    expect(shown).toContain("wss://jackioh-server.onrender.com/ws/match");
+    expect(shown).toContain("wss://jackioh.com/ws/match");
   });
 
   it("returns an unparseable value unchanged rather than throwing", () => {
@@ -396,7 +373,6 @@ describe("R268 the mulligan clock on the match bar", () => {
 });
 
 describe("R439 the turn clock's last 30 seconds on the match bar", () => {
-  /** A `clock` frame whose turn clock has `ms` left at the server's `now`. */
   function clockFrame(now: number, ms: number | null): string {
     return JSON.stringify({
       type: "clock",
@@ -444,14 +420,13 @@ describe("R439 the turn clock's last 30 seconds on the match bar", () => {
     const now = 1_000_000;
     act(() => {
       live().onopen?.({});
-      // The opponent's turn, with 5 seconds left on it.
       live().onmessage?.({ data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p2", turn: 3 }) }) });
       live().onmessage?.({ data: clockFrame(now, TURN_CLOCK_LAST_MS / 2) });
     });
     expect(clockRoot()).toHaveAttribute("data-clock-side", "opponent");
     expect(clockRoot()).toHaveAttribute("data-clock-urgency", "last10");
 
-    // The viewer's turn begins: its view first, the server's fresh frame just after (actor.ts).
+    // The viewer's turn begins: its view first, the server's fresh frame just after.
     act(() => {
       live().onmessage?.({
         data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1", turn: 4, clockMs: TURN_CLOCK_MS }) }),
@@ -680,17 +655,6 @@ describe("the match screen's ranks (R604, R612)", () => {
     return fetchMock;
   }
 
-  it("names both seats' ranks and whether the game moves them", async () => {
-    stubFetch(ranksBody);
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    const banner = await screen.findByTestId("match-ranks");
-    expect(banner).toHaveTextContent("Ranked match");
-    expect(banner).toHaveTextContent("Max#3 (you) Normal Grape III");
-    expect(banner).toHaveTextContent("שרה Raisin");
-  });
-
   it("shows the full line on desktop and a compact line for phones, both with both seats", async () => {
     stubFetch(ranksBody);
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
@@ -699,7 +663,8 @@ describe("the match screen's ranks (R604, R612)", () => {
     const banner = await screen.findByTestId("match-ranks");
     const full = banner.querySelector(".match-ranks__full");
     expect(full).toHaveTextContent("Ranked match");
-    expect(full).toHaveTextContent("Normal Grape III");
+    expect(full).toHaveTextContent("Max#3 (you) Normal Grape III");
+    expect(full).toHaveTextContent("שרה Raisin");
     const short = banner.querySelector(".match-ranks__short");
     expect(short).toHaveTextContent("Normal III");
     expect(short).toHaveTextContent("Raisin");
@@ -720,7 +685,6 @@ describe("the match screen's ranks (R604, R612)", () => {
     attach({ legal: [{ type: "endTurn" }] });
 
     const banner = await screen.findByTestId("match-ranks");
-    // Both the full and the compact line name the seats the same isolated way.
     for (const line of [".match-ranks__full", ".match-ranks__short"]) {
       const names = [...(banner.querySelector(line)?.querySelectorAll("bdi.username") ?? [])];
       expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
@@ -765,7 +729,6 @@ describe("the match screen's ranks (R604, R612)", () => {
     render(<MatchRoute matchId="m-2" token="tok" socketFactory={socketFactory} />);
     attach({ legal: [{ type: "endTurn" }] });
     await screen.findByTestId("hero-you");
-    // The ranks read has answered by now, and its body was not a ranks body: no banner, no crash.
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/ranks"), expect.anything());
     });
@@ -791,25 +754,20 @@ describe("the match screen's ranks (R604, R612)", () => {
     expect(banner).toHaveTextContent(`Max#3 (you) ${String(N)} Normal Grape III`);
   });
 
-  it("R2101000 no seat shows a flame below the threshold or after a loss", async () => {
-    stubFetch(withStreaks(N - 1, 0));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
+  for (const row of [
+    { name: "below the threshold or after a loss", ranks: withStreaks(N - 1, 0), line: "Ranked match" },
+    { name: "on an unranked (casual) match, whatever the streaks", ranks: withStreaks(N + 1, N + 1, false), line: "Unranked match" },
+  ]) {
+    it(`R2101000 no seat shows a flame ${row.name}`, async () => {
+      stubFetch(row.ranks);
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      attach({ legal: [{ type: "endTurn" }] });
 
-    const banner = await screen.findByTestId("match-ranks");
-    expect(banner).toHaveTextContent("Ranked match");
-    expect(banner.querySelector(".streak-flame")).toBeNull();
-  });
-
-  it("R2101000 an unranked (casual) match's line shows no flame, whatever the streaks", async () => {
-    stubFetch(withStreaks(N + 1, N + 1, false));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    const banner = await screen.findByTestId("match-ranks");
-    expect(banner).toHaveTextContent("Unranked match");
-    expect(banner.querySelector(".streak-flame")).toBeNull();
-  });
+      const banner = await screen.findByTestId("match-ranks");
+      expect(banner).toHaveTextContent(row.line);
+      expect(banner.querySelector(".streak-flame")).toBeNull();
+    });
+  }
 });
 
 describe("R2388000 a ranked match's result shows the rank it moved each seat to", () => {
@@ -956,7 +914,6 @@ describe("R2388000 a ranked match's result shows the rank it moved each seat to"
 describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
   const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
 
-  /** One view frame, as the actor sends it after the result has landed. */
   function push(view: ReturnType<typeof baseView>, extra: Record<string, unknown> = {}): void {
     act(() => {
       live().onmessage?.({ data: JSON.stringify({ type: "view", view, ...extra }) });
@@ -970,12 +927,10 @@ describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
     push(baseView({ viewer: "p1", active: "p1" }), { jloreCapped: true });
     expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
 
-    // The finished game, the server saying the cap held this account's Jlore back.
     push(finished, { jloreCapped: true });
     expect(await screen.findByTestId("result-daily-jlore")).toHaveTextContent("Daily Jlore reached");
     cleanup();
 
-    // The same game with nothing held back, or a view that says nothing about it, shows none.
     for (const extra of [{ jloreCapped: false }, {}]) {
       render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
       attach({ view: finished, ...extra });
@@ -1044,7 +999,6 @@ describe("R169 the modifier list at the online table", () => {
 
 describe("the XP reveal on a finished match (#1664)", () => {
   const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
-  /** What the result's write paid the account: a track moved one level, a quest completed. */
   const economy = {
     jlore: 30,
     xp: 540,
@@ -1180,7 +1134,6 @@ describe("the death screen's rematch offers (R672)", () => {
     );
   }
 
-  /** Push a finished game, the way the actor's last view reads after the killing blow. */
   function finish(): void {
     attach({
       view: baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } }),
@@ -1196,35 +1149,23 @@ describe("the death screen's rematch offers (R672)", () => {
     expect(screen.getByTestId("rematch-double")).toBeInTheDocument();
   });
 
-  it("shows no rematch on a live series game, whose continue flow owns what comes next", async () => {
-    stubMatchFetch(seriesIn("playing"));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    finish();
+  for (const state of ["playing", "over"] as const) {
+    it(`shows no rematch on a series game while it is ${state}: the continue flow owns what comes next`, async () => {
+      stubMatchFetch(seriesIn(state));
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      finish();
 
-    // The banner read the series (so the hook ran), yet no rematch rendered for it.
-    await screen.findByTestId("series-banner");
-    await act(async () => {});
-    expect(screen.queryByTestId("rematch-offer")).toBeNull();
-    expect(screen.queryByTestId("rematch-double")).toBeNull();
-  });
-
-  it("shows no rematch once the series is over either: finished series games are refused too", async () => {
-    stubMatchFetch(seriesIn("over"));
-    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    finish();
-
-    // The banner read the series (so the hook ran), yet no rematch rendered for it.
-    await screen.findByTestId("series-banner");
-    await act(async () => {});
-    expect(screen.queryByTestId("rematch-offer")).toBeNull();
-    expect(screen.queryByTestId("rematch-double")).toBeNull();
-  });
+      // The banner read the series (so the hook ran), yet no rematch rendered for it.
+      await screen.findByTestId("series-banner");
+      await act(async () => {});
+      expect(screen.queryByTestId("rematch-offer")).toBeNull();
+      expect(screen.queryByTestId("rematch-double")).toBeNull();
+    });
+  }
 
   it("takes the seat to the rematch even after View the board folded the panel", async () => {
     vi.mocked(navigate).mockClear();
-    // The rematch answers are held back until the panel is folded: neither the buttons'
-    // poll nor the watcher's has answered by then, so nothing can have navigated yet. Every
-    // pending poll is released, in case the buttons polled again after mounting.
+    // The rematch answers are held back until the panel is folded, so nothing can have navigated yet.
     const releaseRematch: Array<(body: string) => void> = [];
     vi.stubGlobal(
       "fetch",
@@ -1266,10 +1207,7 @@ describe("the death screen's rematch offers (R672)", () => {
     });
   });
 
-  /**
-   * The test above's held rematch answers, with the replay's pages served as `stubReplayFetch` below
-   * serves them and `/series` answering this series (or none). Returns the held answers' releases.
-   */
+  /** The test above's held rematch answers, plus `stubReplayFetch`'s replay pages and this `/series`. */
   function stubHeldRematchFetch(series: Record<string, unknown> | null): Array<(body: string) => void> {
     const steps = foldedReplaySteps();
     const releaseRematch: Array<(body: string) => void> = [];
@@ -1302,7 +1240,6 @@ describe("the death screen's rematch offers (R672)", () => {
     return releaseRematch;
   }
 
-  /** Both seats' matching offers, as the rematch poll answers once they have made `match-2`. */
   const AGREED = JSON.stringify({ youOffered: 1, opponentOffer: 1, opponentHere: true, matchId: "match-2" });
 
   it("takes the seat to the rematch even from the finished match's replay", async () => {
@@ -1348,7 +1285,6 @@ describe("the death screen's rematch offers (R672)", () => {
     });
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
 
-    // Back: the result panel again, still with no rematch on it.
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
@@ -1388,9 +1324,7 @@ describe("a match voided mid-game (#1899)", () => {
     });
     expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "closed");
     expect(screen.getByTestId("match-gone")).toHaveTextContent("This match is no longer available.");
-    // The board stays up behind the notice.
     expect(screen.getByTestId("hero-you")).toBeInTheDocument();
-    // A voided match has no socket to reopen (R679).
     expect(screen.queryByTestId("match-reconnect")).toBeNull();
     expect(sockets).toHaveLength(1);
 

@@ -53,5 +53,17 @@ The Stinkyscape set's entries (`stinkyscape-…`) draw `stinkyscape.ts`'s proced
 
 The Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds.ts`'s procedural art
 the same way: a training yard under one subject per family, its dummies, ogres, knives, totems,
-Felinors, runes, posters and Golem each what the card is (R2202000). Its snapshots #41–#60
-(`SNAPSHOT_ART`) draw the Core card each one freezes, by that card's id, delivered file included.
+Felinors, runes, posters and Golem each what the card is (R2202000). Its Legacy cards #41–#60
+(`SNAPSHOT_ART`) draw their Core card's subject in the yard, each with a touch of its own
+(`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id.
+
+## The full-art cards' moving art
+
+A full-art card's procedural picture also has a moving version (R2715001, `motion.ts`): given the
+card's recipe (`FULL_ART_MOTION`), the painters tag each layer by its role (background, subject,
+over, light, props, motes), add particles that suit the card, and put per-card keyframes in the
+picture, transform and opacity only, behind `prefers-reduced-motion`. Without a recipe the picture is
+byte for byte the still one. The Animated art, the Legendary and the Mythic wear it (R2715000), a few
+faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
+version, so delivering a full-art card's file means delivering its motion too, or the card stops
+moving.

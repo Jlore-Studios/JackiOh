@@ -1,12 +1,4 @@
-//! Cosmetic packs and the Chase Shard bar (`src/economy/cosmetic_packs.rs`, SPEC §14.6; #1306):
-//! the slots an opening gives, the cosmetics' fall to a lower tier and to the bars, the bar
-//! counting, paying and holding, what it buys and refuses, the read-back and the replay.
-//!
-//! Every request goes through the whole app over an empty fake store (`deps::empty_test_app`), as
-//! the active account `p1`. Openings the test must steer (a fixture registry, so a tier is empty
-//! or a cosmetic is for an unowned card) call `open_cosmetic_pack` with that registry and a seed,
-//! as `tokens.rs` calls `open_pack`; the opening through the route, the read-back and the shipped
-//! registry's cases go through the routes.
+//! Cosmetic packs and Chase Shard bar (`src/economy/cosmetic_packs.rs`, SPEC §14.6, #1306).
 
 use std::sync::Arc;
 
@@ -18,10 +10,11 @@ use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
-    COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX,
-    PACK_FLOORED_SLOT, SPEND_BUSY_RETRY_AFTER_MS,
+    COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE,
+    CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_FLOORED_SLOT,
+    SPEND_BUSY_RETRY_AFTER_MS,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
+use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, shipped};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase, buy_chase_once,
@@ -52,10 +45,6 @@ const ROUTES: [(&str, &str); 3] = [
     ("POST", "/api/cosmetic-packs/open"),
     ("POST", "/api/cosmetic-packs/chase"),
 ];
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// An empty app with the active `p1` and its Bearer [REDACTED]
 async fn setup() -> (Arc<App>, String) {
@@ -142,7 +131,6 @@ async fn grant_item(app: &App, item: InventoryItem, key: &str, delta: i64) {
     tx.commit().await.expect("the commit");
 }
 
-/// How many of `item` under `key` `p1` holds.
 async fn held(app: &App, item: InventoryItem, key: &str) -> i64 {
     let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
     let inventory = tx.economy_inventory_get(PROFILE).await.expect("the inventory");
@@ -153,7 +141,6 @@ async fn held(app: &App, item: InventoryItem, key: &str) -> i64 {
         .map_or(0, |entry| entry.count)
 }
 
-/// `p1`'s economy ledger.
 async fn ledger(app: &App) -> EconomyLedger {
     let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
     let ledger = tx.economy_ledger_get(PROFILE).await.expect("the ledger");
@@ -242,9 +229,7 @@ fn points(pack: &OpenedCosmeticPack) -> i64 {
     pack.bars.slot_points.iter().sum()
 }
 
-// ---------------------------------------------------------------------------------------------
 // A fixture registry (per-card cosmetics at every tier, and one of each refusal)
-// ---------------------------------------------------------------------------------------------
 
 fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
     Cosmetic {
@@ -255,6 +240,7 @@ fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
         default: false,
         starter: false,
         chase: rarity.is_chase(),
+        jlorious: false,
         card: None,
     }
 }
@@ -318,9 +304,7 @@ fn new_references(before: &EconomyLedger, after: &EconomyLedger) -> Vec<Option<S
         .collect()
 }
 
-// ---------------------------------------------------------------------------------------------
 // Opening (R1306000, R1306001)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
@@ -483,9 +467,7 @@ async fn r1306000_an_unowned_card_s_cosmetic_also_grants_the_card() {
 #[tokio::test]
 async fn r1306001_a_legendary_or_mythic_roll_falls_to_the_highest_tier_with_something_unowned() {
     let (app, _) = setup().await;
-    // A registry with no Legendary or Mythic cosmetic a pack can drop: the shipped one before
-    // #1833's chases (R1833000), whose droppable ones below them are Epic and lower. A seed whose
-    // first slot rolls Legendary, and one whose first slot rolls Mythic, each find an Epic one.
+    // #1833, R1833000: rolls fall back to Epic when no Legendary/Mythic in registry.
     let registry: Vec<Cosmetic> = shipped()
         .expect("the shipped registry")
         .into_iter()
@@ -662,10 +644,11 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
             cosmetic: BarSettle {
                 before: 0,
                 after: cosmetic_gain,
-                size: COSMETIC_TOKEN_BAR_SIZE,
+                size: COSMETIC_TOKEN_BAR_SIZE_RARE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            cosmetic_sizes: vec![COSMETIC_TOKEN_BAR_SIZE_RARE],
             slot_points: pack.bars.slot_points.clone(),
         }
     );
@@ -693,7 +676,7 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
     assert_eq!(status, 200, "{body}");
     let bars = &body["bars"];
     assert_eq!(bars["card"]["before"], json!(pack.bars.card.after));
-    assert_eq!(bars["cosmetic"]["size"], json!(COSMETIC_TOKEN_BAR_SIZE));
+    assert_eq!(bars["cosmetic"]["size"], json!(COSMETIC_TOKEN_BAR_SIZE_RARE));
     assert_eq!(bars["cosmeticPaid"], json!([]));
     assert_eq!(opened(&body).bars.cosmetic.before, pack.bars.cosmetic.after);
 }
@@ -703,24 +686,29 @@ async fn a_cosmetic_pack_answers_the_cycle_s_next_step_when_its_cosmetic_bar_pay
     let (app, _) = setup().await;
     grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
     // One step into the cycle, so the next is its second (an Epic token), and the bar one point
-    // short: the spent slots add at least that and less than a second size (R1953000).
+    // short of that step's size: the spent slots add at least that and less than the next step's
+    // size (R1953000, R2728000), so the bar rests on the Legendary step.
     set_counter(&app, Counter::CosmeticTokenCycle, 1).await;
-    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE - 1).await;
+    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE_EPIC - 1).await;
     let pack = open_cosmetic_pack(&app, PROFILE, &[], "bars-cycle")
         .await
         .expect("the opening");
     let gain = points(&pack);
-    assert!(gain < COSMETIC_TOKEN_BAR_SIZE, "{gain}");
+    assert!(gain - 1 < COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, "{gain}");
     assert_eq!(
         pack.bars.cosmetic,
         BarSettle {
-            before: COSMETIC_TOKEN_BAR_SIZE - 1,
+            before: COSMETIC_TOKEN_BAR_SIZE_EPIC - 1,
             after: gain - 1,
-            size: COSMETIC_TOKEN_BAR_SIZE,
+            size: COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
             pays: 1,
         }
     );
     assert_eq!(pack.bars.cosmetic_paid, vec![CosmeticTokenStep::Epic]);
+    assert_eq!(
+        pack.bars.cosmetic_sizes,
+        vec![COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY]
+    );
     assert_eq!(
         serde_json::to_value(&pack.bars).expect("the bars")["cosmeticPaid"],
         json!(["epic"])
@@ -775,10 +763,11 @@ async fn r1999000_a_cosmetic_pack_of_new_cosmetics_adds_every_slot_s_points_to_b
             cosmetic: BarSettle {
                 before: 11,
                 after: 11 + gained,
-                size: COSMETIC_TOKEN_BAR_SIZE,
+                size: COSMETIC_TOKEN_BAR_SIZE_RARE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            cosmetic_sizes: vec![COSMETIC_TOKEN_BAR_SIZE_RARE],
             slot_points: expected,
         }
     );
@@ -870,9 +859,7 @@ async fn r1333000_a_cosmetic_pack_leaves_the_card_pity_counters_alone() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The Chase Shard bar (R1306002)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1306002_the_shard_bar_counts_one_per_pack_pays_when_full_and_empties() {
@@ -1169,14 +1156,9 @@ async fn r1306002_get_reads_the_shard_bar_and_unopened_packs() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // The log and the lock (R1306003)
-// ---------------------------------------------------------------------------------------------
 
-/// Checks the opening whose rows start at `before` against its log: every economy row it wrote
-/// carries the log, the log holds the slots the opening answered, and [`roll_cosmetic_pack`] over
-/// the catalog's pool, `before_holdings`, the logged cosmetics and the logged seed rolls them
-/// again.
+/// Checks opening rows from `before` against log: rolls match catalog pool and seed.
 async fn assert_replays(
     app: &App,
     before: &EconomyLedger,
@@ -1314,6 +1296,42 @@ async fn r1833000_a_full_shard_bar_buys_a_new_chase_and_the_openings_replay() {
 }
 
 #[tokio::test]
+async fn r2755000_a_full_shard_bar_cannot_buy_the_jlorious_card_back() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    nearly_full(&app).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+
+    // Mythic as it is, only reaching Jlorious grants it: the full bar is refused and stays full.
+    let before = ledger(&app).await;
+    let (status, _, answer) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/chase",
+        Some(&token),
+        json!({ "cosmeticId": JLORIOUS_CARD_BACK }),
+    )
+    .await;
+    assert_eq!(
+        (status, answer["error"]["code"].clone()),
+        (409, json!("conflict")),
+        "{answer}"
+    );
+    assert!(!owns_cosmetic(&app, None, JLORIOUS_CARD_BACK).await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    assert_eq!(ledger(&app).await.cosmetics.len(), before.cosmetics.len());
+}
+
+#[tokio::test]
 async fn opening_without_a_cosmetic_pack_is_refused() {
     let (app, token) = setup().await;
     let before = everything(&app).await;
@@ -1400,9 +1418,7 @@ async fn the_routes_refuse_a_signed_out_caller() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2124000: an opening or a chase sent again under its Idempotency-Key runs once
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r2124000_the_same_key_twice_opens_one_cosmetic_pack() {
@@ -1486,9 +1502,7 @@ async fn r2124000_the_same_key_twice_buys_one_chase() {
     assert_eq!(bought, 1);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2378000: an account runs one spend at a time, the rest waiting their turn
-// ---------------------------------------------------------------------------------------------
 
 /// How many times `until_claims` lets the spawned spends run before it gives up.
 const YIELDS: usize = 1_000;
@@ -1604,4 +1618,27 @@ async fn r2655000_a_full_shard_bar_buys_a_full_art_chase_on_an_owned_card() {
     assert!(owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler-signed").await);
     assert!(!owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler").await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
+}
+
+#[tokio::test]
+async fn r2715000_the_chase_shard_bar_refuses_an_animated_art() {
+    let (app, token) = setup().await;
+    let card = "core-004".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, std::slice::from_ref(&card)).await;
+    // Owning the card and a full bar, its Animated art, an Epic and no chase, is refused, nothing
+    // is written and the bar stays full.
+    let before = everything(&app).await;
+    let (status, _, answer) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/chase",
+        Some(&token),
+        json!({ "cosmeticId": "animated-gary-the-gambler", "cardId": card }),
+    )
+    .await;
+    assert_eq!(status, 409, "{answer}");
+    assert_eq!(everything(&app).await, before);
+    assert!(!owns_cosmetic(&app, Some(&card), "animated-gary-the-gambler").await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
 }

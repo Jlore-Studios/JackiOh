@@ -1,8 +1,5 @@
 // #1578, R1578000: the Play hub is one screen. jsdom cannot measure layout, so this mounts the route in
-// a browser at a desktop and a phone size, serves the reads it makes from fixtures, and checks that the
-// page does not scroll, that online play comes first, and that every way to play and the room are in
-// view on a desktop and on a 390x844 phone, with no scroll inside the hub either. The signed-out
-// variant is held to the same.
+// a browser at a desktop and a phone size, with the reads it makes served from fixtures.
 
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -27,7 +24,7 @@ function byTestid(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-/** Deckable cards follow validator L3: no token by flag or tag, and none of a set not shipped yet (R1420). */
+/** Validator L3's deckable cards: no token by flag or tag, none of an unshipped set (R1420). */
 const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token") && setShips(def.set));
 
 const DECK_ID = "00000000-0000-4000-8000-000000000001";
@@ -50,7 +47,7 @@ const DECKS: DecksResponse = {
   limits: { decks: MAX_SAVED_DECKS, trios: MAX_SAVED_TRIOS, nameLength: DECK_NAME_MAX_LENGTH },
 };
 
-/** What each read the lobby makes answers; any other request goes on to the network. */
+/** Answers each read the lobby makes; other requests go on to the network. */
 function serveFixtures(): void {
   const bodies: Record<string, unknown> = {
     "/api/decks": DECKS,
@@ -69,6 +66,7 @@ function serveFixtures(): void {
     "/api/queue/population": { gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } },
     "/api/ranked": {
       season: "v0.2",
+      ladder: "constructed",
       profileId: "5d0c7a1e-0b9f-4c55-9a3e-6f2d8b1c4e70",
       username: "Max#3",
       rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
@@ -91,7 +89,6 @@ function serveFixtures(): void {
   });
 }
 
-/** The page does not scroll, either way. */
 function expectNoPageScroll(viewport: Viewport): void {
   cy.window({ log: false }).should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;
@@ -104,7 +101,7 @@ function expectNoPageScroll(viewport: Viewport): void {
   });
 }
 
-/** Every testid's first match lies whole inside the viewport: seen, not scrolled to. */
+/** Each testid's first match lies whole in the viewport: seen, not scrolled to. */
 function expectInView(viewport: Viewport, testids: readonly string[]): void {
   cy.window({ log: false }).should((win) => {
     for (const testid of testids) {
@@ -118,7 +115,7 @@ function expectInView(viewport: Viewport, testids: readonly string[]): void {
   });
 }
 
-/** Nothing in the hub scrolls: no region has more to show than its box. */
+/** No region in the hub has more to show than its box. */
 function expectNoHubScroll(): void {
   cy.get(".play-layout").should(($layout) => {
     const layout = $layout[0] as HTMLElement;
@@ -145,7 +142,7 @@ function expectOnlineFirst(): void {
   });
 }
 
-const WAYS = [playTestid.practice, playTestid.together, playTestid.replays] as const;
+const WAYS = [playTestid.practice, playTestid.dungeon, playTestid.together, playTestid.replays] as const;
 
 describe("#1578 the Play hub is one screen", () => {
   // The validator and the catalog are Rust WebAssembly (docs/v0.3.0/SURFACE.md §10.3); load them first.
@@ -166,7 +163,6 @@ describe("#1578 the Play hub is one screen", () => {
       expectNoPageScroll(viewport);
       expectOnlineFirst();
       expectInView(viewport, [playTestid.queue, playTestid.deckSelect, playTestid.rank]);
-      // Both sizes show every way to play and the room at once.
       expectInView(viewport, [...WAYS, playTestid.createRoom, playTestid.joinInput, playTestid.joinSubmit]);
       expectNoHubScroll();
     });

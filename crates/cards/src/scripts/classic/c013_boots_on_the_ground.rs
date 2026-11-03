@@ -59,10 +59,8 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 when it attacks,
-// before the damage, forced attacks included, and so though it dies in that combat (R2285000,
-// R2396000); an attack called off in its trap window (R44) or defending draws nothing. Radiant 4/2:
-// Recruits instead, a recruited trap landing face-down (R33); numbers via `param()` (R386). Forced
-// attacks come from #9 Moths to the Flame (start of turn: every enemy Unit attacks this).
+// before the damage, forced attacks (#9 Moths to the Flame) included, though it dies in that combat
+// (R2285000, R2396000); an attack called off in its trap window (R44) draws nothing. Radiant 4/2: Recruits.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,7 +84,6 @@ mod tests {
     const A: &str = "core-020";
     const B: &str = "core-001";
 
-    /// Lanes 1–5, `None` for an empty zone.
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
     }

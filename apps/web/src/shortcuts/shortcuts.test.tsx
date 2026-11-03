@@ -1,6 +1,5 @@
-// R2126000: the client's own keyboard shortcuts are shown on keyboard devices, ⌘ or Ctrl by platform, in
-// each control's tooltip and aria-keyshortcuts, in the hover preview, the command menu and the site
-// footer; a touch-only device shows no hint, and no key handler is added on a board route.
+// R2126000: the client's own keyboard shortcuts are shown on keyboard devices, ⌘ or Ctrl by platform,
+// wherever a hint goes; a touch-only device shows no hint, and no key handler is added on a board route.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -34,7 +33,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** A device with no hover and a coarse pointer: only `TOUCH_ONLY_QUERY` matches. */
+/** A touch-only device: only `TOUCH_ONLY_QUERY` matches. */
 function touchOnlyDevice(): void {
   vi.spyOn(window, "matchMedia").mockImplementation(
     (query: string) =>
@@ -59,7 +58,7 @@ function toolbar(): void {
 
 let enemyId = "";
 
-/** Hovers the first opponent unit on a full board until its preview opens, and returns the preview. */
+/** Hovers the first opponent unit on a full board and returns its preview. */
 function hoverPreview(): HTMLElement {
   vi.useFakeTimers();
   const view = fullBoardView();
@@ -179,7 +178,6 @@ describe("R2126000 shortcut hints", () => {
   });
 });
 
-/** The client's sources: `apps/web/src`, this folder's parent. */
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Sources that draw a board, or that a board's routes mount (the deck builder's menu screens aside). */
@@ -189,10 +187,8 @@ const KEY_PROP = /^onKey(Down|Up|Press)(Capture)?$/u;
 const KEY_EVENTS = ["keydown", "keyup", "keypress"];
 
 /**
- * R2126000: the key handlers in each source of a board route, by path under `src/`: a
- * `addEventListener("keydown" | "keyup" | "keypress", …)` call, an `onKey*` prop, or an `onKey*` entry in
- * a props object. A hint adds none, so a new shortcut, an End-turn key above all, fails this test; a
- * count is never raised to pass it.
+ * R2126000: each board-route source's key handlers (an `addEventListener` of a key event, or an `onKey*`
+ * prop or entry). A hint adds none, so a new shortcut fails this test; a count is never raised to pass it.
  */
 const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "cards/CardRef.tsx": 2,
@@ -207,6 +203,8 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/Board.tsx": 1,
   "game/Card.tsx": 1,
   "game/ConfirmConcede.tsx": 1,
+  // R2785000 (amends R2126000): Space skips a set piece, and the keyup of the Space that skipped is swallowed.
+  "game/Game.tsx": 2,
   "game/Hero.tsx": 2,
   "game/MarketPrompt.tsx": 1,
   "game/Marketplace.tsx": 1,

@@ -1,8 +1,6 @@
 //! Classic+ #42 KY's Test's question bank (docs/classic-sets.md B5 E31, SPEC §8.7 row 42, R420, R465,
-//! R580), through a fixture KY's Test and a fixture bank (`fixtures/kyTest.ts`). The real card and the
-//! real bank are proved again in packages/cards (test/classic-plus/042-kys-test.test.ts).
-//!
-//! Port of `packages/engine/test/kyTest.test.ts`.
+//! R580), through a fixture KY's Test and a fixture bank (`fixtures/ky_test.rs`). The real card and the
+//! real bank are proved again in `crates/cards` (`scripts/classic_plus/c042_kys_test.rs`).
 
 use jackioh_engine::subsystems::ky_test::{easy_problem, four_digit_problem};
 use jackioh_engine::testkit::*;
@@ -587,7 +585,7 @@ mod c_42_kys_test_the_rewards_r420 {
 
     #[test]
     fn r420_hard_kys_gift_at_its_printed_cost() {
-        // Patch v0.3.10 (#831): the Gift costs (4) and arrives at it, no longer at (0).
+        // #831: the Gift costs (4) and arrives at it.
         let mut state = offered("kt-gift", false);
         take(&mut state, "Hard", true);
         assert_eq!(hand_def_ids(&state, P1), vec![gift().id]);

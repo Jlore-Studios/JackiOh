@@ -1,11 +1,10 @@
 //! Issue #2521, "Patch: Stinkyscape balance changes I": the spec-tester's suite for behaviours B1–B20 of
-//! `.fullsend/SPEC.md`, written against SPEC's surface before the code that makes them true. Each test
-//! names the behavior it holds the code to (`b<n>_…`); each card's own file still holds its own tests.
+//! `.fullsend/SPEC.md`. Each test names the behavior it holds the code to (`b<n>_…`); each card's own
+//! file still holds its own tests.
 //!
 //!  - B1–B5, the Resources: their tags and prices, Korrelite's Pierce and Echo, Narcor's Legendary pool,
 //!    Red Narcor's mana and draw.
-//!  - B6–B8, the Factions and Swear Loyalities, by SPEC S9's faction table: a faction is its Faction card
-//!    plus the cards it adds; Swear exiles the other factions' cards from its caster's hand and library.
+//!  - B6–B8, the Factions and Swear Loyalities, by SPEC S9's faction table.
 //!  - B9–B16, the Starship Pieces: the fifteen that are no pieces, the base version a dead piece fuses
 //!    (SPEC S4), Stratos, S #177 Cloaking Module, Paragon-X, Jlockeed's Yamato Cannon.
 //!  - B17–B20, the weapons: no hero target, their damage and their uses, Flak's weighted rolls (S1, S7).
@@ -144,7 +143,6 @@ const NOT_PIECES: [&str; 15] = [
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
     ("stinkyscape-050", "Beam v3", 5, 10),
     ("stinkyscape-054", "Beam v4", 7, 14),
-    // #2657 took Beam v5 to 11 and 22.
     ("stinkyscape-058", "Beam v5", 11, 22),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
@@ -157,13 +155,11 @@ const FLAK_V5: &str = "stinkyscape-061";
 /// B20: each Flak and its rounds an activation.
 const FLAKS: [(&str, usize); 3] = [(FLAK_V3, 1), ("stinkyscape-057", 2), (FLAK_V5, 3)];
 /// B20: the enemies a Flak volley hits each round, p2's two Radiant Big Felinors (6/20, so none dies of a
-/// volley); p2's hero too until #2657 took it off the Flaks' rounds.
+/// volley), and never p2's hero (#2657).
 const ENEMIES_A_ROUND: usize = 2;
 const ENEMY_HERO: &str = "hero-p2";
 
-// ---------------------------------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------------------------------
 
 fn filler(count: usize) -> Value {
     json!(vec![FILLER; count])
@@ -282,7 +278,6 @@ fn felinor_clears(def: &str, radiant: bool) -> Scenario {
     s
 }
 
-/// p1 destroys p1's own lane-1 Unit with Hit Job.
 fn hit_job_p1_lane_1(s: &mut Scenario) {
     let target = pick::unit_at(s, P1, 1);
     s.play(HIT_JOB, json!({ "targets": target }));
@@ -492,9 +487,7 @@ fn tally(amounts: &[i32], value: i32) -> usize {
     amounts.iter().filter(|amount| **amount == value).count()
 }
 
-// ---------------------------------------------------------------------------------------------------
 // B1–B5: the Resources
-// ---------------------------------------------------------------------------------------------------
 
 #[test]
 fn b1_reknite_korrelite_gellium_axnit_narcor_and_red_narcor_carry_resource_and_token() {
@@ -681,9 +674,7 @@ fn b5_red_narcor_s_mana_is_this_turn_s_and_leaves_the_max_where_it_was_even_past
     }
 }
 
-// ---------------------------------------------------------------------------------------------------
 // B6–B8: the Factions and Swear Loyalities
-// ---------------------------------------------------------------------------------------------------
 
 #[test]
 fn b6_the_five_faction_cards_are_named_faction_colon_tagged_faction_and_cost_2() {
@@ -972,9 +963,7 @@ fn b8_the_faction_card_just_added_and_copies_of_it_stay_while_other_faction_card
     );
 }
 
-// ---------------------------------------------------------------------------------------------------
 // B9–B16: the Starship Pieces
-// ---------------------------------------------------------------------------------------------------
 
 #[test]
 fn b9_the_fifteen_die_on_either_face_and_fuse_nothing() {
@@ -1451,9 +1440,7 @@ fn b16_base_yamato_cannon_has_no_rush_and_may_not_attack_the_turn_it_is_played()
     s.expect_in_zone(vanilla.as_str(), "field");
 }
 
-// ---------------------------------------------------------------------------------------------------
 // B17–B20: the weapons
-// ---------------------------------------------------------------------------------------------------
 
 #[test]
 fn b17_no_aimed_weapon_lists_the_enemy_hero_as_a_target_of_its_activate() {

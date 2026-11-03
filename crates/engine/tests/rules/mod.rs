@@ -1,6 +1,5 @@
-//! The ported engine tests (SURFACE §1): one module per `packages/engine/test/<x>.test.ts`, plus
-//! the test-only scripts and catalogs in `fixtures`. Each file starts with
-//! `use jackioh_engine::testkit::*;`. Written once by part 1; the files are parts 24–27's.
+//! The engine's rule tests (SURFACE §1), plus the test-only scripts and catalogs in `fixtures`. Each
+//! file starts with `use jackioh_engine::testkit::*;`.
 //!
 //! The modules from `a` to `o`, in the `rules` binary; those from `p` on are `mod_2.rs`'s, in
 //! `rules_2` (`tests/rules_2.rs`). One binary took CI's `rust (test engine rules)` past seven
@@ -29,6 +28,7 @@ pub mod autopilot;
 pub mod backrow_death;
 pub mod backrow_piles;
 pub mod balance_2657;
+pub mod balance_2727;
 pub mod blueprint;
 pub mod board_history;
 pub mod brittle;
@@ -67,6 +67,7 @@ pub mod damage_odds;
 pub mod damage_pipeline;
 pub mod death_pause;
 pub mod deck_bottom;
+pub mod deck_marks;
 pub mod delayed_kinds;
 pub mod destroyed_face;
 pub mod discard_guard;
@@ -164,10 +165,12 @@ pub mod hero_floor;
 pub mod hero_immune;
 pub mod hero_power;
 pub mod hidden_nerfs_and_trades;
+pub mod hook_marks;
 pub mod hotseat_smoke;
 pub mod immutable;
 pub mod instance_data;
 pub mod invariants;
+pub mod keyword_via;
 pub mod kill_credit;
 pub mod ky_competition;
 pub mod ky_test;

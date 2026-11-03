@@ -3,9 +3,10 @@
 // Reuse `net/head.ts`, `almanacShelf` (R674, R1420; no unshipped cards), `fillParams`, and `patches.json`.
 // This Vite entry uses relative imports because Vitest and Cypress do not resolve `@jackioh/*` here.
 // `<style>` hides static content until startup; `<noscript>` restores it without script.
-// Every address names the build's own host (`StaticPagesInput.origin`, #696).
+// Every address names the build's own host (`StaticPagesInput.origin`, #696), and so does the CSP the
+// build writes into `_headers` (`connectSources`).
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import type { Plugin } from "vite";
@@ -13,8 +14,9 @@ import type { Plugin } from "vite";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
+import { RELEASE_ART_DIR, releaseArtAsset, releaseArtAssets } from "./src/patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines } from "./src/patches/releases.ts";
-import type { Patch, TechnicalEntry } from "./src/patches/source.ts";
+import type { Patch, Snapshot, TechnicalEntry } from "./src/patches/source.ts";
 import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS, MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
@@ -73,13 +75,11 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
 /** Unit conversion, not configuration. */
 const SECONDS_PER_HOUR = 3600;
 
-/** A section of a page's static text: its heading and its paragraphs or list, as HTML. */
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
  * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
- * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check);
- * /almanac and /patch-notes are written from their data (`almanacList`, `patchList`).
+ * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
@@ -320,6 +320,27 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
 /** Files Vite copies from `public/` before `writeBundle` that name `SITE_ORIGIN`. */
 export const ADDRESSED_PUBLIC_FILES = ["robots.txt", ".well-known/security.txt"] as const;
 
+/** The headers Cloudflare sends with the build's files (wrangler.jsonc `assets`), copied from `public/`. */
+export const HEADERS_FILE = "_headers";
+
+/** What `public/_headers` spells in place of its CSP's `connect-src` sources, which differ by build. */
+export const CONNECT_SRC_PLACEHOLDER = "%CONNECT_SRC%";
+
+/** Any `%NAME%` left in a written file: a placeholder the build did not fill. */
+const PLACEHOLDER = /%[A-Z][A-Z0-9_]*%/u;
+
+/**
+ * The CSP's `connect-src` for a build served from `origin`: 'self', where the server answers
+ * `/api/*` (wrangler.jsonc `run_worker_first`), Supabase's origin, which a build without
+ * `VITE_SUPABASE_URL` never signs in through, and `wss://` on the build's own host for the sockets.
+ */
+export function connectSources(origin: string, supabaseUrl: string | undefined): string {
+  const sources = ["'self'"];
+  if (supabaseUrl !== undefined && supabaseUrl.length > 0) sources.push(new URL(supabaseUrl).origin);
+  sources.push(`wss://${new URL(origin).host}`);
+  return sources.join(" ");
+}
+
 const STATIC_HEAD =
   "<style>.static-body{display:none}</style><noscript><style>.static-body{display:block}</style></noscript>";
 const ROOT_OPEN = '<div id="root">';
@@ -446,13 +467,29 @@ export type StaticPagesInput = {
   pages: readonly PublicPage[];
   cards: CardDefs;
   patches: readonly Patch[];
-  /** R1369000: the technical log, `technical.json`. */
   technical?: readonly TechnicalEntry[];
+  /** #2681: one version's catalog snapshot; with it, every patch's release artwork is written beside the pages. */
+  snapshot?: (version: string) => Snapshot | null;
   outDir: string;
   origin: string;
+  /** The build's `VITE_SUPABASE_URL`, for its CSP (`connectSources`); unset, the CSP names no Supabase host. */
+  supabaseUrl?: string | undefined;
 };
 
-export function writeStaticPages({ template, pages, cards, patches, technical = [], outDir, origin }: StaticPagesInput): void {
+/** Where the release artwork is written under the output directory (releaseArt.ts's `RELEASE_ART_DIR`, without its slash). */
+const RELEASE_ART_FOLDER = "release-art";
+
+export function writeStaticPages({
+  template,
+  pages,
+  cards,
+  patches,
+  technical = [],
+  snapshot,
+  outDir,
+  origin,
+  supabaseUrl,
+}: StaticPagesInput): void {
   for (const page of pages) {
     const extra =
       page.path === paths.almanac
@@ -465,40 +502,81 @@ export function writeStaticPages({ template, pages, cards, patches, technical = 
     writeFileSync(file, pageHtml(template, page, pages, extra, origin));
   }
   writeFileSync(join(outDir, "sitemap.xml"), sitemapXml(pages, origin));
+  if (snapshot !== undefined) {
+    mkdirSync(join(outDir, RELEASE_ART_FOLDER), { recursive: true });
+    for (const { path, svg } of releaseArtAssets(patches, snapshot)) writeFileSync(join(outDir, decodeURIComponent(path)), svg);
+  }
   for (const file of ADDRESSED_PUBLIC_FILES) {
     const text = readFileSync(join(outDir, file), "utf8");
     if (!text.includes(SITE_ORIGIN)) throw new Error(`static-pages.ts: ${file} does not name ${SITE_ORIGIN}`);
     writeFileSync(join(outDir, file), text.replaceAll(SITE_ORIGIN, origin));
   }
+  const headers = readFileSync(join(outDir, HEADERS_FILE), "utf8");
+  if (!headers.includes(CONNECT_SRC_PLACEHOLDER)) {
+    throw new Error(`static-pages.ts: ${HEADERS_FILE} does not spell ${CONNECT_SRC_PLACEHOLDER}`);
+  }
+  const filled = headers.replaceAll(CONNECT_SRC_PLACEHOLDER, connectSources(origin, supabaseUrl));
+  const left = PLACEHOLDER.exec(filled)?.[0];
+  if (left !== undefined) throw new Error(`static-pages.ts: ${HEADERS_FILE} still holds ${left}, which nothing fills`);
+  writeFileSync(join(outDir, HEADERS_FILE), filled);
 }
 
 export function staticPages(): Plugin {
   let root = "";
   let outDir = "";
   let origin = SITE_ORIGIN;
+  let supabaseUrl: string | undefined;
+  // Reading here avoids bundling the catalog into each config load.
+  const data = (file: string): unknown =>
+    JSON.parse(readFileSync(resolve(root, "../../crates/cards", file), "utf8"));
+  const snapshot = (version: string): Snapshot | null => {
+    const file = resolve(root, "../../crates/cards/patches", `${version}.json`);
+    return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Snapshot) : null;
+  };
   return {
     name: "jackioh:static-pages",
-    apply: "build",
     configResolved(config) {
       root = config.root;
       outDir = resolve(config.root, config.build.outDir);
-      // `config.env` is Vite's loadEnv: a variable the build's process sets (staging's, vercel.json)
-      // wins over `.env.production`'s.
+      // `config.env` is Vite's loadEnv: a variable the build's process sets (staging's, from
+      // .env.staging by `build:staging`) wins over `.env.production`'s.
       const configured: unknown = config.env.VITE_SITE_ORIGIN;
       origin = originOf(configured);
+      const supabase: unknown = config.env.VITE_SUPABASE_URL;
+      supabaseUrl = typeof supabase === "string" ? supabase : undefined;
     },
+    // #2681: the dev server draws a patch's artwork when asked for it, as the build writes it, and
+    // answers no other path: nothing is written into the source tree.
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const path = (request.url ?? "").split("?")[0] ?? "";
+        try {
+          const asset = path.startsWith(RELEASE_ART_DIR)
+            ? releaseArtAsset(path, data("patches/patches.json") as Patch[], snapshot)
+            : null;
+          if (asset === null) {
+            next();
+            return;
+          }
+          response.setHeader("Content-Type", "image/svg+xml");
+          response.end(asset.svg);
+        } catch (error) {
+          next(error);
+        }
+      });
+    },
+    // Only a build writes pages: `serve` never runs this hook.
     writeBundle() {
-      // Reading here avoids bundling the catalog into each config load.
-      const data = (file: string): unknown =>
-        JSON.parse(readFileSync(resolve(root, "../../crates/cards", file), "utf8"));
       writeStaticPages({
         template: readFileSync(join(outDir, "index.html"), "utf8"),
         pages: PUBLIC_PAGES,
         cards: data("catalog.json") as CardDefs,
         patches: data("patches/patches.json") as Patch[],
         technical: data("patches/technical.json") as TechnicalEntry[],
+        snapshot,
         outDir,
         origin,
+        supabaseUrl,
       });
     },
   };

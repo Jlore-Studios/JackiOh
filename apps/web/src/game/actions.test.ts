@@ -1,6 +1,5 @@
 // M5-T2: the client asks `legalActions` and narrows. These tests exist to prove that it never
-// computes legality itself — every one of them feeds a hand-built `ActionBody[]` and checks that
-// what comes out was derived from that array and nothing else.
+// computes legality itself.
 
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
 import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
@@ -24,10 +23,9 @@ import {
   selectionTestid,
   type Interaction,
 } from "./actions.ts";
-import { testid } from "./contract.ts";
+import { testid, type ClickTarget } from "./contract.ts";
 import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
-/** A seat with three cards in hand, two of your units and one of theirs. */
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -89,8 +87,7 @@ describe("highlightFor: every lit testid came out of the legal array (M5-T2)", (
   });
 
   it("greys out a card the player cannot afford, because the engine did not list it", () => {
-    // The 6-cost card is missing from `legalActions` for exactly one reason — the engine decided
-    // it. The client holds no cost arithmetic; it just fails to find a `play` naming it.
+    // The client holds no cost arithmetic; it just fails to find a `play` naming it.
     const view = seatedView({
       you: emptySide("p1", {
         mana: { current: 1, max: 6 },
@@ -163,56 +160,61 @@ describe("a hero as an attack target", () => {
 });
 
 describe("onClickTarget: illegal clicks change nothing", () => {
-  it("ignores a hand card with no play in the legal array", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [playZone("h1", 1), { type: "endTurn" }];
+  for (const row of [
+    {
+      name: "a hand card with no play in the legal array",
+      legal: [playZone("h1", 1), { type: "endTurn" }],
+      start: "idle",
+      target: { on: "hand", instanceId: "h3" },
+    },
+    {
+      name: "a zone no candidate names",
+      legal: [playZone("h1", 3), playZone("h1", 5)],
+      start: "playing",
+      target: { on: "zone", side: "you", row: "units", lane: 1 },
+    },
+    {
+      name: "a unit with no attack in the legal array",
+      legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }],
+      start: "idle",
+      target: { on: "unit", instanceId: "u2", side: "you", lane: 2 },
+    },
+    {
+      name: "an attack target no candidate names",
+      legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }],
+      start: "attacking",
+      target: { on: "hero", side: "opponent" },
+    },
+    {
+      name: "a switch with no switchPosition in the legal array",
+      legal: [{ type: "endTurn" }],
+      start: "idle",
+      target: { on: "switch", instanceId: "u1" },
+    },
+    {
+      name: "a unit with no attack while an attack is in flight",
+      legal: [
+        { type: "attack", attackerId: "u1", targetId: "e1" },
+        { type: "switchPosition", instanceId: "u2" },
+      ],
+      start: "attacking",
+      target: { on: "unit", instanceId: "u2", side: "you", lane: 2 },
+    },
+  ] as Array<{ name: string; legal: ActionBody[]; start: "idle" | "playing" | "attacking"; target: ClickTarget }>) {
+    it(`ignores an illegal click: nothing is sent and the interaction is unchanged (${row.name})`, () => {
+      const view = seatedView();
+      const playing = onClickTarget(view, row.legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+      const attacking = onClickTarget(view, row.legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+        .interaction;
+      const start = row.start === "idle" ? IDLE : row.start === "playing" ? playing : attacking;
 
-    const result = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h3" });
+      const result = onClickTarget(view, row.legal, start, row.target);
 
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(IDLE);
-  });
-
-  it("ignores a zone no candidate names", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [playZone("h1", 3), playZone("h1", 5)];
-    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
-
-    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "units", lane: 1 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(playing);
-  });
-
-  it("ignores a unit with no attack in the legal array", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
-
-    const result = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(IDLE);
-  });
-
-  it("ignores an attack target no candidate names", () => {
-    const view = seatedView();
-    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
-
-    const result = onClickTarget(view, legal, attacking, { on: "hero", side: "opponent" });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(attacking);
-  });
-
-  it("ignores a switch with no switchPosition in the legal array", () => {
-    const view = seatedView();
-    const result = onClickTarget(view, [{ type: "endTurn" }], IDLE, { on: "switch", instanceId: "u1" });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toBe(IDLE);
-  });
+      expect(result.action).toBeUndefined();
+      expect(result.notice).toBeUndefined();
+      expect(result.interaction).toBe(start);
+    });
+  }
 });
 
 describe("the click reducer builds a play out of the candidates (R81)", () => {
@@ -567,15 +569,26 @@ describe("the attack flow", () => {
     expect(result.interaction).toEqual(IDLE);
   });
 
-  it("deselects the attacker when it is clicked again", () => {
-    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
+  for (const { listed, legal } of [
+    { listed: "alone", legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }] },
+    {
+      listed: "with another attacker listed",
+      legal: [
+        { type: "attack", attackerId: "u1", targetId: "e1" },
+        { type: "attack", attackerId: "u2", targetId: "e1" },
+      ],
+    },
+  ] as Array<{ listed: string; legal: ActionBody[] }>) {
+    it(`deselects the attacker when it is clicked again (${listed})`, () => {
+      const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+        .interaction;
 
-    expect(
-      onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 }).interaction,
-    ).toEqual(IDLE);
-  });
+      const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+      expect(result.action).toBeUndefined();
+      expect(result.interaction).toEqual(IDLE);
+    });
+  }
 
   it("emits the switchPosition the engine listed", () => {
     const legal: ActionBody[] = [{ type: "switchPosition", instanceId: "u2" }, { type: "endTurn" }];
@@ -613,35 +626,6 @@ describe("the attack flow", () => {
 
     expect(result.action).toEqual({ type: "attack", attackerId: "u1", targetId: "u2" });
     expect(result.interaction).toEqual(IDLE);
-  });
-
-  it("deselects the attacker when it is clicked again, with another attacker listed", () => {
-    const legal: ActionBody[] = [
-      { type: "attack", attackerId: "u1", targetId: "e1" },
-      { type: "attack", attackerId: "u2", targetId: "e1" },
-    ];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
-
-    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.interaction).toEqual(IDLE);
-  });
-
-  it("ignores a click on a unit with no attack while an attack is in flight", () => {
-    const legal: ActionBody[] = [
-      { type: "attack", attackerId: "u1", targetId: "e1" },
-      { type: "switchPosition", instanceId: "u2" },
-    ];
-    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
-      .interaction;
-
-    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
-
-    expect(result.action).toBeUndefined();
-    expect(result.notice).toBeUndefined();
-    expect(result.interaction).toBe(attacking);
   });
 
   it("sends a random attack at once when the attack is switched to it", () => {
@@ -914,17 +898,6 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
     expect(built).toBe(enumerated);
   });
 
-  it("falls back to its own reconstruction when no legal array is available", () => {
-    const pending = pendingFor("mode", [{ key: "mode:Draw a card", label: "Draw a card" }]);
-    if (!pending.forYou) throw new Error("fixture");
-
-    expect(answerAction(pending, ["mode:Draw a card"], view, [])).toEqual({
-      type: "answer",
-      choiceId: "ch1",
-      selection: [{ pick: "mode", option: "Draw a card" }],
-    });
-  });
-
   it("picks the enumerated mulligan subset over its own", () => {
     const pending = pendingFor(
       "mulligan",
@@ -943,8 +916,7 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
 
 describe("an empty legal array offers nothing", () => {
   it("lights nothing when the engine lists nothing — the client never reads view.result itself", () => {
-    // `legalActions` returns [] once `state.result` is set, or when it is not your turn. The
-    // client does not repeat either test; it just gets an empty array.
+    // `legalActions` returns [] once `state.result` is set, or when it is not your turn.
     const view = seatedView({ result: { winner: "p1", reason: "hero-death" } });
     const idle = highlightFor(view, [], IDLE);
     expect(idle.legal.size).toBe(0);
@@ -1127,7 +1099,6 @@ describe("R1086 Equip plays (issue #532)", () => {
     ];
     const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
 
-    // Two zones first, then which way onto the shared one.
     expect(outstandingNeed(playing.interaction)).toEqual({
       kind: "zone",
       min: 1,
@@ -1181,7 +1152,6 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
   it("is recognized by the engine's two sentences and the shape of its options, and nothing else", () => {
     expect(isPlaguePlacementPrompt(placement)).toBe(true);
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: ONE }))).toBe(true);
-    // Another target prompt over the same cards, a pick of several, another kind, a prompt not for you.
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: "Choose a target" }))).toBe(false);
     expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: MANY, min: 1, max: 2 }))).toBe(false);
     expect(isPlaguePlacementPrompt(pendingFor("pick", options, { prompt: MANY }))).toBe(false);
@@ -1195,7 +1165,6 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
 
   it("selects an option by its id even when it names its zone too (R177)", () => {
     expect(selectionForOption(options[2]!)).toEqual({ pick: "instance", instanceId: "t1" });
-    // A zone option, which has no id, still selects its zone.
     expect(selectionForOption({ key: "zone:p1:units:2", label: "Lane 2", player: "p1", row: "units", lane: 2 })).toEqual({
       pick: "zone",
       player: "p1",

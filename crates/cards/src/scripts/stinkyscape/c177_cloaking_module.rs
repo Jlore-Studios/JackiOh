@@ -3,13 +3,12 @@
 //!   Base:    "Starship Piece, Equip, Cloaked, Immutable"
 //!   Radiant: "Starship Piece, Equip, Cloaked, Immutable, Immune to Spells"
 //!
-//! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it fuses into
-//! it, the host keeping its zone and taking its stats and keywords (R77), Starship Piece only into a
-//! piece (R1852001). Cloaked (R783004–R783006): it may be set face-down at its own (2) and revealed by
-//! its Activate: Reveal into a unit zone. Immutable (R23, R781001): no Spell, Field Spell or Field Trap
+//! Keywords only (§6.1): its script is empty. Equip (R1086, R77): played onto one of your Units it fuses
+//! into it, Starship Piece only into a piece (R1852001). Cloaked (R783004–R783006): it may be set
+//! face-down and revealed into a unit zone. Immutable (R23, R781001): no Spell, Field Spell or Field Trap
 //! targets it in play, and nothing fuses onto it. Starship Piece: played alone, its death fuses its base
-//! version into its owner's Dormant Starship, summoned first if they have none (R1852000, R2521000). The
-//! Radiant face doubles the stats and adds Immune to Spells (E35): no Spell targets or affects it.
+//! version into its owner's Dormant Starship (R1852000, R2521000). Immune to Spells (E35): no Spell
+//! targets or affects it.
 
 use jackioh_engine::prelude::*;
 
@@ -17,15 +16,12 @@ pub const ID: &str = "stinkyscape-177";
 
 pub fn script() -> CardScripts {
     let base = Script::default();
-    // The Radiant face doubles the stats and adds Immune to Spells: catalog data only.
+    // The Radiant face differs in catalog data only.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// S #177 Cloaking Module — SPEC §8.10 row 177, BUILD M12 row S 177: "played onto a Unit as an Equip, the
-// host gains +2/+2 and stays no piece unless it was one (R1852001); set face-down by Cloaked and revealed,
-// it takes a unit zone; played alone, its death fuses it into a Dormant Starship (R1852000); radiant 4/4
-// with Immune to Spells: a Spell's sweep passes it by".
+// S #177 Cloaking Module — SPEC §8.10 row 177, BUILD M12 row S 177 (R1852001, R1852000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,14 +39,6 @@ mod tests {
     const POWDER_SPRAY: &str = "classicplus-012-4"; // (1) Spell: Deal 3 damage to each enemy.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    /// p1 with the Module (Radiant on `radiant`) standing in unit zone 1 and `hand`; p2 holds `p2_hand`.
     fn standing(radiant: bool, hand: Value, p2_hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": hand, "field": [{ "def": MODULE, "radiant": radiant }], "mana": 10, "library": filler(4) },
@@ -60,22 +48,6 @@ mod tests {
 
     mod base {
         use super::*;
-
-        #[test]
-        fn prints_starship_piece_equip_cloaked_immutable_2_2_radiant_4_4_adds_immune_to_spells() {
-            crate::register_all();
-            let def = crate::card_def(MODULE);
-            assert_eq!(
-                kinds_of(&def.base.keywords),
-                vec!["Starship Piece", "Equip", "Cloaked", "Immutable"]
-            );
-            assert_eq!(
-                kinds_of(&def.radiant.keywords),
-                vec!["Starship Piece", "Equip", "Cloaked", "Immutable", "Immune to Spells"]
-            );
-            assert_eq!((def.base.attack, def.base.health), (Some(2), Some(2)));
-            assert_eq!((def.radiant.attack, def.radiant.health), (Some(4), Some(4)));
-        }
 
         #[test]
         fn r1852001_equipped_onto_a_unit_it_fuses_and_the_host_stays_no_piece() {

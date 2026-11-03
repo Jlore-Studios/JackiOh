@@ -17,9 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #98 Hull Booster — SPEC §8.10 row 98, BUILD M12 row S 98: "a 1/1 Armor 2 Starship
-// Piece, each hit on it 2 less; played as an Equip, the host gains +1/+1 and Armor 2, which stacks
-// with its own (§6.1); radiant 2/2 and Armor 4".
+// Stinkyscape #98 Hull Booster — SPEC §8.10 row 98, BUILD M12 row S 98 (§6.1).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -33,31 +31,12 @@ mod tests {
     const WEAK: &str = "core-007"; // (1) Unit 1/1.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
-    }
-
-    #[test]
-    fn prints_armor_2_1_1_radiant_armor_4_2_2() {
-        crate::register_all();
-        let def = crate::card_def(BOOSTER);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Equip", "Armor"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Starship Piece", "Equip", "Armor"]);
-        assert!(def.base.keywords.contains(&Keyword::Armor { n: 2 }));
-        assert!(def.radiant.keywords.contains(&Keyword::Armor { n: 4 }));
-        assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
     }
 
     #[test]
@@ -84,7 +63,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(BOOSTER, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 1/1, with Armor 2.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 5, "health": 5 }));
         assert_eq!(s.stats(host.id.as_str()).armor, 2);

@@ -198,6 +198,73 @@
   );
 }
 
+/* ----------------------------------------------------------- callout: a keyword's icon --- */
+
+/* R2789000: a combat keyword's beat (fx/motifs/beats.ts) pops its icon over the unit that has it, a dark
+   round badge on the unit's top edge holding one path of `cards/keywordVisuals.ts` (fx/dom.ts). It pops in,
+   holds through FX_CALLOUT_MS and fades. `data-callout` names the keyword (not `data-keyword`, which the
+   card rules match). Under reduced motion it is `data-still`: the same badge with no animation. */
+
+@keyframes fx-callout-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  14% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  24% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9) translateY(-10px);
+    opacity: 0;
+  }
+}
+
+.fx-callout {
+  left: var(--fx-x);
+  top: calc(var(--fx-y) - var(--fx-h, 82px) * 0.5);
+  width: clamp(26px, calc(var(--fx-w, 82px) * 0.5), 52px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  z-index: 4;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--fx-steel) 30%, var(--fx-ink)) 0%, var(--fx-ink) 100%);
+  border: 2px solid var(--fx-gold);
+  box-shadow: 0 3px 4px color-mix(in srgb, var(--fx-ink) 80%, transparent);
+  animation: fx-callout-pop var(--fx-ms) ease-out both;
+}
+
+.fx-callout[data-still="true"] {
+  animation: none;
+}
+
+.fx-callout-icon {
+  width: 68%;
+  height: 68%;
+  fill: var(--fx-white);
+  stroke: var(--fx-ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+/* A line icon (Windfury, Ranged) is a stroke, not a fill. */
+.fx-callout-icon path[data-line="true"] {
+  fill: none;
+  stroke: var(--fx-white);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
 /* ------------------------------------------------------------ rays: the light-ray fans --- */
 
 /* Legendary and Mythic entrances, the heal column, the radiant set and the victory / "Your turn"
@@ -1979,11 +2046,392 @@
   animation: fx-zone-count var(--fx-ms) ease-out both;
 }
 
+/* ---------------------------------------------------------------------------- takeover --- */
+
+/* R2722001: a Mythic takes over the board, as Hearthstone's Deathwing arrives. The cue covers the
+   whole layer; `--fx-x/--fx-y` is where the card lands and `--fx-land` when, inside the queue's hold.
+   The board darkens to that moment (the card mid-animation sits above the layer, so it stays lit), a
+   card-shaped silhouette in the look's colors sweeps across it into the landing point (a shape,
+   never a face: R202), then light rays turn and a shockwave crosses both sides from there. The
+   whole cue fades out by --fx-ms, inside the effects' tail (R200). Transform and opacity only. */
+.fx-takeover {
+  inset: 0;
+  z-index: 0;
+  animation: fx-takeover-in var(--fx-ms) linear both;
+}
+
+@keyframes fx-takeover-in {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-takeover-dark {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-core) 22%, transparent) 0,
+    color-mix(in srgb, var(--fx-tint-glow) 14%, color-mix(in srgb, var(--pal-black) 55%, transparent)) 30%,
+    color-mix(in srgb, var(--pal-black) 92%, transparent) 75%
+  );
+  animation: fx-takeover-dark var(--fx-land) ease-in both;
+}
+
+@keyframes fx-takeover-dark {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.72;
+  }
+}
+
+.fx-takeover-sweep {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: min(42vmin, 320px);
+  aspect-ratio: 5 / 7;
+  translate: -50% -50%;
+  border-radius: 6%;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--fx-tint-rim) 85%, var(--pal-white)) 0%,
+    color-mix(in srgb, var(--fx-tint-core) 60%, transparent) 45%,
+    color-mix(in srgb, var(--fx-tint-glow) 80%, transparent) 100%
+  );
+  box-shadow:
+    0 0 0 3px var(--fx-tint-rim),
+    0 0 40px 12px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  animation: fx-takeover-sweep var(--fx-land) cubic-bezier(0.55, 0, 0.75, 0.35) both;
+}
+
+@keyframes fx-takeover-sweep {
+  0% {
+    transform: translateX(-75vw) rotate(-14deg) scale(2.4);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* #100 Ceaseless Void collapses into the dark from all around; #97 Zephrys blows in from the other side. */
+.fx-takeover[data-look="void"] .fx-takeover-sweep {
+  animation-name: fx-takeover-collapse;
+}
+
+.fx-takeover[data-look="genie"] .fx-takeover-sweep {
+  animation-direction: reverse;
+  animation-name: fx-takeover-gust;
+}
+
+@keyframes fx-takeover-collapse {
+  0% {
+    transform: scale(6) rotate(30deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-gust {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(75vw) rotate(16deg) scale(2.2);
+    opacity: 0;
+  }
+}
+
+.fx-takeover-rays {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 220vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--fx-tint-core) 55%, transparent) 0deg 4deg,
+    transparent 7deg 15deg,
+    color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 17deg 20deg,
+    transparent 23deg 30deg
+  );
+  mask-image: radial-gradient(circle, var(--pal-black) 0, var(--pal-black) 18%, transparent 55%);
+  animation: fx-takeover-rays calc(var(--fx-ms) - var(--fx-land)) cubic-bezier(0.2, 0.7, 0.3, 1) var(--fx-land) both;
+}
+
+@keyframes fx-takeover-rays {
+  0% {
+    transform: rotate(0deg) scale(0.3);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: rotate(40deg) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.fx-takeover[data-look="void"] .fx-takeover-rays {
+  animation-direction: reverse;
+}
+
+.fx-takeover-wave {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 40vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--fx-tint-rim) 80%, var(--pal-white)),
+    0 0 30px 14px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
+    inset 0 0 30px 10px color-mix(in srgb, var(--fx-tint-glow) 50%, transparent);
+  animation: fx-takeover-wave calc(var(--fx-ms) - var(--fx-land)) ease-out var(--fx-land) both;
+}
+
+@keyframes fx-takeover-wave {
+  0% {
+    transform: scale(0.05);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(5);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------- set piece --- */
+
+/* R2800000: a board clear's set piece, over the whole layer and centred on `--fx-x/--fx-y` (the board,
+   the middle of the one side it takes from, or a Trap's or a Unit's own zone). The vortex darkens the
+   sides its wipe takes from (one side's only, `data-side`), turns a spiral there (`--fx-spin` says
+   which way) that shrinks into its centre until the swallow at `--fx-hold`, and flashes its core
+   there; the fold closes black in from the board's edges until the swallow, and then the light comes
+   back at its centre. The cards it takes are the board's own (board.css). It names no card (R202), and
+   the whole cue fades out by --fx-ms, inside the effects' tail (R200). Transform and opacity only. */
+.fx-setPiece {
+  inset: 0;
+  z-index: 0;
+  animation: fx-set-piece-in var(--fx-ms) linear both;
+}
+
+@keyframes fx-set-piece-in {
+  0% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-setPiece-dark {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-core) 30%, var(--pal-black)) 0,
+    color-mix(in srgb, var(--fx-tint-glow) 12%, color-mix(in srgb, var(--pal-black) 60%, transparent)) 35%,
+    color-mix(in srgb, var(--pal-black) 90%, transparent) 75%
+  );
+  animation: fx-set-piece-dark var(--fx-hold) ease-in both;
+}
+
+/* One side's wipe darkens that side alone: an ellipse over its half of the board. */
+.fx-setPiece[data-side="you"] .fx-setPiece-dark,
+.fx-setPiece[data-side="opponent"] .fx-setPiece-dark {
+  background: radial-gradient(
+    ellipse 62% 30% at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-core) 30%, var(--pal-black)) 0,
+    color-mix(in srgb, var(--pal-black) 80%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+@keyframes fx-set-piece-dark {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.8;
+  }
+}
+
+.fx-setPiece-spiral {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 120vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  /* Soft arms that blend into one another, so the turning spiral reads as a swirl, not a starburst. */
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--fx-tint-glow) 34%, transparent) 0deg,
+    transparent 16deg,
+    color-mix(in srgb, var(--fx-tint-rim) 30%, transparent) 30deg,
+    transparent 44deg,
+    color-mix(in srgb, var(--fx-tint-glow) 34%, transparent) 60deg
+  );
+  mask-image: radial-gradient(circle, transparent 0, var(--pal-black) 5%, var(--pal-black) 20%, transparent 46%);
+  animation: fx-set-piece-spiral var(--fx-hold) cubic-bezier(0.5, 0, 0.9, 0.6) both;
+}
+
+.fx-setPiece[data-side="you"] .fx-setPiece-spiral,
+.fx-setPiece[data-side="opponent"] .fx-setPiece-spiral {
+  width: 80vmax;
+}
+
+@keyframes fx-set-piece-spiral {
+  0% {
+    transform: rotate(0deg) scale(1.1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: rotate(calc(var(--fx-spin, 1) * 720deg)) scale(0.05);
+    opacity: 0.9;
+  }
+}
+
+.fx-setPiece-core {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 28vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--pal-white) 0,
+    color-mix(in srgb, var(--fx-tint-core) 80%, transparent) 30%,
+    transparent 70%
+  );
+  animation: fx-set-piece-core calc(var(--fx-ms) - var(--fx-hold)) ease-out var(--fx-hold) both;
+}
+
+@keyframes fx-set-piece-core {
+  0% {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* #100 Ceaseless Void: the board's edges fold in to black, and the light comes back where it stands. */
+.fx-setPiece-edges {
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--fx-x) var(--fx-y);
+  background: radial-gradient(
+    ellipse at var(--fx-x) var(--fx-y),
+    transparent 0,
+    transparent 22%,
+    color-mix(in srgb, var(--fx-tint-core) 40%, var(--pal-black)) 48%,
+    var(--pal-black) 72%
+  );
+  animation: fx-set-piece-fold var(--fx-hold) cubic-bezier(0.6, 0, 0.8, 0.4) both;
+}
+
+@keyframes fx-set-piece-fold {
+  0% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+}
+
+.fx-setPiece-light {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 46vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--fx-tint-glow) 70%, var(--pal-white)) 0,
+    color-mix(in srgb, var(--fx-tint-rim) 40%, transparent) 40%,
+    transparent 70%
+  );
+  animation: fx-set-piece-light calc(var(--fx-ms) - var(--fx-hold)) ease-out var(--fx-hold) both;
+}
+
+@keyframes fx-set-piece-light {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
-/* R200: under prefers-reduced-motion no effect is drawn at all. FxLayer already renders
-   `data-fx="off"` with no canvas and plays no cue, which also takes the cocoon away (it is gated on
-   `data-fx="on"`); this block is the belt to that brace. */
+/* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer
+   renders `data-fx="off"` with no canvas and plays only still callouts, which also takes the cocoon away
+   (it is gated on `data-fx="on"`); this block is the belt to that brace. */
 @media (prefers-reduced-motion: reduce) {
   .fx-layer *,
   .fx-layer *::before,
@@ -1996,6 +2444,11 @@
 
   .fx-dom > * {
     visibility: hidden;
+  }
+
+  /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped. */
+  .fx-dom > .fx-callout[data-still="true"] {
+    visibility: visible;
   }
 }
 

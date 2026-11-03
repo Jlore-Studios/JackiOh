@@ -1,14 +1,5 @@
-//! The picks an account makes for one card of its own (`src/api/card_picks.rs`, SPEC §14.2,
-//! R1834000, R1834001).
-//!
-//! The questions here are the routes' own: that they are three active routes, that each reads and
-//! writes the caller's own picks and nobody else's, that a `PUT` changes only the keys it names and
-//! refuses an id of another kind or one the account does not own, and that the device's one-time
-//! upload never overwrites a card the account holds and keeps an id this build does not know. What
-//! the store does with the rows is `tests/store/contract.rs`'s; RLS is the SQL suites'.
-//!
-//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
-//! caller is `e2e-p1`, the other account `e2e-p2` and the pending one `e2e-pending`.
+//! Card picks per account (`src/api/card_picks.rs`, SPEC §14.2, R1834000, R1834001).
+//! Verifies account isolation, PUT partial updates, validation, and upload idempotence.
 
 use std::sync::Arc;
 
@@ -436,6 +427,66 @@ async fn r2655000_a_pick_of_a_full_art_tier_needs_that_tier_owned_on_its_card() 
         body,
         json!({ "cards": [
             { "cardId": "core-004", "fullArt": "full-art-gary-the-gambler-animated" },
+            { "cardId": CARD, "fullArt": true },
+        ] })
+    );
+}
+
+#[tokio::test]
+async fn r2715000_a_pick_of_an_animated_art_needs_it_owned_on_its_card() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    let animated = "animated-mr-vanilla";
+    let nothing = json!({ "cards": [] });
+    // Not owned, even beside the card's still Epic, and another card's, even owned there: 400, and
+    // nothing is written.
+    own(&app, &profile, CARD, FULL_ART).await;
+    own(&app, &profile, "core-004", "animated-gary-the-gambler").await;
+    for (body, message) in [
+        (
+            json!({ "cardId": CARD, "fullArt": animated }),
+            "\"fullArt\" is a cosmetic this account does not own",
+        ),
+        (
+            json!({ "cardId": CARD, "fullArt": "animated-gary-the-gambler" }),
+            "\"fullArt\" is not a cosmetic id of its kind",
+        ),
+        (
+            json!({ "cardId": CARD, "fullArt": "animated-Mr" }),
+            "\"fullArt\" must be a boolean or a full-art id or null",
+        ),
+    ] {
+        assert_eq!(refusal(put(&app, TOKEN, body.clone()).await), message, "{body}");
+        assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing.clone()), "{body}");
+    }
+    // Owned on its card, it is picked by its id and reads back as written.
+    own(&app, &profile, CARD, animated).await;
+    let (status, body) = put(&app, TOKEN, json!({ "cardId": CARD, "fullArt": animated })).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [{ "cardId": CARD, "fullArt": animated }] })
+    );
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, body));
+    // `true` is the still Epic, and an upload keeps an owned Animated art's id.
+    let (status, body) = put(&app, TOKEN, json!({ "cardId": CARD, "fullArt": true })).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body, json!({ "cards": [{ "cardId": CARD, "fullArt": true }] }));
+    let (status, body) = upload(
+        &app,
+        TOKEN,
+        json!([
+            { "cardId": "core-004", "fullArt": "animated-gary-the-gambler" },
+            // Not owned: left out, and with it the whole entry.
+            { "cardId": "core-011", "fullArt": "animated-tempo-timmy" },
+        ]),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [
+            { "cardId": "core-004", "fullArt": "animated-gary-the-gambler" },
             { "cardId": CARD, "fullArt": true },
         ] })
     );

@@ -1,8 +1,6 @@
 // Test-only full-lesson runner on the real practice core; its coach reads browser-equivalent
-// snapshots (R293). A frozen clock and fixed node budget make replays deterministic. Policies cover
-// coached, coached-passive (spec 22), autonomous, robust random play, and the reckless player who
-// attacks into everything and plays nothing protective (R2205001), and the idle player who only ends
-// the turn (R2201000).
+// snapshots (R293). A frozen clock and fixed node budget make replays deterministic. Policies:
+// coached, coached-passive (spec 22), autonomous, random, reckless (R2205001) and idle (R2201000).
 
 import { AI_GATE_BUDGET, type SearchBudget } from "@jackioh/ai";
 import { createRng } from "@jackioh/engine";
@@ -23,6 +21,7 @@ import {
   type LessonScript,
   type StepOutcome,
 } from "./coach.ts";
+import { aimsAtOwnSide, bestPlay } from "./advice.ts";
 import { lessonById, type TutorialLesson } from "./lessons.ts";
 import { scriptFor } from "./scripts/index.ts";
 import { heroTargetId, myMain, mulliganOpen } from "./steps.ts";
@@ -86,18 +85,6 @@ function isPlay(action: ActionBody): action is Extract<ActionBody, { type: "play
   return action.type === "play";
 }
 
-function hitsOwnSide(view: PlayerView, action: Extract<ActionBody, { type: "play" }>): boolean {
-  const own = new Set<string>();
-  for (const unit of view.you.units) if (unit !== null) own.add(unit.instanceId);
-  for (const card of view.you.backrow) if (card !== null && !card.faceDown) own.add(card.instanceId);
-  return (action.targets ?? []).some(
-    (target) =>
-      (target.pick === "instance" && own.has(target.instanceId)) ||
-      (target.pick === "hero" && target.player === view.viewer) ||
-      (target.pick === "zone" && target.player === view.viewer && target.row === "backrow"),
-  );
-}
-
 /** Beginner fallback: keep, resolve prompts, play safely, then attack and end. */
 export function autopilot(ctx: CoachCtx): ActionBody | null {
   const { view, legal } = ctx;
@@ -112,11 +99,7 @@ export function autopilot(ctx: CoachCtx): ActionBody | null {
   }
   if (!myMain(ctx)) return null;
 
-  const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
-  const costOf = (instanceId: string): number => hand.find((card) => card.instanceId === instanceId)?.cost ?? 0;
-  const plays = legal.filter(isPlay).filter((action) => !hitsOwnSide(view, action));
-  plays.sort((a, b) => costOf(b.instanceId) - costOf(a.instanceId));
-  const play = plays[0];
+  const play = bestPlay(ctx);
   if (play !== undefined) return play;
 
   const hero = heroTargetId(view, "opponent");
@@ -145,19 +128,13 @@ export function passive(ctx: CoachCtx): ActionBody | null {
 
 const PROTECTIVE_KEYWORDS: readonly string[] = ["Taunt", "Divine Shield", "Armor"];
 
-/** A card the reckless player never plays: a Trap, a Field Trap, or a unit that guards. */
 function protective(def: CardDef | undefined): boolean {
   if (def === undefined) return false;
   if (def.type === "Trap" || def.type === "Field Trap") return true;
   return def.type === "Unit" && def.base.keywords.some((keyword) => PROTECTIVE_KEYWORDS.includes(keyword.kind));
 }
 
-/**
- * R2205001: the reckless player keeps its hand, answers each prompt with its first option, attacks
- * with everything into the enemy unit with the most Attack (the hero when no unit can be hit), then
- * plays its cheapest card that guards nothing and aims at nothing of its own, and ends the turn. It
- * never switches a unit to Defense Position.
- */
+/** R2205001: the reckless player attacks into everything, plays nothing protective, and never switches to Defense. */
 export function reckless(ctx: CoachCtx): ActionBody | null {
   const { view, legal } = ctx;
   if (mulliganOpen(view) || (view.pending !== null && view.pending.forYou)) return autopilot(ctx);
@@ -174,7 +151,7 @@ export function reckless(ctx: CoachCtx): ActionBody | null {
   const cardOf = (instanceId: string) => hand.find((card) => card.instanceId === instanceId);
   const plays = legal
     .filter(isPlay)
-    .filter((action) => !hitsOwnSide(view, action))
+    .filter((action) => !aimsAtOwnSide(ctx, action))
     .filter((action) => {
       const card = cardOf(action.instanceId);
       return card === undefined || !protective(ctx.defOf?.(card.defId));
@@ -186,11 +163,7 @@ export function reckless(ctx: CoachCtx): ActionBody | null {
   return legal.find((action) => action.type === "endTurn") ?? null;
 }
 
-/**
- * R2201000: the idle player keeps its hand, answers each prompt with its first option, and otherwise
- * only ends its turn: it never plays a card, attacks or switches a position, so the lesson is won
- * by the opponent's deck running out and fatigue.
- */
+/** R2201000: the idle player only ends its turn, so the lesson is won by the opponent's deck running out and fatigue. */
 export function idle(ctx: CoachCtx): ActionBody | null {
   const { view, legal } = ctx;
   if (mulliganOpen(view) || (view.pending !== null && view.pending.forYou)) return autopilot(ctx);

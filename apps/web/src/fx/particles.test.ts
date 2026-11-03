@@ -1,7 +1,5 @@
 // docs/polish/1-animations.md, behaviors B23 to B26: the pooled particle system (S5).
-//
-// No canvas is needed: `inspect()`, `alive()`, `capacity()` and `stats()` are the observable surface,
-// and nothing here draws.
+// No canvas is needed: `inspect()`, `alive()`, `capacity()` and `stats()` are the observable surface.
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -29,6 +27,11 @@ const PRESETS: readonly FxPreset[] = [
   "confetti",
   "blood",
   "frost",
+  "leaf",
+  "circuit",
+  "crumb",
+  "star",
+  "exhaust",
 ];
 
 const BOX = { x: 100, y: 120, width: 90, height: 126 };
@@ -51,9 +54,7 @@ function run(ps: { step(dtMs: number): void }, total: number, frame = 50): void 
   }
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B23: the cap
- * ------------------------------------------------------------------------------------------- */
+/* B23: the cap */
 
 describe("B23 the particle cap", () => {
   it("B23 emitting 9x capacity of one preset then 1x of another leaves exactly capacity alive, all of the second", () => {
@@ -127,9 +128,7 @@ describe("B23 the particle cap", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B24: pooling
- * ------------------------------------------------------------------------------------------- */
+/* B24: pooling */
 
 describe("B24 pooling", () => {
   it("B24 10,000 emit and step cycles allocate the pool exactly once", () => {
@@ -166,9 +165,7 @@ describe("B24 pooling", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B25: bounded life
- * ------------------------------------------------------------------------------------------- */
+/* B25: bounded life */
 
 describe("B25 every particle dies within FX_MAX_PARTICLE_LIFE_MS", () => {
   it("B25 there is a preset for every FxPreset, and every preset's life fits under FX_MAX_PARTICLE_LIFE_MS", () => {
@@ -205,11 +202,19 @@ describe("B25 every particle dies within FX_MAX_PARTICLE_LIFE_MS", () => {
     ps.step(5_000);
     expect(ps.alive()).toBe(0);
   });
+
+  it("#2792 leaf, circuit, crumb, star and exhaust stay within the cap and die by FX_MAX_PARTICLE_LIFE_MS", () => {
+    for (const preset of ["leaf", "circuit", "crumb", "star", "exhaust"] as const) {
+      const ps = system(40);
+      expect(ps.emit(preset, 145, 183, opts(360, "area", 3)), preset).toBe(40);
+      expect(ps.alive(), preset).toBe(40);
+      run(ps, FX_MAX_PARTICLE_LIFE_MS);
+      expect(ps.alive(), preset).toBe(0);
+    }
+  });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B26: determinism
- * ------------------------------------------------------------------------------------------- */
+/* B26: determinism */
 
 function script(seed: number) {
   const ps = system(300, seed);
@@ -253,10 +258,10 @@ describe("B26 determinism", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
+/*
  * S5: drawing. `draw` paints every live particle; a null sprite falls back to a filled arc in the
  * preset color (the jsdom and no-2D-context case, and any sprite the cache could not make).
- * ------------------------------------------------------------------------------------------- */
+ */
 
 type DrawCall = { name: string; args: unknown[]; fillStyle: unknown };
 
@@ -416,9 +421,7 @@ describe("S5 drawing live particles", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B43: streaks. A preset with `stretch` draws each moving particle along its velocity.
- * ------------------------------------------------------------------------------------------- */
+/* B43: streaks. A preset with `stretch` draws each moving particle along its velocity. */
 
 describe("B43 streaks", () => {
   it("B43 a stretched preset draws one sprite per particle under a rotation transform, then restores the dpr transform", () => {

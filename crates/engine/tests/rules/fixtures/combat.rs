@@ -1,14 +1,7 @@
-//! Combat, damage and keyword fixtures for the M2-M3 engine tests (BUILD §0): one plain CardDef per
-//! keyword or statline the tests need. The real cards, with their own tests, arrive in M4.
-//!
-//! Each def echoes the §8 card named in its doc comment, trimmed to the one property its name
-//! promises; the stats are the ones the importing tests assert (SPEC §6.1 keywords, §4.1 to §4.5
-//! combat, §10.4 layers). A fixture named for a keyword carries that keyword on *both* faces, so
-//! `{ radiant: true }` never silently changes what the fixture means; the exceptions are the four
-//! defs that mirror a specific card's radiant text (Big D-fender, Moths, Deft Duelist, Spikey
-//! Pillow), which SPEC §8 pins.
-//!
-//! Surface contract: docs/v0.3.0/SURFACE.md §4.2.
+//! Combat, damage and keyword fixtures (BUILD §0; SPEC §6.1, §4.1 to §4.5, §10.4), each trimmed from the
+//! §8 card its doc names to the one property its name promises, on *both* faces so `{ radiant: true }`
+//! never changes its meaning; the four that mirror a card's radiant text (Big D-fender, Moths, Deft
+//! Duelist, Spikey Pillow) are the exceptions §8 pins. Surface contract: docs/v0.3.0/SURFACE.md §4.2.
 
 #![allow(non_upper_case_globals)]
 
@@ -38,7 +31,7 @@ fn def(overrides: Value) -> CardDef {
 
 // Bodies with no keywords.
 
-/// The vanilla 3/3 every test attacks with, trades and targets. No keywords at all (§6.1).
+/// The vanilla 3/3 every test attacks with, trades and targets.
 pub static plain: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-plain",
@@ -132,8 +125,8 @@ pub static shielded: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// §8 #25 (the 4-mana 7/7), trimmed to its Armor 7 (§4.4 step 2). #25's radiant text swaps the Armor
-/// for Indestructible; the fixture keeps Armor on both faces so `indestructible` is the one that means that.
+/// §8 #25 (the 4-mana 7/7) trimmed to its Armor 7 (§4.4 step 2), on both faces, so `indestructible`
+/// alone stands for #25's radiant swap to Indestructible.
 pub static armored: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-armored",
@@ -238,8 +231,7 @@ pub static pacifist: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
-/// §8 #92's Stack keyword (§3.2, R13), without Felinor Fiender's set-stat layer; here for the view
-/// and the validator to read.
+/// §8 #92's Stack keyword (§3.2, R13), without Felinor Fiender's set-stat layer.
 pub static stacker: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-stacker",
@@ -254,7 +246,7 @@ pub static stacker: LazyLock<CardDef> = LazyLock::new(|| {
 // The three §8 cards whose rules text the tests exercise, scripts included.
 
 /// §8 #9 Moths to the Flame, 1/14 (2/28 with Armor 1 radiant): the body the forced-attack tests aim
-/// at, with no script; the start-of-turn half of #9's text is the real card's job in M4 (R53).
+/// at, with no script; the start-of-turn half of #9's text is the real card's (R53).
 pub static moths: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-moths",
@@ -345,8 +337,7 @@ fn deft_duelist_scripts() -> CardScripts {
 }
 
 /// §8 token 65.1 Spikey Pillow, 0/2 → 0/4: the `neverDefense` flag of §4.1 plus the layer-5 aura
-/// that takes 2 attack off your units, floored at 0 (§10.4). The radiant aura spares other Spikey
-/// Pillows.
+/// that takes 2 attack off your units, floored at 0 (§10.4); the radiant aura spares other Pillows.
 pub static spikey_pillow: LazyLock<CardDef> = LazyLock::new(|| {
     def(json!({
         "id": "cb-spikey-pillow",
@@ -470,7 +461,6 @@ pub static COMBAT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::n
     ])
 });
 
-/// Every combat fixture on top of `base`.
 pub fn combat_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in COMBAT_DEFS.iter() {
@@ -479,7 +469,6 @@ pub fn combat_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts (`COMBAT_SCRIPTS`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     COMBAT_SCRIPTS.clone()
 }

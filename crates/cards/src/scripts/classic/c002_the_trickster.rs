@@ -14,7 +14,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-002";
 
-/// "Trap or Field Spell": a Field Trap is a Trap.
 const REACHES: &[CardType] = &[CardType::Trap, CardType::FieldTrap, CardType::FieldSpell];
 
 pub fn script() -> CardScripts {
@@ -69,7 +68,6 @@ mod tests {
         effective_cost(s.state(), s.card(card), Default::default())
     }
 
-    /// `"you" | "opponent"`: the side of the viewer's view whose modifiers are read.
     fn modifier_labels(s: &Scenario, viewer: PlayerId, side: &str) -> Vec<String> {
         let view = js(&s.view(viewer));
         view[side]["modifiers"]
@@ -107,7 +105,6 @@ mod tests {
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, EXPERIMENT), 0);
                 s.play(EXPERIMENT, json!({ "zone": 1 }));
-                // 4 − 1 (Trickster) − 0.
                 s.expect_mana(P1, 3);
             }
 
@@ -210,7 +207,6 @@ mod tests {
                 }
                 assert!(!theirs.to_string().contains(EXPERIMENT));
                 assert_eq!(modifier_labels(&s, P2, "opponent"), vec!["Your next Trap or Field Spell costs (2) less"]);
-                // The change is real in your own view: the Trap reads (0) there.
                 let your_hand = js(&s.view(P1))["you"]["hand"].clone();
                 let Some(cards) = your_hand.as_array() else {
                     panic!("your own hand travels in full (§10.8)");
@@ -276,7 +272,6 @@ mod tests {
                 assert_eq!(modifier_labels(&s, P1, "you"), vec!["Your next Trap or Field Spell costs (0)"]);
                 s.play(MANA_WELL, json!({ "zone": 1 }));
                 s.expect_mana(P1, 3);
-                // Consumed by that play.
                 assert_eq!(cost_of(&s, EXPERIMENT), 2);
             }
 

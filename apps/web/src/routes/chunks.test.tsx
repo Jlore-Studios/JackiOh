@@ -1,9 +1,6 @@
-// R2116000, issue #2116 (part of #2036): a screen's code starts loading when the player shows
-// intent toward a control that leads there, once per route per page load, with the engine for a
-// game's screen; Save-Data turns it all off and a production build has no dev-only chunk.
-//
-// `wasm/index.ts` is mocked the way `routes/engine-gate.test.tsx` does, so the setup file's real
-// module stays underneath.
+// R2116000 (#2116, #2036): a screen's code starts loading on intent toward a control leading there,
+// once per route per page load, with the engine for a game's screen. `wasm/index.ts` is mocked as
+// `routes/engine-gate.test.tsx` does, so the setup file's real module stays underneath.
 
 import { Suspense, type ReactElement, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -172,6 +169,25 @@ describe("R2116000 prefetching a screen on intent", () => {
     expect(loadWasm).toHaveBeenCalledTimes(1);
   });
 
+  it("B13 intent toward the Dungeon Run and its stats starts their chunks and loadWasm()", () => {
+    const dungeon = vi.spyOn(routeChunks.dungeon, "load").mockResolvedValue(stubModule);
+    const stats = vi.spyOn(routeChunks.dungeonStats, "load").mockResolvedValue(stubModule);
+    render(
+      <>
+        <a href="/dungeon">Dungeon</a>
+        <a href="/dungeon/stats">Dungeon stats</a>
+      </>,
+    );
+
+    fireEvent.pointerEnter(screen.getByText("Dungeon"));
+    expect(dungeon).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerEnter(screen.getByText("Dungeon stats"));
+    expect(stats).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(2);
+  });
+
   it("R2116000 a production build has no dev-only route to prefetch", async () => {
     vi.stubEnv("MODE", "production");
     vi.resetModules();
@@ -179,6 +195,8 @@ describe("R2116000 prefetching a screen on intent", () => {
 
     expect(production.routeChunks.hotseat).toBeNull();
     expect(production.routeChunks.duosDev).toBeNull();
+    // R2784000: the motif gallery too.
+    expect(production.routeChunks.fxGallery).toBeNull();
     expect(() => production.prefetchRoute("/dev/hotseat")).not.toThrow();
   });
 });

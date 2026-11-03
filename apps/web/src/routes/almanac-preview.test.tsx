@@ -1,9 +1,7 @@
-// The Almanac and the deck builder with the Meditative set previewed (issue #550): `@jackioh/shared`
-// is mocked so that `SHIPPED_SETS` lists the set the day before its patch does, and every chip, pool
-// and mark that follows what ships (R1380, R1381) shows it. The same pieces with the set not shipped
-// are almanac.test.tsx's, filters.test.ts's and browse.test.tsx's, so a test here holds nothing the
-// release has to rewrite: the mock keeps the list free of repeats, so it stays valid once the
-// release lists the set itself.
+// The Almanac and the deck builder with the Meditative set previewed (#550): `@jackioh/shared` is
+// mocked so `SHIPPED_SETS` lists the set, and every chip, pool and mark that follows what ships
+// (R1380, R1381) shows it; unshipped is almanac.test.tsx's, filters.test.ts's and browse.test.tsx's.
+// The mock keeps the list free of repeats, so it stays valid once the release lists the set itself.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,8 +18,7 @@ vi.mock("@jackioh/shared", async (importOriginal) => {
     newestShippedSet: (): SetName => "Meditative",
   };
 });
-// The Almanac's shelf (`shelf.ts`) reads the wire module itself, without the client's aliases, so the
-// static `/almanac` page can import it: the same preview goes there too.
+// `shelf.ts` reads the wire module itself (no client aliases, for the static `/almanac` page): mock it too.
 vi.mock("../wire/catalog.ts", async (importOriginal) => {
   const real = await importOriginal<typeof import("../wire/catalog.ts")>();
   const shipped: readonly SetName[] = [...new Set<SetName>([...real.SHIPPED_SETS, "Meditative"])];
@@ -76,10 +73,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * The grid renders every shipped card and token, 710 since the Stinkyscape release (#1884), past
- * vitest's 5 s default under a loaded jsdom run, as almanac.test.tsx's grid tests are.
- */
+/** The whole grid (710 cards and tokens since #1884) outruns vitest's 5 s default under jsdom. */
 const SLOW_GRID = { timeout: 30_000 } as const;
 
 describe("the Almanac with the Meditative set previewed", SLOW_GRID, () => {

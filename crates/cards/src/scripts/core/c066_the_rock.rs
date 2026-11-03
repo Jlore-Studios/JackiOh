@@ -2,17 +2,13 @@
 //!
 //! Base "Tribute 1, Indestructible"; radiant "Plus Immutable" (§8 Conventions: the base list plus X).
 //! Both lists are on the catalog faces and §10.4 layer 1 reads them off the def, so this file grants
-//! no keyword. It carries only the Tribute cost (§6.3: "an additional cost of playing a card"), which
-//! `play_choices.rs` validates: `tribute_cost_of` reads `static_flags.tribute`; `tribute_value_of` gives
-//! the Sheep Token 2 and any other unit 1 (§3.2, §6.3); `legal_tribute_units` offers only the chooser's
-//! own units (only #55 Lava Golem sets `tribute_enemies`); `refuse_tributes` refuses an unpayable play.
-//! Chosen units travel in the `play` action's `tributes` (R81, R90), so there is no hook.
+//! no keyword. It carries only the Tribute cost (§6.3), which `play_choices.rs` validates (a Sheep
+//! Token pays 2, §3.2; only #55 Lava Golem sets `tribute_enemies`). Chosen units travel in the `play`
+//! action's `tributes` (R81, R90), so there is no hook.
 //!
 //! Engine-side: Indestructible takes no damage (§4.4 step 4); R46 and §4.5 step 1 ignore a destroy
-//! mark, and the unit switches to Attack Position and loses Taunt for the turn; R69: it dies anyway
-//! once max health is 0 or less, since no destroy effect is involved; §6.1: Sacrifice and Exile still
-//! remove it. Immutable (R23) blocks Vanilla, Transform and Fuse-onto; Radiant is still allowed and
-//! #41 Sheepish still fires, consumed for nothing (R17).
+//! mark; R69: it dies anyway once max health is 0 or less; §6.1: Sacrifice and Exile still remove it.
+//! Immutable (R23) blocks Vanilla, Transform and Fuse-onto; #41 Sheepish still fires, for nothing (R17).
 
 use jackioh_engine::prelude::*;
 
@@ -29,22 +25,14 @@ pub fn script() -> CardScripts {
         }),
         ..Script::default()
     };
-    // The radiant cell adds a keyword and nothing else, and §8's Conventions keep every base clause a
-    // radiant cell does not restate — so the Tribute cost is kept and the script is the same object.
+    // §8 Conventions keep every base clause the radiant cell does not restate: the same script.
     CardScripts {
         radiant: base.clone(),
         base,
     }
 }
 
-// #66 The Rock — SPEC §8.3, BUILD M4-T4: "Play refused without a tribute; Indestructible; radiant
-// Immutable".
-//
-// The §8.3 row is "Tribute 1, Indestructible" → "Plus Immutable", with the Engine cell "Tribute
-// validator; Indestructible per 6.1". So the cases below are: the validator refusing and accepting
-// a Tribute (§6.3, §3.2's Sheep worth 2), Indestructible under damage (§4.4 step 4), under a destroy
-// mark (R46) and at 0 max health (R69), and the radiant face keeping every base clause the cell does
-// not restate (§8 Conventions) while adding Immutable (R23).
+// #66 The Rock — SPEC §8.3, BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -55,15 +43,14 @@ mod tests {
     const RUSH: &str = "core-t-rush"; // Rush Token, 3/3: a second body, so an action can run a state check.
     const AURA: &str = "core-046"; // Suppressive Aura, Field Spell, embiggen price 4 — R69's −10/−10.
 
-    /// R82: a turn whose only legal actions are ending it, conceding and offering a draw auto-ends, and
-    /// `reduce` checks that after EVERY action, so every scenario keeps one free 0-cost Spell in p1's
-    /// hand. It is never played; it only keeps one legal action on the turn.
+    /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
+    /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
     /// The refusal names the Tribute, capitalised or not, so the word's common tail is matched.
     const TRIBUTE_TEXT: &str = "ribute";
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand. The shipped cards are registered first.
+    /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {
         crate::register_all();
         let mut opts = opts;
@@ -159,8 +146,7 @@ mod tests {
 
         #[test]
         fn s6_1_a_tribute_sacrifices_an_indestructible_unit_sacrifice_bypasses_it() {
-            // Two copies: the string form resolves the hand one for `play` and the field one for `tributes`,
-            // because each search is narrowed to its own place.
+            // Two copies: the string form finds the hand one for `play`, the field one for `tributes`.
             let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [ROCK] } }));
             let on_field = s.unit(PlayerId::P1, 1);
             s.play(ROCK, json!({ "tributes": [ROCK] }));
@@ -183,9 +169,8 @@ mod tests {
             let mut s = board(json!({
                 "p1": { "field": [{ "def": ROCK, "position": "DEF", "lane": 1 }, { "def": RUSH, "lane": 2 }] }
             }));
-            // §6.3 Destroy "only marks the card"; `effects/destroy.rs` sets this flag and §4.5 step 1 collects
-            // it at the next state check. No reachable verb destroys a chosen unit yet, so the mark is set
-            // directly through `s.state_mut()`, a test-only liberty.
+            // §6.3 Destroy "only marks the card". No reachable verb destroys a chosen unit yet, so the
+            // mark is set directly, a test-only liberty.
             let rock = s.card(ROCK).id.clone();
             find_instance_mut(s.state_mut(), &rock)
                 .expect("setup: The Rock is on the field")
@@ -221,14 +206,12 @@ mod tests {
         fn r23_the_radiant_face_computes_as_indestructible_plus_immutable_s8_conventions_plus() {
             let s = board(json!({ "p1": { "field": [{ "def": ROCK, "radiant": true }] } }));
             let kinds = keywords_of(&s, PlayerId::P1, 1);
-            // Both are there, whatever else is.
             assert!(
                 ["Indestructible", "Immutable"].iter().all(|wanted| kinds.iter().any(|kind| kind == wanted)),
                 "keywords {kinds:?}"
             );
-            // R23's blocking lives in `effects/transform.rs` (`transform` and `vanilla` return early on an
-            // Immutable card) and in `traps.rs` for #41 Sheepish. No reachable verb applies Vanilla or Transform
-            // to a chosen unit yet, so the cross-card cases live in #41, #61, #83 and #85.
+            // R23's blocking is in `effects/transform.rs` and `traps.rs`; no reachable verb applies it to
+            // a chosen unit yet, so the cross-card cases live in #41, #61, #83 and #85.
         }
 
         #[test]

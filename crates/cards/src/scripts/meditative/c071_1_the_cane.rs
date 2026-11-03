@@ -38,8 +38,7 @@ mod tests {
 
     const SCARAB: &str = "core-007";
 
-    /// The Cane in p1's backrow, facing one enemy; the R383 revision this relies on is absent, so
-    /// the second-turn attack it enables is not tested here (M10).
+    /// The Cane in p1's backrow, facing one enemy.
     fn cane_game() -> Scenario {
         crate::register_all();
         scenario(json!({
@@ -126,8 +125,7 @@ mod tests {
                 .any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })),
             "the Cane made a forced attack: {kinds:?}"
         );
-        // After that combat's state check it is home, it not being p1's turn: no unit stands, the
-        // backrow holds it.
+        // After that combat's state check it is home, it not being p1's turn.
         assert!(kinds.contains(&"deanimated"), "the Cane went home: {kinds:?}");
         assert!(s.unit(P1, 1).is_none());
         assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(ID.to_string()));
@@ -135,7 +133,6 @@ mod tests {
 
     #[test]
     fn r1126_on_its_own_turn_it_stays_a_unit() {
-        // On its controller's turn the attack happens all the same, and the Cane stays a Unit.
         let mut s = cane_game();
         let events = strike_and_return(&mut s);
         let kinds: Vec<&str> = events.iter().map(|event| event.event_type().as_str()).collect();

@@ -1,28 +1,12 @@
-// `/stats`: Public card and player statistics page (SPEC §9.11, R654).
-//
-// Accessible signed out and signed in.
-// Provides three tabs:
-//  - Cards: sortable, filterable table of card win rates and play rates; the filters, not columns, cover cost, rarity and keyword (R2446000).
-//  - Sets: each set's cards on the patch (below).
-//  - Players: public player aggregates (games, win rate, favorite cards, fun stats from #125).
-// Features:
-//  - No provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661); the patch bar below is the way back to the previous patch.
-//  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
-//    for a Drawn vs not drawn the server withholds until both its sides reach the floor (R654, R2427000).
-//  - URL search params for shareable views.
-//  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
-//    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
-//  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
-//  - Patch bar (R1973002): a picker of the newest patches with enough games, and the patch before and after
-//    the one shown; a patch is the window the cards share (R1973001), so a micro is never a step of its own.
-//  - Sets tab (R1966000): each set's cards on the patch, pooled, by mean and by median, the change since the
-//    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
-//  - Games panel (R1994000): at the head of the Cards tab's scrolling panel, how the patch's games went
-//    (stats/GamesPanel.tsx).
-//  - Created cards (R2089000): below the Cards tab's table, the cards made during games, apart from the deck
-//    cards and answering the same search box (stats/CreatedPanel.tsx).
-//  - Tokens (R2370000): behind the Cards tab's Show tokens toggle, off by default, the tokens alone with each
-//    one's win rate, above the Created cards (stats/TokensPanel.tsx).
+// `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on three tabs: Cards
+// (the filters, not columns, cover cost, rarity and keyword, R2446000), Sets (R1966000) and Players (public
+// aggregates, fun stats from #125). No provisional banner and no reading notes (R2325000): the page never
+// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games", and a
+// Drawn vs not drawn the server withholds until both sides reach it, "not enough data" (R2427000). The
+// patch bar (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of
+// its own. The Cards tab also holds the games panel (R1994000), the Created cards (R2089000) and, behind
+// Show tokens, off by default, the tokens (R2370000). The card drill-down shows the faces (a full-art
+// card's art as the viewer picks it, R2756000), patch history, turn curve and co-played synergy.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -31,7 +15,9 @@ import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
+import { FULL_ART_STRIP_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
+import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
@@ -108,6 +94,24 @@ function tokensOf(def: CardDef): CardDef[] {
 }
 
 /**
+ * R2756000: the arts a card's drill-down offers: its normal face, then each tier it has a full art of, commonest
+ * first (a listed token's are its parent's, R2655002); none for a card without full art. R2715000: in the
+ * Collection's order, the Animated art first.
+ */
+function artsOf(defId: string): DrillDownArt[] {
+  if (!isFullArtCard(defId)) return [];
+  const tiers = FULL_ARTS_OF_CARD.get(fullArtSource(defId));
+  return ["normal", ...FULL_ART_STRIP_TIERS.filter((tier) => tiers?.has(tier) === true)];
+}
+
+/** R2756000: `art` as the full-art pick `FullArtShown` takes for `defId`'s faces: `false` for the normal face, else that tier's (R2655000). */
+function artPick(defId: string, art: DrillDownArt): boolean | string {
+  const source = fullArtSource(defId);
+  const id = art === "normal" ? undefined : FULL_ARTS_OF_CARD.get(source)?.get(art);
+  return id === undefined ? false : fullArtPickOf(source, id);
+}
+
+/**
  * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
  * at, from the response's patch list; a server without one names the version before.
  */
@@ -135,6 +139,7 @@ type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
   | "games"
+  | "adjustedWinRate"
   | "winRate"
   | "drawnWinRate"
   | "drawnDelta"
@@ -143,9 +148,22 @@ type SortColumn =
   | "playRate";
 type SortDirection = "asc" | "desc";
 
+/** R2756000: the art the drill-down's faces print: the normal face, or one of the card's full arts by tier. */
+type DrillDownArt = "normal" | FullArtTier;
+
+/** R2756000: each art choice's button, in English, put through `t()` where it is drawn as `SORT_LABELS` are. */
+const ART_LABELS: Record<DrillDownArt, string> = {
+  normal: "No full art",
+  Animated: "Animated",
+  Epic: "Epic",
+  Legendary: "Legendary",
+  Mythic: "Mythic",
+};
+
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
   "games",
+  "adjustedWinRate",
   "winRate",
   "drawnWinRate",
   "drawnDelta",
@@ -157,6 +175,7 @@ const SORT_COLUMNS: readonly SortColumn[] = [
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
+  adjustedWinRate: "Adjusted",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
   drawnDelta: "Drawn vs not drawn",
@@ -169,15 +188,44 @@ function defaultDirection(col: SortColumn): SortDirection {
   return col === "name" ? "asc" : "desc";
 }
 
+/** R2777000: an adjusted win rate to a tenth of a point, as it moves in tenths near 50%; "—" when there is none. */
+function adjustedText(rate: number | null | undefined): string {
+  return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";
+}
+
+/** R2777000: the table's default order, the adjusted win rate descending. */
+const DEFAULT_SORT: SortColumn = "adjustedWinRate";
+
 /**
  * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
- * `keyword`) is the default, win rate descending, its direction too.
+ * `keyword`) is the default, the adjusted win rate descending (R2777000), its direction too.
  */
 function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
   const asked = params.get("sort");
-  const col = asked === null ? "winRate" : SORT_COLUMNS.find((known) => known === asked);
-  if (col === undefined) return { col: "winRate", dir: "desc" };
+  const col = asked === null ? DEFAULT_SORT : SORT_COLUMNS.find((known) => known === asked);
+  if (col === undefined) return { col: DEFAULT_SORT, dir: "desc" };
   return { col, dir: params.get("dir") === "asc" ? "asc" : "desc" };
+}
+
+/**
+ * R2777001: the match types the page reads, Constructed (Best of 1 and Conquest together) first and the default,
+ * then All Random, then each constructed mode alone. No figure mixes chosen decks with dealt ones, so every mode
+ * together is not offered.
+ */
+const MODES = ["constructed", "random", "bo1", "bo3"] as const;
+type StatsMode = (typeof MODES)[number];
+const DEFAULT_MODE: StatsMode = "constructed";
+const MODE_LABELS: Record<StatsMode, string> = {
+  constructed: "Constructed",
+  random: "All Random",
+  bo1: "Best of 1",
+  bo3: "Conquest",
+};
+
+/** R2777001: the mode an address asks for; one the page does not offer (an old `all`, or none) is Constructed. */
+function modeOf(params: URLSearchParams): StatsMode {
+  const asked = params.get("mode");
+  return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
 }
 
 /** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
@@ -202,7 +250,6 @@ function DrillDownBackLayer({ onClose }: { onClose: () => void }): null {
 
 export default function StatsRoute(): ReactElement {
   const locale = useLocale();
-  // Read initial state from URL search params
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const [tab, setTab] = useState<TabKey>(() => {
@@ -219,15 +266,9 @@ export default function StatsRoute(): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
-  // R2370000: the Tokens section, off unless the address asks for it.
   const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
-  const [mode, setMode] = useState<string>(
-    ["bo1", "bo3", "random"].includes(initialParams.get("mode") ?? "")
-      ? (initialParams.get("mode") as string)
-      : "",
-  );
+  const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
 
-  // Column visibility
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
     games: true,
@@ -239,7 +280,7 @@ export default function StatsRoute(): ReactElement {
     playRate: true,
   });
 
-  // Card stats response. R2125000: a revisit starts on the table these filters last read and reads it again behind it.
+  // R2125000: a revisit starts on the table these filters last read and reads it again behind it.
   const [cardStatsKept] = useState(() =>
     cachedRead<PublicStatsCardsResponse>(
       null,
@@ -252,17 +293,15 @@ export default function StatsRoute(): ReactElement {
   // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
   const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
 
-  // Players response
   const [playersLoading, setPlayersLoading] = useState(false);
   const [playersError, setPlayersError] = useState(false);
   const [playersList, setPlayersList] = useState<PublicPlayerSummary[]>([]);
   const [playerSearch, setPlayerSearch] = useState("");
-  // The search the players tab last asked for (the box's text, a pause after its last change) and its page.
+  // The search last asked for (the box's text, a pause after its last change) and its page.
   const [playerQuery, setPlayerQuery] = useState("");
   const [playerPage, setPlayerPage] = useState(1);
   const [playersHasMore, setPlayersHasMore] = useState(false);
 
-  // Drill-down data
   const [drillDownLoading, setDrillDownLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<CardDrillDownResponse | null>(null);
   const [drillDownError, setDrillDownError] = useState(false);
@@ -270,21 +309,24 @@ export default function StatsRoute(): ReactElement {
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
+  // R2756000: the drill-down's art, kept from card to card as Show Radiant is; null until the viewer picks one,
+  // when the faces print what the Full-art cards setting says.
+  const [drillDownArt, setDrillDownArt] = useState<DrillDownArt | null>(null);
+  const { fullArt: fullArtSetting } = useCardSettings();
 
-  // R1966000: the Sets tab's patch, every set's cards unfiltered, and its previous patch's for the change.
+  // R1966000: every set's cards, unfiltered, and the previous patch's for the change.
   const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
   const [setsPrevious, setSetsPrevious] = useState<PublicStatsCardsResponse | null>(null);
   const [setsError, setSetsError] = useState(false);
   // Bumped by the Sets tab's Retry, as `cardStatsAttempt` is by the table's.
   const [setsAttempt, setSetsAttempt] = useState(0);
 
-  // Sync state to URL
   const updateUrl = useCallback(() => {
     const params = new URLSearchParams();
     if (tab !== "cards") params.set("tab", tab);
     if (patch) params.set("patch", patch);
     if (search) params.set("search", search);
-    if (sortCol !== "winRate") params.set("sort", sortCol);
+    if (sortCol !== DEFAULT_SORT) params.set("sort", sortCol);
     if (sortDir !== "desc") params.set("dir", sortDir);
     if (setFilter) params.set("set", setFilter);
     if (rarityFilter) params.set("rarity", rarityFilter);
@@ -292,7 +334,7 @@ export default function StatsRoute(): ReactElement {
     if (keywordFilter) params.set("keyword", keywordFilter);
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
-    if (mode) params.set("mode", mode);
+    if (mode !== DEFAULT_MODE) params.set("mode", mode);
     if (showTokens) params.set("tokens", "1");
 
     const query = params.toString();
@@ -304,7 +346,6 @@ export default function StatsRoute(): ReactElement {
     updateUrl();
   }, [updateUrl]);
 
-  // Fetch card stats
   const fetchCardStats = useCallback(
     () => {
       const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode);
@@ -342,7 +383,7 @@ export default function StatsRoute(): ReactElement {
     return fetchCardStats();
   }, [fetchCardStats, cardStatsAttempt]);
 
-  // Fetch players: one page of the server's `limit` rows. The response carries no total, so a full page may have another after it.
+  // The response carries no total, so a full page of the server's `limit` rows may have another after it.
   const fetchPlayers = useCallback((query: string, page: number) => {
     setPlayersLoading(true);
     setPlayersError(false);
@@ -364,8 +405,7 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, []);
 
-  // One request per pause in the typing, not one per keystroke: the box's text becomes the query
-  // `PLAYER_SEARCH_DEBOUNCE_MS` after its last change, from page 1.
+  // One request per pause in the typing, not one per keystroke.
   useEffect(() => {
     if (playerSearch === playerQuery) return;
     const timer = window.setTimeout(() => {
@@ -408,7 +448,6 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [tab, patch, mode, setsAttempt]);
 
-  // Fetch card drill-down
   useEffect(() => {
     if (!cardDrillDownId) {
       setDrillDownData(null);
@@ -432,11 +471,9 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md,
-  // B25): the focus moves to its Close when it opens, Tab and Shift+Tab stay inside, Escape and Back
-  // (R2127000, `DrillDownBackLayer`) close it, and the control that opened it has the focus back once
-  // it closes. That control is kept when it is pressed, not read off the focus, which a click on a
-  // button does not move in every browser.
+  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25; Escape and Back
+  // close it, R2127000). The control that opened it is kept when it is pressed, not read off the
+  // focus, which a click on a button does not move in every browser.
   const drillDownOpener = useRef<HTMLElement | null>(null);
   const drillDownDialog = useRef<HTMLDivElement>(null);
   const drillDownCloseButton = useRef<HTMLButtonElement>(null);
@@ -479,7 +516,6 @@ export default function StatsRoute(): ReactElement {
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
-  // R1966000: the Sets tab's figures, off the cards it read; R1973002: compared with the patch before.
   const setsSince = setsData ? previousPatchOf(setsData)?.name : undefined;
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   const sets = useMemo(() => (setsData ? setRows(setsData.cards, setsMinSample) : []), [setsData, setsMinSample]);
@@ -504,7 +540,6 @@ export default function StatsRoute(): ReactElement {
     return KEYWORD_KINDS.filter((kind) => present.has(kind));
   }, []);
 
-  // Toggle sort
   const handleSort = (col: SortColumn) => {
     if (sortCol === col) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -514,7 +549,6 @@ export default function StatsRoute(): ReactElement {
     }
   };
 
-  // Filter and sort cards
   const filteredCards = useMemo(() => {
     if (!cardStatsData) return [];
     let list = [...cardStatsData.cards];
@@ -532,7 +566,18 @@ export default function StatsRoute(): ReactElement {
     const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
       shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
     list.sort((a, b) => {
-      if (sortCol === "winRate") {
+      if (sortCol === "adjustedWinRate") {
+        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
+        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+        const aRate = a.adjustedWinRate ?? null;
+        const bRate = b.adjustedWinRate ?? null;
+        if (aRate !== null && bRate === null) return -1;
+        if (aRate === null && bRate !== null) return 1;
+        if (aRate !== null && bRate !== null && aRate !== bRate) {
+          return (aRate - bRate) * flip;
+        }
+      } else if (sortCol === "winRate") {
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
         if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
@@ -586,13 +631,11 @@ export default function StatsRoute(): ReactElement {
 
   // R2089000: the Created cards in the server's order, those the search box asks for as the deck rows are.
   const createdCards = (cardStatsData?.created ?? []).filter((card) => matchesSearch(card, search));
-  // R2370000: of those, the catalog's tokens.
   const tokenCards = createdCards.filter((card) => CATALOG[card.id]?.token === true);
 
   const summary = cardStatsData?.summary;
 
-  // R1973002: the patch shown, the picker's choices and the patches either side of it. The newest is
-  // asked for with no `?patch=`, so the address stays the plain one.
+  // R1973002: the newest patch is asked for with no `?patch=`, so the address stays the plain one.
   const patchList = cardStatsData?.patches ?? [];
   const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
   const pickable = offeredPatches(patchList, shownPatch);
@@ -604,6 +647,9 @@ export default function StatsRoute(): ReactElement {
   const drillDownRadiantFace =
     drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
+  // R2756000: the arts offered and the one the faces print: the one picked, else the setting's Epic or the normal face.
+  const drillDownArts = drillDownDef ? artsOf(drillDownDef.id) : [];
+  const shownArt: DrillDownArt = drillDownArt ?? (fullArtSetting ? "Epic" : "normal");
 
   return (
     <CardDefsProvider defs={CATALOG}>
@@ -789,13 +835,14 @@ export default function StatsRoute(): ReactElement {
                   className="stats-select"
                   data-testid={statsTestid.modeSelect}
                   value={mode}
-                  onChange={(e) => setMode(e.target.value)}
+                  onChange={(e) => setMode(modeOf(new URLSearchParams({ mode: e.target.value })))}
                   aria-label={t("Filter by match type")}
                 >
-                  <option value="">{t("All modes")}</option>
-                  <option value="bo1">{t("Best of 1")}</option>
-                  <option value="bo3">{t("Conquest")}</option>
-                  <option value="random">{t("All Random")}</option>
+                  {MODES.map((known) => (
+                    <option key={known} value={known}>
+                      {t(MODE_LABELS[known])}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -961,6 +1008,8 @@ export default function StatsRoute(): ReactElement {
                         )}
                       </button>
                       <dl className="stats-grid-figures">
+                        <dt>{t("Adjusted")}</dt>
+                        <dd>{card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}</dd>
                         <dt>{t("Win rate")}</dt>
                         <dd>
                           {card.hasEnoughGames && card.winRate !== null
@@ -1016,6 +1065,22 @@ export default function StatsRoute(): ReactElement {
                           {t("Games")} {sortCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
+                        title={t("50% plus how far drawing the card moves its deck's win rate, counted only as far as its games bear out")}
+                        aria-sort={sortCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("adjustedWinRate")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("adjustedWinRate");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Adjusted")} {sortCol === "adjustedWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
@@ -1149,6 +1214,9 @@ export default function StatsRoute(): ReactElement {
                             <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
+                          <td className="stats-td" data-testid={statsTestid.adjustedCell}>
+                            {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
+                          </td>
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
                               <div className="stats-winrate-cell">
@@ -1523,22 +1591,45 @@ export default function StatsRoute(): ReactElement {
               <div className="stats-drilldown-body">
                 {drillDownDef && drillDownFace && (
                   <div className="stats-drilldown-cards">
-                    <div className="stats-drilldown-faces">
-                      <figure className="stats-drilldown-face">
-                        <div className="stats-drilldown-card-preview">
-                          <CardFace face={drillDownFace} layout="full" />
+                    {/* R2756000: the faces print the art picked. FullArtShown decides only an own copy's face (R1834000), so they
+                        are drawn as one; nothing else here reads OwnCopy (no inspect overlay, and CardFace's cosmetics follow
+                        `worn`, left false). The page has no FullArtOwned above it, so every tier counts as owned, as in the Almanac
+                        (R1313000). No pick is written. */}
+                    <OwnCopy own>
+                      <FullArtShown defId={fullArtSource(drillDownDef.id)} pick={artPick(drillDownDef.id, shownArt)}>
+                        <div className="stats-drilldown-faces">
+                          <figure className="stats-drilldown-face">
+                            <div className="stats-drilldown-card-preview">
+                              <CardFace face={drillDownFace} layout="full" />
+                            </div>
+                            {drillDownRadiantFace && <figcaption className="stats-drilldown-caption">{t("Normal")}</figcaption>}
+                          </figure>
+                          {drillDownRadiantFace && (
+                            <figure className="stats-drilldown-face" data-testid={statsTestid.drillDownRadiantFace}>
+                              <div className="stats-drilldown-card-preview">
+                                <CardFace face={drillDownRadiantFace} layout="full" />
+                              </div>
+                              <figcaption className="stats-drilldown-caption">{t("Radiant")}</figcaption>
+                            </figure>
+                          )}
                         </div>
-                        {drillDownRadiantFace && <figcaption className="stats-drilldown-caption">{t("Normal")}</figcaption>}
-                      </figure>
-                      {drillDownRadiantFace && (
-                        <figure className="stats-drilldown-face" data-testid={statsTestid.drillDownRadiantFace}>
-                          <div className="stats-drilldown-card-preview">
-                            <CardFace face={drillDownRadiantFace} layout="full" />
-                          </div>
-                          <figcaption className="stats-drilldown-caption">{t("Radiant")}</figcaption>
-                        </figure>
-                      )}
-                    </div>
+                      </FullArtShown>
+                    </OwnCopy>
+                    {drillDownArts.length > 0 && (
+                      <div className="stats-drilldown-actions" role="group" aria-label={t("Full art")} data-testid={statsTestid.drillDownArt}>
+                        {drillDownArts.map((art) => (
+                          <button
+                            key={art}
+                            type="button"
+                            className="stats-drilldown-action"
+                            aria-pressed={shownArt === art}
+                            onClick={() => setDrillDownArt(art)}
+                          >
+                            {t(ART_LABELS[art])}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"

@@ -1,6 +1,5 @@
-// R388, R507: a patch's cards as the Patch notes page sorts them, and one card's history, newest
-// first. Order always comes from patches.json (R105 as B4.2 rewrites it): the fixture versions sort
-// the wrong way as strings.
+// R388, R507: a patch's cards as the Patch notes page sorts them, and one card's history, newest first.
+// Order comes from patches.json (R105 as B4.2 rewrites it): fixture versions sort wrong as strings.
 
 import type { CardDef } from "@jackioh/shared";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
@@ -189,8 +188,7 @@ describe("R388 one card's history", () => {
     const snapshots = new Map<string, Snapshot | null>();
     for (const version of versions) snapshots.set(version, await realPatchSource.snapshot(version));
     const entries = cardHistory("core-003", patches, index, snapshots);
-    // Promotions only append to a card's index, so in this newest-first list they prepend:
-    // the five versions the brief checked are the tail.
+    // Promotions append to a card's index, so they prepend here: the brief's five versions are the tail.
     expect(entries.map((entry) => entry.patch.version).slice(-5)).toEqual(["v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0b", "v0.1.0"]);
     expect(entries.at(-1)?.delta.kind).toBe("added");
   });
@@ -202,8 +200,7 @@ describe("R388 one card's history", () => {
     expect(versions.slice(0, 2)).toEqual(["v0.1.1", "v0.2.0"]);
     const snapshots = new Map<string, Snapshot | null>();
     for (const version of versions) snapshots.set(version, await realPatchSource.snapshot(version));
-    // Added in v0.2.0 and unchanged since — until a promoted patch touches it again (R646),
-    // which turns "unchanged since" off by adding a second history entry.
+    // Unchanged since v0.2.0 until a promoted patch adds it a second history entry (R646).
     expect(unchangedSince(cardHistory("classic-001", patches, index, snapshots))).toBe(
       (index["classic-001"] ?? []).length === 1 ? "v0.2.0" : null,
     );

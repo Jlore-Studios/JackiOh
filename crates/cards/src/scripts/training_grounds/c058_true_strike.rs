@@ -53,9 +53,7 @@ pub fn script() -> CardScripts {
 }
 
 // #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
-// Must-pass row (BUILD M4-T4 #44): "4 damage through Armor 7; Divine Shield still blocks; exiled;
-// radiant 8." Pierce skips §4.4 step 2 only, so each half is one test: #25 4-mana 7/7 (Armor 7) takes
-// the full hit, #56 Jilliax (Divine Shield) takes none because step 1 negates the whole instance.
+// Must-pass row: BUILD M4-T4 #44. Fixtures: #25 4-mana 7/7 (Armor 7) and #56 Jilliax (Divine Shield).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -293,7 +291,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-044, on both faces: the damage through Armor, and the exile.
+    /// R2195003: the snapshot plays exactly as core-044, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_044() {
         for radiant in [false, true] {

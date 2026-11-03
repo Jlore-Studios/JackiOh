@@ -1,23 +1,6 @@
 //! Buying and opening card packs (SPEC §14.1, §14.3; #1301), on the server, its one screen the
 //! account page's opening (#1308): the store's grants around `economy::roll`'s pure roll, each in
 //! one transaction.
-//!
-//! - [`buy_pack_once`]: `PACK_PRICE_JLORE` out of the wallet and an unopened pack into the
-//!   inventory; a wallet that cannot cover it is refused and changes nothing (§14.1).
-//! - [`open_pack`]: under the account's lock, one unopened pack spent, its slots rolled from a
-//!   fresh seed and every grant written, its cards, cosmetics, pity counters and bars, a full bar
-//!   paying its tokens with the overflow kept (`economy::tokens::settle_bar`, R1305000, R1305001),
-//!   a duplicate's account cosmetic of the global roll owned for the account (R1661001), with the
-//!   opening's log (its catalog, cosmetics, seed and result) in the `ref` of every economy row it
-//!   writes (R1301003). It answers what each bar did, its points before and after and what it
-//!   paid ([`BarsSettled`]). The whole opening or nothing: every refusal returns
-//!   before the commit, and the dropped `Tx` rolls it all back.
-//! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters, the odds and the
-//!   unopened packs held), `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
-//!   or `GLOBAL_PACK_NAME`, and an optional `Idempotency-Key`, under which a retry answers as its
-//!   first try did and spends nothing again ([`buy_pack_once`], [`open_pack_once`], R2124000). Each
-//!   spend runs in the account's turn, the account's other spends waiting theirs, and one sent past
-//!   `ECONOMY_SPENDS_WAITING_MAX` is 429 `rate_limited` (`economy::spend_slots`, R2378000).
 
 use std::sync::Arc;
 
@@ -31,9 +14,9 @@ use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, str};
 use crate::app::App;
 use crate::config::{
-    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
-    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
-    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
+    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, GLOBAL_COSMETIC_FLOOR_RARITY,
+    GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS,
+    PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
@@ -45,7 +28,7 @@ use crate::economy::store::{
     InventoryItem, JloreGrant, JloreReason,
 };
 use crate::economy::tiers::{card_odds, cosmetic_odds};
-use crate::economy::tokens::{card_bar_points, settle_bar};
+use crate::economy::tokens::{card_bar_points, settle_bar, settle_cosmetic_bar};
 
 /// The collection ledger's reason for a card a pack unlocks: migration 0002's `pack`, one of its
 /// closed set, as `api::collection::LAUNCH_GRANT_REASON` is its `launch`.
@@ -74,7 +57,8 @@ pub struct OpenedPack {
 
 /// One token bar across an opening (R1305000): its points `before` the opening and `after` it (the
 /// overflow a pay leaves kept), its `size` and how many times it `pays` in this opening. Every
-/// opening moves both bars, since every slot adds points (R1999000).
+/// opening moves both bars, since every slot adds points (R1999000). The cosmetic bar's `size` is
+/// the size of the step it stands at after the opening (R2728000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarSettle {
@@ -84,17 +68,20 @@ pub struct BarSettle {
     pub pays: i64,
 }
 
-/// What an opening did to both token bars (R1305000, R1305001), for the client to animate from
-/// where each stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the
-/// cycle's steps it paid, in order, so its length is `cosmetic.pays`, and `slot_points` are the
-/// points each slot added to each bar, in slot order, every slot's its rolled rarity's, so the
-/// client can send each slot's points to the bars without counting them (R1953000, R1999000).
+/// What an opening did to both token bars (R1305000, R1305001), for the client to animate from where each
+/// stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the cycle's steps it paid, in
+/// order (so its length is `cosmetic.pays`), `cosmetic_sizes` the size of each step its sweep crosses
+/// (R2728000), and `slot_points` are the points each slot added to each bar, in slot order, so the client
+/// sends each slot's points to the bars without counting (R1953000, R1999000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarsSettled {
     pub card: BarSettle,
     pub cosmetic: BarSettle,
     pub cosmetic_paid: Vec<CosmeticTokenStep>,
+    /// R2728000: the size of each step the cosmetic bar's sweep crosses: each step paid, in order,
+    /// then the step it stands at after (`cosmetic.size`), so `cosmetic.pays + 1` entries.
+    pub cosmetic_sizes: Vec<i64>,
     pub slot_points: Vec<i64>,
 }
 
@@ -139,7 +126,6 @@ fn unopened_from(inventory: &[InventoryEntry]) -> Vec<Value> {
         .collect()
 }
 
-/// The pack a request body names (`{ pack }`).
 fn pack_of(body: &Value) -> Result<PackKind, ApiError> {
     let name = str(body, "pack")?;
     PackKind::parse(&name).ok_or_else(|| bad_request(format!("no card pack is named \"{name}\"")))
@@ -149,18 +135,14 @@ fn no_pack_held() -> ApiError {
     ApiError::new(ApiErrorCode::Conflict, "no unopened pack of that kind")
 }
 
-/// A count as a ledger delta.
 pub(crate) fn delta_of(count: usize) -> Result<i64, ApiError> {
     i64::try_from(count).map_err(|_| ApiError::internal(format!("{count} does not fit a ledger delta")))
 }
 
-/// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction: the wallet's debit, then the
-/// pack, unopened, into the inventory, each with its ledger row. A wallet that cannot cover the
-/// price is 409 and writes nothing (§14.1). Under an `Idempotency-Key` (R2124000): a keyed buy
-/// takes the account's lock first, so a retry racing its first try waits for it (through the route
-/// it waits its turn first, R2378000), then answers a key it already committed as it did then, and
-/// keeps the answer of one it buys in the same transaction. A buy with no key takes no lock and
-/// keeps nothing, as before keys.
+/// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction; a wallet that cannot cover it is 409 and
+/// writes nothing (§14.1). A keyed buy (R2124000) takes the account's lock first, so a retry racing its first
+/// try waits for it (after its turn, R2378000), then answers a committed key as it did then and keeps a new
+/// buy's answer in its transaction. A buy with no key takes no lock and keeps nothing.
 pub async fn buy_pack_once(
     app: &App,
     profile_id: &str,
@@ -254,9 +236,9 @@ pub(crate) fn cycle_at(position: i64) -> CosmeticTokenStep {
     COSMETIC_TOKEN_CYCLE[(position % COSMETIC_TOKEN_CYCLE.len() as i64) as usize]
 }
 
-/// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5): a Rare or an
-/// Epic cosmetic token, or a cosmetic pack. A pack opening's bar and a dev account's fill
-/// (`api::dev::fill_bar`, R1310003) both pay through it.
+/// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5; a Legendary token among
+/// them, R2728000). A pack opening's bar and a dev account's fill (`api::dev::fill_bar`, R1310003) both
+/// pay through it.
 pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
     match cycle_at(position) {
         CosmeticTokenStep::Rare => (
@@ -267,14 +249,18 @@ pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
             InventoryItem::CosmeticToken,
             CosmeticRarity::Epic.as_str().to_string(),
         ),
+        CosmeticTokenStep::Legendary => (
+            InventoryItem::CosmeticToken,
+            CosmeticRarity::Legendary.as_str().to_string(),
+        ),
         CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
     }
 }
 
 /// Writes the cards an opening unlocked, `unlocked` copies per card over the copies `owned` before
 /// it: the collection's absolute quantities, then its ledger's deltas (reason [`PACK_GRANT_REASON`]),
-/// as `api::collection::grant_cards` writes them. Nothing unlocked writes nothing. A card pack's
-/// opening and a cosmetic pack's both write through it (R1306000).
+/// as `api::collection::grant_cards` writes them. A card pack's opening and a cosmetic pack's both
+/// write through it (R1306000).
 pub(crate) async fn grant_unlocked(
     tx: &mut Tx<'_>,
     profile_id: &str,
@@ -315,12 +301,10 @@ pub fn slot_bar_points(slots: &[Slot]) -> Vec<i64> {
 }
 
 /// Both token bars' points for an opening's slots, `slot_points` each slot's to each bar
-/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size
-/// (R1305000, R1305001): the points accrue, a bar that reaches its size pays its tokens and keeps
-/// the overflow, and the cosmetic bar's payouts are the cycle's next steps, whose stored position
-/// then advances. Each bar's write carries `reference`, the opening's log, and every row shares
-/// `at`; `counters` is the account's before the opening. It answers what each bar did, for the
-/// opening's answer. A card pack's opening and a cosmetic pack's both settle through it (R1306001).
+/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size (R1305000, R1305001), the
+/// cosmetic bar step by step at each step's own size (`settle_cosmetic_bar`, R2728000). Each bar's write
+/// carries `reference`, the opening's log, and every row shares `at`; `counters` is the account's before
+/// the opening. A card pack's opening and a cosmetic pack's both settle through it (R1306001).
 pub(crate) async fn settle_bars(
     tx: &mut Tx<'_>,
     profile_id: &str,
@@ -335,9 +319,8 @@ pub(crate) async fn settle_bars(
     let cosmetic_bar_before = bar_before(counters, Counter::CosmeticTokenBar);
     let cycle_before = bar_before(counters, Counter::CosmeticTokenCycle);
 
-    // The card token bar (R1305000): the slots' points accrue, and a bar that reaches its size
-    // pays card tokens and keeps the overflow, in this transaction. The paying write replaces the
-    // accrual row, so still one row per bar per opening.
+    // The card token bar (R1305000): the paying write replaces the accrual row, so still one row
+    // per bar per opening.
     let (card_pays, card_remainder) = settle_bar(card_bar_before, gained, CARD_TOKEN_BAR_SIZE);
     if card_pays > 0 {
         grant_counter(
@@ -376,9 +359,10 @@ pub(crate) async fn settle_bars(
     }
 
     // The cosmetic token bar (R1305000, R1305001): as above, and each payout is the cycle's next
-    // step, whose stored position then advances by the payouts.
-    let (cosmetic_pays, cosmetic_remainder) =
-        settle_bar(cosmetic_bar_before, gained, COSMETIC_TOKEN_BAR_SIZE);
+    // step, paid at its own size (R2728000), whose stored position then advances by the payouts.
+    let (cosmetic_paid, cosmetic_remainder) = settle_cosmetic_bar(cosmetic_bar_before, gained, cycle_before);
+    let cosmetic_pays = delta_of(cosmetic_paid.len())?;
+    let resting = cycle_at(cycle_before + cosmetic_pays);
     if cosmetic_pays > 0 {
         grant_counter(
             tx,
@@ -437,27 +421,23 @@ pub(crate) async fn settle_bars(
         cosmetic: BarSettle {
             before: cosmetic_bar_before,
             after: cosmetic_remainder,
-            size: COSMETIC_TOKEN_BAR_SIZE,
+            size: resting.bar_size(),
             pays: cosmetic_pays,
         },
-        cosmetic_paid: (0..cosmetic_pays)
-            .map(|paid| cycle_at(cycle_before + paid))
+        cosmetic_sizes: cosmetic_paid
+            .iter()
+            .chain([&resting])
+            .map(|step| step.bar_size())
             .collect(),
+        cosmetic_paid,
         slot_points,
     })
 }
 
-/// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock
-/// (R1301003) it reads the pack held, the collection, the per-card and account cosmetics and the
-/// counters (the pity counters and both bars with the cycle's position), rolls the opening from
-/// `seed` (`roll::roll_opening`) and writes every grant: the pack spent, the new cards (the
-/// collection and its ledger, reason `pack`), the cosmetics, a per-card one on its slot's card and
-/// an account one on none (R1661001), each pity counter that moved, both bars' points for every
-/// slot, each its slot's rarity's whatever it grants (R1953000, R1999000), and each bar that
-/// reached its size paying its tokens with the overflow kept (R1305000, R1305001). Every economy
-/// row's `ref` is the opening's log; the collection's rows have no `ref` and share the opening's
-/// `at`. No pack held is 409. Every refusal and failure returns before the commit, so it writes
-/// nothing. With no key, [`open_pack_once`]'s opening.
+/// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock (R1301003)
+/// it rolls the opening from `seed` (`roll::roll_opening`) and writes every grant. Every economy row's `ref`
+/// is the opening's log; the collection's rows have no `ref` and share the opening's `at`. No pack held is
+/// 409, writing nothing. With no key, [`open_pack_once`]'s opening.
 pub async fn open_pack(
     app: &App,
     profile_id: &str,
@@ -529,7 +509,6 @@ pub async fn open_pack_once(
         .await?
         .ok_or_else(no_pack_held)?;
 
-    // The new cards, summed per card.
     let mut unlocked: IndexMap<String, i64> = IndexMap::new();
     for slot in &opening.slots {
         if slot.grant == SlotGrant::Card {
@@ -616,12 +595,9 @@ pub async fn open_pack_once(
 }
 
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
-/// screen to show (§14.4): the price and slots, each counter's threshold, and one roll's odds on
-/// the tier tables, the fallback included (R1339000): a slot's, the floored slot's and a
-/// duplicate's cosmetic, and a duplicate's global roll (R1661001), its `chance`,
-/// `GLOBAL_COSMETIC_ROLL_WEIGHT` over `TIER_WEIGHT_TOTAL`, and its `tiers`, the table floored at
-/// `GLOBAL_COSMETIC_FLOOR_RARITY`. It also lists the unopened packs the caller holds (`unopened`,
-/// [`unopened_from`]).
+/// screen to show (§14.4), and the unopened packs it holds. The odds are one roll's on the tier
+/// tables, the fallback included (R1339000), and a duplicate's global roll (R1661001) is its
+/// `chance` and its `tiers`, the table floored at `GLOBAL_COSMETIC_FLOOR_RARITY`.
 pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;

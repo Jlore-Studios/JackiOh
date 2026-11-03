@@ -7,10 +7,7 @@
 //! R1848002), so each of its hits destroys a Unit it deals 1 or more to. `give_next_spell_keyword`
 //! puts a `keywordNextSpell` modifier on its caster for this turn: the next Spell they play face-up
 //! takes Poisonous at §10.5 step 4 for that resolution alone, a Unit, Field Spell or Trap played
-//! meanwhile leaving it waiting, and the turn's cleanup ending it (R1848002). Then `damage_all` on
-//! the enemy hero and every enemy Unit, one hit each before one state check (R59), and a `draw`.
-//! The Radiant face prints Echo 1 (`StaticFlags.echo`, §6.2): the whole resolves twice, the second
-//! modifier spent by the same next Spell.
+//! meanwhile leaving it waiting, and the turn's cleanup ending it (R1848002).
 
 use jackioh_engine::prelude::*;
 
@@ -43,11 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #13 Asphyxiants Cloud — SPEC §8.10 row S 13, BUILD M12 row S 13: "1 to the enemy hero and to
-// each enemy Unit, each enemy Unit it deals 1 to destroyed, one with Divine Shield spared; draws 1;
-// the next Spell its caster plays this turn destroys each Unit its hits deal 1 or more to, and the
-// one after it does not; a Unit played between leaves it waiting; it ends with the turn; damage and
-// draw read through `param()`; radiant it all happens twice" (R1848002).
+// S #13 Asphyxiants Cloud — SPEC §8.10 row S 13, BUILD M12 row S 13 (R1848002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -68,8 +61,6 @@ mod tests {
         s.state().players[player].hero.health
     }
 
-    /// p1 holds the Cloud (Radiant when `radiant`) and `more`, with `mine` on its field; p2's field
-    /// holds `theirs`. Both draw from a pile of fillers.
     fn cloud_board(radiant: bool, more: Value, mine: Value, theirs: Value) -> Scenario {
         crate::register_all();
         let mut hand = vec![json!({ "def": CLOUD, "radiant": radiant })];
@@ -99,14 +90,11 @@ mod tests {
 
             s.expect_in_zone(&first, "graveyard");
             s.expect_in_zone(&second, "graveyard");
-            // Divine Shield took the hit, so nothing was dealt and nothing destroys it.
             s.expect_in_zone(&shielded, "field");
             assert_eq!(s.card(&shielded).damage, 0);
             assert_eq!(hero_health(&s, P2), HERO_HEALTH - 1);
-            // "All enemies": its caster's side is untouched.
             assert_eq!(s.card(&mine).damage, 0);
             assert_eq!(hero_health(&s, P1), HERO_HEALTH);
-            // The Cloud left the hand and one card came in.
             assert_eq!(s.hand(P1).len(), held);
         }
 
@@ -196,7 +184,6 @@ mod tests {
 
             assert_eq!(hero_health(&s, P2), HERO_HEALTH - 2);
             assert_eq!(s.hand(P1).len(), held + 1, "two drawn for the Cloud played");
-            // The first hit took the shield, and the repeat's Poisonous hit destroyed it.
             s.expect_in_zone(&shielded, "graveyard");
         }
     }

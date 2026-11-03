@@ -3,7 +3,12 @@
 // each in src/audio/music-manifest.json (SPEC §10.11 "Music", R631).
 //
 //   node apps/web/scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>]
+//   node apps/web/scripts/gen-music.mjs --candidates --root <scratchDir>
 //   pnpm --filter @jackioh/web gen:music
+//
+// `--candidates` renders the audition candidates (scripts/music/candidates.mjs) instead of the
+// shipped tracks, into a scratch tree only (it needs a `--root` outside this app) and with no size
+// budget: the owner listens to them, and the ones kept move into tracks.mjs.
 //
 // THE MUSIC IS COMPOSED HERE. Each track is a score written as code (scripts/music/tracks.mjs, on
 // the toolkit in compose.mjs): a key, a tempo, chord progressions, parts and melodies built on one
@@ -23,10 +28,10 @@
 // LOOP_GUARD_S before the loop's end to LOOP_TAIL_S after it (`seam`). So the jump is exact even on
 // a decoder that keeps AAC's encoder priming (2112 samples, about 48 ms, of delay) or trims more.
 //
-// CARD INTROS (R1352). A Legendary's or a Mythic's intro is a sting of its own: a few bars that play
-// once, then a short tail (the score's `tail`, not STING_TAIL_S) whose last `post.fadeOutS` seconds
-// fade to silence, so the file ends clean wherever the reverb is, and its loudness is measured over
-// the file it keeps (`post.loudnessOverFile`), so it sits at every other track's level. A track that
+// CARD INTROS (R1352, R2722000). A Legendary's or a Mythic's intro is a sting of its own: a fanfare
+// that plays once, then a short tail (the score's `tail`, not STING_TAIL_S) whose last
+// `post.fadeOutS` seconds fade to silence, so the file ends clean wherever the reverb is, and its
+// loudness is measured over the file it keeps (`post.loudnessOverFile`), so it sits at every other track's level. A track that
 // names none of these renders exactly as before, and its hash does not move.
 //
 // It is idempotent by input: a track renders again only when its hash (the MIDI bytes, the render
@@ -74,12 +79,15 @@ const PEAK_DB = -1.5;
 /**
  * MUSIC_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks. R1352
  * raised it from 24 MiB for the card intros (the shipped sets' and, with its release, the Meditative
- * set's), at the same encoding as every track.
+ * set's), at the same encoding as every track, and the stations' auditioned tracks raised it again
+ * from 28 MiB (three to seven in-game tracks a station, with room left for later sets' intros), and
+ * R2722000 from 42 MiB for the intros' fanfares (a riser, a Mythic's own motif and an ending make
+ * them about half as long again).
  */
-const BUDGET_BYTES = 28 * 1024 * 1024;
+const BUDGET_BYTES = 49 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 const FILE_MODE = 0o644;
-const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>]";
+const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>] [--candidates]";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -90,11 +98,12 @@ function usage(message) {
 }
 
 function parseArgs(argv) {
-  const opts = { check: false, force: false, only: null, root: path.resolve(SCRIPT_DIR, "..") };
+  const opts = { check: false, force: false, only: null, root: path.resolve(SCRIPT_DIR, ".."), candidates: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--check") opts.check = true;
     else if (arg === "--force") opts.force = true;
+    else if (arg === "--candidates") opts.candidates = true;
     else if (arg === "--only" || arg === "--root") {
       const value = argv[++i];
       if (value === undefined || value.startsWith("--")) usage(`${arg} needs a value`);
@@ -102,6 +111,7 @@ function parseArgs(argv) {
       else opts.root = path.resolve(value);
     } else usage(`unknown argument ${arg}`);
   }
+  if (opts.candidates && opts.root === path.resolve(SCRIPT_DIR, "..")) usage("--candidates renders into a scratch --root only");
   return opts;
 }
 
@@ -434,12 +444,15 @@ function fileSize(file) {
   }
 }
 
-function main() {
+async function main() {
   const opts = parseArgs(process.argv.slice(2));
+  const list = opts.candidates ? (await import("./music/candidates.mjs")).CANDIDATES : TRACKS;
+  // Candidates are auditioned, never shipped, so they answer to no budget.
+  const budget = opts.candidates ? Infinity : BUDGET_BYTES;
   const manifestPath = path.join(opts.root, "src/audio/music-manifest.json");
   const outDir = path.join(opts.root, "public/audio/music");
   const old = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, "utf8")) : { version: 1, format: FORMAT, files: {} };
-  const tracks = TRACKS.map((def) => ({ ...def.build(), id: def.id, loop: def.loop }));
+  const tracks = list.map((def) => ({ ...def.build(), id: def.id, loop: def.loop }));
   if (opts.only !== null && !tracks.some((t) => t.id === opts.only)) usage(`no track ${opts.only}`);
   const problems = [];
   const files = {};
@@ -489,7 +502,7 @@ function main() {
   if (opts.check) {
     for (const stray of strays) problems.push(`${stray}: not a track in scripts/music/tracks.mjs`);
     for (const id of Object.keys(old.files)) if (!known.has(id)) problems.push(`${id}: in the manifest but not a track`);
-    if (total > BUDGET_BYTES) problems.push(`budget: ${total} bytes on disk is over ${BUDGET_BYTES}`);
+    if (total > budget) problems.push(`budget: ${total} bytes on disk is over ${budget}`);
     if (problems.length > 0) {
       for (const p of problems) console.log(p);
       process.exit(1);
@@ -501,13 +514,17 @@ function main() {
   const ordered = {};
   for (const track of tracks) if (files[track.id] !== undefined) ordered[track.id] = files[track.id];
   const next = `${JSON.stringify({ version: 1, format: FORMAT, files: ordered }, null, 2)}\n`;
-  if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== next) fs.writeFileSync(manifestPath, next);
+  if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== next) {
+    // A scratch --root (the candidates') starts with no src/audio.
+    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    fs.writeFileSync(manifestPath, next);
+  }
   if (scratch !== null) fs.rmSync(scratch, { recursive: true, force: true });
-  if (total > BUDGET_BYTES) {
+  if (total > budget) {
     console.error(`gen-music: ${total} bytes on disk is over the ${BUDGET_BYTES} budget`);
     process.exit(1);
   }
   console.log(`gen-music: done, ${Object.keys(ordered).length} files, ${total} bytes on disk`);
 }
 
-main();
+await main();

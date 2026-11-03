@@ -1,20 +1,5 @@
-//! R190, docs/polish/5-sign-in.md B10, B11 and B12: which address a per-IP limit counts.
-//!
-//! §9.4 step 3 (20 redemptions per IP hash per hour) and R157's anonymous API bucket both key on
-//! "the IP hash". Behind a proxy it is read from `X-Forwarded-For`, but only from the entry the
-//! deployment's own proxies wrote: the `TRUSTED_PROXY_HOPS`-th from the right. Everything to its
-//! left was written by the caller.
-//!
-//!  - B10: with one trusted hop, the rightmost entry is the key, in `code_attempts.ipHash` and in
-//!    the anonymous limiter alike.
-//!  - B11: `CF-Connecting-IP` and `X-Real-IP` are never read; too few entries fall back to the
-//!    socket's peer address (axum's `ConnectInfo<SocketAddr>`), and no peer to `UNKNOWN_CLIENT_ADDRESS`.
-//!  - B12: `TRUSTED_PROXY_HOPS` is parsed by `load_env` and defaults to 0 (no proxy trusted), and the
-//!    router reports the fewest entries any request carried, never an address.
-//!  - An IPv6 client is counted by its /56, and an IPv4-mapped address as the IPv4 address.
-//!
-//! The router is the App's own (`app::router`, SURFACE §11.2), whose `GET /api/catalog` is open
-//! (R163: `auth: none`); the redemption floor is the production 250 ms on tokio's paused clock.
+//! R190, docs/polish/5-sign-in.md B10, B11, B12: client address parsing for IP limits (§9.4, R157).
+//! Open endpoint R163; SURFACE §11.2.
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
@@ -43,8 +28,6 @@ use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 use crate::support::deps;
 use crate::support::store::hmac_sha256_hex;
 
-// Fixtures
-
 /// R109's allowance, as the server carries it.
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 
@@ -61,8 +44,8 @@ const PEER: &str = "192.0.2.10";
 const PEPPER: &str = "client-address-test-pepper-of-32-characters-or-more";
 
 /// The test environment: `E2E=1` (the fake store and fixture auth), the compiled-in catalog
-/// version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind Render's edge
-/// (`render.yaml`).
+/// version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind the Cloudflare
+/// Worker, which writes `CF-Connecting-IP` as the one entry (wrangler.jsonc).
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [

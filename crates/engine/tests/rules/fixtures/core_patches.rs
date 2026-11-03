@@ -1,11 +1,6 @@
-//! Fixtures for the engine half of patch v0.2.0's Core patches and cosmetics (test/corePatches.test.ts):
-//! the play count R429 keeps (`timesPlayed`), the price a return that keeps it is noted with (R429,
-//! R766, issue #557) and the mark R437 puts on a card a delayed effect waits for. Test-only
-//! definitions and scripts, prefixed `cp-` and indexed from 4400, so they collide with no other file's.
-//!
-//! Port of `packages/engine/test/fixtures/corePatches.ts`. TS numbered its defs with a module counter
-//! (`nextIndex`, from 4400, one per `def` call in file order); each def here states the index that
-//! counter gave it.
+//! Fixtures for the engine half of the Core patches and cosmetics: R429's play count (`timesPlayed`),
+//! the kept price of a return (R766, issue #557) and R437's mark. Prefixed `cp-` and indexed from 4400,
+//! so they collide with no other file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -16,8 +11,8 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// TS `def(name, type, extra = {})`: a Core Common at cost 1, a 1/1 when it is a Unit (unless `extra`
-/// names `attack` or `health`), both faces alike, every other key of `extra` over it.
+/// A Core Common at cost 1, a 1/1 when it is a Unit (unless `extra` names `attack` or `health`),
+/// both faces alike, every other key of `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut rest = if extra.is_object() { extra } else { json!({}) };
     let attack = rest

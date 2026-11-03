@@ -1,67 +1,69 @@
-// Cloudflare production must match Vercel staging: routes, 404s and security headers.
-// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it,
-// but for the one header only staging sends (`X-Robots-Tag: noindex`, #770).
-// Cloudflare rewrites target `/`, list both slash spellings and use `404-page`.
-// Generated static pages need a folder rule; Vercel serves files before rewrites.
+// wrangler.jsonc and public/_headers: what Cloudflare serves the site with, in both environments.
+// Each environment serves apps/web/dist as static assets and sends only the server's paths, `/api/*`
+// and `/ws/*`, to apps/edge's Worker (`assets.run_worker_first`); every file it serves carries
+// `_headers`' security headers, whose CSP names the build's own hosts (static-pages.ts
+// `connectSources`). cloudflare-serve.test.ts holds how a path that is no file is answered, and
+// deploy-routes.test.ts holds `_redirects` to the route table.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { PUBLIC_PAGES } from "../../static-pages.ts";
-import { paths } from "./navigate.ts";
+import { CONNECT_SRC_PLACEHOLDER, connectSources } from "../../static-pages.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
 const PUBLIC = join(HERE, "../../public");
 
-type VercelConfig = {
-  rewrites: { source: string; destination: string }[];
-  headers: { source: string; headers: { key: string; value: string }[] }[];
-};
+type Assets = { directory?: string; not_found_handling?: string; run_worker_first?: unknown };
+type Environment = { name?: string; workers_dev?: boolean; preview_urls?: boolean; assets?: Assets };
+type Wrangler = Environment & { main?: string; env?: Record<string, Environment> };
+
+const wrangler = JSON5.parse<Wrangler>(readFileSync(join(ROOT, "wrangler.jsonc"), "utf8"));
+
+/** Production (the top level) and staging (`env.staging`), each as wrangler deploys it. */
+const ENVIRONMENTS: [string, Environment][] = [
+  ["production", wrangler],
+  ["staging", wrangler.env?.["staging"] ?? {}],
+];
+
+/** The paths the Worker answers: crates/server's routes (apps/edge/src/routing.ts `SERVER_ROUTES`). */
+const SERVER_ROUTES = ["/api/*", "/ws/*"];
+
+describe("wrangler.jsonc", () => {
+  it("has exactly the two environments, production at the top level and staging", () => {
+    expect(Object.keys(wrangler.env ?? {})).toEqual(["staging"]);
+    expect(wrangler.name).toBe("jackioh");
+    expect(wrangler.env?.["staging"]?.name).toBe("jackioh-staging");
+  });
+
+  it("serves the web build as static assets in both environments", () => {
+    for (const [name, environment] of ENVIRONMENTS) {
+      expect(environment.assets?.directory, name).toBe("./apps/web/dist");
+    }
+  });
+
+  it("answers an unrouted path with public/404.html and a 404 in both environments", () => {
+    for (const [name, environment] of ENVIRONMENTS) expect(environment.assets?.not_found_handling, name).toBe("404-page");
+  });
+
+  it("runs the Worker first for exactly /api/* and /ws/* in both environments: every other path is a file, a rewrite or the 404 page", () => {
+    expect(wrangler.main).toBe("./apps/edge/src/index.ts");
+    for (const [name, environment] of ENVIRONMENTS) expect(environment.assets?.run_worker_first, name).toEqual(SERVER_ROUTES);
+  });
+
+  it("serves staging only at staging.jackioh.com, behind Access: no workers.dev or preview address around it", () => {
+    const staging = wrangler.env?.["staging"];
+    expect(staging?.workers_dev).toBe(false);
+    expect(staging?.preview_urls).toBe(false);
+  });
+});
 
 type Header = { key: string; value: string };
 type HeaderBlock = { path: string; headers: Header[] };
-
-/** The one header staging sends and production must not: search engines leave the test copy out (#770). */
-const STAGING_ONLY_HEADER: Header = { key: "X-Robots-Tag", value: "noindex" };
-
-const isStagingOnly = (header: Header): boolean =>
-  header.key === STAGING_ONLY_HEADER.key && header.value === STAGING_ONLY_HEADER.value;
-
-/**
- * The header blocks `_headers` must hold for these vercel.json blocks: each path in Cloudflare's
- * spelling (`(.*)` as `*`), and the every-path block without STAGING_ONLY_HEADER. Every other
- * header, value and path is copied as it is, so any other difference fails the comparison.
- */
-function productionHeaders(staging: VercelConfig["headers"]): HeaderBlock[] {
-  return staging.map((block) => ({
-    path: block.source.replace("(.*)", "*"),
-    headers: block.source === "/(.*)" ? block.headers.filter((header) => !isStagingOnly(header)) : block.headers,
-  }));
-}
-
-const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as VercelConfig;
-
-const EMITTED = new Set(PUBLIC_PAGES.map((page) => page.path));
-
-function expectedRules(): string[] {
-  const rules: string[] = [];
-  for (const { source } of vercel.rewrites) {
-    const listed = /^\/\(([a-z|-]+)\)\{\/\}\?$/u.exec(source);
-    const byId = /^\/\(([a-z|-]+)\)\/\(\[\^\/\]\+\)\{\/\}\?$/u.exec(source);
-    const names = (listed ?? byId)?.[1]?.split("|");
-    if (names === undefined) throw new Error(`cloudflare-config.test.ts cannot read this source: ${source}`);
-    for (const name of names) {
-      const path = byId === null ? `/${name}` : `/${name}/:id`;
-      if (EMITTED.has(path)) rules.push(`${path} ${path}/ 200`);
-      else rules.push(`${path} / 200`, `${path}/ / 200`);
-    }
-  }
-  return rules;
-}
 
 const lines = (text: string): string[] =>
   text
@@ -69,149 +71,77 @@ const lines = (text: string): string[] =>
     .map((line) => line.replace(/\s+$/u, ""))
     .filter((line) => line.trim() !== "" && !line.trim().startsWith("#"));
 
-describe("public/_redirects", () => {
-  const rules = lines(readFileSync(join(PUBLIC, "_redirects"), "utf8")).map((line) => line.split(/\s+/u));
-
-  it("rewrites exactly the paths vercel.json rewrites, each page the build writes to its own folder", () => {
-    expect(rules.map((rule) => rule.join(" ")).sort()).toEqual(expectedRules().sort());
-  });
-
-  it("rewrites (200), never to an `index.html`, which Cloudflare answers with a redirect", () => {
-    for (const [from, to, status] of rules) {
-      expect(status, from).toBe("200");
-      expect(to, from).not.toMatch(/index\.html$/u);
+function blocks(): HeaderBlock[] {
+  const out: HeaderBlock[] = [];
+  for (const line of lines(readFileSync(join(PUBLIC, "_headers"), "utf8"))) {
+    if (!/^\s/u.test(line)) {
+      out.push({ path: line.trim(), headers: [] });
+      continue;
     }
-  });
-
-  function served(path: string): boolean {
-    if (path === "/" || rules.some(([from]) => from === path)) return true;
-    return path.endsWith("/") && EMITTED.has(path.slice(0, -1));
+    const at = line.indexOf(":");
+    out.at(-1)?.headers.push({ key: line.slice(0, at).trim(), value: line.slice(at + 1).trim() });
   }
+  return out;
+}
 
-  it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
-    const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays, the replay list's old home).
-      .filter(([name]) => name !== "hotseat" && name !== "duosDev")
-      .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
-    for (const path of fixed) {
-      expect(served(path), path).toBe(true);
-      if (path !== paths.landing) expect(served(`${path}/`), `${path}/`).toBe(true);
-    }
-    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat", "/dev/duos", "/dev/replays"]) expect(served(path), path).toBe(false);
-  });
-});
+const IMMUTABLE: Header[] = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
 
 describe("public/_headers", () => {
-  function blocks(): HeaderBlock[] {
-    const out: HeaderBlock[] = [];
-    for (const line of lines(readFileSync(join(PUBLIC, "_headers"), "utf8"))) {
-      if (!/^\s/u.test(line)) {
-        out.push({ path: line.trim(), headers: [] });
-        continue;
-      }
-      const at = line.indexOf(":");
-      out.at(-1)?.headers.push({ key: line.slice(0, at).trim(), value: line.slice(at + 1).trim() });
-    }
-    return out;
-  }
-
-  it("sends vercel.json's headers on every path, value for value, but for staging's noindex", () => {
-    const [first] = blocks();
-    expect(first?.path).toBe("/*");
-    const all = vercel.headers.find((block) => block.source === "/(.*)");
-    expect(first?.headers).toEqual(all?.headers.filter((header) => !isStagingOnly(header)));
+  it("has three blocks: every path, the fonts and the bundle", () => {
+    expect(blocks().map((block) => block.path)).toEqual(["/*", "/fonts/*", "/assets/*"]);
   });
 
-  it("has exactly vercel.json's header blocks, each path in Cloudflare's spelling (`(.*)` as `*`)", () => {
-    expect(blocks()).toEqual(productionHeaders(vercel.headers));
+  it("sends the security headers on every path, with an enforced CSP", () => {
+    const all = blocks().find((block) => block.path === "/*");
+    const headers = new Map((all?.headers ?? []).map(({ key, value }) => [key.toLowerCase(), value]));
+    expect([...headers.keys()]).toEqual([
+      "content-security-policy",
+      "x-frame-options",
+      "x-content-type-options",
+      "referrer-policy",
+      "permissions-policy",
+    ]);
+    expect(headers.get("x-frame-options")).toBe("DENY");
+    expect(headers.get("x-content-type-options")).toBe("nosniff");
+    expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+    expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+    const csp = headers.get("content-security-policy") ?? "";
+    // WebAssembly compilation needs `wasm-unsafe-eval` (docs/v0.3.0/SURFACE.md §10.3).
+    expect(csp).toMatch(/script-src 'self' 'wasm-unsafe-eval'(;|$)/u);
+    expect(csp).toMatch(/frame-ancestors 'none'/u);
+    expect(csp).toMatch(/^default-src 'self';/u);
   });
 
-  it("keeps staging out of search results (#770): vercel.json sends X-Robots-Tag: noindex on every path, _headers never", () => {
-    const all = vercel.headers.find((block) => block.source === "/(.*)");
-    expect(all?.headers.filter(isStagingOnly)).toHaveLength(1);
+  it("leaves the CSP's connect-src to the build, which names its own hosts in it", () => {
+    const csp = blocks()[0]?.headers.find((header) => header.key === "Content-Security-Policy")?.value ?? "";
+    expect(/connect-src ([^;]+)/u.exec(csp)?.[1]).toBe(CONNECT_SRC_PLACEHOLDER);
+    // The bundle connects only to its own origin (the API), Supabase (sign-in) and its own host's sockets.
+    expect(connectSources("https://jackioh.com", "https://exmjdaswedxhnzmpzqrq.supabase.co")).toBe(
+      "'self' https://exmjdaswedxhnzmpzqrq.supabase.co wss://jackioh.com",
+    );
+    expect(connectSources("https://staging.jackioh.com", "https://exmjdaswedxhnzmpzqrq.supabase.co/")).toBe(
+      "'self' https://exmjdaswedxhnzmpzqrq.supabase.co wss://staging.jackioh.com",
+    );
+    // A build without Supabase (`build:e2e`) never signs in, so its CSP names no Supabase host.
+    expect(connectSources("https://staging.jackioh.com", undefined)).toBe("'self' wss://staging.jackioh.com");
+    expect(connectSources("https://staging.jackioh.com", "")).toBe("'self' wss://staging.jackioh.com");
+  });
+
+  it("sends no X-Robots-Tag: staging is behind Access, so no crawler reaches it, and production is meant to be found", () => {
     const keys = blocks().flatMap((block) => block.headers.map((header) => header.key.toLowerCase()));
     expect(keys).not.toContain("x-robots-tag");
   });
 
-  it("allows staging exactly one extra header, X-Robots-Tag: noindex on every path (#770)", () => {
-    const shared = { key: "X-Frame-Options", value: "DENY" };
-    const cache = { key: "Cache-Control", value: "public, max-age=31536000, immutable" };
-    expect(
-      productionHeaders([
-        { source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] },
-        { source: "/fonts/(.*)", headers: [cache] },
-      ]),
-    ).toEqual([
-      { path: "/*", headers: [shared] },
-      { path: "/fonts/*", headers: [cache] },
-    ]);
-  });
-
-  it("fails on any other difference between the two header sets (#770)", () => {
-    const shared = { key: "X-Frame-Options", value: "DENY" };
-    const cache = { key: "Cache-Control", value: "public, max-age=31536000, immutable" };
-    const fonts = { source: "/fonts/(.*)", headers: [cache] };
-    const production: HeaderBlock[] = [
-      { path: "/*", headers: [shared] },
-      { path: "/fonts/*", headers: [cache] },
-    ];
-    const differing: VercelConfig["headers"][] = [
-      // Another extra header on every path.
-      [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER, { key: "X-Other", value: "1" }] }, fonts],
-      // The header with another value, or spelled another way.
-      [{ source: "/(.*)", headers: [shared, { key: "X-Robots-Tag", value: "none" }] }, fonts],
-      [{ source: "/(.*)", headers: [shared, { key: "x-robots-tag", value: "noindex" }] }, fonts],
-      // The header on another path.
-      [{ source: "/(.*)", headers: [shared] }, { source: "/fonts/(.*)", headers: [cache, STAGING_ONLY_HEADER] }],
-      // A shared header missing or changed, or a block missing.
-      [{ source: "/(.*)", headers: [STAGING_ONLY_HEADER] }, fonts],
-      [{ source: "/(.*)", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, STAGING_ONLY_HEADER] }, fonts],
-      [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] }],
-    ];
-    for (const staging of differing) {
-      expect(productionHeaders(staging), JSON.stringify(staging)).not.toEqual(production);
-    }
-    // Production sending the header is a difference too.
-    expect(productionHeaders([{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] }, fonts])).not.toEqual([
-      { path: "/*", headers: [shared, STAGING_ONLY_HEADER] },
-      { path: "/fonts/*", headers: [cache] },
-    ]);
-  });
-
   it("lets a browser keep the web fonts a year (#262): their names carry their versions", () => {
-    const fonts = blocks().find((block) => block.path === "/fonts/*");
-    expect(fonts?.headers).toEqual([{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]);
+    expect(blocks().find((block) => block.path === "/fonts/*")?.headers).toEqual(IMMUTABLE);
     const files = readdirSync(join(PUBLIC, "fonts")).filter((file) => file.endsWith(".woff2"));
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) expect(file, "a versioned name").toMatch(/-\d+\.\d+\.\d+-/u);
   });
 
   it("lets a browser keep the bundle and the engine's module a year (#778): Vite names every file in /assets/ by its hash", () => {
-    const cache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
-    expect(blocks().find((block) => block.path === "/assets/*")?.headers).toEqual(cache);
-    expect(vercel.headers.find((block) => block.source === "/assets/(.*)")?.headers).toEqual(cache);
+    expect(blocks().find((block) => block.path === "/assets/*")?.headers).toEqual(IMMUTABLE);
     // Only Vite writes /assets/: nothing in public/ is served there under a name without a hash.
     expect(readdirSync(PUBLIC)).not.toContain("assets");
-  });
-});
-
-describe("wrangler.jsonc", () => {
-  const text = readFileSync(join(ROOT, "wrangler.jsonc"), "utf8")
-    .split("\n")
-    .filter((line) => !line.trim().startsWith("//"))
-    .join("\n");
-  const config = JSON.parse(text) as {
-    main?: string;
-    assets?: { directory?: string; not_found_handling?: string; run_worker_first?: unknown };
-  };
-
-  it("serves the web build as static assets, with no Worker script and so no secrets", () => {
-    expect(config.main).toBeUndefined();
-    expect(config.assets?.directory).toBe("./apps/web/dist");
-    expect(config.assets?.run_worker_first).toBeUndefined();
-  });
-
-  it("answers an unrouted path with public/404.html and a 404, as Vercel does", () => {
-    expect(config.assets?.not_found_handling).toBe("404-page");
   });
 });

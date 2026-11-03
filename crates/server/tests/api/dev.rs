@@ -1,11 +1,4 @@
-//! SPEC §14.10, R1300000: the dev accounts and their tools (`src/api/dev.rs`). `DEV_PROFILE_IDS`
-//! is parsed at boot and a malformed id fails it; `/api/auth/me` says `isDev`; every dev route
-//! answers anyone the list does not name 403 and writes nothing; each give, fill and clear writes
-//! ledger rows marked `dev`, and a clear removes what it names and nothing else.
-//!
-//! The whole router over the fake store, from two accounts seeded active (`DEV`, listed, in upper
-//! case, and `OTHER`, not), each with nothing until a test grants it. Expectations are computed
-//! from the real catalog and the shipped cosmetics registry.
+//! Dev accounts and administrative tools (`src/api/dev.rs`, SPEC §14.10, R1300000).
 
 use std::sync::Arc;
 
@@ -16,7 +9,7 @@ use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
-use jackioh_server::cosmetics::{CosmeticKind, shipped};
+use jackioh_server::cosmetics::{ANIMATED_ART_ID_PREFIX, CosmeticKind, JLORIOUS_CARD_BACK, shipped};
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
@@ -33,10 +26,6 @@ use crate::support::store::fake;
 const DEV: &str = "d0000000-0000-4000-8000-000000001300";
 /// An active account it does not.
 const OTHER: &str = "d0000000-0000-4000-8000-000000001301";
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// A server environment that `load_env` takes, with `extra` on top (`env_github_issues.rs`'s).
 fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
@@ -125,8 +114,7 @@ fn economy_calls(calls: &std::sync::Mutex<Vec<String>>) -> Vec<String> {
         .collect()
 }
 
-/// Everything §14.10's clears name, as the store holds it for `profile_id`: the cards owned (above
-/// 0), the cosmetics, the Jlore, the counters above 0 and the tracks off their start.
+/// §14.10: holdings tracked for profile: cards, cosmetics, Jlore, counters, tracks.
 #[derive(Clone, Debug, PartialEq)]
 struct Holdings {
     cards: Vec<CollectionEntry>,
@@ -255,9 +243,7 @@ fn collectable(app: &App) -> Vec<String> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------------------------
 // The list (§14.10: read at boot, a malformed id fails it)
-// ---------------------------------------------------------------------------------------------
 
 #[test]
 fn r1300000_unset_or_blank_lists_no_dev_account() {
@@ -316,9 +302,7 @@ fn dev_profile_ids_is_server_only() {
     assert!(SERVER_ONLY_ENV_VARS.contains(&"DEV_PROFILE_IDS"));
 }
 
-// ---------------------------------------------------------------------------------------------
 // The server decides (CLAUDE.md rule 7)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1300000_me_says_is_dev_for_a_listed_account_only() {
@@ -366,9 +350,7 @@ async fn r1300000_a_non_dev_gets_403_on_every_dev_route_and_nothing_is_written()
     assert_eq!(card_grants(&app, OTHER).await, Vec::<CollectionGrant>::new());
 }
 
-// ---------------------------------------------------------------------------------------------
 // Give
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1300000_giving_xp_moves_the_track_through_the_level_curve_marked_dev() {
@@ -465,12 +447,10 @@ async fn r1300000_giving_jlore_adds_it_marked_dev() {
     assert_eq!(holdings(&app, DEV).await.jlore, 75);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Fill
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
-async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
+async fn r1300000_r2755000_fill_grants_every_card_and_every_cosmetic_but_the_jlorious_back_marked_dev() {
     let (app, dev, _other) = dev_app().await;
     let cards = collectable(&app);
     let registry = shipped().expect("the registry parses");
@@ -494,7 +474,11 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     let mut account_cosmetics: Vec<String> = registry
         .iter()
         .filter(|cosmetic| {
-            !cosmetic.default && !per_card(cosmetic.kind) && cosmetic.kind != CosmeticKind::FullArt
+            !cosmetic.default
+                && !per_card(cosmetic.kind)
+                && cosmetic.kind != CosmeticKind::FullArt
+                // R2755000: only reaching Jlorious grants it.
+                && !cosmetic.jlorious
         })
         .map(|cosmetic| cosmetic.id.clone())
         .collect();
@@ -533,6 +517,7 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     );
     assert_eq!(held.cosmetics.cards.len(), on_cards);
     assert_eq!(held.cosmetics.account, account_cosmetics);
+    assert!(!held.cosmetics.account.iter().any(|id| id == JLORIOUS_CARD_BACK));
     // No default: every account owns those with no row (§14.2).
     assert!(
         held.cosmetics.cards.iter().all(|owned| {
@@ -573,13 +558,50 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     assert_eq!(ledger(&app, DEV).await, after);
 }
 
-// ---------------------------------------------------------------------------------------------
-// Clear
-// ---------------------------------------------------------------------------------------------
+#[tokio::test]
+async fn r2715000_fill_grants_each_full_art_card_its_animated_art() {
+    let (app, dev, _other) = dev_app().await;
+    let registry = shipped().expect("the registry parses");
+    // The 21 Animated arts, each on the one card it names (R1313000, R2715000).
+    let animated: Vec<(&str, &str)> = registry
+        .iter()
+        .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+        .filter(|cosmetic| cosmetic.id.starts_with(ANIMATED_ART_ID_PREFIX))
+        .filter_map(|cosmetic| Some((cosmetic.card.as_deref()?, cosmetic.id.as_str())))
+        .collect();
+    assert_eq!(animated.len(), 21);
+    assert!(
+        holdings(&app, DEV).await.cosmetics.cards.is_empty(),
+        "the dev account starts with no per-card cosmetic"
+    );
 
-/// A fresh app whose dev account holds something of every kind a clear names: a fill's cards and
-/// cosmetics, Jlore, a track's XP, and a pity counter a pack opening counted (no dev tool sets
-/// one).
+    ok(&app, "/api/dev/fill", &dev, json!({})).await;
+
+    // Each is owned on its own card, and on no other, as a dev grant.
+    let held = holdings(&app, DEV).await;
+    for (card, id) in &animated {
+        let on: Vec<&str> = held
+            .cosmetics
+            .cards
+            .iter()
+            .filter(|owned| owned.cosmetic_id == *id)
+            .map(|owned| owned.card_id.as_str())
+            .collect();
+        assert_eq!(on, [*card], "{id}");
+    }
+    let rows: Vec<(bool, bool)> = ledger(&app, DEV)
+        .await
+        .cosmetics
+        .iter()
+        .filter(|row| row.cosmetic_id.starts_with(ANIMATED_ART_ID_PREFIX))
+        .map(|row| (row.reason == EconomyReason::Dev, row.dev))
+        .collect();
+    assert_eq!(rows, vec![(true, true); animated.len()]);
+}
+
+// Clear
+
+/// Dev account populated with cards, cosmetics, Jlore, track XP, and pity counter.
 async fn stocked() -> (Arc<App>, String) {
     let (app, dev, _other) = dev_app().await;
     ok(&app, "/api/dev/fill", &dev, json!({})).await;
@@ -753,9 +775,7 @@ async fn fill_and_every_clear_take_the_accounts_economy_lock_before_they_read() 
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A bar filled (R1310003)
-// ---------------------------------------------------------------------------------------------
 
 /// How many of `item` under `key` `profile_id` holds.
 async fn held(app: &App, profile_id: &str, item: InventoryItem, key: &str) -> i64 {
@@ -838,4 +858,61 @@ async fn r1310003_filling_a_bar_pays_its_token_marked_dev() {
     assert_eq!(status, 404, "{answer}");
     assert_eq!(answer["error"]["code"], json!("not_found"));
     assert_eq!(ledger(&app, DEV).await, before);
+}
+
+/// `delta` more of the account-wide `counter` for `DEV`, as an opening would leave it.
+async fn grant_counter_of(app: &App, counter: Counter, delta: i64) {
+    let mut tx = app.db.begin(Some(DEV)).await.expect("begin");
+    tx.economy_counters_grant(&CounterGrant {
+        profile_id: DEV.to_string(),
+        counter,
+        pack: String::new(),
+        delta,
+        reason: EconomyReason::PackOpen,
+        reference: None,
+        dev: false,
+        at: now_ms(),
+    })
+    .await
+    .expect("the counter")
+    .expect("a count");
+    tx.commit().await.expect("commit");
+}
+
+#[tokio::test]
+async fn r2728000_a_dev_fill_fills_the_cosmetic_bar_to_its_current_step_s_size() {
+    let (app, dev, _other) = dev_app().await;
+
+    // At the cycle's Legendary step with 30 points: the fill tops the bar up to that step's size,
+    // pays a Legendary token and keeps nothing, the cycle's place moved on.
+    grant_counter_of(&app, Counter::CosmeticTokenCycle, 2).await;
+    grant_counter_of(&app, Counter::CosmeticTokenBar, 30).await;
+    let answer = ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 3 }));
+    assert_eq!(
+        held(&app, DEV, InventoryItem::CosmeticToken, "Legendary").await,
+        1
+    );
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 3);
+
+    // The next step is the second lap's Rare at its own size: an empty bar fills whole to it, its
+    // points needing no row.
+    let answer = ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 2 }));
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Rare").await, 1);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 4);
+
+    // A bar the 200-point bar left past its step's size (R1953000) pays every step it holds
+    // first, as an opening would, then tops up the step it rests on: at the Epic step, 199 points
+    // pay Epic (75) and the pack (100), keeping 24, and the fill tops up the next Rare (50).
+    grant_counter_of(&app, Counter::CosmeticTokenBar, 199).await;
+    let answer = ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 5 }));
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Epic").await, 1);
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticPack, "").await, 1);
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Rare").await, 2);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 7);
 }

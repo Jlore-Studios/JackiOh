@@ -1,21 +1,6 @@
-//! R1454 (SPEC §9.12): the bot pool. Its size is `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE ×
-//! weekly active people, BOT_POOL_MAX)`; an excess retires the youngest accounts and a shortfall puts
-//! the most recently retired back before it makes new ones. A new bot is drawn like a player (a
-//! strength whose rating seeds its R610 row, a speed, a persona, a schedule, an account age, a name or
-//! the default `Player#n`), and its Best-of-1 decks are the patch's human decklists first, then the
-//! AI's own, each legal, dealt again whenever the catalog version changes. A bot whose claimed match
-//! never started is let go (`release_stale_starts`, which the queue's sweeper runs).
-//!
-//! R641000: each active bot also holds a Conquest trio, three decks a player could queue as a trio
-//! sharing no card (R253): its own Best-of-1 decks first, then decks dealt with the cards already
-//! taken left out, dealt again whenever the catalog version changes.
-//!
-//! R1555000: when the season's `BOT_GRIND_REFERENCE_RANK`-th placed person is more than
-//! `BOT_GRIND_GAP` above every active bot, a refresh sets the top `BOT_GRINDERS` grinding, and clears
-//! them once a bot is within the gap less `BOT_GRIND_HYSTERESIS`; a grinder is on more hours, and
-//! the queue's sweep pairs it with another bot while nobody is queued (`choose_bot_pair`).
-//!
-//! `jackioh_server::bots::pool`, against the fake store and the real catalog.
+//! R1454 (SPEC §9.12): the bot pool. Sizing, retirement, and deck generation (R610).
+//! R641000: Conquest trios with no shared cards (R253).
+//! R1555000: grinder bots above top human rankings.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,12 +26,12 @@ use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_GRIND_ACTIVE_HOURS, BOT_GRIND_GAP,
     BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRIND_STEP_GAMES, BOT_GRINDERS, BOT_HOURS_PER_DAY,
-    BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX, BOT_SPEED_MIN,
-    BOT_STALE_START_SECONDS, BOT_STRENGTHS, BOT_VS_BOT_MAX_LIVE, BOT_VS_BOT_MIN_GAP_SECONDS,
+    BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE, BOT_RECENT_OPPONENTS, BOT_SPEED_MAX,
+    BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS, BOT_VS_BOT_MAX_LIVE, BOT_VS_BOT_MIN_GAP_SECONDS,
     MATCHMAKER_SWEEP_INTERVAL_SECONDS, MAX_FAIR_GAP, PersonaName,
 };
 use jackioh_server::db::store::{BotDeck, BotRow, FrozenTrio, NewBot, RatedGameRow, Ticket};
-use jackioh_server::ranked::ladder::fresh_rank;
+use jackioh_server::ranked::ladder::{Ladder, fresh_rank};
 use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::username::normalize_username;
 
@@ -72,6 +57,7 @@ fn bot(id: &str, created_at: i64, retired_at: Option<i64>) -> BotRow {
         created_at,
         retired_at,
         rating: 1000.0,
+        random_rating: 1000.0,
         in_match_id: None,
         grinding: false,
         grind_wins: 0,
@@ -127,6 +113,25 @@ fn lists_of(records: &[GameRecord], patch: &str) -> Vec<ListTotal> {
         totals.fold(record, false);
     }
     totals.decklists(patch)
+}
+
+#[test]
+fn r2778001_the_pool_holds_enough_bots_on_at_any_hour_to_grind_against() {
+    const {
+        // At the floor, with every bot on its fewest hours, the bots on at an hour are on average more
+        // than twice the opponents a player may not meet again (and the one they last met), so a
+        // grinder always finds one the last few games have not used up.
+        assert!(
+            BOT_POOL_MIN as i64 * BOT_ACTIVE_HOURS_MIN as i64
+                >= 2 * (BOT_RECENT_OPPONENTS as i64 + 1) * BOT_HOURS_PER_DAY as i64
+        );
+        assert!(BOT_ACTIVE_HOURS_MIN <= BOT_ACTIVE_HOURS_MAX);
+        assert!(BOT_POOL_MIN <= BOT_POOL_MAX);
+        // One bot per weekly player: the pool grows with the people, not a quarter of them.
+        assert!(BOT_POOL_PER_WEEKLY_ACTIVE >= 1.0);
+    }
+    assert_eq!(pool_target(0), BOT_POOL_MIN);
+    assert_eq!(pool_target(BOT_POOL_MIN as i64 * 2), BOT_POOL_MIN * 2);
 }
 
 #[test]
@@ -381,7 +386,7 @@ async fn r1454_refresh_seeds_ratings_no_collection() {
     assert_eq!(bots.len(), BOT_POOL_MIN);
     for bot in &bots {
         // Its R610 row starts at its strength's rating, with no games.
-        let rating = q!(app, ranked_bot(&bot.profile_id)).expect("an R610 row");
+        let rating = q!(app, ranked_bot(&bot.profile_id, Ladder::Constructed)).expect("an R610 row");
         assert_eq!(rating.glicko.rating, BOT_STRENGTHS[bot.strength].seed_rating);
         assert_eq!(rating.games, 0);
         assert_eq!(bot.rating, rating.glicko.rating);
@@ -430,9 +435,7 @@ async fn r1454_new_catalog_redraws_decks() {
     }
 }
 
-/// R1705001: a bot holding decks of `EARLIER_DECK_SIZE` cards for this very catalog, as every bot did
-/// before the deck grew, is dealt again, its Best-of-1 decks and its Conquest trio alike, so no bot
-/// queues a deck L2 refuses.
+/// R1705001: bot holding EARLIER_DECK_SIZE cards redealt to avoid L2 refusal.
 #[tokio::test(start_paused = true)]
 async fn r1705001_a_bot_holding_a_twenty_card_deck_is_dealt_again() {
     let app = empty_test_app().await;
@@ -903,19 +906,30 @@ fn r1555000_grinding_starts_past_the_gap_for_the_top_bots_alone() {
         .iter()
         .map(|id| id.to_string())
         .collect();
-    assert_eq!(plan_grind(&bots, &people), top, "the highest first, ties on id");
+    assert_eq!(
+        plan_grind(&bots, &people, Ladder::Constructed),
+        top,
+        "the highest first, ties on id"
+    );
 
     // At the gap, not past it: none.
     let at = [AT_THE_GAP + 50.0, AT_THE_GAP + 40.0, AT_THE_GAP];
-    assert!(plan_grind(&bots, &at).is_empty());
+    assert!(plan_grind(&bots, &at, Ladder::Constructed).is_empty());
     // Too few placed people: none, however far ahead.
-    assert!(plan_grind(&bots, &[AT_THE_GAP + 500.0, AT_THE_GAP + 400.0]).is_empty());
+    assert!(
+        plan_grind(
+            &bots,
+            &[AT_THE_GAP + 500.0, AT_THE_GAP + 400.0],
+            Ladder::Constructed
+        )
+        .is_empty()
+    );
     // No active bot: none.
     let mut all_retired = bots.clone();
     for bot in &mut all_retired {
         bot.retired_at = Some(1);
     }
-    assert!(plan_grind(&all_retired, &people).is_empty());
+    assert!(plan_grind(&all_retired, &people, Ladder::Constructed).is_empty());
 }
 
 #[test]
@@ -933,15 +947,15 @@ fn r1555000_grinding_stops_only_past_the_hysteresis() {
         .iter()
         .map(|id| id.to_string())
         .collect();
-    assert_eq!(plan_grind(&grinding, &people_at(stays)), top);
-    assert!(plan_grind(&grinding, &people_at(stops)).is_empty());
+    assert_eq!(plan_grind(&grinding, &people_at(stays), Ladder::Constructed), top);
+    assert!(plan_grind(&grinding, &people_at(stops), Ladder::Constructed).is_empty());
 
     // The grinders are chosen again at each refresh: a bot that grinds now but is no longer among the
     // top hands its place on.
     let mut handed = grinding.clone();
     handed[2].grinding = false;
     handed[3].grinding = true;
-    assert_eq!(plan_grind(&handed, &people_at(stays)), top);
+    assert_eq!(plan_grind(&handed, &people_at(stays), Ladder::Constructed), top);
 
     // A grind not yet started needs the whole gap.
     let idle: Vec<BotRow> = grinding
@@ -951,7 +965,25 @@ fn r1555000_grinding_stops_only_past_the_hysteresis() {
             ..bot.clone()
         })
         .collect();
-    assert!(plan_grind(&idle, &people_at(stays)).is_empty());
+    assert!(plan_grind(&idle, &people_at(stays), Ladder::Constructed).is_empty());
+}
+
+#[test]
+fn r2778000_the_grind_is_planned_on_the_ladder_it_reads() {
+    // The bots are far below the people on Constructed and level with them on All Random: Constructed's
+    // plan grinds the top bots, All Random's grinds none.
+    let bots: Vec<BotRow> = ["a", "b", "c", "d"]
+        .iter()
+        .enumerate()
+        .map(|(index, id)| BotRow {
+            random_rating: AT_THE_GAP + 300.0,
+            ..rated_bot(id, 1200.0 - 10.0 * index as f64, false)
+        })
+        .collect();
+    let people = [AT_THE_GAP + 60.0, AT_THE_GAP + 50.0, AT_THE_GAP + 1.0];
+    let top: Vec<String> = ["a", "b", "c"].iter().map(|id| id.to_string()).collect();
+    assert_eq!(plan_grind(&bots, &people, Ladder::Constructed), top);
+    assert!(plan_grind(&bots, &people, Ladder::Random).is_empty());
 }
 
 #[test]
@@ -1201,7 +1233,7 @@ async fn r1555000_a_refresh_marks_the_top_bots_grinding_and_clears_them() {
 
     // The top bot climbs to within the gap less the hysteresis of the third person: the grind stops.
     let climber = &expected[0];
-    let mut rating = q!(app, ranked_bot(climber)).expect("its rating");
+    let mut rating = q!(app, ranked_bot(climber, Ladder::Constructed)).expect("its rating");
     rating.glicko.rating = top + BOT_GRIND_GAP + 1.0 - (BOT_GRIND_GAP - BOT_GRIND_HYSTERESIS);
     q!(app, ranked_put_bot(&rating));
     let refreshed = refresh_pool(&app, "grind-4", now).await.expect("a refresh");

@@ -1,6 +1,5 @@
 // Haptics (R669) buzz for a viewer's own plays and turns, plus damage.
-// They use only public events, so they neither enforce rules nor reveal information (CLAUDE.md rule 7).
-// Skip unavailable devices, disabled or reduced-motion settings, and repeated calls inside HAPTIC_MIN_GAP_MS.
+// Public events only, so they neither enforce rules nor reveal information (CLAUDE.md rule 7).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 

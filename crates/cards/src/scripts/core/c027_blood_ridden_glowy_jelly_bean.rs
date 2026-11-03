@@ -1,16 +1,7 @@
 //! #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2): "Cast on draw: a random card in your hand becomes
 //! Radiant; you lose 7 health", radiant "2 random cards".
-//!
-//! The radiant cell restates only the number of random cards, so every clause it does not restate is
-//! kept (§8 Conventions). `staticFlags` are read through `scriptOf`, which returns the radiant script
-//! once the instance is Radiant, so the radiant face carries `castOnDraw` too or a Radiant copy would
-//! go to hand uncast. `drawOne` casts the card the moment it is drawn, even with a full hand, and
-//! repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the cast is free and no card played, so it
-//! feeds no Combo (R40, R2179002; through v0.5.2 it was one, R70).
-//!
-//! R60's pick: `setRadiantRandom` pools only non-Radiant cards, takes `count` different ones (all when
-//! fewer exist, none when none do); the resolving card never picks itself. "You lose 7 health" is
-//! R18's `loseHealth`, not damage: it bypasses Armor, #73 Going Long's cap and Fed Fauci's tokens.
+//! staticFlags.castOnDraw casts on draw up to CAST_ON_DRAW_CHAIN_CAP (R58; R40, R2179002, R70; §8 Conventions, #73).
+//! Makes random hand card Radiant (R60; R74, §5.2); deals 7 damage to self hero (§4.4).
 
 use jackioh_engine::prelude::*;
 
@@ -41,9 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27): "Cast on draw; a random
-// non-Radiant hand card becomes Radiant (R60); 7 health lost ignoring Going Long (R18); radiant
-// 2 cards".
+// #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27) (R60, R18).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,7 +1,6 @@
 // docs/polish/1-animations.md S2: the effects layer's constants, whose values the design fixes
-// ("values binding"). Every planner, director and CSS bound in the doc is stated in these names, and
-// task 7's settings panel reads the speed steps and intensity scale, so a silent change to one of
-// them is a contract change. The table below is S2 verbatim.
+// ("values binding"): every bound in the doc, and the settings panel's speed steps and intensity
+// scale, is stated in these names, so a silent change to one is a contract change.
 
 import { describe, expect, it } from "vitest";
 
@@ -42,7 +41,9 @@ const S2 = {
   FX_SLAM_STATS_MIN: 10,
   FX_SLAM_TRAUMA_PER_STAT: 0.06,
   FX_SLAM_MAX_TRAUMA: 0.5,
-  FX_LEGENDARY_TRAUMA: 0.5,
+  FX_LEGENDARY_TRAUMA: 0.7,
+  FX_TAKEOVER_TAIL_MS: 700,
+  FX_TAKEOVER_TRAUMA: 1,
   FX_TRAP_TRAUMA: 0.4,
   FX_RESULT_TRAUMA: 0.9,
   FX_LETHAL_LEAD_MAX_MS: 600,
@@ -64,10 +65,10 @@ const S2 = {
   FX_ADAPT_RECOVER_WINDOWS: 3,
   FX_DEFAULT_SEED: 0x5eed,
   FX_MEMORY_LIMIT: 64,
-  // v0.2.0: R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand;
-  // R436's Call to Chaos reveal.
+  // R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand; R436's Call to Chaos.
   FX_MEMORY_RECENT: 16,
   FX_MEMORY_RESOLVING: 8,
+  FX_MEMORY_HITS: 44,
   FX_CAST_ON_DRAW_TRAUMA: 0.25,
   FX_CRACK_HIT_AT: 0.45,
   FX_CRACK_STAGGER_MS: 50,
@@ -78,14 +79,14 @@ const S2 = {
   FX_BLOOD_PICK_BASE: 1,
   FX_BLOOD_PICK_STRIDE: 2,
   FX_BLOOD_TRAUMA: 0.2,
-  // Patch v0.2.7: Classic+ #24 Crushing Walls.
+  // Classic+ #24 Crushing Walls.
   FX_WALLS_HIT_AT: 0.3,
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
   FX_WALLS_TRAUMA: 0.45,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
-  // Patch v0.3.X (MN05): Armor's shield flash (R1363).
+  // MN05: Armor's shield flash (R1363).
   FX_SHIELD_TAIL_MS: 450,
   FX_CHAOS_LAND_AT: 0.4,
   FX_CHAOS_STAGGER: 0.2,
@@ -114,6 +115,28 @@ const S2 = {
   FX_SHOT_LAUNCH_AT: 0.24,
   FX_SHOT_SHAKE_TRAUMA: 0.3,
   FX_FLAVOR_VOLLEY_MAX: 4,
+  // Issue #2784: the motifs (R2784000) and the gallery's scales.
+  FX_MOTIF_PHASES: { gather: 0, travel: 0.2, land: 0.6, linger: 0.75 },
+  FX_MOTIF_SCALE_PER_COST: 0.08,
+  FX_MOTIF_COST_CAP: 7,
+  FX_MOTIF_X_COST: 3,
+  FX_MOTIF_SCALE_MAX: 2,
+  FX_MOTIF_RARITY_SCALE: { Common: 1, Rare: 1.1, Epic: 1.25, Legendary: 1.4, Mythic: 1.6, Token: 0.9 },
+  FX_MOTIF_VOLLEY_MAX: 5,
+  FX_MOTIF_BARRAGE_MAX: 8,
+  FX_MOTIF_BARRAGE_STEP: 0.02,
+  FX_MOTIF_CENTER_LANE: 3,
+  FX_MOTIF_TRAUMA: { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 },
+  FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
+  FX_CALLOUT_MS: 600,
+  FX_CALLOUTS_PER_HIT: 2,
+  FX_BEAT_STAGGER_MS: 60,
+  FX_BEAT_STAGGER_MAX: 0.5,
+  FX_BEAT_TRAUMA: 0.25,
+  FX_FIRST_STRIKE_BREAK_AT: 0.4,
+  FX_FIRST_STRIKE_BREAK_REACH: 0.6,
+  FX_PIERCE_REACH: 0.8,
+  FX_FLYING_LUNGE_LIFT: 0.18,
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },
@@ -235,10 +258,20 @@ describe("S2 the effects constants", () => {
       constants.FX_WALLS_HIT_AT,
       constants.FX_WALLS_REACH,
       constants.FX_DEATH_BOLT_FLIGHT_FRACTION,
+      // R2789000: the beats' stagger cap and a First Strike's break-off.
+      constants.FX_BEAT_STAGGER_MAX,
+      constants.FX_FIRST_STRIKE_BREAK_AT,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
       expect(fraction).toBeLessThanOrEqual(1);
+    }
+    // R2784000: a motif's phases run in order from the entry's start, each inside it.
+    const phases = [constants.FX_MOTIF_PHASES.gather, constants.FX_MOTIF_PHASES.travel, constants.FX_MOTIF_PHASES.land, constants.FX_MOTIF_PHASES.linger];
+    expect(phases[0]).toBe(0);
+    for (let k = 1; k < phases.length; k += 1) {
+      expect(phases[k]).toBeGreaterThan(phases[k - 1] ?? 1);
+      expect(phases[k]).toBeLessThanOrEqual(1);
     }
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
@@ -266,8 +299,15 @@ describe("S2 the effects constants", () => {
       constants.FX_LEGENDARY_TRAUMA,
       constants.FX_TRAP_TRAUMA,
       constants.FX_RESULT_TRAUMA,
+      constants.FX_TAKEOVER_TRAUMA,
+      constants.FX_BEAT_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
+      expect(trauma).toBeLessThanOrEqual(1);
+    }
+    // R2784000: a motif's shake, none for vanish.
+    for (const trauma of Object.values(constants.FX_MOTIF_TRAUMA)) {
+      expect(trauma).toBeGreaterThanOrEqual(0);
       expect(trauma).toBeLessThanOrEqual(1);
     }
   });
@@ -290,6 +330,8 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
     expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_WALLS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_TAKEOVER_TAIL_MS, "R2722001").toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_CALLOUT_MS, "R2789000").toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST, constants.FX_ROLL_LAND_AT, constants.FX_ROLL_LAND_LAST]) {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);

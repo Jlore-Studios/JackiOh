@@ -1,50 +1,30 @@
 // The sound director (SPEC §10.11 "Timing"): turns the view stream into cues, in step with the
-// animation runner.
-//
-// A view arrives with §10.8's sliding window of events. The director remembers the events it has
-// not voiced yet (`owed`), each with the view it was planned against, and sends an event's cues
-// only when the runner STARTS the entry that animates it, so sound and motion land together.
-// Whatever the runner never starts — every entry under reduced motion, `gameOver`'s zero-length
-// entry, a queue drained at a game's end or a skip — is flushed once, condensed, when the runner
-// goes idle. A condensed burst plays at most FLUSH_MAX_SFX plain effects, one card effect and one
-// line: the most important of each (R655).
-//
-// R203: the first view, and a view for a different seat (a hotseat hand-over), voices nothing and
-// drops everything owed, so the arriving seat hears nothing its own view did not produce.
-//
-// WHICH EVENTS ARE NEW. The director diffs two views with the runner's own `newEventsSince`
-// (game/animations.ts), so what it owes is exactly what Game enqueues. Two windows overlap where the
-// tail of the older one is the head of the newer one, but not always byte for byte: R97 judges a
-// card by where it sits NOW, so when the opponent plays a card it drew earlier in the window, that
-// older `drawn` (or `shuffledIn`, …) changes from the sentinel to the card's real id between the two
-// views, and `sameOccurrence` lets it match. Every event of a view the director has already seen and
-// not owed also stays silent should the runner ever start it (`known`): old news does not speak twice.
-//
-// Events are matched by object identity: `newEventsSince` and `planEntries` both hand out the very
-// objects in `view.events`, so the entry the runner starts carries the same objects the director
-// owes.
-//
-// PLAYS IN PROGRESS (R506). The director resolves every event it voices in stream order, so it can
-// follow the plays the stream opens and closes: a `cardPlayed` opens one, its `cardResolved` closes
-// it, and a turn's start forgets any left open. A cue reads the innermost one (`playing`), which is
-// how #21 Hinder's rider and #27's Radiant cards know whose they are. A `cardPlayed` that directly
-// follows a readable `drawn` of the same card (a `cardAnnounced`, a Gifted Program `radiantSet` or
-// a cost change of that card may come between) is that card cast as it was drawn. Both read only
-// what the stream shows the viewer: a sentinel play opens a frame no moment matches, and a sentinel
-// draw marks nothing.
+// animation runner. A view arrives with §10.8's sliding window of events; the director owes each event
+// it has not voiced (`owed`, with the view it was planned against) and sends its cues only when the
+// runner STARTS the entry that animates it, so sound and motion land together. What the runner never
+// starts (reduced motion, `gameOver`'s zero-length entry, a drained queue) is flushed once at idle.
+// R203: the first view, and a view for a different seat (a hand-over), voices nothing and drops all owed.
+// New events come from the runner's own `newEventsSince` (game/animations.ts), so what it owes is what
+// Game enqueues; R97 may turn an older `drawn` from the sentinel to its real id between windows, which
+// `sameOccurrence` matches. Events match by object identity: the entry the runner starts carries the
+// very objects in `view.events`.
+// PLAYS IN PROGRESS (R506): a cue reads the innermost open play (`playing`), as #21 Hinder's rider and
+// #27's Radiant cards do. A sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
+// SET PIECES (R2800000): a board clear's held entry sends its bed as it starts (setPieceBeds.ts), and its
+// wipe's removals sound once, condensed, after the hold.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
 import { newEventsSince, type AnimationEntry } from "../game/animations.ts";
 import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS, PLAY_STACK_MAX } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
+import { setPieceBed } from "./setPieceBeds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
 
 export type SoundDirector = {
   /** Feed every newest view (Game's props.view). */
   onView(view: PlayerView): void;
-  /** The runner has just started this entry. */
   onEntryStart(entry: AnimationEntry): void;
   /** The runner is idle (inFlight() === null). */
   onIdle(): void;
@@ -62,10 +42,7 @@ function findUnit(view: PlayerView | null, instanceId: string): UnitView | null 
   return null;
 }
 
-/**
- * Events that may come between a card's `drawn` and its cast's `cardPlayed` (R506): the card's own
- * announce, Radiance or cost, and the prompts its cast asks the drawer (an Echoed hand pick).
- */
+/** Events that may come between a card's `drawn` and its cast's `cardPlayed` (R506). */
 function keepsDrawnCard(event: GameEvent, drawn: { instanceId: string; player: PlayerId }): boolean {
   switch (event.type) {
     case "cardAnnounced":
@@ -87,10 +64,9 @@ function sideMana(view: PlayerView, player: PlayerId): number {
 }
 
 /**
- * `card` is the public catalog (`useGameAudio` reads the board's `CatalogContext`), asked only for
- * a defId the viewer can read; without it every card makes its type's plain sounds. `observe` hears
- * every event as it is resolved, with the view it was planned against, in the same step as its cues:
- * the music director's casts and hero hits (R631).
+ * `card` is the public catalog, asked only for a defId the viewer can read; without it every card makes
+ * its type's plain sounds. `observe` hears every event as it is resolved, with its view, in the same step
+ * as its cues: the music director's casts and hero hits (R631).
  */
 export function createSoundDirector(
   sink: SoundSink,
@@ -111,9 +87,8 @@ export function createSoundDirector(
   /** R506: the plays in progress, innermost last. */
   let plays: PlayFrame[] = [];
   /**
-   * R506: the card the last event drew, while nothing else has happened since. A draw behind the
-   * sentinel counts too: what it drew is named only by its own public cast, as the effects layer
-   * reads it (fx/castOnDraw.ts), and the sting it gets names nothing (R203).
+   * R506: the card the last event drew, while nothing else has happened since. A sentinel draw counts
+   * too: only its own public cast names it (fx/castOnDraw.ts), and its sting names nothing.
    */
   let drawnLast: { instanceId: string; player: PlayerId } | null = null;
 
@@ -189,7 +164,8 @@ export function createSoundDirector(
     return owed.some((item) => item.event === event);
   }
 
-  function flush(items: readonly Owed[]): void {
+  /** Voices `items` as one burst; `offsetMs` (a set piece's hold) delays all of it. */
+  function flush(items: readonly Owed[], offsetMs = 0): void {
     const effects: SoundCue[] = [];
     let endCue: SoundCue | null = null;
     let line: Extract<SoundCue, { kind: "voice" }> | null = null;
@@ -225,12 +201,11 @@ export function createSoundDirector(
     const kept = unique.slice(0, endCue === null ? FLUSH_MAX_SFX : FLUSH_MAX_SFX - 1);
     if (endCue !== null) kept.push(endCue);
     kept.forEach((cue, j) => {
-      send(cue, j * FLUSH_GAP_MS);
+      send(cue, offsetMs + j * FLUSH_GAP_MS);
     });
 
-    // One card effect and one voice: the burst's most important of each, at its own delay.
-    if (cardEffect !== null) send(cardEffect, cardEffect.delayMs);
-    if (line !== null) send(line, line.delayMs);
+    if (cardEffect !== null) send(cardEffect, offsetMs + cardEffect.delayMs);
+    if (line !== null) send(line, offsetMs + line.delayMs);
   }
 
   return {
@@ -260,10 +235,13 @@ export function createSoundDirector(
       if (first === undefined) return;
       const at = owed.findIndex((item) => item.event === first);
       if (at > 0) flush(owed.splice(0, at));
+      // R2800000: a set piece's bed, laid across its hold.
+      for (const cue of setPieceBed(entry)) send(cue, cue.delayMs);
 
       // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
       // stack a sound per card; condense the entry to one of each sfx and its most important line.
-      if (entry.sweep !== undefined || entry.zone !== undefined) {
+      // R2800000: so is a wipe, voiced once its set piece's hold is over.
+      if (entry.sweep !== undefined || entry.zone !== undefined || entry.wipe !== undefined) {
         const items: Owed[] = [];
         for (const event of entry.events) {
           const index = owed.findIndex((item) => item.event === event);
@@ -275,7 +253,7 @@ export function createSoundDirector(
           if (view === null) continue;
           items.push({ event, view });
         }
-        flush(items);
+        flush(items, entry.setPiece?.holdMs ?? 0);
         return;
       }
 
@@ -284,7 +262,6 @@ export function createSoundDirector(
         const item = index >= 0 ? owed[index] : undefined;
         if (index >= 0) owed.splice(index, 1);
         if (voiced.has(event)) return;
-        // A view's event the director did not owe is old news the runner is replaying: silent.
         if (item === undefined && known.has(event)) return;
         voiced.add(event);
         const view = item?.view ?? seen;

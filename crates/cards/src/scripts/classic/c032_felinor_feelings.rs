@@ -25,9 +25,7 @@ pub const ID: &str = "classic-032";
 
 /// §7's shared Felinor Token, a (1) Cost Unit.
 const FELINOR_TOKEN: &str = "core-t-felinor";
-/// The name of the lane rule in `targetChecks`, as the declaration's filter names it.
 const LANE_RULE: &str = "felinorLane";
-/// The continuation the Radiant face's prompt re-enters.
 const STEAL: &str = "feelings-steal";
 
 /// The lanes where `player` controls a Unit that costs exactly (1) (R396).
@@ -43,7 +41,6 @@ fn feeling_lanes(state: &GameState, player: PlayerId) -> IndexSet<i32> {
     lanes
 }
 
-/// An enemy permanent standing in one of those lanes.
 fn in_feeling_lane(state: &GameState, player: PlayerId, card: Option<&CardInstance>) -> bool {
     let Some(card) = card else { return false };
     let Zone::Field { lane, .. } = card.zone else { return false };
@@ -66,7 +63,6 @@ const UNITS: &[&str] = &["unit"];
 /// R767000: through v0.4.0f, any enemy permanent, a backrow card too.
 const PERMANENTS: &[&str] = &["unit", "backrow"];
 
-/// The base face: a declared target, an enemy card of `of` in a Felinor lane.
 fn feelings(of: &'static [&'static str]) -> Script {
     Script {
         targets: vec![TargetDecl::target(
@@ -80,7 +76,6 @@ fn feelings(of: &'static [&'static str]) -> Script {
     }
 }
 
-/// The Radiant face: the Felinor Token, then a prompt for an enemy card of `of` in a Felinor lane.
 fn feelings_radiant(of: &'static [&'static str], prompt: &'static str) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
@@ -107,8 +102,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.4.0f and every version before it ran, stealing any enemy permanent;
-/// `KEPT_SCRIPTS` folds those versions' replays under them.
+/// R767000: the scripts v0.4.0f and every version before it ran, stealing any enemy permanent.
 pub fn script_v0_4_0f() -> CardScripts {
     CardScripts {
         base: feelings(PERMANENTS),
@@ -140,7 +134,6 @@ mod tests {
     const TOKEN: &str = "core-t-felinor";
     const FILLER: &str = "core-010";
 
-    /// Each `SideSetup` spread over the hand Feelings needs.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": FEELINGS, "radiant": radiant_face }, FILLER] }), p1),
@@ -148,7 +141,6 @@ mod tests {
         }))
     }
 
-    /// `pick::instance(card)` as the selections a prompt carries.
     fn at_selection(card: &CardInstance) -> Vec<Selection> {
         vec![Selection::Instance {
             instance_id: card.id.clone(),
@@ -162,7 +154,6 @@ mod tests {
         }
     }
 
-    /// The targets `legalActions` offers this play, by instance id.
     fn offered(s: &Scenario) -> Vec<String> {
         let card = s.card(FEELINGS).id.clone();
         legal_actions(s.state(), P1)
@@ -181,7 +172,6 @@ mod tests {
             .collect()
     }
 
-    /// The open prompt's options, as selections.
     fn pending_selections(s: &Scenario) -> Option<Vec<Selection>> {
         s.state()
             .pending
@@ -220,7 +210,6 @@ mod tests {
             #[test]
             fn r15_the_stolen_unit_takes_its_own_lane_when_free_else_your_first_free_zone() {
                 crate::register_all();
-                // Lane 2 on p1's side holds the Timmy, so the Vanilla lands in p1's lane 1.
                 let mut s = setup(
                     json!({ "field": [{ "def": TIMMY, "lane": 2 }] }),
                     json!({ "field": [{ "def": VANILLA, "lane": 2 }] }),
@@ -461,7 +450,6 @@ mod tests {
 
                 s.play(FEELINGS, json!({}));
 
-                // The token lands in lane 2 (lane 1 is taken): Menace's lane counts, Vanilla's does not.
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(TOKEN.to_string()));
                 assert_eq!(pending_selections(&s), Some(at_selection(&must_unit(&s, P2, 2))));
             }

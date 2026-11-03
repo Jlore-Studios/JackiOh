@@ -141,6 +141,16 @@ export const testid = {
   marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
 } as const;
 
+/** The CSS selector for the element whose testid is `id`, its quotes and backslashes escaped. */
+export function testidSelector(id: string): string {
+  return `[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`;
+}
+
+/** The page's element whose testid is `id`, or null. */
+export function byTestid(id: string): Element | null {
+  return document.querySelector(testidSelector(id));
+}
+
 /**
  * R384, R510, R1751000: the `ability` an Activate control names. Under R1751000, board Activate
  * controls on cards with multiple abilities target `{ on: "activate", instanceId }` (without ability)
@@ -251,6 +261,13 @@ export type HeroEmotes = {
   onCloseMenu: () => void;
 };
 
+/**
+ * DR14 (#2706): a route's slot beside each hero, as `boardRail` is one in the rail: `own` beside the
+ * viewer's hero, `enemy` beside the opponent's. The board draws what it is handed and reads nothing
+ * of it; absent, nothing is drawn.
+ */
+export type HeroAside = { own?: ReactNode; enemy?: ReactNode };
+
 export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
@@ -270,6 +287,8 @@ export type BoardProps = {
   matchStatus?: ReactNode;
   /** Route chrome carved into the same physical side rail as the controls. */
   boardRail?: ReactNode;
+  /** Route chrome drawn beside each hero (`HeroAside`). */
+  heroAside?: HeroAside;
   /** Alerts and offers inset into the board rail, never rendered as page overlays. */
   boardNotices?: ReactNode;
   /** R1853003: the Marketplace's shop, drawn in the control bar (#2645); absent (a replay), none. */

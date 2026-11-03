@@ -47,9 +47,7 @@ import { armorTookHalf } from "../game/damageFeel.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Fixtures
- * --------------------------------------------------------------------------------------------- */
+/* Fixtures */
 
 const LINES: CardAudioTable = {
   voices: {
@@ -193,7 +191,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
   emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
-  // Patch v0.2.0 (docs/classic-sets.md B3, B5).
+  // docs/classic-sets.md B3, B5.
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: SPELL, cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
   countered: { type: "countered", player: "p1", instanceId: "c1", defId: SPELL, byInstanceId: "b5", to: "graveyard" },
   stolen: { type: "stolen", instanceId: "c1", defId: SPELL, from: "p2", to: "p1", zone: "hand" },
@@ -220,9 +218,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   // R800: a discard a discard guard stopped.
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
-  // Patch v0.3.X (MN05).
+  // MN05.
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
-  // Patch v0.3.X (Meditative #39.2, R961).
+  // Meditative #39.2, R961.
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   // Meditative MB05 (ME-SECRET).
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
@@ -255,6 +253,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
   rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
+  // Issue #2783 (R2783000).
+  hookResolving: { type: "hookResolving", sourceId: "c1", defId: "core-001", controller: "p1", hook: "cry" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -305,7 +305,6 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   drawAnswered: "cancel",
   emoted: null,
   gameOver: "victory",
-  // Patch v0.2.0.
   cardAnnounced: null,
   countered: "counterspell",
   stolen: "steal",
@@ -332,9 +331,9 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   translated: null,
   // R800: a discard a discard guard stopped sounds a soft cancel.
   discardPrevented: "cancel",
-  // Patch v0.3.X (MN05).
+  // MN05.
   damageAbsorbed: "armorRing",
-  // Patch v0.3.X (Meditative #39.2, R961).
+  // Meditative #39.2, R961.
   jadeChanged: "uiClick",
   // Meditative MB05 (ME-SECRET).
   secretChosen: "trapSet",
@@ -358,6 +357,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   held: "poof",
   boardReplaced: "whoosh",
   rolled: "chaosRoll",
+  // R2783000: a marker; the hook's own events sound.
+  hookResolving: null,
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -421,10 +422,6 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "discardPrevented",
   "damageAbsorbed",
 ];
-
-/* --------------------------------------------------------------------------------------------- *
- * B17: a total table
- * --------------------------------------------------------------------------------------------- */
 
 describe("B17 SOUND_CUES is total over GameEvent types", () => {
   it("B17 has exactly one row per GAME_EVENT_TYPES member, and no other", () => {
@@ -510,9 +507,7 @@ describe("B17 SOUND_CUES is total over GameEvent types", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B18 and B19: which moments speak (R204)
- * --------------------------------------------------------------------------------------------- */
+/* B18 and B19: which moments speak (R204) */
 
 describe("R319: the overflows' sounds", () => {
   it("R319 a fatigue draw knocks, a full library refuses, a full hand burns: three sounds of their own", () => {
@@ -689,9 +684,7 @@ describe("R204: which moments speak", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B20: what audio may reveal (R203)
- * --------------------------------------------------------------------------------------------- */
+/* B20: what audio may reveal (R203) */
 
 describe("R203: audio reveals no more than the screen", () => {
   it("R203 (B20) HIDDEN_DEF_ID is the sentinel a redacted event carries", () => {
@@ -743,18 +736,20 @@ describe("R203: audio reveals no more than the screen", () => {
   });
 
   it("R203 (B20) the other seat hears a set trap as the generic play, with no line", () => {
-    // p1 sets a trap; on p2's seat the event arrives redacted to the sentinel.
     const opponentSeat = ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
     const redacted = played(HIDDEN_DEF_ID, "p1", HIDDEN_DEF_ID);
     expect(voices(redacted, opponentSeat)).toEqual([]);
     expect(shape(redacted, opponentSeat)).toEqual([sfx("play")]);
   });
+
+  it("R2734000 the other seat hears a fired trap's sting and its cast line once its view names it", () => {
+    // p1's trap fires; on p2's seat the event names it wherever it lies public, as on p1's.
+    const opponentSeat = ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
+    expect(shape(trapFired(TRAP, "p1"), opponentSeat)).toEqual([sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
+  });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B21: amounts
- * --------------------------------------------------------------------------------------------- */
-
+// B21: amounts
 describe("B21 amounts", () => {
   it("B21 damage, healed and healthLost with amount 0 give nothing", () => {
     expect(cuesFor({ type: "damage", sourceId: null, targetId: "u1", amount: 0, combat: false }, ctx())).toEqual([]);
@@ -818,9 +813,7 @@ describe("B21 amounts", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B22: mana against a baseline
- * --------------------------------------------------------------------------------------------- */
+/* B22: mana against a baseline */
 
 describe("B22 manaChanged", () => {
   const before = (values: Partial<Record<PlayerId, number>>) => (player: PlayerId): number => values[player] ?? 0;
@@ -860,10 +853,6 @@ describe("B22 manaChanged", () => {
     expect(shape({ type: "manaChanged", player: "p1", current: 2, max: 2 }, context)).toEqual([]);
   });
 });
-
-/* --------------------------------------------------------------------------------------------- *
- * B23: seat-relative rows
- * --------------------------------------------------------------------------------------------- */
 
 describe("B23 seat-relative rows", () => {
   const p2Seat = (): CueContext => ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
@@ -905,7 +894,6 @@ describe("B23 seat-relative rows", () => {
   it("drawOffered rings as a question (the urgent notify), not as the routine blips", () => {
     expect(onlySfx({ type: "drawOffered", player: "p2" }).params).toEqual({ urgent: true });
     expect(onlySfx({ type: "drawOffered", player: "p1" }, p2Seat()).params).toEqual({ urgent: true });
-    // Every other notify stays the plain one.
     expect(onlySfx({ type: "turnAutoEnded", player: "p1", turn: 3 }).params).toBeUndefined();
     expect(onlySfx({ type: "promptOpened", player: "p1", choiceId: "ch1", kind: "target" }).params).toBeUndefined();
   });
@@ -917,7 +905,6 @@ describe("B23 seat-relative rows", () => {
     // p1 answered p2's offer: its own click already ticked.
     expect(shape({ type: "drawAnswered", player: "p1", accept: false })).toEqual([]);
     expect(shape({ type: "drawAnswered", player: "p1", accept: true })).toEqual([]);
-    // The same from p2's seat.
     expect(shape({ type: "drawAnswered", player: "p1", accept: false }, p2Seat())).toEqual([sfx("cancel")]);
     expect(shape({ type: "drawAnswered", player: "p2", accept: false }, p2Seat())).toEqual([]);
   });
@@ -931,10 +918,6 @@ describe("B23 seat-relative rows", () => {
     expect(onlySfx({ type: "turnStarted", player: "p2", turn: 6 }, p2Seat()).params?.mine).toBe(true);
   });
 });
-
-/* --------------------------------------------------------------------------------------------- *
- * B56: a summon sounds its size
- * --------------------------------------------------------------------------------------------- */
 
 describe("B56 a summon is sized by the unit that lands", () => {
   const landed: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 1 };
@@ -958,10 +941,10 @@ describe("B56 a summon is sized by the unit that lands", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
+/*
  * Integration: the public catalog colors a card the viewer can name (docs/polish/reference.md,
  * audio x cards), and R203 still bounds it.
- * --------------------------------------------------------------------------------------------- */
+ */
 
 describe("the catalog colors summons and spells, never what the viewer cannot name", () => {
   const CATALOG: Record<string, CueCard> = {
@@ -1043,10 +1026,10 @@ describe("the catalog colors summons and spells, never what the viewer cannot na
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Patch v0.2.0 (R506): the Book, Pancake and AI families, a token's printed rarity, the card
+/*
+ * R506: the Book, Pancake and AI families, a token's printed rarity, the card
  * moments, Call to Chaos's roll and a mark. Real catalog cards, through the board's own lookup.
- * --------------------------------------------------------------------------------------------- */
+ */
 
 const LOOKUP = lookupFromDefs(CATALOG);
 const realCard = (defId: string): CueCard | undefined => cueCard(LOOKUP, defId);
@@ -1220,7 +1203,6 @@ describe("R506 #27 Blood Ridden Glowy Jelly Bean: a blood drain, then a gold bur
   it("R203 on the other seat the card is the sentinel, and the same sound plays: it reads the public cast alone", () => {
     const p1Seat = ctx(inside(BLOOD_BEAN_DEF_ID));
     expect(shape(radiantInHand(HIDDEN_DEF_ID, HIDDEN_DEF_ID, "p2"), p1Seat)).toEqual(BURST);
-    // …and whatever the hidden card, the same.
     expect(shape(radiantInHand(HIDDEN_DEF_ID, HIDDEN_DEF_ID, "p2"), p1Seat)).toEqual(shape(radiantInHand("c3", UNIT, "p2"), p1Seat));
   });
 
@@ -1284,9 +1266,7 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R655: a hook's effect plays at the moment its line would speak
- * --------------------------------------------------------------------------------------------- */
+/* R655: a hook's effect plays at the moment its line would speak */
 
 describe("R655 a card's hook may carry an effect beside or instead of its line", () => {
   /** The Rock (#66) with an effect and a line on its play and only an effect on its death; #5, #18 and #96 likewise. */
@@ -1369,9 +1349,7 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R669 (#259): a sting for every readable play, and lane panning
- * --------------------------------------------------------------------------------------------- */
+/* R669 (#259): a sting for every readable play, and lane panning */
 
 describe("R669 every card the viewer can read stings as it is played, by its rarity", () => {
   const catalogOf =
@@ -1471,9 +1449,7 @@ describe("R669 an effect about a unit on the field comes from its lane", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * MN05 (docs/meditative-set.md M8): Armor's sounds and the niche moments
- * --------------------------------------------------------------------------------------------- */
+/* MN05 (docs/meditative-set.md M8): Armor's sounds and the niche moments */
 
 /** A hit of `amount` with `absorbed` taken off it by Armor, on `targetId`. */
 type DamageEvent = Extract<GameEvent, { type: "damage" }>;
@@ -1576,7 +1552,6 @@ describe("R1365 the niche moments each have a sound of their own", () => {
     expect(ids(SAMPLES.fused)).toEqual(["fuse"]);
     expect(ids(SAMPLES.degraded)).toEqual(["degrade"]);
     expect(ids(SAMPLES.upgraded)).toEqual(["upgrade"]);
-    // Each is that row's alone.
     const own = ["crumble", "unlock", "counterspell", "fuse", "degrade", "upgrade", "armorRing"] as const;
     for (const id of own) {
       const rows = GAME_EVENT_TYPES.filter((type) => SOUND_CUES[type].sfx === id);
@@ -1600,7 +1575,6 @@ describe("R1365 the niche moments each have a sound of their own", () => {
   it("R1365 a card transformed into a Sheep the viewer can read bleats as it comes out of the puff", () => {
     expect(SHEEP_DEF_IDS).toContain(TOKEN);
     expect(shape(SAMPLES.transformed)).toEqual([sfx("poof"), sfx("bleat", BLEAT_DELAY_MS)].sort());
-    // Into anything else, the plain puff.
     expect(shape({ type: "transformed", instanceId: "u3", fromDefId: TOKEN, toDefId: UNIT, newInstanceId: "c90" })).toEqual([sfx("poof")]);
   });
 
@@ -1648,5 +1622,70 @@ describe("R1044 your own set Unit sounds as a set", () => {
     const event: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "h1", defId: HIDDEN_DEF_ID, costPaid: 2, formerId: "h1" };
     expect(voices(event)).toEqual([]);
     expect(shape(event)).toEqual([sfx("trapSet")]);
+  });
+});
+
+describe("R2722002 a hidden card makes its entrance as it reveals, never as it is set", () => {
+  /** Legendary and Mythic Traps, and Cloaked cards of each kind: Units, a Spell and a Field Spell. */
+  const CARDS: Record<string, CueCard> = {
+    "trap-legend": { type: "Trap", tags: [], rarity: "Legendary" },
+    "trap-mythic": { type: "Field Trap", tags: [], rarity: "Mythic" },
+    "trap-rare": { type: "Trap", tags: [], rarity: "Rare" },
+    "cloak-common": { type: "Unit", tags: [], rarity: "Common" },
+    "cloak-epic": { type: "Spell", tags: [], rarity: "Epic" },
+    "cloak-legend": { type: "Unit", tags: [], rarity: "Legendary" },
+    "cloak-mythic": { type: "Field Spell", tags: [], rarity: "Mythic" },
+  };
+  const LINES_CLOAKED: CardAudioTable = {
+    ...LINES,
+    cards: {
+      ...LINES.cards,
+      "cloak-common": { kind: "unit", play: { voice: "hustler", text: "Peekaboo." } },
+      "cloak-legend": { kind: "unit", play: { voice: "hustler", text: "Surprise." } },
+      "cloak-mythic": { kind: "spell", cast: { voice: "crone", text: "Ta-da." } },
+    },
+  };
+  const seat = (viewer: PlayerId): CueContext =>
+    ctx({
+      lines: LINES_CLOAKED,
+      card: (defId) => CARDS[defId],
+      view: baseView(viewer === "p1" ? {} : { viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }),
+    });
+  const reveal = (defId: string): GameEvent => ({ type: "activated", player: "p1", instanceId: "b1", defId, ability: "reveal" });
+  const ENTRANCE = sfx("entrance", STING_DELAY_MS);
+
+  it("R2722002 a Legendary or Mythic Trap's first firing plays the entrance; the sentinel and a firing again do not", () => {
+    // R2734000: the firing names the trap to both seats wherever it lies public, so both make the entrance.
+    for (const viewer of ["p1", "p2"] as const) expect(shape(trapFired("trap-legend"), seat(viewer)), viewer).toEqual([sfx("trapSting"), ENTRANCE].sort());
+    const mythic = cuesFor(trapFired("trap-mythic"), seat("p1")).find((c) => c.kind === "sfx" && c.id === "entrance");
+    expect(mythic).toMatchObject({ params: { mythic: true } });
+    // A lower-rarity Trap keeps the sting every Trap shares (R203).
+    expect(shape(trapFired("trap-rare"), seat("p1"))).toEqual([sfx("trapSting")]);
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSting")]);
+    const again = { ...trapFired("trap-mythic"), again: true } as GameEvent;
+    expect(shape(again, seat("p1"))).toEqual([sfx("spell")]);
+  });
+
+  it("R2722002 a Cloaked Common's reveal plays its rarity sting, a Cloaked Legendary's the entrance, on both seats", () => {
+    // Each seat reads it at the firing (R2734000), once: the activated reveal before it adds nothing.
+    for (const viewer of ["p1", "p2"] as const) {
+      expect(shape(trapFired("cloak-common"), seat(viewer)), viewer).toEqual([sfx("trapSting"), sfx("sting", STING_DELAY_MS)].sort());
+      expect(shape(trapFired("cloak-legend"), seat(viewer)), viewer).toEqual([sfx("trapSting"), ENTRANCE].sort());
+      const epic = cuesFor(trapFired("cloak-epic"), seat(viewer)).find((c) => c.kind === "sfx" && c.id === "sting");
+      expect(epic, viewer).toMatchObject({ params: { tier: "epic" } });
+      const mythic = cuesFor(trapFired("cloak-mythic"), seat(viewer)).find((c) => c.kind === "sfx" && c.id === "entrance");
+      expect(mythic, viewer).toMatchObject({ params: { mythic: true } });
+      expect(shape(reveal("cloak-legend"), seat(viewer)), viewer).toEqual([sfx("spell")]);
+    }
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSting")]);
+  });
+
+  it("R2722002 a Cloaked set plays trapSet or the plain play whatever its rarity", () => {
+    for (const defId of ["cloak-common", "cloak-legend", "cloak-mythic"]) {
+      const own: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "c9", defId, costPaid: 2, formerId: "c2" };
+      expect(shape(own, seat("p1")), defId).toEqual([sfx("trapSet")]);
+    }
+    const theirs: GameEvent = { type: "cardPlayed", player: "p1", instanceId: HIDDEN_DEF_ID, defId: HIDDEN_DEF_ID, costPaid: 2 };
+    expect(shape(theirs, seat("p2"))).toEqual([sfx("play")]);
   });
 });

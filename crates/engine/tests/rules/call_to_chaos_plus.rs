@@ -1,8 +1,6 @@
-//! C+ #73 Call to Chaos (Classic+ Edition)'s table, rolled by Core #95's subsystem (R28, R87, R423,
-//! R436): each of the ten entries against fixture pools, the Radiant's three different entries in list
-//! order, the recursion counting casts of either edition and resolving into nothing at the cap, and
-//! fused deck cards through JSON (R179, R468). The real card's test covers the same cases against the
-//! real catalog.
+//! C+ #73 Call to Chaos (Classic+ Edition)'s table, rolled by Core #95's subsystem (R28, R87, R423, R436),
+//! against fixture pools: the ten entries, the Radiant's three in list order, the recursion counting casts
+//! of either edition and resolving into nothing at the cap, and fused deck cards through JSON (R179, R468).
 
 use jackioh_engine::subsystems::call_to_chaos::{
     CHAOS_CHAIN_KEY, CallToChaosArgs, ChaosEffectDef, call_to_chaos, cast_random_call_to_chaos,
@@ -416,7 +414,6 @@ mod r423_c_plus_73s_table {
         let mut seen: Vec<String> = Vec::new();
         for i in 0..4 {
             let mut state = game(&format!("replace-{i}"), None, None);
-            // A copy: `setLibrary` hands back the library array itself.
             let old = set_library(&mut state, P1, &["fx-1", "fx-2", "fx-3", "fx-4", "fx-5"]);
             let events = run(&mut state, entry("replace"), None);
             assert_eq!(
@@ -431,7 +428,6 @@ mod r423_c_plus_73s_table {
                 assert_eq!(card.known_as, None);
                 seen.push(card.def_id.clone());
             }
-            // Each old card has ceased to exist, so none is found.
             assert!(old.iter().all(|card| find_instance(&state, &card.id).is_none()));
         }
         assert_eq!(sorted(seen), sorted(vec![plus.id.clone(), core95.id.clone()]));

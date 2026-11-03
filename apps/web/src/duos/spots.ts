@@ -1,15 +1,14 @@
-// Where on a board a ping points (#936 B64): the element Game.tsx draws for a hero, a zone or a hand
-// card, read back from its testid (`game/contract.ts`), and the S6 `PingTarget` it means in the duel
-// that board shows. Game.tsx stays the one board, so the Duos layer finds its anchors by the testids
-// every other layer uses, and adds nothing to the board itself.
+// Where on a board a ping points (#936 B64): a hero, zone or hand card Game.tsx draws, read back from
+// its testid (`game/contract.ts`), and the S6 `PingTarget` it means in the duel that board shows.
+// Game.tsx stays the one board, so the Duos layer finds its anchors by the testids every layer uses.
 //
-// A board always shows a view of the viewer's own team: its "you" side is the team's player in that
-// duel (team A's `p1`, team B's `p2`), its "opponent" side the enemy's. A hand target only ever names
-// "you" (S6: the sender's own team's side), the one hand the view holds as cards.
+// A board's "you" side is the viewer's team's player in that duel. A hand target only ever names
+// "you" (S6), the one hand the view holds as cards.
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
 import { testid, type Side } from "../game/contract.ts";
+import { placeOf } from "../game/drag/targets.ts";
 import type { PingTarget } from "../net/duos.ts";
 
 /** A pingable place on a board, as the board names it: lanes 1-based, as its zone testids count. */
@@ -29,10 +28,6 @@ export const SPOT_SELECTOR = [
   `[data-testid^="${ZONE_PREFIX}"][data-side][data-row][data-lane]`,
 ].join(", ");
 
-function sideOfAttr(value: string | null): Side | null {
-  return value === "you" || value === "opponent" ? value : null;
-}
-
 /** The spot the element is, or is inside; null for anything else on the page. */
 export function spotOfElement(element: Element | null): BoardSpot | null {
   const hit = element?.closest(SPOT_SELECTOR) ?? null;
@@ -44,14 +39,10 @@ export function spotOfElement(element: Element | null): BoardSpot | null {
   }
   if (id === testid.hero("you")) return { at: "hero", side: "you" };
   if (id === testid.hero("opponent")) return { at: "hero", side: "opponent" };
-  const side = sideOfAttr(hit.getAttribute("data-side"));
-  const row = hit.getAttribute("data-row");
-  const lane = Number(hit.getAttribute("data-lane"));
-  if (side === null || (row !== "units" && row !== "backrow") || !Number.isInteger(lane) || lane < 1) return null;
-  return { at: "zone", side, row, lane };
+  const place = placeOf(hit);
+  return place === null ? null : { at: "zone", ...place };
 }
 
-/** The testid of the element a spot is drawn as. */
 export function spotTestid(spot: BoardSpot): string {
   switch (spot.at) {
     case "hand":
@@ -68,7 +59,6 @@ export function sameSpot(a: BoardSpot | null, b: BoardSpot | null): boolean {
   return spotTestid(a) === spotTestid(b);
 }
 
-/** The viewer's own hand as cards, or none (a view only ever holds its own hand as cards). */
 function handOf(view: PlayerView): readonly { instanceId: string }[] {
   return Array.isArray(view.you.hand) ? view.you.hand : [];
 }

@@ -1,7 +1,5 @@
-// Every number the effects layer uses (CLAUDE.md rule 9; docs/polish/1-animations.md, Surface S2).
-// Particle counts per recipe live in `TUNING` in `cues.ts`, and preset physics in
-// `PARTICLE_PRESETS` in `presets.ts`. The values below are binding: other slices compile and test
-// against them.
+// Every number the effects layer uses (CLAUDE.md rule 9; docs/polish/1-animations.md, Surface S2), binding:
+// other slices test against them. Recipe counts live in `cues.ts`'s `TUNING`, preset physics in `presets.ts`.
 
 export const FX_MAX_TAIL_MS = 900;            // T: nothing an entry starts outlives entry end + T
 export const FX_MAX_PARTICLE_LIFE_MS = 900;   // every preset's max life, ≤ FX_MAX_TAIL_MS
@@ -37,7 +35,12 @@ export const FX_MANA_MAX_SPARKS = 10;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
-export const FX_LEGENDARY_TRAUMA = 0.5;
+/** R2722001: a Legendary's or a Mythic's entrance lands this hard (0.5 until R2722001 made it bigger). */
+export const FX_LEGENDARY_TRAUMA = 0.7;
+/** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
+export const FX_TAKEOVER_TAIL_MS = 700;
+/** R2722001: the takeover's shake as its card lands, the hardest the board takes. */
+export const FX_TAKEOVER_TRAUMA = 1;
 export const FX_TRAP_TRAUMA = 0.4;
 export const FX_RESULT_TRAUMA = 0.9;
 export const FX_LETHAL_LEAD_MAX_MS = 600;     // the killing blow replayed before the result plays in at most this (R200)
@@ -61,45 +64,39 @@ export const FX_DEFAULT_SEED = 0x5eed;
 export const FX_MEMORY_LIMIT = 64;            // entries each FxMemory map keeps (oldest evicted)
 export const FX_MEMORY_RECENT = 16;           // R502: the last events the planner keeps in order (a cast on draw is read off them)
 export const FX_MEMORY_RESOLVING = 8;         // R502: the plays still resolving it keeps, innermost last
+export const FX_MEMORY_HITS = 44;             // R2784000: the hit ids each keeps, a damage and a removal of all 20 zones' cards and both heroes
 
 // R502: a cast on draw. The card bursts out of its drawer's Deck pile as its `cardPlayed` starts.
 export const FX_CAST_ON_DRAW_TRAUMA = 0.25;
-// R502: #21 Hinder's refresh loss. A frost bolt flies from the caster's hero to the victim's crystal
-// tray, lands at FX_CRACK_HIT_AT of the entry, and each crystal the next refresh loses fractures from
-// there, FX_CRACK_STAGGER_MS apart but never past the entry's end (R200).
+// R502: #21 Hinder's refresh loss. Each crystal the next refresh loses fractures from the frost bolt's
+// landing, FX_CRACK_STAGGER_MS apart but never past the entry's end (R200).
 export const FX_CRACK_HIT_AT = 0.45;
 export const FX_CRACK_STAGGER_MS = 50;
 export const FX_FRACTURE_TAIL_MS = 800;       // a fracture lasts (D − delay) + this, inside FX_MAX_TAIL_MS
 export const FX_CRACK_TRAUMA = 0.3;
 /** The id the engine gives the next refresh's rider (`NEXT_REFRESH_MODIFIER_ID`, R169): #21 Hinder's badge. */
 export const FX_NEXT_REFRESH_MODIFIER_ID = "nextTurnMana";
-// R502: #27 Blood Ridden Glowy Jelly Bean. A crimson stream leaves the caster's hero, reaches the card
-// made Radiant at FX_BLOOD_FLIGHT_FRACTION of the entry and bursts gold there; on the other seat it
-// lands on a back chosen by a counter of the planner's own (R202), never the hidden card's place.
+// R502: #27 Blood Ridden Glowy Jelly Bean. On the other seat its stream lands on a back chosen by a
+// counter of the planner's own (R202), never the hidden card's place.
 export const FX_BLOOD_FLIGHT_FRACTION = 0.6;
 export const FX_BLOOD_PICK_BASE = 1;          // the first back a hidden pick lands on (modulo the hand)
 export const FX_BLOOD_PICK_STRIDE = 2;        // how far each later pick of the same play moves on
 export const FX_BLOOD_TRAUMA = 0.2;
-// Patch v0.2.7: Classic+ #24 Crushing Walls. At the first card its play destroys, two spiked walls
-// slide in from the board's left and right edges over lanes 1 and 5, meet the cards at
-// FX_WALLS_HIT_AT of the cue (fx.css's `fx-walls-close` stop of the same name), shake and slide back
-// out. The cue lasts D + FX_WALLS_TAIL_MS, inside FX_MAX_TAIL_MS (R200).
+// Classic+ #24 Crushing Walls: the walls meet the cards at FX_WALLS_HIT_AT of the cue (fx.css's
+// `fx-walls-close` stop of the same name); the cue lasts D + FX_WALLS_TAIL_MS, inside FX_MAX_TAIL_MS (R200).
 export const FX_WALLS_HIT_AT = 0.3;
 export const FX_WALLS_TAIL_MS = 850;
 export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
 export const FX_WALLS_TRAUMA = 0.45;
-// R437: a mark branded onto a card. The sigil slams on at FX_BRAND_SLAM_AT of the entry and fades
-// over FX_BRAND_TAIL_MS after it.
+// R437: a mark branded onto a card; its sigil fades over FX_BRAND_TAIL_MS after the entry.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
-// R1363 (MN05): a shield flashes up as Armor takes a hit, from the moment the hit lands, and fades
-// over FX_SHIELD_TAIL_MS after the entry.
+// R1363 (MN05): Armor's shield flashes from the hit's landing and fades over this after the entry.
 export const FX_SHIELD_TAIL_MS = 450;
 // R436: Call to Chaos's reveal. Line i lands at (FX_CHAOS_LAND_AT + i × stagger) of the entry, the
-// stagger shrinking so the last line lands by FX_CHAOS_LAND_LAST; each reel runs past
-// FX_CHAOS_REEL_DECOYS other names first. The reveal lasts D + FX_BANNER_TAIL_MS.
+// stagger shrinking so the last line lands by FX_CHAOS_LAND_LAST. The reveal lasts D + FX_BANNER_TAIL_MS.
 export const FX_CHAOS_LAND_AT = 0.4;
-// Patch v0.2.0's events (docs/classic-sets.md B3, B5), each a fraction of its entry (R200).
+// docs/classic-sets.md B3, B5's events, each a fraction of its entry (R200).
 export const FX_FLICKER_RETURN_AT = 0.5;       // a flickered card comes back through the void halfway in
 export const FX_REDIRECT_FLIGHT_FRACTION = 0.6; // a redirected hit flies from its old target to its new one
 export const FX_COUNTER_TRAUMA = 0.25;         // a countered card shatters with a small shake
@@ -116,10 +113,8 @@ export const FX_ROLL_STAGGER = 0.05;
 export const FX_ROLL_LAND_LAST = 0.7;
 export const FX_ROLL_TUMBLE_FACES = 8;
 export const FX_ROLL_TUMBLE_STRIDE = 3;        // a die's walk through its faces, item i stepping this + i
-// Issue #124: a sweep's fog rolls over its row (one entry, SWEEP_MS), each unit's hit landing as the
-// fog reaches its lane, from FX_FOG_HIT_FROM to FX_FOG_HIT_TO of the entry; a zone wave's count pops
-// at FX_ZONE_COUNT_AT. A fog is FX_FOG_PUFFS puffs of cloud and FX_FOG_ICONS icons, spread over the
-// row grown by FX_FOG_PAD of its height on every side; both trail FX_FOG_TAIL_MS after the entry.
+// Issue #124: a sweep's fog rolls over its row in one entry (SWEEP_MS), each unit's hit landing as the
+// fog reaches its lane; it spreads over the row grown by FX_FOG_PAD of its height on every side.
 export const FX_FOG_HIT_FROM = 0.2;
 export const FX_FOG_HIT_TO = 0.75;
 export const FX_FOG_TAIL_MS = 500;
@@ -128,21 +123,47 @@ export const FX_FOG_ICONS = 6;
 export const FX_FOG_PAD = 0.15;
 export const FX_ZONE_COUNT_AT = 0.35;
 export const FX_ZONE_TAIL_MS = 400;
-// Issue #124: a cast another card made flares at its caster's hero, bigger with each cast of the same
-// burst (FX_CAST_SCALE_STEP more per cast, up to FX_CAST_SCALE_MAX), and the hero jolts a little.
+// Issue #124: a cast another card made flares at its caster's hero, bigger with each cast of the same burst.
 export const FX_CAST_SCALE_STEP = 0.06;
 export const FX_CAST_SCALE_MAX = 1.6;
 export const FX_CAST_TRAUMA = 0.12;
-// #1442; on since #1444; the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
+// #1442, #1444: the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
 export const FX_FLAVOR_LIVE: boolean = true;
 export const FX_SHOT_LAUNCH_AT = 0.24;
 export const FX_SHOT_SHAKE_TRAUMA = 0.3;
 // #1443: the per-entry cap on non-combat damage shots (one volley starts together).
 export const FX_FLAVOR_VOLLEY_MAX = 4;
-// #1445: a Unit's summon entrance takes its flavor. A Brute lands heavy, with the weight of a
-// Legendary entrance; every other flavor throws its bursts with these counts and powers at
-// intensity "normal" (rule 9). Every count is at least 8, so low plans strictly fewer particles
-// than normal and high strictly more.
+// R2784000: a card's motif (fx/motifs/). Its four phases start at these fractions of the entry, as
+// FX_SLAM_AT does; its scale is the card's rarity × (1 + capped cost × step), at most FX_MOTIF_SCALE_MAX,
+// times the intensity (an X cost counts as FX_MOTIF_X_COST); each motif's shake is FX_MOTIF_TRAUMA's.
+export const FX_MOTIF_PHASES = { gather: 0, travel: 0.2, land: 0.6, linger: 0.75 } as const;
+export const FX_MOTIF_SCALE_PER_COST = 0.08;
+export const FX_MOTIF_COST_CAP = 7;
+export const FX_MOTIF_X_COST = 3;
+export const FX_MOTIF_SCALE_MAX = 2;
+export const FX_MOTIF_RARITY_SCALE = { Common: 1, Rare: 1.1, Epic: 1.25, Legendary: 1.4, Mythic: 1.6, Token: 0.9 } as const;
+export const FX_MOTIF_VOLLEY_MAX = 5;          // volley: the shots one entry fires
+export const FX_MOTIF_BARRAGE_MAX = 8;         // barrage: the hits that land one by one…
+export const FX_MOTIF_BARRAGE_STEP = 0.02;     // …this fraction of D apart, never past linger
+export const FX_MOTIF_CENTER_LANE = 3;         // nova: the lane a one-sided blast centres on
+export const FX_MOTIF_TRAUMA = { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 } as const;
+// R2784000: the scales the /dev/fx gallery offers.
+export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R2789000: the combat keyword beats (fx/motifs/beats.ts). A callout is the keyword's icon over the unit; a
+// hit's beats start FX_BEAT_STAGGER_MS apart (a later one at most FX_BEAT_STAGGER_MAX of D in), at most
+// FX_CALLOUTS_PER_HIT of them each with a callout. The fractions are of D, the lengths in ms, and all of it
+// lies inside the entry (R200).
+export const FX_CALLOUT_MS = 600;
+export const FX_CALLOUTS_PER_HIT = 2;
+export const FX_BEAT_STAGGER_MS = 60;
+export const FX_BEAT_STAGGER_MAX = 0.5;
+export const FX_BEAT_TRAUMA = 0.25;
+export const FX_FIRST_STRIKE_BREAK_AT = 0.4;   // the dying defender's counter-blow breaks off this far into the entry…
+export const FX_FIRST_STRIKE_BREAK_REACH = 0.6; // …this many card heights toward the attacker
+export const FX_PIERCE_REACH = 0.8;            // a Pierce's spear line runs this many card heights past each edge
+export const FX_FLYING_LUNGE_LIFT = 0.18;      // a Flying attacker's lunge scales up this much more, over the lane
+// #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
+// a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;
 export const FX_SUMMON_FLAVOR_TUNING = {
   physicalSpark: { count: 8, power: 1.2 },
@@ -173,8 +194,7 @@ export const FX_SUMMON_FLAVOR_TUNING = {
   spiritWisps: { count: 10, power: 0.7 },
 } as const;
 // #1446: a face-up death's flavor exit, on the death's beats (FX_DEATH_EMBER_AT, FX_DEATH_SMOKE_AT).
-// A Beast's streak to its graveyard flies this fraction of the entry; Hustle's bills and Clout's
-// lights-out take these colors (hot first). Every count is at least 8, as the summon's (rule 9).
+// Colors run hot first; every count is at least 8, as the summon's (rule 9).
 export const FX_DEATH_BOLT_FLIGHT_FRACTION = 0.5;
 export const FX_DEATH_BILL_COLORS = ["#e9f7d9", "#3fae5a", "#1f6b35"] as const;
 export const FX_DEATH_LIGHTS_OUT_COLORS = ["#4a4a57", "#26262e", "#0b0b0f"] as const;

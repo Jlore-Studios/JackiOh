@@ -1,11 +1,9 @@
-// The viewer's vibration switch (R669, issue #259): a presentation preference of this device, so it
-// lives in this browser only, under HAPTICS_SETTINGS_KEY in `localStorage`. The settings panel mounts
-// it through `SETTINGS_SLOTS`; the haptics player reads it at every buzz, so it applies at once.
-//
-// Storage is optional. A missing `window`, a throwing `localStorage`, a quota error on write or
-// unparsable JSON fall back to the default or to the in-memory value, and nothing here throws.
+// The viewer's vibration switch (R669, issue #259), kept in this browser's `localStorage` only. The
+// haptics player reads it at every buzz, so it applies at once. A storage failure falls back to the
+// default or the in-memory value; nothing here throws.
 
 import { useSyncExternalStore } from "react";
+import { getStored, setStored } from "../net/storage.ts";
 
 export type HapticsSettings = { vibration: boolean };
 
@@ -22,7 +20,7 @@ export function parseHapticsSettings(raw: unknown): HapticsSettings {
 
 function load(): HapticsSettings {
   try {
-    const text = window.localStorage.getItem(HAPTICS_SETTINGS_KEY);
+    const text = getStored(HAPTICS_SETTINGS_KEY);
     return text === null ? { ...DEFAULT_HAPTICS_SETTINGS } : parseHapticsSettings(JSON.parse(text));
   } catch {
     return { ...DEFAULT_HAPTICS_SETTINGS };
@@ -38,15 +36,11 @@ export function readHapticsSettings(): HapticsSettings {
   return current;
 }
 
-/** Merges `patch` over the current value, persists it in try/catch and notifies. */
 export function writeHapticsSettings(patch: Partial<HapticsSettings>): HapticsSettings {
   const next = parseHapticsSettings({ ...readHapticsSettings(), ...patch });
   current = next;
-  try {
-    window.localStorage.setItem(HAPTICS_SETTINGS_KEY, JSON.stringify(next));
-  } catch {
-    // Quota, private mode or blocked storage: the switch still holds in memory for this page.
-  }
+  // Quota, private mode or blocked storage: the switch still holds in memory for this page.
+  setStored(HAPTICS_SETTINGS_KEY, JSON.stringify(next));
   for (const listener of [...listeners]) listener();
   return next;
 }

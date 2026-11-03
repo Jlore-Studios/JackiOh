@@ -1,11 +1,5 @@
-// The opening's two bars and the reward reveal (#1658, R1953000), from crafted answers: both bars
-// pinned at the top as a HUD, unmoved ones included; each spent slot's points flying into it, labeled
-// with the server's points and tinted by rarity; then each bar filling from its points before to its
-// points after, a full one pulsing as it bursts and revealing what its fill paid; and the reveal
-// flying its items out one by one with the pack opening's sting, or all at once with one sting under
-// reduced motion, which flies and pulses nothing. The stylesheet is read as text, as
-// `FillBar.test.tsx` reads it, because Vitest stubs CSS imports. The audio engine is the recording
-// fake the pack scene's tests use; fake timers move everything.
+// The opening's two bars and the reward reveal (#1658, R1953000), from crafted answers. The audio
+// engine is the pack scene's recording fake; fake timers move all.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
@@ -138,7 +132,6 @@ describe("#1658 the opening's two bars", () => {
     const epic = screen.getByTestId(`${ID}-rewards-cosmetic-1`);
     expect(epic).toHaveTextContent("Epic token");
     expect(epic).toHaveAttribute("data-rarity", "Epic");
-    // Each flew out with its sting: the Epic one's tier and the card token's.
     expect(engine.playSfx).toHaveBeenCalledWith("sting", { tier: "epic" });
     expect(engine.playSfx).toHaveBeenCalledWith("sting", { tier: "rare" });
     expect(engine.playSfx).toHaveBeenCalledTimes(2);
@@ -166,6 +159,43 @@ describe("#1658 the opening's two bars", () => {
 
     expect(kinds()).toEqual(["cosmeticToken", "cosmeticPack"]);
     expect(screen.getByTestId(`${ID}-rewards-cosmetic-2`)).toHaveTextContent("Cosmetic pack");
+  });
+
+  it("R2728000 the cosmetic bar waits on its step's size, fills each step at its own and reveals a Legendary token", () => {
+    const bars = paid({
+      card: { before: 5, after: 9, size: 20, pays: 0 },
+      cosmetic: { before: 60, after: 10, size: 50, pays: 2 },
+      cosmeticPaid: ["epic", "legendary"],
+      cosmeticSizes: [75, 100, 50],
+    });
+    const { rerender } = render(<OpeningBars bars={bars} play={false} testid={ID} />);
+    const cosmetic = (): HTMLElement => screen.getByTestId(`${ID}-cosmetic`);
+
+    // Held back, it rests at its points before on the bar of the step it stood at.
+    expect(cosmetic().querySelector("progress")).toHaveProperty("max", 75);
+    expect(cosmetic()).toHaveTextContent("60 / 75");
+
+    rerender(<OpeningBars bars={bars} testid={ID} />);
+    advance(segmentMs({ from: 60, to: 75, burst: true }, 75));
+    advance(REVEAL_STAGGER_MS);
+    expect(screen.getByTestId(`${ID}-rewards-cosmetic-1`)).toHaveTextContent("Epic token");
+    advance(BURST_MS);
+    advance(segmentMs({ from: 0, to: 100, burst: true }, 100));
+    advance(REVEAL_STAGGER_MS);
+
+    expect(kinds()).toEqual(["cosmeticToken", "cosmeticToken"]);
+    const legendary = screen.getByTestId(`${ID}-rewards-cosmetic-2`);
+    expect(legendary).toHaveTextContent("Legendary token");
+    expect(legendary).toHaveAttribute("data-rarity", "Legendary");
+    expect(engine.playSfx).toHaveBeenCalledWith("entrance");
+
+    // It rests at the answer's points after, on the step after's bar.
+    advance(BURST_MS);
+    advance(segmentMs({ from: 0, to: 10, burst: false }, 50));
+    expect(cosmetic()).toHaveAttribute("data-state", "resting");
+    expect(cosmetic()).toHaveAttribute("data-bursts", "2");
+    expect(cosmetic().querySelector("progress")).toHaveProperty("max", 50);
+    expect(progress("cosmetic")).toBe(10);
   });
 
   it("bars that moved without paying fill to their points and reveal nothing", () => {
@@ -223,7 +253,7 @@ describe("#1658 the opening's two bars", () => {
   });
 });
 
-/* ------------------------------------------------------------------------ the stylesheet --- */
+/* the stylesheet */
 
 /** `economy.css` without its comments: vitest stubs CSS imports, so the file is read from the test's working directory. */
 const sheet: string = (() => {
@@ -289,7 +319,6 @@ describe("#1953 the opening's HUD", () => {
     expect(hud).toHaveAttribute("data-motion", "full");
     expect(hud).toHaveAttribute("data-phase", "flights");
     expect(hud.style.getPropertyValue("--flight-ms")).toBe(`${String(BAR_FLIGHT_MS)}ms`);
-    // One flight for each slot the server gave points, its label the server's number, none for the others.
     expect(hud.querySelectorAll(".bar-flight")).toHaveLength(2);
     expect(screen.queryByTestId(`${ID}-flight-0`)).toBeNull();
     expect(screen.queryByTestId(`${ID}-flight-2`)).toBeNull();
@@ -299,7 +328,6 @@ describe("#1953 the opening's HUD", () => {
     expect(five).toHaveAttribute("data-rarity", "Legendary");
     expect(ten).toHaveTextContent(/^\+10$/);
     expect(ten).toHaveAttribute("data-rarity", "Mythic");
-    // Each takes off from its slot's center for the HUD's, one stagger after the one before.
     expect(five.style.getPropertyValue("--flight-x")).toBe("150px");
     expect(five.style.getPropertyValue("--flight-y")).toBe("470px");
     expect(five.style.getPropertyValue("--flight-dx")).toBe("350px");
@@ -340,7 +368,6 @@ describe("#1953 the opening's HUD", () => {
     render(<OpeningBars bars={paid()} flights={flightsFor(paid())} testid={ID} />);
     advance(flightsMs(2));
 
-    // The cosmetic bar reaches full first: it pulses and glows, and its reward has not flown out yet.
     advance(segmentMs({ from: 145, to: 150, burst: true }, 150));
     const hud = screen.getByTestId(ID);
     const cosmetic = screen.getByTestId(`${ID}-cosmetic`);
@@ -366,7 +393,6 @@ describe("#1953 the opening's HUD", () => {
   });
 
   it("R1953000 reduced motion plays no flight or pulse, just the final fill", () => {
-    // Reduce motion: the bars rest at the points after at once, every reward shown.
     writeSettings({ reduceMotion: true });
     render(<OpeningBars bars={paid()} flights={flightsFor(paid())} testid={ID} />);
     expect(screen.getByTestId(ID)).toHaveAttribute("data-motion", "still");

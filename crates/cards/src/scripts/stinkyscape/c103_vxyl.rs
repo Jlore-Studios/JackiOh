@@ -7,8 +7,7 @@
 //! own (2) as a Trap and revealed by its Activate: Reveal, which takes it into a unit zone and runs
 //! its Cry; the designer's "On reveal" is that Cry (ST-S14-5), so a face-up play runs it too. The Cry
 //! is one `add_to_hand` of a base S #99 No-No Words, whose X its player chooses as they play it
-//! (R348), and nothing while the card is set (`is_set`). Poisonous (§4.4 step 7). The Radiant face
-//! adds Divine Shield and adds the same card.
+//! (R348), and nothing while the card is set (`is_set`).
 
 use jackioh_engine::prelude::*;
 
@@ -39,9 +38,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #103 Vxyl — SPEC §8.10 row S 103, BUILD M12 row S 103: "played face-up it adds one base No-No
-// Words to its controller's hand; set face-down by Cloaked and revealed, it takes a unit zone and adds
-// one; its hit destroys the Unit it damages; radiant 2/8 with Divine Shield".
+// S #103 Vxyl — SPEC §8.10 row S 103, BUILD M12 row S 103.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

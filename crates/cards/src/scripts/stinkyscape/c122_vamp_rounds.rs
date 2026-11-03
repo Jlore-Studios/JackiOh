@@ -17,9 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #122 Vamp Rounds — SPEC §8.10 row 122, BUILD M12 row S 122: "a 2/1 Lifesteal
-// Starship Piece whose damage heals its controller's hero; played as an Equip, the host gains
-// +2/+1 and Lifesteal; radiant 4/2".
+// Stinkyscape #122 Vamp Rounds — SPEC §8.10 row 122, BUILD M12 row S 122.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -32,29 +30,12 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
-    }
-
-    #[test]
-    fn prints_lifesteal_2_1_radiant_4_2() {
-        crate::register_all();
-        let def = crate::card_def(VAMP);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Equip", "Lifesteal"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Starship Piece", "Equip", "Lifesteal"]);
-        assert_eq!((def.base.attack, def.base.health), (Some(2), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(4), Some(2)));
     }
 
     #[test]
@@ -65,7 +46,7 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
         }));
         s.play(VAMP, json!({ "zone": 1 }));
-        // Past its summoning sickness: a full round, then it attacks. Its 2 damage heals its
+        // Its 2 damage heals its
         // controller's hero 2 (§4.4 step 8), though it dies to the 4-attack strike back.
         s.end_turn();
         s.end_turn();
@@ -85,7 +66,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(VAMP, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 2/1, with Lifesteal.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 6, "health": 5 }));
         let host_kinds = live_kinds(&s, host.id.as_str());

@@ -1,9 +1,7 @@
 // "Share as GIF" in the replay player (#513, R513000): the shown turn, or the range marked with the
 // scrubber, drawn as a GIF from its steps' views alone and handed to the share sheet or downloaded.
-// The state lives in `useGifExport`, which the player calls above its board so a fresh board (every
-// jump gives `Game` a new key) keeps it; `ShareGif` draws it in the board's notice slot beneath the
-// toolbar. The export itself, the raster and the encoder load on demand, with `import()`, the first
-// time a GIF is made, so the main bundle does not carry them.
+// The state lives in `useGifExport`, which the player calls above its board so a fresh board keeps it.
+// The export, the raster and the encoder load on demand, with `import()`, out of the main bundle.
 
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -15,6 +13,7 @@ import type { ReplayGifPreset } from "./config.ts";
 import type * as Gif from "./gif/export.ts";
 import { clampClip, loadClip, turnRange } from "./steps.ts";
 import type { StepCache } from "./steps.ts";
+import { isAbort, messageOf } from "../net/errors.ts";
 
 export const gifTestid = {
   toggle: "replay-gif",
@@ -50,7 +49,6 @@ export type GifExport = {
   /** The marked ends, null while unmarked; one mark alone is a clip of that step. */
   from: number | null;
   to: number | null;
-  /** The shown step. */
   current: number;
   preset: ReplayGifPreset;
   phase: GifPhase;
@@ -65,10 +63,6 @@ export type GifExport = {
 };
 
 const IDLE: GifPhase = { kind: "idle" };
-
-function isAbort(cause: unknown): boolean {
-  return cause instanceof DOMException && cause.name === "AbortError";
-}
 
 /** The clip marked on the scrubber, clamped to its cap, or null while nothing is marked. */
 export function markedClip(from: number | null, to: number | null): [number, number] | null {
@@ -125,7 +119,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
         setPhase(result.kind === "ready" ? { kind: "ready", file: result.file, share: gif.canShareFile(result.file) } : { kind: "tooBig" });
       } catch (cause) {
         if (controller.signal.aborted || isAbort(cause)) return;
-        setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause), ready: null });
+        setPhase({ kind: "failed", message: messageOf(cause), ready: null });
       }
     })();
   }, [cache, current, from, to, preset, lookup]);
@@ -170,7 +164,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
       setPhase(ready);
       loaded.current.shareGif(ready.file).catch((cause: unknown) => {
         // A dismissed share sheet is the viewer's answer, not a failure.
-        if (!isAbort(cause)) setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause), ready });
+        if (!isAbort(cause)) setPhase({ kind: "failed", message: messageOf(cause), ready });
       });
     },
   };

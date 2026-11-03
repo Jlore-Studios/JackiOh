@@ -1165,3 +1165,121 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* --- a Discover is just its cards (#2738) --- */
+
+/* No panel: the cards float over the dimmed board, as Hearthstone dims the board behind a Discover. */
+.prompt[data-prompt-layout="cards"][data-bare] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Off a phone the picker hugs its cards instead of holding a 560 px panel's width. */
+@media (min-width: 601px) and (min-height: 501px) {
+  .prompt[data-prompt-layout="cards"][data-bare] {
+    width: fit-content;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+/* The controls a picker still needs sit as one quiet row under the cards, not a form's footer. */
+.prompt[data-prompt-layout="cards"][data-bare] > .prompt-actions {
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  background: transparent;
+}
+
+/* Quiet buttons: a pill each at the small type, never stretched across the sheet. */
+.prompt[data-prompt-layout="cards"][data-bare] > .prompt-actions button {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
+}
+
+/* "View the board" is Hearthstone's Hide: a dim toggle, not a full-width button. */
+.prompt[data-prompt-layout="cards"][data-bare] [data-testid="prompt-peek"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--pal-wood-950) 55%, transparent);
+  color: var(--text-dim);
+}
+
+/* Stop stays a dashed pill of its own, centered under the answers. */
+.prompt[data-prompt-layout="cards"][data-bare] > .prompt-answer-stop {
+  align-self: center;
+  padding-inline: 18px;
+  border-style: dashed;
+  border-radius: var(--radius-pill);
+}
+
+/* The lines a bare picker keeps carry state the cards do not show, so they read over the dim. */
+.prompt[data-prompt-layout="cards"][data-bare] > :is(.prompt-budget, .mulligan-status, .prompt-streak, .prompt-sequence-clock) {
+  text-align: center;
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--pal-black) 85%, transparent);
+}
+
+/* Toward Hearthstone's Discover scale where the screen has room. */
+@media (min-width: 1025px) and (min-height: 701px) {
+  .prompt[data-prompt-layout="cards"][data-bare] > .prompt-cards {
+    gap: 16px;
+  }
+  .prompt[data-prompt-layout="cards"][data-bare] > .prompt-cards .prompt-card:not(.prompt-card--code) {
+    width: 164px;
+    min-height: 224px;
+  }
+}
+
+/* --- a Choose one of lanes is its lanes on the board (#2757) --- */
+
+/* Last in the sheet, so each rule beats the small pickers' docks of the same weight above. No dim and no
+   panel: the lanes are lit on the board (LanePick.tsx), and what is left is a hint and Cancel in one pill at the
+   foot of the screen, clear of the home indicator, solid so it reads over the hand and the control bar it covers
+   (as the phone's target bar does). A replay's top placement is more specific and wins. */
+.prompt-scrim:has(> .prompt[data-lane-pick]) {
+  place-items: end center;
+  padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: transparent;
+}
+
+.prompt[data-prompt-kind][data-lane-pick] {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  max-height: none;
+  padding: 4px 6px 4px 16px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-2);
+}
+
+.prompt[data-prompt-kind][data-lane-pick] > :is(.prompt-board-hint, .prompt-title) {
+  display: block;
+  max-width: none;
+  margin: 0;
+  font-size: var(--type-sm);
+}
+
+.prompt[data-prompt-kind][data-lane-pick] > .prompt-actions {
+  position: static;
+  padding: 0;
+  border-top: 0;
+  background: transparent;
+}
+
+.prompt[data-prompt-kind][data-lane-pick] > .prompt-actions button {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
+}

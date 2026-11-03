@@ -6,7 +6,7 @@
 //! its Attack as it is shown now through the layers (§10.4), floored at 0, so a 3/3 becomes 6/3 and a
 //! 0-Attack Unit stays at 0 (R1868001); then `grant_keyword` First Strike on every Unit of both
 //! sides, a granted keyword it keeps for its stay (R78), not for the turn. A Unit Immune to Spells is
-//! passed by. Radiant: the First Strike for its caster's Units alone. Declares no numbers.
+//! passed by.
 
 use jackioh_engine::prelude::*;
 
@@ -45,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #119 Unsecure System — SPEC §8.10 row S 119, BUILD M12 row S 119: "a 3/3 becomes 6/3 on both
-// sides; every Unit has First Strike until it leaves the field; a 0-Attack Unit stays at 0; radiant
-// enemy Units are doubled but gain no First Strike" (R1868001, proven here and in S #118's file).
+// S #119 Unsecure System — SPEC §8.10 row S 119, BUILD M12 row S 119 (#118, R1868001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

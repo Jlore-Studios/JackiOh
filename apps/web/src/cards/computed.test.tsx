@@ -1,7 +1,5 @@
-// R280: in play, a card whose view carries `preview` prints what its formula comes to now, in
-// braces after the formula — in hand, on the field, and in the overlays that show those faces. The
-// collection prints no value. Every view is a fixture shaped as `viewFor` builds it; the engine's
-// side (which cards carry it, and for whom) is crates/engine/tests/rules/preview.rs's and
+// R280: in play, a card whose view carries `preview` prints what its formula comes to now. The
+// engine's side (which cards carry it, and for whom) is crates/engine/tests/rules/preview.rs's and
 // crates/cards/tests/cross/preview.rs's.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -96,7 +94,6 @@ describe("R280 what a formula comes to now", () => {
     const value = hand.querySelector(".cf-value");
     expect(value).toHaveAttribute("title", "Fib(times played + 1): currently 2");
     expect(value).toHaveAttribute("data-label", "Fib(times played + 1)");
-    // Its hover preview prints the same.
     expect(values(hover(hand))).toEqual(["{2}"]);
   });
 
@@ -111,7 +108,7 @@ describe("R280 what a formula comes to now", () => {
   });
 
   it("R280 R102 a fused card's values follow their own lines: the nth entry with a label after its nth occurrence", () => {
-    // #85 fusing a Fed Fauci onto a Fed Fauci: one text per ingredient, and one value each.
+    // #85 fusing a Fed Fauci onto a Fed Fauci.
     const fused = fusedDef([def("core-091"), def("core-091")]);
     const printed = Object.fromEntries((def("core-091").params ?? []).map((param) => [param.key, param.base]));
     const face = faceModel({
@@ -129,8 +126,7 @@ describe("R280 what a formula comes to now", () => {
     });
     const { container } = render(<CardFace face={face} layout="full" />);
     expect(values(container)).toEqual(["{2}", "{3}", "{9}"]);
-    // Each ingredient's text is its own lines (R102, R366), so the lines that print the formula are
-    // one per ingredient, in order, and the value the text does not print comes at the very end.
+    // Each ingredient's text is its own lines (R102, R366).
     const text = container.querySelector(".card-text")?.textContent ?? "";
     const formulaLines = text.split("\n").filter((line) => line.includes("+1 mana per Plague Counter"));
     expect(formulaLines).toHaveLength(2);

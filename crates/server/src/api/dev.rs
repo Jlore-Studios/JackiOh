@@ -1,35 +1,20 @@
-//! The dev tools (SPEC §14.10, R1300000): a dev account, one whose profile id `DEV_PROFILE_IDS`
-//! lists (`env.rs`), or in end-to-end mode a fixture account marked dev (R1310004,
-//! `api::e2e::is_e2e_dev`), moves its own economy by hand, so each part of §14 can be tried on
-//! staging and production. Every route acts on the caller's own account, named by the token, and
-//! none takes a profile id.
+//! The dev tools (SPEC §14.10, R1300000): a dev account, one `DEV_PROFILE_IDS` lists (`env.rs`) or in
+//! end-to-end mode a fixture marked dev (R1310004, `api::e2e::is_e2e_dev`), moves its own economy by hand.
+//! Every route acts on the caller's own account, named by the token, never a profile id. The server
+//! decides (CLAUDE.md rule 7): every route checks the list itself and answers anyone else 403 `forbidden`,
+//! writing nothing; the client's `isDev` only shows its panel. Each action is one transaction, every row a
+//! ledger row of reason `dev` marked `dev` (§14.10, §14.11, [`DEV_GRANT_REASON`]), and a clear is an
+//! offsetting row per holding, never a deleted one.
 //!
-//! The server decides (CLAUDE.md rule 7): `GET /api/auth/me` says whether the caller is a dev
-//! account (`isDev`), and every route here checks the list itself and answers anyone else 403
-//! `forbidden`, writing nothing. The client only chooses whether to show its panel.
+//! - `POST /api/dev/xp`: XP to a shipping set's track (§14.7), up to `SET_TRACK_LEVELS`; no rewards are paid.
+//! - `POST /api/dev/jlore`: Jlore (§14.1).
+//! - `POST /api/dev/fill`: every collectable card to `MAX_COPIES` and every cosmetic but each kind's default,
+//!   which every account owns with no row (§14.2), a full art on its card (R1313000).
+//! - `POST /api/dev/clear/:part`: cards, cosmetics, jlore, counters, tracks, or everything; packs,
+//!   tokens and quests are no part of any.
+//! - `POST /api/dev/bar/:bar` (R1310003): a token bar filled, paying as a pack's duplicates would (§14.5).
 //!
-//! Each action is one transaction, and every row it writes is a ledger row of reason `dev` marked
-//! `dev` (§14.10, §14.11): the collection's `collection_grants` under the reason
-//! [`DEV_GRANT_REASON`] (migration 0046), each economy ledger under `JloreReason::Dev` or
-//! `EconomyReason::Dev`. A clear is an offsetting row per holding, never a deleted one (§14.11).
-//!
-//! - `POST /api/dev/xp` `{ setId, xp }`: XP to the track of a set that ships, through the level
-//!   curve (§14.7), its level stopping at `SET_TRACK_LEVELS`. No level's rewards are paid: the
-//!   reward tables are the tracks' sub-issue's.
-//! - `POST /api/dev/jlore` `{ jlore }`: Jlore (§14.1).
-//! - `POST /api/dev/fill`: every collectable card (non-token, unbanned, of a set that ships) up to
-//!   `MAX_COPIES`, and every cosmetic of the registry but each kind's default, which every account
-//!   owns with no row (§14.2): a per-card kind on each of those cards, a full art on the card it
-//!   names (R1313000), an account kind once.
-//! - `POST /api/dev/clear/:part`: `cards`, `cosmetics`, `jlore`, `counters` (the bars and pity
-//!   counters), `tracks`, or `everything`, all five in one transaction. Packs, tokens and quests are
-//!   no part of any.
-//! - `POST /api/dev/bar/:bar` (R1310003): the `card` or the `cosmetic` token bar filled to its size,
-//!   so it pays at once what a pack's duplicates filling it would (§14.5): a card token, or the
-//!   cosmetic token cycle's next step, the cycle's place moving on.
-//!
-//! The quest tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`, §14.9) are
-//! `api/quests.rs`'s, behind this same [`dev_caller`].
+//! The quest tools (§14.9) are `api/quests.rs`'s, behind this same [`dev_caller`].
 
 use std::sync::Arc;
 
@@ -42,16 +27,16 @@ use crate::api::collection::{caller_profile, owned_in};
 use crate::api::e2e::is_e2e_dev;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, str};
 use crate::app::{App, now_ms};
-use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
+use crate::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use crate::cosmetics::CosmeticKind;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
 use crate::economy::math::level_for_xp;
-use crate::economy::packs::{bar_before, cycle_step};
+use crate::economy::packs::{bar_before, cycle_at, cycle_step, delta_of};
 use crate::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyReason, InventoryGrant, InventoryItem, JloreGrant,
     JloreReason, SetTrack, TrackGrant,
 };
-use crate::economy::tokens::settle_bar;
+use crate::economy::tokens::{settle_bar, settle_cosmetic_bar};
 
 /// R1300000: `collection_grants.reason` for a dev account's own card grant or clear (migration
 /// 0046), which its `collection_grants_dev_check` writes only with the `dev` mark.
@@ -215,7 +200,11 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let mut cosmetics_written = 0;
-    for cosmetic in cosmetics.iter().filter(|cosmetic| !cosmetic.default) {
+    // R2755000: the Jlorious card back too is left out, which only reaching Jlorious grants.
+    for cosmetic in cosmetics
+        .iter()
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+    {
         let targets: Vec<Option<&str>> = if per_card(cosmetic.kind) {
             cards.iter().copied().map(Some).collect()
         } else if cosmetic.kind == CosmeticKind::FullArt {
@@ -301,24 +290,24 @@ pub async fn clear(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json(200, json!({ "written": written })))
 }
 
-/// The token bar a fill's `:bar` names (§14.5), with its size, or `None` for no bar.
-fn bar_of(bar: &str) -> Option<(Counter, i64)> {
+/// The token bar a fill's `:bar` names (§14.5), or `None` for no bar.
+fn bar_of(bar: &str) -> Option<Counter> {
     match bar {
-        "card" => Some((Counter::CardTokenBar, CARD_TOKEN_BAR_SIZE)),
-        "cosmetic" => Some((Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE)),
+        "card" => Some(Counter::CardTokenBar),
+        "cosmetic" => Some(Counter::CosmeticTokenBar),
         _ => None,
     }
 }
 
-/// `POST /api/dev/bar/:bar` (R1310003): 200 `{ written }`, the ledger rows the fill wrote; 404 for a
-/// `:bar` that names no bar. Under the account's lock (R1301003) the bar gains what it lacks of its
-/// size and pays as a pack's duplicates filling it would (`economy::packs::settle_bars`): the bar's
-/// points to what it keeps, then a card token, or the cosmetic token cycle's next step and the
-/// cycle's place moved on. Every row is reason `dev`, marked `dev`.
+/// `POST /api/dev/bar/:bar` (R1310003): 200 `{ written }`, the rows written; 404 for a `:bar` that
+/// names no bar. Under the account's lock (R1301003) the bar gains what it lacks of its size, the
+/// cosmetic bar's its current step's (R2728000), and pays as a pack's duplicates filling it would
+/// (`economy::packs::settle_bars`), every row marked `dev`. A bar already past its size pays every size
+/// it holds first, as an opening would, and the fill tops up the rest.
 pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = dev_caller(app, &req)?;
     let bar = req.params.get("bar").map(String::as_str).unwrap_or("");
-    let Some((counter, size)) = bar_of(bar) else {
+    let Some(counter) = bar_of(bar) else {
         return Err(ApiError::new(ApiErrorCode::NotFound, "no such bar"));
     };
     let at = now_ms();
@@ -326,7 +315,18 @@ pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
     tx.economy_lock_account(&profile.id).await?;
     let counters = tx.economy_counters_get(&profile.id).await?;
     let held = bar_before(&counters, counter);
-    let (pays, remainder) = settle_bar(held, size - held % size, size);
+    let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);
+    let (pays, remainder) = if counter == Counter::CardTokenBar {
+        let size = CARD_TOKEN_BAR_SIZE;
+        settle_bar(held, size - held % size, size)
+    } else {
+        // The step the bar stands at once what it holds is paid, and what it lacks of that step's
+        // size (R2728000).
+        let (owed, kept) = settle_cosmetic_bar(held, 0, cycle);
+        let lacks = cycle_at(cycle + delta_of(owed.len())?).bar_size() - kept;
+        let (paid, remainder) = settle_cosmetic_bar(held, lacks, cycle);
+        (delta_of(paid.len())?, remainder)
+    };
     let mut written = 0;
     if remainder != held {
         grant_dev_counter(&mut tx, &profile.id, counter, remainder - held, at).await?;
@@ -344,7 +344,6 @@ pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
         .await?;
         written += 1;
     } else {
-        let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);
         for paid in 0..pays {
             let (item, key) = cycle_step(cycle + paid);
             grant_dev_item(&mut tx, &profile.id, item, key, 1, at).await?;

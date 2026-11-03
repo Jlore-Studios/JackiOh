@@ -2,14 +2,9 @@
 //!   Base:    "Charge, Deft"
 //!   Radiant: "Charge, Armor 1, Deft" — §8 Conventions: a keyword cell without "Plus" gives the
 //!            radiant face's COMPLETE keyword list.
-//!
-//! Charge, Armor 1 and Deft are PRINTED keywords: `catalog.json` carries them on `base.keywords`
-//! and `radiant.keywords`, and §10.4 layer 1 reads them off the def. Granting any of them here
-//! would be a second source — for Armor it would literally double it, because §10.4 sums Armor
-//! across sources. So both scripts are empty.
-//!
-//! R49 (two exertions: one attack plus one switch in a turn) is the Deft keyword, read through
-//! §10.4's layers, so a granted Deft works the same as the printed one.
+//! Charge, Armor 1 and Deft are PRINTED keywords in catalog.json read by §10.4 layer 1.
+//! Charge: attacks hero on summoned turn (§6.1, §4.1). Armor 1: §4.4 step 2 (R346).
+//! Deft: 2 exertion tokens per turn (§4.1, R49). Empty Script.
 
 use jackioh_engine::prelude::*;
 
@@ -23,10 +18,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63).
-//
-// The must-pass row (BUILD M4-T4 #45): "Charge; attack then switch and switch then attack in one
-// turn (R49); radiant Armor 1."
+// #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63): the must-pass row of BUILD M4-T4 #45.
 //
 // R6: "switch then attack" is a unit that starts in Defense, switches to Attack and then attacks;
 // for every other unit the switch spends the turn, which the #20 Pointmaster controls prove.

@@ -18,7 +18,6 @@ export const PRACTICE_PACING: PracticePacing = {
   firstActionMs: 800,
   actionGapMs: 550,
   promptAnswerMs: 450,
-  // Wait for lethal replay and result effects.
   resultDelayMs: FX_LETHAL_LEAD_MAX_MS + FX_RESULT_MS,
 };
 
@@ -48,6 +47,13 @@ export const PRACTICE_SETUP_KEY = "jackioh.practice.setup";
 
 export const PRACTICE_DEFAULT_DIFFICULTY: Difficulty = "easy";
 
+/**
+ * R2777003: the one tier whose practice games the player's own statistics (R639) count. Easy plays the AI on a
+ * person's resources (§9.9, R180); Medium and Hard hand it more, so their games would pull the player's win
+ * rates down for a reason that is not the player's cards.
+ */
+export const PRACTICE_TALLY_DIFFICULTY: Difficulty = "easy";
+
 export const PRACTICE_SEED_BYTES = 4;
 
 export const PRACTICE_SEED_MAX_LENGTH = 64;
@@ -57,10 +63,7 @@ export const PRACTICE_RESULT_PARTICLES = 18;
 /** R768: retained free-game replays. */
 export const PRACTICE_REPLAYS_KEPT = 10;
 
-/**
- * R768: how many of the kept games opened last the worker holds folded, so going back to one folds
- * it no second time. Each holds a state every `REPLAY_CHECKPOINT_EVERY` steps.
- */
+/** R768: how many kept games opened last the worker holds folded, so going back to one folds it no second time. */
 export const PRACTICE_REPLAYS_CACHED = 5;
 
 /** R923001: the most cards the practice sandbox's search shows at once. */

@@ -12,7 +12,7 @@ What the other crates call:
 
 | Function | Answers |
 | --- | --- |
-| `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678), dealt seats (R433) and the practice sandbox flag (R923000) |
+| `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678), dealt seats (R433), the practice sandbox flag (R923000) and each seat's deck marks, cards dealt Radiant or Buffed (R2702000) |
 | `create_recorded_game(&CreateGameOptions) -> GameState` | `create_game` for a game already made (a fold, a replay, a summary): a seat with no handicap holds the deck size the game was made under, so a game dealt 20-card decks before #1705 folds as it was played (R1705003) |
 | `begin_game(&GameState) -> ReduceResult` | setup run (§2.1): the opening draws and the mulligan prompts |
 | `reduce(&GameState, &Action) -> ReduceResult` | the next state and its events, or `error: Some(reason)` with the input state unchanged and no events |
@@ -45,6 +45,17 @@ mulligan, both seats' prompts open at once in `state.mulligan` (R265–R268). An
 pause parks what it still owes on `state.work` as plain-data `Resume` records, never closures, in the
 order R113 sets (`state.work_cursor`). Read `work.rs`'s header before touching anything that can
 open a prompt.
+
+The event stream also says why things happen, for the client's cues and never for a rule. A keyword
+behind a `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` rides it as `via`, set where
+the keyword applies: Cleave, Trample and First Strike as the hit's route (`DamageFlags.via`, never
+serialized, from `combat.rs` and `damage.rs`'s Trample), Pierce and Lifesteal in `damage.rs`'s steps,
+Poisonous and First Strike's unanswered kill on the `destroyed` through `Frontier.death_via`, and
+Reborn in `state_check.rs` (R2783001). `hook_marks.rs` emits `hookResolving` just before each first run
+of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
+`state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
+`view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
+drops `via`, so neither moves a hash.
 
 ## Purity (CLAUDE.md rule 4)
 

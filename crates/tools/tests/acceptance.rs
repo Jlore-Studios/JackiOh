@@ -1,61 +1,28 @@
-//! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own
-//! tests held, read off the repository itself:
+//! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own tests held,
+//! read off the repository itself, and the later ones beside them:
 //!
 //!  - V2: the pure crates (engine, cards, ai, luau, run) link nothing but serde, serde_json, indexmap and
-//!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), and the
-//!    engine's and `jackioh-luau`'s ts-rs only behind their optional `ts` features (CLAUDE.md rule 4;
-//!    each crate's `clippy.toml` holds the rest of the rule, the five byte for byte the same and every
-//!    entry shown to fire on `tests/fixtures/purity.rs`);
-//!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose, part 28's grep
-//!    (`readFileSync(…md`, `include_str!(…md`, `read_to_string(…md`) as a test. The two structural
-//!    readers it allows are named below;
-//!  - V28: the TypeScript the Rust replaced is gone: no source file under `packages/`,
-//!    `apps/server/` or `ladder/` (part 37; a checkout's leftover `node_modules` does not count).
-//!
-//! And one the CI scoping added (#751):
-//!
-//!  - CI scope: `scripts/ci-scope.sh`'s `rust_<group>` lines follow the crate graph `cargo metadata`
-//!    reads, so a change in a crate runs every one of ci.yml's `rust-test` groups that tests it or a
-//!    crate built on it (dev-dependencies included) and no other, and a crate or a path dependency
-//!    the script's map lacks fails here; and a file a crate includes from outside its own directory
-//!    runs a group that tests that crate.
-//!
-//! And one for the daily run:
-//!
-//!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`. super.yml's
-//!    `daily tests` job runs each one (`cargo test -- --ignored`), and the reason names what holds
-//!    the same rule per pull request, so an ignore moves a test to the daily run and never switches
-//!    one off.
-//!
-//! And one for BUILD §2 (#1640):
-//!
-//!  - Config: every `pub const` of the engine's `config.rs` is named, outside comments, by a source
-//!    file under `crates/*/src`, a crate's `build.rs`, the engine's `tests/export_config.rs` or
-//!    another constant in `config.rs`, so flipping one changes the game, or stops the build where
-//!    the code that plays it asserts the one value it plays.
-//!
-//! And one for this crate's own contract (#1720):
-//!
-//!  - README: `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface, read
-//!    off each command's `-h` page: every subcommand, flag and listed value a row names is the
-//!    CLI's, and every command, flag and possible value of the CLI is in some row.
-//!
-//! And one for the tests' shared helpers (#1777, #1826):
-//!
-//!  - Helpers: each family of shared test helpers is defined once, in its home, and no other file
-//!    under the trees it covers defines its own: `both` and `spread` under `crates/engine/tests/rules/`
-//!    (`fixtures/harness.rs`); the testkit's `Scenario::unit_at` and one-instance pick builders
-//!    (`crates/engine/src/testkit/pick.rs`) under `crates/engine/tests/`, `crates/cards/`,
-//!    `crates/luau/tests/` and `crates/ai/tests/`; `register_fixture_script`, `fixture`, `in_hand`,
-//!    `targets_of` and `tributes_of` under `crates/cards/tests/cross/` (its `mod.rs`); and `det`,
-//!    `ai_options` and `js` under `crates/ai/tests/` (`ai/support.rs`). A test file copied from an
-//!    old one brings no copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
-//!
-//! And one for R1420's preview (#2257):
-//!
-//!  - Preview: every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not list.
-//!    A preview opens a held set on one test's thread, and one of a set that ships opens nothing,
-//!    so the patch that ships a set takes its previews out with it.
+//!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), ts-rs only behind
+//!    the optional `ts` features (CLAUDE.md rule 4); the five `clippy.toml`s are identical and every entry
+//!    fires on `tests/fixtures/purity.rs`;
+//!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose (part 28's grep) but the
+//!    two structural readers named below; V28: no source under `packages/`, `apps/server/` or `ladder/`
+//!    (part 37);
+//!  - CI scope (#751): `scripts/ci-scope.sh`'s `rust_<group>` lines follow `cargo metadata`'s crate graph: a
+//!    change runs every `rust-test` group that tests its crate or one built on it, and no other; so does a
+//!    file included from outside its crate's directory;
+//!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`, naming what holds its rule
+//!    per pull request, so an ignore moves a test to super.yml's daily run and never switches one off;
+//!  - Config (BUILD §2, #1640): every `pub const` of the engine's `config.rs` is named, outside comments, by
+//!    a source file under `crates/*/src`, a `build.rs`, `tests/export_config.rs` or another constant;
+//!  - README (#1720): `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface: every
+//!    row's words are the CLI's, and the whole CLI is in some row;
+//!  - Helpers (#1777, #1826): each family of shared test helpers is defined once, in its home, and no file
+//!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2);
+//!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
+//!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
+//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
+//!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -126,7 +93,7 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
             path.display()
         );
         for (name, entry) in &dependencies {
-            if matches!(crate_dir, "engine" | "luau") && name == "ts-rs" {
+            if matches!(crate_dir, "engine" | "luau" | "run") && name == "ts-rs" {
                 assert!(
                     entry.contains("optional = true"),
                     "{}: ts-rs must stay optional, behind the `ts` feature",
@@ -159,7 +126,6 @@ fn v2_the_reader_sees_through_tables_and_inline_tables() {
 /// One use of every path the pure crates' `clippy.toml` bans (its header says why nothing compiles it).
 const PURITY_FIXTURE: &str = include_str!("fixtures/purity.rs");
 
-/// Every `path = "…"` entry of a `clippy.toml`, in its order.
 fn banned_paths(toml: &str) -> Vec<String> {
     toml.lines()
         .filter_map(|line| line.split_once("path = \"")?.1.split_once('"'))
@@ -269,7 +235,8 @@ const STRUCTURAL_READERS: &[&str] = &[
     // SPEC §7's table of tokens, its Token and Index cells, one row per token (R1177001).
     "crates/cards/tests/cross/catalog.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
-    // table, the first cell of each row only (#1720).
+    // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
+    // row only, and the line of `spec/README.md`'s map that links §15.
     "crates/tools/tests/acceptance.rs",
 ];
 
@@ -1057,7 +1024,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/ai/tests/ai/support.rs",
-        names: &["det", "ai_options", "js"],
+        names: &["det", "ai_options", "js", "unit"],
         statics: &[],
         structs: &[],
         dirs: &["crates/ai/tests"],
@@ -1582,9 +1549,8 @@ fn is_command_word(token: &str) -> bool {
 }
 
 /// Where the table and the CLI disagree (#1720). Each usage is read as clap reads a command line: a
-/// word naming a subcommand of the command reached so far descends into it, a `--flag` must be a
-/// flag of that command, and the word after a flag that takes a value is its value, which must be
-/// one of the flag's possible values (each of `a|b`) when clap lists them; any other word is a
+/// subcommand word descends, a `--flag` must be the reached command's, and the word after a valued
+/// flag must be one of its possible values (each of `a|b`) when clap lists them; any other word is a
 /// placeholder. Then every command, flag and possible value of the CLI must be named by some usage.
 fn table_drift(usages: &[String], tree: &BTreeMap<Vec<String>, CliCommand>) -> Vec<String> {
     let shown = |path: &[String]| {
@@ -1834,4 +1800,48 @@ fn preview_no_test_previews_only_sets_that_ship() {
 fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
     let text = "let _a = preview_sets(&[SetName::Core]);\nlet _b = preview_sets(&[SetName::Boss]);\nlet _c = preview_sets(&[\n    SetName::Meditative,\n    jackioh_engine::SetName::Stinkyscape,\n]);\nlet _d = preview_sets(&[SetName::MeditativePlus, SetName::Custom]);\nlet _e = preview_every_set();\n";
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
+}
+
+/// The constants `spec/15-dungeon-run.md`'s table names, the first cell of each row, in order.
+fn spec_table_constants(section: &str) -> Vec<String> {
+    section
+        .lines()
+        .filter_map(|line| line.strip_prefix("| `"))
+        .filter_map(|rest| rest.split('`').next())
+        .map(str::to_string)
+        .collect()
+}
+
+// B33 (DR14, #2709): the dungeon run's spec section holds one row per `pub const` of the run's
+// `config.rs` and no other, and the spec's map links the note.
+#[test]
+fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
+    let root = repo();
+    let config = fs::read_to_string(root.join("crates/run/src/config.rs")).expect("the run's config.rs");
+    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md");
+    let map = fs::read_to_string(root.join("spec/README.md")).expect("spec/README.md");
+    let constants: BTreeSet<String> = config_constants(&config).into_iter().collect();
+    let rows: BTreeSet<String> = spec_table_constants(&section).into_iter().collect();
+    assert!(
+        constants.len() > 40,
+        "only {} constants found in crates/run/src/config.rs",
+        constants.len()
+    );
+    let missing: Vec<&String> = constants.difference(&rows).collect();
+    let stale: Vec<&String> = rows.difference(&constants).collect();
+    assert!(
+        missing.is_empty() && stale.is_empty(),
+        "spec/15-dungeon-run.md's constants table and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
+    );
+    assert!(
+        map.lines()
+            .any(|line| line.starts_with("- [[§15]]") && line.contains("(15-dungeon-run.md)")),
+        "spec/README.md does not map spec/15-dungeon-run.md"
+    );
+}
+
+#[test]
+fn dungeon_the_table_scan_reads_each_rows_first_cell() {
+    let section = "| Constant | What | Where |\n| --- | --- | --- |\n| `RUN_A` | One | [[§15.1]] |\n| `RUN_B` | Two, see `RUN_A` | [[§15.2]] |\nProse naming `RUN_C`.\n";
+    assert_eq!(spec_table_constants(section), ["RUN_A", "RUN_B"]);
 }

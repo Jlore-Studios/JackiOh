@@ -1,0 +1,129 @@
+// R2784000: the signature animation of every Classic+ card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
+// default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
+// recipe) or "keep" (it plays over that recipe).
+{
+  "classicplus-001": { setPiece: "vortex" }, // Doom Shroom
+  "classicplus-002": "none: pending", // Groom Shroom
+  "classicplus-003": "none: pending", // Second Amendment Snake
+  "classicplus-004": "none: pending", // Juhan Biggest Bat
+  "classicplus-005": "none: pending", // Guy Att
+  "classicplus-006": "none: pending", // Wrong-House Attacker
+  "classicplus-007": "none: pending", // The House
+  "classicplus-008": "none: pending", // Withering Storm
+  "classicplus-009": "none: pending", // Silence
+  "classicplus-010": "none: pending", // New Wraps
+  "classicplus-011": "none: pending", // Anime Armor
+  "classicplus-012": "none: pending", // The Mother Pancake
+  "classicplus-012-1": "none: pending", // Devour
+  "classicplus-012-2": "none: pending", // Death Boil
+  "classicplus-012-3": "none: pending", // Fluffy Grip
+  "classicplus-012-4": "none: pending", // Powder Spray
+  "classicplus-012-5": "none: pending", // Anti-Waffle Shell
+  "classicplus-012-6": { setPiece: "vortex" }, // Frozen Wastes
+  "classicplus-012-7": "none: pending", // Legion of the Hungry
+  "classicplus-012-8": "none: pending", // Frostspatula
+  "classicplus-013": "none: pending", // Mommy Barker
+  "classicplus-014": "none: pending", // Forever&
+  "classicplus-015": "none: pending", // Conjure Rush Token
+  "classicplus-016": "none: pending", // Conjure Rush Token+
+  "classicplus-017": "none: pending", // Conjure Rush Token++
+  "classicplus-018": "none: pending", // Gullible Treatler
+  "classicplus-019": "none: pending", // League of Losers
+  "classicplus-019-1": "none: pending", // Top Loser
+  "classicplus-019-2": "none: pending", // Jungle Loser
+  "classicplus-019-3": "none: pending", // Mid Loser
+  "classicplus-019-4": "none: pending", // Support Loser
+  "classicplus-019-5": "none: pending", // Bot Loser
+  "classicplus-020": "none: pending", // Mushroom Power
+  "classicplus-021": { cast: { motif: "nova" } }, // Whirlwind
+  "classicplus-022": "none: pending", // Blood Moon
+  "classicplus-023": "none: pending", // Dropshipping
+  "classicplus-024": { bespoke: "crushingWalls" }, // Crushing Walls
+  "classicplus-025": { cast: { motif: "bolt" } }, // Soul Shot
+  "classicplus-026": "none: pending", // Tommy Tempo
+  "classicplus-027": "none: pending", // Zephrys Zealotism
+  "classicplus-028": "none: pending", // Nuestro hogar, nuestras tumbas
+  "classicplus-029": "none: pending", // Portal to the Past
+  "classicplus-030": "none: pending", // Felinor Fuser
+  "classicplus-031": "none: pending", // Fusion Lab
+  "classicplus-032": "none: pending", // Otherworldly Removal
+  "classicplus-032-1": "none: pending", // Execute
+  "classicplus-032-2": { cast: { motif: "wipe" } }, // Brawl
+  "classicplus-032-3": "none: pending", // Blade Storm
+  "classicplus-033": "none: pending", // Ivory Tower
+  "classicplus-034": "none: pending", // Memory Leak
+  "classicplus-035": "none: pending", // Rollback
+  "classicplus-036": "none: pending", // Conjure Bones
+  "classicplus-036-1": "none: pending", // Bone Storm
+  "classicplus-037": "none: pending", // Wardrum
+  "classicplus-038": "none: pending", // Solarius
+  "classicplus-038-1": "none: pending", // Solarius Prime
+  "classicplus-039": "none: pending", // Book Worm
+  "classicplus-040": "none: pending", // Appropriations
+  "classicplus-041": "none: pending", // KY's Constant
+  "classicplus-042": "none: pending", // KY's Test
+  "classicplus-042-1": "none: pending", // KY's Gift
+  "classicplus-043": "none: pending", // AI Slop
+  "classicplus-044": "none: pending", // Simplicity Audit
+  "classicplus-045": "none: pending", // Complexity Audit
+  "classicplus-046": "none: pending", // Felinor Flagbearer
+  "classicplus-046-1": "none: pending", // Felinor Flagbearer Prime
+  "classicplus-047": "none: pending", // Jogg's Box
+  "classicplus-048": "none: pending", // Jlockeed's Lobbyist
+  "classicplus-049": "none: pending", // Jay Fungus
+  "classicplus-050": "none: pending", // Adaptive Growth
+  "classicplus-051": "none: pending", // Jlockeed's J15 Fighter
+  "classicplus-052": "none: pending", // Jlockeed's Permanent Defense Contract
+  "classicplus-053": "none: pending", // Book of Tokens
+  "classicplus-054": "none: pending", // Book of Books
+  "classicplus-055": "none: pending", // Book of Greed
+  "classicplus-056": "none: pending", // Book of Pain
+  "classicplus-057": "none: pending", // Book of Stats
+  "classicplus-058": "none: pending", // Fruit Basket
+  "classicplus-059": "none: pending", // All Purpose Apple
+  "classicplus-060": "none: pending", // Doctors Orders
+  "classicplus-061": "none: pending", // Bauble Bubble
+  "classicplus-062": "none: pending", // KY's Papaya
+  "classicplus-063": "none: pending", // Fruit Tree
+  "classicplus-064": "none: pending", // Mulch Muncher
+  "classicplus-065": "none: pending", // Two Grapes
+  "classicplus-065-1": "none: pending", // Rotten Grape
+  "classicplus-065-2": "none: pending", // Normal Grape
+  "classicplus-065-3": "none: pending", // Large Grape
+  "classicplus-065-4": "none: pending", // Golden Grape
+  "classicplus-065-5": "none: pending", // Mythic Grape
+  "classicplus-066": "none: pending", // Vine of Grapes
+  "classicplus-067": "none: pending", // Pear
+  "classicplus-068": "none: pending", // Organic Produce
+  "classicplus-069": "none: pending", // Buff Billy
+  "classicplus-070": "none: pending", // Chaos Machine
+  "classicplus-071": "none: pending", // Book of Buff
+  "classicplus-072": "none: pending", // Book of Nerf
+  "classicplus-073": { cast: { motif: "wipe" } }, // Call to Chaos (Classic+ Edition)
+  "classicplus-073-1": "none: pending", // Classic Golem
+  "classicplus-074": "none: pending", // Twice Forward One Step Backwards
+  "classicplus-075": "none: pending", // J-lease J-Jungle EX-plorer
+  "classicplus-075-1": "none: pending", // J-lease J-Jungle EX-plorer Pack
+  "classicplus-076": "none: pending", // Brother Lar
+  "classicplus-076-1": "none: pending", // Brother Ping
+  "classicplus-077": "none: pending", // Anti-Softlock
+  "classicplus-078": "none: pending", // Claude's Datacenter
+  "classicplus-t-ai-01": "none: pending", // Helpful Assistant
+  "classicplus-t-ai-02": "none: pending", // Scaling Law
+  "classicplus-t-ai-03": "none: pending", // Hallucination
+  "classicplus-t-ai-04": "none: pending", // Chain of Thought
+  "classicplus-t-ai-05": "none: pending", // Autocomplete
+  "classicplus-t-ai-06": "none: pending", // Datacenter Fire
+  "classicplus-t-ai-07": "none: pending", // Alignment Tax
+  "classicplus-t-ai-08": "none: pending", // Rate Limit
+  "classicplus-t-ai-09": "none: pending", // Refusal
+  "classicplus-t-ai-10": "none: pending", // Fine-Tuning
+}

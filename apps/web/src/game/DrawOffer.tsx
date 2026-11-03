@@ -2,24 +2,14 @@
 //
 // Only the active player offers, once per turn, and the other seat answers. The offer stands, on
 // both seats' views, as `PlayerView.drawOffer` until it is answered or lapses at the end of the
-// offerer's turn; what became of it is in the view's event window (`drawAnswered`). So:
-//
-//  - the offerer, while it stands: "Draw offered — waiting for reply" (`draw-offer-status`);
-//  - the other seat, while it stands: "Your opponent offers a draw" with Accept and Decline
-//    (`draw-offer`, `draw-accept`, `draw-decline`), a notice beside the board rather than a modal.
-//    The buttons are live exactly when `legal` lists the matching `answerDraw`, and each sends that
-//    listed body: no rule is applied here (CLAUDE.md rule 7);
-//  - afterwards, for the rest of that turn: "You declined the draw" / "Your opponent declined the
-//    draw", or "Draw accepted"; an offer that lapsed unanswered reads "The draw offer expired"
-//    through the turn after it (`draw-outcome`, `data-outcome`).
+// offerer's turn; what became of it is in the view's event window (`drawAnswered`). The other
+// seat's Accept and Decline are a notice beside the board rather than a modal. The buttons are live
+// exactly when `legal` lists the matching `answerDraw`, and each sends that listed body: no rule is
+// applied here (CLAUDE.md rule 7).
 //
 // All of it sits in one element, `draw-toast`, which the animation table's `drawOffered` and
 // `drawAnswered` rows play on (animations.ts). It is drawn from the NEWEST view, not the one the
-// board still shows, so the entry that animates its arrival has the element there. It sits in a
-// live region that is always in the tree, so each notice is read out as it arrives.
-//
-// `view.drawOffer` alone says an offer stands (R269); the event stream only says what became of one.
-// The Offer draw control's words come from here too (`offerDrawControlText`): while a declined offer blocks the viewer (R36), it names the turns left, from `view.drawOfferBlockedTurns`.
+// board still shows, so the entry that animates its arrival has the element there.
 
 import { useId, type ReactElement } from "react";
 
@@ -102,9 +92,8 @@ export function drawNoticeText(notice: DrawNotice): string {
 
 /**
  * R36: what the Offer draw control reads. While a declined offer still blocks the viewer, the view
- * counts the turns of theirs it covers (`drawOfferBlockedTurns`, on their own view only), and the
- * control names them, with the full sentence as its tooltip. Whether it is live is still `legal`'s
- * alone (CLAUDE.md rule 7): this only says why it is dark.
+ * counts the turns of theirs it covers (`drawOfferBlockedTurns`, on their own view only). Whether it
+ * is live is still `legal`'s alone (CLAUDE.md rule 7): this only says why it is dark.
  */
 export function offerDrawControlText(view: PlayerView): { label: string; title?: string } {
   const left = view.drawOfferBlockedTurns;

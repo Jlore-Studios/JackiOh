@@ -1,10 +1,5 @@
-// The tutorial's progress store (tutorial/progress.ts): R294 and R321.
-//
-// The device's progress is kept in localStorage, read and written inside try/catch, parsed
-// tolerantly, and synced across tabs by the `storage` event; this module itself sends nothing
-// anywhere (the account's copy is accountSync.ts's, tested there). The unlock rule is lesson 1
-// always, lesson N once lesson N-1 is completed, and completed stays completed. R321's merge with
-// the account's copy is a union of lessons and the newest Hide/Show choice.
+// The tutorial's progress store (tutorial/progress.ts): R294 and R321. This module sends nothing
+// anywhere (the account's copy is accountSync.ts's, tested there).
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -305,7 +300,6 @@ describe("R321 the device's copy merges with the account's, and never steps back
     for (const hiddenChoice of [true, { hidden: 1, at: 2 }, { hidden: true, at: -1 }, { hidden: true, at: 1.5 }, { hidden: true }]) {
       expect(parseTutorialProgress({ v: 1, completed: [], hiddenChoice }).hiddenChoice).toBeNull();
     }
-    // A reset forgets the choice too.
     expect(resetTutorialProgress().hiddenChoice).toBeNull();
   });
 });

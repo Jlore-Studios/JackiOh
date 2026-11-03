@@ -1,6 +1,4 @@
-// The bar's pure parts (#1658): the sweeps a bar plays from its points before to its points after,
-// each sweep's share of the time, the flights a spent slot's points take into the bars and their time
-// (R1953000), the reward each fill reveals and the sting a reward plays.
+// The bar's pure parts (#1658, R1953000).
 
 import { describe, expect, it } from "vitest";
 
@@ -15,6 +13,7 @@ import {
   fraction,
   segmentMs,
   segments,
+  sizeAt,
   stingOf,
   strongestSting,
   type RevealItem,
@@ -83,6 +82,31 @@ describe("#1658 the sweeps a bar plays", () => {
   });
 });
 
+describe("#2728 a bar whose steps differ in size", () => {
+  it("R2728000 each fill sweeps to its own step's size and the last rests on the step after", () => {
+    expect(segments(50, 10, 60, 2, [75, 100, 50])).toEqual([
+      { from: 60, to: 75, burst: true },
+      { from: 0, to: 100, burst: true },
+      { from: 0, to: 10, burst: false },
+    ]);
+    // Points past either end are held to the bar of their own step.
+    expect(segments(50, 60, 80, 1, [75, 50])).toEqual([
+      { from: 75, to: 75, burst: true },
+      { from: 0, to: 50, burst: false },
+    ]);
+    // A step's size is the answer's; with none for it (an answer kept from before #2728), the one size.
+    expect(sizeAt(50, [75, 100, 50], 0)).toBe(75);
+    expect(sizeAt(50, [75, 100, 50], 1)).toBe(100);
+    expect(sizeAt(50, [75], 1)).toBe(50);
+    expect(sizeAt(50, undefined, 1)).toBe(50);
+    expect(segments(50, 10, 40, 2)).toEqual([
+      { from: 40, to: 50, burst: true },
+      { from: 0, to: 50, burst: true },
+      { from: 0, to: 10, burst: false },
+    ]);
+  });
+});
+
 describe("#1953 the flights of an opening", () => {
   const source = (index: number): string => `slot-${String(index)}`;
 
@@ -132,6 +156,13 @@ describe("#1658 an opening's bars and rewards", () => {
     });
     expect(fillReward(bars, "cosmetic", 3)).toEqual({ key: "cosmetic-3", kind: "cosmeticPack", label: "Cosmetic pack" });
     expect(fillReward(bars, "cosmetic", 4)).toBeNull();
+  });
+
+  it("R2728000 a Legendary step's fill reveals a Legendary token", () => {
+    const bars = answer({ cosmeticPaid: ["rare", "epic", "legendary"] });
+    const legendary = fillReward(bars, "cosmetic", 3);
+    expect(legendary).toEqual({ key: "cosmetic-3", kind: "cosmeticToken", label: "Legendary token", rarity: "Legendary" });
+    expect(stingOf(legendary!)).toBe("Legendary");
   });
 
   it("a reward's sting is its rarity's when it names a printed one, else its kind's", () => {

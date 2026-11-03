@@ -1,9 +1,6 @@
 //! Test-only cards for play pipeline B (docs/classic-sets.md B5 E11, E12, E15, B4.5; R391, R396,
 //! R452–R455), each reproducing through the effects library the shape of a Classic or Classic+ card
-//! that the systems exist for. The engine never depends on `crates/cards` (CLAUDE.md), so these are
-//! the engine's proof; the real cards' tests prove the same cases again.
-//!
-//! Ids are prefixed `pb-` and indexed from 4520 up, clear of every other fixture file (BUILD §0).
+//! that the systems exist for. Ids `pb-…` from 4520, clear of every other fixture file (BUILD §0).
 
 use std::sync::{Arc, LazyLock};
 
@@ -45,12 +42,12 @@ fn unit(index: u32, name: &str, attack: i32, health: i32, extra: Value, keywords
 
 // E11: permissions to play from the graveyard (R454)
 
-/// Classic #28 Second Wind's shape: every card from your graveyard; Radiant, only a price of (1)+.
+/// Classic #28 Second Wind: every card from your graveyard; Radiant, only a price of (1)+.
 pub fn second_wind() -> CardDef {
     def(4521, "second-wind", "Field Spell", json!({ "cost": 0 }))
 }
 
-/// Classic #74 Corpse Plantation's shape: Units from your graveyard, paid with its Plague Counters.
+/// Classic #74 Corpse Plantation: Units from your graveyard, paid with its Plague Counters.
 pub fn plantation() -> CardDef {
     def(4522, "plantation", "Field Spell", json!({ "cost": 2 }))
 }
@@ -84,27 +81,27 @@ pub fn grave_trap() -> CardDef {
 
 // E12: casts (R452, R453)
 
-/// A Spell with one declared target, any unit or hero: 3 damage to it.
+/// One declared target, any unit or hero: 3 damage to it.
 pub fn target_spell() -> CardDef {
     def(4528, "target-spell", "Spell", json!({ "cost": 2 }))
 }
 
-/// A Spell with a declared mode: "a" deals 1 to the enemy hero, "b" heals nothing and deals 2.
+/// A declared mode: "a" deals 1 to the enemy hero, "b" heals nothing and deals 2.
 pub fn mode_spell() -> CardDef {
     def(4529, "mode-spell", "Spell", json!({ "cost": 1 }))
 }
 
-/// A Spell whose resolution opens a Discover among three fixture units.
+/// Its resolution opens a Discover among three fixture units.
 pub fn discover_spell() -> CardDef {
     def(4530, "discover-spell", "Spell", json!({ "cost": 1 }))
 }
 
-/// An X Spell: X damage to the enemy hero.
+/// X damage to the enemy hero.
 pub fn x_spell() -> CardDef {
     def(4531, "x-spell", "Spell", json!({ "cost": "X" }))
 }
 
-/// An X Spell with a declared target: X damage to it.
+/// A declared target: X damage to it.
 pub fn x_target() -> CardDef {
     def(4532, "x-target", "Spell", json!({ "cost": "X" }))
 }
@@ -119,17 +116,16 @@ pub fn cast_trap() -> CardDef {
     def(4534, "cast-trap", "Trap", json!({ "cost": 1 }))
 }
 
-/// A Spell whose resolution asks the OTHER player to choose (Classic #9's shape).
+/// Its resolution asks the OTHER player to choose (Classic #9).
 pub fn their_choice() -> CardDef {
     def(4535, "their-choice", "Spell", json!({ "cost": 1 }))
 }
 
-/// A Spell whose resolution asks its controller to choose a target (a prompt, not a declaration).
+/// Its resolution asks its controller to choose a target (a prompt, not a declaration).
 pub fn ask_target() -> CardDef {
     def(4536, "ask-target", "Spell", json!({ "cost": 1 }))
 }
 
-/// The pool the random casters below cast from, named card by card.
 pub const RANDOM_POOL: &[&str] = &[
     "pb-target-spell",
     "pb-mode-spell",
@@ -137,12 +133,12 @@ pub const RANDOM_POOL: &[&str] = &[
     "pb-ask-target",
 ];
 
-/// Classic+ #47 Jogg's Box's shape: cast 3 random Spells from `RANDOM_POOL` (itself excluded).
+/// Classic+ #47 Jogg's Box: cast 3 random Spells from `RANDOM_POOL` (itself excluded).
 pub fn jogg_box() -> CardDef {
     def(4537, "jogg-box", "Spell", json!({ "cost": 4 }))
 }
 
-/// Classic+ #38.1 Solarius Prime's shape: its Cry casts 2 random Spells that target enemies.
+/// Classic+ #38.1 Solarius Prime: its Cry casts 2 random Spells that target enemies.
 pub fn solarius() -> CardDef {
     unit(4538, "solarius", 9, 5, json!({ "cost": 4 }), json!([]))
 }
@@ -157,39 +153,39 @@ pub fn tyrant() -> CardDef {
     unit(4540, "tyrant", 5, 5, json!({ "cost": 4 }), json!([]))
 }
 
-/// Classic #47 Recurring Felinor's shape: its Cry casts a named card (`pb-target-spell`).
+/// Classic #47 Recurring Felinor: its Cry casts a named card (`pb-target-spell`).
 pub fn named_caster() -> CardDef {
     unit(4541, "named-caster", 3, 2, json!({ "cost": 2 }), json!([]))
 }
 
-/// Classic+ #14 Forever&'s shape: the next Spell gains "return after resolving, can't cost < (2)".
+/// Classic+ #14 Forever&: the next Spell gains "return after resolving, can't cost < (2)".
 pub fn forever() -> CardDef {
     def(4542, "forever", "Spell", json!({ "cost": 1 }))
 }
 
 // E15: price rules (R455)
 
-/// Classic #6 Cloaked Toe Cracker's shape: "Aura: Your Traps cost (0)".
+/// Classic #6 Cloaked Toe Cracker: "Aura: Your Traps cost (0)".
 pub fn toe_cracker() -> CardDef {
     unit(4543, "toe-cracker", 3, 4, json!({ "cost": 2 }), json!([]))
 }
 
-/// Classic #68 Small Card Lobbyist's shape: (3)+ Cost cards cost (1) more; Radiant, the enemy can't play them.
+/// Classic #68 Small Card Lobbyist: (3)+ Cost cards cost (1) more; Radiant, the enemy can't play them.
 pub fn lobbyist() -> CardDef {
     unit(4544, "lobbyist", 11, 13, json!({ "cost": 4 }), json!([]))
 }
 
-/// Classic #77 Anti-Magic Monkey's shape: Spells cost (1) more, (2) on the Radiant face.
+/// Classic #77 Anti-Magic Monkey: Spells cost (1) more, (2) on the Radiant face.
 pub fn monkey() -> CardDef {
     unit(4545, "monkey", 5, 5, json!({ "cost": 2 }), json!([]))
 }
 
-/// Classic #2 The Trickster's shape: your next Trap or Field Spell costs (2) less; Radiant, (0).
+/// Classic #2 The Trickster: your next Trap or Field Spell costs (2) less; Radiant, (0).
 pub fn trickster() -> CardDef {
     unit(4546, "trickster", 2, 1, json!({ "cost": 1 }), json!([]))
 }
 
-/// AI Alignment Tax's shape: your opponent's cards cost (1) more during their next turn.
+/// AI Alignment Tax: your opponent's cards cost (1) more during their next turn.
 pub fn tax() -> CardDef {
     def(4547, "tax", "Spell", json!({ "cost": 1 }))
 }
@@ -224,7 +220,7 @@ pub fn embiggen_field() -> CardDef {
 
 // B4.5: Tribute zones (R391)
 
-/// Classic #45 Nature Titan's shape: Tribute 1 on a big body.
+/// Classic #45 Nature Titan: Tribute 1 on a big body.
 pub fn titan() -> CardDef {
     unit(4553, "titan", 6, 6, json!({ "cost": 2 }), json!([]))
 }
@@ -305,7 +301,7 @@ pub static PB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
-/// The discover pool: three vanilla fixture units every test catalog holds.
+/// Three vanilla fixture units every test catalog holds.
 pub const DISCOVER_POOL: &[&str] = &["fx-1", "fx-2", "fx-3"];
 
 fn ask(
@@ -364,7 +360,6 @@ fn ask_the_opponent() -> Effect {
     })
 }
 
-/// A new card of that definition, cast by the running card's controller.
 fn cast_new_of(def_id: String) -> Effect {
     effects::cast_new(effects::CastNewArgs {
         def: effects::CastNewDef::from(def_id),
@@ -384,7 +379,7 @@ fn cast_random_of(pool: Vec<String>, count: i32, radiant: Option<bool>, how: Val
     })
 }
 
-/// The Spells in the running card's controller's graveyard, by id (`castEach`'s `cards`).
+/// The Spells in the running card's controller's graveyard, by id (`cast_each`'s `cards`).
 fn graveyard_spells(ctx: &mut EffectContext<'_>) -> Vec<String> {
     ctx.state.players[ctx.controller]
         .graveyard
@@ -823,12 +818,10 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     table
 });
 
-/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     PB_SCRIPTS.clone()
 }
 
-/// Merge this file's cards into whatever catalog and scripts the test registered first.
 pub fn register_pipeline_b() {
     let mut defs = registered_catalog().clone();
     for entry in PB_DEFS.iter() {
@@ -840,9 +833,8 @@ pub fn register_pipeline_b() {
     register_scripts(all_scripts);
 }
 
-// Harness shared by the pipeline B tests
+// Harness
 
-/// Past the mulligans, in p1's main phase, with these cards registered and p1 at 4 mana.
 pub fn pb_playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
@@ -865,7 +857,6 @@ pub fn pb_playing(seed: &str) -> GameState {
     state
 }
 
-/// A card of `defId` put straight into `player`'s graveyard.
 pub fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
     state.players[player].graveyard.push(card.clone());
@@ -879,7 +870,6 @@ pub fn only<T: Clone>(items: &[T]) -> T {
     }
 }
 
-/// The `play` actions `legal_actions` offers for one instance.
 pub fn plays_of(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<ActionBody> {
     legal_actions(state, player)
         .into_iter()

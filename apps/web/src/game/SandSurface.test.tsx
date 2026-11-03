@@ -1,6 +1,5 @@
 // #1954: one press on the empty field is one tap — one mark set and one sound — and each
-// playmat taps in its family's look and sound. The drag trail is gone: holding or dragging
-// after a press adds no mark and no `playSfx` call.
+// playmat taps in its family's look and sound.
 // #2332: an occupied zone's own element taps too; only its card and the board's controls keep a press.
 
 import { useRef, type ReactElement } from "react";
@@ -49,7 +48,6 @@ const SFX_OF: Record<TapFamily, SfxId> = {
   astral: "tapAstral",
 };
 
-/** Sand draws its grain; every other family draws its own tap mark. */
 const MARK_OF: Record<TapFamily, string> = {
   sand: "sand-mark--grain",
   wood: "tap-mark--wood",

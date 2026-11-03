@@ -4,15 +4,11 @@
 //!             to your hand."
 //!   Radiant: the same with a Radiant Temporal Rift.
 //!
-//! Two next-turn riders (§6.3 Mana, `next_turn_mana`), as Expedition12's (#1563; it was ME-TURN's lost
-//! refreshes, R844, "Lose all mana for your next 2 turns", until then): the first lowers your next
-//! refresh by `loss`; a delayed step at the start of your next turn (§10.1, R62: after that turn's
+//! Two next-turn riders (§6.3 Mana, `next_turn_mana`, #1563), as Expedition12's: the first lowers your
+//! next refresh by `loss`; a delayed step at the start of your next turn (§10.1, R62: after that turn's
 //! refresh) sets the second, `lossAfter`, on the refresh after it, carrying the number as it stood at
-//! the cast. Each refresh floors at 0. Then the Rift (M #19.1) into hand, Radiant on the Radiant face; a
-//! full hand burns it (§2.4). An extra turn taken next is "next turn", as Hearthstone's Overload lands
-//! on Time Warp's extra turn.
-//!
-//! `script_v0_4_0f` keeps the card as it ran through v0.4.0f for its replays (R767000).
+//! the cast. A full hand burns the Rift (§2.4). An extra turn taken next is "next turn", as
+//! Hearthstone's Overload lands on Time Warp's extra turn.
 
 use jackioh_engine::prelude::*;
 
@@ -82,10 +78,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #19 Expedition123 — SPEC §8.8 row 19, BUILD M10 row M 19: Quickdraw; your next refresh
-// gives 2 less and the one after 3 less, each never below 0, the third normal; an extra turn taken
-// next is the first; mana gained in those turns still adds; adds a base Temporal Rift to hand, burned
-// at a full hand; both losses read through `param()`; radiant the Rift is Radiant.
+// Meditative #19 Expedition123 — SPEC §8.8 row 19, BUILD M10 row M 19, #831.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,7 +180,6 @@ mod tests {
             assert_eq!(added.len(), 1);
             assert!(!added[0].radiant, "a base Rift");
 
-            // A full hand burns the Rift: it lands in the graveyard instead.
             let mut s = board(json!([EXPEDITION]));
             let filler = s.card(FILLER).clone();
             for _ in 0..10 {

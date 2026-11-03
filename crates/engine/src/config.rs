@@ -558,6 +558,12 @@ pub const TUNE_BUFF_ANY_KEYWORDS: &[KeywordKind] = &[KeywordKind::Flashback];
 /// R2657005: the harmful keywords a Nerf's keyword row may add to a Unit, a Field Spell, a Trap or a
 /// Field Trap that lacks them, while it is in a hand.
 pub const TUNE_NERF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Crater];
+/// R2727000: the keywords a Buff's keyword row may add to a Unit, a Spell or a Field Spell that lacks them
+/// of its own while it is in a hand, after the row's other additions. Never to a Trap or a Field Trap.
+pub const TUNE_BUFF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Cloaked];
+/// R2727001: the harmful keywords a Buff's keyword row may also take off a card of any type that has them
+/// of its own while it is in a hand, beside `TUNE_BUFF_REMOVES`.
+pub const TUNE_BUFF_HAND_REMOVES: &[KeywordKind] = &[KeywordKind::Crater];
 /// R1748001: the keywords a Buff's keyword row may add to a Field Spell, in this order; R2436000 added
 /// Immutable after Indestructible.
 pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible, KeywordKind::Immutable];
@@ -2174,6 +2180,16 @@ pub const STATS_INTERVAL_Z: f64 = 1.96;
 
 /// R1994000: a share of the game figures is rounded to this many parts of one (three decimals).
 pub const STATS_SHARE_PRECISION: f64 = 1000.0;
+
+/// R2777000: the adjusted win rate's centre, an even game's win rate: a card that moves its deck's win rate
+/// not at all reads this, and the drawn delta's sampling variance is taken at it, where it is widest.
+pub const ADJUSTED_WIN_RATE_CENTER: f64 = 0.5;
+
+/// R2777000: the spread (one standard deviation) of real card lifts the adjusted win rate assumes, as a
+/// fraction: most cards move their deck's win rate by less than five points. A card's drawn delta is kept
+/// in the share `τ² / (τ² + SE²)`, so at this spread a delta measured over about 100 games seen and 100
+/// never drawn keeps under half its swing, and one over a few thousand keeps nearly all.
+pub const ADJUSTED_WIN_RATE_PRIOR_SPREAD: f64 = 0.05;
 
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)

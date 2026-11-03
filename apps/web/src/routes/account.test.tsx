@@ -1,8 +1,5 @@
-// `/account`: the screen that did not exist, and the three things it has to get right.
-//
-// Before it, a signed-in player could not see WHICH account they were signed in as, could not see
-// their record, and — the one that actually trapped people — could not sign out at all:
-// `net/session.ts` wrote the token and nothing ever cleared it.
+// `/account`: the three things it has to get right: which account is signed in, its record, and
+// signing out, which clears the token `net/session.ts` wrote.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -74,6 +71,7 @@ function profileBody(over: Partial<Parameters<typeof Object.assign>[0]> = {}) {
 function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   return {
     season: "v0.2",
+    ladder: "constructed",
     profileId: "p1",
     username: "Max#3",
     rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
@@ -143,7 +141,6 @@ describe("the account screen", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} />);
 
-    // The headline fact: a player could not see this anywhere before.
     expect(await screen.findByTestId("account-email")).toHaveTextContent("player1@example.com");
     // In a player's words, with the raw status beside it for tests.
     expect(screen.getByTestId("account-status")).toHaveTextContent("Active");
@@ -168,6 +165,31 @@ describe("the account screen", () => {
     expect(within(badges).getByRole("img", { name: "Normal Grape II · v0.1" })).toBeInTheDocument();
     expect(screen.getByTestId("account-leaderboard")).toHaveAttribute("href", "/leaderboard");
     expect(screen.queryByTestId("account-rating")).toBeNull();
+  });
+
+  it("R2778000 shows the Constructed ladder's rank and then the All Random one's, each read on its own", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
+      ladder === "random"
+        ? rankBody({
+            ladder: "random",
+            rank: { tier: "golden", division: 1, pips: 2, pipsPerDivision: 3, floor: "golden" },
+            record: { games: 3, wins: 3, losses: 0, draws: 0 },
+            badges: [],
+          })
+        : rankBody(),
+    );
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(accountTestid.rank)).toHaveTextContent("Normal Grape III");
+    const random = await screen.findByTestId(accountTestid.randomRank);
+    expect(random).toHaveTextContent("Max#3 · Golden Grape I · Season v0.2");
+    expect(screen.getByTestId(accountTestid.randomSeasonRecord)).toHaveTextContent("This season (ranked): 3–0–0");
+    expect(screen.getByTestId(accountTestid.randomBadges)).toHaveTextContent(/no season best yet/i);
+    expect(screen.getByTestId(accountTestid.seasonRecord)).toHaveTextContent("7–2–1");
+    expect(screen.getByRole("heading", { name: "Constructed" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All Random" })).toBeInTheDocument();
+    expect(vi.mocked(getOwnRank)).toHaveBeenCalledWith(TOKEN, "random");
   });
 
   it("says so when no season best has been earned yet", async () => {
@@ -385,9 +407,11 @@ describe("the account screen", () => {
     render(<AccountRoute token={TOKEN} />);
 
     expect(await screen.findByTestId(accountTestid.record)).toHaveTextContent("7–2–1");
-    expect(getOwnRank).toHaveBeenCalledTimes(1);
+    // R2778000: one read per ladder, both failed.
+    expect(getOwnRank).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("heading", { name: "Rank" })).toBeInTheDocument();
     expect(screen.queryByTestId(accountTestid.rank)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.randomRank)).toBeNull();
     expect(screen.queryByTestId(accountTestid.badges)).toBeNull();
     expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
@@ -681,9 +705,8 @@ describe("deleting the account", () => {
   });
 });
 
-// R1580000: the packs, their opening, pity, the tokens and the cosmetic packs left this screen for
-// `/shop`, which the tavern home's Shop door opens (this screen links it no more, R1646000); shop.test.tsx
-// proves they are reached there.
+// R1580000: packs, pity, tokens and cosmetic packs live on `/shop` (shop.test.tsx), which this screen
+// does not link (R1646000).
 describe("R1580000 the account screen keeps account things", () => {
   function me(over: { isDev?: boolean; status?: MeResponse["profile"]["status"] } = {}): MeResponse {
     return {

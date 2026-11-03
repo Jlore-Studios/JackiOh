@@ -1,13 +1,5 @@
 //! ME-TRIG (docs/meditative-set.md M5; R820–R824): the trigger multipliers and "trigger your End of
 //! turn effects", proved on fixture cards (`fixtures::trigger_multipliers`).
-//!
-//! What is pinned: the highest multiplier holds and two never add, a fused card's included (R820); a
-//! player's start- and end-of-turn hooks run once more per extra, each copy its own entry that fizzles
-//! when its card has left, and the opponent's hooks are untouched (R821); a Spell's resolution is not
-//! repeated (R822); an extra Cry reuses the play's targets, fizzles on one gone since, asks again and
-//! survives a JSON round trip, a triggered Cry reuses its answers, a Death runs again for its card's
-//! controller and a multiplier dying in the same pass doubles nothing (R823); "trigger your End of turn
-//! effects" runs its rounds one after another without ending the turn, each multiplied (R824).
 
 use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::rng::Rng;
@@ -76,7 +68,7 @@ fn on_field(s: &Scenario, player: PlayerId, def_id: &str) -> usize {
         .count()
 }
 
-// ---- R820: the highest multiplier holds ----
+// R820: the highest multiplier holds
 
 #[test]
 fn r820_the_highest_multiplier_holds_and_two_never_add() {
@@ -124,7 +116,7 @@ fn r820_a_fused_card_gives_its_ingredients_highest_extra() {
     assert_eq!(extra_runs(s.state(), P1, Multiplied::TurnHooks), 2);
 }
 
-// ---- R821: start- and end-of-turn hooks, copy by copy ----
+// R821: start- and end-of-turn hooks, copy by copy
 
 #[test]
 fn r821_end_of_turn_hooks_are_queued_twice() {
@@ -168,7 +160,7 @@ fn r821_the_opponents_hooks_run_once() {
     );
 }
 
-// ---- R822: a Spell's resolution is no Cry ----
+// R822: a Spell's resolution is no Cry
 
 #[test]
 fn r822_a_spells_resolution_does_not_repeat() {
@@ -179,7 +171,7 @@ fn r822_a_spells_resolution_does_not_repeat() {
     assert_eq!(health(&s, P2), 27, "the Spell resolves once");
 }
 
-// ---- R823: what an extra Cry and an extra Death reuse ----
+// R823: what an extra Cry and an extra Death reuse
 
 #[test]
 fn r823_a_target_gone_since_fizzles() {
@@ -254,7 +246,7 @@ fn r823_dying_together_doubles_nothing() {
     assert_eq!(health(&s, P2), 29, "Double Counting left the field with the Dier");
 }
 
-// ---- R824: trigger your End of turn effects ----
+// R824: trigger your End of turn effects
 
 #[test]
 fn r824_each_round_follows_the_last_and_the_turn_goes_on() {

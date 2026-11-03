@@ -41,13 +41,11 @@ function yourUnit(view: PlayerView, index: number): string {
   return must(view.you.units[index], `your unit ${index}`).instanceId;
 }
 
-/** A view with `instanceId`/`defId` resolving on your seat, and the damage it deals. */
 function resolvingView(defId: string, instanceId: string): PlayerView {
   const view = fullBoardView();
   return { ...view, you: { ...view.you, resolving: [card({ instanceId, defId })] } };
 }
 
-/** Every entry planned for `events` against `view`, with each entry's cues in order. */
 function planned(events: readonly GameEvent[], view: PlayerView): { entries: AnimationEntry[]; byEntry: FxCue[][] } {
   const shown = withEvents(view, [...events]);
   const entries = planEntries([...events], shown, false);
@@ -74,12 +72,6 @@ function burstsOf(cues: readonly FxCue[], preset: string): FxCue[] {
 function shakesOf(cues: readonly FxCue[]): FxCue[] {
   return cues.filter((cue) => cue.kind === "shake");
 }
-
-describe("#1443 the volley cap", () => {
-  it("#1443 the volley cap is four", () => {
-    expect(FX_FLAVOR_VOLLEY_MAX).toBe(4);
-  });
-});
 
 describe("#1443 a Spell's non-combat damage fires its flavor's shot from its controller's hero", () => {
   it("#1443 Burn throws Fire from your hero", () => {

@@ -32,6 +32,7 @@ import {
 } from "./testids.ts";
 import { TRIO_CODE_PREFIX, decodeTrioCode } from "./trioCode.ts";
 import { cardNames, cardsWord } from "./workshop.ts";
+import { messageOf } from "../../net/errors.ts";
 
 export type TrioImportPanelProps = {
   catalog: CatalogSnapshot;
@@ -94,7 +95,7 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
           else setRefusal(result.message);
         },
         (cause: unknown) => {
-          setRefusal(cause instanceof Error ? cause.message : String(cause));
+          setRefusal(messageOf(cause));
         },
       )
       .finally(() => {

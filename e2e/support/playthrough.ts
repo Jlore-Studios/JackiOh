@@ -1,20 +1,7 @@
 // Spec 36's driver (#552, MN09): a hotseat game played by `window.__jackioh` alone, one step at a time,
 // so every card of a set can be played once through the browser without a line of card knowledge.
-//
-// Each step reads the dev handle (the raw state only for whose move it is, as the AI's `seat_to_act`
-// does; everything else from the seat's own `viewFor` and `legalActions`) and does exactly one thing:
-//
-//   - the device goes to the seat that owes the move, if another holds it;
-//   - a mulligan still owed is answered keeping the whole hand;
-//   - a prompt the seat holds is answered with its first legal answer (`legalActions` lists a
-//     prompt's answers, R211, so every kind is answered with no picker logic here);
-//   - a card still to be played that the seat holds and may play is played, its first legal play;
-//   - otherwise the turn ends.
-//
-// Concede and the draw offer are listed among the legal actions at every moment and are never taken.
-// `reduce` still refuses anything illegal (SPEC §9.3), so the driver can reach no state a player
-// could not: dispatching is a way past the UI, never past the rules. The spec around it waits on the
-// DOM between steps (`cy.settled()`) and asserts what the board, the log and the inspect view show.
+// A step reads the raw state only for whose move it is (as the AI's `seat_to_act` does), the rest from
+// the seat's `viewFor` and `legalActions` (R211); `reduce` still refuses anything illegal (SPEC §9.3).
 
 import type { ActionBody, JackiOhDevHandle, PlayerId } from "./types.ts";
 
@@ -31,7 +18,7 @@ export type PlayStep =
 
 /** The parts of `viewFor` the driver reads (a structural subset of `PlayerView`). */
 type ViewLike = {
-  pending?: { forYou?: boolean; kind?: string; prompt?: string; options?: unknown[] } | null;
+  pending?: { forYou?: boolean; kind?: string; prompt?: string; options?: unknown[]; max?: number } | null;
   you: { hand: { instanceId: string; defId: string }[] | { count: number }; libraryCount?: number };
 };
 
@@ -45,7 +32,6 @@ type StateLike = {
 
 type Handle = Required<Pick<JackiOhDevHandle, "view" | "legal" | "setSeat">> & JackiOhDevHandle;
 
-/** The seat that owes the next move: a mulligan still owed, else the prompt's holder, else the active seat. */
 export function seatToAct(state: StateLike): PlayerId {
   if (state.mulligan !== undefined) {
     const owing = (["p1", "p2"] as const).find((seat) => state.mulligan?.[seat]?.keep === null);
@@ -66,18 +52,32 @@ export const GAME_OVER = "the game is over";
 const DISCOVER_OPTION_LIMIT = 4;
 
 /**
- * The `data-prompt-kind` the board draws a prompt with (`apps/web/src/game/Prompt.tsx`, the M5-T4
- * contract): the prompt's own kind, except a short `mode` prompt, which is a Discover pop-up.
+ * #2757: a Choose one of one lane is no Discover but its lanes on the board, a `mode` all the same. These mirror
+ * `LANES` (`contract.ts`) and `isLanePick` (`actions.ts`): every option is `mode:lane-<n>`, n of the board's lanes.
  */
-export function boardKind(pending: { kind?: string; options?: unknown[] }): string {
+const LANE_KEY = /^mode:lane-([1-9]\d*)$/;
+const LANE_COUNT = 5;
+
+function optionKey(option: unknown): string {
+  const key = typeof option === "object" && option !== null ? (option as { key?: unknown }).key : undefined;
+  return typeof key === "string" ? key : "";
+}
+
+function isLanePick(pending: { options?: unknown[]; max?: number }): boolean {
+  const options = pending.options ?? [];
+  const inBoard = (option: unknown): boolean => Number(LANE_KEY.exec(optionKey(option))?.[1] ?? 0) <= LANE_COUNT && LANE_KEY.test(optionKey(option));
+  return (pending.max ?? 1) <= 1 && options.length > 0 && options.every(inBoard);
+}
+
+/** The `data-prompt-kind` the board draws a prompt with (`apps/web/src/game/Prompt.tsx`, the M5-T4 contract). */
+export function boardKind(pending: { kind?: string; options?: unknown[]; max?: number }): string {
   const kind = pending.kind ?? "";
-  return kind === "mode" && (pending.options?.length ?? 0) <= DISCOVER_OPTION_LIMIT ? "discover" : kind;
+  return kind === "mode" && (pending.options?.length ?? 0) <= DISCOVER_OPTION_LIMIT && !isLanePick(pending) ? "discover" : kind;
 }
 
 /**
- * The prompt kind the next step will answer, when it is one, as the board draws it (`boardKind`): the seat that owes the move holds the
- * device and its view holds a prompt for it. The spec waits on the board to draw that prompt before
- * the step reads it, since the board swaps its view only once the animations before it have run.
+ * The prompt kind (`boardKind`) the next step will answer, if the seat owing the move holds the device
+ * and a prompt. The spec waits on the board to draw it first: it swaps its view only after the animations.
  */
 export function owedPromptKind(handle: Handle): string | null {
   const state = handle.state as unknown as StateLike;
@@ -89,11 +89,7 @@ export function owedPromptKind(handle: Handle): string | null {
   return view.pending?.forYou === true ? boardKind(view.pending) : null;
 }
 
-/**
- * One step of the game, as the header says. `toPlay` is the set of definition ids still to be played;
- * the step plays one of them when it can and never anything else. `doc` is read for the open prompt's
- * `data-prompt-kind`, so the spec can check the board showed the prompt the view holds.
- */
+/** One step (see the header). `doc` gives the open prompt's `data-prompt-kind`, so the spec can check the board showed the view's prompt. */
 export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Document): PlayStep {
   const state = handle.state as unknown as StateLike;
   if (state.result !== null && state.result !== undefined) return { kind: "over", why: GAME_OVER };
@@ -138,7 +134,7 @@ export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Docum
   return { kind: "end", seat, turn: state.turn, held, deck: view.you.libraryCount ?? 0 };
 }
 
-/* ------------------------------------------------------------------------------- the decks */
+/* the decks */
 
 /** The fields of a catalog entry (`crates/cards/catalog.json`) the decks are built from. */
 export type CatalogRow = {
@@ -157,10 +153,7 @@ export function deckableOf(catalog: Readonly<Record<string, CatalogRow>>, set: s
   return Object.values(catalog).filter((def) => def.set === set && def.token !== true && !def.tags.includes("Token"));
 }
 
-/**
- * A card cast as it is drawn (Meditative #37 CN in a Bottle, §2.4, R58): drawn, it is cast and lands in
- * its owner's graveyard, never played from a hand. Its turn in the play-through is that cast.
- */
+/** A card cast as it is drawn (Meditative #37 CN in a Bottle, §2.4, R58), never played from a hand: its play-through turn is that cast. */
 export function castOnDraw(def: CatalogRow): boolean {
   return /^Cast on draw:/.test(def.base.text);
 }
@@ -170,7 +163,7 @@ export function needsRadiant(def: CatalogRow): boolean {
   return /De-Radiant a Radiant card/.test(def.base.text);
 }
 
-/** CN in a Bottle casts as it is drawn (R58) and adds a random Radiant card to the hand: Prestige's source. */
+/** CN in a Bottle, which adds a random Radiant card to the hand: Prestige's source. */
 export function radiantSource(def: CatalogRow): boolean {
   return castOnDraw(def) && /Add a random Radiant card to your hand/.test(def.base.text);
 }
@@ -185,9 +178,8 @@ function share(def: CatalogRow): "units" | "backrow" | "spells" {
 
 /**
  * The next game's two decks out of the cards still to play, in catalog order, each seat within
- * SEAT_SHARE. A seat left with nothing holds `filler`, a card of a set that ships, so every deck has a card.
- * A seat holding a card that needs a Radiant card in hand (Prestige) is dealt `source` too, when given,
- * unless it already holds a Radiant source of its own.
+ * SEAT_SHARE; a seat left with nothing holds `filler`, a card of a set that ships. A seat holding
+ * Prestige is dealt `source` too, when given, unless it holds a Radiant source of its own.
  */
 export function nextGame(cards: readonly CatalogRow[], filler: CatalogRow, source?: CatalogRow): [CatalogRow[], CatalogRow[]] {
   const seats: [CatalogRow[], CatalogRow[]] = [[], []];
@@ -212,21 +204,20 @@ export function printedCost(def: CatalogRow): number {
   return def.cost === "X" ? 0 : def.cost.base;
 }
 
-/* ------------------------------------------------------------------------------- the words */
+/* the words */
 
-/** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`, `meditativeplus-001-1`, `stinkyscape-t-ai-01`, `traininggrounds-039-1`): never in a line a player reads. */
+/** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`): never in a line a player reads. */
 const CATALOG_ID = /\b(?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|traininggrounds)-(?:t-)?[0-9a-z]+(?:-[0-9a-z]+)?\b/;
 /** What a slip upstream prints: a value with no words. */
 const LEAKS = /\bundefined\b|\bNaN\b|\bnull\b|\[object /;
 /** A placeholder a text never filled ("{chance}"); a computed value a face prints in play, "{7}", is R280's. */
 const UNFILLED = /\{[A-Za-z_][^}]*\}/;
-/** An engine identifier: camelCase (an event or key, `jadeChanged`) or snake_case (`set_hand_cap`). */
+/** An engine identifier: camelCase (`jadeChanged`) or snake_case (`set_hand_cap`). */
 const IDENTIFIER = /\b[a-z]+[A-Z][A-Za-z]*\b|\b[a-z]+_[a-z_]+\b/;
 
 /**
- * Every way one line of the log fails to read as English: it opens with a capital (or a card's name
- * in the Chinese a card shown in Chinese is named by, R1301), and prints no id, no engine identifier
- * and no unfilled value. Empty means it reads.
+ * Every way one line of the log fails to read as English: it opens with a capital (or a card's Chinese
+ * name, R1301), and prints no id, no engine identifier and no unfilled value. Empty means it reads.
  */
 export function englishProblems(line: string, where: string): string[] {
   const problems: string[] = [];

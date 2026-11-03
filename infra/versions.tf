@@ -1,5 +1,5 @@
 # The hosts' dashboard settings as code (#1708): what each provider below owns is in README.md, and
-# what it leaves to render.yaml, wrangler.jsonc and vercel.json. OpenTofu reads the same files.
+# what it leaves to wrangler.jsonc. OpenTofu reads the same files.
 terraform {
   # 1.5 for `import` blocks, 1.6 for the s3 backend's `endpoints` and `use_path_style`.
   required_version = ">= 1.6.0, < 2.0.0"

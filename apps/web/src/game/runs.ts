@@ -1,12 +1,12 @@
-// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, and sweeps from redacted events and PlayerView.
+// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps and wipes from redacted events and PlayerView.
 // R97, R202, R242, and R440 forbid hidden-card inference; `HIDDEN_PILE_OF` uses only public card text.
 
-import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
 import { flavorSourceOf } from "../fx/flavorSource.ts";
-import { sideOf, type Side } from "./contract";
+import { sideOf, testid, type Side } from "./contract";
 
-/** R97's sentinel (engine `viewFor.ts` `HIDDEN_ID`). */
+/** R97's sentinel (the engine's `HIDDEN_ID`). */
 const HIDDEN = "hidden";
 
 const SIDES: readonly Side[] = ["you", "opponent"];
@@ -16,25 +16,34 @@ export const PLAYS_OPEN_MAX = 16;
 
 // Casts
 
-/** A play the stream has opened and not yet resolved, and how many casts it has made so far. */
+/** A play the stream has opened and not yet resolved. */
 export type OpenPlay = { player: PlayerId; instanceId: string; defId: string; casts: number };
 
 /** A cast: the play that made it (as it stood after this cast) and which of its casts this is (1 on). */
 export type Cast = { by: OpenPlay; ordinal: number };
 
+/**
+ * R2800000: the hook resolving now, as the seat's own stream marks it: a `hookResolving` (R2783000) or a
+ * Trap's `trapFired`, whose `trap` is the zone it fired from (R154). `defId` is R97's sentinel when the
+ * seat cannot read the card.
+ */
+export type OpenHook = { defId: string; sourceId: string; controller: PlayerId; trap: { row: Row; lane: number } | null };
+
 export type PlayTracker = {
-  /** The innermost play still resolving, or undefined. */
   current(): OpenPlay | undefined;
+  /** R2800000: the hook the stream marked last, until its play resolves, the turn turns or `closeHook`. */
+  hook(): OpenHook | undefined;
+  /** R2800000: forgets the open hook, so it makes one wipe. */
+  closeHook(): void;
   /** Reads one event, in stream order; a `cardPlayed` that is a cast returns who cast it. */
   see(event: GameEvent): Cast | null;
   clear(): void;
 };
 
-/**
- * Tracks open plays. R97 may close the innermost play; B5 E1 counters before §10.5's `cardPlayed`, so it closes only an exact match.
- */
+/** R97 may close the innermost play; B5 E1 counters before §10.5's `cardPlayed`, so it closes only an exact match. */
 export function createPlayTracker(): PlayTracker {
   let open: OpenPlay[] = [];
+  let hook: OpenHook | undefined;
 
   const close = (player: PlayerId, instanceId: string, exact: boolean): void => {
     for (let i = open.length - 1; i >= 0; i -= 1) {
@@ -53,8 +62,20 @@ export function createPlayTracker(): PlayTracker {
       const top = open[open.length - 1];
       return top === undefined ? undefined : { ...top };
     },
+    hook() {
+      return hook === undefined ? undefined : { ...hook, trap: hook.trap === null ? null : { ...hook.trap } };
+    },
+    closeHook() {
+      hook = undefined;
+    },
     see(event) {
       switch (event.type) {
+        case "hookResolving":
+          hook = { defId: event.defId, sourceId: event.sourceId, controller: event.controller, trap: null };
+          return null;
+        case "trapFired":
+          hook = { defId: event.defId, sourceId: event.instanceId, controller: event.controller, trap: { row: event.row, lane: event.lane } };
+          return null;
         case "cardPlayed": {
           const parent = open[open.length - 1];
           let cast: Cast | null = null;
@@ -68,13 +89,20 @@ export function createPlayTracker(): PlayTracker {
         }
         case "cardResolved":
           close(event.player, event.instanceId, false);
+          hook = undefined;
           return null;
         case "countered":
           close(event.player, event.instanceId, true);
+          hook = undefined;
           return null;
         case "turnStarted":
         case "gameOver":
           open = [];
+          hook = undefined;
+          return null;
+        case "attackDeclared":
+          // R2800000: an attack is an action of its own, never a hook's: a hook left open (a Death's) ends here.
+          hook = undefined;
           return null;
         default:
           return null;
@@ -82,6 +110,7 @@ export function createPlayTracker(): PlayTracker {
     },
     clear() {
       open = [];
+      hook = undefined;
     },
   };
 }
@@ -90,18 +119,15 @@ export function createPlayTracker(): PlayTracker {
 
 export type PileKind = "library" | "graveyard" | "exile";
 
-/** One pile: whose (viewer-relative) and which. */
 export type Pile = { side: Side; pile: PileKind };
 
 /**
- * A whole-pile impact as the runner plays it: the pile, how many cards it held as the run began, and
- * how many events the run made (a pile changed twice over makes twice its count).
+ * A whole-pile impact: how many cards the pile held as the run began, and how many events the run
+ * made (a pile changed twice over makes twice its count).
  */
 export type ZoneImpact = Pile & { count: number; events: number };
 
-/**
- * R440 hidden changes map only where public text names one library; multi-pile cards (C+ #73) stay unmapped.
- */
+/** R440 hidden changes map only where public text names one library; multi-pile cards (C+ #73) stay unmapped. */
 export const HIDDEN_PILE_OF: Readonly<Record<string, "own" | "enemy">> = {
   // C+ #8 Withering Storm changes the opponent's deck.
   "classicplus-008": "enemy",
@@ -125,14 +151,12 @@ function seat(view: PlayerView, side: Side): PlayerView["you"] {
   return side === "you" ? view.you : view.opponent;
 }
 
-/** How many cards a pile holds in `view`. */
 export function pileCount(view: PlayerView, pile: Pile): number {
   const sv = seat(view, pile.side);
   if (pile.pile === "library") return sv.libraryCount;
   return pile.pile === "graveyard" ? sv.graveyard.length : sv.exile.length;
 }
 
-/** The public pile (a graveyard or an exile) `view` lists the card in, or null. */
 function publicPileOf(view: PlayerView, instanceId: string): Pile | null {
   for (const side of SIDES) {
     const sv = seat(view, side);
@@ -142,7 +166,6 @@ function publicPileOf(view: PlayerView, instanceId: string): Pile | null {
   return null;
 }
 
-/** Whether `view` shows the card anywhere: on the field, in a hand the viewer reads, resolving, in a public pile. */
 function shown(view: PlayerView, instanceId: string): boolean {
   if (publicPileOf(view, instanceId) !== null) return true;
   for (const side of SIDES) {
@@ -156,14 +179,11 @@ function shown(view: PlayerView, instanceId: string): boolean {
   return false;
 }
 
-/** The other player. */
 function otherOf(player: PlayerId): PlayerId {
   return player === "p1" ? "p2" : "p1";
 }
 
-/**
- * `inferred` piles count whole only on an exact run, because the view did not show the card's origin.
- */
+/** `inferred` piles count whole only on an exact run, because the view did not show the card's origin. */
 export function pileOf(
   event: GameEvent,
   view: PlayerView,
@@ -207,9 +227,7 @@ function samePile(a: Pile, b: Pile): boolean {
   return a.side === b.side && a.pile === b.pile;
 }
 
-/**
- * A same-type, same-pile run is whole at two or more events and the pile count (exactly for inferred piles).
- */
+/** A same-type, same-pile run is whole at two or more events and the pile count (exactly for inferred piles). */
 export function pileRunAt(
   events: readonly GameEvent[],
   at: number,
@@ -237,7 +255,7 @@ export function pileRunAt(
 
 // Sweeps
 
-/** A sweep as the runner plays it: hits or heals, the sides every unit of which it reached, and its source. */
+/** A sweep as the runner plays it: `sides` are the sides every unit of which it reached. */
 export type Sweep = { tone: "damage" | "heal"; sides: readonly Side[]; sourceId: string | null };
 
 const HERO_ID = /^hero-(p1|p2)$/;
@@ -253,7 +271,6 @@ function targetSide(view: PlayerView, targetId: string): { side: Side; unit: boo
   return null;
 }
 
-/** One step of a sweep: the card or hero it reaches, and whether it is a hit, a heal or a shield taking a hit. */
 function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; source?: string | null } | null {
   if (event.type === "damage") return event.combat ? null : { target: event.targetId, tone: "damage", source: event.sourceId };
   if (event.type === "divineShieldLost") return { target: event.instanceId, tone: "damage" };
@@ -263,9 +280,7 @@ function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; sou
   return null;
 }
 
-/**
- * A sweep reaches every unit on each touched side with distinct non-combat hits or heals.
- */
+/** A sweep reaches every unit on each touched side with distinct non-combat hits or heals. */
 export function sweepAt(
   events: readonly GameEvent[],
   at: number,
@@ -305,10 +320,8 @@ export function sweepAt(
 
 /**
  * #1443: one volley of non-combat damage from one source, planned as one entry so its shots start
- * together. A hit only when `events[at]` is `damage` with `combat: false` and a non-null,
- * non-sentinel `sourceId`, the run of consecutive same-`sourceId`, non-combat `damage` events has
- * length 2 or more, and the view shows the source face-up (`flavorSourceOf` non-null:
- * hidden/unknown/hero-power sources keep today's entries).
+ * together. Only when the view shows the source face-up (`flavorSourceOf` non-null):
+ * hidden/unknown/hero-power sources keep today's entries.
  */
 export function volleyAt(events: readonly GameEvent[], at: number, view: PlayerView): { length: number } | null {
   const first = events[at];
@@ -324,4 +337,83 @@ export function volleyAt(events: readonly GameEvent[], at: number, view: PlayerV
   if (length < 2) return null;
   if (flavorSourceOf(source, view) === null) return null;
   return { length };
+}
+
+// Wipes
+
+/** R2800000: the removals a wipe is made of. */
+const WIPE_STEPS = new Set<GameEvent["type"]>(["destroyed", "exiled", "bounced"]);
+
+/**
+ * R2800000: a run of removals a set-piece card's hook made, as the runner plays it. `by` is the hook's
+ * readable definition, `sides` the sides the run took cards from, and `anchor` the zone it centres on:
+ * the zone a Trap fired from (R154), or the Unit's own; null for a Spell's.
+ */
+export type Wipe = { by: string; sourceId: string; sides: readonly Side[]; anchor: string | null };
+
+type WipeStep = Extract<GameEvent, { type: "destroyed" | "exiled" | "bounced" }>;
+
+function isWipeStep(event: GameEvent | undefined): event is WipeStep {
+  return event !== undefined && WIPE_STEPS.has(event.type);
+}
+
+/** A bounced card's arrival in its hand (or its burning there, R317), which the engine emits right after the bounce. */
+function landsFrom(event: GameEvent | undefined, step: WipeStep): boolean {
+  if (event === undefined || step.type !== "bounced") return false;
+  return (event.type === "addedToHand" || event.type === "burned") && event.instanceId === step.instanceId;
+}
+
+/** The side of the field that shows `instanceId` in `view`: a unit, or a face-up backrow card. */
+function fieldSide(view: PlayerView, instanceId: string): Side | null {
+  if (instanceId === HIDDEN) return null;
+  for (const side of SIDES) {
+    const sv = seat(view, side);
+    if (sv.units.some((unit) => unit !== null && unit.instanceId === instanceId)) return side;
+    if (sv.backrow.some((slot) => slot !== null && !slot.faceDown && slot.instanceId === instanceId)) return side;
+  }
+  return null;
+}
+
+/** The units zone the board shows `instanceId` in, or null. */
+function unitZone(view: PlayerView, instanceId: string): string | null {
+  for (const side of SIDES) {
+    const lane = seat(view, side).units.findIndex((unit) => unit !== null && unit.instanceId === instanceId);
+    if (lane >= 0) return testid.zone(side, "units", lane + 1);
+  }
+  return null;
+}
+
+/**
+ * R2800000: the wipe at `at`, or null. Only a hook the seat reads (R202) whose card `wipeOf` names, and
+ * only its run of consecutive removals from `at`, each bounce with the hand arrival that follows it: the
+ * caller closes the hook after it, so a hook makes one wipe. A removal the board does not show (R97's
+ * sentinel, a face-down card) counts on its owner's side (for a death, its controller's).
+ */
+export function wipeAt(
+  events: readonly GameEvent[],
+  at: number,
+  view: PlayerView,
+  hook: OpenHook | undefined,
+  wipeOf: (defId: string) => boolean,
+): { wipe: Wipe; length: number } | null {
+  if (hook === undefined || hook.defId === HIDDEN || !wipeOf(hook.defId) || !isWipeStep(events[at])) return null;
+  const taken = new Set<Side>();
+  let i = at;
+  for (let event = events[i]; isWipeStep(event); event = events[i]) {
+    taken.add(fieldSide(view, event.instanceId) ?? sideOf(view, event.type === "destroyed" ? event.controller : event.owner));
+    i += landsFrom(events[i + 1], event) ? 2 : 1;
+  }
+  const length = i - at;
+  let anchor: string | null = null;
+  if (hook.trap !== null) {
+    anchor = testid.zone(sideOf(view, hook.controller), hook.trap.row, hook.trap.lane);
+  } else {
+    for (let k = at - 1; k >= 0 && anchor === null; k -= 1) {
+      const event = events[k];
+      if (event?.type === "summoned" && event.instanceId === hook.sourceId) anchor = testid.zone(sideOf(view, event.player), event.row, event.lane);
+    }
+    anchor ??= unitZone(view, hook.sourceId);
+  }
+  const sides = SIDES.filter((side) => taken.has(side));
+  return { wipe: { by: hook.defId, sourceId: hook.sourceId, sides, anchor }, length };
 }

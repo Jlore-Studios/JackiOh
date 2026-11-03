@@ -1,8 +1,8 @@
 /**
  * Procedural particle sprites (docs/polish/1-animations.md, S5). Each sprite is a radial-gradient disc
  * painted once into a small offscreen canvas per (preset, color, dpr) and reused for every particle
- * after that, which is the cheap way to draw soft glowing dots (MDN, "Optimizing canvas"). There are
- * no image assets: every look is a gradient drawn here.
+ * after that, the cheap way to draw soft glowing dots (MDN, "Optimizing canvas"). No image assets.
+ * Paper, leaf, circuit, crumb and star are flat shapes drawn with paths (#2792).
  */
 import { PARTICLE_PRESETS } from "./presets.ts";
 import { isHeadlessDom } from "./surface.ts";
@@ -12,11 +12,7 @@ export type SpriteSurface = { canvas: CanvasImageSource; ctx: CanvasRenderingCon
 export type SpriteCanvasFactory = (sizePx: number) => SpriteSurface | null;
 
 export type SpriteCache = {
-  /**
-   * A radial-gradient disc for (preset, color index, dpr), drawn once and cached; null without a 2D context.
-   * `colors` (#1447) is a palette that stands in for the preset's own: the index picks from it, and the color it
-   * picks is part of the cache key, so two palettes never share a sprite.
-   */
+  /** Null without a 2D context. `colors` (#1447) stands in for the preset's palette, and the color picked is part of the cache key. */
   get(preset: FxPreset, colorIndex: number, dpr: number, colors?: readonly string[]): CanvasImageSource | null;
   size(): number;
   clear(): void;
@@ -25,12 +21,13 @@ export type SpriteCache = {
 /** CSS px diameter a sprite is painted at; particles scale it to their own size when drawn. */
 const SPRITE_BASE_PX = 48;
 
-type SpriteStyle = "glow" | "soft" | "hard" | "paper";
+type DiscStyle = "glow" | "soft" | "hard";
+type ShapeStyle = "leaf" | "pixel" | "crumb" | "star";
+type SpriteStyle = DiscStyle | "paper" | ShapeStyle;
 
 /**
- * How each preset's disc falls off. Glow has a hot white core, soft is a faint puff, hard a solid
- * dot. Paper is not a disc at all: a small flat rectangle with a lit edge, which the particle
- * system's tumble squash turns into a spinning scrap of confetti.
+ * How each preset's disc falls off: glow has a hot white core, soft is a faint puff, hard a solid dot.
+ * Paper is a flat rectangle with a lit edge, which the tumble squash turns into a spinning scrap.
  */
 const SPRITE_STYLE: { readonly [P in FxPreset]: SpriteStyle } = {
   fire: "glow",
@@ -49,13 +46,33 @@ const SPRITE_STYLE: { readonly [P in FxPreset]: SpriteStyle } = {
   confetti: "paper",
   blood: "hard",
   frost: "hard",
+  leaf: "leaf",
+  circuit: "pixel",
+  crumb: "crumb",
+  star: "star",
+  exhaust: "glow",
 };
 
 /** The paper scrap, as fractions of the sprite: its width, its height, and the lit band along its top. */
 const PAPER = { width: 0.86, height: 0.5, lit: 0.35, litWhiten: 0.45 } as const;
 
+/** Twice pi, the full turn a star's corners are spaced over (#2792). */
+const TAU = Math.PI * 2;
+
+/** The leaf's body: its half-length, its bulge, and its pale midrib (#2792). */
+const LEAF = { length: 0.9, width: 0.44, rib: 0.07, ribLength: 0.7, ribWhiten: 0.5 } as const;
+
+/** The circuit pixel: its side, and the lit square in its top-left corner (#2792). */
+const PIXEL = { side: 0.64, lit: 0.34, litWhiten: 0.6 } as const;
+
+/** The crumb's jagged outline: each corner's reach, and the lit inner copy (#2792). */
+const CRUMB = { corners: [0.92, 0.64, 0.86, 0.56, 0.9, 0.7], lit: 0.5, litWhiten: 0.35 } as const;
+
+/** The star's points: how many, its outer and inner reach, its turn, and its whitening (#2792). */
+const STAR = { points: 5, outer: 0.95, inner: 0.42, turn: -Math.PI / 2, whiten: 0.3 } as const;
+
 /** Gradient stops per disc style: [offset along the radius, alpha, how far the color is mixed toward white]. */
-const GRADIENT_STOPS: { readonly [S in Exclude<SpriteStyle, "paper">]: ReadonlyArray<readonly [number, number, number]> } = {
+const GRADIENT_STOPS: { readonly [S in DiscStyle]: ReadonlyArray<readonly [number, number, number]> } = {
   glow: [
     [0, 1, 0.65],
     [0.2, 1, 0.2],
@@ -106,6 +123,73 @@ export function domSpriteCanvas(doc?: Document): SpriteCanvasFactory {
   };
 }
 
+/** A flat polygon out of `reach`'s corners around `(r, r)`, first `turn` round (#2792). */
+function fillPolygon(ctx: CanvasRenderingContext2D, r: number, reach: readonly number[], turn: number): void {
+  ctx.beginPath();
+  reach.forEach((k, i) => {
+    const angle = turn + (i / reach.length) * TAU;
+    const x = r + r * k * Math.cos(angle);
+    const y = r + r * k * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** A flat shape in `rgb`'s color: a leaf, a circuit pixel, a crumb or a star (#2792). */
+function paintShape(ctx: CanvasRenderingContext2D, style: ShapeStyle, rgb: readonly [number, number, number], sizePx: number): void {
+  const r = sizePx / 2;
+  switch (style) {
+    case "leaf": {
+      const half = (sizePx * LEAF.length) / 2;
+      const bulge = sizePx * LEAF.width;
+      ctx.fillStyle = rgba(rgb, 1, 0);
+      ctx.beginPath();
+      ctx.moveTo(r - half, r);
+      ctx.quadraticCurveTo(r, r - bulge, r + half, r);
+      ctx.quadraticCurveTo(r, r + bulge, r - half, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgba(rgb, 1, LEAF.ribWhiten);
+      ctx.fillRect(r - half * LEAF.ribLength, r - (sizePx * LEAF.rib) / 2, 2 * half * LEAF.ribLength, sizePx * LEAF.rib);
+      return;
+    }
+    case "pixel": {
+      const side = sizePx * PIXEL.side;
+      const x = (sizePx - side) / 2;
+      const y = (sizePx - side) / 2;
+      ctx.fillStyle = rgba(rgb, 1, 0);
+      ctx.fillRect(x, y, side, side);
+      ctx.fillStyle = rgba(rgb, 1, PIXEL.litWhiten);
+      ctx.fillRect(x, y, side * PIXEL.lit, side * PIXEL.lit);
+      return;
+    }
+    case "crumb": {
+      ctx.fillStyle = rgba(rgb, 1, 0);
+      fillPolygon(ctx, r, CRUMB.corners, 0);
+      ctx.fillStyle = rgba(rgb, 1, CRUMB.litWhiten);
+      fillPolygon(
+        ctx,
+        r,
+        CRUMB.corners.map((k) => k * CRUMB.lit),
+        0,
+      );
+      return;
+    }
+    case "star": {
+      ctx.fillStyle = rgba(rgb, 1, STAR.whiten);
+      fillPolygon(
+        ctx,
+        r,
+        Array.from({ length: STAR.points * 2 }, (_, i) => (i % 2 === 0 ? STAR.outer : STAR.inner)),
+        STAR.turn,
+      );
+      return;
+    }
+  }
+}
+
 function paintSprite(ctx: CanvasRenderingContext2D, preset: FxPreset, color: string, sizePx: number): void {
   const r = sizePx / 2;
   const rgb = parseHex(color);
@@ -120,6 +204,10 @@ function paintSprite(ctx: CanvasRenderingContext2D, preset: FxPreset, color: str
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = rgba(rgb, 1, PAPER.litWhiten);
     ctx.fillRect(x, y, w, h * PAPER.lit);
+    return;
+  }
+  if (style === "leaf" || style === "pixel" || style === "crumb" || style === "star") {
+    paintShape(ctx, style, rgb, sizePx);
     return;
   }
   const gradient = ctx.createRadialGradient(r, r, 0, r, r, r);

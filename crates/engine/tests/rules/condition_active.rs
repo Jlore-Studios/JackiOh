@@ -1,10 +1,6 @@
 //! R195 (SPEC §10.8, §10.9): the engine's yellow glow, `conditionActive`, as `viewFor` surfaces it.
 //! B10 (SPEC's wording vs the rulings index) is not tested: `spec check` reads ids and test names.
-//!
-//! Every card is a test-only def whose hook is a `ConditionHook` built per test (`Hooks::new`): its
-//! answer is an `Arc<AtomicBool>` the test sets, and every question it is asked goes down a channel
-//! the test reads back. Defs and scripts go over the fixture catalog per test thread (the testkit's
-//! thread-local registries, SURFACE §8).
+//! Each hook is a test-only `ConditionHook` built per test (`Hooks::new`; thread-local, SURFACE §8).
 //!
 //! First match wins (docs/polish/7-mobile-ux.md, S2): game over; a field card not the viewer's; a
 //! hand card outside the viewer's own main phase or with a prompt open; a face with no hook -> false.
@@ -131,8 +127,7 @@ enum Which {
     B,
 }
 
-/// One question a hook was asked: its `ConditionContext`, kept as the values it carried (the
-/// context borrows the state, so the state is kept by address).
+/// One question a hook was asked: its `ConditionContext`'s values, the borrowed state by address.
 #[derive(Clone, Debug)]
 struct Asked {
     which: Which,
@@ -145,8 +140,7 @@ struct Asked {
     your_turn: bool,
 }
 
-/// The four hooks of one test: what each answers, and every question each was asked since its
-/// last clear. A fresh one per `game()`.
+/// The four hooks of one test: what each answers and what each was asked since its last clear.
 struct Hooks {
     base_answer: Arc<AtomicBool>,
     radiant_answer: Arc<AtomicBool>,
@@ -180,7 +174,6 @@ fn hooked_script(hook: &ConditionHook) -> Script {
 }
 
 impl Hooks {
-    /// The hooks (base and radiant answer `true`, A and B `false`) and the scripts that carry them.
     fn new() -> (Hooks, IndexMap<String, CardScripts>) {
         let (outbox, inbox) = channel();
         let hooks = Hooks {
@@ -266,7 +259,6 @@ impl Hooks {
         flag.store(answer, Ordering::SeqCst);
     }
 
-    /// Every question either face's hook was asked since the last clear (base face first).
     fn asked(&self) -> Vec<Asked> {
         let mut all = self.calls(Which::Base);
         all.extend(self.calls(Which::Radiant));
@@ -281,7 +273,6 @@ impl Hooks {
     }
 }
 
-/// p1's main phase on turn 3, no prompt, no result, with this file's defs and scripts registered.
 fn game(seed: &str) -> (GameState, Hooks) {
     let mut state = new_game(seed, None);
     let (hooks, scripts) = Hooks::new();
@@ -323,9 +314,8 @@ fn has_key<T: serde::Serialize>(card: &T, key: &str) -> bool {
     json_of(card).get(key).is_some()
 }
 
-/// The flag as the view carries it. `true` when the key is present, which must then hold exactly
-/// `true`; `false` when the key is absent. A key present with any other value fails here, because
-/// R195 makes the key absent rather than `false`.
+/// The flag as the view carries it: absent is `false`, and a present key must hold exactly `true`,
+/// as R195 makes the key absent rather than `false`.
 fn glows<T: serde::Serialize>(card: Option<&T>) -> bool {
     let Some(card) = card else {
         panic!("no card at that place in the view");
@@ -343,7 +333,6 @@ fn view_json_mentions(view: &PlayerView, needle: &str) -> bool {
     serde_json::to_string(view).expect("serializes").contains(needle)
 }
 
-/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it.
 fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -895,7 +884,7 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
         find_instance_mut(&mut state, &fired_field_trap.id)
             .expect("in the backrow")
             .face_up = Some(true);
-        // p2's own hooked unit, so p2's view is not simply a view with nothing to ask about.
+        // p2's own hooked unit, so p2's view has something to ask about.
         let their_unit = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 2), json!({}));
 
         let mine = view_for(&state, P1);
@@ -926,7 +915,6 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
             &json!({ "faceDown": false, "instanceId": fired_field_trap.id })
         ));
         assert!(!glows(theirs.opponent.backrow[2].as_ref()));
-        // p2's own unit is the positive control: the view does ask, just never about p1's cards.
         assert!(glows(theirs.you.units[1].as_ref()));
 
         let calls = hooks.asked();
@@ -1019,7 +1007,6 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
 mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
     use super::*;
 
-    /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`.
     fn craft(state: &mut GameState, def_ids: &[String]) -> CardInstance {
         let ingredients: Vec<CardInstance> = def_ids
             .iter()
@@ -1067,8 +1054,7 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
         let (mut state, hooks) = game("r196-context");
         let fused = craft(&mut state, &[glow_a().id, glow_b().id]);
 
-        // Both answer `false` (a hook answers a `bool`, spec-gaps-part-26-2.md): neither lights the
-        // card, and the or-ed hook must still ask both ingredients.
+        // Both answer `false`: neither lights the card, and the or-ed hook still asks both ingredients.
         hooks.answer(Which::A, false);
         hooks.answer(Which::B, false);
         assert!(!condition_active(

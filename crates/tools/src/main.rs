@@ -1,10 +1,6 @@
-//! `jackioh`, the project's command-line tools (SURFACE §12), run as `cargo jackioh <cmd>`
-//! (`.cargo/config.toml`'s alias). One subcommand per row of §12's table; each module defines its
-//! own `#[derive(clap::Args)] pub struct Args` and `pub fn run(args: Args) -> anyhow::Result<()>`,
-//! and is owned by the part §12 names. Written once by part 1.
-//!
-//! Exit codes: 0 on success, 1 on a failed check (a `run` that returns `Err`), 2 on bad usage
-//! (clap). Output goes to stdout; nothing is interactive.
+//! `jackioh`, the project's command-line tools (SURFACE §12), run as `cargo jackioh <cmd>`, one
+//! subcommand per row of §12's table. Exit codes: 0 on success, 1 on a failed check (a `run` that
+//! returns `Err`), 2 on bad usage (clap). Output goes to stdout; nothing is interactive.
 
 mod agent;
 mod arena;
@@ -18,6 +14,7 @@ mod duos_fuzz;
 mod duos_gate;
 mod fused_pairs;
 mod fuzz;
+mod fx_census;
 mod gate;
 mod golden;
 mod luau;
@@ -53,6 +50,8 @@ enum Command {
     Fuzz(fuzz::Args),
     /// Each triggered card's text fused onto each fusable Unit and played until the board settles; a daily sample, or one pair (#2381).
     FusedPairs(fused_pairs::Args),
+    /// What each card's plays and hooks do on the board, from seeded games, with a suggested motif (#2788).
+    Fx(fx_census::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
     Replay(replay::Args),
     /// Print one gate game turn by turn (part 22).
@@ -77,7 +76,7 @@ enum Command {
     Winrates(winrates::Args),
     /// Golden traces: `golden check`, `golden record` (part 23; `bless` retired in #2578).
     Golden(golden::Args),
-    /// Two builds compared: `luau diff`, `luau bench`; and `luau surface`, the card scripts' API (v0.4.0, #442).
+    /// Two builds compared: `luau diff`, `luau bench`.
     Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
@@ -98,6 +97,7 @@ fn main() -> ExitCode {
     let result = match parsed.command {
         Command::Fuzz(args) => fuzz::run(args),
         Command::FusedPairs(args) => fused_pairs::run(args),
+        Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),

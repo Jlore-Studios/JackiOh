@@ -475,6 +475,18 @@ impl<T> std::ops::Index<PlayerId> for PerPlayer<T> { type Output = T; /* … */ 
 impl<T> std::ops::IndexMut<PlayerId> for PerPlayer<T> { /* … */ }
 ```
 
+Since #2783 the event union says why things happen, for the client's cues (#2782) and nothing else.
+`damage`, `damageAbsorbed`, `healed`, `destroyed` and `summoned` carry an optional `via: KeywordKind`,
+serialized only when set: Cleave, Trample, First Strike, Pierce, Lifesteal, Poisonous or Reborn, the
+engine's `damage.rs`, `combat.rs` and `state_check.rs` setting it where the keyword applies (a hit's
+route rides `DamageFlags.via`, never serialized; a death's keyword `Frontier.death_via`, which dies
+with the action). `GameEvent::HookResolving { source_id, def_id, controller, hook: HookKind,
+hidden_from }` marks each first run of a Cry, Death, start-of-turn or end-of-turn hook, Whenever
+trigger and Activate just before its effects (`hook_marks.rs`). Neither reaches the trigger loop
+(`as_rules_read`, `triggers::withhold_report`), so no rule reads them and no hash moves; `view_for`
+withholds a marker from a seat that could not read its card and never forwards `hiddenFrom`, and the
+golden texts leave both out (R2783000, R2783001).
+
 ### 6.5 Mutation convention and the per-call sink
 
 A TS function that mutates its `state` argument takes `&mut GameState`; one that only reads takes
@@ -765,8 +777,9 @@ keeps behind its opaque `EngineState` brand.
 wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarball into
 `.cache/bin/`; then `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown` and
 `wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
-`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. On Vercel,
-`vercel.json`'s `installCommand` (`scripts/vercel-install.sh`) uses the build image's rustup (Vercel ships one under `/rust`), installs rustup (minimal profile) only where there is none, then the pinned toolchain, before `pnpm install`.
+`apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
+(`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
+the web build.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
@@ -946,7 +959,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `crates/cards/patches/patches.json`. `CATALOG_VERSION` in the environment is still read, but only
   to warn when it disagrees: the compiled-in version is served either way, so a stale dashboard value
   never stops a deploy (#488; it first refused to boot, which made every card patch a hand edit).
-  `GET /api/catalog` keeps `x-deployed-commit` from `RENDER_GIT_COMMIT`.
+  `GET /api/catalog` keeps `x-deployed-commit`, from `RENDER_GIT_COMMIT` then and `DEPLOYED_COMMIT` now.
 - **Routes dropped** (unused): `POST /api/auth/signup` (503 in production). `GET /api/catalog/:version`
   stays, since R388 and §9.4 promise it (#2160). `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
@@ -978,15 +991,15 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
   before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
-  border?, fullArt? }` (`fullArt` `true` for the card's Epic full art, or a Legendary's or a
-  Mythic's id, R2655000), goes after the first view to a socket that shows a card that seat's deck
+  border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a
+  Mythic's or an Animated art's id, R2655000, R2715000), goes after the first view to a socket that shows a card that seat's deck
   dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
   `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:
   `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
-  fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, R2655000) and `POST /api/card-picks/upload` `{ cards }`
+  fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, `full-art-…` or `animated-…`, R2655000, R2715000) and `POST /api/card-picks/upload` `{ cards }`
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in
   `apps/web/src/game/net.ts` and `src/cards/loadouts.ts`; without them every seat but the viewer's
   draws the defaults.
@@ -995,9 +1008,10 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.
 - **Deploy**: `crates/server/Dockerfile` (multi-stage: `rust:1.97-slim` builds
   `cargo build --release -p jackioh-server`; `debian:bookworm-slim` with `ca-certificates` runs
-  `/app/jackioh-server release`), `render.yaml` `runtime: docker`, the same service name, region,
-  plan, health check (`/api/catalog` then, `/readyz` since #861) and env contract minus the Node-only keys (`NODE_VERSION`,
-  `CYPRESS_INSTALL_BINARY`). `NODE_ENV` is still read (E2E refusal).
+  `/app/jackioh-server release`), now run in a Cloudflare container behind the
+  site's Worker (`wrangler.jsonc`, `apps/edge`), with the same env contract minus the Node-only keys
+  (`NODE_VERSION`, `CYPRESS_INSTALL_BINARY`) and Render's `RENDER_GIT_COMMIT`, now `DEPLOYED_COMMIT`.
+  `NODE_ENV` is still read (E2E refusal).
 
 ## 12. The `jackioh` CLI
 

@@ -1,10 +1,6 @@
-// Polish 1 (docs/polish/1-animations.md, B46–B48): the stage cues.
-//
-// The board shows the view from before a burst until the whole burst has played (BUILD M5-T4), so
-// the layer carries a moved card with a stand-in (B46), hides a card the burst has taken away (B47)
-// and aims an attacker's lunge at what it attacks (B48). This file covers the planner (`stage.ts`,
-// pure), the director's side (real elements, with their rectangles stubbed because jsdom has no
-// layout) and the layer releasing everything the moment the board shows the next view.
+// Polish 1 (docs/polish/1-animations.md, B46–B48): the stage cues. The board shows the view from before
+// a burst until the whole burst has played (BUILD M5-T4), so the layer carries a moved card with a
+// stand-in (B46), hides a card the burst has taken away (B47) and aims an attacker's lunge (B48).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
@@ -14,6 +10,7 @@ import { MIN_ENTRY_MS, createAnimationQueue, planEntries, type AnimationEntry } 
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import {
   FX_CONCEAL_AT,
+  FX_FLYING_LUNGE_LIFT,
   FX_HOLD_MAX_MS,
   FX_INTENSITY_SCALE,
   FX_LUNGE_CONTACT_AT,
@@ -81,9 +78,7 @@ const summon = (player: "p1" | "p2", instanceId: string, lane = 3): GameEvent =>
   lane,
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The planner
- * ------------------------------------------------------------------------------------------- */
+/* The planner */
 
 describe("B46 stand-ins are planned for every card the burst moves onto the board", () => {
   it("B46 a unit played from the viewer's hand flies from its hand card to its zone and lands on the slam; the hand card hides at once", () => {
@@ -223,9 +218,7 @@ describe("R200 stage cues pace nothing", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The DOM side
- * ------------------------------------------------------------------------------------------- */
+/* The DOM side */
 
 /** jsdom lays nothing out, so every element the director measures gets a fixed rectangle. */
 function place(element: Element, box: FxBox): void {
@@ -337,12 +330,10 @@ describe("B46 the stand-in in the page", () => {
     expect(hold.style.getPropertyValue("--fx-x")).toBe(`${land.x}px`);
     expect(hold.style.getPropertyValue("--fx-h")).toBe(`${land.height}px`);
     expect(hold.style.getPropertyValue("--fx-land-ms")).toBe(`${Math.round(FX_SLAM_AT * 400)}ms`);
-    // It starts where the hand card was.
     const dx = HAND_BOX.x + HAND_BOX.width / 2 - (land.x + land.width / 2);
     expect(hold.style.getPropertyValue("--fx-dx")).toBe(`${dx}px`);
     // The card it stands in for is hidden in the same task, so no paint shows both or neither.
     expect(hand.getAttribute("data-fx-concealed")).toBe("now");
-    // Exactly one element with the card's testid is left in the document.
     expect(document.querySelectorAll(`[data-testid="hand-card-${HAND}"]`)).toHaveLength(1);
   });
 
@@ -403,8 +394,7 @@ describe("B46 the stand-in in the page", () => {
   });
 
   it("B46 a parked stand-in keeps no frame loop running and measures nothing until the board moves under it", () => {
-    // Review: every frame re-measured the zone and rewrote left/top/width/height, forcing a layout per
-    // frame for the rest of the burst (93 layouts against 30 without the summon, on a phone at 4x CPU).
+    // Re-measuring the zone every frame forced a layout per frame for the rest of the burst.
     const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
     hand.className = "card";
     const zone = boardElement("zone-you-units-3", ZONE_BOX);
@@ -433,7 +423,6 @@ describe("B46 the stand-in in the page", () => {
     expect(hold.style.getPropertyValue("--fx-x")).toBe(left);
     expect(h.pendingFrames()).toBe(0);
 
-    // Back where it was placed: no offset left.
     place(zone, ZONE_BOX);
     h.scroll();
     h.frameAt(1048);
@@ -464,7 +453,6 @@ describe("B46 the stand-in in the page", () => {
       if (h.pendingFrames() > 0) expect(shift).toBeCloseTo(offsets.at(-1) ?? 0, 6);
     }
     expect(offsets.length).toBeGreaterThan(3);
-    // The shake is over, the board is back, and so is the stand-in; nothing keeps the loop alive.
     expect(h.pendingFrames()).toBe(0);
     expect(hold.style.getPropertyValue("translate")).toBe("");
   });
@@ -489,7 +477,6 @@ describe("B46 the stand-in in the page", () => {
     await Promise.resolve();
     expect(copy.hasAttribute("data-animating")).toBe(false);
 
-    // Released: the copy is gone and nothing watches the hand card any more.
     h.director.release();
     hand.setAttribute("data-animating", "damage");
     await Promise.resolve();
@@ -586,6 +573,32 @@ describe("B47 concealing in the page", () => {
     h.director.clear();
     expect(card.hasAttribute("data-fx-concealed")).toBe(false);
   });
+
+  it("R2785000 cut() lands a waiting conceal now, keeps the stand-in and the concealment, and drops every other effect", () => {
+    const hand = boardElement(`hand-card-${HAND}`, HAND_BOX);
+    hand.className = "card card-hand";
+    boardElement("zone-you-units-3", ZONE_BOX);
+    const card = boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    const h = directorHarness();
+    h.director.play(stage([play("p1", HAND), summon("p1", HAND)]));
+    h.director.play(stage([{ type: "destroyed", instanceId: ENEMY, owner: "p2" } as GameEvent], 350));
+    h.director.play([{ kind: "splat", tone: "heal", amount: 1, at: tid(`card-${ENEMY}`), delayMs: 0, durationMs: 500 }]);
+    h.frameAt(1016);
+    expect(h.root.querySelector('[data-fx="splat"]')).not.toBeNull();
+    expect(card.hasAttribute("data-fx-concealed")).toBe(false);
+
+    // A skipped set piece: the board stands as the entry would leave it, until it shows the next view.
+    h.director.cut();
+    expect(h.root.querySelector('[data-fx="splat"]')).toBeNull();
+    expect(h.root.querySelector('[data-fx="hold"]')).not.toBeNull();
+    expect(hand.getAttribute("data-fx-concealed")).toBe("now");
+    expect(card.getAttribute("data-fx-concealed")).toBe("after");
+    h.frameAt(2000);
+    expect(h.root.querySelector('[data-fx="splat"]')).toBeNull();
+    h.director.release();
+    expect(hand.hasAttribute("data-fx-concealed")).toBe(false);
+    expect(card.hasAttribute("data-fx-concealed")).toBe(false);
+  });
 });
 
 describe("B48 aiming the lunge in the page", () => {
@@ -604,6 +617,23 @@ describe("B48 aiming the lunge in the page", () => {
     expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
   });
 
+  it("R2789000 a Flying lunge arcs and release clears --fx-lunge-lift", () => {
+    const attacker = boardElement(`card-${MINE}`, { x: 300, y: 300, width: 60, height: 82 });
+    boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    const h = directorHarness();
+    // A walker's lunge carries no lift.
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350 }]);
+    expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
+    h.director.release();
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350, arc: true }]);
+    expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-lift"))).toBe(FX_FLYING_LUNGE_LIFT);
+    // It still aims along the line to the target.
+    expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-y"))).toBeLessThan(-FX_LUNGE_MIN_PX);
+    h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
+    expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
+  });
+
   it("B48 the aim is at least the BUILD lunge distance and at most FX_LUNGE_MAX_PX", () => {
     const attacker = boardElement(`card-${MINE}`, { x: 0, y: 0, width: 60, height: 82 });
     boardElement(`card-${ENEMY}`, { x: 3000, y: 0, width: 60, height: 82 });
@@ -614,6 +644,28 @@ describe("B48 aiming the lunge in the page", () => {
     const near = boardElement(`card-${ENEMY}-near`, { x: 10, y: 0, width: 60, height: 82 });
     h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: near.getAttribute("data-testid")!, delayMs: 0, durationMs: 350 }]);
     expect(Number.parseFloat(attacker.style.getPropertyValue("--fx-lunge-x"))).toBeCloseTo(FX_LUNGE_MIN_PX, 5);
+  });
+});
+
+describe("R2800000 a set piece's pull in the page", () => {
+  it("R2800000 a pull draws a card toward the set piece's centre, or sinks it in place, and release clears it", () => {
+    const card = boardElement(`card-${MINE}`, { x: 100, y: 300, width: 60, height: 82 });
+    boardElement("board", { x: 0, y: 0, width: 800, height: 600 });
+    const h = directorHarness();
+    h.director.play([{ kind: "pull", testid: `card-${MINE}`, to: { kind: "testid", testid: "board" }, delayMs: 0, durationMs: FX_HOLD_MAX_MS }]);
+    expect(card.getAttribute("data-fx-pulled")).toBe("true");
+    // From the card's centre (130, 341) to the board's (400, 300).
+    expect(Number.parseFloat(card.style.getPropertyValue("--fx-pull-x"))).toBeCloseTo(270, 5);
+    expect(Number.parseFloat(card.style.getPropertyValue("--fx-pull-y"))).toBeCloseTo(-41, 5);
+    h.director.release();
+    expect(card.hasAttribute("data-fx-pulled")).toBe(false);
+    expect(card.style.getPropertyValue("--fx-pull-x")).toBe("");
+    // Pulled toward itself, it sinks where it stands.
+    h.director.play([{ kind: "pull", testid: `card-${MINE}`, to: { kind: "testid", testid: `card-${MINE}` }, delayMs: 0, durationMs: FX_HOLD_MAX_MS }]);
+    expect(card.style.getPropertyValue("--fx-pull-x")).toBe("0.0px");
+    expect(card.style.getPropertyValue("--fx-pull-y")).toBe("0.0px");
+    h.director.release();
+    expect(card.hasAttribute("data-fx-pulled")).toBe(false);
   });
 });
 
@@ -644,9 +696,7 @@ describe("B46 standInCopy and landingBox", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The layer: the release lands in the same commit as the new board
- * ------------------------------------------------------------------------------------------- */
+/* The layer: the release lands in the same commit as the new board */
 
 describe("B46 FxLayer releases the stage when the shown view changes", () => {
   it("B46 a stand-in lives while the runner holds the view back and is gone in the render that shows the next view", () => {

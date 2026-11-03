@@ -1,6 +1,5 @@
-// Polish 6, slice A: `<CardArt>`'s DOM contract (docs/polish/6-cards.md, Surface A "DOM contract",
-// behavior B6). The `manifest` prop is injected, so real art is exercised without any file in
-// apps/web/public/art/.
+// `<CardArt>`'s DOM contract (docs/polish/6-cards.md, Surface A, B6). The injected `manifest` prop
+// exercises real art without any file in apps/web/public/art/.
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,6 +10,7 @@ import type { CardDef } from "@jackioh/shared";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { CardDefsProvider } from "../refContext.tsx";
 import { CardArt, artUrl, themeFor, type ArtManifest, type ArtShape, type CardArtProps } from "./index.ts";
+import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 
 afterEach(cleanup);
 
@@ -214,5 +214,27 @@ describe("R503: CardArt draws the card's motif", () => {
     const art = renderArt("classic-036", { manifest: { "classic-036": { base: true } }, name: "Burn" });
     expect(art.getAttribute("data-art")).toBe("real");
     expect(art.hasAttribute("data-art-motif")).toBe(false);
+  });
+});
+
+describe("#2681: proceduralCardArtUri", () => {
+  it("#2681 proceduralCardArtUri matches CardArt's generated source for every art family", () => {
+    // Core's (R503), Stinkyscape's (R2170000), Training Grounds' own (R2202000) and a Legacy card's,
+    // which draws its own yard picture with its Core card's subject (R2724000, R2511000).
+    const ids = ["core-002", "classic-036", "stinkyscape-001", "traininggrounds-001", "traininggrounds-041"];
+    for (const id of ids) {
+      const card = def(id);
+      for (const radiant of [false, true]) {
+        const art = renderArt(id, { manifest: {}, name: card.name, radiant });
+        expect(art.getAttribute("data-art"), id).toBe("procedural");
+        expect(backgroundOf(art), `${id} ${radiant ? "radiant" : "base"}`).toContain(proceduralCardArtUri(card, radiant));
+        cleanup();
+      }
+    }
+    // The families really differ, so the loop above compares five different pictures per face; the
+    // Legacy card's is its own, never its Core card's (R2724000).
+    const uris = new Set(ids.map((id) => proceduralCardArtUri(def(id), false)));
+    expect(uris.size).toBe(ids.length);
+    expect(proceduralCardArtUri(def("traininggrounds-041"), true)).not.toBe(proceduralCardArtUri(def("core-002"), true));
   });
 });

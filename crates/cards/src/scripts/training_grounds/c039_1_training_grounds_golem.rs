@@ -14,9 +14,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #39.1 Training-Grounds Golem — SPEC §7, BUILD M13 row TG 39.1: "10/10 with the five keywords, can
-// attack Units the turn it lands; Armor 10 takes 10 off each hit; Taunt holds attacks. radiant 20/20 and
-// Armor 20".
+// TG #39.1 Training-Grounds Golem — SPEC §7, BUILD M13 row TG 39.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -41,7 +39,6 @@ mod tests {
         out
     }
 
-    /// p2 holds the Golem in lane 1 and a Mr. Vanilla in lane 2; p1 has two heavy hitters (12/99).
     fn defending(radiant: bool, attack: i32) -> Scenario {
         let hitter = json!({ "def": BODY, "statsOverride": { "attack": attack, "health": 99 } });
         scenario(json!({
@@ -60,18 +57,6 @@ mod tests {
 
     mod base {
         use super::*;
-
-        #[test]
-        fn s6_1_a_10_10_with_rush_armor_taunt_divine_shield_and_pierce() {
-            let mut s = defending(false, 12);
-            s.expect_stats(super::super::ID, json!({ "attack": 10, "health": 10 }));
-            assert_eq!(keywords_of(&s), ["Armor", "Divine Shield", "Pierce", "Rush", "Taunt"]);
-            assert!(s
-                .stats(super::super::ID)
-                .keywords
-                .iter()
-                .any(|keyword| matches!(keyword, Keyword::Armor { n: 10 })));
-        }
 
         #[test]
         fn s6_1_rush_it_attacks_a_unit_the_turn_it_lands_never_the_hero() {

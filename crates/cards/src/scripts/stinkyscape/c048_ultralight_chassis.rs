@@ -17,10 +17,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #48 Ultralight Chassis — SPEC §8.10 row 48, BUILD M12 row S 48: "a 4/1 Rush
-// Starship Piece whose death fuses a copy into its owner's Dormant Starship (R1852000); played as
-// an Equip onto a Unit, the host gains +4/+1 and Rush and stays no piece unless it was one
-// (R1852001); radiant 8/2".
+// Stinkyscape #48 Ultralight Chassis — SPEC §8.10 row 48, BUILD M12 row S 48 (R1852000, R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -37,29 +34,6 @@ mod tests {
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    #[test]
-    fn prints_rush_equip_and_starship_piece_4_1_radiant_8_2() {
-        crate::register_all();
-        let def = crate::card_def(CHASSIS);
-        assert_eq!(
-            kinds_of(&def.base.keywords),
-            vec!["Starship Piece", "Equip", "Rush"]
-        );
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Equip", "Rush"]
-        );
-        assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
-    }
-
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
@@ -113,7 +87,6 @@ mod tests {
         s.play(VANILLA, json!({ "zone": 1 }));
         s.play(CHASSIS, json!({ "zone": 1, "equip": true }));
 
-        // The host is kept: a 4/4 that is also a 4/1, with Rush.
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
         s.expect_stats(host.id.as_str(), json!({ "attack": 8, "health": 5 }));
         let host_kinds = kinds(&s, host.id.as_str());

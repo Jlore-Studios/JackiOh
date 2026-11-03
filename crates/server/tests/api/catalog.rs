@@ -1,19 +1,7 @@
-//! The catalog and validator bindings (`src/api/catalog.rs`, and `jackioh_engine::validator`, which
-//! the handlers call directly): the two places the server reaches data and rules that live in other
-//! crates (SPEC §9.4). It is docs/v0.3.0/README.md V18's proof too: the server serves the catalog
-//! version of the newest `patches.json` entry, with `x-deployed-commit`.
-//!
-//! Two SPEC §11 rulings live here as well:
-//!   * R163 — the catalog endpoint a client that ships none can read: whole, unprojected,
-//!     unauthenticated, carrying R105's version.
-//!   * R164 — where L6's ban list lives: server state, never a flag on a card definition, read
-//!     through the catalog handle.
-//!
-//! The catalog is compiled in (`jackioh_cards::catalog_json()`) and its version is
-//! `jackioh_cards::catalog_version()`, whatever `CATALOG_VERSION` says (a different value only
-//! warns). The binding tests hand `jackioh_engine::validator` the snapshot a handler builds from the
-//! catalog handle (`snapshot` below), JSON in and JSON out (§10.1). R388's `GET /api/catalog/:version`
-//! serves every shipped patch's exact snapshot.
+//! Catalog and validator bindings (`src/api/catalog.rs`, SPEC §9.4, §11, docs/v0.3.0/README.md V18).
+//! - R163: unauthenticated catalog endpoint (R105).
+//! - R164: server-side ban list.
+//! - R388: GET /api/catalog/:version for shipped patches (§10.1).
 
 use std::sync::Arc;
 
@@ -739,14 +727,14 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
     async fn r163_reports_the_deployed_commit_in_a_header_when_one_is_known_and_leaves_the_body_alone() {
         let commit = "0123456789abcdef0123456789abcdef01234567";
         let mut deployed = test_env();
-        // `env.rs` reads Render's `RENDER_GIT_COMMIT` into the deployed commit `app::build` hands the
-        // catalog route.
-        deployed.insert("RENDER_GIT_COMMIT".to_string(), commit.to_string());
+        // `env.rs` reads `DEPLOYED_COMMIT`, which the Worker hands the container, into the deployed
+        // commit `app::build` hands the catalog route.
+        deployed.insert("DEPLOYED_COMMIT".to_string(), commit.to_string());
 
         let known = get(&app_from(&deployed).await, "/api/catalog", None).await;
         let unknown = get(&test_app().await, "/api/catalog", None).await;
 
-        // deploy-watch.yml compares this header with the commit that was pushed.
+        // The live check after `wrangler deploy` compares this header with the commit it deployed.
         assert_eq!(DEPLOYED_COMMIT_HEADER, "x-deployed-commit");
         assert_eq!(
             known
@@ -755,14 +743,14 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
                 .and_then(|value| value.to_str().ok()),
             Some(commit)
         );
-        // No commit (a local server, anything but Render): no header, rather than an empty one.
+        // No commit (a local server, any the Worker did not start): no header, rather than an empty one.
         assert!(unknown.headers.get(DEPLOYED_COMMIT_HEADER).is_none());
         // The header is not the body: the bytes stay the same for everybody.
         assert_eq!(known.text, unknown.text);
     }
 
     /// `bug_reports.rs`: whether the server can file a match its log does not reproduce, beside the
-    /// commit, so deploy-watch.yml shows it after a deploy. A server with no token says `off`.
+    /// commit, so the live check after a deploy shows it. A server with no token says `off`.
     #[tokio::test]
     async fn reports_whether_bug_reports_can_be_filed_in_a_header() {
         let answer = get(&test_app().await, "/api/catalog", None).await;

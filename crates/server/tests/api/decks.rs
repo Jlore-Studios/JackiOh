@@ -1,26 +1,6 @@
-//! Saved decks and trios (`crates/server/src/api/decks.rs`, SPEC §9.4, R250–R256) and the
-//! queue-time helpers the queue and the rooms share (`read_mode_choice`, `freeze_choice`,
-//! `assert_free_to_play`; R253, R257, R264).
-//!
-//! Not a test of D1–D4, T1–T3 or L1–L6: those live in the shared validator
-//! (`jackioh_engine::validator`) and are tested there. Here the questions are the endpoints' own:
-//! is the id a UUID, is the catalog current, are the draft issues passed through untouched, what
-//! does each store outcome answer, and is another profile's id indistinguishable from a missing
-//! one. Every expected issue is the shared module's own verdict for the same input.
-//!
-//! The rulings, by their test titles:
-//!  - R250: a save checks structure only (D1–D4), at most `MAX_SAVED_DECKS` decks;
-//!  - R252: T1–T3, at most `MAX_SAVED_TRIOS` trios, a deleted deck empties its slots;
-//!  - R256: `PUT` is an idempotent upsert keyed by the client's id;
-//!  - R341: a trio import is checked like every save and written all or nothing, under both caps
-//!    (R340);
-//!  - R165: a profile with nothing saved is refused as a deck failure, not a missing resource;
-//!  - R1827000: a deck's portrait is one its account owns, on top of D5;
-//!  - R2100000: each save keeps a version (a burst one, at most `DECK_VERSIONS_KEPT`), and a restore
-//!    is a save of one that keeps the version it replaced.
-//!
-//! The test app serves the compiled-in catalog and the handlers call the shared validator directly
-//! (SURFACE §11.3), so the cards here are the real catalog's playable ids.
+//! Saved decks and trios (`crates/server/src/api/decks.rs`, SPEC §9.4, R250–R256, R253, R257, R264).
+//! Rulings: R250, R252, R256, R341, R340, R165, R1827000, R2100000.
+//! Surface contract: SURFACE §11.3.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -595,7 +575,7 @@ mod saved_decks_9_4_r250_r256 {
     }
 }
 
-/// R250's draft refusals, one per D-rule case (TS's table of `it`s).
+/// R250 draft refusals, one per D-rule case.
 mod r250_refuses_a_draft_that_breaks_d1_d4_with_the_shared_module_s_own_issues {
     use super::*;
 
@@ -633,56 +613,27 @@ mod r250_refuses_a_draft_that_breaks_d1_d4_with_the_shared_module_s_own_issues {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_1_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "   ", cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_2_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", &"x".repeat(DECK_NAME_MAX_LENGTH + 1), cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_3_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "Bad\u{0007}name", cards(2, 0)).await;
-    }
-
-    // A right-to-left override makes a name show text it does not hold; a zero-width space hides one.
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_4_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "Aggro\u{202e}orez", cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d1_case_5_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D1", "\u{200b}", cards(2, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d2_case_6_is_a_400_carrying_every_issue_and_writes_nothing() {
-        // One more than any deck holds: the catalog has room for it.
-        refuses("D2", "Big", cards(DECK_SIZE as usize + 1, 0)).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d3_case_7_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D3", "Token", with(cards(2, 0), &[a_token()])).await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d3_case_8_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses(
-            "D3",
-            "Unknown",
-            with(cards(2, 0), &["core-does-not-exist".to_string()]),
-        )
-        .await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn r250_d4_case_9_is_a_400_carrying_every_issue_and_writes_nothing() {
-        refuses("D4", "Twice", with(cards(2, 0), &cards(1, 0))).await;
+    async fn r250_refuses_each_invalid_draft_shape_with_a_400_carrying_every_issue() {
+        // A right-to-left override makes a name show text it does not hold; a zero-width space hides one.
+        let cases: Vec<(&str, String, Vec<String>)> = vec![
+            ("D1", "   ".to_string(), cards(2, 0)),
+            ("D1", "x".repeat(DECK_NAME_MAX_LENGTH + 1), cards(2, 0)),
+            ("D1", "Bad\u{0007}name".to_string(), cards(2, 0)),
+            ("D1", "Aggro\u{202e}orez".to_string(), cards(2, 0)),
+            ("D1", "\u{200b}".to_string(), cards(2, 0)),
+            // One more than any deck holds: the catalog has room for it.
+            ("D2", "Big".to_string(), cards(DECK_SIZE as usize + 1, 0)),
+            ("D3", "Token".to_string(), with(cards(2, 0), &[a_token()])),
+            (
+                "D3",
+                "Unknown".to_string(),
+                with(cards(2, 0), &["core-does-not-exist".to_string()]),
+            ),
+            ("D4", "Twice".to_string(), with(cards(2, 0), &cards(1, 0))),
+        ];
+        for (rule, name, deck) in cases {
+            refuses(rule, &name, deck).await;
+        }
     }
 
     #[tokio::test(start_paused = true)]

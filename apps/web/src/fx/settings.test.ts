@@ -1,8 +1,6 @@
-// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3).
-//
-// `localStorage` must only ever be touched inside try/catch: a missing, throwing or full storage and
-// unparsable JSON all fall back to the defaults without throwing, and `setFxSettings` keeps working
-// in memory. Every test leaves storage empty and the store reset.
+// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3). `localStorage` must
+// only ever be touched inside try/catch: a missing, throwing or full storage and unparsable JSON fall back
+// to the defaults without throwing, and `setFxSettings` keeps working in memory.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ReactElement } from "react";
@@ -42,7 +40,7 @@ afterEach(() => {
   resetFxSettingsForTests();
 });
 
-const DEFAULTS: FxSettings = { speed: 1, intensity: "normal", motion: "system" };
+const DEFAULTS: FxSettings = { speed: 1, intensity: "normal", motion: "system", bigMoments: "full" };
 
 /** A `Storage` whose every member throws, as Safari's private mode and a blocked origin do. */
 function throwingStorage(): Storage {
@@ -97,9 +95,7 @@ function store(value: unknown): void {
   window.localStorage.setItem(FX_SETTINGS_KEY, JSON.stringify(value));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B6: loading and normalizing
- * ------------------------------------------------------------------------------------------- */
+/* B6: loading and normalizing */
 
 describe("B6 loadFxSettings and normalization", () => {
   it("B6 the defaults are speed 1, intensity normal and motion system, under the key jackioh.fx.v1", () => {
@@ -145,10 +141,10 @@ describe("B6 loadFxSettings and normalization", () => {
   });
 
   it("B6 valid stored values load as stored", () => {
-    const saved: FxSettings = { speed: 1.5, intensity: "high", motion: "reduce" };
+    const saved: FxSettings = { speed: 1.5, intensity: "high", motion: "reduce", bigMoments: "full" };
     expect(loadFxSettings(storageWith(JSON.stringify(saved)))).toEqual(saved);
     store({ speed: 0.5, intensity: "off", motion: "system" });
-    expect(loadFxSettings(window.localStorage)).toEqual({ speed: 0.5, intensity: "off", motion: "system" });
+    expect(loadFxSettings(window.localStorage)).toEqual({ speed: 0.5, intensity: "off", motion: "system", bigMoments: "full" });
   });
 
   it("B6 a stored speed out of range is clamped to [FX_SPEED_MIN, FX_SPEED_MAX]", () => {
@@ -156,11 +152,13 @@ describe("B6 loadFxSettings and normalization", () => {
       speed: FX_SPEED_MAX,
       intensity: "low",
       motion: "system",
+      bigMoments: "full",
     });
     expect(loadFxSettings(storageWith(JSON.stringify({ speed: 0.1, intensity: "low", motion: "system" })))).toEqual({
       speed: FX_SPEED_MIN,
       intensity: "low",
       motion: "system",
+      bigMoments: "full",
     });
   });
 
@@ -169,11 +167,13 @@ describe("B6 loadFxSettings and normalization", () => {
       speed: 1.5,
       intensity: "normal",
       motion: "reduce",
+      bigMoments: "full",
     });
     expect(loadFxSettings(storageWith(JSON.stringify({ speed: 2, intensity: "high", motion: "never" })))).toEqual({
       speed: 2,
       intensity: "high",
       motion: "system",
+      bigMoments: "full",
     });
     expect(loadFxSettings(storageWith(JSON.stringify({ speed: "fast", intensity: 3, motion: null })))).toEqual(DEFAULTS);
   });
@@ -183,6 +183,7 @@ describe("B6 loadFxSettings and normalization", () => {
       speed: 1,
       intensity: "low",
       motion: "system",
+      bigMoments: "full",
     });
     expect(loadFxSettings(storageWith(JSON.stringify({})))).toEqual(DEFAULTS);
   });
@@ -215,15 +216,13 @@ describe("B6 loadFxSettings and normalization", () => {
   it("B6 normalizeFxSettings keeps every valid intensity and motion", () => {
     for (const intensity of ["off", "low", "normal", "high"] as const) {
       for (const motion of ["system", "reduce"] as const) {
-        expect(normalizeFxSettings({ speed: 1.5, intensity, motion })).toEqual({ speed: 1.5, intensity, motion });
+        expect(normalizeFxSettings({ speed: 1.5, intensity, motion })).toEqual({ speed: 1.5, intensity, motion, bigMoments: "full" });
       }
     }
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B6: the in-memory store and persistence
- * ------------------------------------------------------------------------------------------- */
+/* B6: the in-memory store and persistence */
 
 describe("B6 getFxSettings and setFxSettings", () => {
   it("B6 getFxSettings starts at the defaults with empty storage", () => {
@@ -232,7 +231,7 @@ describe("B6 getFxSettings and setFxSettings", () => {
 
   it("B6 setFxSettings persists under jackioh.fx.v1, and a fresh load reads the same value back", () => {
     const next = setFxSettings({ speed: 2, intensity: "high" });
-    expect(next).toEqual({ speed: 2, intensity: "high", motion: "system" });
+    expect(next).toEqual({ speed: 2, intensity: "high", motion: "system", bigMoments: "full" });
     expect(window.localStorage.getItem("jackioh.fx.v1")).not.toBeNull();
     expect(loadFxSettings(window.localStorage)).toEqual(next);
 
@@ -242,12 +241,12 @@ describe("B6 getFxSettings and setFxSettings", () => {
 
   it("B6 setFxSettings merges a partial patch over the current value", () => {
     setFxSettings({ intensity: "low" });
-    expect(setFxSettings({ motion: "reduce" })).toEqual({ speed: 1, intensity: "low", motion: "reduce" });
-    expect(getFxSettings()).toEqual({ speed: 1, intensity: "low", motion: "reduce" });
+    expect(setFxSettings({ motion: "reduce" })).toEqual({ speed: 1, intensity: "low", motion: "reduce", bigMoments: "full" });
+    expect(getFxSettings()).toEqual({ speed: 1, intensity: "low", motion: "reduce", bigMoments: "full" });
   });
 
   it("B6 setFxSettings normalizes the patch before storing and returning it", () => {
-    expect(setFxSettings({ speed: 10 })).toEqual({ speed: 3, intensity: "normal", motion: "system" });
+    expect(setFxSettings({ speed: 10 })).toEqual({ speed: 3, intensity: "normal", motion: "system", bigMoments: "full" });
     expect(getFxSettings().speed).toBe(3);
     expect(setFxSettings({ speed: Number.NaN })).toEqual(DEFAULTS);
     expect(setFxSettings({ intensity: "loud" as FxSettings["intensity"] }).intensity).toBe("normal");
@@ -262,8 +261,8 @@ describe("B6 getFxSettings and setFxSettings", () => {
     expect(() => {
       result = setFxSettings({ speed: 0.5, intensity: "off" });
     }).not.toThrow();
-    expect(result).toEqual({ speed: 0.5, intensity: "off", motion: "system" });
-    expect(getFxSettings()).toEqual({ speed: 0.5, intensity: "off", motion: "system" });
+    expect(result).toEqual({ speed: 0.5, intensity: "off", motion: "system", bigMoments: "full" });
+    expect(getFxSettings()).toEqual({ speed: 0.5, intensity: "off", motion: "system", bigMoments: "full" });
   });
 
   it("B6 the store works in memory when reading localStorage itself throws", () => {
@@ -272,7 +271,7 @@ describe("B6 getFxSettings and setFxSettings", () => {
       resetFxSettingsForTests();
       expect(getFxSettings()).toEqual(DEFAULTS);
       expect(() => setFxSettings({ motion: "reduce" })).not.toThrow();
-      expect(getFxSettings()).toEqual({ speed: 1, intensity: "normal", motion: "reduce" });
+      expect(getFxSettings()).toEqual({ speed: 1, intensity: "normal", motion: "reduce", bigMoments: "full" });
     } finally {
       restore();
     }
@@ -288,20 +287,18 @@ describe("B6 getFxSettings and setFxSettings", () => {
   it("B6 getFxSettings loads storage once, lazily, and keeps its value until reset", () => {
     store({ speed: 1.5, intensity: "low", motion: "system" });
     resetFxSettingsForTests();
-    expect(getFxSettings()).toEqual({ speed: 1.5, intensity: "low", motion: "system" });
+    expect(getFxSettings()).toEqual({ speed: 1.5, intensity: "low", motion: "system", bigMoments: "full" });
 
     // Written behind the store's back: the in-memory value stands.
     store({ speed: 0.5, intensity: "high", motion: "reduce" });
-    expect(getFxSettings()).toEqual({ speed: 1.5, intensity: "low", motion: "system" });
+    expect(getFxSettings()).toEqual({ speed: 1.5, intensity: "low", motion: "system", bigMoments: "full" });
 
     resetFxSettingsForTests();
-    expect(getFxSettings()).toEqual({ speed: 0.5, intensity: "high", motion: "reduce" });
+    expect(getFxSettings()).toEqual({ speed: 0.5, intensity: "high", motion: "reduce", bigMoments: "full" });
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B7: notification and the hook
- * ------------------------------------------------------------------------------------------- */
+/* B7: notification and the hook */
 
 function Probe(): ReactElement {
   const [settings, update] = useFxSettings();
@@ -319,8 +316,8 @@ describe("B7 subscriptions", () => {
     setFxSettings({ speed: 7, intensity: "low" });
 
     expect(first).toHaveBeenCalledTimes(1);
-    expect(first).toHaveBeenLastCalledWith({ speed: 3, intensity: "low", motion: "system" });
-    expect(second).toHaveBeenLastCalledWith({ speed: 3, intensity: "low", motion: "system" });
+    expect(first).toHaveBeenLastCalledWith({ speed: 3, intensity: "low", motion: "system", bigMoments: "full" });
+    expect(second).toHaveBeenLastCalledWith({ speed: 3, intensity: "low", motion: "system", bigMoments: "full" });
   });
 
   it("B7 an unsubscribed listener is not notified", () => {
@@ -346,7 +343,7 @@ describe("B7 subscriptions", () => {
     const listener = vi.fn();
     subscribeFxSettings(listener);
     setFxSettings({ motion: "reduce" });
-    expect(listener).toHaveBeenLastCalledWith({ speed: 1, intensity: "normal", motion: "reduce" });
+    expect(listener).toHaveBeenLastCalledWith({ speed: 1, intensity: "normal", motion: "reduce", bigMoments: "full" });
   });
 
   it("B7 a component using useFxSettings re-renders with every change", () => {
@@ -373,7 +370,32 @@ describe("B7 subscriptions", () => {
     fireEvent.click(screen.getByTestId("fx-probe"));
 
     expect(screen.getByTestId("fx-probe").textContent).toBe("0.5|normal|system");
-    expect(getFxSettings()).toEqual({ speed: 0.5, intensity: "normal", motion: "system" });
-    expect(listener).toHaveBeenLastCalledWith({ speed: 0.5, intensity: "normal", motion: "system" });
+    expect(getFxSettings()).toEqual({ speed: 0.5, intensity: "normal", motion: "system", bigMoments: "full" });
+    expect(listener).toHaveBeenLastCalledWith({ speed: 0.5, intensity: "normal", motion: "system", bigMoments: "full" });
+  });
+});
+
+/* R2785000: Big moments, how long a set piece holds the game */
+
+describe("R2785000 the Big moments setting", () => {
+  it("R2785000 bigMoments defaults to full, keeps full, short and off, and turns anything else into full", () => {
+    expect(DEFAULT_FX_SETTINGS.bigMoments).toBe("full");
+    expect(getFxSettings().bigMoments).toBe("full");
+    for (const bigMoments of ["full", "short", "off"] as const) {
+      expect(normalizeFxSettings({ speed: 1, intensity: "normal", motion: "system", bigMoments }).bigMoments).toBe(bigMoments);
+      // Stored with the other effects settings, under jackioh.fx.v1, and read back as stored.
+      expect(setFxSettings({ bigMoments }).bigMoments).toBe(bigMoments);
+      expect(JSON.parse(window.localStorage.getItem(FX_SETTINGS_KEY) ?? "{}")).toMatchObject({ bigMoments });
+      expect(loadFxSettings(window.localStorage).bigMoments).toBe(bigMoments);
+    }
+    for (const raw of [undefined, null, "", "Full", "long", 0, true, {}, []]) {
+      expect(normalizeFxSettings({ speed: 2, intensity: "high", motion: "reduce", bigMoments: raw }), String(raw)).toEqual({
+        speed: 2,
+        intensity: "high",
+        motion: "reduce",
+        bigMoments: "full",
+      });
+    }
+    expect(setFxSettings({ bigMoments: "brief" as FxSettings["bigMoments"] }).bigMoments).toBe("full");
   });
 });

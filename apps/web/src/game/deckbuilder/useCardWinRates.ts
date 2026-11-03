@@ -8,15 +8,12 @@ import { useCallback, useEffect, useState } from "react";
 import { getCardStats } from "../../net/api.ts";
 import type { CardWinRateInfo, SortKey } from "./filters.ts";
 
-/** Where the win rates stand: not asked for, on their way, arrived, or the fetch failed. */
 export type WinRatesStatus = "idle" | "loading" | "ready" | "failed";
 
-/** What `useCardWinRates` hands a screen. */
 export type CardWinRates = {
   /** Each card's win rate; `null` until a fetch succeeds. */
   rates: Map<string, CardWinRateInfo> | null;
   status: WinRatesStatus;
-  /** Asks again after a failed fetch. */
   retry: () => void;
 };
 
@@ -31,7 +28,6 @@ export function useCardWinRates(sortKey: SortKey): CardWinRates {
 
   useEffect(() => {
     if (!wanted) {
-      // Leaving the sort forgets a failure, so coming back to it asks again, as it always has.
       setFailed(false);
       return undefined;
     }

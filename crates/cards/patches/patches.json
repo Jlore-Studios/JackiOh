@@ -20403,5 +20403,268 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.10d",
+    "date": "2026-11-01",
+    "title": "Patch: the web's barrels hold only what importers take, and its duplicated helpers and test helpers keep one copy each",
+    "source": "#2160, #2743",
+    "notes": "The client's code merges of #2160: the barrels hold only the names an importer takes through them, and duplicated helpers keep one copy each (messages, storage, sockets, class names, tests). Under apps/web/src/cards/ only the barrels, imports and shared helpers moved (R2529000 counts any code change there): no card looks or plays differently.",
+    "player": {
+      "title": "Behind-the-scenes tidying",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "The code behind the card faces and the game screens was tidied; nothing looks or plays differently."
+      ]
+    },
+    "commits": [
+      "07b67a1e49adce94a129924d414a1ebdc5b9f3cf"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10e",
+    "date": "2026-11-02",
+    "title": "Patch: the Jlorious card back, owned only by reaching Jlorious",
+    "source": "#2755",
+    "notes": "R2755000: card-back-jlorious, a Mythic card back that no roll, cosmetic pack, token, Chase Shard bar, dev fill or ladder bot offers; a rated game grants it to each person it leaves Jlorious, and migration 0074 to everyone who held Jlorious before. On a card its emblem draws the J and star of the logo's front card and breathes.",
+    "player": {
+      "title": "The Jlorious card back",
+      "new": [
+        "The Jlorious card back: the logo's gold J and star on a violet card. The only way to own it is to reach Jlorious, and it is yours to keep."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "124d3322fb63ca0105c77aabd39296f6d286ca97"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10f",
+    "date": "2026-11-02",
+    "title": "Patch: set watermarks behind every card's rules text, one for each set",
+    "source": "#2718",
+    "notes": "Every face with a rules box (any type, Radiant, Chinese, blank) prints its set's mark (R503) large, centred and faint in one ink under the text; a full-art card's goes behind its Full text and detail rules. Glitch, compact, full-art, sub-150 px, face-down and symbol-less sets (Boss, Boss-X, Custom) print none. Meditative+ gets a mark (the ensō with a plus). A Set watermarks switch (Visuals, on by default, device only) removes them (R2718000). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Set watermarks",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every card now shows its set's symbol, faint, behind its text, and Meditative+ has a symbol of its own. Turn it off under Settings, Visuals, Set watermarks."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3bee38b49d3a3ced2342eaa5949ed9583b93c7ec"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10g",
+    "date": "2026-11-02",
+    "title": "Patch: every finish shows on a full-art card",
+    "source": "#2720",
+    "notes": "On a full-art face every finish now paints a band of itself round the art's edge, at most 0.6 opaque and clear toward the middle, under the gems, the banner, the signature and the stats (R2720000). Animated finishes move as before. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Finishes on full-art cards",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A card's finish now shows on its full art, as a band of its color and texture round the art's edge."
+      ]
+    },
+    "commits": [
+      "84ae9acba8ded380afba2a39c776cd0964153ecb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11",
+    "date": "2026-11-02",
+    "title": "A Buff in a hand may give Cloaked or take Crater off",
+    "source": "#2727",
+    "notes": "R2727000, R2727001: in a hand a Buff's keyword row also adds Cloaked (last, after Flashback) to a Unit, a Spell or a Field Spell that lacks it of its own, and removes a Crater any card has of its own; a Nerf there takes off a card's own Cloaked, as before. The classifier shows the 67 cards in `plays` playing differently.",
+    "player": {
+      "title": "Buffs can Cloak cards in your hand and clear their Crater",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Buff on a Unit, Spell or Field Spell in your hand can now give it Cloaked.",
+        "A Buff on a card in your hand can now remove its Crater."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "be314c9deaeba663b4c1f5f861ec0ac59316ced7"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-007",
+      "classic-035",
+      "classic-050",
+      "classicplus-009",
+      "classicplus-022",
+      "classicplus-030",
+      "classicplus-041",
+      "classicplus-046",
+      "classicplus-058",
+      "classicplus-070",
+      "classicplus-071",
+      "classicplus-073",
+      "core-008",
+      "core-040",
+      "core-080",
+      "core-092",
+      "core-098",
+      "core-t-rush",
+      "meditative-034",
+      "meditative-038",
+      "meditative-040",
+      "meditative-082",
+      "meditative-087",
+      "meditativeplus-016",
+      "meditativeplus-021",
+      "stinkyscape-006",
+      "stinkyscape-015",
+      "stinkyscape-016",
+      "stinkyscape-024",
+      "stinkyscape-027",
+      "stinkyscape-028",
+      "stinkyscape-029",
+      "stinkyscape-033",
+      "stinkyscape-050",
+      "stinkyscape-053",
+      "stinkyscape-058",
+      "stinkyscape-060",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-066",
+      "stinkyscape-068",
+      "stinkyscape-071",
+      "stinkyscape-089",
+      "stinkyscape-127",
+      "stinkyscape-142",
+      "stinkyscape-147",
+      "stinkyscape-158",
+      "stinkyscape-160",
+      "stinkyscape-166",
+      "stinkyscape-167",
+      "stinkyscape-177",
+      "stinkyscape-t-ai-09",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "traininggrounds-023",
+      "traininggrounds-024",
+      "traininggrounds-029",
+      "traininggrounds-035",
+      "traininggrounds-037",
+      "traininggrounds-039",
+      "traininggrounds-060"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11b",
+    "date": "2026-11-02",
+    "title": "Patch: Training Grounds' Legacy cards redrawn in the yard's own art style",
+    "source": "#2724",
+    "notes": "Each Training Grounds Legacy card (#41–#60) draws its Core card's subject in the set's training yard, with a touch of its own, on both faces (R2724000). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Legacy cards get their own art",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Each Training Grounds Legacy card now has art of its own: its Core card's picture redrawn in the training yard, with a touch of its own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "542d16f961cfa40b1389615a5bad1c3389ea3b82"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11c",
+    "date": "2026-11-02",
+    "title": "Patch: full-art cards in your hand show only their art, no name",
+    "source": "#2723",
+    "notes": "A full-art card (R1017001, R2655000) in the viewer's own hand now draws only its art, its cost gem and a Unit's attack and health: no name banner, Mythic signature, rarity gem, set mark or crest (R2723000). Its name stays in its words for a screen reader and the tooltip; every other view prints the whole face. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Full-art cards in your hand",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A full-art card in your hand now shows just its art, its cost and, on a Unit, its attack and health. Hover over it, or hold it on a touch screen, to see its name and the whole card."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0042c19a3c6a26fef5448f00cb8c0aa26a7b4fd2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11d",
+    "date": "2026-11-02",
+    "title": "Patch: no rarity foil on Legendary and Mythic cards by default; the crest and the music set them apart",
+    "source": "#2721",
+    "notes": "R2721000: Legendary and Mythic faces wear no rarity foil by default; the Rarity foil setting gives the Mythic its sheen and rainbow edge back. Radiant faces keep their foil. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Quieter Legendary and Mythic cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Mythic cards no longer shine with a rainbow foil and edge by default: like Legendary cards, they stand out by the crest at the top, their gem and their music.",
+        "Turn on Rarity foil in Settings, Visuals, to bring the Mythic's rainbow foil and edge back.",
+        "A Mythic card now shows the cosmetic foil you equip on it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "2a10dc2711b6e90b79a4f389c547d5a1390191f8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

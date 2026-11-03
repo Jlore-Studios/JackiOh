@@ -1,6 +1,4 @@
-//! A card's stay, read off the event stream (SPEC §10.3, R174, R212): `stays.ts`'s two readers.
-//!
-//! Port of `packages/engine/test/stays.test.ts`.
+//! A card's stay, read off the event stream (SPEC §10.3, R174, R212): the readers of `stays.rs`.
 
 use jackioh_engine::testkit::*;
 
@@ -18,6 +16,7 @@ fn summoned(id: &str) -> GameEvent {
         arrived_during: None,
         exits_from: None,
         creator: None,
+        via: None,
     }
 }
 
@@ -31,6 +30,7 @@ fn destroyed(id: &str) -> GameEvent {
         max_health: 1,
         killer_id: None,
         radiant: None,
+        via: None,
     }
 }
 
@@ -41,6 +41,7 @@ fn damage(id: &str) -> GameEvent {
         amount: 1,
         combat: false,
         absorbed: 0,
+        via: None,
     }
 }
 
@@ -55,7 +56,6 @@ fn stolen(id: &str, controller: PlayerId) -> GameEvent {
     }
 }
 
-/// `[...later.moved].sort()`.
 fn sorted_moved(later: &LaterMoves) -> Vec<String> {
     let mut moved: Vec<String> = later.moved.iter().cloned().collect();
     moved.sort();

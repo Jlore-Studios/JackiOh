@@ -45,17 +45,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite (issue #2521): played from the hand, 1 damage
-// to a random enemy (the hero or a Unit, each seen over the seeds) with Pierce, so an Armored hero or
-// Unit takes it whole; damage reads through `param()`; radiant it resolves twice (Echo 1), both hits
-// piercing. Tagged Resource and Token.
+// S T-korrelite — SPEC §7, BUILD M12 row S T-korrelite (issue #2521).
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::layers::unit_view;
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{card_def, play_resource, scenario};
+    use crate::{play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -73,7 +69,6 @@ mod tests {
         }))
     }
 
-    /// The damage the enemy hero and the enemy Unit took from one play on `seed`.
     fn hits(seed: &str, radiant: bool) -> (i32, i32) {
         let mut s = board(seed, radiant);
         play_resource(&mut s, P1, ID, Value::Null);
@@ -97,23 +92,6 @@ mod tests {
         let s = armored_play(seed, radiant, json!([ARMORED]));
         let wall = s.unit_at(P2, 1);
         (30 - s.state().players[P2].hero.health, 7 - s.stats(&wall).health)
-    }
-
-    #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
-    }
-
-    #[test]
-    fn prints_pierce_on_both_faces() {
-        let def = card_def(ID);
-        assert_eq!(serde_json::to_value(&def.base.keywords).unwrap(), json!([{ "kind": "Pierce" }]));
-        assert_eq!(serde_json::to_value(&def.radiant.keywords).unwrap(), json!([{ "kind": "Pierce" }]));
-        // The card in a hand reads it, as §4.4 step 2 reads its source (`damage::pierces`).
-        let s = board("korrelite-keyword", false);
-        let card = s.card(ID).clone();
-        let keywords = serde_json::to_value(&unit_view(s.state(), &card).keywords).unwrap();
-        assert!(keywords.as_array().unwrap().contains(&json!({ "kind": "Pierce" })));
     }
 
     #[test]

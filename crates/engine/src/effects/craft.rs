@@ -1,8 +1,6 @@
-//! Mint a crafted card (ME-CRAFT, Meditative #17 True Craft a Card, R882): validate the
-//! recipe, compile it into a transient definition and add a fresh instance to the hand.
-//!
-//! The definition lands in `state.transient_defs` as a Fuse's does (R77), so its scripts rebuild
-//! from the def in any process; a full hand burns the card like any other arrival (§2.4, R4).
+//! Mint a crafted card (ME-CRAFT, Meditative #17 True Craft a Card, R882): validate the recipe and
+//! compile it into a transient definition, kept in `state.transient_defs` as a Fuse's is (R77) so its
+//! scripts rebuild in any process, then add a fresh instance to the hand (§2.4, R4).
 
 use serde::{Deserialize, Serialize};
 
@@ -23,9 +21,8 @@ pub struct CraftCardArgs {
     pub radiant: Option<bool>,
 }
 
-/// Compile the recipe and add a fresh card of it to the controller's hand at its cost, Radiant
-/// on the Radiant face. An invalid recipe makes nothing — the answer check (`prompts`) has
-/// already refused it, so this guard is unreachable from an answered prompt.
+/// An invalid recipe makes nothing: the answer check (`prompts`) has already refused it, so this
+/// guard is unreachable from an answered prompt.
 pub fn craft_card(args: CraftCardArgs) -> Effect {
     Effect::new("craftCard", move |ctx| {
         if validate_recipe(&args.recipe, args.recipe.cost).is_err() {
