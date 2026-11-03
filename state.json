@@ -16013,7 +16013,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-03T08:38:10Z",
       "round_tier": "",
-      "run_id": "pending:e1774545-1793696622",
+      "run_id": "41608046406",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
