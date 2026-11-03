@@ -15240,13 +15240,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-03T15:13:01Z",
-      "run_id": "41662069914",
+      "run_id": "pending:7dfd0784-1793722956",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 15,
-      "started_at": "2026-11-03T15:15:51Z",
+      "started_at": "2026-11-03T16:23:12Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15683,9 +15684,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T16:22:20Z",
+    "at": "2026-11-03T16:23:12Z",
     "url": "",
-    "what": "build #2928 on claude-3"
+    "what": "spot-check #2935 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T15:44:50Z",
@@ -29116,7 +29117,15 @@
         "n": 15,
         "pr": 2935,
         "queued_at": "2026-11-03T16:05:15Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:7dfd0784-1793722956",
         "sha": "46b50bf36d30c4e2890999e2bd644bc591feccbe",
+        "started_at": "2026-11-03T16:23:12Z",
         "status": "queued",
         "title": "Patch: the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
         "tries": 0
