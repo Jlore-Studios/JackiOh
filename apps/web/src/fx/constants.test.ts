@@ -84,6 +84,8 @@ const S2 = {
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
   FX_WALLS_TRAUMA: 0.45,
+  FX_ROLLBACK_STEP: 0.08,
+  FX_INK_TEAR_TRAUMA: 0.2,
   // #2796: Meditative's Flourishes.
   FX_JADE_CRACK_TRAUMA: 0.3,
   FX_HARMONY_TRAUMA: 0.15,
@@ -180,6 +182,10 @@ const S2 = {
   FX_WISH_TRAUMA: 0.3,
   FX_FORGE_TRAUMA: 0.4,
   FX_FORGE_REACH: 0.2,
+  // Issue #2798: Stinkyscape's flourishes.
+  FX_FLASH_FREEZE_TRAUMA: 0.35,
+  FX_DUO_BOND_TRAUMA: 0.3,
+  FX_STRATOS_SWARM_TRAUMA: 0.3,
   FX_SET_PASS_FLOOR: 0.55,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #2787: the auras (R2787000).

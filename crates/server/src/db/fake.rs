@@ -4539,6 +4539,28 @@ pub fn presence_watchable(
         .collect())
 }
 
+pub fn presence_duos_blocked(
+    f: &mut FakeTx<'_>,
+    viewer: &str,
+    match_ids: &[String],
+) -> Result<Vec<String>, StoreError> {
+    call(f, "presence.duosBlocked")?;
+    let tables: &FakeTables = f.tables();
+    Ok(match_ids
+        .iter()
+        .filter(|id| {
+            tables.duos.matches.iter().any(|row| {
+                row.id == **id
+                    && tables.social.blocks.iter().any(|block| {
+                        joins(&block.blocker, &block.blocked, viewer, &row.a1)
+                            || joins(&block.blocker, &block.blocked, viewer, &row.a2)
+                    })
+            })
+        })
+        .cloned()
+        .collect())
+}
+
 // profiles (B46, B50)
 
 pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {

@@ -6,7 +6,9 @@
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
+import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
 import { isCardRecipeKey, type CardRecipeKey } from "../cards/bespoke.ts";
@@ -43,6 +45,9 @@ export function galleryPlayId(n: number): string {
 
 /** R2785000: the key of the gallery's fixture set piece. */
 export const GALLERY_SET_PIECE = "fixture";
+
+/** #2798: Stinkyscape #68 Stratos, the Unit Stratos Swarm fills a board with. */
+const STRATOS = "stinkyscape-068";
 
 /**
  * R2785000: the gallery's fixture set piece: the entry holding the play of `instanceId` claims the set
@@ -349,11 +354,14 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * `view`: Hinder adds the next-refresh rider to the other player, Blood Ridden Glowy Jelly Bean makes the
  * viewer's first hand card Radiant at a life price, Crushing Walls takes wipe's fixture, Transmogulate
  * turns the viewer's first hand card into a Legendary, Zephrys adds its card to the hand and Craft a
- * Card adds its crafted card, then fuses it. #2796: Auspicious Rock costs its caster 2 and rolls a Jade
- * into the hand, Spiritually 中国 turns every one of the viewer's hand cards into one CN card and
- * summons a CN Unit, and Harmony Spirit sets every unit to 3/3. R2797000: Olivian Expanse adds its
- * Discovered card, Imitated Instrumentality summons its three Field Spells and Drone Core X its
- * Battleship.
+ * Card adds its crafted card, then fuses it. R2795000: Rollback rolls both sides back a turn, KY's
+ * Constant changes the cost of the viewer's first hand card, and Book of Pain discards two of the other
+ * player's cards. #2796: Auspicious Rock costs its caster 2 and rolls a Jade into the hand, Spiritually
+ * 中国 turns every one of the viewer's hand cards into one CN card and summons a CN Unit, and Harmony
+ * Spirit sets every unit to 3/3. R2797000: Olivian Expanse adds its Discovered card, Imitated
+ * Instrumentality summons its three Field Spells and Drone Core X its Battleship. #2798: iKwzki Duos
+ * with the player's first unit, Flash Freeze freezes every unit on both sides and Stratos Swarm fills
+ * the player's empty zones with Stratos (its first unit zone, a full board having none).
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -370,6 +378,18 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "addedToHand", player, instanceId: "fx-fused", defId: "core-055" },
     { type: "fused", instanceIds: ["fx-half-a", "fx-half-b"], resultInstanceId: "fx-fused", defId: "core-055" },
   ],
+  rollbackSweep: (view, _instanceId, player) => [{ type: "rolledBack", player, turnsAgo: 1, sides: [view.you.player, view.opponent.player] }],
+  constantStamp: (view) => {
+    const hand = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+    return hand === undefined ? [] : [{ type: "numberChanged", instanceId: hand.instanceId, defId: hand.defId, key: "cost", value: 3 }];
+  },
+  inkTear: (_view, _instanceId, player) => {
+    const owner = player === "p1" ? "p2" : "p1";
+    return [
+      { type: "discarded", instanceId: "fx-discarded-1", defId: "core-055", owner },
+      { type: "discarded", instanceId: "fx-discarded-2", defId: "core-002", owner },
+    ];
+  },
   jadeCrack: (_view, _instanceId, player) => [
     { type: "healthLost", player, amount: 2 },
     { type: "addedToHand", player, instanceId: "fx-jade", defId: "meditative-039-2" },
@@ -405,6 +425,26 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   battleshipWarp: (_view, _instanceId, player) => [
     { type: "summoned", player, instanceId: "fx-battleship", defId: "stinkyscape-t-shield-layer", row: "units", lane: GALLERY_WARP_LANE },
   ],
+  duoBond: (view, _instanceId, player) => {
+    const mine = unitsOf(player === view.viewer ? view.you : view.opponent)[0];
+    return mine === undefined ? [] : [{ type: "marked", instanceId: mine.instanceId, mark: DUO_MARK, color: DUO_MARK_COLOR, added: true }];
+  },
+  flashFreeze: (view) =>
+    [...unitsOf(view.you), ...unitsOf(view.opponent)].map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  stratosSwarm: (view, _instanceId, player) => {
+    const side = player === view.viewer ? view.you : view.opponent;
+    const open = (row: "units" | "backrow", zones: readonly unknown[]): { row: "units" | "backrow"; lane: number }[] =>
+      zones.flatMap((zone, k) => (zone === null ? [{ row, lane: k + 1 }] : []));
+    const zones = [...open("units", side.units), ...open("backrow", side.backrow)];
+    return (zones.length === 0 ? [{ row: "units" as const, lane: 1 }] : zones).map(({ row, lane }) => ({
+      type: "summoned",
+      player,
+      instanceId: `fx-stratos-${row}-${String(lane)}`,
+      defId: STRATOS,
+      row,
+      lane,
+    }));
+  },
 };
 
 /**

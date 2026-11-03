@@ -24,8 +24,12 @@ const GAP = 6;
 /** The bubble's widest, before the viewport narrows it (px): a phone's 390 leaves 358. */
 const BUBBLE_MAX = 320;
 
-/** Where the bubble sits: under the badge in the top half of the screen, over it in the bottom half. */
-function placement(badge: DOMRect): CSSProperties {
+/**
+ * Where a bubble sits: under its badge in the top half of the screen, over it in the bottom
+ * half. Shared with the hero tray's overflow list (#2877), which is placed and dismissed the
+ * same way its badges' bubbles are.
+ */
+export function bubblePlacement(badge: DOMRect): CSSProperties {
   const width = Math.min(BUBBLE_MAX, window.innerWidth - 2 * EDGE);
   const left = Math.max(EDGE, Math.min(badge.left, window.innerWidth - EDGE - width));
   const below = badge.top + badge.height / 2 < window.innerHeight / 2;
@@ -77,7 +81,7 @@ export function ModifierBadge({ modifier }: { modifier: ModifierView }): ReactEl
         onClick={(event) => {
           event.stopPropagation();
           const rect = badge.current?.getBoundingClientRect();
-          setAt(open || rect === undefined ? null : placement(rect));
+          setAt(open || rect === undefined ? null : bubblePlacement(rect));
         }}
         // Focus leaving for anything but the bubble (Tab away) closes it; a touch screen may never
         // focus the button, and there the tap elsewhere closes it instead.

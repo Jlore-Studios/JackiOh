@@ -1,7 +1,8 @@
 // R2784000 #2792: `/dev/fx`, the motif gallery: it offers every drawn motif, every flavor's
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
-// each plays something; #2793: every Core entry other than `none` plays as its card's play, and #2796
-// every Meditative and Meditative+ one, R2797000 a Death, trigger or Activate from its hook's marker.
+// each plays something; #2793: every Core entry other than `none` plays as its card's play, #2796 every
+// Meditative and Meditative+ one, R2795000 every Classic+ one, a Field card wearing its aura, and #2798
+// every Stinkyscape part-two one, R2797000 a Death, trigger or Activate from its hook's marker.
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +10,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 
 import { planAuras } from "../../fx/aura/plan.ts";
 import { planCardFx, planCardMotif } from "../../fx/cardFx.ts";
-import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { planFx } from "../../fx/cues.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
@@ -29,6 +30,7 @@ import type { FxPlanEnv } from "../../fx/types.ts";
 import { BURST_BUDGET_MS, planEntries } from "../../game/animations.ts";
 import { FX_DRAWN_MOTIFS } from "../../fx/motifs/names.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { CATALOG } from "../../wire/cards.ts";
 import FxGallery, { fxGalleryTestid, galleryCards } from "./fx.tsx";
 
 afterEach(cleanup);
@@ -50,10 +52,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
     // #2793: Core's 91 entries other than `none` (76 on the play, 7 on a hook, 5 recipes, 3 set pieces);
-    // #2796: Meditative's 116 and Meditative+'s 29; R2797000: Stinkyscape 001 to 090's 94; then the other
-    // sets' 11 motif cards, 5 aura-only Field Spells, Crushing Walls' recipe, 4 set pieces and Training
-    // Grounds #30's `death: wipe` on its hook.
-    expect(cards).toHaveLength(352);
+    // #2796: Meditative's 116 and Meditative+'s 29; R2795000: Classic+'s 96 (74 cards and 22 tokens);
+    // #2798: Stinkyscape part two's 83; R2797000: Stinkyscape 001 to 090's 94; then the other sets' 4
+    // motif cards, 3 aura-only Field Spells, 1 set piece and Training Grounds #30's `death: wipe` on its hook.
+    expect(cards).toHaveLength(518);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -95,15 +97,24 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(screen.getByTestId(fxGalleryTestid.root)).toBeInTheDocument();
   });
 
-  it("R2784000 #2793 the gallery has a play for every Core entry other than none, and each plays its motif, recipe or set piece", () => {
+  /**
+   * Every entry of `ids` other than none has a gallery play, in table order, and each plays its motif, recipe
+   * or set piece as the board's effects layer plans it; a Field card's aura stands where the gallery lays it.
+   */
+  function expectGalleryPlays(ids: ReadonlySet<string>, count: number): void {
     const view = fullBoardView();
     const intensity = FX_INTENSITY_SCALE.normal;
-    const core = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("core-") && entry.kind !== "none");
-    expect(core).toHaveLength(91);
-    expect(galleryCards().filter((card) => card.defId.startsWith("core-")).map((card) => card.defId)).toEqual(core.map(([defId]) => defId));
-    for (const [defId, entry] of core) {
+    const drawable = [...FX_CARD_TABLE].filter(([defId, entry]) => ids.has(defId) && entry.kind !== "none");
+    expect(drawable).toHaveLength(count);
+    expect(galleryCards().filter((card) => ids.has(card.defId)).map((card) => card.defId)).toEqual(drawable.map(([defId]) => defId));
+    for (const [defId, entry] of drawable) {
+      // R2787000: a Field card's aura stands in the backrow zone the gallery lays it in.
+      if (entry.kind === "hooks" && entry.aura !== undefined && galleryFieldView(defId, view) !== view) {
+        expect(planAuras(galleryFieldView(defId, view), new Map()).map((aura) => aura.defId), defId).toContain(defId);
+      }
       const play = galleryPlayOf(defId, entry);
       if (play === null) throw new Error(`${defId} has no gallery play`);
+      if (play.kind === "aura") continue;
       // Planned as the board's effects layer plans it: remember, then plan.
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
@@ -118,6 +129,16 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
     }
+  }
+
+  it("R2784000 #2793 the gallery has a play for every Core entry other than none, and each plays its motif, recipe or set piece", () => {
+    expectGalleryPlays(new Set(Object.keys(CATALOG).filter((id) => CATALOG[id]?.set === "Core")), 91);
+  });
+
+  it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {
+    const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
+    if (file === undefined) throw new Error("no stinkyscape-2.json5");
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 83);
   });
 
   it("R2784000 #2796 the gallery plays every Meditative and Meditative+ entry", () => {
@@ -146,6 +167,48 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
     }
+  });
+
+  it("R2795000 the gallery has a play for every Classic+ entry other than none, and each plays its motif, recipe or set piece", () => {
+    render(<FxGallery />);
+    const offered = optionsOf(fxGalleryTestid.card);
+    const view = fullBoardView();
+    const intensity = FX_INTENSITY_SCALE.normal;
+    const given = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("classicplus-") && entry.kind !== "none");
+    expect(galleryCards().filter((card) => card.defId.startsWith("classicplus-")).map((card) => card.defId)).toEqual(given.map(([defId]) => defId));
+    for (const [defId, entry] of given) {
+      expect(offered, defId).toContain(defId);
+      const play = galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      // Planned as the board's effects layer plans it: remember, then plan.
+      const events = galleryCardEvents(defId, play, view, 1);
+      const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
+      let drawn = false;
+      for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece)) {
+        env.memory.remember(planned.events);
+        // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
+        if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
+        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+      }
+      expect(drawn, `${defId} ${play.kind}`).toBe(true);
+    }
+  });
+
+  it("R2795000 a Classic+ Field card's gallery view stands it face-up, wearing its aura", () => {
+    const view = fullBoardView();
+    const isField = (defId: string): boolean => CATALOG[defId]?.type === "Field Spell" || CATALOG[defId]?.type === "Field Trap";
+    const fields = galleryCards().filter((card) => card.defId.startsWith("classicplus-") && isField(card.defId));
+    expect(fields.length).toBeGreaterThanOrEqual(10);
+    const wears = (shown: typeof view, defId: string): boolean => planAuras(shown, new Map()).some((aura) => aura.defId === defId);
+    for (const { defId } of fields) {
+      const shown = galleryFieldView(defId, view);
+      expect(shown.you.backrow[0], defId).toEqual(expect.objectContaining({ defId, faceDown: false }));
+      expect(wears(view, defId), defId).toBe(false);
+      expect(wears(shown, defId), defId).toBe(true);
+    }
+    // Any other card leaves the board as it stands.
+    expect(galleryFieldView("classicplus-025", view)).toBe(view);
   });
 
   it("R2784000 #2793 the gallery plays a card of each kind, a Field Spell standing in the backrow with its aura", () => {

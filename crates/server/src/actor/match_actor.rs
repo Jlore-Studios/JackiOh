@@ -2556,7 +2556,7 @@ use crate::social::watch::parse_watch_hello;
 pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 
 /// R1107000: what a finished match's watcher's close says, once it has been sent its seat's last view.
-const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
+pub(crate) const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 
 /// One recorded view of a seat: its encoded `view` frame (`legal: []`, B50), when the state it shows
 /// was reached, and its place in the record. R1834003: and the `(seat, card)` pairs it shows

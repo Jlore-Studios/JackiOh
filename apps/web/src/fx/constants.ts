@@ -88,6 +88,10 @@ export const FX_WALLS_HIT_AT = 0.3;
 export const FX_WALLS_TAIL_MS = 850;
 export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
 export const FX_WALLS_TRAUMA = 0.45;
+// R2795000: Classic+ #35 Rollback rewinds the lanes from 5 to 1, each ring this fraction of D after the
+// last (all of them inside Travel to Land); Classic+ #56 Book of Pain shakes this hard at its first tear.
+export const FX_ROLLBACK_STEP = 0.08;
+export const FX_INK_TEAR_TRAUMA = 0.2;
 // #2796: Meditative's Flourishes (fx/cards/meditative/, meditativeplus/): each one's shake at Land.
 export const FX_JADE_CRACK_TRAUMA = 0.3;
 export const FX_HARMONY_TRAUMA = 0.15;
@@ -204,6 +208,10 @@ export const FX_TIDE_TRAUMA = 0.35;
 export const FX_WISH_TRAUMA = 0.3;
 export const FX_FORGE_TRAUMA = 0.4;
 export const FX_FORGE_REACH = 0.2;
+// #2798: Stinkyscape's flourishes (fx/cards/stinkyscape/): each shake at Land.
+export const FX_FLASH_FREEZE_TRAUMA = 0.35;
+export const FX_DUO_BOND_TRAUMA = 0.3;
+export const FX_STRATOS_SWARM_TRAUMA = 0.3;
 // #2793: the share of a set's non-token cards its pass gives an entry other than `none`.
 export const FX_SET_PASS_FLOOR = 0.55;
 // R2784000: the scales the /dev/fx gallery offers.

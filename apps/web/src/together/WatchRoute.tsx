@@ -8,6 +8,8 @@
 // answer (R1441, R1103000), within the reopen attempts.
 // R1834003, R1834004: both seats' frozen loadouts are kept merged as the match socket keeps them
 // (game/net.ts); a watched board wears nobody's device picks, so both seats wear their own.
+// R2881000: a co-op game (`coop`, the link's `&coop=1`) is watched over the same socket and hello; its
+// frames are the friend's seat's `DuosView`s, drawn on the co-op board as its replay draws a step.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -20,14 +22,20 @@ import { ModifierList } from "../game/ModifierList.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { createWakeProbe, parseServerFrame } from "../game/net.ts";
+import { DuosChromeContext } from "../duos/context.ts";
+import { DuosBoard } from "../duos/DuosBoard.tsx";
+import { parseDuosFrame } from "../duos/socket.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
 import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import type { ReceivedPing } from "../net/duos.ts";
 import { readSession } from "../net/session.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
 import { getFriends } from "../net/social.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
+import type { DuosView } from "../wire/generated/DuosView.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { usePolled } from "./session.ts";
@@ -44,6 +52,9 @@ export type WatchConnection = "connecting" | "open" | "closed" | "refused";
 /** A watched board is offered nothing, and sends nothing. */
 const NOTHING_LEGAL: readonly ActionBody[] = [];
 const IGNORE = (): void => undefined;
+/** R2881000: and a watched co-op board is offered nothing and hears no ping, as `DuosReplay.tsx`'s. */
+const NO_COOP_ACTIONS: readonly DuosActionBody[] = [];
+const NO_PINGS: readonly ReceivedPing[] = [];
 
 /** The watch socket's address beside the match socket's, with no token: it is offered as a subprotocol (R1379000). */
 export function watchSocketUrl(matchId: string, friendId: string, base: string = matchSocketUrl()): string {
@@ -51,12 +62,23 @@ export function watchSocketUrl(matchId: string, friendId: string, base: string =
   return `${serverSocketUrl(WATCH_PATH, base).replace(/\?.*$/u, "")}?${query}`;
 }
 
-/** The newest delayed view of the friend's seat, both seats' loadouts (R1834003), how the socket stands, and the watcher's own retry. */
+/**
+ * The newest delayed view of the friend's seat (a co-op seat's in `coopView`, R2881000), both seats' loadouts
+ * (R1834003), how the socket stands, and the watcher's own retry.
+ */
 function useWatch(
   matchId: string,
   friendId: string,
-): { view: PlayerView | null; loadouts: SeatLoadouts | null; connection: WatchConnection; reconnect: () => void } {
+  coop: boolean,
+): {
+  view: PlayerView | null;
+  coopView: DuosView | null;
+  loadouts: SeatLoadouts | null;
+  connection: WatchConnection;
+  reconnect: () => void;
+} {
   const [view, setView] = useState<PlayerView | null>(null);
+  const [coopView, setCoopView] = useState<DuosView | null>(null);
   const [loadouts, setLoadouts] = useState<SeatLoadouts | null>(null);
   const [connection, setConnection] = useState<WatchConnection>("connecting");
   /** The running effect's retry (#1570); a no-op until the effect sets it. */
@@ -129,6 +151,18 @@ function useWatch(
         wakeProbe.hear();
         wakeProbe.cancel();
         if (typeof event.data !== "string") return;
+        if (coop) {
+          // R2881000: a co-op game's watcher is sent the seat's views, and a refusal, only.
+          const frame = parseDuosFrame(event.data);
+          if (frame?.type === "view") {
+            over = frame.view.result !== null;
+            setCoopView(frame.view);
+          } else if (frame?.type === "error" && frame.code === "forbidden") {
+            refused = true;
+            setConnection("refused");
+          }
+          return;
+        }
         const frame = parseServerFrame(event.data);
         if (frame === null) return;
         if (frame.type === "view") {
@@ -176,13 +210,13 @@ function useWatch(
       wakeProbe.dispose();
       socket?.close();
     };
-  }, [matchId, friendId]);
+  }, [matchId, friendId, coop]);
 
   const reconnect = useCallback((): void => {
     reconnectRef.current();
   }, []);
 
-  return { view, loadouts, connection, reconnect };
+  return { view, coopView, loadouts, connection, reconnect };
 }
 
 /** The connection in a watcher's words. */
@@ -216,17 +250,41 @@ function ReconnectNow({ className, onReconnect }: { className: string; onReconne
   );
 }
 
-export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: string }): ReactElement {
+export function WatchRoute({
+  matchId,
+  friendId,
+  coop = false,
+}: {
+  matchId: string;
+  friendId: string;
+  /** R2881000: the game is a co-op one, drawn on the co-op board. */
+  coop?: boolean;
+}): ReactElement {
   useLocale();
-  const { view, loadouts, connection, reconnect } = useWatch(matchId, friendId);
+  const { view, coopView, loadouts, connection, reconnect } = useWatch(matchId, friendId, coop);
   const lookup = useCatalogLookup();
   const [friends] = usePolled(() => getFriends({ keep: false }), null);
   const name = friends.kind === "ready" ? friends.value.friends.find((friend) => friend.profileId === friendId)?.username : undefined;
   const seconds = String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND));
+  const shown = coop ? coopView : view;
   // #1570: the reopens ran out on a game still running (a finished game's socket closes as "closed" too).
-  const exhausted = connection === "closed" && view?.result == null;
+  const exhausted = connection === "closed" && shown?.result == null;
   // #1691: and while a reopen waits, as the match bar offers it; a click opens the socket at once.
-  const offerReconnect = exhausted || (connection === "connecting" && view?.result == null);
+  const offerReconnect = exhausted || (connection === "connecting" && shown?.result == null);
+  const status = (
+    <>
+      <span data-testid={watchTestid.status} data-connection={connection}>
+        {name === undefined ? t("Watching your friend") : <Named text={t("Watching {name}")} name={name} />} ·{" "}
+        {t("{seconds} s behind", { seconds })} · {connectionWords(connection)}
+      </span>
+      {offerReconnect ? (
+        <>
+          {" "}
+          <ReconnectNow className="link-button" onReconnect={reconnect} />
+        </>
+      ) : null}
+    </>
+  );
 
   let screen: ReactElement;
   if (connection === "refused") {
@@ -240,7 +298,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
         </div>
       </ShellPanel>
     );
-  } else if (view === null && connection === "closed") {
+  } else if (shown === null && connection === "closed") {
     // #1599: the reopens ran out before any view; a spinner here would be a dead end.
     screen = (
       <ShellPanel testId={watchTestid.waiting}>
@@ -253,16 +311,18 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
         </div>
       </ShellPanel>
     );
-  } else if (view === null) {
+  } else if (coopView !== null) {
+    // R2881000: the friend's co-op seat, read-only, as the co-op replay draws a step.
     screen = (
-      <Loading what="Joining as a watcher…" slow testId={watchTestid.waiting}>
-        <p className="auth-hint">{t("What you watch runs {seconds} seconds behind the game.", { seconds })}</p>
-        <div className="row">
-          <BackToTogether />
-        </div>
-      </Loading>
+      <div className="app-shell app-shell--wide watch-screen">
+        <CatalogContext.Provider value={lookup}>
+          <DuosChromeContext.Provider value={{ back: <BackLink to={paths.together} label="← Play together" showSettings={false} />, status }}>
+            <DuosBoard view={coopView} legal={NO_COOP_ACTIONS} onAction={IGNORE} pings={NO_PINGS} onPing={IGNORE} jloreCapped={false} replay />
+          </DuosChromeContext.Provider>
+        </CatalogContext.Provider>
+      </div>
     );
-  } else {
+  } else if (view !== null) {
     screen = (
       <div className="app-shell app-shell--wide watch-screen">
         <CatalogContext.Provider value={lookup}>
@@ -273,20 +333,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
             replay
             resultForm="chip"
             loadouts={loadouts}
-            matchStatus={
-              <>
-                <span data-testid={watchTestid.status} data-connection={connection}>
-                  {name === undefined ? t("Watching your friend") : <Named text={t("Watching {name}")} name={name} />} ·{" "}
-                  {t("{seconds} s behind", { seconds })} · {connectionWords(connection)}
-                </span>
-                {offerReconnect ? (
-                  <>
-                    {" "}
-                    <ReconnectNow className="link-button" onReconnect={reconnect} />
-                  </>
-                ) : null}
-              </>
-            }
+            matchStatus={status}
             boardRail={
               <>
                 <BackLink to={paths.together} label="← Play together" showSettings={false} />
@@ -297,6 +344,15 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
           />
         </CatalogContext.Provider>
       </div>
+    );
+  } else {
+    screen = (
+      <Loading what="Joining as a watcher…" slow testId={watchTestid.waiting}>
+        <p className="auth-hint">{t("What you watch runs {seconds} seconds behind the game.", { seconds })}</p>
+        <div className="row">
+          <BackToTogether />
+        </div>
+      </Loading>
     );
   }
 

@@ -3080,6 +3080,17 @@ impl Tx<'_> {
         dispatch!(self, presence_watchable(viewer, profile_ids))
     }
 
+    /// R2881000, one read for a whole friends list: those of the named co-op matches in which
+    /// `viewer` and a person seated (a1 or a2) stand blocked, either way, in the order named. A
+    /// watcher of one seat is shown the other's duel (§13.6), so a block with either refuses it.
+    pub async fn presence_duos_blocked(
+        &mut self,
+        viewer: &str,
+        match_ids: &[String],
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, presence_duos_blocked(viewer, match_ids))
+    }
+
     // profiles (B46)
 
     /// The profile a client named by id, or `None`: `profiles_get_by_id` for an id that came off
