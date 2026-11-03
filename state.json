@@ -14733,10 +14733,15 @@
     "what": "revise #2917 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-03T11:12:42Z",
+    "at": "2026-11-03T11:20:32Z",
     "notes": [
-      "CI on #2917: #2917: re-ran the failed jobs of run 41618199472",
-      "delivered revise #2913 on muse (run 41620162550): approved"
+      "delivered build #2881 on claude-3 (run 41614528620): built",
+      "delivered revise #2907 on claude-1 (run 41609989443): approved",
+      "started review #2921 on claude-3 (run 41627093182)",
+      "started revise #2907 on claude-1 (run 41627178903)",
+      "started revise #2917 on muse (run 41627278617)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15442,7 +15447,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T11:12:42Z",
+  "loop_tick": "2026-11-03T11:20:32Z",
   "machine_disk": {
     "issue": null,
     "reading": {
