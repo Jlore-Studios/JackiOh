@@ -29400,6 +29400,9 @@
       "2026-11-03T08:07:45Z,claude-3,stream,call,41600541765,96,2026-11-03T09:00:00Z,,,allowed_warning,,,",
       "2026-11-03T08:08:45Z,claude-3,stream,call,41600541765,97,2026-11-03T09:00:00Z,,,allowed_warning,,,",
       "2026-11-03T08:09:45Z,claude-3,stream,call,41600541765,98,2026-11-03T09:00:00Z,,,allowed_warning,,,"
+    ],
+    "runs": [
+      "2026-11-03T08:10:19Z,41600541765,claude-3,opus,review,2905,hard,reviewed,,3.8,71,20419,5449694,2.7374,94,98,,,14.8,claude-2,none,,1"
     ]
   },
   "version": 1
