@@ -14246,6 +14246,8 @@
     "2917": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
+      "ci_fixed_head": "fc3a720de9a7978cda053dbff629f94d96239194",
       "ci_fixes": 1,
       "ci_reruns": {
         "295ca541f455e824bb40077e5451b2afb40adb4d": 1
@@ -14267,24 +14269,28 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-03T07:50:13Z",
+      "feedback_since": "2026-11-03T11:24:29Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2878,
       "kind": "revise",
+      "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-03T11:19:30Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "41627278617",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-03T11:24:29Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
