@@ -15598,6 +15598,14 @@
       "started_at": "2026-11-03T17:22:19Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2951": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-03T16:36:58Z",
+      "issue": 2922,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
