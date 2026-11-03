@@ -14859,11 +14859,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-03T14:11:13Z",
+        "at": "2026-11-03T16:09:47Z",
         "difficulty": "hard",
-        "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's evaluation (`material` in crates/ai/src/evaluate.rs plus a new `EvalWeights` field), which moves the AI's decisions, and the share needs an arena screen and the AI gate."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Rule line 2 (the AI): it adds a term to the AI's evaluation in crates/ai/src/evaluate.rs, which changes the AI's decisions"
       },
       "failures": 0,
       "forced": false,
