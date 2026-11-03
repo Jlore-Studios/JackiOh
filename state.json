@@ -14734,6 +14734,13 @@
     "2926": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:12:25Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "No rule line holds: no file in crates/server/migrations/ changes (only the runner and the catalog seeder), one crate, about 6 files, no engine, AI or cross-crate design."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
