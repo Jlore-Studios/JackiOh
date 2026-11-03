@@ -13739,16 +13739,36 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/README.md",
+            "apps/web/src/fx/cards/bespoke.ts",
+            "apps/web/src/fx/cards/tables.test.ts",
+            "apps/web/src/fx/constants.test.ts",
+            "apps/web/src/fx/constants.ts",
+            "apps/web/src/fx/motifs/gallery.ts",
+            "apps/web/src/fx/motifs/hand.ts",
+            "apps/web/src/fx/motifs/index.ts",
+            "apps/web/src/fx/motifs/motifs.test.ts",
+            "apps/web/src/fx/motifs/names.ts",
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "apps/web/src/routes/dev/fx.tsx",
+            "docs/polish/9-card-animations.md"
+          ],
+          "from": "406831ae089a4a5ff47e992df33886fda4ad60df",
+          "main": "b0e465602a388222016a02b080e0f57de1da7e26"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "41609989443",
+            "run": "41627178903",
             "tier": "strong"
           }
         ],
-        "sha": "406831ae089a4a5ff47e992df33886fda4ad60df",
+        "sha": "f1baed117ad78824d0fdd5cbd98c9b7a7bad7b0c",
         "tiers": {
           "claude": "strong"
         }
