@@ -586,9 +586,14 @@ jobs:
           # What is left, every quoted value blanked (a password's hash among them).
           grep -vE '^(--|$)' roles.sql | sed -E "s/'[^']*'/'…'/g; s/^/  roles.sql: /"
           retry supabase db dump --db-url "$staging" -f schema.sql
+          # The data leaves out the tables Supabase's postgres may not write (run 41583636531 stopped at
+          # storage.buckets_vectors): each project fills its own migrations' tables, and staging holds
+          # nothing in Storage or Vault (0 buckets, 0 objects, 0 secrets on 2026-11-03).
           retry supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
             -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
-            -x public.game_record_batches
+            -x public.game_record_batches \
+            -x storage.buckets_vectors -x storage.vector_indexes -x storage.migrations \
+            -x vault.secrets -x auth.schema_migrations
           for table in $stats; do
             psql "$staging" -Xq -v ON_ERROR_STOP=1 -c "\\copy (select * from public.$table where source = 'live') to '$table.csv' csv"
           done
