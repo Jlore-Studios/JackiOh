@@ -19,7 +19,7 @@ import {
   FX_PARTICLE_CAP,
   FX_PARTICLE_CAP_MOBILE,
 } from "../constants.ts";
-import { FLAVOR_LOOKS } from "../flavors.ts";
+import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
 import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, type AuraLook, type AuraScope } from "./looks.ts";
 import {
@@ -117,6 +117,15 @@ describe("R2787000 what wears an aura", () => {
     // classic-075 is Holy; its entry names Fire.
     expect(planned[3]?.colors).toEqual(FLAVOR_LOOKS.Fire.colors);
     expect(planned[5]?.colors).toEqual(FLAVOR_LOOKS.Fire.colors);
+  });
+
+  it("R2787000 an entry's palette may name a sub-look (#2792), whose colors the aura wears", () => {
+    resetIds();
+    const table = parseFxCardTable("aura.json5", `{ "core-014": { aura: { look: "storm", palette: "Tech/rocket", scope: "side" } } }`);
+    const planned = planAuras(board([field("p1", "core-014")], []), new Map(), table);
+    const rocket = FLAVOR_SUB_LOOKS.Tech?.rocket?.colors;
+    expect(rocket).toBeDefined();
+    expect(planned.map((aura) => aura.colors)).toEqual([rocket]);
   });
 
   it("R2787000 a zone aura covers its zone, a lane aura the lane's four zones, a side aura its ten and a board aura all twenty; a modifier's zone aura is its side's", () => {

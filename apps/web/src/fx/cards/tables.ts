@@ -8,13 +8,13 @@
 
 import JSON5 from "json5";
 
-import type { CardDefs, Flavor, SetName } from "@jackioh/shared";
+import type { CardDefs, SetName } from "@jackioh/shared";
 
 import { messageOf } from "../../net/errors.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isRecord } from "../../wire/json.ts";
 import { isAuraFieldType, isAuraLook, isAuraScope, type AuraLook, type AuraScope } from "../aura/looks.ts";
-import { FLAVOR_LOOKS } from "../flavors.ts";
+import { isPalette, type FxPalette } from "../flavors.ts";
 import { isCardHook, isMotifName, type FxCardHook, type MotifName } from "../motifs/names.ts";
 import { isBespokeKey, type BespokeKey } from "./bespoke.ts";
 import rawClassic from "./classic.json5?raw";
@@ -44,11 +44,11 @@ export const FX_CARD_FILES: readonly FxCardFile[] = [
 /** The first card of Stinkyscape's second file. */
 export const FX_STINKYSCAPE_SPLIT = "stinkyscape-091";
 
-/** A motif on one hook. `palette` is a flavor's look (the card's own by default); `row` defaults to `replace`. */
-export type FxHookSpec = { motif: MotifName; palette?: Flavor; row?: "keep" | "replace" };
+/** A motif on one hook. `palette` is a flavor or `"<Flavor>/<sub-look>"` (the card's own look by default); `row` defaults to `replace`. */
+export type FxHookSpec = { motif: MotifName; palette?: FxPalette; row?: "keep" | "replace" };
 
-/** R2787000: a card's standing look. `palette` is a flavor's look (the card's own by default). */
-export type FxAuraSpec = { look: AuraLook; palette?: Flavor; scope: AuraScope };
+/** R2787000: a card's standing look. `palette` is a flavor or `"<Flavor>/<sub-look>"` (the card's own look by default). */
+export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope };
 
 export type FxCardEntry =
   | { kind: "none"; reason: string }
@@ -57,10 +57,6 @@ export type FxCardEntry =
 
 const HOOK_FIELDS: readonly string[] = ["motif", "palette", "row"];
 const AURA_FIELDS: readonly string[] = ["look", "palette", "scope"];
-
-function isFlavor(name: string): name is Flavor {
-  return Object.prototype.hasOwnProperty.call(FLAVOR_LOOKS, name);
-}
 
 function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => never): FxHookSpec {
   if (!isRecord(value)) fail(`${hook} must be { motif, palette?, row? }`);
@@ -71,7 +67,7 @@ function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => 
   if (typeof motif !== "string" || !isMotifName(motif)) fail(`unknown motif "${String(motif)}" in ${hook}`);
   const spec: FxHookSpec = { motif };
   if (palette !== undefined) {
-    if (typeof palette !== "string" || !isFlavor(palette)) fail(`unknown palette "${String(palette)}" in ${hook}`);
+    if (typeof palette !== "string" || !isPalette(palette)) fail(`unknown palette "${String(palette)}" in ${hook}`);
     spec.palette = palette;
   }
   if (row !== undefined) {
@@ -94,7 +90,7 @@ function parseAura(value: unknown, type: string, fail: (problem: string) => neve
   }
   const spec: FxAuraSpec = { look, scope };
   if (palette !== undefined) {
-    if (typeof palette !== "string" || !isFlavor(palette)) fail(`unknown palette "${String(palette)}" in aura`);
+    if (typeof palette !== "string" || !isPalette(palette)) fail(`unknown palette "${String(palette)}" in aura`);
     spec.palette = palette;
   }
   return spec;

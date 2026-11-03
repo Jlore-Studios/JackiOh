@@ -39,7 +39,7 @@ use crate::config::{
 };
 use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
-    TicketStatus,
+    TicketStatus, ladder_of_mode,
 };
 use crate::seats::{Lease, Seat};
 
@@ -335,7 +335,9 @@ async fn enqueue_ticket(
     let ticket = Ticket {
         id: new_uuid(),
         profile_id: profile.id.clone(),
-        rating: profile.rating,
+        // R2778000: the rating on the ladder the mode plays for, which pairing and the bot fallback
+        // compare on.
+        rating: profile.glicko(ladder_of_mode(mode)).rating,
         mode,
         deck,
         portrait,

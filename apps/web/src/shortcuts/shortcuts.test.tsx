@@ -203,6 +203,8 @@ const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "game/Board.tsx": 1,
   "game/Card.tsx": 1,
   "game/ConfirmConcede.tsx": 1,
+  // R2785000 (amends R2126000): Space skips a set piece, and the keyup of the Space that skipped is swallowed.
+  "game/Game.tsx": 2,
   "game/Hero.tsx": 2,
   "game/MarketPrompt.tsx": 1,
   "game/Marketplace.tsx": 1,

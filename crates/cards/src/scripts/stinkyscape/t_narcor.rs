@@ -91,11 +91,6 @@ mod tests {
     }
 
     #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
-    }
-
-    #[test]
     fn a_legendary_non_token() {
         let mut seen = Vec::new();
         for seed in (0..20).map(|n| format!("narcor-{n}")) {

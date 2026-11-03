@@ -44,6 +44,8 @@ import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
+  SET_PIECE_SKIP_HINT_MS,
+  TAKEOVER_SET_PIECE,
   animTestid,
   createAnimationQueue,
   entranceEntries,
@@ -53,6 +55,7 @@ import {
   slamEntries,
   type AnimationEntry,
   type AnimationQueue,
+  type SetPieceClaimer,
 } from "./animations.ts";
 import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget, type HeroAside } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
@@ -67,6 +70,8 @@ import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
+import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
+import { isTyping } from "../replay/ReplayToolbar.tsx";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
@@ -151,6 +156,11 @@ export type GameProps = {
    * on the whole page, so a second board would play the other duel's cues on the own board.
    */
   silent?: boolean;
+  /**
+   * R2785000: claims an entry as a set piece, asked before the takeover; read at each enqueue. The
+   * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
+   */
+  setPieceOf?: SetPieceClaimer;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -196,6 +206,7 @@ export default function Game({
   lethalHint = false,
   tradeBar = true,
   silent = false,
+  setPieceOf,
 }: GameProps): ReactElement {
   useLocale();
   // R2118000: no command menu over a board.
@@ -304,9 +315,10 @@ export default function Game({
   // motion has none, and starts it as the action arrives, below).
   const inFlightSlam = inFlight?.slam;
   const inFlightMs = inFlight?.durationMs ?? 0;
-  // R2722001: a slam's anticipation and a Mythic takeover's hold both come before the motion.
+  // R2722001, R2785000: a slam's anticipation and a set piece's hold (a Mythic's takeover's) both come before the motion.
   const inFlightLead = inFlight === null ? 0 : leadMs(inFlight);
-  const takeoverHold = inFlight?.entrance?.holdMs ?? 0;
+  const setPiece = inFlight?.setPiece;
+  const takeoverHold = setPiece?.key === TAKEOVER_SET_PIECE ? setPiece.holdMs : 0;
   useEffect(() => {
     if (reducedMotion || inFlightSlam === undefined) return undefined;
     const landsAt = inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT;
@@ -331,6 +343,8 @@ export default function Game({
   const [still, setStill] = useState<{ defId: string; instanceId: string; view: PlayerView } | null>(null);
   const stillSeen = useRef(new Set<string>());
   const endStill = useCallback(() => setStill(null), []);
+  const setPieceOfRef = useRef(setPieceOf);
+  setPieceOfRef.current = setPieceOf;
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
@@ -338,6 +352,9 @@ export default function Game({
       reducedMotion,
       slamOf: slamResolver,
       entranceOf: entranceResolver,
+      // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
+      setPieces: !silent,
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? null,
       onSettled: () => {
         setShown(latest.current);
       },
@@ -390,6 +407,43 @@ export default function Game({
     };
   }, [runner]);
 
+  // R2785000: a tap or a click on the board, or Space, ends a set piece's hold at once and does
+  // nothing else: the click reaches no control, and the Space that skipped presses no focused button
+  // (its keyup, which would, is swallowed too). A key in a text field is the field's. Listening for
+  // the board's life, not the hold's, so that keyup is still heard once the hold is over.
+  useEffect(() => {
+    const element = root.current;
+    if (element === null) return undefined;
+    let swallowUp = false;
+    const onClick = (event: MouseEvent): void => {
+      if (!runner.skip()) return;
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    const isSkipKey = (event: KeyboardEvent): boolean =>
+      event.key === SHORTCUTS.skipSetPiece[0] && !event.altKey && !event.ctrlKey && !event.metaKey && !isTyping(event.target);
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!isSkipKey(event) || event.repeat || !runner.skip()) return;
+      swallowUp = true;
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    const onKeyUp = (event: KeyboardEvent): void => {
+      if (!swallowUp || event.key !== SHORTCUTS.skipSetPiece[0]) return;
+      swallowUp = false;
+      event.stopPropagation();
+      event.preventDefault();
+    };
+    element.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keyup", onKeyUp, true);
+    return () => {
+      element.removeEventListener("click", onClick, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("keyup", onKeyUp, true);
+    };
+  }, [runner]);
+
   // A LAYOUT effect: `data-animating` has to be on the DOM by the time the click that caused the
   // action has returned, or `cy.settled()` reads a stale view as up to date.
   const seen = useRef<PlayerView | null>(null);
@@ -420,7 +474,7 @@ export default function Game({
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
         // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
         // other seat's is up in the showcase already), once per card.
-        const mythic = entranceEntries(slams, entranceResolver, { reduced: true, speed: 1, seen: stillSeen.current }).find(
+        const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
           (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer,
         )?.entrance;
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
@@ -602,7 +656,8 @@ export default function Game({
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
       data-takeover={takeoverHold > 0 ? "mythic" : undefined}
-      style={impactFeel === undefined && inFlightSlam === undefined && takeoverHold <= 0 ? undefined : {
+      data-set-piece={setPiece?.key}
+      style={impactFeel === undefined && inFlightSlam === undefined && setPiece === undefined ? undefined : {
         ...(impactFeel === undefined ? {} : {
           "--impact-number-scale": String(impactFeel.numberScale),
           "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
@@ -611,8 +666,11 @@ export default function Game({
           "--slam-anticipation": `${String(inFlightSlam.anticipationMs)}ms`,
           "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
         }),
+        ...(setPiece === undefined ? {} : {
+          "--set-piece-hold": `${String(setPiece.holdMs)}ms`,
+          "--set-piece-skip-delay": `${String(SET_PIECE_SKIP_HINT_MS)}ms`,
+        }),
         ...(takeoverHold <= 0 ? {} : {
-          "--takeover-hold": `${String(takeoverHold)}ms`,
           "--takeover-land-ms": `${String(Math.round(inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
         }),
       } as CSSProperties}
@@ -689,6 +747,12 @@ export default function Game({
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
       {silent ? null : <CardShowcase view={view} queue={runner} />}
       {silent || still === null ? null : <TakeoverStill defId={still.defId} instanceId={still.instanceId} view={still.view} onDone={endStill} />}
+      {/* R2785000: the first skip control there is, faded in SET_PIECE_SKIP_HINT_MS into the hold. */}
+      {setPiece === undefined ? null : (
+        <p className="set-piece-skip" data-testid="set-piece-skip" aria-hidden="true">
+          {t("Tap to skip")}
+        </p>
+      )}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {(replay && !replayPrompt) || promptOver(shown, burst, inFlight) ? null : (

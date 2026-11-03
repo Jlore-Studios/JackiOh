@@ -137,6 +137,15 @@ const S2 = {
   AURA_BURST_SPEED: 220,
   AURA_BURST_DECAY: 4,
   AURA_SOURCES_LIMIT: 64,
+  FX_CALLOUT_MS: 600,
+  FX_CALLOUTS_PER_HIT: 2,
+  FX_BEAT_STAGGER_MS: 60,
+  FX_BEAT_STAGGER_MAX: 0.5,
+  FX_BEAT_TRAUMA: 0.25,
+  FX_FIRST_STRIKE_BREAK_AT: 0.4,
+  FX_FIRST_STRIKE_BREAK_REACH: 0.6,
+  FX_PIERCE_REACH: 0.8,
+  FX_FLYING_LUNGE_LIFT: 0.18,
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },
@@ -258,6 +267,9 @@ describe("S2 the effects constants", () => {
       constants.FX_WALLS_HIT_AT,
       constants.FX_WALLS_REACH,
       constants.FX_DEATH_BOLT_FLIGHT_FRACTION,
+      // R2789000: the beats' stagger cap and a First Strike's break-off.
+      constants.FX_BEAT_STAGGER_MAX,
+      constants.FX_FIRST_STRIKE_BREAK_AT,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -297,6 +309,7 @@ describe("S2 the effects constants", () => {
       constants.FX_TRAP_TRAUMA,
       constants.FX_RESULT_TRAUMA,
       constants.FX_TAKEOVER_TRAUMA,
+      constants.FX_BEAT_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);
@@ -327,6 +340,7 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
     expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_WALLS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_TAKEOVER_TAIL_MS, "R2722001").toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_CALLOUT_MS, "R2789000").toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST, constants.FX_ROLL_LAND_AT, constants.FX_ROLL_LAND_LAST]) {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);

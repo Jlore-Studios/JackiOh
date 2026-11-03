@@ -1,5 +1,6 @@
 // Polish 1: B28 clamped DPR, B35 board shake, B40 effects draw without blocking the board.
 // R2722001: a Mythic's takeover of the board, caught mid-flight and at rest.
+// R2785000: a set piece (that takeover) skipped by Space and by a click, and the board caught up at once.
 // The watcher must see the splat before synchronous `getImageData`: a later read can miss R200's brief effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
@@ -246,4 +247,44 @@ describe("R2722001 a Mythic takes over a real board", () => {
     cy.get('[data-testid="takeover-still"]').should("not.exist");
     cy.screenshot("takeover-rest", { capture: "viewport", overwrite: true });
   });
+});
+
+describe("R2785000 a set piece is skipped on a real board", () => {
+  const GAME = '[data-testid="game"]';
+  const skips: readonly (readonly [string, () => void])[] = [
+    ["Space", () => cy.document().trigger("keydown", { key: " " })],
+    ["a click", () => cy.get(GAME).click({ force: true })],
+  ];
+  for (const [how, skip] of skips) {
+    it(`R2785000 ${how} skips a Mythic's takeover at once`, () => {
+      cy.viewport(1280, 720);
+      const view = fullBoardView();
+      const lookup = lookupFromDefs(CATALOG);
+      const noop = (): void => undefined;
+      // Meditative #49 YileGPT, a Mythic Unit, played into the viewer's empty lane 3: the takeover set piece.
+      const events: GameEvent[] = [
+        { type: "cardPlayed", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", costPaid: 2 },
+        { type: "summoned", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", row: "units", lane: 3 },
+      ];
+      const board = (shown: PlayerView) => (
+        <CatalogContext.Provider value={lookup}>
+          <div className="app-shell app-shell--wide">
+            <Game view={shown} legal={[]} onAction={noop} />
+          </div>
+        </CatalogContext.Provider>
+      );
+      cy.mount(board(view)).then(({ rerender }) => {
+        cy.get(LAYER).should("have.attr", "data-fx", "on");
+        cy.then(() => rerender(board(withEvents(view, events))));
+      });
+      cy.get(GAME).should("have.attr", "data-set-piece", "takeover");
+      cy.get('[data-testid="set-piece-skip"]').should("contain.text", "Tap to skip");
+      cy.then(skip);
+      // At once: far inside what is left of the hold, the board has caught up and the takeover is gone.
+      cy.get("[data-animating]", { timeout: 300 }).should("not.exist");
+      cy.get(GAME).should("not.have.attr", "data-set-piece");
+      cy.get('[data-testid="set-piece-skip"]').should("not.exist");
+      cy.get(`${FX_DOM} [data-fx="takeover"]`, { timeout: 300 }).should("not.exist");
+    });
+  }
 });

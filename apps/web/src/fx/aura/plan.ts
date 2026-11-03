@@ -16,7 +16,7 @@ import { LANES, sideView, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_MAX_PER_ZONE, AURA_MOTES_PER_AURA, AURA_PARTICLE_SHARE, AURA_SOURCES_LIMIT } from "../constants.ts";
-import { FLAVOR_LOOKS, type FlavorColors } from "../flavors.ts";
+import { FLAVOR_LOOKS, paletteLook, type FlavorColors } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
 import type { FxMemory } from "../types.ts";
 import { AURA_SCOPES, isAuraFieldType, type AuraLook, type AuraScope } from "./looks.ts";
@@ -53,7 +53,8 @@ export function auraTestid(key: string): string {
 }
 
 function specOf(key: string, defId: string, instanceId: string, side: Side, lane: number | null, aura: FxAuraSpec, view: PlayerView): AuraSpec {
-  const colors = aura.palette !== undefined ? FLAVOR_LOOKS[aura.palette].colors : (flavorLookOf(defId, instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK]).colors;
+  const look = (aura.palette !== undefined ? paletteLook(aura.palette) : undefined) ?? flavorLookOf(defId, instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
+  const colors = look.colors;
   const scope = lane === null && (aura.scope === "zone" || aura.scope === "lane") ? "side" : aura.scope;
   return { key, defId, instanceId, side, lane, scope, look: aura.look, colors };
 }
