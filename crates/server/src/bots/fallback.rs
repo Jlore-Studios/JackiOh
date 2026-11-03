@@ -17,7 +17,7 @@ use crate::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_ACTIVE_HOURS, BOT_HOURS_PER_DAY,
     BOT_VS_BOT_MIN_GAP_SECONDS, MAX_FAIR_GAP, MS_PER_SECOND,
 };
-use crate::db::store::{BotRow, FrozenTrio, QueueMode, RatedGameRow, Ticket, ladder_of_mode};
+use crate::db::store::{BotRow, BotState, FrozenTrio, QueueMode, RatedGameRow, Ticket, ladder_of_mode};
 
 /// Unit conversion, not configuration: an hour in milliseconds.
 const MS_PER_HOUR: i64 = 3_600_000;
@@ -137,7 +137,7 @@ pub fn choose_bot<'a>(
 
 /// R1555000: the matches two or more of the bots are in, each once, in the list's order: the
 /// matches between two bots live now.
-pub fn bot_matches(bots: &[BotRow]) -> Vec<String> {
+pub fn bot_matches(bots: &[BotState]) -> Vec<String> {
     let mut held: IndexMap<&str, usize> = IndexMap::new();
     for match_id in bots.iter().filter_map(|bot| bot.in_match_id.as_deref()) {
         *held.entry(match_id).or_insert(0) += 1;

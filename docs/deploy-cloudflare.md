@@ -328,7 +328,9 @@ once a day and opens a `human` issue once the period's spend, or its projection,
 - **One container is one point of failure,** as Render's one instance was (`docs/architecture.md`
   §4.1), and now without Render's "keep the old instance until the new one is healthy".
 - **Cold starts.** The first request after ten idle minutes waits for the container and the
-  server's boot (step 5, item 7 measures it).
+  server's boot (step 5, item 7 measures it). A wake with nothing new reads the migration ledger
+  once and writes the catalog in one statement that rewrites no unchanged row (#2926), a handful of
+  round trips where it was about 1,100; the saving is not yet timed (step 5, item 7).
 - **Every deploy builds the image.** `wrangler deploy` runs `docker build` on a fresh runner, so a
   deploy takes as long as a cold release build of the server. Caching the build's layers between
   runs is the next improvement.
