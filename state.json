@@ -13986,6 +13986,7 @@
     "2913": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_reruns": {
         "c784863c4465b2eebc7d992dbfda7ef86af82938": 1
       },
@@ -14003,21 +14004,25 @@
       },
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-03T05:03:54Z",
+      "feedback_since": "2026-11-03T10:32:47Z",
       "issue": 2790,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-03T10:31:00Z",
+      "round_tier": "medium",
       "run_id": "41620162550",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-03T10:32:47Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
