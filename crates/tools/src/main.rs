@@ -23,6 +23,7 @@ mod positions;
 mod promote;
 mod replay;
 mod retcon;
+mod sample_size;
 mod selfplay;
 mod selfplay_records;
 mod spec;

@@ -26,7 +26,7 @@
 //! counts, unknown (not zero) in a record older than them. A forced run files under `dev-force-<id>`, for
 //! `compare` and `report`, never `stats-import` (R1284000). `fit-dealt` refits `DEALT_Q` and
 //! `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`); `from-selfplay` files `selfplay` logs as
-//! development records (`selfplay_records.rs`, R1676000).
+//! development records (`selfplay_records.rs`, R1676000). `sample-size` prints the games a gather run needs at this build's deal pool (`sample_size.rs`, #2888).
 
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -50,7 +50,7 @@ use serde::Serialize;
 
 use crate::arena::{paired_interval, wilson_interval};
 use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
-use crate::{dealt_fit, golden, selfplay_records};
+use crate::{dealt_fit, golden, sample_size, selfplay_records};
 
 const SECONDS_DECIMALS: usize = 1;
 
@@ -133,6 +133,8 @@ pub enum Command {
     Compare(CompareArgs),
     /// R1676000: selfplay logs filed as development records, one GameRecord per line.
     FromSelfplay(selfplay_records::Args),
+    /// #2888: the games a gather run needs for the card win rates at this build's deal pool.
+    SampleSize(sample_size::Args),
 }
 
 /// `cargo jackioh stats compare --before <file>… --after <file>… --card <id>`: two runs of
@@ -875,6 +877,7 @@ pub fn run(args: Args) -> Result<()> {
         Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
         Some(Command::Compare(compared)) => return run_compare(compared),
         Some(Command::FromSelfplay(from)) => return selfplay_records::run(from),
+        Some(Command::SampleSize(sized)) => return sample_size::run(sized),
         None => {}
     }
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
@@ -1097,6 +1100,21 @@ mod tests {
         assert!(report_args(&["a.jsonl", "--pilot=robot"]).is_err());
         assert!(parse(&["--games=3", "report", "a.jsonl"]).is_err());
         assert_eq!(parse(&["--games=3"]).unwrap().command, None);
+    }
+
+    #[test]
+    fn sample_size_is_a_stats_subcommand() {
+        assert_eq!(
+            parse(&["sample-size", "--sigma", "0.03", "--explain"])
+                .unwrap()
+                .command,
+            Some(Command::SampleSize(sample_size::Args {
+                sigma: 0.03,
+                rho: sample_size::DEFAULT_RHO,
+                explain: true
+            }))
+        );
+        assert!(parse(&["sample-size", "--games", "5"]).is_err());
     }
 
     /// A development game of random mode played by two AIs, first seat p1, as a line of JSON.
