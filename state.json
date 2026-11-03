@@ -14189,13 +14189,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-6",
       "queued_at": "2026-11-03T10:04:24Z",
-      "run_id": "41618359109",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:b53f4345-1793710708",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 10,
-      "started_at": "2026-11-03T10:19:47Z",
+      "started_at": "2026-11-03T12:59:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -14568,9 +14569,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T12:58:03Z",
+    "at": "2026-11-03T12:59:00Z",
     "url": "",
-    "what": "revise #2907 on claude-1"
+    "what": "spot-check #2916 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-03T12:37:41Z",
@@ -27751,7 +27752,15 @@
         "n": 10,
         "pr": 2916,
         "queued_at": "2026-11-03T12:52:05Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:b53f4345-1793710708",
         "sha": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
+        "started_at": "2026-11-03T12:59:00Z",
         "status": "queued",
         "title": "Patch: hero plates keep one size however many effects they carry",
         "tries": 0
