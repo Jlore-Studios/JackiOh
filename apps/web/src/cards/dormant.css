@@ -70,6 +70,42 @@
   }
 }
 
+/* R2801000: a Dormant Starship's hull plates (StarshipHull.tsx), one riveted plate for each piece fused
+   into it, bolted on its flanks, port and starboard in turn, down the portrait's widest band between the
+   seal's ribbons. They sit above the seal (later in the DOM, at its z), so the veil greys the hull's art
+   and not its plates, and clear of the state rail above the name. They never move. */
+.cf .cf-starship-hull {
+  position: absolute;
+  z-index: 4;
+  top: 28cqh;
+  left: 12cqw;
+  right: 12cqw;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.cf .cf-starship-flank {
+  display: flex;
+  flex-direction: column;
+  gap: 1cqmin;
+}
+
+.cf .cf-starship-plate {
+  display: block;
+  width: 8.5cqmin;
+  height: 5.5cqmin;
+  border: 0.5cqmin solid var(--pal-slate-900);
+  border-radius: 0.8cqmin;
+  background:
+    radial-gradient(circle at 22% 35%, var(--pal-slate-100) 0 0.6cqmin, transparent 0.8cqmin),
+    radial-gradient(circle at 78% 35%, var(--pal-slate-100) 0 0.6cqmin, transparent 0.8cqmin),
+    linear-gradient(to bottom, var(--pal-slate-400), var(--pal-slate-700));
+  box-shadow:
+    inset 0 0.5cqmin 0 color-mix(in srgb, var(--pal-orange-400) 80%, transparent),
+    0 0.3cqmin 0.6cqmin color-mix(in srgb, var(--pal-black) 60%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cf .cf-dormant,
   .cf .cf-dormant * {
