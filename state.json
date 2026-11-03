@@ -16479,12 +16479,15 @@
     "what": "plan #2942 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-03T23:30:27Z",
+    "at": "2026-11-03T23:44:22Z",
     "notes": [
-      "could not deliver review #2967 on claude-4 (run 41736367277), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/2967/labels: HTTP 500: ): it is tried again next tick (2 more)",
-      "started revise #2964 on muse (run 41740003738)",
-      "started review #2955 on gpt (run 41740099449)",
-      "nothing more to start: nothing is queued"
+      "delivered review #2955 on gpt (run 41740099449): interrupted",
+      "delivered revise #2964 on muse (run 41740003738): blocked",
+      "delivered review #2967 on claude-4 (run 41736367277): approved",
+      "started review #2955 on claude-7 (run 41741960686)",
+      "started plan #2942 on claude-1 (run 41742035597)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17188,7 +17191,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T23:30:27Z",
+  "loop_tick": "2026-11-03T23:44:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
