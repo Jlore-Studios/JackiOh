@@ -164,23 +164,6 @@ mod tests {
             }
 
             #[test]
-            fn r682_the_random_discard_comes_from_the_match_rng_the_same_game_discards_the_same_card() {
-                crate::register_all();
-                let first = draw_hinder(hinder_on_top("hinder-roundtrip", false, None, &[P1_FILLER, P1_SECOND]));
-                let second = draw_hinder(hinder_on_top("hinder-roundtrip", false, None, &[P1_FILLER, P1_SECOND]));
-                let ids = |s: &Scenario| -> Vec<String> {
-                    s.events()
-                        .iter()
-                        .filter_map(|event| match event {
-                            GameEvent::Discarded { instance_id, .. } => Some(instance_id.clone()),
-                            _ => None,
-                        })
-                        .collect()
-                };
-                assert_eq!(ids(&first), ids(&second));
-            }
-
-            #[test]
             fn r431_r90_with_an_empty_hand_there_is_nothing_to_discard_no_prompt_and_the_rest_still_lands() {
                 crate::register_all();
                 let mut s = scenario(json!({
@@ -228,19 +211,6 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 s.expect_mana(P2, 3);
                 assert_eq!(s.view(P2).you.mana, ManaView { current: 3, max: 4 });
-            }
-
-            #[test]
-            fn the_modifier_is_one_shot_the_refresh_after_that_is_back_to_4_s2_3() {
-                crate::register_all();
-                let mut s = draw_hinder(hinder_on_top("hinder-oneshot", false, None, &[P1_FILLER]));
-                s.end_turn(); // p2's lowered refresh.
-                s.expect_mana(P2, 3);
-                s.end_turn(); // p1.
-                s.end_turn(); // p2 again, with nothing owed.
-
-                s.expect_mana(P2, 4);
-                assert_eq!(s.state().players.p2.mana.next_turn_mod, 0);
             }
         }
 

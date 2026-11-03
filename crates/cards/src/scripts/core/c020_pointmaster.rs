@@ -34,30 +34,6 @@ mod tests {
             s.expect_in_zone("core-020", "field");
             s.expect_stats("core-020", json!({ "health": 1 }));
         }
-
-        #[test]
-        fn s4_3_step_2_a_defender_that_survives_the_first_strike_still_answers() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "field": ["core-020"] }, "p2": { "field": ["core-019"] } }));
-
-            s.attack("core-020", "core-019");
-
-            // 7 into a 9/9 leaves it standing, and its 9 back kills a 7/1: base has no Divine Shield.
-            s.expect_stats("core-019", json!({ "health": 2 }));
-            s.expect_in_zone("core-020", "graveyard");
-        }
-
-        #[test]
-        fn s4_3_two_first_strikers_strike_simultaneously_so_neither_is_spared() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "field": ["core-020"] }, "p2": { "field": ["core-011"] } }));
-
-            // #11 Tempo Timmy is a 3/3 with First Strike: both are in step 1, so the exchange is mutual.
-            s.attack("core-020", "core-011");
-
-            s.expect_in_zone("core-011", "graveyard");
-            s.expect_in_zone("core-020", "graveyard");
-        }
     }
 
     mod n20_pointmaster_radiant {

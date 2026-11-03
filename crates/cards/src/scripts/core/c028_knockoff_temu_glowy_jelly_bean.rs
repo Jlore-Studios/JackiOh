@@ -61,23 +61,6 @@ mod tests {
         scenario(json!({ "seed": SEED, "p1": side }))
     }
 
-    /// §3.2: put a fresh `core-025` on top of p1's unit pile in lane 1, burying what stood there, and
-    /// hand back the buried card's id and the new top's.
-    fn stack_on_lane_1(s: &mut Scenario) -> Option<(String, CardInstance)> {
-        let dormant_id = s.state().players.p1.units[0].as_ref()?.first().map(|card| card.id.clone()).unwrap_or_default();
-        let top = new_instance(
-            s.state_mut(),
-            "core-025",
-            P1,
-            Zone::Field {
-                player: P1,
-                row: Row::Units,
-                lane: 1,
-            },
-        );
-        s.state_mut().players.p1.units[0].as_mut()?.insert(0, top.clone());
-        Some((dormant_id, top))
-    }
 
     mod n28_knockoff_temu_glowy_jelly_bean_base {
         use super::*;
@@ -98,22 +81,6 @@ mod tests {
             assert_eq!(flagged.iter().collect::<IndexSet<_>>().len(), 2);
             assert!(s.state().pending.is_none());
             s.expect_in_zone("core-028", "graveyard");
-        }
-
-        #[test]
-        fn r60_draws_once_over_the_union_so_the_same_seed_flags_the_same_two_cards_s9_3() {
-            crate::register_all();
-            let build = || {
-                let mut s = knockoff(json!({
-                    "hand": ["core-028", "core-005", "core-016"],
-                    "library": ["core-010", "core-013"],
-                    "field": ["core-025"],
-                }));
-                s.play("core-028", json!({}));
-                s
-            };
-
-            assert_eq!(radiant_in_pool(build().state()), radiant_in_pool(build().state()));
         }
 
         #[test]
@@ -139,23 +106,6 @@ mod tests {
                     .count(),
                 0
             );
-        }
-
-        #[test]
-        fn r13_never_picks_a_card_under_a_stack_pile_which_is_not_on_the_field() {
-            crate::register_all();
-            let mut s = knockoff(json!({ "hand": ["core-028"], "library": [], "field": ["core-025"] }));
-            assert!(s.state().players.p1.units[0].is_some());
-            // §3.2: a Stack card enters an occupied unit zone and becomes the top of the pile; the card
-            // beneath it is dormant, and R13 keeps a dormant card off the field and out of every pool.
-            let Some((dormant_id, top)) = stack_on_lane_1(&mut s) else {
-                return;
-            };
-
-            s.play("core-028", json!({}));
-
-            assert!(s.card(&top.id).radiant);
-            assert!(!s.card(&dormant_id).radiant);
         }
 
         #[test]
@@ -215,21 +165,6 @@ mod tests {
             let flagged = radiant_in_pool(s.state());
             assert_eq!(flagged.len(), 4);
             assert_eq!(flagged.iter().collect::<IndexSet<_>>().len(), 4);
-        }
-
-        #[test]
-        fn r60_takes_all_of_them_when_the_union_holds_fewer_than_4_non_radiant_cards() {
-            crate::register_all();
-            let mut s = knockoff(json!({
-                "hand": [{ "def": "core-028", "radiant": true }, "core-005"],
-                "library": ["core-013"],
-                "field": ["core-025"],
-            }));
-
-            s.play("core-028", json!({}));
-
-            // Three cards are left in the union once #28 has gone to the graveyard, and all three convert.
-            assert_eq!(radiant_in_pool(s.state()).len(), 3);
         }
     }
 

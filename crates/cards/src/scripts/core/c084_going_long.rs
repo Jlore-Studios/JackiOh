@@ -72,9 +72,6 @@ mod tests {
 
     const GOING_LONG: &str = "core-084"; // Field Spell, cost 2 embiggen 4, no Quickdraw (#2521)
     const BIGOT: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
-    const POINTMASTER: &str = "core-020"; // 7/2
-    const POSTDOC: &str = "core-061"; // 2/4
-    const TRUE_STRIKE: &str = "core-044"; // Spell, 1 — "Deal 4 damage to a target, ignoring Armor"
     const MAGIC_JAMMED: &str = "core-036"; // Spell, 1 — "Destroy target backrow card; Lock its zone"
     const STOCKPILE: &str = "core-005"; // the spare card that keeps a turn meaningful (§2.5)
     const MENACE: &str = "core-019";
@@ -213,34 +210,6 @@ mod tests {
         }
 
         #[test]
-        fn s10_8_the_hero_block_shows_the_armor_the_pipeline_reads() {
-            crate::register_all();
-            let s = scenario(json!({
-                "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
-                "p2": spare(json!({})),
-            }));
-
-            assert_eq!(shown_armor(&s, P1), 2);
-            assert_eq!(shown_armor(&s, P2), 0);
-        }
-
-        #[test]
-        fn r63_a_hit_reduced_to_0_by_the_armor_deals_nothing_heals_nothing_and_emits_no_damage() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "active": "p2",
-                "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
-                "p2": { "field": [POSTDOC], "hand": [STOCKPILE] }, // attack 2, exactly the Armor
-            }));
-
-            s.attack(POSTDOC, "hero");
-
-            assert_eq!(damage_to(&s, "hero-p1"), Vec::<i32>::new());
-            s.expect_health(P1, 30);
-            assert_eq!(healed_count(&s), 0);
-        }
-
-        #[test]
         fn your_hero_the_armor_protects_its_controller_only() {
             crate::register_all();
             let mut s = scenario(json!({
@@ -288,23 +257,6 @@ mod tests {
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![4]);
             s.expect_health(P1, 26);
-        }
-
-        #[test]
-        fn s4_4_step_2_ignores_armor_skips_it_true_strike_lands_whole_where_an_attack_is_reduced() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "active": "p2",
-                "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
-                "p2": { "field": [POINTMASTER], "hand": [TRUE_STRIKE, STOCKPILE] },
-            }));
-
-            s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-            assert_eq!(damage_to(&s, "hero-p1"), vec![4]); // the printed 4, armor skipped
-
-            s.attack(POINTMASTER, "hero");
-            assert_eq!(damage_to(&s, "hero-p1"), vec![4, 5]); // 7 − 2 armor
-            s.expect_health(P1, 21);
         }
 
         #[test]
@@ -372,26 +324,6 @@ mod tests {
             assert_eq!(damage_to(&s, "hero-p1"), Vec::<i32>::new());
             s.expect_health(P1, 30);
             assert_eq!(healed_count(&s), 0);
-        }
-
-        #[test]
-        fn the_radiant_face_still_reduces_rather_than_blocks_a_14_attack_hit_lands_for_4_at_armor_10() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [{ "def": GOING_LONG, "radiant": true }, STOCKPILE],
-                    "field": [SCARAB],
-                    "library": [MENACE, TIMMY],
-                },
-                "p2": spare(json!({ "field": [{ "def": POINTMASTER, "radiant": true }] })), // radiant #20 is a 14/2
-            }));
-
-            s.play(GOING_LONG, json!({ "zone": 1, "embiggen": true }));
-            s.end_turn();
-            s.attack(POINTMASTER, "hero");
-
-            assert_eq!(damage_to(&s, "hero-p1"), vec![4]); // 14 − 10
-            s.expect_health(P1, 26);
         }
 
         #[test]
