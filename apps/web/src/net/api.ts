@@ -1472,6 +1472,14 @@ export type PublicCardStat = {
    * headline rate. Null when it was never seen or never unseen; absent from a server deployed before it.
    */
   adjustedWinRate?: number | null;
+  /**
+   * R2895000: the 95% ranges of `winRate` (Wilson, over the games it counts) and of `adjustedWinRate` (its
+   * posterior), as fractions; null where the rate is, absent from a server deployed before them.
+   */
+  winRateLow?: number | null;
+  winRateHigh?: number | null;
+  adjustedLow?: number | null;
+  adjustedHigh?: number | null;
   playRate: number;
   hasEnoughGames: boolean;
   window?: PublicCardWindow;

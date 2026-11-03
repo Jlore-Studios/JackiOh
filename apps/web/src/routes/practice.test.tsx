@@ -50,6 +50,7 @@ import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume, readPracticeResumeStat
 import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
+import { stubPhoneBar } from "../test/phoneBar.ts";
 import { settle } from "../test/settle.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import type { TutorialAccountApi } from "../tutorial/accountSync.ts";
@@ -1307,6 +1308,25 @@ describe("B33 starting renders the game under the practice HUD", () => {
     concedeOnBoard();
     await screen.findByTestId(T.result);
     expect(concedes()).toEqual([{ type: "act", action: { type: "concede" } }]);
+  });
+
+  it("#2883 a practice game draws no Offer draw on the desktop bar, and Concede stays", async () => {
+    visit("?seed=nodraw1&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+    expect(screen.getByTestId("concede")).toBeInTheDocument();
+  });
+
+  it("#2883 on a phone, a practice game's ⋯ menu holds Concede and no Offer draw", async () => {
+    onTestFinished(stubPhoneBar(true));
+    visit("?seed=nodraw2&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+
+    expect(screen.getByTestId("match-menu-panel").contains(screen.getByTestId("concede"))).toBe(true);
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
   });
 
   it("B33 the HUD shows the think indicator while the AI owes an action, and drops it once it does not", async () => {
