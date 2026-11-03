@@ -29155,12 +29155,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:ddf79ec0-1793723886",
+        "run_id": "",
         "sha": "46b50bf36d30c4e2890999e2bd644bc591feccbe",
         "started_at": "2026-11-03T16:38:42Z",
         "status": "queued",
         "title": "Patch: the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
-        "tries": 1
+        "tries": 2
       },
       {
         "approver": {},
