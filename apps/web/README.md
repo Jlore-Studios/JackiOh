@@ -195,8 +195,9 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 - Hotseat: an offer from the seat holding the device hands it to the other seat to answer, and the
   answer hands it back to the player whose turn it is (`hotseat.ts`). Only the offer moves it: if
   the players pass the device back unanswered with the seat switch, the offerer plays on and the
-  offer lapses with the turn (R269). Practice hides the Offer draw
-  control (SPEC §9.9, R188); an offer made anyway is declined at once and reads as declined.
+  offer lapses with the turn (R269). Practice draws no Offer draw
+  control (its `Game`'s `showOfferDraw={false}`, SPEC §9.9, R188; practice.css hides it on every other
+  `.practice-table` board); an offer made anyway is declined at once and reads as declined.
 
 ## Patch v0.2.0 at the table
 
@@ -319,10 +320,10 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
 (`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
-effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. Since R2794000 it lists every entry that
-plays something (`galleryCardOf`, `fx/motifs/gallery.ts`): a play's motif, a `death`, `trigger` or `activate` motif
-(played through its own director, as no play opens for a hook), a Flourish on its own fixture (`FLOURISH_FIXTURES`)
-and a marquee Unit's entrance as it lands. It calls no engine.
+effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. Since #2793 and R2794000 it lists every
+entry other than `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`): a play's motif, a `death`, `trigger` or `activate`
+motif (played through its own director, as the board does not draw those hooks yet), a recipe or Flourish on its
+fixture (`RECIPE_FIXTURES`), a set piece, an aura, and a marquee Unit's entrance as it lands. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,

@@ -1,7 +1,7 @@
 // R2794000: Classic #3 Book of Heal (`classic-003`, bespoke "pageMend"). Its pages open in arcane light
 // over the caster's hero, a sparkle flies to the card or hero it heals, and the mend lands there in Holy
-// light with a ring and a lingering glow. The heal's own number still plays (`keep`); no motif reads a
-// heal, so the Flourish is drawn from the motif primitives.
+// light with a ring and a lingering glow. The heal's own number still plays (`keep`); #2793's `mend`
+// glows on the healed card alone, so the pages' flight is drawn from the motif primitives.
 
 import { targetFor } from "../../../game/animations.ts";
 import { tid } from "../../build.ts";

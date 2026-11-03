@@ -10,16 +10,14 @@ import { planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { entranceKeyOf } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS } from "../constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SET_PASS_FLOOR } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
-import { FLOURISH_FIXTURES, type FlourishKey } from "../motifs/gallery.ts";
+import { RECIPE_FIXTURES } from "../motifs/gallery.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
-import { CARD_RECIPES } from "./bespoke.ts";
+import { CARD_RECIPES, type CardRecipeKey } from "./bespoke.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
-/** R2794000: the share of Classic's cards whose entry is something other than `none` (#2794's acceptance). */
-const CLASSIC_COVERAGE_FLOOR = 0.55;
 /** Classic's cards, its one token apart. */
 const CLASSIC_CARDS = 90;
 
@@ -74,15 +72,15 @@ function fixtureCues(planned: readonly { entry: AnimationEntry; cues: FxCue[] }[
 }
 
 /** Each Flourish and the Classic card whose entry names it. */
-const FLOURISHES: readonly (readonly [FlourishKey, string])[] = [
+const FLOURISHES: readonly (readonly [CardRecipeKey, string])[] = [
   ["pageMend", "classic-003"],
   ["recycleLoop", "classic-030"],
   ["crownSwap", "classic-085"],
 ];
 
 /** A Flourish's play by `player`: its `cardPlayed`, its fixture and its `cardResolved`. */
-function flourishStream(key: FlourishKey, defId: string, view: PlayerView, player: PlayerId, instanceId: string): GameEvent[] {
-  return [played(player, instanceId, defId), ...FLOURISH_FIXTURES[key](view, instanceId, player), resolved(player, instanceId, defId)];
+function flourishStream(key: CardRecipeKey, defId: string, view: PlayerView, player: PlayerId, instanceId: string): GameEvent[] {
+  return [played(player, instanceId, defId), ...RECIPE_FIXTURES[key](view, instanceId, player), resolved(player, instanceId, defId)];
 }
 
 describe("R2794000 Classic's card animations", () => {
@@ -90,7 +88,7 @@ describe("R2794000 Classic's card animations", () => {
     const cards = classicCards();
     expect(cards).toHaveLength(CLASSIC_CARDS);
     const drawn = cards.filter(([, entry]) => entry.kind !== "none");
-    expect(drawn.length / CLASSIC_CARDS).toBeGreaterThanOrEqual(CLASSIC_COVERAGE_FLOOR);
+    expect(drawn.length / CLASSIC_CARDS).toBeGreaterThanOrEqual(FX_SET_PASS_FLOOR);
     for (const [defId, entry] of cards) expect(entry.kind === "none" ? entry.reason : "drawn", defId).not.toBe("pending");
   });
 
@@ -121,7 +119,7 @@ describe("R2794000 Classic's Flourishes", () => {
     it(`R2794000 ${key} draws on its play's events`, () => {
       expect(FX_CARD_TABLE.get(defId)).toEqual({ kind: "bespoke", key });
       const view = fullBoardView();
-      const fixture = FLOURISH_FIXTURES[key](view, "ex", "p1");
+      const fixture = RECIPE_FIXTURES[key](view, "ex", "p1");
       expect(fixture.length).toBeGreaterThan(0);
       const drawn = fixtureCues(planAll(flourishStream(key, defId, view, "p1", "ex"), view));
       const bare = planAll(fixture, view).flatMap(({ cues }) => cues);
@@ -153,7 +151,7 @@ describe("R2794000 Classic's Flourishes", () => {
 
     it(`R2794000 R202 ${key}: a hidden play plans what no play does, and no cue names the card`, () => {
       const view = fullBoardView();
-      const fixture = FLOURISH_FIXTURES[key](view, "hidden", "p2");
+      const fixture = RECIPE_FIXTURES[key](view, "hidden", "p2");
       const hidden = fixtureCues(planAll([played("p2", "hidden", "hidden"), ...fixture, resolved("p2", "hidden", "hidden")], view));
       expect(hidden).toEqual(planAll(fixture, view).flatMap(({ cues }) => cues));
       const readable = planAll(flourishStream(key, defId, view, "p2", "ex"), view).flatMap(({ cues }) => cues);

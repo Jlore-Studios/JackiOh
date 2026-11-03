@@ -177,10 +177,20 @@ export const FX_MOTIF_TRAUMA = {
   tithe: 0.1,
   tally: 0.15,
   snap: 0.4,
+  send: 0,
+  radiance: 0.15,
+  mend: 0,
   recall: 0,
 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
+// #2793: Core's flourishes (fx/cards/core/): each shake at Land; how far in from the board's edges Craft a Card's halves start.
+export const FX_TIDE_TRAUMA = 0.35;
+export const FX_WISH_TRAUMA = 0.3;
+export const FX_FORGE_TRAUMA = 0.4;
+export const FX_FORGE_REACH = 0.2;
+// #2793: the share of a set's non-token cards its pass gives an entry other than `none`.
+export const FX_SET_PASS_FLOOR = 0.55;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most

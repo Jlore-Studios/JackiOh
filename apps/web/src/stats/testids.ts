@@ -38,6 +38,11 @@ export const statsTestid = {
   modeSelect: "stats-mode-select",
   /** R2777000: a card row's adjusted win rate. */
   adjustedCell: "stats-adjusted-cell",
+  /** R2895000: the Cards tab's Show 95% ranges toggle, a row's two ranges and the line that says what they mean. */
+  rangesToggle: "stats-ranges-toggle",
+  adjustedRange: "stats-adjusted-range",
+  winRateRange: "stats-win-rate-range",
+  rangesNote: "stats-ranges-note",
   playersTable: "stats-players-table",
   playersPager: "stats-players-pager",
   playersPrev: "stats-players-prev",

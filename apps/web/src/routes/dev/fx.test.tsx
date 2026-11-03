@@ -1,18 +1,21 @@
 // R2784000 #2792: `/dev/fx`, the motif gallery: it offers every drawn motif, every flavor's
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
-// each plays something. R2785000: it plays a card as the fixture set piece, which holds the board
-// until a click skips it. R2794000: every Classic entry but Plague Nuke's set piece is a gallery card
-// that plays: its play's motif, a hook's motif, a Flourish or a marquee entrance.
+// each plays something; #2793: every Core entry other than `none` plays as its card's play, and
+// R2794000 every Classic one, a marquee Unit's entrance as it lands. R2785000: it plays a card as the
+// fixture set piece, which holds the board until a click skips it.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
+import { entranceKeyOf, planCardFx, planCardMotif } from "../../fx/cardFx.ts";
+import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
-import { planCardFx, planCardMotif } from "../../fx/cardFx.ts";
-import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
 import { createFxMemory } from "../../fx/memory.ts";
-import { GALLERY_SET_PIECE, galleryCues, galleryHookCues, galleryPlayEvents } from "../../fx/motifs/gallery.ts";
+import { motifScale } from "../../fx/motifs/build.ts";
+import { GALLERY_SET_PIECE, galleryCardEvents, galleryCues, galleryFieldView, galleryPlayOf } from "../../fx/motifs/gallery.ts";
+import { hasSetPiece } from "../../fx/setPieces.ts";
+import type { FxPlanEnv } from "../../fx/types.ts";
 import { BURST_BUDGET_MS, planEntries } from "../../game/animations.ts";
 import { FX_DRAWN_MOTIFS } from "../../fx/motifs/names.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
@@ -36,10 +39,12 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(optionsOf(fxGalleryTestid.scale)).toEqual(FX_GALLERY_SCALES.map(String));
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
-    // The twelve examples but #88 Twisting Nether, now a set piece, and the five board clears that take `wipe`
-    // (R2800000), fifteen outside Classic now that a hook's motif plays (Floodgates' `death: wipe`); and
-    // Classic's 79 entries but Plague Nuke's set piece (R2794000).
-    expect(cards).toHaveLength(15 + 78);
+    // #2793: Core's 91 entries other than `none` (76 on the board, 7 through the director, 5 recipes, 3 set
+    // pieces); R2794000: Classic's 79 (its plays' motifs, its hooks' through the director, its three
+    // Flourishes, Plague Nuke's set piece and its two marquee entrances); then the other sets' 13 motif cards,
+    // 6 aura-only Field Spells, Crushing Walls' recipe, 4 set pieces and Training Grounds #30's `death: wipe`
+    // through the director.
+    expect(cards).toHaveLength(195);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -51,26 +56,36 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(screen.getByTestId(fxGalleryTestid.root)).toBeInTheDocument();
   });
 
-  it("R2794000 the gallery lists every Classic entry but Plague Nuke's set piece, and each plays", () => {
-    const listed = galleryCards();
-    const classic = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("classic-") && entry.kind !== "none" && defId !== "classic-043");
-    expect(classic).toHaveLength(78);
-    for (const [defId] of classic) expect(listed.map((card) => card.defId), defId).toContain(defId);
-    expect(listed.map((card) => card.defId)).not.toContain("classic-043");
+  it("R2794000 the gallery has a play for every Classic entry other than none, and each plays its motif, Flourish, entrance or set piece", () => {
     const view = fullBoardView();
-    for (const card of listed) {
-      if (card.kind === "hook") {
-        expect(galleryHookCues(card, view, FX_INTENSITY_SCALE.normal).length, `${card.defId} ${card.label}`).toBeGreaterThan(0);
+    const intensity = FX_INTENSITY_SCALE.normal;
+    const classic = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("classic-") && entry.kind !== "none");
+    expect(classic).toHaveLength(79);
+    expect(galleryCards().filter((card) => card.defId.startsWith("classic-")).map((card) => card.defId)).toEqual(classic.map(([defId]) => defId));
+    for (const [defId, entry] of classic) {
+      const play = galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      if (play.kind === "director") {
+        expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
         continue;
       }
-      const events = galleryPlayEvents(card, view);
-      const env = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-      const plays = planEntries(events, withEvents(view, events), false).some((entry) => {
-        env.memory.remember(entry.events);
-        const p = { entry, view: entry.view, env, D: entry.durationMs };
-        return planCardMotif(entry, entry.view, env) !== null || entry.events.some((event) => planCardFx(event, p) !== null);
-      });
-      expect(plays, `${card.defId} ${card.label}`).toBe(true);
+      // Planned as the board's effects layer plans it: remember, then plan.
+      const events = galleryCardEvents(defId, play, view, 1);
+      const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
+      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
+      let drawn = false;
+      // A marquee Unit's entrance plays as it lands, Nature Titan's before its Cry's motif.
+      let landed = entranceKeyOf(defId) === undefined || play.kind === "setPiece";
+      for (const planned of entries) {
+        env.memory.remember(planned.events);
+        const recipe = planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null);
+        if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        if ((play.kind === "recipe" || play.kind === "entrance") && recipe) drawn = true;
+        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+        if (recipe && planned.events.some((event) => event.type === "summoned")) landed = true;
+      }
+      expect(drawn, `${defId} ${play.kind}`).toBe(true);
+      expect(landed, `${defId} entrance`).toBe(true);
     }
   });
 
@@ -84,6 +99,75 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       }
       // The effects off plays nothing.
       expect(galleryCues(motif, "Fire", 1, view, FX_INTENSITY_SCALE.off)).toEqual([]);
+    }
+  });
+
+  it("R2784000 #2793 the gallery has a play for every Core entry other than none, and each plays its motif, recipe or set piece", () => {
+    const view = fullBoardView();
+    const intensity = FX_INTENSITY_SCALE.normal;
+    const core = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("core-") && entry.kind !== "none");
+    expect(core).toHaveLength(91);
+    expect(galleryCards().filter((card) => card.defId.startsWith("core-")).map((card) => card.defId)).toEqual(core.map(([defId]) => defId));
+    for (const [defId, entry] of core) {
+      const play = galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      if (play.kind === "director") {
+        expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
+        continue;
+      }
+      // Planned as the board's effects layer plans it: remember, then plan.
+      const events = galleryCardEvents(defId, play, view, 1);
+      const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
+      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
+      let drawn = false;
+      for (const planned of entries) {
+        env.memory.remember(planned.events);
+        if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
+        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+      }
+      expect(drawn, `${defId} ${play.kind}`).toBe(true);
+    }
+  });
+
+  it("R2784000 #2793 the gallery plays a card of each kind, a Field Spell standing in the backrow with its aura", () => {
+    vi.useFakeTimers();
+    // jsdom lays nothing out: give every zone a box, so the aura layer measures the Field Spell's side.
+    const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 100, 100));
+    try {
+      render(<FxGallery />);
+      // A cry motif, a trigger through the director, a recipe, a set piece and a Field Spell's cast and aura.
+      for (const defId of ["core-002", "core-013", "core-083", "core-017", "core-014"]) {
+        fireEvent.change(screen.getByTestId(fxGalleryTestid.card), { target: { value: defId } });
+        fireEvent.click(screen.getByTestId(fxGalleryTestid.playCard));
+        act(() => {
+          vi.advanceTimersByTime(BURST_BUDGET_MS * 4);
+        });
+      }
+      expect(document.querySelector('[data-aura-look="storm"]')).not.toBeNull();
+    } finally {
+      box.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("R2800000 the gallery plays Twisting Nether as its own set piece", () => {
+    vi.useFakeTimers();
+    try {
+      render(<FxGallery />);
+      const game = screen.getByTestId("game");
+      fireEvent.change(screen.getByTestId(fxGalleryTestid.card), { target: { value: "core-088" } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playCard));
+      // The play's own entry, then its wipe, which holds the board as the Nether.
+      const inFlight = (): string | null => screen.queryByTestId("animation-queue")?.getAttribute("data-animating") ?? null;
+      for (let waited = 0; waited < BURST_BUDGET_MS && inFlight() !== "destroyed"; waited += 10) {
+        act(() => {
+          vi.advanceTimersByTime(10);
+        });
+      }
+      expect(game).toHaveAttribute("data-set-piece", "nether");
+    } finally {
+      vi.useRealTimers();
     }
   });
 
