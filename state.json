@@ -11575,6 +11575,11 @@
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
+      "paused": {
+        "at": "2026-11-03T05:47:42Z",
+        "interrupt": "usage",
+        "provider": "claude-6"
+      },
       "pending_request": false,
       "planned_at": "2026-11-02T15:31:16Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -11589,7 +11594,7 @@
       "started_at": "2026-11-03T01:56:44Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1
+      "verdict_rounds": 2
     },
     "2726": {
       "cleared": {
