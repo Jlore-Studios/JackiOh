@@ -14289,13 +14289,24 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "a8155d88eb650e6ac8fcdb327fe8c7e7d22f9bb6",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "41673195675",
+            "tier": "medium"
+          }
+        ],
+        "sha": "323375b9474c8cb6bde8cfe761d6a3f62127d37b",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2919": {
