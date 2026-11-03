@@ -13337,15 +13337,28 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/fx/cards/classic.json5",
+            "apps/web/src/fx/cards/tables.test.ts",
+            "apps/web/src/fx/cards/tables.ts",
+            "apps/web/src/game/Game.tsx",
+            "docs/ADDING_CARDS.md",
+            "spec/10-engine-guide.md"
+          ],
+          "from": "9c41710d363924e41238734dccfd50f08fb4ca31",
+          "main": "87b82eb14f8bc0dca57cf62f7a0c7bfa636248c5"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41547564472",
+            "run": "41561575590",
             "tier": "strong"
           }
         ],
-        "sha": "9c41710d363924e41238734dccfd50f08fb4ca31",
+        "sha": "3fc013d5c950372c9fe761a09e9e16a88a369186",
         "tiers": {
           "claude": "strong"
         }
