@@ -45,9 +45,9 @@ Drawn so far, the damage and removal family (#2784):
 | `vanish` | exiled, bounced | exiled | each card drawn in, glinting, and gone in a soft flare; no shake |
 | `negate` | countered | countered | a ring closes on the countered card, which shatters and fizzles out in smoke |
 
-Named and not drawn yet: `aura` (#2787), and A2's motifs (#2786). A table may name one already: it
-parses, and until its part lands the card plays its event rows only (`planCardMotif` returns
-nothing).
+Named and not drawn yet: A2's motifs (#2786). A table may name one already: it parses, and until its
+part lands the card plays its event rows only (`planCardMotif` returns nothing). `aura` on a hook plays
+nothing either: a card's standing look is its entry's `aura` field (Auras, below).
 
 ### Phases
 
@@ -111,6 +111,55 @@ The new canvas presets (#2792, drawn in code in `fx/presets.ts` and `fx/sprites.
 (Snack's base particle, reused by Hustle/ore), `star` (Tech/starfield) and `exhaust`
 (Tech/rocket).
 
+## Auras
+
+`aura` (#2787, R2787000) is the one persistent motif: while a card's effect holds, the zone, lane, side
+or board it covers wears a quiet looping look in the card's palette, a tint, a slow drift of motes and
+an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
+
+- **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
+  `toxic` and `arcane`, each a mote velocity, size and life range, a mote, tint and edge opacity, a
+  glow spread and a blend. `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
+  own by default, as a motif's.
+- **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
+  both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
+  Trap stands in a zone, so only it may name `zone` or `lane`; the loader fails any other card's.
+- **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
+  Field Trap whose entry has an aura, and every modifier the view lists that a readable play added
+  (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
+  side. A face-down card, the viewer's own unrevealed Field Trap and a Unit in a backrow zone wear
+  none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
+  window before the layer saw it (a reload, a hand-over) wears none.
+- **Begin and end:** an aura the board starts to show fades in over `AURA_FADE_IN_MS` with a burst
+  of motes from its box's centre; one it stops showing fades out over `AURA_FADE_OUT_MS`. Both follow
+  the shown view, so the first view's auras stand without a begin.
+- **Stacking:** at most `AURA_MAX_PER_ZONE` cover a zone: holding before fading, then the nearest
+  scope, then the newest, the nearest drawn on top.
+- **Cost:** one canvas and one frame loop (`fx/loop.ts`) for every aura, running only while one
+  shows and never while the page is hidden; each draws at most `AURA_MOTES_PER_AURA` × the
+  intensity, all of them at most `AURA_PARTICLE_SHARE` of the particle cap. Reduced motion leaves a
+  still tint and edge; the effects intensity `off` leaves none.
+- **The layer** (`fx/aura/AuraLayer.tsx`, `aura.css`): fixed over the board under the effects layer,
+  no pointer events, a `.aura` per aura (`data-aura-look`, `-scope`, `-phase`) and no definition on
+  the page.
+
+Ten Field Spells wear one as the pattern for the set passes:
+
+| Card | Aura |
+|---|---|
+| Core #14 Jlockeed's Weapons | `storm`, side |
+| Core #46 Suppressive Aura | `void`, board |
+| Classic #42 Transmutable Toxins | `toxic`, board |
+| Classic #75 Argusland | `holy`, side |
+| Classic+ #34 Memory Leak | `frost`, lane, palette Tech |
+| Meditative #40 Feng Shui | `bloom`, board |
+| Meditative+ #9 Magic Amplifier | `arcane`, board |
+| Stinkyscape #46 Circadian Halfcycler | `storm`, lane |
+| Stinkyscape #155 Comet Crash | `ember`, zone |
+| Training Grounds #19 Extra Rations | `bloom`, zone |
+
+No modifier example is wired yet, and a bespoke entry (Hinder's rider) cannot take an aura.
+
 ## The tables
 
 `apps/web/src/fx/cards/<set>.json5`, one per set: `core`, `classic`, `classicplus`, `meditative`,
@@ -125,12 +174,13 @@ Stinkyscape is split so its two set passes merge without conflicts.
   "classic-016": { cast: { motif: "scorch", palette: "Fire" } }, // Book of Flame
   "classic-071": { cry: { motif: "lance" } }, // Lane Eater
   "core-021": { bespoke: "manaCrack" }, // Hinder
+  "core-046": { aura: { look: "void", scope: "board" } }, // Suppressive Aura
 }
 ```
 
 - One line per catalog card, tokens included, in catalog order, its name in a comment after it.
   `tables.test.ts` holds each file to the catalog: every card present, in order, each comment its
-  name, no card twice, no unknown hook, motif, palette, field or recipe.
+  name, no card twice, no unknown hook, motif, look, scope, palette, field or recipe.
 - **Hooks by kind:** `cast` is a non-Unit's play (a Spell's, a Field Spell's, a Trap's), `cry` a
   Unit's; a `cry` on a non-Unit or a `cast` on a Unit fails the loader. `death`, `trigger` and
   `activate` are accepted and plan nothing until #2783's `hookResolving` marker lands. A Trap's

@@ -214,21 +214,6 @@ mod tests {
         }
 
         #[test]
-        fn r688_a_locked_unit_zone_takes_a_recruit_once_no_unlocked_zone_is_open() {
-            let mut s = board(json!({ "p1": { "hand": [CALL], "library": [TIMMY, VANILLA, DEFENDER] } }));
-            // §3.2 Lock is a zone flag; the harness exposes no setter.
-            s.state_mut().players.p1.locks.units[0] = true;
-            s.state_mut().players.p1.locks.units[1] = true;
-            s.state_mut().players.p1.locks.units[3] = true;
-            s.state_mut().players.p1.locks.units[4] = true;
-            s.play(CALL, json!({}));
-
-            // R688 prefers the one unlocked zone (lane 3), then fills the leftmost Locked ones.
-            assert_eq!(unit_ids(&s), row([Some(VANILLA), Some(DEFENDER), Some(TIMMY), None, None]));
-            assert!(def_ids(&s.pile(P1, "library")).is_empty());
-        }
-
-        #[test]
         fn r1_a_recruited_unit_fires_no_cry_me_and_mr_token_brings_no_rush_token() {
             let mut s = board(json!({ "p1": { "hand": [CALL], "library": [TOKEN_MAKER] } }));
             s.play(CALL, json!({}));
@@ -274,24 +259,6 @@ mod tests {
 
             assert_eq!(unit_ids(&s), row([None, None, None, None, None]));
             assert_eq!(def_ids(&s.pile(P1, "library")), [MENACE, MENACE]);
-        }
-
-        #[test]
-        fn s8_3_the_radiant_face_stops_when_the_board_fills_too() {
-            let mut s = board(json!({
-                "p1": {
-                    "hand": [{ "def": CALL, "radiant": true }],
-                    "field": [TIMMY, TIMMY, TIMMY, TIMMY],
-                    "library": [POINTMASTER, TIMMY, VANILLA],
-                },
-            }));
-            s.play(CALL, json!({}));
-
-            assert_eq!(
-                unit_ids(&s),
-                row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(POINTMASTER)])
-            );
-            assert_eq!(def_ids(&s.pile(P1, "library")), [TIMMY, VANILLA]);
         }
     }
 

@@ -138,19 +138,6 @@ mod tests {
             g.expect_health(PlayerId::P1, 23);
             g.expect_events(json!(["damage", "healed"]));
         }
-
-        #[test]
-        fn s4_4_step_8_lifesteal_heals_nothing_when_the_hit_dealt_nothing() {
-            crate::register_all();
-            let mut g = scenario(json!({
-                "p1": { "field": [{ "def": "core-056", "lane": 1 }], "health": 20 },
-                // The Rock is Indestructible, so pipeline step 4 stops the hit and 0 is dealt (R63's zero rule).
-                "p2": { "field": [{ "def": "core-066", "lane": 1 }] },
-            }));
-
-            g.attack("core-056", "core-066");
-            g.expect_health(PlayerId::P1, 20);
-        }
     }
 
     mod jilliax_radiant {

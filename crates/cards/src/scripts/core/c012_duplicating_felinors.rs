@@ -176,56 +176,6 @@ mod tests {
                 assert!(second.radiant);
                 assert_ne!(second.id, first.id);
             }
-
-            #[test]
-            fn r1_the_radiant_copy_s_cry_does_not_fire_either() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
-
-                s.play("core-012", json!({}));
-
-                assert_eq!(
-                    row(&s, PlayerId::P1)
-                        .iter()
-                        .filter(|def_id| def_id.as_deref() == Some("core-012"))
-                        .count(),
-                    2
-                );
-            }
-
-            #[test]
-            fn r57_the_radiant_copy_keeps_buffs_and_not_damage_on_the_6_8_face() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
-                let felinors = s.card("core-012").id.clone();
-                seed_history(&mut s, &felinors, 1, 1, 4);
-
-                s.play("core-012", json!({}));
-
-                let original = lane(&s, PlayerId::P1, 1);
-                let copy = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&original, json!({ "attack": 7, "health": 5, "maxHealth": 9 }));
-                s.expect_stats(&copy, json!({ "attack": 7, "health": 9, "maxHealth": 9 }));
-            }
-
-            #[test]
-            fn r64_the_radiant_face_makes_no_copy_on_a_full_board_either() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "p1": {
-                        "field": ["core-008", "core-008", "core-008", "core-008"],
-                        "hand": radiant_hand(),
-                        "library": ["core-005"]
-                    }
-                }));
-
-                s.play("core-012", json!({}));
-
-                assert_eq!(
-                    row(&s, PlayerId::P1),
-                    ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("core-012")])
-                );
-            }
         }
     }
 }

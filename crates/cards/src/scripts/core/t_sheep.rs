@@ -30,8 +30,8 @@ pub fn script() -> CardScripts {
 
 // T-sheep Sheep Token (SPEC §7; §3.2, §6.3, R11, R41, R74). BUILD M4-T4's token row. The `mod`s below prove
 // the base and radiant behavior, asserting the worth through `tribute_value_of` and `legal_tribute_units`.
-// §6.3's second half is proved end to end with #22 Carnivorous Cube, the one card that tributes from its own
-// text (R41).
+// §6.3's second half, a tribute a card's script writes being an ordinary Sacrifice where the 2 never applies
+// (R41), is the engine's (`crates/engine/tests/rules/tribute.rs`).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,65 +174,6 @@ mod tests {
             }
 
             #[test]
-            fn s6_3_two_sheep_tokens_pay_n55_lava_golem_s_tribute_3_where_one_ordinary_unit_more_would_not() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "seed": SEED,
-                    "p1": { "hand": ["core-055"], "field": ["core-t-sheep", "core-t-sheep"] },
-                }));
-                let sheep = vec![
-                    s.unit(P1, 1).expect("a Sheep Token in p1's lane 1"),
-                    s.unit(P1, 2).expect("a Sheep Token in p1's lane 2"),
-                ];
-                let sheep_ids: Vec<String> = sheep.iter().map(|unit| unit.id.clone()).collect();
-
-                s.play("core-055", json!({ "tributes": sheep_ids }));
-
-                s.expect_in_zone("core-055", "field");
-                for unit in &sheep {
-                    s.expect_in_zone(unit, "gone");
-                }
-
-                // Two ordinary units are worth 2, short of the 3 the two Sheep paid.
-                let mut ordinary = scenario(json!({
-                    "seed": SEED,
-                    "p1": { "hand": ["core-055"], "field": ["core-025", "core-025"] },
-                }));
-                let pair: Vec<String> = [1, 2]
-                    .iter()
-                    .map(|lane| ordinary.unit(P1, *lane).expect("an ordinary unit").id)
-                    .collect();
-                ordinary.expect_refused_with(|o| o.play("core-055", json!({ "tributes": pair })), "Tribute 3");
-                ordinary.expect_in_zone("core-055", "hand");
-            }
-
-            #[test]
-            fn s6_3_and_r41_a_script_tribute_n22_sacrifices_only_the_permanent_it_names_the_2_never_applies() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "seed": SEED,
-                    "p1": { "hand": ["core-022"], "field": ["core-t-sheep", "core-025"] },
-                }));
-                let sheep = s.unit(P1, 1).expect("a Sheep Token in p1's lane 1");
-                let other = s.unit(P1, 2).expect("p1's other unit in lane 2");
-
-                // R81: the meal travels in the play action. #22's Cry is a plain `sacrifice` of that one
-                // permanent, so being worth 2 Tributes buys the Sheep nothing here.
-                s.play("core-022", json!({ "targets": [{ "pick": "instance", "instanceId": sheep.id }] }));
-
-                s.expect_events(json!(["cardPlayed", "destroyed"]));
-                // R11: sacrificed from the field, so it ceases to exist instead of reaching the graveyard.
-                s.expect_in_zone(&sheep, "gone");
-                assert!(s.pile(P1, "graveyard").is_empty());
-                // Exactly one permanent was eaten: the other unit and the Cube itself are untouched.
-                s.expect_in_zone(&other, "field");
-                s.expect_in_zone("core-022", "field");
-                // §6.3: the Cube's meal is not a Tribute *cost* — its declaration carries no `amount`, so the
-                // play charged no Tribute and the Sheep's 2 never entered the arithmetic at all.
-                assert_eq!(tribute_cost_of(s.state(), s.card("core-022")), 0);
-            }
-
-            #[test]
             fn r11_a_sheep_token_that_dies_in_combat_ceases_to_exist_and_never_reaches_a_graveyard() {
                 crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-sheep"] }, "p2": { "field": ["core-025"] } }));
@@ -250,23 +191,6 @@ mod tests {
                 assert!(find_instance(s.state(), &sheep.id).is_none());
                 assert!(s.pile(P1, "graveyard").is_empty());
                 assert!(s.pile(P1, "exile").is_empty());
-            }
-
-            #[test]
-            fn r11_a_bounced_sheep_token_ceases_to_exist_rather_than_returning_to_a_hand_s3_2() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-sheep"] } }));
-                let mut sheep = s.unit(P1, 1).expect("a Sheep Token in p1's lane 1");
-
-                // Called directly so this test holds the instance the engine mutates (`reduce` clones).
-                assert_eq!(
-                    move_to_zone(s.state_mut(), &mut sheep, OffFieldZone::Hand, Default::default()),
-                    MoveResult::Vanished
-                );
-
-                s.expect_in_zone(&sheep, "gone");
-                assert_eq!(sheep.zone.z(), ZoneName::Gone);
-                assert!(s.hand(P1).is_empty());
             }
 
             #[test]

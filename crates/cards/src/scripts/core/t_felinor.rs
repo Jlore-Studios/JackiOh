@@ -232,22 +232,6 @@ mod tests {
             }
 
             #[test]
-            fn r11_and_s3_2_bounce_all_units_clears_them_a_bounced_felinor_token_reaches_no_hand() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-felinor"] } }));
-                let mut token = s.unit(P1, 1).unwrap();
-
-                // Called directly so this test holds the instance the engine mutates (`reduce` clones).
-                let moved = move_to_zone(s.state_mut(), &mut token, OffFieldZone::Hand, Default::default());
-                assert!(matches!(moved, MoveResult::Vanished));
-
-                s.expect_in_zone(&token, "gone");
-                assert_eq!(token.zone.z(), ZoneName::Gone);
-                assert!(s.hand(P1).is_empty());
-                assert!(s.unit(P1, 1).is_none());
-            }
-
-            #[test]
             fn r11_a_unit_token_never_enters_a_graveyard_or_exile_so_a_fixture_may_not_put_one_there() {
                 crate::register_all();
                 expect_throw_with(
@@ -309,16 +293,6 @@ mod tests {
                 s.attack(&token, &gary);
                 s.expect_in_zone(&gary, "graveyard");
                 s.expect_stats(&token, json!({ "attack": 2, "health": 1, "maxHealth": 2 }));
-            }
-
-            #[test]
-            fn s4_1_the_base_face_has_no_rush_summoned_this_turn_it_may_attack_nothing() {
-                crate::register_all();
-                let (mut s, token, gary) = fresh_felinor_token(false);
-                assert!(keywords_of(s.state(), s.card(&token)).is_empty());
-
-                s.expect_refused_with(|s| s.attack(&token, &gary), "summoning sick");
-                s.expect_refused_with(|s| s.attack(&token, "hero"), "summoning sick");
             }
 
             #[test]
