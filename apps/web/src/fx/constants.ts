@@ -88,6 +88,10 @@ export const FX_WALLS_HIT_AT = 0.3;
 export const FX_WALLS_TAIL_MS = 850;
 export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
 export const FX_WALLS_TRAUMA = 0.45;
+// #2796: Meditative's Flourishes (fx/cards/meditative/, meditativeplus/): each one's shake at Land.
+export const FX_JADE_CRACK_TRAUMA = 0.3;
+export const FX_HARMONY_TRAUMA = 0.15;
+export const FX_CN_SWEEP_TRAUMA = 0.35;
 // R437: a mark branded onto a card; its sigil fades over FX_BRAND_TAIL_MS after the entry.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
@@ -178,9 +182,12 @@ export const FX_MOTIF_TRAUMA = {
   send: 0,
   radiance: 0.15,
   mend: 0,
+  deal: 0,
+  seal: 0.2,
 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
+export const FX_MOTIF_DEAL_MAX = 5; // deal: the cards one entry deals
 // #2793: Core's flourishes (fx/cards/core/): each shake at Land; how far in from the board's edges Craft a Card's halves start.
 export const FX_TIDE_TRAUMA = 0.35;
 export const FX_WISH_TRAUMA = 0.3;

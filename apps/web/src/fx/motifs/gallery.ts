@@ -1,6 +1,8 @@
 // R2784000: what the /dev/fx gallery (routes/dev/fx.tsx) plays: a fixture event for every motif on a
-// view's own ids, the entry it fills, and a card's table entry as a play that resolves. Pure, so the
-// motif tests plan from the same fixtures the gallery shows.
+// view's own ids, the entry it fills, and a card's table entry as a play that resolves (#2793, #2796:
+// a motif, a card recipe, a set piece or a Field card's aura on the board, and a death, trigger or
+// activate motif through the gallery's own director). Pure, so the motif tests plan from the same
+// fixtures the gallery shows.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -64,7 +66,8 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
  * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
  * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter,
  * snap fires a hidden trap, send puts a card in the hand, radiance makes the viewer's first hand card
- * Radiant and mend heals the viewer's first unit.
+ * Radiant and mend heals the viewer's first unit. Deal (#2796) adds a card to the player's hand and
+ * shuffles a hidden one into their deck, and seal lays a modifier on the enemy seat.
  */
 export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
   const enemy = player === view.viewer ? view.opponent : view.you;
@@ -185,6 +188,13 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
       const mine = unitsOf(view.you)[0];
       return mine === undefined ? [] : [{ type: "healed", targetId: mine.instanceId, amount: 3 }];
     }
+    case "deal":
+      return [
+        { type: "addedToHand", player, instanceId: "fx-dealt", defId: "core-055" },
+        { type: "shuffledIn", player, instanceId: "hidden", defId: "hidden", position: 0 },
+      ];
+    case "seal":
+      return [{ type: "modifierChanged", player: enemy.player, modifierId: "fx-sealed", added: true }];
   }
 }
 
@@ -324,9 +334,11 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * `view`: Hinder adds the next-refresh rider to the other player, Blood Ridden Glowy Jelly Bean makes the
  * viewer's first hand card Radiant at a life price, Crushing Walls takes wipe's fixture, Transmogulate
  * turns the viewer's first hand card into a Legendary, Zephrys adds its card to the hand and Craft a
- * Card adds its crafted card, then fuses it. #2798: iKwzki Duos with the player's first unit, Flash
- * Freeze freezes every unit on both sides and Stratos Swarm fills the player's empty zones with Stratos
- * (its first unit zone, a full board having none).
+ * Card adds its crafted card, then fuses it. #2796: Auspicious Rock costs its caster 2 and rolls a Jade
+ * into the hand, Spiritually 中国 turns every one of the viewer's hand cards into one CN card and
+ * summons a CN Unit, and Harmony Spirit sets every unit to 3/3. #2798: iKwzki Duos with the player's
+ * first unit, Flash Freeze freezes every unit on both sides and Stratos Swarm fills the player's empty
+ * zones with Stratos (its first unit zone, a full board having none).
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -343,6 +355,28 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "addedToHand", player, instanceId: "fx-fused", defId: "core-055" },
     { type: "fused", instanceIds: ["fx-half-a", "fx-half-b"], resultInstanceId: "fx-fused", defId: "core-055" },
   ],
+  jadeCrack: (_view, _instanceId, player) => [
+    { type: "healthLost", player, amount: 2 },
+    { type: "addedToHand", player, instanceId: "fx-jade", defId: "meditative-039-2" },
+  ],
+  cnSweep: (view, _instanceId, player) => {
+    const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+    return [
+      ...hand.map((card, k): GameEvent => ({
+        type: "transformed",
+        instanceId: card.instanceId,
+        fromDefId: card.defId,
+        toDefId: "meditative-036",
+        newInstanceId: `fx-cn-${String(k)}`,
+      })),
+      { type: "summoned", player, instanceId: "fx-cn-unit", defId: "meditative-041", row: "units", lane: 1 },
+    ];
+  },
+  harmonyWave: (view) =>
+    [...unitsOf(view.you), ...unitsOf(view.opponent)].flatMap((unit): GameEvent[] => [
+      { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
+      { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
+    ]),
   duoBond: (view, _instanceId, player) => {
     const mine = unitsOf(player === view.viewer ? view.you : view.opponent)[0];
     return mine === undefined ? [] : [{ type: "marked", instanceId: mine.instanceId, mark: DUO_MARK, color: DUO_MARK_COLOR, added: true }];

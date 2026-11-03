@@ -22,7 +22,10 @@ Every catalog card starts as `"none: pending"` and moves up a tier in its set's 
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
 Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the marquee entrances of
 BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
-names, below).
+names, below), and the Flourishes of the set passes, each built from the motifs' cue helpers
+(`fx/motifs/build.ts`): Meditative #39.1 Auspicious Rock's `jadeCrack`, #32 Spiritually 中国's
+`cnSweep` and Meditative+ #21 Harmony Spirit's `harmonyWave` (#2796, `fx/cards/meditative/`,
+`fx/cards/meditativeplus/`; their per-card table is `fx/cards/meditative.md`).
 
 Core's pass (#2793) adds three flourishes, each built from the motif primitives at the card's motif
 scale (`fx/cards/core/flourish.ts`) and drawn over the event rows (`keep`):
@@ -96,6 +99,15 @@ each:
 | `send` | addedToHand, shuffledIn | nothing | a gather at the caster's hero (the receiver's with no play), a card back flying to the hand or the library, and its sparkle there; no shake |
 | `radiance` | radiantSet | nothing | a sheen and a burst over the card made Radiant (its hand pile for a hand card the viewer may not read), and once a play the Radiant rays |
 | `mend` | healed | nothing | a sheen over the healed hero or unit, a ring closing as it lands and a soft afterglow; the heal's number stays on its row; no shake |
+
+Drawn in #2796, Meditative's pass, built beside #2793's: `seal` for an event no motif read that comes up
+on three or more Meditative cards, and `deal`, written at the same time as `send`, which it widens (it
+also reads a fuse, gathers once an entry and caps its cards; a later pass may fold the two into one):
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `deal` | addedToHand, shuffledIn, fused | nothing | a gather at the caster's hero (the receiver's with no play), then a card back flying to each hand, deck or card dealt, at most `FX_MOTIF_DEAL_MAX` an entry, landing with a sparkle; no shake |
+| `seal` | modifierChanged (an add) | nothing | a bolt from the resolving play's hero to the seat's modifiers, a ring closing on them and a slow afterglow |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -421,3 +433,6 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
   other motifs nor #2793's, so a pass maps the events it counts through the Reads column above, with
   a reason per override (`core.md`, `stinkyscape-2.md`).
 - `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
+- The census's `FAMILY_MOTIFS` knows only damage, removal, return and cost, so for a draw, a buff, a
+  summon, a card dealt or a modifier it says `none: no motif reads …`; a set pass maps that event to
+  the motif whose Reads column names it (#2796's `meditative.md` does, card by card).
