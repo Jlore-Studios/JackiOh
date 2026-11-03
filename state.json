@@ -15042,15 +15042,8 @@
       }
     },
     "2932": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41652634826",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-03T14:45:38Z",
-        "until": "2026-11-03T15:15:38Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15062,10 +15055,9 @@
         "reason": "planned on sonnet",
         "trail": "{\\\\|^\\\\.app-shell--wide > \\\\.game\\\\|^\\\\.game:\\\" apps/web/src/game/board.css apps/web/src/index.css apps/web/src/game/*.css | head -20; sed -n \u2026\n- Bash: {\"command\": \"grep -rn \\\"^\\\\.game {\\\\|^\\\\.game{\\\\|\\\\.game {$\\\" apps/web/src --include=*.css | head; grep -rn \\\"turn-banner\\\" apps/web/src --include=*.tsx --include=*.ts --include=*.css | grep -v \\\"tes\u2026\n- Bash: {\"command\": \"sed -n 735,830p apps/web/src/game/Board.tsx; grep -n \\\"control-bar >\\\" apps/web/src/game/*.css apps/web/src/duos/*.css apps/web/src/*/*.css | head -20\"}\n- Bash: {\"command\": \"grep -n \\\"ReplayPlayer\\\\|app-shell\\\\|<Game\\\\|duos-board\\\" apps/web/src/duos/DuosReplay.tsx apps/web/src/replay/OpenedReplay.tsx | head; sed -n 570,620p apps/web/src/duos/duos.css; sed -n\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\.username\\\" apps/web/src --include=*.css | head -10\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/auth/username.css; sed -n 520,560p apps/web/src/index.css; grep -n \\\"link-button\\\" apps/web/src/index.css | head -5; grep -n \\\"BackLink\\\" -A30 apps/web/src/rout\u2026\n- Bash: {\"command\": \"sed -n 255,330p apps/web/src/rank/RankCrest.tsx; grep -rn \\\"rank-crest\\\\|\\\\.crest\\\" apps/web/src/rank/*.css | head -10\"}\n- Bash: {\"command\": \"grep -n \\\"CREST_SIZE_PX\\\" -A4 apps/web/src/rank/RankCrest.tsx | head -12; sed -n 1,40p apps/web/src/rank/rankCrest.css; grep -rn \\\"match-ranks\\\\|matchTestid.ranks\\\" apps/web/src/routes/m\u2026\n- Bash: {\"command\": \"grep -n \\\"^\\\\.control-bar\\\\|^\\\\.board \\\\.control-bar {\\\" apps/web/src/game/board.css | head; grep -n \\\"^\\\\.control-bar {\\\" -A22 apps/web/src/game/board.css | head -40; grep -n \\\"^\\\\.boar\u2026\n- Bash: {\"command\": \"sed -n 400,445p apps/web/src/index.css; sed -n 1,60p apps/web/src/game/ModifierList.tsx | head -80\"}\n- Bash: {\"command\": \"grep -n \\\"function ManaTray\\\" -A45 apps/web/src/game/Board.tsx | head -80\"}\n- Bash: {\"command\": \"ls apps/web/src/wasm/ 2>&1 | head; git check-ignore -v apps/web/src/wasm/pkg .cache 2>&1 | head; ls .cache 2>&1 | head; sed -n 1,40p scripts/browse.sh | head -50; ls target 2>&1 | head -\u2026\n- Bash: {\"command\": \"grep -n \\\"cf--minion\\\\|data-layout=\\\\\\\"minion\\\\\\\"\\\\|cf-host--minion\\\" apps/web/src/cards/cards.css | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"cf--minion\\\\|\\\\.cf\\\\.cf--minion\\\\|cf--minion\\\" apps/web/src/cards/cards.css apps/web/src/game/board.css | head; grep -n \\\"aspect-ratio\\\" apps/web/src/cards/cards.css | head -20\u2026\n- Bash: {\"command\": \"sed -n 1240,1275p apps/web/src/cards/cards.css; sed -n 120,160p apps/web/src/cards/cards.css; grep -n \\\"cf-scale\\\" apps/web/src/cards/cards.css | head -8\"}\n- Bash: {\"command\": \"grep -rn \\\"fullBoardView\\\" apps/web/src --include=*.tsx --include=*.ts -l | head -5; ls apps/web/src/routes/dev 2>/dev/null; grep -n \\\"mana:\\\" apps/web/src/test/fixtures.ts | head -5\"}\n- Bash: {\"command\": \"cd e2e && grep -rln \\\"activate-\\\\|\\\\.keywords\\\\|keyword-icon\\\\|cf-kw-more\\\" cypress | head; grep -rn \\\"viewport(3[0-9][0-9]\\\\|viewport(4[0-3][0-9]\\\\|390\\\\b\\\" cypress/component/keyword-vi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2932 && sed -n 360,420p e2e/cypress/component/card-faces.cy.tsx; grep -n \\\"viewport(\\\" e2e/cypress/e2e/30-activate.cy.ts | head -5; grep -n \\\"mount\\\\\u2026\n- Bash: {\"command\": \"grep -rn \\\"field-tile-max\\\\|tile-w\\\\|--zone-inside\\\" apps/web/src e2e --include=*.ts --include=*.tsx --include=*.css --include=*.md | grep -v \\\"^apps/web/src/game/board.css\\\" | head; gre\u2026\n- Bash: {\"command\": \"cat docs/issues-and-patches.md | grep -n \\\"pending\\\\|fragment\\\\|patches\\\\\\\"\\\" | head -20; ls; ls patch* 2>/dev/null | head; git log -3 --stat --format=%s -- 'patches/*' | head -20; git s\u2026\n- Bash: {\"command\": \"sed -n 105,160p docs/issues-and-patches.md; ls crates/cards/patches/pending 2>/dev/null | tail -8; git log -5 --format=%h\\\\ %s --diff-filter=A -- crates/cards/patches/pending | head\"}\n- Bash: {\"command\": \"git show 0312164cd --stat | grep -i \\\"patches\\\"; git show 0312164cd -- 'crates/cards/patches/pending/*' | head -40; ls crates/cards/patches 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -n \\\"visual\\\" crates/tools/src/patches.rs | head -20; grep -rn \\\"\\\\\\\"visual\\\\\\\"\\\" crates/cards/patches/pending 2>/dev/null | head -3; ls crates/cards/patches/pending | head\"}\n- Bash: {\"command\": \"sed -n 100,135p apps/web/src/game/Game.tsx; sed -n 650,672p apps/web/src/game/Game.tsx; sed -n 190,210p apps/web/src/game/Game.tsx; grep -n \\\"usePhoneBar\\\" apps/web/src -r | head\"}\n- Bash: {\"command\": \"cat apps/web/src/test/phoneBar.ts; grep -rn \\\"test/phoneBar\\\" apps/web/src | head -5\"}\n- Bash: {\"command\": \"grep -rn \\\"<Card\\\\b\\\" apps/web/src --include=*.tsx | grep -v \\\"test\\\\|Hand.tsx\\\" | head -20; sed -n 95,140p apps/web/src/game/Zone.tsx; sed -n 50,125p apps/web/src/game/Backrow.tsx\"}\n- Bash: {\"command\": \"grep -rn \\\"ACTIVATE_FOR_ATTRIBUTE\\\\|activate-control\\\\|activate-controls\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.css | grep -v \\\"test\\\\|activate.css\\\\|ActivateControl.t\u2026\n- Bash: {\"command\": \"grep -rn \\\"hero-portrait\\\" apps/web/src --include=*.css | head -12; grep -n \\\"\\\\.hero-portrait {\\\" -A18 apps/web/src/emotes/emotes.css | head -40\"}\n- Bash: {\"command\": \"sed -n 650,730p apps/web/src/routes/match.test.tsx\"}\n- Bash: {\"command\": \"cat e2e/package.json | head -30; grep -n \\\"layout:report\\\" -r e2e/cypress.config.ts e2e/*.ts 2>/dev/null | head -3\"}\n- Bash: {\"command\": \"grep -n \\\"rail\\\\|turn-banner\\\\|phone\\\" apps/web/README.md | head -20; grep -n \\\"2876\\\\|layout\\\" e2e/README.md | head -10; ls apps/web/src/game/*.md 2>/dev/null; grep -rn \\\"usePhoneBar\\\\|\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions (final plan written from these)\\n- plate = `.seat` (hero 48px + chips row(s) + 22px tray channel); `.hero` floor 44px (B29), portrait 44px => \u2026\n- said: ## Goal On a phone held upright (`@media (max-width: 600px)`, and nothing else) the board stops stretching field cards and gives their height back to the field. - **Cards:** field cards keep a width \u00f7 height ratio of 0.72\u20130.86 and grow by height. The rows share the field's height (#2900's rows stay\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-03T14:19:54Z",
       "owner_why": "it plans it",
@@ -15078,9 +15070,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-03T14:03:29Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41652634826",
+      "run_id": "pending:c0e3df31-1793717229",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T14:19:54Z",
+      "started_at": "2026-11-03T14:47:42Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15108,9 +15100,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T14:32:48Z",
+    "at": "2026-11-03T14:47:42Z",
     "url": "",
-    "what": "revise #2919 on claude-3"
+    "what": "build #2932 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-03T14:28:34Z",
