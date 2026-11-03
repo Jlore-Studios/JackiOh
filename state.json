@@ -13303,9 +13303,11 @@
       "ci_run_id": 41467862749,
       "ci_sha": "0f6c22cb5cfdda3fbe4a2f8966c49627dc20d84c",
       "cleared": {
-        "at": "2026-11-03T01:41:30Z",
+        "at": "2026-11-03T02:59:48Z",
         "by": "`claude` (strong)",
-        "sha": "9c41710d363924e41238734dccfd50f08fb4ca31"
+        "carried_from": "9c41710d363924e41238734dccfd50f08fb4ca31",
+        "resolved_by": "`claude` (strong)",
+        "sha": "3fc013d5c950372c9fe761a09e9e16a88a369186"
       },
       "died": 0,
       "difficulty": "hard",
