@@ -14863,21 +14863,28 @@
       "taken_asks": []
     },
     "2878": {
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T02:09:42Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:21a97f47-1793671925",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-03T02:12:23Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-03T02:11:50Z",
+    "at": "2026-11-03T02:12:23Z",
     "url": "",
-    "what": "build #2877 on muse"
+    "what": "build #2878 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T02:03:42Z",
