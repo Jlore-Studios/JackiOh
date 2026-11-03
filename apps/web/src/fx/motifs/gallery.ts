@@ -7,7 +7,9 @@
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { flavorOf } from "../../cards/flavor.ts";
+import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
+import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
 import { isCardRecipeKey, type CardRecipeKey } from "../cards/bespoke.ts";
@@ -32,6 +34,9 @@ export function galleryPlayId(n: number): string {
 
 /** R2785000: the key of the gallery's fixture set piece. */
 export const GALLERY_SET_PIECE = "fixture";
+
+/** #2798: Stinkyscape #68 Stratos, the Unit Stratos Swarm fills a board with. */
+const STRATOS = "stinkyscape-068";
 
 /**
  * R2785000: the gallery's fixture set piece: the entry holding the play of `instanceId` claims the set
@@ -333,7 +338,9 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Constant changes the cost of the viewer's first hand card, and Book of Pain discards two of the other
  * player's cards. #2796: Auspicious Rock costs its caster 2 and rolls a Jade into the hand, Spiritually
  * 中国 turns every one of the viewer's hand cards into one CN card and summons a CN Unit, and Harmony
- * Spirit sets every unit to 3/3.
+ * Spirit sets every unit to 3/3. #2798: iKwzki Duos with the player's first unit, Flash Freeze freezes
+ * every unit on both sides and Stratos Swarm fills the player's empty zones with Stratos (its first unit
+ * zone, a full board having none).
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -384,6 +391,26 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
     ]),
+  duoBond: (view, _instanceId, player) => {
+    const mine = unitsOf(player === view.viewer ? view.you : view.opponent)[0];
+    return mine === undefined ? [] : [{ type: "marked", instanceId: mine.instanceId, mark: DUO_MARK, color: DUO_MARK_COLOR, added: true }];
+  },
+  flashFreeze: (view) =>
+    [...unitsOf(view.you), ...unitsOf(view.opponent)].map((unit) => ({ type: "marked", instanceId: unit.instanceId, mark: FROZEN_MARK, color: FROZEN_MARK_COLOR, added: true })),
+  stratosSwarm: (view, _instanceId, player) => {
+    const side = player === view.viewer ? view.you : view.opponent;
+    const open = (row: "units" | "backrow", zones: readonly unknown[]): { row: "units" | "backrow"; lane: number }[] =>
+      zones.flatMap((zone, k) => (zone === null ? [{ row, lane: k + 1 }] : []));
+    const zones = [...open("units", side.units), ...open("backrow", side.backrow)];
+    return (zones.length === 0 ? [{ row: "units" as const, lane: 1 }] : zones).map(({ row, lane }) => ({
+      type: "summoned",
+      player,
+      instanceId: `fx-stratos-${row}-${String(lane)}`,
+      defId: STRATOS,
+      row,
+      lane,
+    }));
+  },
 };
 
 /**

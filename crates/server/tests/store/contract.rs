@@ -476,6 +476,7 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
+  public.practice_claim_counts,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
@@ -9534,10 +9535,11 @@ mod duos {
 mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
-    use jackioh_server::economy::practice::ClaimedResult;
+    use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
         CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
-        JloreGrant, PracticeClaim, PracticeOutcome, PracticeSeed, PracticeSettled, QuestGrant, TrackGrant,
+        JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled,
+        QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -10639,6 +10641,49 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
     }
 
+    /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
+    /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
+    /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
+    /// outcomes in byte order.
+    async fn practice_claims_count_once_per_bucket_and_utc_day(harness: &StoreHarness) {
+        let day = 86_400_000_i64;
+        assert_eq!(q!(harness, t => t.economy_practice_claim_counts()), Vec::new());
+        for bucket in ClaimBucket::ALL {
+            q!(harness, t => t.economy_practice_claim_count(*bucket, 10 * day));
+        }
+        q!(harness, t => t.economy_practice_claim_count(ClaimBucket::Paid, 11 * day - 1));
+        q!(harness, t => t.economy_practice_claim_count(ClaimBucket::Refused(ClaimRefusal::Expired), 11 * day));
+        {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.economy_practice_claim_count(ClaimBucket::Paid, 10 * day)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the count: {error}", harness.name));
+            // Dropped without a commit: the rollback.
+        }
+        let row = |day: &str, outcome: &str, count: i64| PracticeClaimCount {
+            day: day.to_string(),
+            outcome: outcome.to_string(),
+            count,
+        };
+        assert_eq!(
+            q!(harness, t => t.economy_practice_claim_counts()),
+            vec![
+                row("1970-01-11", "already_claimed", 1),
+                row("1970-01-11", "does_not_fold", 1),
+                row("1970-01-11", "economy_off", 1),
+                row("1970-01-11", "expired", 1),
+                row("1970-01-11", "not_finished", 1),
+                row("1970-01-11", "paid", 2),
+                row("1970-01-11", "result_mismatch", 1),
+                row("1970-01-11", "unknown_seed", 1),
+                row("1970-01-11", "voided", 1),
+                row("1970-01-12", "expired", 1),
+            ],
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10659,6 +10704,7 @@ mod economy {
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
+        practice_claims_count_once_per_bucket_and_utc_day,
     );
 }
 

@@ -190,6 +190,11 @@
   --fx-splat-color: var(--fx-loss);
 }
 
+/* Issue #2790: Armor's splat of the amount it took whole (R1361): grey steel, not a wound. */
+.fx-splat[data-tone="absorb"] {
+  --fx-splat-color: var(--fx-steel);
+}
+
 .fx-splat[data-tone="loss"]::before {
   /* Health loss (no damage source) is a seven-point void star. */
   clip-path: polygon(

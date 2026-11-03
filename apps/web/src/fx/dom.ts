@@ -5,7 +5,7 @@
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint, SetPieceShape } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -163,7 +163,7 @@ function rollItems(doc: Document, el: HTMLElement, cue: FxRollCue): void {
   el.appendChild(tray);
 }
 
-function signedAmount(tone: "damage" | "heal" | "loss", amount: number): string {
+function signedAmount(tone: FxSplatTone, amount: number): string {
   return tone === "heal" ? `+${amount}` : `-${amount}`;
 }
 

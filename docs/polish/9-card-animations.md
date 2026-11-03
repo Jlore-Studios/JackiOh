@@ -43,6 +43,16 @@ number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: ea
 out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
 phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
 
+Stinkyscape's pass, part two (#2798), adds three more, in `fx/cards/stinkyscape/` on the same shared
+spec (`fx/cards/core/flourish.ts`); the two mark flourishes draw in the colors of the mark the engine
+sends (`stinkyscape/markLook.ts`), as its brand row does:
+
+| Card | Recipe | Why bespoke |
+|---|---|---|
+| #110 iKwzki | `duoBond` | its Duo is a bond between two cards and no motif reads `marked`: a beam from iKwzki (its caster's hero when it is off the board) to the permanent it Duos with, Radiant rays there, in the Duo mark's gold |
+| #146 Flash Freeze | `flashFreeze` | it freezes the whole board in one breath and no motif reads `marked`: at its first freeze a frost wave across both sides lane by lane into one ring over the board, a sheen and a burst on each Unit frozen, in the freeze mark's cyan |
+| #158 Stratos Swarm | `stratosSwarm` | conjure's circle lands one Unit, where the Swarm fills the board: each Stratos streaking in on a `Tech/rocket` trail from its caster's hero to the zone it fills, one shake a play |
+
 ## The motifs
 
 A motif is a pure planner, `(spec, entry, view, env) => FxCue[]`, built from the cue kinds the effects
@@ -268,6 +278,15 @@ A set's pass (#2782's parts, Core's #2793 the first) fills its table from `cargo
 A motif joins the vocabulary when three or more of a set's cards show an event no motif reads; a
 card no motif can say takes a recipe of its own (Tiers, above).
 
+Stinkyscape's two parts each hold their own file to the pass: part two's are `stinkyscape-2.test.ts`
+and `stinkyscape-2.md` (#2798), over `stinkyscape-091` to the end with the set's tokens. The
+Starship's own moments (the fuse, the launch, Launch Sequencer, #130 Jlockeed's Starship Retrofitting
+Program and the Launchers #140 to #143) are #2782's Starship part: a card whose only hook is one of
+them is `"none: Starship part"`, the one `none` a Spell of the pass may wear, and a Starship Piece's
+other hooks take their entries in the pass. Part two adds no motif: every event it shows on three or
+more of its cards is read already (`send`, `mend`), and the two cards whose `marked` is the moment
+take recipes.
+
 ### Dispatch
 
 `planFx` asks `planCardMotif` first, for every entry. It reads the play resolving now
@@ -449,6 +468,10 @@ No `negate` example: every counter in the catalog is a Trap, whose firing opens 
 - #2782's full text, with its 27 motif names and section 4's table layout, is not in the
   repository. A person pastes it here, and the names not listed above join `FX_MOTIF_NAMES`
   (`fx/motifs/names.ts`), so a table may name them before their parts draw them.
+- `cargo jackioh fx census` suggests only #2784's damage and removal motifs, `rise` and `offering`:
+  its `FAMILY_EVENTS` and `FAMILY_MOTIFS` (`crates/tools/src/fx_census.rs`) know none of #2786's
+  other motifs nor #2793's, so a pass maps the events it counts through the Reads column above, with
+  a reason per override (`core.md`, `stinkyscape-2.md`).
 - `cargo jackioh fx census` (`crates/tools/README.md`) suggests a motif per card and hook from recorded games. It also suggests `rise` (a unit back from a graveyard) and `offering` (own units paid as a cost), #2782's names, which are not yet in this doc's table or `FX_MOTIF_NAMES`.
 - The census's `FAMILY_MOTIFS` knows only damage, removal, return and cost, so for a draw, a buff, a
   summon, a card dealt or a modifier it says `none: no motif reads …`; a set pass maps that event to
