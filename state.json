@@ -16133,6 +16133,7 @@
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 6,
       "started_at": "2026-11-03T08:23:51Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -29871,7 +29872,7 @@
         "tries": 2
       }
     ],
-    "count": 5
+    "count": 6
   },
   "statistics": {
     "at": "2026-11-03T09:27:09Z"
