@@ -1,3 +1,6 @@
 at,github_slots_used,aws_slots_used,plan_lanes_used,queued_plan_medium,queued_plan_hard,queued_plan_unrated,queued_build_medium,queued_build_hard,queued_build_unrated,queued_revise_medium,queued_revise_hard,queued_revise_unrated,queued_review_medium,queued_review_hard,queued_review_unrated,oldest_wait_min,github_slots,aws_slots,plan_lanes,queued,held_for_owner
 2026-11-03T05:30:08Z,8,6,3,0,5,0,1,0,0,0,0,0,0,0,0,1466,8,6,6,6,0
 2026-11-03T06:12:35Z,8,6,4,0,0,0,1,3,0,0,0,0,0,0,0,1508.6,8,6,6,4,0
+2026-11-03T06:25:32Z,8,6,2,0,0,0,1,3,0,0,0,0,0,0,0,1521.4,8,6,6,4,0
+2026-11-03T06:37:25Z,8,6,1,0,1,0,0,3,0,0,0,0,0,0,0,1533,8,6,6,4,0
+2026-11-03T06:52:59Z,8,6,1,0,0,0,0,4,0,0,0,0,0,0,0,1548.5,8,6,6,4,0
