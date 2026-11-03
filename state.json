@@ -14902,6 +14902,13 @@
     "2881": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T04:05:16Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy line 2 fails (server + web + spec, ~30 files) and line 3 fails (spec change); 'design across crates' is hard per the rule, which I apply rather than guessing scope down."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
