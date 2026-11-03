@@ -376,14 +376,14 @@ func TestUsage_ARunsReadingsReachTheReadingsFileThroughDeliverAndTheLoopsFlush(t
 
 // ------------------------------------------------------------------ the loop
 
-// The loop's first flush starts the branch, an orphan holding the no-deploy files, and pushes it.
-func TestUsage_TheBranchIsCreatedWithItsNoDeployFiles(t *testing.T) {
+// The loop's first flush starts the branch, an orphan with an empty first commit, and pushes it.
+func TestUsage_TheBranchIsCreatedAsAnOrphan(t *testing.T) {
 	w := newUsageWorld(t)
-	assertEqual(t, w.show("vercel.json"), "")
+	assertEqual(t, w.show("usage/ticks-2026-11.csv"), "")
 	w.tick()
 	assertEqual(t, w.rec.Problem, "")
 	assertIn(t, "`bot-usage` is not there yet: its first push makes it", strings.Join(w.logs, "\n"))
-	assertEqual(t, w.show("vercel.json")+"\n", config.NoDeploy["vercel.json"])
+	assertEqual(t, w.show("vercel.json"), "")
 	first := fakes.Git(w.origin, "rev-list", "--max-parents=0", "bot-usage")
 	assertEqual(t, fakes.Git(w.origin, "log", "-1", "--format=%s", first), "usage: start [skip ci]")
 	_, failed := herr.Catch[*fakes.PyError](func() { fakes.Git(w.origin, "merge-base", "main", "bot-usage") })
@@ -776,7 +776,7 @@ func TestUsage_TheNightBotRecordsOnItsOwnBranch(t *testing.T) {
 	w.ctx = testsupport.MakeCtx(w.gh, testsupport.Ctx{Cfg: off, At: usageAt})
 	w.tick()
 	assertEqual(t, w.rec.Root(), "")
-	assertEqual(t, w.show("vercel.json"), "")
+	assertEqual(t, w.show("usage/ticks-2026-11.csv"), "")
 	assertFalse(t, slices.ContainsFunc(w.logs, func(l string) bool { return strings.Contains(l, "usage:") }))
 }
 

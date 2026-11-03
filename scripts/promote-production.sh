@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
-# Moves production, by hand only. A person comments `/promote` on the one issue labeled RELEASE_LABEL
-# (or runs promote-production.yml from the Actions tab); this script opens a pull request of a commit
-# of main into production; the daily super run (super.yml) tests that pull request; and the pull
-# request merges once every one of its jobs passed. Nothing else moves production: no clock, no
-# green run on main. The workflow's `deploy` job then puts what production holds on jackioh.com, the
-# site and its game server together (wrangler.jsonc). #2750 asked for the super run's gate; the owner
-# made production manual on 2026-11-02. docs/deploy-cloudflare.md is the plan and the runbook, and
-# apps/web/src/net/promote-production.test.ts holds this in place, against a throwaway repository and
-# a stand-in for `gh`.
+# Moves production, once a day by itself and whenever someone asks, never past a red super run.
+#
+# The daily promotion. Every day super.yml runs on main (its `schedule`). When a run on main passes
+# every job, the commit it tested goes to production: this script opens a pull request of it into
+# production and merges it at once, since the run that gates production already passed on exactly
+# that commit, and the workflow's `deploy` job then puts it on jackioh.com, the site and its game
+# server together (wrangler.jsonc). Each such run is acted on once (the issue's `daily`). A red run
+# on main is the night bot's to fix (super.yml's `report`, `priority:high`), and production waits
+# for the next run that passes; a promotion or a deploy that fails is Squishy's (promote-production.yml's
+# `report`). The owners asked for it on 2026-11-03, after a day of production by hand only (#2750).
+#
+# By hand, sooner. A person comments `/promote` on the one issue labeled RELEASE_LABEL (or runs
+# promote-production.yml from the Actions tab); this opens a pull request of a commit of main into
+# production, super.yml runs on that pull request, and it merges once every one of its jobs passed.
+# docs/deploy-cloudflare.md is the plan and the runbook, and apps/web/src/net/promote-production.test.ts
+# holds this in place, against a throwaway repository and a stand-in for `gh`.
 #
 # Staging is not this script's: deploy-staging.yml deploys every commit of main whose push-to-main CI
 # passed, by itself, and nothing here holds or hurries it.
@@ -15,7 +22,8 @@
 # The production issue. One issue labeled RELEASE_LABEL stays open for good. Its title says where
 # production stands (everything live, commits waiting, or a candidate under test or red); its body
 # lists what main has that is not live yet (the queue) and the commands. Its first line is a hidden
-# state line: the last comment read (`last`) and the last red super run it reported (`reported`).
+# state line: the last comment read (`last`), the last red super run it reported (`reported`) and
+# the last passing super run on main it promoted from (`daily`).
 # Anyone with write access comments on it:
 #   /promote [sha]         opens the promotion pull request: main's newest commit whose push-to-main
 #                          CI passed, or that commit of main. `/fast-forward` says the same.
@@ -23,9 +31,9 @@
 #                          green commit, at once, without the super run. The reason is required; the
 #                          issue and the pull request record who, why and which commit.
 #   /cancel                closes the open promotion pull request; nothing merges.
-# `/hold`, `/resume` and `/delay`, from when production merged by itself once a day, are answered
-# that production moves only on `/promote` now. Each command gets a +1 reaction, or a confused one
-# when it was refused, and a reply saying what came of it.
+# `/hold`, `/resume` and `/delay`, from the countdown before 2026-11-02, are answered that there is
+# nothing to hold: production follows the super run. Each command gets a +1 reaction, or a confused
+# one when it was refused, and a reply saying what came of it.
 #
 # The promotion pull request. The candidate is pushed as promote/<date>-<sha> and a pull request into
 # production opened. super.yml runs on every pull request into production; its `report` job hands a
@@ -33,7 +41,9 @@
 # one as superseded. Every run of this script then reconciles: when the open pull request's newest
 # super run on its head commit passed, it merges it with a merge commit; when that run failed, it says
 # so on the issue, once a run attempt. The pull request stays open after a failure, so re-running the
-# run's failed jobs merges it once they pass. Because production only ever receives merges of main
+# run's failed jobs merges it once they pass, and the next daily promotion of a newer commit
+# supersedes it. The daily promotion's own pull request is opened with GH_TOKEN, which starts no
+# workflow, so super does not run on it a second time. Because production only ever receives merges of main
 # commits, its files always equal the candidate's; a production that carries anything else (someone
 # committed to it) stops the run before anything is opened, and so does a merge that leaves production
 # different from the candidate. Nothing is ever force-pushed. If production does not exist, only
@@ -41,16 +51,17 @@
 #
 # What runs it (EVENT is github.event_name):
 #   issue_comment       a command on the production issue.
-#   workflow_run        a finished super run on a promotion pull request, which is when one merges, or
-#                       a green CI run on main, which only brings the queue up to date. Either
-#                       reconciles, so a wake-up that GitHub's concurrency group dropped (it keeps one
-#                       waiting run, not all) is made up by the next.
+#   workflow_run        a passing super run on main, which is the daily promotion; a finished super run
+#                       on a promotion pull request, which is when one merges; or a green CI run on
+#                       main, which brings the queue up to date. Every run of any kind does the daily
+#                       promotion and reconciles, so a wake-up that GitHub's concurrency group dropped
+#                       (it keeps one waiting run, not all) is made up by the next.
 #   workflow_dispatch   by hand: `/promote` for INPUT_SHA, or the newest green commit; with
 #                       INPUT_SKIP_REASON, `/skip-super` for it, recorded as ACTOR's.
 #
 # When production moves it writes `promoted=true` to GITHUB_OUTPUT, which is what starts the
-# workflow's `deploy` job (GitHub Actions builds production, the bundle and the server's image, and
-# deploys both with wrangler; Cloudflare builds nothing).
+# workflow's `deploy` job (GitHub Actions builds production's bundle and deploys it and the server's
+# image with wrangler; Cloudflare builds nothing).
 #
 # It talks to GitHub through `gh` and to git through the checkout's own credentials: the workflow
 # checks out main with its whole history. Two tokens. What moves production (the push of the promote
@@ -62,7 +73,8 @@
 # It is also why super.yml runs on the pull request at all: a pull request the Actions token opens
 # starts no workflow. Everything else (the issue, its comments, reactions and the label, and reading
 # pull requests and runs) stays on GH_TOKEN, the Actions token, whose writes start no workflow, so the
-# night bot never sees the issue. The bot's pull request starts no loop: CI and super run on it as on
+# night bot never sees the issue; so does the daily promotion's pull request, which super already
+# passed on, so that it starts no second super run. The bot's pull request starts no loop: CI and super run on it as on
 # any pull request into production, and neither starts this script except through workflow_run, which
 # only reconciles; the push of a promote branch or of production starts nothing (every workflow's
 # `push` names branches); and the bot's harness ignores its own events.
@@ -86,6 +98,8 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 # red run on one opens for the night bot (super.yml's CANDIDATE_TITLE).
 : "${SUPER_WORKFLOW:=super.yml}"
 : "${SUPER_TITLE:=CI: super run failed on a production candidate}"
+# The branch whose passing super runs production follows (the daily promotion).
+: "${MAIN_BRANCH:=main}"
 : "${LISTED_COMMITS:=100}"
 : "${MERGE_ATTEMPTS:=4}"
 : "${MERGE_RETRY_SECONDS:=5}"
@@ -181,8 +195,10 @@ pending() {
 
 # Opens the promotion pull request for commit CAND of main. Sets RESULT to opened, testing (one is
 # open for it already), uptodate, waiting or noproduction, and PR_NUMBER, BRANCH, COUNT and CATALOG.
+# With TESTED set (the link of a super run on main that passed on CAND), it is the daily promotion's:
+# opened with GH_TOKEN, whose pull request starts no workflow, since super already passed on CAND.
 open_candidate() {
-  local cand=$CAND current p num head sha body url
+  local cand=$CAND current p num head sha body url opener=promoter
   PR_NUMBER='' BRANCH='' COUNT=0 CATALOG=$(catalog "$cand")
   if ! has_production; then RESULT=noproduction; return 0; fi
   current=$(git rev-parse origin/production)
@@ -213,7 +229,11 @@ open_candidate() {
   {
     echo "Promotes \`main\` up to \`${cand:0:12}\` into \`production\`, which is what players are served: the site and its server, together."
     echo
-    echo "The daily super run (\`super.yml\`) tests this pull request. It merges once every job passes, and \`promote-production.yml\` then deploys it. A red run hands its fix to the night bot (\`priority:high\`); this stays open, and re-running the failed jobs merges it once they pass."
+    if [ -n "${TESTED:-}" ]; then
+      echo "The daily promotion: the super run on \`main\` passed every job on this commit ($TESTED), so this merges at once, with no second super run, and \`promote-production.yml\` then deploys it."
+    else
+      echo "The daily super run (\`super.yml\`) tests this pull request. It merges once every job passes, and \`promote-production.yml\` then deploys it. A red run hands its fix to the night bot (\`priority:high\`); this stays open, and re-running the failed jobs merges it once they pass."
+    fi
     echo
     echo "- Commit of main: \`${cand:0:12}\`"
     echo "- Catalog: $CATALOG"
@@ -230,7 +250,8 @@ open_candidate() {
 
   ensure_label
   push_ref "$cand:refs/heads/$BRANCH"
-  url=$(try promoter pr create --base production --head "$BRANCH" --label "$RELEASE_LABEL" \
+  [ -z "${TESTED:-}" ] || opener=gh
+  url=$(try "$opener" pr create --base production --head "$BRANCH" --label "$RELEASE_LABEL" \
     --label "$HUMAN_LABEL" --assignee "$ASSIGNEES" \
     --title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}" --body-file "$body")
   rm -f "$body"
@@ -295,6 +316,50 @@ skip_super() {
   fi
   try gh pr comment "$num" --body "@$who merges this without the super run, the emergency way (\`/skip-super\`): $reason"
   merge_pr "$num" "$head" "$CAND"
+}
+
+# --- the daily promotion --------------------------------------------------------------------------
+
+# The newest super run on MAIN_BRANCH that passed every job, as "id sha url", or nothing. A run on
+# a promotion pull request is on its promote/ branch, never main's.
+newest_main_pass() {
+  try gh run list --workflow "$SUPER_WORKFLOW" --branch "$MAIN_BRANCH" --status success --limit 1 \
+    --json databaseId,headSha,url --jq '.[0] // empty | "\(.databaseId) \(.headSha) \(.url)"'
+}
+
+# Promotes the commit the newest passing super run on main tested, once a run (`daily`): it opens
+# the promotion pull request without a second super run and merges it. An open promotion already
+# carrying the commit is merged when it is that commit and left to its own run when it is newer; one
+# of an older commit is superseded.
+daily_promotion() {
+  local line id sha url num head psha p
+  line=$(newest_main_pass)
+  [ -n "$line" ] || return 0
+  read -r id sha url <<<"$line"
+  [ "$id" -gt "${daily//-/0}" ] || return 0
+  daily=$id
+  WHY="the daily promotion"
+  if ! vet "$sha"; then
+    say "The super run on \`$MAIN_BRANCH\` passed on \`${sha:0:12}\` ([run]($url)), but it is not promoted: $WHY_NOT"
+    return 0
+  fi
+  p=$(pending)
+  if [ -n "$p" ]; then
+    read -r num head psha <<<"$p"
+    if [ "$psha" != "$CAND" ] && git merge-base --is-ancestor "$CAND" "$psha"; then
+      echo "#$num already carries ${CAND:0:12}; its own super run decides it."
+      return 0
+    fi
+  fi
+  TESTED="[run]($url)" open_candidate
+  case $RESULT in
+    opened | testing)
+      merge_pr "$PR_NUMBER" "$BRANCH" "$CAND"
+      say "Merged to production in #$PR_NUMBER, the daily promotion: the super run on \`$MAIN_BRANCH\` passed every job on \`${CAND:0:12}\` ([run]($url)). $COUNT commit(s), catalog $CATALOG; the deploy follows. $(run_link)"
+      ;;
+    waiting) daily=$((id - 1)) ;;
+    noproduction) say "The super run on \`$MAIN_BRANCH\` passed on \`${CAND:0:12}\` ([run]($url)), but \`production\` does not exist yet: \`/skip-super\` with a reason creates it." ;;
+  esac
 }
 
 # --- reconciling with the super run --------------------------------------------------------------
@@ -417,18 +482,18 @@ title_for() {
 }
 
 body_for() {
-  printf '<!-- promote-production last=%s reported=%s -->\n' "$last" "$reported"
+  printf '<!-- promote-production last=%s reported=%s daily=%s -->\n' "$last" "$reported" "$daily"
   case $STATUS in
     testing)
       printf '**Production:** #%s promotes `main` up to `%s`, and the super run is testing it%s. It merges and deploys once every job passes.\n' \
         "$PR_NUMBER" "${CAND:0:12}" "${SUPER_URL:+ ([run]($SUPER_URL))}"
       ;;
     failed)
-      printf '**Production:** the super run failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass, and `/promote` after the fix tests the newer commit instead.\n' \
+      printf '**Production:** the super run failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass, and the next daily super run on `main` that passes, or a `/promote` after the fix, takes the newer commit instead.\n' \
         "${CAND:0:12}" "$SUPER_URL" "$PR_NUMBER" "$SUPER_TITLE" "$PR_NUMBER"
       ;;
     *)
-      printf '**Production** moves only when someone comments `/promote` here: that opens a pull request into `production`, the daily super run tests it, and it merges and deploys once every job passes.\n'
+      printf '**Production** promotes itself once a day: when the daily super run on `main` passes every job, the commit it tested merges into `production` and deploys. A red run is the night bot'"'"'s to fix, and production waits for the next one that passes. `/promote` here goes sooner: the super run tests a pull request of `main`'"'"'s newest green commit, and it merges and deploys once every job passes.\n'
       ;;
   esac
   printf '\n**Staging** deploys every commit of `main` whose CI passed, by itself (`deploy-staging.yml`): nothing here holds it.\n'
@@ -441,28 +506,31 @@ Comment here. Only people with write access are heard; a command gets a 👍, or
 
 | Comment | Effect |
 | --- | --- |
-| `/promote` | Opens a pull request of `main`'s newest commit whose CI passed into `production`. The daily super run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
+| `/promote` | Sooner than the daily promotion: opens a pull request of `main`'s newest commit whose CI passed into `production`. The super run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
 | `/promote <sha>` | The same, for that commit of `main`. |
 | `/skip-super <reason>` | The emergency way: merges the open pull request, or `main`'s newest green commit, now, without the super run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
-A newer `/promote` closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled.
+A newer `/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled. A promotion or a deploy that fails opens "CI: production promotion failed" for Squishy (`promote-production.yml`'s `report`).
 
 This issue stays open for good. Plan: `docs/deploy-cloudflare.md`. Written by `scripts/promote-production.sh`; the first line is its state, so leave it be.
 TEXT
 }
 
 # Reads issue $1, or starts its state afresh when it has lost its state line. A line the countdown
-# wrote before 2026-11-02 (`due=… held=… last=…`) keeps its `last`.
+# wrote before 2026-11-02 (`due=… held=… last=…`) keeps its `last`, and one from before the daily
+# promotion (no `daily`) starts it at none: production already holding the commit a passing run
+# tested makes that run a no-op.
 load_issue() {
   local m info
   info=$(try gh issue view "$1" --json title,body)
   title=$(jq -r .title <<<"$info")
   body=$(jq -r .body <<<"$info" | tr -d '\r')
   m=$(grep -o 'promote-production [^>]*' <<<"$body" | head -n1 || true)
-  last=0 reported=-
+  last=0 reported=- daily=-
   if [[ $m =~ last=([0-9]+) ]]; then last=${BASH_REMATCH[1]}; else echo "#$1 has lost its state line; starting it afresh."; fi
   if [[ $m =~ reported=([0-9.]+) ]]; then reported=${BASH_REMATCH[1]}; fi
+  if [[ $m =~ daily=([0-9]+) ]]; then daily=${BASH_REMATCH[1]}; fi
 }
 save_issue() {
   local f want text
@@ -482,7 +550,7 @@ find_issue() {
   local issues n f url
   issues=$(open_issues)
   if [ -z "$issues" ]; then
-    last=0 reported=-
+    last=0 reported=- daily=-
     f=$(mktemp)
     body_for > "$f"
     ensure_label
@@ -573,7 +641,7 @@ apply_commands() {
         ;;
       *)
         react "$id" confused
-        say "Production no longer merges by itself, so there is nothing to hold, resume or delay: it moves only when someone comments \`/promote\`."
+        say "There is nothing to hold, resume or delay: production follows the super run, promoting itself when the daily run on \`$MAIN_BRANCH\` passes, or a \`/promote\` here once its own run passes. \`/cancel\` closes an open promotion pull request."
         continue
         ;;
     esac
@@ -607,7 +675,7 @@ dispatch() {
 
 case $EVENT in
   issue_comment | workflow_run | workflow_dispatch) ;;
-  *) fail "promote-production.sh does not handle the $EVENT event: production moves only on /promote." ;;
+  *) fail "promote-production.sh does not handle the $EVENT event: production follows a passing super run, by itself or on /promote." ;;
 esac
 
 QUEUE='' STATUS=idle WAITING=0 WHY='' RESULT='' PR_NUMBER='' BRANCH='' CAND='' SUPER_URL='' COUNT=0 CATALOG=''
@@ -616,6 +684,7 @@ case $EVENT in
   issue_comment) apply_commands ;;
   workflow_dispatch) dispatch ;;
 esac
+daily_promotion
 reconcile
 refresh_queue
 save_issue

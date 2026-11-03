@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -98,8 +97,7 @@ func (x *StateStore) Ensure() bool {
 	if x.GH.BranchSHA(x.Branch) != "" {
 		return false
 	}
-	x.GH.CreateOrphanBranch(x.Branch, x.Path, dump(DefaultState()), "state: start [skip ci]",
-		config.NoDeploy)
+	x.GH.CreateOrphanBranch(x.Branch, x.Path, dump(DefaultState()), "state: start [skip ci]", nil)
 	return true
 }
 
