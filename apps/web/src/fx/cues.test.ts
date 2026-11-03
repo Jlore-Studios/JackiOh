@@ -686,7 +686,8 @@ describe("B13 sourceAnchor and memory", () => {
         splat("damage", 5, heroT("opponent"), flight, 300),
       ],
     );
-    expectCues(plan([dmg("s42", ENEMY_2, 4, false)], 300, { prime: [played("p2", "s42", "core-070")] }), [
+    // #2793: a Spell whose table entry draws no motif on damage (Core #70 now bolts); Classic+'s pass keeps it so, or re-points this.
+    expectCues(plan([dmg("s42", ENEMY_2, 4, false)], 300, { prime: [played("p2", "s42", "classicplus-015")] }), [
       projectile("fire", heroT("opponent"), cardT(ENEMY_2), flight),
       burst("spark", cardT(ENEMY_2), "point", flight),
       splat("damage", 4, cardT(ENEMY_2), flight, 300),
@@ -1814,7 +1815,8 @@ describe("B21 the redacted stream only", () => {
     const primes: GameEvent[][] = [
       [],
       [played("p2", "hidden", "hidden"), { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 1 }],
-      [played("p1", "s1", "core-070"), played("p2", "s2", "core-071")],
+      // #2793: plays whose table entries are `none` (Core #71 now snaps on its cast).
+      [played("p1", "s1", "core-070"), played("p2", "s2", "core-020")],
     ];
     for (const event of HIDDEN_EVENTS) {
       const D = ANIMATIONS[event.type].durationMs;
@@ -2046,7 +2048,8 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
   });
 
   it("R200 a spell's lethal bolt flies again from the caster the drained entries remember", () => {
-    const entries = entriesOf([played("p2", "s9", "core-070"), dmg("s9", "hero-p1", 6, false)], 300);
+    // #2793: a Spell whose table entry draws no motif on damage (Core #70 now bolts); Classic+'s pass keeps it so, or re-points this.
+    const entries = entriesOf([played("p2", "s9", "classicplus-015"), dmg("s9", "hero-p1", 6, false)], 300);
     const env = envOf();
     for (const entry of entries) env.memory.remember(entry.events);
     const lethal = planLethal(entries, finished("p2"), env);
