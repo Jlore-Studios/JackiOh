@@ -15486,12 +15486,14 @@
         "by": "`claude` (strong)",
         "sha": "54c12b84d503a73fd9bf28847f89cea6c677aa88"
       },
+      "closed_at": "2026-11-03T07:04:36Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T03:57:19Z",
       "issue": 2883,
       "kind": "revise",
       "merge_owner": "claude-4",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
