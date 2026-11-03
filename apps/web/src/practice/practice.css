@@ -1,5 +1,5 @@
-/* The practice route's own chrome: the setup screen, the loading and failure screens, the HUD
-   above the board, the think indicator, the result dialog and "Leave this game?". The board itself
+/* The practice route's own chrome: the setup screen, the loading and failure screens, the lesson
+   HUD above the board, the think indicator, the result dialog and "Leave this game?". The board itself
    is Game.tsx, unchanged, laid out and drawn by board.css and the card faces exactly as in hotseat
    and online play; this file only gives it the screen's height (see "the game screen").
 
@@ -651,6 +651,177 @@
   }
 }
 
+/* ---- the HUD above the board (lessons only) ------------------------------------------------- */
+
+/* A practice game renders no `.practice-hud` element: nothing but gameplay is drawn above the
+   board (#2878). The block below styles the lesson HUD. `TutorialHud` reuses the `practice-hud`
+   classes so a lesson's board is laid out exactly as in a practice game, and this route's
+   stylesheet is what provides them (`TutorialHud` imports only `tutorial/tutorial.css`, which
+   carries no base HUD layout). */
+
+/* The HUD sticks to the top of the viewport (below), so anything scrolled into view — by the
+   player's own scroll, a focus move or a test runner — lands below it rather than under it. */
+:root:has(.practice--game) {
+  scroll-padding-top: 64px;
+}
+
+/* Stuck, it floats `--hud-inset` below the viewport's edge, and its first shadow is a band of the
+   page's color filling that gap, so the board never shows through above it. */
+.practice-hud {
+  --tier: var(--legal);
+  --hud-inset: 6px;
+  --hud-band: 0 calc(-2 * var(--hud-inset)) 0 var(--hud-inset) var(--bg);
+  position: sticky;
+  top: var(--hud-inset);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px 14px;
+  min-height: 48px;
+  padding: 6px 8px 6px 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tier) 28%, var(--line));
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-raised) 94%, transparent),
+    color-mix(in srgb, var(--bg) 90%, transparent)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 4%),
+    0 10px 22px -14px rgb(0 0 0 / 90%),
+    var(--hud-band);
+  color: var(--text-dim);
+  backdrop-filter: blur(8px);
+  transition:
+    border-color calc(200ms * var(--anim-scale, 1)),
+    box-shadow calc(200ms * var(--anim-scale, 1));
+}
+
+.practice-hud[data-thinking="true"] {
+  border-color: color-mix(in srgb, var(--opponent) 60%, var(--line));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 4%),
+    0 10px 22px -14px rgb(0 0 0 / 90%),
+    0 0 22px -8px color-mix(in srgb, var(--opponent) 70%, transparent),
+    var(--hud-band);
+}
+
+/* While the AI thinks, a light runs along the HUD's lower edge. */
+.practice-hud::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--opponent), transparent);
+  opacity: 0;
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+
+.practice-hud[data-thinking="true"]::after {
+  opacity: 1;
+  animation: practice-scan calc(1.4s * var(--anim-scale, 1)) linear infinite;
+}
+
+@keyframes practice-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+
+.practice-hud__tier {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.practice-hud__label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.practice-hud__mode {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.practice-hud__label strong {
+  color: color-mix(in srgb, var(--tier) 75%, var(--text));
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.practice-hud__seat {
+  flex: none;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.practice-hud__status {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 32px;
+}
+
+.practice .practice-hud__new,
+.practice .practice-hud__menu {
+  flex: none;
+  min-height: 44px;
+  padding: 6px 14px;
+  border-color: var(--line-bright);
+  background: transparent;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.practice .practice-hud__menu {
+  min-width: 44px;
+  color: var(--text-dim);
+}
+
+.practice .practice-hud__outcome {
+  min-height: 32px;
+  padding: 4px 16px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.practice .practice-hud__outcome[data-outcome="win"] {
+  border-color: var(--radiant);
+  background: color-mix(in srgb, var(--radiant) 16%, var(--bg-sunken));
+  color: var(--radiant);
+}
+
+.practice .practice-hud__outcome[data-outcome="loss"] {
+  border-color: var(--opponent);
+  background: color-mix(in srgb, var(--opponent) 16%, var(--bg-sunken));
+  color: color-mix(in srgb, var(--opponent) 55%, var(--text));
+}
+
 /* ---- the think indicator ------------------------------------------------------------------ */
 
 .practice-thinking {
@@ -1073,6 +1244,7 @@
   .practice-thinking,
   .practice-thinking__orb::before,
   .practice-thinking__core,
+  .practice-hud[data-thinking="true"]::after,
   .practice-shuffle span,
   .practice-result-scrim,
   .practice-result,
@@ -1080,6 +1252,13 @@
   .practice-leave-scrim,
   .practice-leave {
     animation: none;
+  }
+
+  .practice-hud[data-thinking="true"]::after {
+    left: 0;
+    width: 100%;
+    opacity: 0.6;
+    transform: none;
   }
 }
 
@@ -1314,6 +1493,29 @@
 }
 
 @media (max-width: 560px) {
+  .practice-hud {
+    gap: 8px;
+    padding: 5px 6px 5px 10px;
+  }
+
+  .practice-hud__mode,
+  .practice-hud__seat {
+    display: none;
+  }
+
+  .practice .practice-hud__new,
+  .practice .practice-hud__menu {
+    padding: 6px 10px;
+  }
+
+  /* The status slot is what is left between the tier and the buttons, and "AI is thinking…" does
+     not fit it: the pill ran over "Medium" and New game. Here it is the orb alone, and the words
+     stay for a screen reader (the pill is the live region). The slot clips, so nothing in it can
+     ever cover the tier label or a button. */
+  .practice-hud__status {
+    overflow: hidden;
+  }
+
   /* In the control bar's status row room is short: "AI is thinking…" is the orb alone, and the
      words stay for a screen reader (the pill is the live region). */
   .practice-thinking {
@@ -1376,6 +1578,14 @@
   }
 }
 
+/* A landscape phone gives the table every pixel of height the HUD can spare. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .practice-hud {
+    min-height: 0;
+    padding: 2px 4px 2px 10px;
+  }
+}
+
 /* ---- the game screen: exactly one screen tall ------------------------------------------------ */
 
 /* The board is board.css's (polish task 7) and its cards are the card faces (task 6), the same as
@@ -1392,6 +1602,10 @@
   gap: 0;
   padding-top: env(safe-area-inset-top);
   overflow: hidden;
+}
+
+.practice--game > .practice-hud {
+  flex: 0 0 auto;
 }
 
 .practice-table {
@@ -1483,8 +1697,10 @@
   }
 }
 
-/* Touch sizing (task 7's 44 px floor): the "won't earn" line's Dismiss and the result's "View the board". */
+/* Touch sizing (task 7's 44 px floor): the HUD's outcome chip, the "won't earn" line's Dismiss and
+   the result's "View the board". */
 @media (max-width: 1024px), (pointer: coarse) {
+  .practice .practice-hud__outcome,
   .practice-table .practice-unearned button,
   .app-shell.practice .practice-result__view {
     min-height: 44px;
