@@ -110,7 +110,8 @@ describe("R2875002 the landing's news bookmark", () => {
     expect(await screen.findByTestId(landingTestid.newsCount, undefined, SLOW)).toHaveTextContent("2");
     const bookmark = screen.getByTestId(landingTestid.newsBookmark);
     expect(bookmark.tagName).toBe("BUTTON");
-    expect(bookmark).toHaveAccessibleName("News");
+    // WCAG 2.5.3 (spec 38): the name holds the count the bubble shows.
+    expect(bookmark).toHaveAccessibleName("News, 2 to claim");
     expect(bookmark).toHaveAttribute("aria-expanded", "false");
     const panel = screen.getByTestId(landingTestid.newsPanel);
     expect(bookmark.getAttribute("aria-controls")).toBe(panel.getAttribute("id"));
@@ -143,6 +144,7 @@ describe("R2875002 the landing's news bookmark", () => {
 
     const bookmark = await screen.findByTestId(landingTestid.newsBookmark, undefined, SLOW);
     expect(screen.queryByTestId(landingTestid.newsCount)).toBeNull();
+    expect(bookmark).toHaveAccessibleName("News");
 
     // Open, each entry still reads, Claimed and nothing to press.
     fireEvent.click(bookmark);
@@ -197,6 +199,7 @@ describe("R2875002 the landing's news bookmark", () => {
     await waitFor(() => {
       expect(screen.getByTestId(landingTestid.newsCount)).toHaveTextContent("1");
     }, SLOW);
+    expect(screen.getByTestId(landingTestid.newsBookmark)).toHaveAccessibleName("News, 1 to claim");
     const [first, second] = screen.getAllByTestId(newsTestid.entry);
     expect(within(must(first, "the patch")).getByTestId(newsTestid.claimed)).toHaveTextContent("Claimed");
     expect(within(must(second, "the alert")).getByRole("button", { name: "Claim Card token" })).toBeEnabled();
