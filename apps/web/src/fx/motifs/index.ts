@@ -5,10 +5,10 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import type { AnimationEntry } from "../../game/animations.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
-import { bind, conjure, mirror, offering, rise, shift, tether, transmute } from "./board.ts";
+import { bind, conjure, hex, mirror, offering, rise, shift, tether, transmute } from "./board.ts";
 import { readEvents, type MotifPlanner, type MotifSpec } from "./build.ts";
 import { barrage, bolt, chain, lance, nova, scorch, volley } from "./damage.ts";
-import { flight, glimpse, mana, tally, tithe } from "./hand.ts";
+import { flight, forge, glimpse, mana, tally, tithe } from "./hand.ts";
 import { bless, curse, drain, ward } from "./life.ts";
 import type { DrawnMotif } from "./names.ts";
 import { negate, vanish, wipe } from "./removal.ts";
@@ -44,6 +44,8 @@ export const MOTIF_PLANNERS: { readonly [M in DrawnMotif]: MotifPlanner } = {
   tithe,
   tally,
   snap,
+  forge,
+  hex,
 };
 
 export function planMotif(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {

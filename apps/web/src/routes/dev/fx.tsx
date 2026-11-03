@@ -3,21 +3,23 @@
 // palette or sub-look at any gallery scale, through a director of its own as the stat showcase's, and
 // any card's table entry as that card's play through the real board's effects layer, or as the fixture
 // set piece (R2785000), its play holding the board for the set piece's beat until a tap, a click or
-// Space. Dev only: chunks.tsx loads it behind DEV_ONLY, so a production build leaves it out and serves
-// a 404 here, as at `/dev/hotseat`.
+// Space. R2797000: a card whose entry names a motif only on a Death, a trigger or an Activate plays as
+// that hook from its marker, and a card recipe over the fixture of its play. Dev only: chunks.tsx loads
+// it behind DEV_ONLY, so a production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
 
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import { boardShakeSink, resolveAnchor } from "../../fx/anchors.ts";
+import { CARD_RECIPE_FIXTURES, isCardRecipeKey } from "../../fx/cards/bespoke.ts";
 import { FX_CARD_TABLE } from "../../fx/cards/tables.ts";
 import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
 import { cardFixtureEvents, galleryCues, galleryPlayId, gallerySetPiece } from "../../fx/motifs/gallery.ts";
-import { FX_DRAWN_MOTIFS, isDrawnMotif, type DrawnMotif } from "../../fx/motifs/names.ts";
+import { FX_DRAWN_MOTIFS, isDrawnMotif, type DrawnMotif, type FxCardHook } from "../../fx/motifs/names.ts";
 import { useFxSettings } from "../../fx/settings.ts";
 import { createSurface } from "../../fx/surface.ts";
 import { reducedMotionNow } from "../../game/animations.ts";
@@ -38,12 +40,27 @@ export const fxGalleryTestid = {
   playSetPiece: "fx-gallery-play-set-piece",
 } as const;
 
-/** Every card whose table entry names a drawn motif on its play, with that motif. */
-export function galleryCards(): { defId: string; name: string; motif: DrawnMotif }[] {
+/** R2797000: the hook the gallery plays a card's entry on: the first of these that names a drawn motif. */
+const GALLERY_HOOKS: readonly FxCardHook[] = ["cast", "cry", "trigger", "activate", "death"];
+
+/**
+ * Every card whose table entry names a drawn motif on a hook, with that motif and the hook it plays on
+ * (its play's `cast` or `cry` first), and R2797000 every card recipe with a fixture
+ * (`CARD_RECIPE_FIXTURES`), played over that fixture.
+ */
+export function galleryCards(): { defId: string; name: string; motif: DrawnMotif; hook: FxCardHook }[] {
   return [...FX_CARD_TABLE].flatMap(([defId, entry]) => {
+    const name = CATALOG[defId]?.name ?? defId;
+    if (entry.kind === "bespoke") {
+      const motif = isCardRecipeKey(entry.key) ? CARD_RECIPE_FIXTURES[entry.key] : undefined;
+      return motif === undefined ? [] : [{ defId, name, motif, hook: "cast" as const }];
+    }
     if (entry.kind !== "hooks") return [];
-    const motif = (entry.hooks.cast ?? entry.hooks.cry)?.motif;
-    return motif !== undefined && isDrawnMotif(motif) ? [{ defId, name: CATALOG[defId]?.name ?? defId, motif }] : [];
+    for (const hook of GALLERY_HOOKS) {
+      const motif = entry.hooks[hook]?.motif;
+      if (motif !== undefined && isDrawnMotif(motif)) return [{ defId, name, motif, hook }];
+    }
+    return [];
   });
 }
 
@@ -116,7 +133,7 @@ export default function FxGallery(): ReactElement {
     if (card === undefined) return;
     plays.current += 1;
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
-    setShown(withEvents(base, cardFixtureEvents(card.defId, card.motif, base, plays.current)));
+    setShown(withEvents(base, cardFixtureEvents(card.defId, card.motif, base, plays.current, card.hook)));
   };
 
   return (

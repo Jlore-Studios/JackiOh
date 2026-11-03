@@ -9,7 +9,7 @@ import { paletteLook, type FxPalette } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
 import type { FxCue } from "../types.ts";
 import { planMotif } from "./index.ts";
-import type { DrawnMotif } from "./names.ts";
+import type { DrawnMotif, FxCardHook } from "./names.ts";
 
 /** The instance id the gallery's card plays under; the n-th play takes `-n` after it, so each is new to the board. */
 export const GALLERY_CARD_ID = "fx-gallery-card";
@@ -48,8 +48,8 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
  * enemy unit, conjure and rise summon a token, offering sinks the viewer's first unit as a cost, shift
  * swaps the board, bind locks an enemy zone, tether takes the first enemy unit, mirror and transmute
  * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
- * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter
- * and snap fires a hidden trap.
+ * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter,
+ * snap fires a hidden trap, forge adds a card to `player`'s hand and hex freezes the first enemy unit.
  */
 export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: string | null, player: PlayerId): GameEvent[] {
   const enemy = player === view.viewer ? view.opponent : view.you;
@@ -160,6 +160,12 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
     }
     case "snap":
       return [{ type: "trapFired", instanceId: "hidden", defId: "hidden", controller: enemy.player, row: "backrow", lane: 4 }];
+    case "forge":
+      return [{ type: "addedToHand", player, instanceId: "fx-forged", defId: "core-055" }];
+    case "hex": {
+      const foe = foes[0];
+      return foe === undefined ? [] : [{ type: "marked", instanceId: foe.instanceId, mark: "frozen", color: "cyan", added: true }];
+    }
   }
 }
 
@@ -183,10 +189,20 @@ export function galleryCues(motif: DrawnMotif, palette: FxPalette, scale: number
   return planMotif(spec, entry, view, { intensity, card: () => undefined, memory: createFxMemory() });
 }
 
-/** A card's table entry played out: the viewer plays it, its motif's fixture resolves under it, and it resolves. */
-export function cardFixtureEvents(defId: string, motif: DrawnMotif, view: PlayerView, n = 0): GameEvent[] {
+/** R2797000: the marker each hook the gallery plays opens its entry with (a Whenever stands for every trigger). */
+const GALLERY_HOOK_KINDS = { death: "death", trigger: "whenever", activate: "activate" } as const;
+
+/**
+ * A card's table entry played out: the viewer plays it, its motif's fixture resolves under it, and it
+ * resolves. R2797000: a `death`, `trigger` or `activate` hook runs from its own marker instead, as the
+ * engine marks it (R2783000), with no play around it.
+ */
+export function cardFixtureEvents(defId: string, motif: DrawnMotif, view: PlayerView, n = 0, hook: FxCardHook = "cast"): GameEvent[] {
   const instanceId = galleryPlayId(n);
   const player = view.viewer;
+  if (hook === "death" || hook === "trigger" || hook === "activate") {
+    return [{ type: "hookResolving", sourceId: instanceId, defId, controller: player, hook: GALLERY_HOOK_KINDS[hook] }, ...motifFixture(motif, view, instanceId, player)];
+  }
   return [
     { type: "cardPlayed", player, instanceId, defId, costPaid: 1 },
     ...motifFixture(motif, view, instanceId, player),

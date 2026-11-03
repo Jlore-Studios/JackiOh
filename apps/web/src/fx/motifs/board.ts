@@ -1,6 +1,6 @@
 // R2784000: the board motifs (docs/polish/9-card-animations.md): conjure, rise, offering, shift,
-// bind, tether, mirror and transmute. Card-table-only overlays (`replaces: []` throughout): the
-// event rows still play underneath, and each plans nothing without an event it reads.
+// bind, tether, mirror and transmute, and R2797000's hex. Card-table-only overlays (`replaces: []`
+// but bind): the event rows still play underneath, and each plans nothing without an event it reads.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -294,9 +294,12 @@ export const mirror: MotifPlanner = {
   },
 };
 
-const TRANSMUTE_READS = ["transformed"] as const;
+const TRANSMUTE_READS = ["transformed", "fused"] as const;
 
-/** transmute: smoke and sparks as one card becomes another: today's `smoke` beats, phased. */
+/**
+ * transmute: smoke and sparks as one card becomes another: today's `smoke` beats, phased. R2797000: a
+ * fusion too (an Equip pick fused into its host), drawn where the `fused` row finds it, the host.
+ */
 export const transmute: MotifPlanner = {
   reads: TRANSMUTE_READS,
   replaces: [],
@@ -312,6 +315,37 @@ export const transmute: MotifPlanner = {
         motifBurst(spec, h.at, "area", t.L, MOTIF_TUNING.land, "arcane"),
         motifBurst(spec, h.at, "point", t.Li, MOTIF_TUNING.linger, "smoke"),
       );
+    }
+    cues.push(...motifShake(spec, t.L));
+    return cues;
+  },
+};
+
+const HEX_READS = ["marked"] as const;
+
+/**
+ * R2797000 hex: a mark laid on a card (a Freeze, an Allure, any `marked`): a ring closing on it, a sheen
+ * over it and a burst as the mark takes; a mark lifted flares once and is gone. Over the rows
+ * (`replaces: []`): the brand row (fx/brand.ts) keeps the mark's own colors (R437).
+ */
+export const hex: MotifPlanner = {
+  reads: HEX_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, HEX_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    const cues: FxCue[] = [];
+    for (const h of hits) {
+      if (h.event.type === "marked" && h.event.added) {
+        cues.push(
+          motifRing(spec, t.D, h.at, t.G),
+          { kind: "sheen", at: h.at, delayMs: t.T, durationMs: t.L - t.T },
+          motifBurst(spec, h.at, "area", t.L, MOTIF_TUNING.small),
+        );
+      } else {
+        cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.small, "sparkle"));
+      }
     }
     cues.push(...motifShake(spec, t.L));
     return cues;

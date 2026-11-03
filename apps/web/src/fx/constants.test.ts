@@ -155,7 +155,16 @@ const S2 = {
     tithe: 0.1,
     tally: 0.15,
     snap: 0.4,
+    forge: 0.1,
+    hex: 0.15,
   },
+  // Issue #2797: Stinkyscape's Flourishes (R2797000).
+  FX_TERMINUS_TRAUMA: 0.5,
+  FX_MAGI_STAGGER: 0.05,
+  FX_MAGI_BOOTS: 3,
+  FX_MAGI_TRAUMA: 0.3,
+  FX_WARP_TRAUMA: 0.6,
+  FX_WARP_FROM: { x: 0.5, y: 0 },
   FX_MOTIF_TITHE_MAX: 5,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #2787: the auras (R2787000).
@@ -300,6 +309,9 @@ describe("S2 the effects constants", () => {
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
       constants.FX_FIRST_STRIKE_BREAK_AT,
+      // R2797000: Imitated Instrumentality's stagger, and where Drone Core X's Battleship warps in from.
+      constants.FX_MAGI_STAGGER,
+      constants.FX_WARP_FROM.x,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -340,6 +352,10 @@ describe("S2 the effects constants", () => {
       constants.FX_RESULT_TRAUMA,
       constants.FX_TAKEOVER_TRAUMA,
       constants.FX_BEAT_TRAUMA,
+      // R2797000: Stinkyscape's Flourishes.
+      constants.FX_TERMINUS_TRAUMA,
+      constants.FX_MAGI_TRAUMA,
+      constants.FX_WARP_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);

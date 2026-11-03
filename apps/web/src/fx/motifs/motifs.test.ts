@@ -18,7 +18,7 @@ import { createFxMemory } from "../memory.ts";
 import type { FxBurstCue, FxCue, FxPlanEnv } from "../types.ts";
 import { MOTIF_TUNING, motifScale, timesOf, type MotifSpec } from "./build.ts";
 import { galleryEntry, gallerySource, motifFixture } from "./gallery.ts";
-import { planMotif } from "./index.ts";
+import { motifReplaces, planMotif } from "./index.ts";
 import { FX_DRAWN_MOTIFS, type DrawnMotif } from "./names.ts";
 
 const SCALE = 1.5;
@@ -101,6 +101,10 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   tally: ["burst@240", "shake@240"],
   // The ring closes at gather, the reveal lands on jk-trap-flip's stop, the shake on Land.
   snap: ["ring@0", "burst@120", "shake@240"],
+  // R2797000: with no play resolving there is no source to fly from, so the card lands with its sparkle alone.
+  forge: ["burst@240", "shake@240"],
+  // R2797000: a ring closes on the frozen card, a sheen crosses it and the mark takes on Land.
+  hex: ["ring@0", "sheen@80", "burst@240", "shake@240"],
 };
 
 describe("R2784000 the damage and removal motifs", () => {
@@ -285,7 +289,7 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
     expect(drawn.some((cue) => cue.kind === "shot" && cue.shot.motion === "beam")).toBe(true);
   });
 
-  it("R2784000 a not-yet-drawn motif, or a death, trigger or activate hook, plays the event rows only", () => {
+  it("R2784000 a not-yet-drawn motif, or a death, trigger or activate hook during the card's own play, plays the event rows only", () => {
     const view = fullBoardView();
     const env = envOf();
     const events = [played("p1", "ex", "core-035"), ...motifFixture("bolt", view, "ex", "p1")];
@@ -484,5 +488,71 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
       const rows = planFx({ ...entry, events: entry.events.filter((event) => motif?.replaces.has(event) !== true) }, view, envOf());
       expect(flashes(motif?.cues ?? []) + flashes(rows), row).toBe(1);
     }
+  });
+});
+
+describe("R2797000 forge, hex and transmute's fusion", () => {
+  const at = (cue: FxCue | undefined): string => (cue !== undefined && "at" in cue && cue.at.kind === "testid" ? cue.at.testid : "");
+
+  it("R2797000 forge flies a card back from the play's source into the hand or the library, and the rows still play", () => {
+    const view = fullBoardView();
+    const made: GameEvent[] = [
+      { type: "addedToHand", player: "p1", instanceId: "fx-made", defId: "core-055" },
+      { type: "shuffledIn", player: "p1", instanceId: "fx-shuffled", defId: "core-055", position: 0 },
+    ];
+    const entry = { ...galleryEntry(made, view), durationMs: 400 };
+    const ghosts = (cues: readonly FxCue[]): string[] =>
+      cues.flatMap((cue) => (cue.kind === "ghost" && cue.from.kind === "testid" && cue.to.kind === "testid" ? [`${cue.from.testid}>${cue.to.testid}@${String(cue.delayMs)}`] : []));
+    // A Spell's play flies from its caster's hero, a card on the board (a Unit's Cry, a hook) from the card.
+    const spell = envOf();
+    spell.memory.remember([played("p1", "ex", "core-035")]);
+    const fromHero = planMotif(specOf("forge"), entry, view, spell);
+    expect(ghosts(fromHero)).toEqual([`${testid.hero("you")}>hand-you@80`, `${testid.hero("you")}>library-you@80`]);
+    expect(at(fromHero[0])).toBe(testid.hero("you"));
+    const sparkles = fromHero.filter((cue) => cue.kind === "burst" && cue.preset === "sparkle" && cue.delayMs === timesOf(400).L).map(at);
+    expect(sparkles).toEqual(["hand-you", "library-you"]);
+    const source = view.you.units[0]?.instanceId ?? "";
+    const unit = envOf();
+    unit.memory.remember([played("p1", source, "core-004")]);
+    expect(ghosts(planMotif(specOf("forge"), entry, view, unit))).toEqual([`${testid.card(source)}>hand-you@80`, `${testid.card(source)}>library-you@80`]);
+    // Over the rows: it replaces nothing, so the hand's glint and the shuffle still play.
+    expect(motifReplaces(specOf("forge"), entry, view, spell).size).toBe(0);
+    // R202: a card added to the other hand flies to its back by count, naming no card.
+    const theirs = { ...galleryEntry([{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }], view), durationMs: 400 };
+    const cues = planMotif(specOf("forge"), theirs, view, spell);
+    expect(ghosts(cues)).toEqual([`${testid.hero("you")}>hand-opponent@80`]);
+    expect(JSON.stringify(cues)).not.toMatch(/core-\d{3}/);
+  });
+
+  it("R2797000 hex rings a card marked and flares one unmarked", () => {
+    const view = fullBoardView();
+    const [first, second] = view.opponent.units.map((unit) => unit?.instanceId ?? "");
+    const marks: GameEvent[] = [
+      { type: "marked", instanceId: first ?? "", mark: "frozen", color: "cyan", added: true },
+      { type: "marked", instanceId: second ?? "", mark: "allure", color: "pink", added: false },
+      // R202: a mark on a card the viewer may not read lands nowhere.
+      { type: "marked", instanceId: "hidden", mark: "frozen", color: "cyan", added: true },
+    ];
+    const cues = planMotif(specOf("hex"), { ...galleryEntry(marks, view), durationMs: 400 }, view, envOf());
+    expect(cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}:${at(cue)}`)).toEqual([
+      `ring@0:${testid.card(first ?? "")}`,
+      `sheen@80:${testid.card(first ?? "")}`,
+      `burst@240:${testid.card(first ?? "")}`,
+      `burst@240:${testid.card(second ?? "")}`,
+      "shake@240:",
+    ]);
+    const lifted = cues[3];
+    expect(lifted?.kind === "burst" && lifted.preset === "sparkle" && lifted.spread === "ring").toBe(true);
+    // The brand row keeps the mark's own colors.
+    expect(motifReplaces(specOf("hex"), { ...galleryEntry(marks, view), durationMs: 400 }, view, envOf()).size).toBe(0);
+  });
+
+  it("R2797000 transmute draws an Equip's fused at the host", () => {
+    const view = fullBoardView();
+    const host = view.you.units[1]?.instanceId ?? "";
+    const fused: GameEvent = { type: "fused", instanceIds: [host, "fx-pick"], resultInstanceId: host, defId: "core-011" };
+    const cues = planMotif(specOf("transmute"), { ...galleryEntry([fused], view), durationMs: 400 }, view, envOf());
+    expect(beats(cues)).toEqual(PINNED.transmute);
+    for (const cue of cues) if (cue.kind !== "shake") expect(at(cue)).toBe(testid.card(host));
   });
 });
