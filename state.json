@@ -16383,14 +16383,9 @@
     "what": "revise #2931 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-03T20:28:08Z",
+    "at": "2026-11-03T20:41:15Z",
     "notes": [
-      "delivered review #2960 on claude-7 (run 41710734097): approved",
-      "delivered build #2930 on claude-3 (run 41698712651): built",
-      "started review #2961 on claude-3 (run 41713586341)",
-      "started revise #2931 on claude-8 (run 41713728265)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "#2960: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17094,7 +17089,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T20:28:08Z",
+  "loop_tick": "2026-11-03T20:41:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
