@@ -525,9 +525,23 @@ jobs:
         if: ${{ inputs.step == 'copy' }}
         env:
           DRY_RUN: ${{ inputs.dry_run }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Until production leaves it, staging's database serves two servers, Render's and staging's,
+          # each up to 10 connections with its ladder bots, through a session pooler of 15 clients,
+          # which they kept full (runs 41581788146, 41582767500). 30 is half of Postgres' 60 on the
+          # project's compute; the copy needs one.
+          STAGING_POOL: "30"
         run: |
           set -euo pipefail
           umask 077
+          pooler="https://api.supabase.com/v1/projects/$STAGING_REF/config/database/pooler"
+          auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json")
+          size=$(curl -sS --fail-with-body "${auth[@]}" "$pooler" | jq -r 'if type == "array" then map(.default_pool_size) | max else .default_pool_size end')
+          echo "staging's pooler: $size clients"
+          if [ "$size" -lt "$STAGING_POOL" ]; then
+            curl -sS --fail-with-body "${auth[@]}" -X PATCH "$pooler" -d "{\"default_pool_size\": $STAGING_POOL}" > /dev/null
+            echo "staging's pooler: now $(curl -sS --fail-with-body "${auth[@]}" "$pooler" | jq -r 'if type == "array" then map(.default_pool_size) | max else .default_pool_size end') clients"
+          fi
           # PostgreSQL 17's client, from PGDG: a dump made by a current pg_dump opens with `\restrict`,
           # which an older psql refuses.
           sudo apt-get install -y -qq postgresql-common > /dev/null
