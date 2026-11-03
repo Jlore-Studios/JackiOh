@@ -4,10 +4,13 @@ package tests
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/deliver"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
@@ -71,8 +74,15 @@ func pickupLabelsPicks(gh *fakes.FakeGitHub, ctx *hctx.Context) []int {
 }
 
 // pickupLabelsEveryModel is every_model(): each committed subscription.
+// The weak one is left out: it takes no work at all since #2748.
 func pickupLabelsEveryModel() []*providers.Provider {
-	return testsupport.MakeConfig(testsupport.Config{Env: pickupLabelsAll, Machine: testsupport.AllMachine}).Pool.Ordered()
+	out := []*providers.Provider{}
+	for _, p := range testsupport.MakeConfig(testsupport.Config{Env: pickupLabelsAll, Machine: testsupport.AllMachine}).Pool.Ordered() {
+		if p.Tier != "weak" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // pickupLabelsIssue is gh.add_issue(number, labels=labels).
@@ -227,8 +237,8 @@ func TestPickupLabels_HumanIsNeverSelectedWhateverTheModel(t *testing.T) {
 	for _, provider := range pickupLabelsEveryModel() {
 		gh := fakes.NewFakeGitHub()
 		ctx := pickupLabelsCtx(gh, provider)
-		pickupLabelsIssue(gh, 5, config.LabelBuild, "human", pickupLabelsHigh, "difficulty:easy")
-		pickupLabelsIssue(gh, 6, config.LabelBuild, "difficulty:easy")
+		pickupLabelsIssue(gh, 5, config.LabelBuild, "human", pickupLabelsHigh, "difficulty:medium")
+		pickupLabelsIssue(gh, 6, config.LabelBuild, "difficulty:medium")
 		flowUpdateItem(ctx, 6, pyjson.New("planned_at", "2026-09-20T00:00:00Z"))
 		pickupLabelsQueued(ctx, 5, "2026-09-20T00:00:00Z", "forced", true)
 		planned := plan.Make(ctx, true, nil, "auto", nil)
@@ -289,6 +299,112 @@ func TestPickupLabels_TheReplySaysWhatTheLabelChanges(t *testing.T) {
 	assertNotIn(t, "labelled", build(8))
 }
 
+// `tracking` (#2748): a tracker or status issue. Every queue path treats it as `human`: a request
+// to build it, to split it as fullsend or to revise one gets a reply saying so and nothing else,
+// it is never a candidate however it is labelled, and adopting a tree keeps a tracking sub-issue
+// out of its parts. The bot may still comment on it.
+func TestPickupLabels_TrackingIsNeverQueuedPlannedOrBuilt(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: testsupport.MakeConfig(
+		testsupport.Config{Env: pickupLabelsAll, Machine: testsupport.Machine, CommittedPlanLanes: true})})
+	pickupLabelsIssue(gh, 5, config.LabelBuild, "Tracking", pickupLabelsHigh)
+	pickupLabelsIssue(gh, 6, config.LabelTracking)
+	pickupLabelsIssue(gh, 3, config.LabelBuild)
+	reply := queue.QueueBuild(ctx, 6, "MaxGoetzmann", false, false, nil, nil)
+	assertIn(t, "#6 is labelled `tracking`: a tracker or status issue, which I may comment on but "+
+		"never queue, plan or build", reply)
+	fullsend := "fullsend"
+	assertIn(t, "labelled `tracking`", queue.QueueBuild(ctx, 6, "MaxGoetzmann", false, false, nil, &fullsend))
+	assertEqual(t, gh.LabelNames(6), setOf(config.LabelTracking))
+	planned := plan.Make(ctx, true, nil, "auto", nil)
+	assertEqual(t, planned.Get("number"), 3)
+	assertIn(t, "#5 skipped: labelled `tracking`, so no model takes it", pickupLabelsSkipped(t, planned))
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBuild, "Tracking", pickupLabelsHigh)) // no bot:needs-plan
+	gh.AddPull(9, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, config.LabelTracking}})
+	assertIn(t, "labelled `tracking`", queue.QueueRevise(ctx, 9, "MaxGoetzmann", false, "request", false, nil, nil))
+	// A tree adopted as fullsend keeps its tracking sub-issue out of its parts.
+	gh.AddIssue(20, fakes.Issue{Labels: []string{"bot:fullsend"}})
+	pickupLabelsIssue(gh, 21)
+	pickupLabelsIssue(gh, 22, config.LabelTracking)
+	for _, child := range []int{21, 22} {
+		gh.AddSubIssue(20, gh.GetIssue(child).Int("id"))
+	}
+	adopted := queue.QueueBuild(ctx, 20, "MaxGoetzmann", false, false, nil, nil)
+	assertIn(t, "#22 (labelled `tracking`)", adopted)
+	assertTrue(t, !gh.LabelNames(22)[config.LabelBuild])
+	assertTrue(t, gh.LabelNames(21)[config.LabelBuild])
+}
+
+// Each kind of run puts its own live label on the item it holds (#2748), and only one: a planning
+// run, a split, a build, a revision, a CI fix (red CI or the merge queue), a review run and a
+// fullsend parent's reconcile. A revision's CI fix is claimed with `bot:fixing-ci`, which the
+// item's record keeps as `live`.
+func TestPickupLabels_EachKindOfRunHasItsLiveLabel(t *testing.T) {
+	for _, c := range []struct {
+		kind, action, mode, source string
+		reconcile, pr              bool
+		want                       string
+	}{
+		{"build", "plan", "", "", false, false, config.LabelPlanning},
+		{"build", "build", "fullsend", "", false, false, config.LabelSplitting},
+		{"build", "build", "split", "", false, false, config.LabelSplitting},
+		{"build", "build", "fullsend", "", true, false, config.LabelReconciling},
+		{"build", "build", "", "", false, false, config.LabelBuilding},
+		{"build", "build", "oneshot", "", false, false, config.LabelBuilding},
+		{"revise", "revise", "", "request", false, true, config.LabelRevising},
+		{"revise", "revise", "", "conflict", false, true, config.LabelRevising},
+		{"revise", "revise", "", "ci", false, true, config.LabelFixingCI},
+		{"review", "review", "", "", false, true, config.LabelReviewing},
+		{"", "", "", "", false, true, config.LabelRevising},
+		{"", "", "", "", false, false, config.LabelBuilding},
+	} {
+		assertEqual(t, config.LiveLabel(config.LiveRun(c.kind, c.action, c.mode, c.source, c.reconcile, c.pr)),
+			c.want, c)
+	}
+	assertEqual(t, len(config.LiveLabels), 7)
+	gh := fakes.NewFakeGitHub()
+	ctx := pickupLabelsCtx(gh, nil)
+	gh.AddPull(9, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, config.LabelRevise}})
+	flowUpdateItem(ctx, 9, pyjson.New("kind", "revise", "source", "ci", "queued_at", "2026-09-20T00:00:00Z"))
+	planned := plan.Make(ctx, true, nil, "auto", nil)
+	assertEqual(t, []any{planned.Get("action"), planned.Get("source")}, []any{"revise", "ci"})
+	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelFixingCI))
+	assertEqual(t, ctx.Store.Load().Obj("items").Obj("9").Get("live"), "fixing-ci")
+}
+
+// `bot:working`, from a claim made before the live labels (#2748), still holds its thread: no run
+// takes it, and a request waits for the run that holds it.
+func TestPickupLabels_AnOldWorkingLabelStillHoldsItsThread(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := pickupLabelsCtx(gh, nil)
+	pickupLabelsIssue(gh, 5, config.LabelBuild, config.LabelWorking)
+	assertTrue(t, config.IsLive(gh.LabelNames(5)))
+	assertEqual(t, len(queue.Candidates(ctx, ctx.Store.Load(), nil, nil)), 0)
+	assertIn(t, "I am working on #5 right now", queue.QueueBuild(ctx, 5, "MaxGoetzmann", false, false, nil, nil))
+	// The next state label takes it off, as it does a live label.
+	queue.SetStateLabel(ctx, 5, gh.LabelNames(5), config.LabelBlocked)
+	assertEqual(t, gh.LabelNames(5), setOf(config.LabelBlocked))
+}
+
+// `bot:merging` (#2748) is on a bot pull request while its auto-merge is on: it comes off when a
+// revision holds the merge, on `/harness stop`, and when the pull request closes or merges.
+func TestPickupLabels_MergingComesOffWhenAutoMergeGoesOff(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := pickupLabelsCtx(gh, nil)
+	for _, n := range []int{9, 10, 11} {
+		gh.AddPull(n, fmt.Sprintf("bot/issue-%d", n-5), fakes.Pull{Labels: []string{config.LabelPR, config.LabelMerging}}).
+			Set("auto_merge", pyjson.New("merge_method", "squash"))
+	}
+	queue.QueueRevise(ctx, 9, "MaxGoetzmann", false, "request", false, nil, nil)
+	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelRevise))
+	queue.Stop(ctx, 10, "MaxGoetzmann")
+	assertEqual(t, gh.LabelNames(10), setOf(config.LabelPR))
+	closed := gh.Threads.Item(11).Set("state", "closed").Set("merged", true)
+	events.Handle(ctx, "pull_request", pyjson.New("action", "closed", "pull_request", closed,
+		"sender", pyjson.New("login", "MaxGoetzmann")))
+	assertEqual(t, gh.LabelNames(11), setOf(config.LabelPR))
+}
+
 // ---------------------------------------------------------------------------- SuggestionTests
 //
 // A suggestion the bot opened is built once a person queues it (#664): `bot:build`, an assignment
@@ -337,10 +453,11 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 			created[name] = true
 		}
 	}
-	for _, name := range []string{"human", "difficulty:easy", "difficulty:medium", "difficulty:hard",
+	for _, name := range []string{"human", "difficulty:medium", "difficulty:hard",
 		pickupLabelsHigh, pickupLabelsMedium, pickupLabelsLow} {
 		assertTrue(t, created[name], name)
 	}
+	assertFalse(t, created["difficulty:easy"]) // retired (#2748)
 	again := false
 	for _, name := range config.Labels.Keys() {
 		color, text := repoMetaLabel(t, name)
@@ -354,18 +471,22 @@ func TestPickupLabels_SetupCreatesTheNewLabels(t *testing.T) {
 
 func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: pickupLabelsAll, Machine: testsupport.Machine, At: testsupport.Day})
-	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:easy", "Priority:High")
+	pickupLabelsIssue(h.gh, 12, config.LabelBuild, "difficulty:medium", "Priority:High")
 	planned, result := h.night(workFake(map[string]runner.Handler{
 		"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}), "review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("priority"), planned.Get("difficulty"), result.Get("status")},
-		[]any{"muse", "high", "easy", "approved"})
+		[]any{"muse", "high", "medium", "approved"})
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
-	// Muse planned, built and reviewed it in the run, and a medium approval ships an easy item with
-	// no further audit (#725).
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:easy", "Priority:High"))
-	_, merging := h.gh.AutoMerge[fmt.Sprintf("PR_%d", pr)]
-	assertTrue(t, merging)
-	assertEqual(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "easy")
+	// Muse planned, built and reviewed it in the run, and its own approval ships it (2026-11-02,
+	// #2748): it auto-merges, with the issue's labels.
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelMerging, "difficulty:medium", "Priority:High"))
+	assertEqual(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "medium")
+	// A label still saying `difficulty:easy` is not carried: it is retired, and the sweep labels
+	// the pull request from its issue (medium).
+	d := deliver.NewDeliverer(h.ctx, pyjson.New("action", "build", "provider", "muse"), filepath.Join(h.root, "x"),
+		h.deliverRepo, "", nil, "")
+	pickupLabelsIssue(h.gh, 13, "difficulty:easy", "priority:low")
+	assertEqual(t, d.Carried(13), []string{"priority:low"})
 }
 
 func TestPickupLabels_ADraftPullRequestKeepsThemToo(t *testing.T) {

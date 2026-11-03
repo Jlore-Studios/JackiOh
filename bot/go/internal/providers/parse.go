@@ -140,7 +140,7 @@ func limits(raw any, where string) *Limits {
 var providerKeys = []string{"enabled", "cli", "family", "model", "effort", "tier", "secret", "schedule",
 	"limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
 	"self_check", "extra_models", "off_from", "off_reason", "usage_since",
-	"lanes", "build_last", "easy_first", "off_hours", "fix_effort",
+	"lanes", "build_last", "off_hours", "fix_effort",
 	"review_effort", "start_headroom", "fill_in", "last_hour", "late_week", "hard_cap"}
 
 // tier is _tier.
@@ -170,13 +170,13 @@ func extraModels(raw any, effort string, where string) []*ExtraModel {
 		if !ok || !entry.Truthy("model") {
 			configError("%s[%d]: needs a model and a tier", where, i)
 		}
-		if unknown := unknownKeys(entry, []string{"model", "effort", "tier", "note", "takes_over"}); len(unknown) > 0 {
+		if unknown := unknownKeys(entry, []string{"model", "effort", "tier", "note"}); len(unknown) > 0 {
 			configError("%s[%d]: unknown keys %s", where, i, strings.Join(unknown, ", "))
 		}
 		model := py.Str(entry.Get("model"))
 		modelEffort := py.Str(entry.GetOr("effort", effort))
 		modelTier := tier(entry.Get("tier"), fmt.Sprintf("%s[%d].tier", where, i))
-		found = append(found, &ExtraModel{model, modelEffort, modelTier, py.OrStr(entry.Get("takes_over"), "")})
+		found = append(found, &ExtraModel{model, modelEffort, modelTier})
 	}
 	return found
 }
@@ -418,7 +418,6 @@ func provider(name string, raw any) *Provider {
 	p.FillIn = fillIn(obj.Get("fill_in"), where+".fill_in")
 	p.SelfCheck = pyjson.Truthy(obj.GetOr("self_check", false))
 	p.BuildLast = pyjson.Truthy(obj.GetOr("build_last", false))
-	p.EasyFirst = pyjson.Truthy(obj.GetOr("easy_first", false))
 	p.OffHours = offHours(obj.Get("off_hours"), where+".off_hours")
 	p.FixEffort = py.OrStr(obj.Get("fix_effort"), "")
 	p.ReviewEffort = py.OrStr(obj.Get("review_effort"), "")
@@ -558,20 +557,36 @@ func Parse(raw any) *Pool {
 	if planLanes < 0 {
 		configError("%s: plan_lanes must be 0 or more", ProvidersPath)
 	}
-	for _, p := range all {
-		for _, extra := range p.ExtraModels {
-			if extra.TakesOver != "" && (!providers.Has(extra.TakesOver) || extra.TakesOver == p.ID) {
-				configError("%s: %s's %s takes over %s, which is not another provider",
-					ProvidersPath, p.ID, extra.Model, py.Repr(extra.TakesOver))
-			}
-		}
-	}
 	balance, ok := obj.GetOr("balance", false).(bool)
 	if !ok {
 		configError("%s: balance must be true or false", ProvidersPath)
 	}
+	// A subscription `lanes_by_cap` matches has its lanes from the rule (#2748): the most it may
+	// hold is the rule's `high`, and one that names its own `lanes` is refused, since nothing
+	// would read them.
+	rule := lanesByCap(obj.Get("lanes_by_cap"), ProvidersPath+".lanes_by_cap")
+	if rule != nil {
+		listed, _ := mapping(obj.Get("providers"))
+		ruled := pyjson.New()
+		providers.Items(func(k string, v any) bool {
+			p := v.(*Provider)
+			if rule.Matches(p) {
+				if own, _ := mapping(listed.Get(k)); own.Has("lanes") {
+					configError("%s: providers.%s.lanes: lanes_by_cap decides the lanes of a %s "+
+						"subscription; take its lanes out", ProvidersPath, k, rule.CLI)
+				}
+				c := *p
+				c.Lanes = rule.High
+				p = &c
+			}
+			ruled.Set(k, p)
+			return true
+		})
+		providers = ruled
+	}
 	pool = &Pool{MaxParallel: maxParallel, Priority: priority, Providers: providers,
-		MachineParallel: machine, PlanLanes: planLanes, Tiers: tiers, Balance: balance}
+		MachineParallel: machine, PlanLanes: planLanes, Tiers: tiers, Balance: balance,
+		LanesByCap: rule}
 	// Every model a provider runs has its place in its own tier's order, so the router always
 	// knows which to try first, and a model never has two tiers.
 	for _, p := range all {

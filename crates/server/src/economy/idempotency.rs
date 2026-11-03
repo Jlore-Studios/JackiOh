@@ -60,6 +60,24 @@ impl RequestKey {
             body_hash: digest(&format!("{}:body", app.env.code_pepper), &req.body.to_string()),
         }))
     }
+
+    /// [`RequestKey::of`] for a route whose path names what it spends on (`target`, such as
+    /// `/api/news/:newsId/claim`'s entry, R2875000): the hash covers the target beside the body, so
+    /// the same key sent for another target is another request, 422.
+    pub fn of_target(
+        app: &App,
+        req: &Req,
+        route: &'static str,
+        target: &str,
+    ) -> Result<Option<RequestKey>, ApiError> {
+        Ok(RequestKey::of(app, req, route)?.map(|request| RequestKey {
+            body_hash: digest(
+                &format!("{}:body", app.env.code_pepper),
+                &serde_json::json!({ "target": target, "body": req.body }).to_string(),
+            ),
+            ..request
+        }))
+    }
 }
 
 /// What a keyed spend did: ran `Now`, or answered as it did `Before`, from its kept answer.

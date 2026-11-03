@@ -1,7 +1,7 @@
 // Landing's front door (B37-B39): a fan of real cards and one call to action; CSS stays scoped to
 // `.landing` so it cannot affect the board layout. R765 shows an active online game.
 
-import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
 import { ECONOMY_LIVE, GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 
@@ -41,6 +41,7 @@ import {
   type RandomSource,
 } from "./landingFan.ts";
 import { LiveGameBanner } from "./GameBanner.tsx";
+import { NewsList, useNews } from "./NewsPanel.tsx";
 import { QuestsView, useQuests } from "./QuestsPanel.tsx";
 import { followInApp } from "./nav.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
@@ -328,18 +329,49 @@ function QuestGlyph(): ReactElement {
   );
 }
 
-/** R2035000: how long the quests' parchment takes to unroll, and to roll back up. */
+/** R2875002: the news bookmark's glyph, a scroll rolled at both ends, drawn as the quests' is. */
+function NewsGlyph(): ReactElement {
+  return (
+    <svg
+      className="landing-news-glyph"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      focusable="false"
+      aria-hidden="true"
+    >
+      <rect x="7" y="5.5" width="10" height="13" fill="currentColor" opacity="0.28" />
+      <path d="M7 5.5 V18.5 M17 5.5 V18.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="4.5" y="3.5" width="15" height="3.5" rx="1.75" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="4.5" y="17" width="15" height="3.5" rx="1.75" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M9.5 10.5 H14.5 M9.5 13.5 H14.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** R2035000: how long the quests' parchment takes to unroll, and to roll back up; the news' too (R2875002). */
 export const QUESTS_UNROLL_MS = 220;
 
-type QuestsPhase = "closed" | "open" | "closing";
+/** The unroll's length, as the sheet reads it. */
+const UNROLL_STYLE = { "--quests-unroll": `${String(QUESTS_UNROLL_MS)}ms` } as CSSProperties;
 
-/** R2035000: the account's quests behind a bookmark on the doors' box, read once on mount (CLAUDE.md rule 7). */
-function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
-  const { quests, error, reread, replace } = useQuests(token);
-  const [phase, setPhase] = useState<QuestsPhase>("closed");
+type UnrollPhase = "closed" | "open" | "closing";
+
+/**
+ * R2035000, R2875002: a bookmark's parchment, open, closed or rolling up: a second click, Escape (which
+ * gives the focus back to the bookmark) or a press outside `root` rolls it up.
+ */
+function useUnroll(motion: LandingMotion): {
+  phase: UnrollPhase;
+  open: boolean;
+  root: RefObject<HTMLDivElement | null>;
+  bookmark: RefObject<HTMLButtonElement | null>;
+  close: () => void;
+  toggle: () => void;
+} {
+  const [phase, setPhase] = useState<UnrollPhase>("closed");
   const root = useRef<HTMLDivElement>(null);
   const bookmark = useRef<HTMLButtonElement>(null);
-  const panelId = useId();
   const close = useCallback((): void => {
     setPhase(motion === "reduced" ? "closed" : "closing");
   }, [motion]);
@@ -373,16 +405,25 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
     };
   }, [phase, close]);
 
+  const open = phase === "open";
+  const toggle = (): void => {
+    if (open) close();
+    else setPhase("open");
+  };
+  return { phase, open, root, bookmark, close, toggle };
+}
+
+/** R2035000: the account's quests behind a bookmark on the doors' box, read once on mount (CLAUDE.md rule 7). */
+function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
+  const { quests, error, reread, replace } = useQuests(token);
+  const { phase, open, root, bookmark, close, toggle } = useUnroll(motion);
+  const panelId = useId();
+
   // Nothing held and nothing due (R1304002): nothing to show, as on `/collection`.
   if (quests !== null && quests.quests.length === 0 && quests.nextDueAt === null) return null;
   const held = quests?.quests.length ?? 0;
-  const open = phase === "open";
   return (
-    <div
-      ref={root}
-      className="landing-quests"
-      style={{ "--quests-unroll": `${String(QUESTS_UNROLL_MS)}ms` } as CSSProperties}
-    >
+    <div ref={root} className="landing-quests" style={UNROLL_STYLE}>
       {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
       {open ? (
         <BackLayer
@@ -401,10 +442,7 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
         title={t("Quests")}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => {
-          if (open) close();
-          else setPhase("open");
-        }}
+        onClick={toggle}
       >
         <QuestGlyph />
         {held > 0 ? (
@@ -429,7 +467,61 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
   );
 }
 
-function Actions({ questsToken, motion }: { questsToken: string | null; motion: LandingMotion }): ReactElement {
+/**
+ * R2875002: the account's news behind a bookmark beside the quests', read once on mount, its count the
+ * entries the server says are unclaimed (CLAUDE.md rule 7). No live entry or no answer: no bookmark (R2875001).
+ */
+function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
+  const { news, claim } = useNews(token);
+  const { phase, open, root, bookmark, close, toggle } = useUnroll(motion);
+  const panelId = useId();
+
+  if (news === null || news.length === 0) return null;
+  const unclaimed = news.filter((entry) => !entry.claimed).length;
+  return (
+    <div ref={root} className="landing-news" style={UNROLL_STYLE}>
+      {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
+      {open ? (
+        <BackLayer
+          onClose={() => {
+            close();
+            bookmark.current?.focus();
+          }}
+        />
+      ) : null}
+      <button
+        ref={bookmark}
+        type="button"
+        className="landing-news-bookmark"
+        data-testid={landingTestid.newsBookmark}
+        aria-label={t("News")}
+        title={t("News")}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={toggle}
+      >
+        <NewsGlyph />
+        {unclaimed > 0 ? (
+          <span className="landing-news-count" data-testid={landingTestid.newsCount} aria-hidden="true">
+            {formatNumber(unclaimed)}
+          </span>
+        ) : null}
+      </button>
+      <div
+        id={panelId}
+        className="landing-news-panel"
+        data-testid={landingTestid.newsPanel}
+        data-state={phase}
+        data-motion={motion}
+        hidden={phase === "closed"}
+      >
+        {phase === "closed" ? null : <NewsList news={news} onClaim={claim} />}
+      </div>
+    </div>
+  );
+}
+
+function Actions({ economyToken, motion }: { economyToken: string | null; motion: LandingMotion }): ReactElement {
   // #1577, R1578000: the three doors. Play leads to the Play hub, which holds every way to play,
   // online first; the invite-only sentence lives on `/invite` and `/play`, where the player decides.
   return (
@@ -470,7 +562,8 @@ function Actions({ questsToken, motion }: { questsToken: string | null; motion: 
           {t("Hotseat: both seats on this device")}
         </a>
       ) : null}
-      {questsToken === null ? null : <QuestsBookmark token={questsToken} motion={motion} />}
+      {economyToken === null ? null : <QuestsBookmark token={economyToken} motion={motion} />}
+      {economyToken === null ? null : <NewsBookmark token={economyToken} motion={motion} />}
     </nav>
   );
 }
@@ -480,7 +573,7 @@ function Actions({ questsToken, motion }: { questsToken: string | null; motion: 
 export type LandingRouteProps = {
   /** R374: where the fan's deal draws its randomness; a seeded source in tests. */
   random?: RandomSource;
-  /** R2035000: whether the economy is live, for the quests bookmark. */
+  /** R2035000: whether the economy is live, for the quests bookmark and the news' (R2875002). */
   economyLive?: boolean;
 };
 
@@ -490,8 +583,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   useSettingsAccountSync(account);
   const liveGame = useLiveGame(account);
   const motion = useMotion();
-  // R2035000: GET /api/quests answers an active account alone.
-  const questsToken =
+  // R2035000, R2875002: GET /api/quests and GET /api/news answer an active account alone.
+  const economyToken =
     economyLive && account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
   // R374 deals once per mount; R639 uses all shipped cards after enough games; R704 rotates that pool.
   // R1017002: from the cards that print whole on a fan card, a hero's full-art card favored.
@@ -562,7 +655,7 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
 
           <CardFan hand={hand} onOpen={setOpen} onHold={setHeld} />
 
-          <Actions questsToken={questsToken} motion={motion} />
+          <Actions economyToken={economyToken} motion={motion} />
         </div>
       </section>
 

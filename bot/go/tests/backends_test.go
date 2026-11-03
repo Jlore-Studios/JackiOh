@@ -792,6 +792,27 @@ func TestBackends_AgyReadsThePoolItsModelDrawsOn(t *testing.T) {
 	assertEqual(t, []any{backendsUtilization(claude, "seven_day"), backendsUtilization(claude, "five_hour")},
 		[]any{0.0, 0.0})
 	assertTrue(t, runner.ParseAgyUsage("Fetching usage...\nerror: offline\n", "gemini-3.8") == nil)
+	// Gemini 4 Argon (#2748) draws on the Gemini pool too: its name says nothing the reading needs.
+	assertEqual(t, runner.ParseAgyUsage(backendsAgyTable, "gemini-4-argon-high"), gemini)
+}
+
+// Should agy list more than one Gemini pool for a window, the row naming the model's line is its
+// own ("Argon" for `gemini-4-argon-high`); with none naming it, the fullest holds, so no cap
+// holds on an emptier pool by mistake (#2748).
+func TestBackends_AgyPicksItsOwnGeminiPoolWhenThereAreSeveral(t *testing.T) {
+	table := "Gemini Flash Models\tWeekly Limit Remaining\t90%\t2026-10-09T17:47:52Z\n" +
+		"Gemini Argon Models\tWeekly Limit Remaining\t40%\t2026-10-10T17:47:52Z\n" +
+		"Gemini Flash Models\tFive Hour Limit Remaining\t10%\t2026-10-04T16:18:35Z\n" +
+		"Gemini Argon Models\tFive Hour Limit Remaining\t70%\t2026-10-04T17:18:35Z\n"
+	argon := runner.ParseAgyUsage(table, "gemini-4-argon-high")
+	assertEqual(t, argon.Get("seven_day"), pyjson.New("utilization", 0.6, "resets_at", "2026-10-10T17:47:52Z"))
+	assertEqual(t, backendsUtilization(argon, "five_hour"), 0.3)
+	flash := runner.ParseAgyUsage(table, "gemini-3.8-flash-high")
+	assertEqual(t, []any{backendsUtilization(flash, "seven_day"), backendsUtilization(flash, "five_hour")},
+		[]any{0.1, 0.9})
+	pro := runner.ParseAgyUsage(table, "gemini-5-pro-high") // names neither: the fullest of each window
+	assertEqual(t, []any{backendsUtilization(pro, "seven_day"), backendsUtilization(pro, "five_hour")},
+		[]any{0.6, 0.9})
 }
 
 func TestBackends_MuseReadsThe5HourWindowAndTheWeekWithTheirResets(t *testing.T) {

@@ -533,12 +533,13 @@
   outline-offset: 3px;
 }
 
-/* --- the quests bookmark (R2035000) ----------------------------------------------------------------
+/* --- the quests bookmark (R2035000) and the news' (R2875002) -------------------------------------
    A narrow ribbon tucked under the doors' box, with a notched bottom; a click unrolls a parchment
    panel downward over the floor. It is quiet beside the doors: no glow, lower contrast, and Play
-   stays the one lit action. */
+   stays the one lit action. The news' ribbon and parchment are the quests', drawn the same. */
 
-.landing .landing-quests {
+.landing .landing-quests,
+.landing .landing-news {
   position: absolute;
   top: 100%;
   left: 0;
@@ -546,7 +547,8 @@
   height: 0;
 }
 
-.landing button.landing-quests-bookmark {
+.landing button.landing-quests-bookmark,
+.landing button.landing-news-bookmark {
   position: absolute;
   top: -12px;
   left: 22px;
@@ -568,7 +570,8 @@
   transition: transform var(--quests-unroll) ease-out;
 }
 
-.landing button.landing-quests-bookmark::before {
+.landing button.landing-quests-bookmark::before,
+.landing button.landing-news-bookmark::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -578,20 +581,24 @@
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
 }
 
-.landing button.landing-quests-bookmark:hover {
+.landing button.landing-quests-bookmark:hover,
+.landing button.landing-news-bookmark:hover {
   color: var(--tavern-gold-pale);
 }
 
-.landing button.landing-quests-bookmark[aria-expanded="true"] {
+.landing button.landing-quests-bookmark[aria-expanded="true"],
+.landing button.landing-news-bookmark[aria-expanded="true"] {
   transform: translateY(6px);
 }
 
-.landing button.landing-quests-bookmark:focus-visible {
+.landing button.landing-quests-bookmark:focus-visible,
+.landing button.landing-news-bookmark:focus-visible {
   outline: 2px solid var(--tavern-gold);
   outline-offset: 2px;
 }
 
-.landing .landing-quests-panel {
+.landing .landing-quests-panel,
+.landing .landing-news-panel {
   position: absolute;
   top: 48px;
   left: 0;
@@ -610,21 +617,25 @@
   animation: landing-quests-unroll var(--quests-unroll) ease-out both;
 }
 
-.landing .landing-quests-panel[hidden] {
+.landing .landing-quests-panel[hidden],
+.landing .landing-news-panel[hidden] {
   display: none;
 }
 
-.landing .landing-quests-panel[data-state="closing"] {
+.landing .landing-quests-panel[data-state="closing"],
+.landing .landing-news-panel[data-state="closing"] {
   animation: landing-quests-roll-up var(--quests-unroll) ease-in both;
 }
 
 /* The panel reads `/collection`'s rows, restyled for parchment. */
-.landing .landing-quests-panel .account-heading {
+.landing .landing-quests-panel .account-heading,
+.landing .landing-news-panel .account-heading {
   font-family: var(--tavern-serif);
   font-size: 18px;
 }
 
-.landing .landing-quests-panel ul {
+.landing .landing-quests-panel ul,
+.landing .landing-news-panel ul {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -633,13 +644,15 @@
   list-style: none;
 }
 
-.landing .landing-quests-panel li {
+.landing .landing-quests-panel li,
+.landing .landing-news-panel li {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.landing .landing-quests-panel .account-quests__title {
+.landing .landing-quests-panel .account-quests__title,
+.landing .landing-news-panel .account-quests__title {
   font-weight: 700;
 }
 
@@ -647,18 +660,46 @@
   width: 100%;
 }
 
-.landing .landing-quests-panel .account-quests__reward {
+.landing .landing-quests-panel .account-quests__reward,
+.landing .landing-news-panel .account-quests__reward {
   font-size: 13px;
 }
 
-.landing .landing-quests-panel p {
+.landing .landing-quests-panel p,
+.landing .landing-news-panel p {
   margin-top: 8px;
 }
 
-.landing .landing-quests-panel button {
+.landing .landing-quests-panel button,
+.landing .landing-news-panel button {
   border: 1px solid var(--tavern-brass);
   background: var(--tavern-wood);
   color: var(--tavern-parchment);
+}
+
+/* R2875002: the news' ribbon hangs beside the quests' (22px in, 36px wide), or in its place when no
+   quests' shows, with a red bubble on its glyph counting the unclaimed entries, as the friends button's
+   badge sits on its icon; the box's rim covers the ribbon's top 12px, so the bubble starts below it. */
+.landing .landing-quests ~ .landing-news button.landing-news-bookmark {
+  left: 66px;
+}
+
+.landing .landing-news-count {
+  position: absolute;
+  top: 14px;
+  right: -6px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--opponent);
+  color: var(--pal-white);
+  font-size: var(--type-xs);
+  line-height: 18px;
+  text-align: center;
+}
+
+.landing .landing-news-panel .news-panel__summary {
+  margin-top: 0;
 }
 
 /* --- section headings ------------------------------------------------------------------------ */
@@ -901,7 +942,7 @@
   }
 }
 
-/* R2035000: the quests' parchment unrolls from its bookmark, and rolls back up. */
+/* R2035000: the quests' parchment unrolls from its bookmark, and rolls back up; the news' too (R2875002). */
 @keyframes landing-quests-unroll {
   from {
     opacity: 0;

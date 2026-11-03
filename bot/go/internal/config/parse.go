@@ -49,7 +49,7 @@ var roles = []string{"plan", "build", "fix", "revise", "review", "suggest"}
 
 // optional is _OPTIONAL: keys `.harness/config.json` may leave out, with their defaults.
 // `identity` is read once, when the process starts (`identity.py`); `parse` only checks it.
-var optional = pyjson.New("max_self_check_rounds", 3, "easy", pyjson.New(), "identity", nil,
+var optional = pyjson.New("max_self_check_rounds", 3, "identity", nil,
 	"controller", false, "resolvers", []any{})
 
 func raiseConfig(format string, args ...any) {
@@ -70,42 +70,6 @@ func unknownKeys(raw *pyjson.Object, known ...[]string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func easyRule(raw any) *EasyRule {
-	o, ok := raw.(*pyjson.Object)
-	if !ok {
-		raiseConfig("easy: expected an object")
-	}
-	if unknown := unknownKeys(o, []string{"max_files", "max_lines", "off_limits", "generated"}); len(unknown) > 0 {
-		raiseConfig("easy: unknown keys %s", strings.Join(unknown, ", "))
-	}
-	rule, err := func() (*EasyRule, error) {
-		maxFiles, err := py.Int(o.GetOr("max_files", 10))
-		if err != nil {
-			return nil, err
-		}
-		maxLines, err := py.Int(o.GetOr("max_lines", 400))
-		if err != nil {
-			return nil, err
-		}
-		offLimits, err := strs(py.Or(o.Get("off_limits"), []any{}))
-		if err != nil {
-			return nil, err
-		}
-		generated, err := strs(py.Or(o.Get("generated"), []any{}))
-		if err != nil {
-			return nil, err
-		}
-		return &EasyRule{MaxFiles: maxFiles, MaxLines: maxLines, OffLimits: offLimits, Generated: generated}, nil
-	}()
-	if err != nil {
-		raiseConfig("easy: %s", err)
-	}
-	if rule.MaxFiles < 1 || rule.MaxLines < 1 {
-		raiseConfig("easy: max_files and max_lines must be at least 1")
-	}
-	return rule
 }
 
 func gate(raw any, where string) *Gate {
@@ -299,7 +263,7 @@ func orNoList(v any) any {
 
 // LaneReviewCycles is review verdict rounds per difficulty when `max_review_cycles` names no
 // mapping (#725).
-var LaneReviewCycles = pyjson.New("hard", 10, "medium", 3, "easy", 3)
+var LaneReviewCycles = pyjson.New("hard", 10, "medium", 3)
 
 // reviewCycles is _review_cycles: `max_review_cycles` as a per-difficulty mapping: a mapping
 // names each difficulty, and a bare number keeps the old shape (every difficulty gets it).
@@ -429,6 +393,28 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))
 	c.ReviewPaths = mustStrs(raw.Get("review_paths"))
 	c.UploadTranscripts = pyjson.Truthy(raw.Get("upload_transcripts"))
+	c.ResumeSessions = pyjson.Truthy(raw.GetOr("resume_sessions", optional.Get("resume_sessions")))
+	c.HoldMinutes = py.MustInt(raw.GetOr("hold_minutes", optional.Get("hold_minutes")))
+	if c.HoldMinutes < 0 {
+		raiseConfig("hold_minutes: must be 0 (no hold) or more")
+	}
+	c.HoldExempt = mustStrs(raw.GetOr("hold_exempt", optional.Get("hold_exempt")))
+	c.SpotCheckEvery = py.MustInt(raw.GetOr("spot_check_every", optional.Get("spot_check_every")))
+	if c.SpotCheckEvery < 0 {
+		raiseConfig("spot_check_every: must be 0 (no spot-check) or more")
+	}
+	c.FullsendAdopt = pyjson.Truthy(raw.GetOr("fullsend_adopt", optional.Get("fullsend_adopt")))
+	c.FullsendSendBacks = py.MustInt(raw.GetOr("fullsend_send_backs", optional.Get("fullsend_send_backs")))
+	if c.FullsendSendBacks < 0 {
+		raiseConfig("fullsend_send_backs: must be 0 (none sent back) or more")
+	}
+	c.OwnReviewRun = pyjson.Truthy(raw.GetOr("own_review_run", optional.Get("own_review_run")))
+	c.OwnReviewReserveMinutes = py.MustInt(raw.GetOr("own_review_reserve_minutes",
+		optional.Get("own_review_reserve_minutes")))
+	if c.OwnReviewReserveMinutes < 0 {
+		raiseConfig("own_review_reserve_minutes: must be 0 (no lane kept) or more")
+	}
+	c.UsageHistory = pyjson.Truthy(raw.GetOr("usage_history", optional.Get("usage_history")))
 	install, ok := raw.Get("install").(*pyjson.Object)
 	if !ok {
 		herr.Raise(typeError("unsupported operand type(s) for |: '%s' and 'dict'", py.TypeName(raw.Get("install"))))
@@ -442,7 +428,6 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	}
 	c.Resolvers = resolvers(raw.GetOr("resolvers", optional.Get("resolvers")))
 	c.MaxSelfCheckRounds = selfChecks
-	c.Easy = easyRule(raw.GetOr("easy", optional.Get("easy")))
 	c.Controller = pyjson.Truthy(raw.GetOr("controller", optional.Get("controller")))
 	c.BotToken = env["BOT_GITHUB_TOKEN"]
 	c.ActionsToken = env["GITHUB_TOKEN"]

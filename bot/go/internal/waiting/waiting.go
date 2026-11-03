@@ -9,7 +9,8 @@
 // would start it, and calls a subscription idle only when it may start work and nothing queued is
 // for it. An item no run can take says the tier its difficulty needs (an Opus for a hard one, or a
 // revision that answers a strong audit), which subscriptions have such a seat, and when the first
-// of them can start one: at a reset, at its hours, after its back-off, or when its run ends.
+// of them can start one: at a reset, at its hours, after its back-off, or when its run ends. An
+// item held for its owner (#2748, `plan.Holds`) says for whom, until when and why.
 package waiting
 
 import (
@@ -28,6 +29,8 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/spotcheck"
 )
 
 // TIER_WORDS: what each tier may take, said once above the queue: the router tries the weakest
@@ -35,7 +38,7 @@ import (
 var TierWords = map[string]string{"weak": "any model", "medium": "a medium or strong model", "strong": "a strong model"}
 
 // DIFFICULTY_MARK
-var DifficultyMark = map[string]string{"easy": "🟢", "medium": "🟡", "hard": "🔴", "unrated": "⚪"}
+var DifficultyMark = map[string]string{"medium": "🟡", "hard": "🔴", "unrated": "⚪"}
 
 // tierRank is providers.TIER_RANK (`{name: rank for rank, name in enumerate(TIERS)}`): the rank,
 // and whether `tier` has one.
@@ -117,6 +120,12 @@ type Row struct {
 	// True for an item the planner leaves out of the queue (`human`, a blocker, open parts).
 	Held   bool // default: False
 	Forced bool // default: False
+	// Able is the subscriptions with a seat that may take its next step (`Able`), whatever holds
+	// them now; HeldFor the one it is held for (`bot:waiting`, #2748), "" for none; QueuedAt when
+	// it was queued. The usage history counts the queue for each subscription from them (#2749).
+	Able     []string // default: ()
+	HeldFor  string   // default: ""
+	QueuedAt string   // default: ""
 }
 
 // Explained is waiting.Explained.
@@ -133,7 +142,7 @@ func TierNames(pool *providers.Pool, tier string) string {
 	for _, entry := range pool.TierEntries(tier) {
 		var owners []*providers.Provider
 		for _, p := range pool.Ordered() {
-			if slices.ContainsFunc(pool.OwnSeats(p), func(s *providers.Seat) bool { return s.Model == entry.Model }) {
+			if slices.ContainsFunc(pool.Seats(p), func(s *providers.Seat) bool { return s.Model == entry.Model }) {
 				owners = append(owners, p)
 			}
 		}
@@ -157,7 +166,8 @@ func TierNames(pool *providers.Pool, tier string) string {
 }
 
 // `plan.read_lanes` from the lanes the issue has read already (`status.lanes_now`), so the
-// queue costs no second look at the runs. `live` is item number (its key written out) ->
+// queue costs no second look at the runs, with the lanes in force now (`plan.lanes_in_force`:
+// a Claude account's by its 5-hour cap, #2748). `live` is item number (its key written out) ->
 // provider id.
 func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lanes {
 	pool := ctx.Cfg.Pool
@@ -185,16 +195,32 @@ func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lan
 	}
 	return &plan.Lanes{Limit: pool.MaxParallel, Held: held, Planning: planning,
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
-		Filling: filling}
+		Filling: filling, InForce: plan.LanesInForce(ctx, s)}
 }
 
 // (step, tier, why): what the next run does to `c`, the weakest tier that may do it
 // (`plan.assign`, `plan.review_seat`), and why that tier is not its difficulty's own.
 func Need(c *queue.Candidate) (string, string, string) {
+	difficulty := config.AsDifficulty(c.Difficulty)
+	if c.SpotCheck {
+		return "review", spotcheck.Tier, "an after-merge spot-check" // #2748, section 5
+	}
+	if c.OwnReview {
+		// Its own review run (#2748, 2026-11-02): on the subscription whose run built it, at the
+		// item's tier, which its lane reviews and fixes at.
+		return "review", config.MinTier[difficulty], fmt.Sprintf("its own review run, on `%s`", c.Owner)
+	}
 	if c.Kind == "review" {
-		tier, why := "strong", "its final audit"
-		if c.Difficulty == "easy" {
-			tier, why = "medium", ""
+		// The weakest tier whose approval ships it (#2748), on any subscription, its builder's
+		// included (2026-11-02): medium for a medium item; strong for a hard one, or for votes
+		// cast before #2748 (`review_rule.tiers`).
+		tiers := c.ReviewTiers
+		if len(tiers) == 0 {
+			tiers = reviewrule.Shipping(difficulty)
+		}
+		tier, why := tiers[0], ""
+		if tier == "strong" {
+			why = "its final audit"
 		}
 		if r, ok := tierRank(c.ReviewFloor); ok && r > rank(tier) {
 			tier, why = c.ReviewFloor, fmt.Sprintf("a person asked for a %s review", c.ReviewFloor)
@@ -208,14 +234,14 @@ func Need(c *queue.Candidate) (string, string, string) {
 		}
 		return "plan", queue.PlanFloor(c), why
 	}
-	tier, why := config.MinTier[c.Difficulty], ""
+	tier, why := config.MinTier[difficulty], ""
 	if c.Kind == "build" && c.Part && queue.PlanMeets(c) && rank(tier) > rank(config.PartFloor) {
 		tier, why = config.PartFloor, "a fullsend part, built from its plan"
 	}
 	if c.Kind == "revise" {
-		if r, ok := tierRank(c.AuditTier); ok && r > rank(tier) {
-			tier, why = c.AuditTier, fmt.Sprintf("it answers a %s reviewer's audit", c.AuditTier)
-		}
+		// A revision that answers a final audit is the auditor's own fix (#2748, section 4): its
+		// subscription owns it and fixes it at the audit's tier, but handed off it goes to the
+		// item's own tier, which is the weakest that may do it.
 		if (!c.BotPR || c.Conflict) && rank(tier) < rank("medium") {
 			tier = "medium"
 			if c.Conflict {
@@ -228,17 +254,9 @@ func Need(c *queue.Candidate) (string, string, string) {
 	return c.Kind, tier, why
 }
 
-// `20:27` today (Central time), `Fri 18:47` on another day.
+// `20:27` today (Central time), `Fri 18:47` on another day (`plan.Clock`).
 func Clock(ctx *hctx.Context, at time.Time) string {
-	zone := clock.Zone(ctx.Cfg.Timezone)
-	local := at.In(zone)
-	today := ctx.Now().In(zone)
-	ly, lm, ld := local.Date()
-	ty, tm, td := today.Date()
-	if ly == ty && lm == tm && ld == td {
-		return local.Format("15:04")
-	}
-	return local.Format("Mon 15:04")
+	return plan.Clock(ctx, at)
 }
 
 // Why `provider` may not start a run now, as a `Now`, or None (nil) when it may (its lanes
@@ -382,6 +400,11 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 		}
 	}
 	now := Subscriptions(ctx, s, lanes, after, starts, halted)
+	// Items held for their owners (#2748): what they wait for is that owner.
+	holds := map[int]*plan.Hold{}
+	if halted == "" {
+		holds = plan.Holds(ctx, s, q, lanes, false, plan.AnyQuiet)
+	}
 	// The planner's own order (`plan.pairs`), the items that start at the next run first.
 	order := slices.Clone(q)
 	sort.SliceStable(order, func(i, j int) bool {
@@ -400,10 +423,18 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 		}
 		start, _ := starts.Get(strconv.Itoa(c.Number)).(*plan.Assignment)
 		row := &Row{Number: c.Number, Title: c.Title, Step: step, Difficulty: difficulty, Tier: tier,
-			TierWhy: why, Priority: priority, Starts: start, Forced: c.Forced}
+			TierWhy: why, Priority: priority, Starts: start, Forced: c.Forced, QueuedAt: c.QueuedAt}
+		for _, p := range Able(ctx.Cfg.Pool, c, step, tier) {
+			row.Able = append(row.Able, p.ID)
+		}
+		if held := holds[c.Number]; held != nil {
+			row.HeldFor = held.Owner
+		}
 		if row.Starts == nil {
 			row.Waiting = halted
-			if halted == "" {
+			if held := holds[c.Number]; held != nil {
+				row.Waiting = "⏸️ " + plan.HoldLine(ctx, held)
+			} else if halted == "" {
 				row.Waiting = WaitsFor(ctx, s, c, step, tier, after, now)
 			}
 		}
@@ -414,7 +445,8 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 }
 
 // lessByPlanner is the key `(c.number not in starts, not c.forced, c.kind != "review",
-// c.priority, KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty), c.queued_at, c.number)`.
+// c.spot_check, c.priority, KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty), c.queued_at,
+// c.number)`.
 func lessByPlanner(a, b *queue.Candidate, starts *pyjson.Object) bool {
 	aStarts, bStarts := starts.Has(strconv.Itoa(a.Number)), starts.Has(strconv.Itoa(b.Number))
 	if aStarts != bStarts {
@@ -425,6 +457,9 @@ func lessByPlanner(a, b *queue.Candidate, starts *pyjson.Object) bool {
 	}
 	if aReview, bReview := a.Kind == "review", b.Kind == "review"; aReview != bReview {
 		return aReview
+	}
+	if a.SpotCheck != b.SpotCheck {
+		return b.SpotCheck // after the other review runs (#2748)
 	}
 	if a.Priority != b.Priority {
 		return a.Priority < b.Priority
@@ -521,6 +556,29 @@ func Subscriptions(ctx *hctx.Context, s *pyjson.Object, lanes *plan.Lanes, after
 	return found
 }
 
+// Able is the subscriptions with a seat at `tier` or above that may take `step` of `c`, in the
+// usage order, whatever holds them now: a spot-check never goes to its builder's subscription,
+// and an own review run only to its owner's.
+func Able(pool *providers.Pool, c *queue.Candidate, step string, tier string) []*providers.Provider {
+	role, ok := plan.RoleOf[step]
+	if !ok {
+		role = step
+	}
+	var able []*providers.Provider
+	for _, p := range pool.Ordered() {
+		if step == "review" && c.SpotCheck && c.BuiltBy != "" && p.ID == c.BuiltBy {
+			continue // a spot-check never goes to its builder's subscription (#2748)
+		}
+		if c.OwnReview && p.ID != c.Owner {
+			continue // its own review run is its builder's lane's alone (2026-11-02)
+		}
+		if slices.Contains(p.Roles, role) && pool.BestSeat(p, tier) != nil {
+			able = append(able, p)
+		}
+	}
+	return able
+}
+
 // Why no run takes `c` now: the kind of model it needs, and which of them frees up first.
 // `now` is Subscriptions' result.
 func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step string, tier string, lanes *plan.Lanes, now *pyjson.Object) string {
@@ -529,12 +587,7 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	if !ok {
 		role = step
 	}
-	var able []*providers.Provider
-	for _, p := range pool.Ordered() {
-		if slices.Contains(p.Roles, role) && pool.BestSeat(p, tier) != nil {
-			able = append(able, p)
-		}
-	}
+	able := Able(pool, c, step, tier)
 	if len(able) == 0 {
 		return fmt.Sprintf("⚠️ no subscription has a %s seat that may %s it", tier, role)
 	}
@@ -548,6 +601,12 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	}
 	if tier == "strong" {
 		wanted += fmt.Sprintf(" (%s)", TierNames(pool, tier))
+	}
+	if step == "review" && c.SpotCheck && c.BuiltBy != "" {
+		wanted += fmt.Sprintf(" on a subscription other than `%s`, which built it", c.BuiltBy)
+	}
+	if c.OwnReview {
+		wanted += fmt.Sprintf(" on `%s`, whose run built it (its own review run)", c.Owner)
 	}
 	var soonestAt time.Time
 	soonestID, haveSoonest := "", false

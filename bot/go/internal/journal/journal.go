@@ -274,6 +274,9 @@ func Section(result *pyjson.Object, provider string, models string, action strin
 		}
 		lines = append(lines, line+".")
 	}
+	if session, _ := result.Get("session").(*pyjson.Object); session != nil {
+		lines = append(lines, SessionLine(session)) // a Claude run's own session (#2748)
+	}
 	if result.Truthy("head") {
 		line := "Its work ended at `" + py.SliceTo(py.Str(result.Get("head")), 12) + "`"
 		if result.Truthy("branch") {
