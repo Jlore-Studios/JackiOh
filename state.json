@@ -15159,7 +15159,7 @@
       "started_at": "2026-11-03T21:51:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 4,
+      "verdict_rounds": 5,
       "votes": {
         "approvals": [],
         "builder": "claude",
