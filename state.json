@@ -14759,6 +14759,13 @@
     "2927": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:11:47Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "One crate (crates/server): one store method across the pg, fake and dispatch layers plus a reorder in one function; no engine, AI, migration or cross-crate contract, and well under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
