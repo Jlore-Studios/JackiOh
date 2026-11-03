@@ -14204,12 +14204,12 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-03T10:04:24Z",
-      "run_id": "41642635990",
+      "run_id": "pending:bd952c78-1793712828",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 10,
-      "started_at": "2026-11-03T13:14:49Z",
+      "started_at": "2026-11-03T13:34:27Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -14706,9 +14706,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T13:33:35Z",
+    "at": "2026-11-03T13:34:27Z",
     "url": "",
-    "what": "review #2931 on claude-8"
+    "what": "spot-check #2916 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-03T13:07:31Z",
@@ -27945,9 +27945,9 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:bd952c78-1793712828",
         "sha": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
-        "started_at": "2026-11-03T13:14:49Z",
+        "started_at": "2026-11-03T13:34:27Z",
         "status": "queued",
         "title": "Patch: hero plates keep one size however many effects they carry",
         "tries": 2
