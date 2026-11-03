@@ -15037,16 +15037,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/routes/dev/fx.test.tsx"
+          ],
+          "from": "9ee40eb7373843e5751aa8724539bafd8c4f77ec",
+          "main": "35844cd8b76e362c1af00eba5e3531588e7c06dd"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "41665596168",
+            "run": "41680723525",
             "tier": "strong"
           }
         ],
-        "sha": "9ee40eb7373843e5751aa8724539bafd8c4f77ec",
+        "sha": "01b384eb3ec9f6f5d7d67effb6355d991f18fe62",
         "tiers": {
           "claude": "strong"
         }
