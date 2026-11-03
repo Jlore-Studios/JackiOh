@@ -14288,32 +14288,13 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "carried": {
-          "by": "`muse` (medium)",
-          "conflicts": [
-            "apps/web/src/game/Hero.tsx"
-          ],
-          "from": "fc3a720de9a7978cda053dbff629f94d96239194",
-          "main": "c7145e4d941c6131378b5ef01be606e08775daf8"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "41642513159",
-            "tier": "medium"
-          }
-        ],
-        "sha": "95b7bd4138c3520c02608375e9a352b0e2dcccbd",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "a8155d88eb650e6ac8fcdb327fe8c7e7d22f9bb6",
+        "tiers": {}
       }
     },
     "2919": {
