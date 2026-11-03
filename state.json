@@ -14680,6 +14680,13 @@
     "2923": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:14:26Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: one client hook plus its test, no engine rules, AI, cross-crate design, migration, or 40-file scope"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
