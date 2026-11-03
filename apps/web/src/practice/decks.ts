@@ -35,7 +35,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-069", // Call to Arms
       "core-077", // Professor Curvature
       "core-030", // Archivist
-      "core-002", // Bigot
+      "core-002", // Speciesist
       "core-091", // Fed Fauci
       "core-073", // Anti-oneshot Armor
       "core-013", // Jlockeed Shredder-10
@@ -70,7 +70,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-058", // Rush Token Farm
       "core-068", // Twisted Sorcerer
       "core-080", // Zao Gao
-      "core-002", // Bigot
+      "core-002", // Speciesist
       "core-013", // Jlockeed Shredder-10
       "core-070", // Spiteful Stab
       "core-089", // Corpse Eater

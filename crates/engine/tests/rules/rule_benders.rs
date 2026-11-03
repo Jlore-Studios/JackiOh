@@ -17,7 +17,7 @@ use serde_json::json;
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const HIT_JOB: &str = "core-016";
 const VANILLA: &str = "core-008"; // (1) 4/4 Human.
 const PLAIN: &str = "core-025"; // (4) 7/7, no tags.
@@ -58,12 +58,12 @@ mod r940 {
     #[test]
     fn r940_a_harmful_scope_naming_a_tribal_tag_passes_an_immune_unit_by() {
         let mut s = hunting(
-            "benders-bigot",
-            json!([{ "def": BIGOT, "radiant": true }, FILLER]),
+            "benders-speciesist",
+            json!([{ "def": SPECIESIST, "radiant": true }, FILLER]),
         );
         let spared = s.unit(P2, 1).expect("victim").id.clone();
-        s.play(BIGOT, json!({}));
-        // Radiant Bigot's destroy_all over notTags [Human] passes the immune unit by.
+        s.play(SPECIESIST, json!({}));
+        // Radiant Speciesist's destroy_all over notTags [Human] passes the immune unit by.
         assert_eq!(s.unit(P2, 1).expect("stands").id, spared);
         assert!(s.unit(P2, 2).is_none(), "the plain unit is destroyed");
     }
@@ -84,13 +84,13 @@ mod r940 {
     fn r940_a_harm_declaration_cannot_pick_it_and_a_help_one_can() {
         let mut s = hunting(
             "benders-picks",
-            json!([{ "def": BIGOT }, { "def": RCTA }, FILLER]),
+            json!([{ "def": SPECIESIST }, { "def": RCTA }, FILLER]),
         );
         let target = s.unit(P2, 1).expect("victim").id.clone();
-        // Bigot's pick aims harm at notTags [Human]: refused.
+        // Speciesist's pick aims harm at notTags [Human]: refused.
         s.expect_refused(|s| {
             s.play(
-                BIGOT,
+                SPECIESIST,
                 json!({ "targets": [{ "pick": "instance", "instanceId": target }] }),
             )
         });
@@ -230,7 +230,7 @@ mod r940 {
         jackioh_engine::with_shipped(Some(shipped), || {
             let mut s = hunting(
                 "benders-shipped",
-                json!([{ "def": BIGOT, "radiant": true }, FILLER]),
+                json!([{ "def": SPECIESIST, "radiant": true }, FILLER]),
             );
             let felinor = s.unit(P2, 1).expect("victim").id.clone();
             assert!(
@@ -249,7 +249,7 @@ mod r940 {
                     .iter()
                     .all(|keyword| keyword.kind() != KeywordKind::ImmuneToTribalHate)
             );
-            s.play(BIGOT, json!({}));
+            s.play(SPECIESIST, json!({}));
             assert_eq!(s.unit(P2, 1).expect("stands").id, felinor);
         });
     }

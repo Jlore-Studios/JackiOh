@@ -1214,7 +1214,7 @@ mod tests {
             .filter(|cosmetic| cosmetic.id == VERSION_FULL_ART_ID)
             .collect();
         assert_eq!(droppable.len(), 1);
-        // Bigot, a Common Unit, is not offered the Full art version; The Mother Pancake, a Legendary Unit, is.
+        // Speciesist, a Common Unit, is not offered the Full art version; The Mother Pancake, a Legendary Unit, is.
         let pool = [
             PoolCard {
                 id: "core-002".to_owned(),

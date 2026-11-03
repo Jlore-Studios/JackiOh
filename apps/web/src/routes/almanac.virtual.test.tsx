@@ -70,8 +70,8 @@ describe("#2334 the Almanac's grid mounts only the rows near the view", SLOW_GRI
     expect(screen.getByTestId(poolCardId(far))).toBeInTheDocument();
     expect(mounted()).not.toContain(POOL[0]);
 
-    await userEvent.type(screen.getByTestId(DB_SEARCH), "bigot");
-    const kept = almanacPool(ALMANAC_CATALOG, { ...DEFAULT_FILTER, search: "bigot" }, DEFAULT_SORT);
+    await userEvent.type(screen.getByTestId(DB_SEARCH), "speciesist");
+    const kept = almanacPool(ALMANAC_CATALOG, { ...DEFAULT_FILTER, search: "speciesist" }, DEFAULT_SORT);
     expect(kept.length).toBeGreaterThan(0);
     expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(kept.length));
     expect(mounted()).toEqual(kept);

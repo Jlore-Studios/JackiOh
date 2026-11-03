@@ -17,7 +17,7 @@ export type WheelItem = {
   /** Stable key for what it shows. */
   key: string;
   face: FaceModel | null;
-  /** What a screen reader calls it ("Bigot", "Unknown card"). */
+  /** What a screen reader calls it ("Speciesist", "Unknown card"). */
   name: string;
   /** Where it sits, in words ("Top of pile", "Buried", "Bottom of pile"); shown under the primary. */
   note?: string;

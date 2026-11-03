@@ -76,7 +76,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage; your next Spell this turn costs (1) less.
     const DIVIDEND: &str = "core-024"; // (X) Spell
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const FILLER: &str = "core-010"; // (0) Spell
@@ -210,14 +210,14 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [LOBBYIST] },
-                    "p2": { "hand": [FILLER], "library": [{ "def": CN_VIRUS, "costMod": 2 }, VANILLA] },
+                    "p2": { "hand": [FILLER], "library": [{ "def": SUPER_VIRUS, "costMod": 2 }, VANILLA] },
                 }));
                 s.end_turn();
                 let cast = s
                     .last_events()
                     .iter()
                     .map(js)
-                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS)
+                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS)
                     .expect("the Cast on draw card's cardPlayed");
                 assert!(matches_object(&cast, &json!({ "player": "p2", "costPaid": 0 })));
             }
@@ -371,14 +371,14 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
-                    "p2": { "hand": [FILLER], "library": [{ "def": CN_VIRUS, "costMod": 2 }, VANILLA] },
+                    "p2": { "hand": [FILLER], "library": [{ "def": SUPER_VIRUS, "costMod": 2 }, VANILLA] },
                 }));
                 s.end_turn();
                 let cast = s
                     .last_events()
                     .iter()
                     .map(js)
-                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS)
+                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS)
                     .expect("the Cast on draw card's cardPlayed");
                 assert!(matches_object(&cast, &json!({ "player": "p2" })));
             }

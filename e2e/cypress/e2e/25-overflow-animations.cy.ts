@@ -43,7 +43,7 @@ const CLONE_MACHINE = nameOf(33);
 const GARY = nameOf(4);
 const VANILLA = nameOf(8);
 const INJECTION = nameOf(90);
-const CN_VIRUS = TOKEN_NAMES["90.1"] ?? "CN-Virus";
+const SUPER_VIRUS = TOKEN_NAMES["90.1"] ?? "Super-Virus";
 const THE_COIN = TOKEN_NAMES["T-coin"] ?? "The Coin";
 
 // Screenshot pass
@@ -363,7 +363,7 @@ function libraryFull(viewport: Viewport | null, shoot: Shoot): void {
     during: () => {
       shoot("library-full-opponent", pileNoticeId("opponent"));
       expectPileNotice("opponent", "libraryFull", "Deck full");
-      expectOverflowCard("opponent", CN_VIRUS, "notCreated");
+      expectOverflowCard("opponent", SUPER_VIRUS, "notCreated");
     },
   });
   expectNoticesGone("opponent");
@@ -382,7 +382,7 @@ describe("Spec 25 — fatigue, a full hand and a full library on the board (R315
     handFull(null, NO_SHOTS);
   });
 
-  it("R316 library full: the refused copy under 'Deck full', the owner's own play and then the other seat's CN-Virus", () => {
+  it("R316 library full: the refused copy under 'Deck full', the owner's own play and then the other seat's Super-Virus", () => {
     libraryFull(null, NO_SHOTS);
   });
 });

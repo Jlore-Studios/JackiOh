@@ -154,7 +154,7 @@ fn names(text: &str, name: &str) -> bool {
 /// Every catalog id a card's base or Radiant text names, in catalog order. R1249: a card of a set that
 /// ships names no card of a set that has not (R1420), so its shipped `refs` stay as they are until
 /// that set ships. R2195002, R2511000: a Core card's name names the Core card alone (S #88 Siva 2's
-/// Bigots, C+ #61's Stockpile, Core #76's Reminisce), since its Legacy card is named `Legacy: <name>`.
+/// Speciesists, C+ #61's Stockpile, Core #76's Reminisce), since its Legacy card is named `Legacy: <name>`.
 fn named_by(card: &CardDef) -> Vec<String> {
     let texts = [&card.base.text, &card.radiant.text];
     entries()
@@ -514,7 +514,7 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     fn r279_names_a_card_by_its_name_before_a_parenthesis_and_never_by_a_longer_word() {
         let chaos = CATALOG.get("core-095");
         assert!(chaos.is_some_and(|card| card.refs.iter().flatten().any(|id| id == "core-095")));
-        assert!(!names("Shuffle a CN-Viral Injection", "CN-Virus"));
+        assert!(!names("shuffle two Super-Viruses into", "Super-Virus"));
         assert!(!names("summon a Vanilla copy", "Mr. Vanilla"));
         assert!(names("fill your board with Rush Tokens; if", "Rush Token"));
         assert!(names(

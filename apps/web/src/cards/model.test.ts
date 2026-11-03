@@ -197,7 +197,7 @@ describe("B7: faceModel copies the def and picks the face", () => {
 
   it("B7 with a def present, the def's name wins over the CardInfo name fallback", () => {
     const f = faceModel({ defId: "core-002", def: def("core-002"), name: "Wrong", radiant: false });
-    expect(f.name).toBe("Bigot");
+    expect(f.name).toBe("Speciesist");
     expect(f.known).toBe(true);
   });
 });
@@ -582,7 +582,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     const fused = fusedDef([def("core-011"), def("core-002")]);
     const f = faceModel({ defId: fused.id, def: fused, radiant: true, inPlay: {} });
     expect(f.text.full.split("\n")).toEqual([def("core-011").radiant.text, def("core-002").radiant.text]);
-    // Tempo Timmy's Charge, and Bigot's "all … Units", each against its own base line.
+    // Tempo Timmy's Charge, and Speciesist's "all … Units", each against its own base line.
     expect(markedText(f.text.full, f.text.marks)).toEqual(["Charge", "all", "Units"]);
   });
 

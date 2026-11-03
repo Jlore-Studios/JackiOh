@@ -12,7 +12,7 @@ const STOCKPILE: &str = "core-005";
 const SHREDDER: &str = "core-013";
 const MENACE: &str = "core-019";
 const RENO: &str = "core-053";
-const CN_VIRUS: &str = "core-090-1";
+const SUPER_VIRUS: &str = "core-090-1";
 const MY_PAWN: &str = "core-096";
 const VANILLA: &str = "core-008";
 const HINDER: &str = "core-021";
@@ -48,14 +48,14 @@ mod r216_nothing_happens_after_the_game_is_over {
     use super::*;
 
     #[test]
-    fn r216_5_stockpiles_heal_does_not_follow_the_cn_virus_cast_that_killed_its_hero_2_5_4_5_2_4() {
-        // p1 at 1 health draws a CN-Virus off Stockpile's "draw 2": the cast deals p1 1 damage, and
+    fn r216_5_stockpiles_heal_does_not_follow_the_super_virus_cast_that_killed_its_hero_2_5_4_5_2_4() {
+        // p1 at 1 health draws a Super-Virus off Stockpile's "draw 2": the cast deals p1 1 damage, and
         // §2.4's chain runs §4.5's check after that cast, which ends the game (§2.5). Stockpile's
         // "heal your hero 2" is the rest of a script whose game is already decided.
         let mut s = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-after-game-over",
-            "p1": { "hand": [STOCKPILE], "health": 1, "library": [CN_VIRUS, RENO, MENACE] },
+            "p1": { "hand": [STOCKPILE], "health": 1, "library": [SUPER_VIRUS, RENO, MENACE] },
             "p2": { "hand": [RENO], "field": [MENACE] },
         }));
         s.play(STOCKPILE, json!({}));

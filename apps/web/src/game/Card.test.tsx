@@ -185,23 +185,23 @@ describe("B16: a face-down card is a back and nothing else", () => {
 
     // The control: the very same gestures on a face-up card do open, so the silence above is the
     // back's and not a gesture that never reached anything.
-    const bigot = handRoot(must(handOf(view)[0], "a hand card").instanceId);
-    fireEvent.pointerEnter(bigot, { pointerType: "mouse" });
+    const speciesist = handRoot(must(handOf(view)[0], "a hand card").instanceId);
+    fireEvent.pointerEnter(speciesist, { pointerType: "mouse" });
     act(() => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
     const preview = screen.getByTestId(INSPECT_HOVER);
-    expect(bigot.contains(preview)).toBe(false);
-    fireEvent.pointerLeave(bigot, { pointerType: "mouse" });
+    expect(speciesist.contains(preview)).toBe(false);
+    fireEvent.pointerLeave(speciesist, { pointerType: "mouse" });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
 
     // R2617000: the hold is the hover, open while the finger is down.
-    fireEvent.pointerDown(bigot, { pointerType: "touch", clientX: 10, clientY: 10 });
+    fireEvent.pointerDown(speciesist, { pointerType: "touch", clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
     expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
-    fireEvent.pointerUp(bigot, { pointerType: "touch", clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(speciesist, { pointerType: "touch", clientX: 10, clientY: 10 });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
   });
 
@@ -632,8 +632,8 @@ describe("B18: Card picks its form from its props", () => {
   it("B18 a hand card is the full form, with .card-text", () => {
     const view = fullBoardView();
     renderBoard(view);
-    const bigot = must(handOf(view)[0], "Bigot in hand");
-    const root = handRoot(bigot.instanceId);
+    const speciesist = must(handOf(view)[0], "Speciesist in hand");
+    const root = handRoot(speciesist.instanceId);
     expect(root.getAttribute("data-face")).toBe("full");
     const cf = inside(root, ".cf");
     expect(cf.getAttribute("data-layout")).toBe("full");
@@ -934,10 +934,10 @@ describe("R2098000 a hand card's term shows its rule on hover and on a long pres
   it("R2098000 hovering, tapping and holding a hand card's Cry term", () => {
     vi.useFakeTimers();
     const view = fullBoardView();
-    const bigot = must(handOf(view)[0], "a hand card");
+    const speciesist = must(handOf(view)[0], "a hand card");
     const onClick = vi.fn<(target: ClickTarget) => void>();
-    renderBoard(view, { highlight: highlightOf([testid.handCard(bigot.instanceId)]), onClick });
-    const term = inside(handRoot(bigot.instanceId), '.cf-term[data-term="Cry"]');
+    renderBoard(view, { highlight: highlightOf([testid.handCard(speciesist.instanceId)]), onClick });
+    const term = inside(handRoot(speciesist.instanceId), '.cf-term[data-term="Cry"]');
     expect(term).toHaveAttribute("data-tip", "pointer");
     expect(term).not.toHaveAttribute("tabindex");
 
@@ -951,7 +951,7 @@ describe("R2098000 a hand card's term shows its rule on hover and on a long pres
     expect(screen.queryByTestId(TERM_TOOLTIP_TESTID)).toBeNull();
 
     fireEvent.click(term);
-    expect(onClick).toHaveBeenLastCalledWith({ on: "hand", instanceId: bigot.instanceId });
+    expect(onClick).toHaveBeenLastCalledWith({ on: "hand", instanceId: speciesist.instanceId });
 
     fireEvent.pointerDown(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
     act(() => {

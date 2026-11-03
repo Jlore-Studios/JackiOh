@@ -82,7 +82,7 @@ mod tests {
     const FELINORS: &str = "core-012"; // (2) Unit 3/4
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const REPLENISH: &str = "core-010"; // (0) Spell
-    const BIGOT: &str = "core-002"; // (2) Unit 6/1
+    const SPECIESIST: &str = "core-002"; // (2) Unit 6/1
     const THEIR_HAND: [&str; 5] = [MENACE, SEVEN, FELINORS, VANILLA, REPLENISH];
 
     fn open(s: &Scenario) -> PendingChoice {
@@ -263,7 +263,7 @@ mod tests {
         use super::*;
 
         fn mixed_hand() -> Value {
-            json!([MENACE, { "def": FELINORS, "costMod": -1 }, VANILLA, REPLENISH, BIGOT])
+            json!([MENACE, { "def": FELINORS, "costMod": -1 }, VANILLA, REPLENISH, SPECIESIST])
         }
 
         #[test]
@@ -292,7 +292,7 @@ mod tests {
             s.answer(json!("1"));
             s.expect_in_zone(&felinors, "exile");
             s.expect_in_zone(&vanilla, "exile");
-            assert_eq!(def_ids(&s.hand(P2)), [MENACE, REPLENISH, BIGOT]);
+            assert_eq!(def_ids(&s.hand(P2)), [MENACE, REPLENISH, SPECIESIST]);
             s.expect_in_zone(MELT, "graveyard");
         }
 

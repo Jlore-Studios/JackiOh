@@ -40,7 +40,7 @@ fn big_spell() -> CardDef {
         json!({ "id": "lib-embiggen", "name": "Embiggen", "cost": { "base": 3, "embiggen": 5 } }),
     )
 }
-/// What the opponent's CN-Viral Injection names (#90): a card shuffled in by a play both saw.
+/// What the opponent's Super-Virus Injection names (#90): a card shuffled in by a play both saw.
 fn virus() -> CardDef {
     spell_def(
         807,

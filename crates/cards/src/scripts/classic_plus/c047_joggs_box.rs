@@ -589,8 +589,8 @@ mod tests {
                 }
                 if s.state().result.is_none() {
                     // The paused rest followed the answers: the owed start-of-turn draw landed. The first
-                    // game that pauses has the box cast Core #90 CN-Viral Injection (#2204), so p2's draw
-                    // takes a CN-Virus, cast on its draw (§2.4), and goes on to the next card; one card of
+                    // game that pauses has the box cast Core #90 Super-Virus Injection (#2204), so p2's draw
+                    // takes a Super-Virus, cast on its draw (§2.4), and goes on to the next card; one card of
                     // p2's draws reached its hand.
                     assert!(s.state().pending.is_none());
                     assert_eq!(

@@ -629,9 +629,9 @@ describe("B14: the radiant face", () => {
   });
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
-    const bigot = one(catalogFace("core-002", true), ".card-text");
-    expect(bigot.textContent).toBe("Cry: Destroy all enemy non-Human Units.");
-    expect(bigot.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
+    const speciesist = one(catalogFace("core-002", true), ".card-text");
+    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units.");
+    expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
     expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (4): −4/−4 instead.");
   });
@@ -1575,7 +1575,7 @@ describe("R2723000: a full-art face in the viewer's own hand", () => {
   const UNIT = "classicplus-046";
   /** League of Losers, a Spell. */
   const SPELL = "classicplus-019";
-  /** Bigot, a card that prints no full art. */
+  /** Speciesist, a card that prints no full art. */
   const PLAIN = "core-002";
   /** What the face prints on its own and a hand's full-art face does not. */
   const HIDDEN = [".card-name", ".cf-signature", ".cf-gem", ".cf-set", ".cf-crest"] as const;

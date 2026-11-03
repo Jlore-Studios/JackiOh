@@ -321,7 +321,7 @@ pub struct RadiantChanceArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// A per-card chance rather than a pick of N (#42 Eugenics: "each remaining library card has a 30%
+/// A per-card chance rather than a pick of N (#42 Selective Breeding: "each remaining library card has a 30%
 /// chance to become Radiant"): one independent roll per card in `pool_of`'s order (§10.7).
 ///
 /// EVERY card is rolled, a Radiant one included (§8 #42 is not one of R60's picks): skipping them would

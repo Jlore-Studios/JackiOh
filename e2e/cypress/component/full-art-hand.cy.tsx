@@ -17,7 +17,7 @@ import { baseView, card, emptySide, resetIds } from "../../../apps/web/src/test/
 const UNIT = "classicplus-046";
 /** League of Losers, a Spell that prints full art. */
 const SPELL = "classicplus-019";
-/** Bigot, a card that prints none. */
+/** Speciesist, a card that prints none. */
 const PLAIN = "core-002";
 
 /** What a full-art face prints on its own and a hand's does not. */
@@ -123,7 +123,7 @@ describe("R2723000 a full-art card in the viewer's own hand", () => {
       const plain = faceOf(hand, "plain");
       expect(plain.hasAttribute("data-full-art-hand"), "the normal card is not bare").to.eq(false);
       const banner = must(plain.querySelector(".card-name"), "name banner of the normal card");
-      expect(banner.textContent).to.eq("Bigot");
+      expect(banner.textContent).to.eq("Speciesist");
       expectDrawnInside(plain, ".card-name", PLAIN);
       const box = banner.getBoundingClientRect();
       expect(box.width, "the banner is wider than a pixel").to.be.greaterThan(1);

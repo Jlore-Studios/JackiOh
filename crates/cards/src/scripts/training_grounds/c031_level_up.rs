@@ -99,7 +99,7 @@ mod tests {
 
     const LEVEL_UP: &str = super::ID;
     const VANILLA: &str = "core-008"; // (1) 4/4
-    const BIGOT: &str = "core-002"; // (2) 4/1
+    const SPECIESIST: &str = "core-002"; // (2) 4/1
     /// S Trap: "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
     const CANCELLER: &str = "stinkyscape-t-ai-04";
     const MOTHS: &str = "core-009"; // start of turn: every enemy Unit attacks this
@@ -313,7 +313,7 @@ mod tests {
 
         #[test]
         fn r174_a_unit_that_dies_in_its_third_attack_is_not_made_radiant() {
-            let mut s = board(false, json!({ "field": [BIGOT] }), json!({ "field": [{ "def": VANILLA, "statsOverride": { "attack": 0, "health": 30 } }] }));
+            let mut s = board(false, json!({ "field": [SPECIESIST] }), json!({ "field": [{ "def": VANILLA, "statsOverride": { "attack": 0, "health": 30 } }] }));
             swing(&mut s, 1);
             next_round(&mut s);
             swing(&mut s, 1);
@@ -323,8 +323,8 @@ mod tests {
             s.card_mut(wall_id.as_str()).buffs = AttackHealth { attack: 1, health: 0 };
             swing(&mut s, 1);
 
-            s.expect_in_zone(BIGOT, "graveyard");
-            assert!(!s.card(BIGOT).radiant);
+            s.expect_in_zone(SPECIESIST, "graveyard");
+            assert!(!s.card(SPECIESIST).radiant);
         }
 
         #[test]

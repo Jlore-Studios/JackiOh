@@ -102,7 +102,7 @@ describe("R2725000 a card's version and augments", () => {
         expect(offeredOn(id, card)).toBe(true);
       }
       for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(true);
-      expect(offeredOn(id, "core-002"), `${id} on Bigot`).toBe(false);
+      expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(false);
     }
     // No other id has an offer.
     expect(isOfferedId("foil-galaxy")).toBe(false);

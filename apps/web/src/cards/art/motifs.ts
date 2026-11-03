@@ -171,7 +171,7 @@ export const MOTIF_WORDS: readonly (readonly [MotifId, readonly string[]])[] = [
   ["notes", ["pop", "song*", "music*", "sing*", "choir"]],
   ["heart", ["feel*", "love*", "heart*", "friend*", "helpful"]],
   ["brain", ["mind*", "memory", "knowledge", "brain*", "thought*", "think*", "reminisc*", "control*", "genius"]],
-  ["helix", ["mutat*", "transmog*", "eugenic*", "adapt*", "gene*", "dna", "duplicat*", "clone*"]],
+  ["helix", ["mutat*", "transmog*", "breed*", "adapt*", "gene*", "dna", "duplicat*", "clone*"]],
   ["scales", ["audit*", "justice", "punish*", "unbiased", "judge*", "trial", "test", "balance"]],
   ["rise", ["buff*", "upgrade*", "scaling", "stats", "boost*"]],
   ["fall", ["nerf*", "degrade*", "wither*", "weaken*"]],

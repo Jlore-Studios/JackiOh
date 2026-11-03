@@ -2,7 +2,7 @@
 //!
 //! A hook is a pure builder, so a list a prompt split is continued by building it again and skipping
 //! what already ran: wrong for a list whose shape hangs on the board once its own head has moved the
-//! cards it was built from (#94 Genn's Greed's rebuilt draws skipped a Bigot by index). So such a
+//! cards it was built from (#94 Genn's Greed's rebuilt draws skipped a Speciesist by index). So such a
 //! clause is a part of the list (`resolve::lazy_part`): it reads its set once, as the list reaches it,
 //! and keeps the ids as the part's memo, so a pause inside it resumes over the set it began with.
 

@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 use super::{fixture, register_fixture_script};
 
 const TIMMY: &str = "core-011";
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const RIGHT_HOUSE: &str = "core-003";
 const SCARAB: &str = "core-007";
 const GARY: &str = "core-004";
@@ -901,11 +901,11 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
 mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     use super::*;
 
-    fn bigot_swings_at_jilliax(seed: &str, p2_health: i32) -> Scenario {
+    fn speciesist_swings_at_jilliax(seed: &str, p2_health: i32) -> Scenario {
         let mut s = setup(json!({
             "seed": seed,
             "p1": {
-                "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
+                "field": [{ "def": SPECIESIST, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                 "backrow": [{ "def": GOING_LONG, "lane": 1 }],
                 "hand": [STOCKPILE],
                 "library": [GIGA, GIGA, GIGA],
@@ -918,20 +918,20 @@ mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
                 "library": [GIGA, GIGA],
             },
         }));
-        let bigot = must(s.unit("p1", 1), "p1's Bigot");
+        let speciesist = must(s.unit("p1", 1), "p1's Speciesist");
         let jilliax = must(s.unit("p2", 1), "p2's Jilliax");
-        s.card_mut(&bigot).granted_keywords.push(Keyword::Trample);
+        s.card_mut(&speciesist).granted_keywords.push(Keyword::Trample);
         s.card_mut(&jilliax).granted_keywords.push(Keyword::Trample);
         s.card_mut(&jilliax).divine_shield_spent = Some(true);
 
-        s.attack(&bigot, &jilliax);
+        s.attack(&speciesist, &jilliax);
         s
     }
 
     #[test]
     fn r176_r1750000_a_defenders_strike_back_never_tramples_so_lifesteal_heals_the_full_strike_and_the_swing_is_not_lethal_s4_4_steps_5_8_9()
      {
-        let mut s = bigot_swings_at_jilliax("cw8-pawn-trample-strikeback", 3);
+        let mut s = speciesist_swings_at_jilliax("cw8-pawn-trample-strikeback", 3);
 
         assert_eq!(count(&s, GameEventType::AttackCancelled), 0);
         assert!(s.state().result.is_none());
@@ -943,7 +943,7 @@ mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     #[test]
     fn r176_r1750000_the_full_strike_heals_no_more_than_it_deals_so_one_health_less_is_lethal_s4_4_steps_5_8_9()
      {
-        let mut s = bigot_swings_at_jilliax("cw8-pawn-trample-strikeback-lethal", 1);
+        let mut s = speciesist_swings_at_jilliax("cw8-pawn-trample-strikeback-lethal", 1);
 
         assert_eq!(count(&s, GameEventType::AttackCancelled), 1);
         assert!(s.state().result.is_none());

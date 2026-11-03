@@ -1233,11 +1233,11 @@ describe("R923000 a practice sandbox game", () => {
   const sandboxConfig = (seed: string, over: Partial<PracticeStartConfig> = {}): PracticeStartConfig =>
     config({ seed, humanSeat: "p1", sandbox: true, ...over });
 
-  /** A card a spawn may name: Bigot, a Core Unit. */
-  function bigotId(): string {
-    const bigot = Object.values(registeredCatalog()).find((def) => def.name === "Bigot");
-    if (bigot === undefined) throw new Error("the catalog has no Bigot");
-    return bigot.id;
+  /** A card a spawn may name: Speciesist, a Core Unit. */
+  function speciesistId(): string {
+    const speciesist = Object.values(registeredCatalog()).find((def) => def.name === "Speciesist");
+    if (speciesist === undefined) throw new Error("the catalog has no Speciesist");
+    return speciesist.id;
   }
 
   it("R923000 R923001 R923002 the human's tools wait on the mulligan, then are logged as h<n>, never listed, and the game folds only with the flag", { timeout: 120_000 }, () => {
@@ -1259,10 +1259,10 @@ describe("R923000 a practice sandbox game", () => {
     const lane = main.view.opponent.units.findIndex((slot) => slot === null) + 1;
     expect(lane, "the AI's unit row has an open lane").toBeGreaterThan(0);
     const spawned = snapshotOf(
-      d.send({ type: "act", action: { type: "sandbox", op: { kind: "spawn", player: "p2", defId: bigotId(), to: { zone: "field", row: "units", lane } } } }),
+      d.send({ type: "act", action: { type: "sandbox", op: { kind: "spawn", player: "p2", defId: speciesistId(), to: { zone: "field", row: "units", lane } } } }),
     );
     expect(spawned.error).toBeNull();
-    expect(spawned.view.opponent.units[lane - 1]?.defId).toBe(bigotId());
+    expect(spawned.view.opponent.units[lane - 1]?.defId).toBe(speciesistId());
     expect(spawned.legal.some((action) => action.type === "sandbox"), "legalActions never lists a tool").toBe(false);
 
     const after = debugOf(d);
@@ -1323,7 +1323,7 @@ describe("R923000 a practice sandbox game", () => {
 
   it("R923000 R508 a sandbox game brings no last board and leaves none", { timeout: 60_000 }, () => {
     const d = driver();
-    d.send({ type: "start", config: sandboxConfig("r923-board", { lastBoard: [{ defId: bigotId(), radiant: false }] }) });
+    d.send({ type: "start", config: sandboxConfig("r923-board", { lastBoard: [{ defId: speciesistId(), radiant: false }] }) });
     expect(debugOf(d).lastBoards).toBeUndefined();
     const over = snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
     expect(over.view.result).not.toBeNull();

@@ -650,14 +650,14 @@ describe("R1655000 a card in context", () => {
   });
 
   it("R2725001 a card's strip lists only its offered versions and augments", () => {
-    // Carnivorous Cube, offered all three with no full art of its own; Bigot, offered none.
+    // Carnivorous Cube, offered all three with no full art of its own; Speciesist, offered none.
     const groups = (defId: string) => cardStrip(defId, () => true).map((group) => [group.kind, group.items.map((entry) => entry.id)]);
     expect(groups(CUBE).slice(3)).toEqual([
       ["version", [NO_FULL_ART_ID, VERSION_FULL_ART_ID]],
       ["augment", [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]],
     ]);
     expect(groups(PLAIN).map(([kind]) => kind)).toEqual(["foil", "finish", "border"]);
-    // Owned on Bigot by a grant no shop makes, none is listed, and a face there wears none.
+    // Owned on Speciesist by a grant no shop makes, none is listed, and a face there wears none.
     writeCardFullArt(PLAIN, VERSION_FULL_ART_ID);
     open(PLAIN, new Map([[PLAIN, new Set([VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID])]]));
     expect(screen.queryByTestId(T.strip("version"))).toBeNull();

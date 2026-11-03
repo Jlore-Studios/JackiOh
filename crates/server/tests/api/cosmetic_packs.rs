@@ -1620,7 +1620,7 @@ async fn r2378000_an_opening_or_a_chase_sent_past_the_waiting_ones_is_refused_at
 #[tokio::test]
 async fn r2655000_r2725001_the_chase_refuses_an_unoffered_card_and_a_retired_full_art() {
     let (app, token) = setup().await;
-    // Gary the Gambler, one of the 21 full-art cards, is offered the Full art version; Bigot, a Common
+    // Gary the Gambler, one of the 21 full-art cards, is offered the Full art version; Speciesist, a Common
     // Unit, is not.
     let card = "core-004".to_string();
     let bare = "core-002".to_string();
@@ -1640,7 +1640,7 @@ async fn r2655000_r2725001_the_chase_refuses_an_unoffered_card_and_a_retired_ful
     assert_eq!(status, 409, "{answer}");
     assert_eq!(everything(&app).await, before);
 
-    // Owning both cards: its retired signed full art is sold no more, and the version on Bigot is not
+    // Owning both cards: its retired signed full art is sold no more, and the version on Speciesist is not
     // offered, each a 400; the Animated augment is no chase, a 409. Nothing is written.
     own(&app, &[card.clone(), bare.clone()]).await;
     let before = everything(&app).await;

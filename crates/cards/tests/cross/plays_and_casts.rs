@@ -31,8 +31,8 @@ const ROCK: &str = "core-066";
 const FULLSEND: &str = "core-078";
 const TWINSPELL: &str = "core-079";
 const INFINITE_RESERVES: &str = "core-075"; // an empty library gives a Rush Token card, not fatigue
-const GOING_LONG: &str = "core-084"; // hero Armor 2, so CN-Virus's 1 damage is absorbed
-const CN_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage; shuffle 2 copies of this into your library
+const GOING_LONG: &str = "core-084"; // hero Armor 2, so Super-Virus's 1 damage is absorbed
+const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage; shuffle 2 copies of this into your library
 const LIBRARY: &[&str] = &[
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
@@ -393,15 +393,15 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
     use super::*;
 
     #[test]
-    fn r217_a_cn_virus_cast_under_fullsend_s_combo_draw_is_one_chain_bounded_by_r58_s_cap_2_4_r70_9_3() {
+    fn r217_a_super_virus_cast_under_fullsend_s_combo_draw_is_one_chain_bounded_by_r58_s_cap_2_4_r70_9_3() {
         register_all();
         // /fullsend gives every card p1 plays this turn "Combo: draw 1", and a cast is a play (R70), so
-        // each CN-Virus cast draws once more before its own script shuffles two copies back in.
+        // each Super-Virus cast draws once more before its own script shuffles two copies back in.
         let mut g = scenario(json!({
             "p1": {
                 "hand": [{ "def": FULLSEND, "radiant": true }, VANILLA],
                 "backrow": [GOING_LONG, INFINITE_RESERVES],
-                "library": [CN_VIRUS],
+                "library": [SUPER_VIRUS],
                 "mana": 4,
             },
             "p2": { "hand": [VANILLA], "field": [VANILLA], "library": [VANILLA, VANILLA] },
@@ -414,7 +414,7 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
         let casts = g
             .last_events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == CN_VIRUS))
+            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == SUPER_VIRUS))
             .count();
         assert!(casts > 0);
         assert!(casts as i32 <= CAST_ON_DRAW_CHAIN_CAP);
@@ -492,14 +492,14 @@ fn chaos_cursor_for(effect: &str) -> u32 {
 }
 
 mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
-    // A seeded random game filled p2's library with #90's CN-Viruses beside p1's #33, and p2's #95 threw
+    // A seeded random game filled p2's library with #90's Super-Viruses beside p1's #33, and p2's #95 threw
     // out of `reduce`. "Draw your whole library" is one draw per card held (R58), each casting at most
-    // 20 CN-Viruses (R58, R217), every cast a play #33 answers (R70). R350 holds a virus's copies to the
+    // 20 Super-Viruses (R58, R217), every cast a play #33 answers (R70). R350 holds a virus's copies to the
     // end of the turn: the play casts only what the library held, then fatigues to death.
     use super::*;
 
     #[test]
-    fn r58_r350_a_call_to_chaos_that_draws_a_library_of_55_cn_viruses_beside_unstable_clone_machine_resolves_instead_of_throwing_10_3_r217_r70()
+    fn r58_r350_a_call_to_chaos_that_draws_a_library_of_55_super_viruses_beside_unstable_clone_machine_resolves_instead_of_throwing_10_3_r217_r70()
      {
         register_all();
         let mut s = scenario(json!({
@@ -508,7 +508,7 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
                 "hand": [CHAOS, MENACE],
                 "mana": 8,
                 "backrow": [GOING_LONG, CLONE_MACHINE],
-                "library": vec![CN_VIRUS; 55],
+                "library": vec![SUPER_VIRUS; 55],
             },
         }));
         s.state_mut().rng_cursor = chaos_cursor_for("draw");
@@ -519,7 +519,7 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
         let casts = s
             .events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == CN_VIRUS))
+            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == SUPER_VIRUS))
             .count();
         assert!(casts > 0);
         assert!(casts <= 55);

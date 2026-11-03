@@ -3,7 +3,7 @@
 /** SPEC §8 Core cards. */
 export const CARD_NAMES: Record<number, string> = {
   1: "Big D-fender",
-  2: "Bigot",
+  2: "Speciesist",
   3: "Right-house defender",
   4: "Gary the Gambler",
   5: "Stockpile",
@@ -43,7 +43,7 @@ export const CARD_NAMES: Record<number, string> = {
   39: "Recycling Initiative",
   40: "Echoes of the Forgotten",
   41: "Sheepish",
-  42: "Eugenics",
+  42: "Selective Breeding",
   43: "Big Felinor",
   44: "True Strike",
   45: "Deft Duelist",
@@ -91,7 +91,7 @@ export const CARD_NAMES: Record<number, string> = {
   87: "Pocket Chaos",
   88: "Twisting Nether",
   89: "Corpse Eater",
-  90: "CN-Viral Injection",
+  90: "Super-Virus Injection",
   91: "Fed Fauci",
   92: "Felinor Fiender",
   93: "Combo-Index",
@@ -118,7 +118,7 @@ export function allCardIds(): string[] {
 export const TOKEN_NAMES: Record<string, string> = {
   "51.1": "KY's Empty Notebook",
   "65.1": "Spikey Pillow",
-  "90.1": "CN-Virus",
+  "90.1": "Super-Virus",
   "93.1": "Combo-Fodder",
   "95.1": "Chaos Golem",
   "T-rush": "Rush Token",

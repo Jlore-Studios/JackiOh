@@ -21,7 +21,7 @@ use crate::rules::fixtures::quests::{
     banish_any, blank, bless, bolt, draw_one, draw_then_recruit, draw_two, limiter, mill, recall,
     register_quest_fixtures, slay, tree,
 };
-use crate::rules::fixtures::scripts::cn_virus;
+use crate::rules::fixtures::scripts::super_virus;
 
 const RUSH_TOKEN: &str = "fx-token-rush";
 
@@ -245,7 +245,7 @@ mod e33_quests_each_goal_counted_and_not_counted {
             &mut state,
             P1,
             &[
-                cn_virus().id.as_str(),
+                super_virus().id.as_str(),
                 plain_id.as_str(),
                 plain_id.as_str(),
                 plain_id.as_str(),
@@ -254,7 +254,7 @@ mod e33_quests_each_goal_counted_and_not_counted {
         let Played {
             state: mut s1, card, ..
         } = goal(&mut state, "draws", P1);
-        // One draw that casts the CN-Virus and draws on (R58): two draws.
+        // One draw that casts the Super-Virus and draws on (R58): two draws.
         let step = play_new(&mut s1, &draw_one().id, P1, &[]);
         assert_eq!(
             field_of(&step.events, GameEventType::Drawn, "player")

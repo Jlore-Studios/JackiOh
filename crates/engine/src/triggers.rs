@@ -96,7 +96,7 @@ pub const OWED_TO_TRAPS: &str = "@traps";
 /// MD-B22, R946: the `hook` of a lane watcher's queue entry (Showdown, Meditative #98, Radiant face).
 pub const LANE_WATCH: &str = "@laneWatch";
 
-/// R1863000: the `hook` of a play watcher's queue entry (Great Replacement Theory, Stinkyscape #44).
+/// R1863000: the `hook` of a play watcher's queue entry (Great Paperclip Theory, Stinkyscape #44).
 pub const PLAY_WATCH: &str = "@playWatch";
 
 /// R1882004: the `hook` of a death watcher's queue entry (Stinkyscape #150 Call to Chaos, entry 8).
@@ -882,7 +882,7 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     }
     // MD-B22, R946: Showdown's watchers answer the event before anything notes its removals.
     queued.extend(offer_to_lane_watches(sink, event));
-    // R1863000: and Great Replacement Theory's, a resolved play's first of each card they name.
+    // R1863000: and Great Paperclip Theory's, a resolved play's first of each card they name.
     queued.extend(offer_to_play_watches(sink, event));
     // R1882004: and Call to Chaos (Stinky Edition)'s, a death of a card printing their tag.
     queued.extend(offer_to_death_watches(sink, event));
@@ -1548,7 +1548,7 @@ pub fn settle(sink: &mut SettleSink<'_>, options: SettleOptions) {
 pub struct SettleOptions {
     /// §10.5 step 4's loop, so that a trap answering the play (Sheepish) fires before the Cry (R17).
     /// Nothing has resolved yet, so §4.5's check waits for a trap, owed work or a queued trigger: a card
-    /// arriving at 0 or less health (a 6/1 Bigot under #46 Suppressive Aura) still resolves its Cry and
+    /// arriving at 0 or less health (a 6/1 Speciesist under #46 Suppressive Aura) still resolves its Cry and
     /// the check after step 6 collects it. R118 loses the Cry only where a trap took the card.
     pub hold_check: Option<bool>,
 }

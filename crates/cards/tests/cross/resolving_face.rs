@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 
 use super::craft_fused;
 
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const STOCKPILE: &str = "core-005";
 const VANILLA: &str = "core-008";
 const MOTHS: &str = "core-009";
@@ -251,16 +251,16 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
     }
 
     #[test]
-    fn r214_a_crafted_bigot_twisted_sorcerer_that_gifted_program_will_make_radiant_names_the_sorcerers_target_alone_r90_r102()
+    fn r214_a_crafted_speciesist_twisted_sorcerer_that_gifted_program_will_make_radiant_names_the_sorcerers_target_alone_r90_r102()
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": { "hand": [RENO], "mana": 4, "backrow": [GIFTED] },
             "p2": { "hand": [RENO], "field": [PANTHER] },
         }));
-        // Craft a Card's result for Bigot and Twisted Sorcerer, made directly (R77): the test is about the
+        // Craft a Card's result for Speciesist and Twisted Sorcerer, made directly (R77): the test is about the
         // fused card, not about which two Discover offers the pools of every set (R380) make.
-        craft_fused(&mut g, PlayerId::P1, &[BIGOT, TWISTED_SORCERER]);
+        craft_fused(&mut g, PlayerId::P1, &[SPECIESIST, TWISTED_SORCERER]);
         let card = must(
             g.hand(PlayerId::P1)
                 .iter()
@@ -297,7 +297,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         jackioh_cards::register_all();
         let mut s = scenario(json!({
             "p1": {
-                "hand": [CARNIVOROUS_CUBE, LAVA_GOLEM, BIGOT],
+                "hand": [CARNIVOROUS_CUBE, LAVA_GOLEM, SPECIESIST],
                 "field": [GARY, JEWELOSCO_SCARAB, VANILLA],
                 "backrow": [GIFTED],
                 "library": [RENO, RENO],
@@ -309,11 +309,11 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         // keeps its instance and its type (R77). #22 eats Units only (R428), and this one is a Unit.
         let vanilla = must(s.unit(PlayerId::P1, 3), "p1's Mr. Vanilla");
         let gifted = must(s.backrow(PlayerId::P1, 1), "p1's Gifted Program");
-        // #99's result: Lava Golem + Bigot, a Unit with Tribute 3 costing 0, whose base face names an
+        // #99's result: Lava Golem + Speciesist, a Unit with Tribute 3 costing 0, whose base face names an
         // enemy non-Human unit to destroy and whose radiant face destroys every enemy non-Human unit
         // and names nothing (R102, R214).
         let lava_golem = s.card(LAVA_GOLEM).clone();
-        let bigot = s.card(BIGOT).clone();
+        let speciesist = s.card(SPECIESIST).clone();
         let (gifted_unit, crafted) = {
             let mut events: Vec<GameEvent> = vec![];
             let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -333,12 +333,12 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
                 subsystems::fuse(
                     &mut sink,
                     FuseArgs {
-                        ingredients: vec![lava_golem, bigot],
+                        ingredients: vec![lava_golem, speciesist],
                         to_hand: Some(PlayerId::P1),
                         ..FuseArgs::default()
                     },
                 ),
-                "the crafted Lava Golem + Bigot",
+                "the crafted Lava Golem + Speciesist",
             );
             (gifted_unit, crafted)
         };

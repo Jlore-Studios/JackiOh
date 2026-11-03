@@ -1050,7 +1050,7 @@ begin
   delete from public.cards
    where id in ('check18-probe', 'check18-probe-quest', 'check18-probe-swarm', 'check18-probe-token');
 
-  -- A row as `seed-catalog` writes Training Grounds #41 Legacy: Bigot, a Human Legacy Unit, is
+  -- A row as `seed-catalog` writes Training Grounds #41 Legacy: Speciesist, a Human Legacy Unit, is
   -- admitted (R2511000).
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,

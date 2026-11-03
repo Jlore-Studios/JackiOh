@@ -110,7 +110,7 @@ pub struct ShuffleCopiesOfSelfArgs {
     pub player: Option<PlayerSpec>,
 }
 
-/// Shuffle copies of the card that is resolving (CN-Virus's own copies).
+/// Shuffle copies of the card that is resolving (Super-Virus's own copies).
 pub fn shuffle_copies_of_self(args: ShuffleCopiesOfSelfArgs) -> Effect {
     Effect::new("shuffleCopiesOfSelf", move |ctx| {
         let Some(this) = ctx.live_self().cloned() else {

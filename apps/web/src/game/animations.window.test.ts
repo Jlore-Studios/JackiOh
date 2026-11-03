@@ -103,7 +103,7 @@ describe("newEventsSince against the engine's own views", () => {
 const OVERFLOWS: readonly GameEventType[] = ["fatigue", "burned", "libraryOverflow"];
 /** #33 Unstable Clone Machine: after its controller plays a card, three copies go into the library. */
 const CLONE_MACHINE = "core-033";
-/** #90 CN-Viral Injection: a CN-Virus into the opponent's library. */
+/** #90 Super-Virus Injection: a Super-Virus into the opponent's library. */
 const VIRAL_INJECTION = "core-090";
 
 /** `n` distinct deckable ids, cheapest first (as `cheap20` picks them), after the ones a game needs.

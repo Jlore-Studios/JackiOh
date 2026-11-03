@@ -144,7 +144,7 @@ radiant?: true,
 via?: KeywordKind, } | { "type": "enteredGraveyard", instanceId: string, defId: string, owner: PlayerId, } | { "type": "exiled", instanceId: string, defId: string, owner: PlayerId, } | { "type": "bounced", instanceId: string, defId: string, owner: PlayerId, } | { "type": "burned", instanceId: string, defId: string, owner: PlayerId, } | { "type": "fatigue", player: PlayerId, count: number, amount: number, } | { "type": "libraryOverflow", player: PlayerId, instanceId: string, defId: string, outcome: LibraryOverflowOutcome, 
 /**
  * R316: set when the refused card is Radiant (#33's Radiant face makes every copy Radiant, a
- * Radiant CN-Virus copies Radiant), so the board shows the face it would have had. It is the
+ * Radiant Super-Virus copies Radiant), so the board shows the face it would have had. It is the
  * card's, so a view that hides the card hides this too (R97). Only ever `Some(true)`.
  */
 radiant?: true, 

@@ -1253,7 +1253,7 @@ async fn r2378000_a_redemption_sent_past_the_waiting_ones_is_refused_at_once_and
 #[tokio::test]
 async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_art() {
     let (app, token) = setup().await;
-    // League of Losers, a Legendary Spell, is offered the versions and augments; Bigot, a Common Unit, is not.
+    // League of Losers, a Legendary Spell, is offered the versions and augments; Speciesist, a Common Unit, is not.
     let card = "classicplus-019".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;

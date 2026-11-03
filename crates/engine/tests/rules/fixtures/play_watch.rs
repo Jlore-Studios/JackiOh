@@ -1,6 +1,6 @@
 //! Test-only cards for the rest-of-game play watcher (issue #1863, R1863000): "for the rest of the
 //! game, the first time you play each …" (`watch_first_plays`), which Stinkyscape #44 Great
-//! Replacement Theory uses. Ids `pw-…` from 18630, no other fixture file's.
+//! Paperclip Theory uses. Ids `pw-…` from 18630, no other fixture file's.
 
 use std::sync::LazyLock;
 

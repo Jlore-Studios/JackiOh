@@ -54,7 +54,7 @@ mod tests {
     const RECYCLER: &str = super::ID;
     const RUSH: &str = "core-t-rush";
     const VANILLA: &str = "core-008"; // (1) 4/4
-    const BIGOT: &str = "core-002"; // (2) 4/1
+    const SPECIESIST: &str = "core-002"; // (2) 4/1
     const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike
     const BIG_FELINOR: &str = "core-043"; // (4) 3/10, Cry: destroy all non-Felinor Units.
     const COLLATERAL: &str = "core-034"; // exiles a permanent
@@ -83,10 +83,10 @@ mod tests {
 
         #[test]
         fn r2199006_your_non_token_unit_dies_and_you_get_a_rush_token() {
-            let mut s = board(false, json!({ "field": [{ "def": BIGOT, "lane": 3 }] }), json!({ "field": [VANILLA] }));
-            let bigot = s.unit(P1, 3).unwrap();
+            let mut s = board(false, json!({ "field": [{ "def": SPECIESIST, "lane": 3 }] }), json!({ "field": [VANILLA] }));
+            let speciesist = s.unit(P1, 3).unwrap();
             let vanilla = s.unit(P2, 1).unwrap();
-            s.attack(&bigot, &vanilla);
+            s.attack(&speciesist, &vanilla);
 
             // R64: the leftmost open zone, not the zone it died in.
             assert_eq!(units(&s, P1)[0].as_deref(), Some(RUSH));
@@ -96,11 +96,11 @@ mod tests {
 
         #[test]
         fn r172_an_enemy_unit_dies_and_the_enemy_gets_one() {
-            // Timmy's First Strike kills the Bigot before it strikes back.
-            let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [BIGOT] }));
+            // Timmy's First Strike kills the Speciesist before it strikes back.
+            let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [SPECIESIST] }));
             let vanilla = s.unit(P1, 1).unwrap();
-            let bigot = s.unit(P2, 1).unwrap();
-            s.attack(&vanilla, &bigot);
+            let speciesist = s.unit(P2, 1).unwrap();
+            s.attack(&vanilla, &speciesist);
 
             assert_eq!(tokens(&s, P2), 1);
             assert_eq!(tokens(&s, P1), 0);
@@ -119,18 +119,18 @@ mod tests {
 
         #[test]
         fn r64_a_full_row_summons_nothing() {
-            // The Bigot tops a Stack pile (§3.2): the Vanilla beneath resumes, so the row stays full.
+            // The Speciesist tops a Stack pile (§3.2): the Vanilla beneath resumes, so the row stays full.
             let mut s = board(
                 false,
-                json!({ "field": [VANILLA, { "def": BIGOT, "stack": true }, VANILLA, VANILLA, VANILLA, VANILLA] }),
+                json!({ "field": [VANILLA, { "def": SPECIESIST, "stack": true }, VANILLA, VANILLA, VANILLA, VANILLA] }),
                 json!({ "field": [VANILLA] }),
             );
-            let bigot = s.unit(P1, 1).unwrap();
-            assert_eq!(bigot.def_id, BIGOT);
+            let speciesist = s.unit(P1, 1).unwrap();
+            assert_eq!(speciesist.def_id, SPECIESIST);
             let target = s.unit(P2, 1).unwrap();
-            s.attack(&bigot, &target);
+            s.attack(&speciesist, &target);
 
-            s.expect_in_zone(BIGOT, "graveyard");
+            s.expect_in_zone(SPECIESIST, "graveyard");
             assert_eq!(tokens(&s, P1), 0);
             assert!(units(&s, P1).iter().all(|def| def.as_deref() == Some(VANILLA)));
         }
@@ -174,12 +174,12 @@ mod tests {
 
         #[test]
         fn r153_once_it_is_gone_nothing_happens() {
-            let mut s = board(false, json!({ "hand": [COLLATERAL, HIT_JOB], "field": [BIGOT] }), json!({ "field": [VANILLA] }));
+            let mut s = board(false, json!({ "hand": [COLLATERAL, HIT_JOB], "field": [SPECIESIST] }), json!({ "field": [VANILLA] }));
             let recycler = s.card(RECYCLER).clone();
             s.play(COLLATERAL, json!({ "targets": [{ "pick": "instance", "instanceId": recycler.id }] }));
-            let bigot = s.unit(P1, 1).unwrap();
+            let speciesist = s.unit(P1, 1).unwrap();
             let vanilla = s.unit(P2, 1).unwrap();
-            s.attack(&bigot, &vanilla);
+            s.attack(&speciesist, &vanilla);
 
             assert_eq!(tokens(&s, P1), 0);
         }
@@ -190,10 +190,10 @@ mod tests {
 
         #[test]
         fn r74_a_radiant_rush_token_6_6_rush_cleave() {
-            let mut s = board(true, json!({ "field": [BIGOT] }), json!({ "field": [VANILLA] }));
-            let bigot = s.unit(P1, 1).unwrap();
+            let mut s = board(true, json!({ "field": [SPECIESIST] }), json!({ "field": [VANILLA] }));
+            let speciesist = s.unit(P1, 1).unwrap();
             let vanilla = s.unit(P2, 1).unwrap();
-            s.attack(&bigot, &vanilla);
+            s.attack(&speciesist, &vanilla);
 
             let token = s.unit(P1, 1).expect("a token");
             assert_eq!(token.def_id, RUSH);

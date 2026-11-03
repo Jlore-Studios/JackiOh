@@ -237,7 +237,7 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2),
         // Meditative+ #21 Harmony Spirit.
         // Stinkyscape #142.
-        // Training Grounds #29 Oriental.
+        // Training Grounds #29 Easterner.
         Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; not C+ #61 Bauble Bubble (#831) nor
         // Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field Spells that make Fruit

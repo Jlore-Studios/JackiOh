@@ -506,7 +506,7 @@ pub enum GameEvent {
         def_id: String,
         outcome: LibraryOverflowOutcome,
         /// R316: set when the refused card is Radiant (#33's Radiant face makes every copy Radiant, a
-        /// Radiant CN-Virus copies Radiant), so the board shows the face it would have had. It is the
+        /// Radiant Super-Virus copies Radiant), so the board shows the face it would have had. It is the
         /// card's, so a view that hides the card hides this too (R97). Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]

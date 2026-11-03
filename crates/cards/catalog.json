@@ -39,7 +39,7 @@
   "core-002": {
     "id": "core-002",
     "index": "2",
-    "name": "Bigot",
+    "name": "Speciesist",
     "set": "Core",
     "type": "Unit",
     "tags": [
@@ -1394,7 +1394,7 @@
   "core-042": {
     "id": "core-042",
     "index": "42",
-    "name": "Eugenics",
+    "name": "Selective Breeding",
     "set": "Core",
     "type": "Spell",
     "tags": [],
@@ -3211,7 +3211,7 @@
   "core-090": {
     "id": "core-090",
     "index": "90",
-    "name": "CN-Viral Injection",
+    "name": "Super-Virus Injection",
     "set": "Core",
     "type": "Spell",
     "tags": [
@@ -3227,17 +3227,17 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Shuffle a CN-Virus into your opponent's deck."
+      "text": "Shuffle a Super-Virus into your opponent's deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a Radiant CN-Virus into your opponent's deck."
+      "text": "Shuffle a Radiant Super-Virus into your opponent's deck."
     }
   },
   "core-090-1": {
     "id": "core-090-1",
     "index": "90.1",
-    "name": "CN-Virus",
+    "name": "Super-Virus",
     "set": "Core",
     "type": "Spell",
     "tags": [
@@ -14386,7 +14386,7 @@
   "meditative-061": {
     "id": "meditative-061",
     "index": "61",
-    "name": "Joon Jorker",
+    "name": "Joon Juicer",
     "set": "Meditative",
     "type": "Unit",
     "tags": [
@@ -16014,7 +16014,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle {viruses|CN-Virus|CN-Viruses} into your opponent's deck."
+      "text": "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle {viruses|Super-Virus|Super-Viruses} into your opponent's deck."
     },
     "radiant": {
       "attack": 20,
@@ -16036,7 +16036,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your opponent's deck."
+      "text": "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle {viruses|Radiant Super-Virus|Radiant Super-Viruses} into your opponent's deck."
     }
   },
   "meditative-096": {
@@ -20119,7 +20119,7 @@
   "stinkyscape-044": {
     "id": "stinkyscape-044",
     "index": "44",
-    "name": "Great Replacement Theory",
+    "name": "Great Paperclip Theory",
     "set": "Stinkyscape",
     "type": "Spell",
     "tags": [
@@ -22035,7 +22035,7 @@
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Aura: Your Humans have Poisonous.\nCry: Fill your hand with Bigots."
+      "text": "Aura: Your Humans have Poisonous.\nCry: Fill your hand with Speciesists."
     }
   },
   "stinkyscape-089": {
@@ -27659,7 +27659,7 @@
   "traininggrounds-029": {
     "id": "traininggrounds-029",
     "index": "29",
-    "name": "Oriental",
+    "name": "Easterner",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
@@ -28111,7 +28111,7 @@
   "traininggrounds-041": {
     "id": "traininggrounds-041",
     "index": "41",
-    "name": "Legacy: Bigot",
+    "name": "Legacy: Speciesist",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [

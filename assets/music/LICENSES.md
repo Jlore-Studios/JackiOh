@@ -192,7 +192,7 @@ attribution is required when they play in the game.
 | `intro-stinkyscape-036` | `apps/web/public/audio/music/intro-stinkyscape-036.m4a` | Intro of Stinkyscape #36 Drone Core X (Mythic): saw lead, synth strings, synth bass, D-flat phrygian, 4/4 at 148 | 9.3 s |
 | `intro-stinkyscape-037` | `apps/web/public/audio/music/intro-stinkyscape-037.m4a` | Intro of Stinkyscape #37 Kwzka (Legendary): horn, strings, contrabass, A dorian, 4/4 at 115 | 7.5 s |
 | `intro-stinkyscape-039` | `apps/web/public/audio/music/intro-stinkyscape-039.m4a` | Intro of Stinkyscape #39 The Narcor Project (Legendary): clarinet, choir, cello, C major, 4/4 at 107 | 7.9 s |
-| `intro-stinkyscape-044` | `apps/web/public/audio/music/intro-stinkyscape-044.m4a` | Intro of Stinkyscape #44 Great Replacement Theory (Mythic): whistle, steel guitar, acoustic bass, C dorian, 4/4 at 137 | 10.0 s |
+| `intro-stinkyscape-044` | `apps/web/public/audio/music/intro-stinkyscape-044.m4a` | Intro of Stinkyscape #44 Great Paperclip Theory (Mythic): whistle, steel guitar, acoustic bass, C dorian, 4/4 at 137 | 10.0 s |
 | `intro-stinkyscape-058` | `apps/web/public/audio/music/intro-stinkyscape-058.m4a` | Intro of Stinkyscape #58 Beam v5 (Legendary): synth brass, brass, contrabass, B minor, 4/4 at 107 | 7.9 s |
 | `intro-stinkyscape-059` | `apps/web/public/audio/music/intro-stinkyscape-059.m4a` | Intro of Stinkyscape #59 Repeater v5 (Legendary): synth brass, brass, contrabass, E-flat harmonic minor, 4/4 at 116 | 7.4 s |
 | `intro-stinkyscape-060` | `apps/web/public/audio/music/intro-stinkyscape-060.m4a` | Intro of Stinkyscape #60 Cannon v5 (Legendary): synth brass, brass, contrabass, B harmonic minor, 4/4 at 108 | 7.9 s |

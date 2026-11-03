@@ -7,7 +7,7 @@
 //! from each owner's seat, so the rightmost is the board's last,
 //! `UNIT_ZONES`), both sides and both rows (Radiant: the enemy's alone), passing a Unit standing on an
 //! Ivory Tower as its play resolves (R446, R653). The base face destroys itself there too, as
-//! Hearthstone's "destroy all minions" (R2196003). TG #29 Oriental mirrors it on lane 1.
+//! Hearthstone's "destroy all minions" (R2196003). TG #29 Easterner mirrors it on lane 1.
 
 use jackioh_engine::prelude::*;
 

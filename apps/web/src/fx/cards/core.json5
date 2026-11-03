@@ -12,7 +12,7 @@
 // recipe) or "keep" (it plays over that recipe).
 {
   "core-001": "none: its Aura is standing Armor, with no moment to draw", // Big D-fender
-  "core-002": { cry: { motif: "bolt" } }, // Bigot
+  "core-002": { cry: { motif: "bolt" } }, // Speciesist
   "core-003": "none: vanilla", // Right-house defender
   "core-004": { cry: { motif: "bless", palette: "Hustle/cash" } }, // Gary the Gambler
   "core-005": { cast: { motif: "flight" } }, // Stockpile
@@ -52,7 +52,7 @@
   "core-039": { cast: { motif: "vanish" }, trigger: { motif: "send" } }, // Recycling Initiative
   "core-040": { cast: { motif: "conjure" }, trigger: { motif: "bolt" }, aura: { look: "void", scope: "zone" } }, // Echoes of the Forgotten
   "core-041": { cast: { motif: "snap", palette: "Beast/wool" } }, // Sheepish
-  "core-042": { cast: { motif: "vanish" } }, // Eugenics
+  "core-042": { cast: { motif: "vanish" } }, // Selective Breeding
   "core-043": { cry: { motif: "wipe", palette: "Beast/felinor" } }, // Big Felinor
   "core-044": { cast: { motif: "bolt" } }, // True Strike
   "core-045": "none: vanilla", // Deft Duelist
@@ -102,8 +102,8 @@
   "core-087": { cast: { motif: "shift" } }, // Pocket Chaos
   "core-088": { setPiece: "nether" }, // Twisting Nether
   "core-089": "none: it grows in hand, with no board change to draw", // Corpse Eater
-  "core-090": { cast: { motif: "send" } }, // CN-Viral Injection
-  "core-090-1": { cast: { motif: "bolt" } }, // CN-Virus
+  "core-090": { cast: { motif: "send" } }, // Super-Virus Injection
+  "core-090-1": { cast: { motif: "bolt" } }, // Super-Virus
   "core-091": { trigger: { motif: "mana" } }, // Fed Fauci
   "core-092": "none: no hook; its Legendary entrance plays", // Felinor Fiender
   "core-093": { cast: { motif: "conjure" }, trigger: { motif: "tally" }, aura: { look: "storm", scope: "zone" } }, // Combo-Index

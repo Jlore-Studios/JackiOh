@@ -860,7 +860,7 @@ mod tests {
                 cosmetic_rarity: CosmeticRarity::Legendary
             }
         );
-        // A card neither is offered on (Bigot, a Common Unit) never drops one.
+        // A card neither is offered on (Speciesist, a Common Unit) never drops one.
         let other: Vec<CardCosmetic> = held_mythics
             .iter()
             .map(|row| held("core-002", &row.cosmetic_id))

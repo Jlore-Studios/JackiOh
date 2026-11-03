@@ -24,7 +24,7 @@ const CARD_FACE_LABEL =
 
 /**
  * WCAG 2.5.3 Label in Name, the deck builder's list: an open deck's strip shows cost and name, and its
- * name says what pressing it does ("Remove Bigot from Deck 2"), naming the card but not the cost.
+ * name says what pressing it does ("Remove Speciesist from Deck 2"), naming the card but not the cost.
  */
 const DECK_TILE_LABEL =
   "A deck's card strip shows its cost and name; its name says what pressing it does and names the card. Reading the cost too is the same design decision.";
