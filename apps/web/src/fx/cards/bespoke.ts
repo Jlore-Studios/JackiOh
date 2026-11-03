@@ -15,6 +15,9 @@ import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
+import { duoBond } from "./stinkyscape/duoBond.ts";
+import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
+import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 
 export const CARD_RECIPES = {
   manaCrack,
@@ -29,6 +32,9 @@ export const CARD_RECIPES = {
   jadeCrack,
   cnSweep,
   harmonyWave,
+  duoBond,
+  flashFreeze,
+  stratosSwarm,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
