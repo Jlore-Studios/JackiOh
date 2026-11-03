@@ -13221,9 +13221,11 @@
       "ci_run_id": 41472491161,
       "ci_sha": "fb479d9478a98988d11509e529dc558464803922",
       "cleared": {
-        "at": "2026-11-03T03:27:17Z",
+        "at": "2026-11-03T04:50:08Z",
         "by": "`claude` (strong)",
-        "sha": "c218167df2955acbb4808d7f67c04f8831d45c3f"
+        "carried_from": "c218167df2955acbb4808d7f67c04f8831d45c3f",
+        "resolved_by": "`claude` (strong)",
+        "sha": "9b4250776601821ca947bf855f8f5668bce9d4e2"
       },
       "cross_rounds": 0,
       "died": 0,
