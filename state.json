@@ -14793,21 +14793,28 @@
       "verdict_rounds": 0
     },
     "2876": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T01:38:15Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:2d3fb01d-1793670146",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-03T01:42:46Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-03T01:27:33Z",
+    "at": "2026-11-03T01:42:46Z",
     "url": "",
-    "what": "build #2739 on claude-1"
+    "what": "plan #2876 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T01:34:03Z",
