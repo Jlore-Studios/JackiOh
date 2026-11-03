@@ -1,0 +1,17 @@
+{
+  "title": "Patch: callout icons for the ten tempo keywords",
+  "sources": "#2791",
+  "notes": "R2791000: the ten tempo keywords (Charge, Rush, Equip, Tradable, Stack, Spell Damage, Lucky, Deft, Flashback, Temporary) each get a callout icon for their effect beat. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Callout icons for the tempo keywords",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Charge, Rush, Equip, Tradable, Stack, Spell Damage, Lucky, Deft, Flashback and Temporary each show their own icon beside their effect callout."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

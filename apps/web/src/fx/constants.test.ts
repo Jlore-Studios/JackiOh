@@ -185,6 +185,10 @@ const S2 = {
   FX_FIRST_STRIKE_BREAK_REACH: 0.6,
   FX_PIERCE_REACH: 0.8,
   FX_FLYING_LUNGE_LIFT: 0.18,
+  // Issue #2791: the tempo keyword beats (R2791000).
+  FX_STACK_LAND: { x: 0.62, y: 0.35 },
+  FX_DEFT_FEINT_STEP: 0.18,
+  FX_CHARGE_LINE_SPREAD: 0.22,
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },

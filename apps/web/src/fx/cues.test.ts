@@ -756,7 +756,13 @@ describe("B14 summon", () => {
 
   function summonCues(facts: FxCardFacts | undefined, D: number, row: "units" | "backrow" = "units"): FxCue[] {
     const zoneLane = 3;
+    // R2791000: a plain summon needs an empty zone (§3.2); lane 3 stands occupied, which would
+    // draw the Stack beat over its occupant instead of the arrival alone.
+    const empty = fullBoardView();
+    if (row === "units") empty.you.units[zoneLane - 1] = null;
+    else empty.you.backrow[zoneLane - 1] = null;
     return plan([summon("p1", "n1", "core-500", row, zoneLane)], D, {
+      view: empty,
       env: envOf({ card: (defId) => (defId === "core-500" ? facts : undefined) }),
     });
   }
@@ -857,7 +863,11 @@ describe("B14 summon", () => {
   it("B14 the opponent's summon lands on the opponent's zone", () => {
     const slam = r(FX_SLAM_AT * 250);
     const zone = testid.zone("opponent", "units", 2);
-    expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { env: envOf({ card: catalog(FACTS) }) }), [
+    // R2791000: lane 2 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+    // beat lands on the occupant too.
+    const empty = fullBoardView();
+    empty.opponent.units[1] = null;
+    expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { view: empty, env: envOf({ card: catalog(FACTS) }) }), [
       ring("dust", tid(zone), slam, 250),
       burst("dust", tid(zone, FOOT), "ring", slam),
       // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
@@ -871,7 +881,12 @@ describe("B15 cast", () => {
     for (const D of [ANIMATIONS.cardPlayed.durationMs, ODD_D]) {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("you", "units", 3);
+      // R2791000: lane 3 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+      // beat lands on the occupant too.
+      const empty = fullBoardView();
+      empty.you.units[2] = null;
       const cues = plan([played("p1", HAND), summon("p1", HAND, "core-002", "units", 3)], D, {
+        view: empty,
         env: envOf({ card: catalog(FACTS) }),
       });
       expectCues(cues, [
@@ -1799,7 +1814,11 @@ describe("B21 the redacted stream only", () => {
     for (const D of [ANIMATIONS.summoned.durationMs, ODD_D]) {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("opponent", "units", 2);
-      const cues = plan([summon("p2", "hidden", "hidden", "units", 2)], D, { env: envOf({ card: lookup }) });
+      // R2791000: lane 2 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+      // beat lands on the occupant too.
+      const empty = fullBoardView();
+      empty.opponent.units[1] = null;
+      const cues = plan([summon("p2", "hidden", "hidden", "units", 2)], D, { view: empty, env: envOf({ card: lookup }) });
       expect(cues.some((c) => c.kind === "rays")).toBe(false);
       expectCues(cues, [burst("dust", tid(zone, FOOT), "ring", slam)]);
     }

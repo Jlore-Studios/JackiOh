@@ -216,6 +216,12 @@ export const FX_FIRST_STRIKE_BREAK_AT = 0.4;   // the dying defender's counter-b
 export const FX_FIRST_STRIKE_BREAK_REACH = 0.6; // …this many card heights toward the attacker
 export const FX_PIERCE_REACH = 0.8;            // a Pierce's spear line runs this many card heights past each edge
 export const FX_FLYING_LUNGE_LIFT = 0.18;      // a Flying attacker's lunge scales up this much more, over the lane
+// R2791000: the tempo keyword beats (fx/motifs/beats.ts). A Stack landing bursts up-right of the
+// pile top; a Deft feint sidesteps this many card widths; a Charge landing's speed lines spread
+// this far across the hand region they leave from.
+export const FX_STACK_LAND = { x: 0.62, y: 0.35 } as const;
+export const FX_DEFT_FEINT_STEP = 0.18;
+export const FX_CHARGE_LINE_SPREAD = 0.22;
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;
