@@ -15962,15 +15962,8 @@
       }
     },
     "2957": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41702504126",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-03T19:31:23Z",
-        "until": "2026-11-03T20:01:23Z"
-      },
       "difficulty_by": {
         "at": "2026-11-03T19:31:07Z",
         "difficulty": "medium",
@@ -15987,9 +15980,8 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "or changes, so no new ruling and no `spec/pending` note); no `scripts/ci-scope.sh` change is neede\u2026\n- ## Steps\n- 1. In `crates/engine/tests/rules/mod_2.rs`, delete every `pub mod` line from `pub mod sandbox;` to the end of the file, keeping `pub mod fixtures;` (with its existing `#[allow(dead_code)]`) and everything from `pub mod papaya;` through `pub mod rulings_config;`. Update its header comment to say it \u2026\n- 2. Create `crates/engine/tests/rules/mod_3.rs` with the same header pattern (copy `mod_2.rs`'s header, changing `p`/`mod_2.rs` references to `s`-on/`mod_3.rs` and citing this issue #2957), then `#[allow(dead_code)] pub mod fixtures;` followed by the deleted lines verbatim in the same order (`sandbo\u2026\n- 3. Create `crates/engine/tests/rules_3.rs` as a copy of `crates/engine/tests/rules_2.rs` with `rules/mod_2.rs` changed to `rules/mod_3.rs` in both the doc comment and the `#[path]`, so the module is still named `rules` and every test path is unchanged.\n- 4. In `crates/engine/Cargo.toml`, after the `rules_2` `[[test]]` block, add `[[test]] name = \"rules_3\" path = \"tests/rules_3.rs\" required-features = [\"testkit\"]`, and update the comment above the blocks to say the modules from `a` to `o` are in `rules`, `p` through `r` in `rules_2`, and the rest in\u2026\n- 5. Update `crates/engine/README.md`'s Tests table: change the `rules_2` row to \"from `p` through `r`\" and add a `rules_3` row (\"from `s` on, apart so CI compiles the three side by side (#2957); all three take `rules/fixtures/`\"). Update the two `--test 'rules*'` command lines' comments to say \"the \u2026\n- 6. Update `docs/v0.3.0/SURFACE.md`: the `tests/rules_2.rs` line becomes the `p`\u2013`r` binary plus a `tests/rules_3.rs` line (the rest); `tests/rules/mod_2.rs` becomes \"from `p` through `r`\" plus a `mod_3.rs` line (the same from `s` on); the \"are two\" sentence becomes three binaries compiled side by s\u2026\n- 7. Update `BUILD.md` line 66 to \"the engine's tests, in three binaries (a\u2013o, p\u2013r, s\u2013z)\" and `CLAUDE.md` line 141 to \"(the binaries rules, rules_2 and rules_3)\". Leave `scripts/worktree.sh` line 48 alone: `--test 'rules*'` already matches `rules_3`.\n- 8. Verify no module was lost: every `pub mod <x>;` line of the old `mod_2.rs` must appear in exactly one of the new `mod_2.rs` / `mod_3.rs` (compare with `git diff` plus a grep loop). Verify the three binary roots each declare `mod rules;` so test paths still start with `rules::` (R-id citations an\u2026\n- The person's `.github/workflows/ci.yml` edit (bot-forbidden; hand these lines to a person): directly after the `engine rules 2` matrix entry, insert:\n- ```yaml\n- - group: engine rules 3\n- scope: engine_rules\n- cache: engine-rules\n- test: -p jackioh-engine --features jackioh-engine/testkit --test rules_3 --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0\n- ```\n- and in the `engine` group's `binaries:` line change `jackioh-engine export_config golden rules rules_2` to `jackioh-engine export_config golden rules rules_2 rules_3`, or that group's binary check fails on the new binary. Same scope and cache as the other two, so `scripts/ci-scope.sh` needs no chan\u2026\n- ## Tests\n- - `cargo test -p jackioh-engine --features testkit --test rules_2 --no-run` and `cargo test -p jackioh-engine --features testkit --test rules_3 --no-run`: both new binaries compile.\n- - `cargo test -p jackioh-engine --features testkit --test rules_3`: the whole new binary runs green (about 50 modules; previously part of the 65 s `rules_2` run).\n- - `cargo test -p jackioh-engine --features testkit --test rules_2 r58` (or one quick named subset): the trimmed binary still runs.\n- - Module-conservation grep (step 8): proves no test moved to nowhere and none runs twice.\n- - `cargo fmt --check` and `cargo clippy -p jackioh-engine --all-targets -- -D warnings` (purity lint covers tests).\n- ## Done when\n- - [ ] `rules_2` holds `p`\u2013`r` plus `fixtures`, `rules_3` holds `s`\u2013`z` plus `fixtures`, every old module in exactly one binary, all test paths still `rules::\u2026`.\n- - [ ] Both binaries compile and their tests pass via the commands above; fmt and clippy are clean.\n- - [ ] `cargo jackioh spec check` passes (no R-id path changed, but the harness runs it).\n- - [ ] The exact `ci.yml` lines above are handed to a person (the bot made no `.github/` edit).\n- ## Risks\n- - Test paths must stay `rules::<x>::\u2026`: rule 3's `spec check` matches proving tests by name, and CI filters by `--test 'rules*'`. The `#[path]` + `mod rules;` pattern in step 3 guarantees this; the conservation check in step 8 catches a dropped or doubled module.\n- - `fixtures` is compiled into all three binaries with `#[allow(dead_code)]`, exactly as the two-binary split did (#2113); a fixture used by only one binary is dead code in the others, which is expected, not a warning to silence another way.\n- - `tutorial_cards` (starts with `t`) stays in the `rules` binary; moving it would rebalance sizes slightly but grow the diff for no CI reason. The `p`\u2013`r` / `s`\u2013`z` cut (\u224841 vs \u224852 modules) roughly halves the slow binary's compile and run time, which is the headroom the issue asks for.\n- - Three jobs sharing the `engine-rules` cache key compile concurrently as the two did; each compiles strictly less code than before, so cache contention cannot exceed the current run's.\n- ## Open questions\n- - Person's part: adding the `engine rules 3` matrix entry and extending the `engine` group's `binaries:` list in `.github/workflows/ci.yml` (exact lines in Steps). Everything else the bot builds; nothing further needs a person.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-2957 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-2957/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-03T19:21:23Z",
       "owner_why": "it plans it",
@@ -16000,18 +15992,18 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
-      "run_id": "41702504126",
+      "run_id": "pending:e9c110a9-1793734576",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-03T19:21:23Z",
+      "started_at": "2026-11-03T19:36:45Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T19:21:23Z",
+    "at": "2026-11-03T19:36:45Z",
     "url": "",
-    "what": "plan #2957 on muse"
+    "what": "build #2957 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T19:11:36Z",
