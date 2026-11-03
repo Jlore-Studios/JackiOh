@@ -15724,6 +15724,16 @@
         "sha": "54ca12e95030c407fe7c66964c4c57358e09be66",
         "tiers": {}
       }
+    },
+    "2940": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-03T15:59:27Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
