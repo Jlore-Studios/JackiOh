@@ -163,7 +163,7 @@ function run(w: World, args: string[], env: Record<string, string> = {}) {
 }
 
 type Container = { name: string; image: string; image_build_context?: string };
-function containers(w: World): Record<string, Container> {
+function containers(w: World): { production: Container; staging: Container } {
   const c = JSON5.parse<{ containers: Container[]; env: { staging: { containers: Container[] } } }>(
     readFileSync(join(w.repo, "wrangler.jsonc"), "utf8"),
   );
