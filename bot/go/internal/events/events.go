@@ -841,10 +841,13 @@ func DropWip(ctx *hctx.Context, number int) {
 // for the after-merge spot-check too (`SpotCheckMerge`).
 func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 	pull := payload.Obj("pull_request")
+	// A pull request that waited its turn behind this one (#2948) takes its turn now, on the lane
+	// and model that approved it, whoever's this one was.
+	turns := plan.SyncTurns(ctx, py.MustInt(py.Or(pull.Get("number"), 0)))
 	if !queue.LabelNames(pull)[config.LabelPR] {
-		return []string{"ignored: not a bot pull request"}
+		return append([]string{"ignored: not a bot pull request"}, turns...)
 	}
-	notes := onPullClosed(ctx, pull)
+	notes := append(onPullClosed(ctx, pull), turns...)
 	if said := SpotCheckMerge(ctx, pull); said != "" {
 		notes = append(notes, said)
 	}
@@ -1037,8 +1040,7 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 	// this head fixes it, ahead of its new work (`plan.Pairs`), held for it a while or handed off
 	// as any owner's work (`plan.Owning`). Its fix is a new head, which its own run's reviewer's
 	// approval at the item's tier ships (`reviewrule`, 2026-11-02).
-	owner := py.OrStr(record.Get("merge_owner"), "")
-	if owner != "" && pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
+	if owner := plan.MergeOwner(record, sha); owner != "" {
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			plan.Own(s, number, owner, fmt.Sprintf("its approval shipped `%s`, and the last approver "+
 				"owns the merge, so it fixes what CI found", py.SliceTo(sha, 12)), ctx.Now())

@@ -85,9 +85,10 @@ func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *
 	if c.Owner == "" || (c.Kind == "review" && !c.OwnReview) || (c.Kind == "build" && c.Part && !c.SentBack) {
 		return &Ownership{} // a part its reconcile sent back is its builder's, as owned work is
 	}
-	if c.OwnReview || (c.Kind == "build" && c.BuildNext) {
-		// Its own review run (#2748, 2026-11-02) takes the lane its build reserved for it, and a
-		// build the lane its planning run kept for it (#2903).
+	if Reserves(c) {
+		// Its own review run (#2748, 2026-11-02) takes the lane its build reserved for it, a build
+		// the lane its planning run kept for it (#2903), and a turn's conflict revision the lane kept
+		// for it once its turn came (#2948).
 		lanes = lanes.Without(c.Number)
 	}
 	own := &Ownership{Owner: c.Owner}
@@ -445,13 +446,20 @@ func writeHoldComment(ctx *hctx.Context, number int, body string, create bool) {
 }
 
 // Release clears the owner of thread `number`'s item (`queue.OwnerItem`) and any hold on the
-// thread, and any lane its planner kept for its build (#2903): whoever takes it up next owns it
-// (`Claim`). `why` goes on record as `owner_why`.
+// thread, any lane its planner kept for its build (#2903), and any lane kept for its turn (#2948):
+// whoever takes it up next owns it (`Claim`). `why` goes on record as `owner_why`.
 func Release(s *pyjson.Object, number int, why string, at time.Time) {
 	hstate.Item(s, queue.OwnerItem(s, number)).Update(pyjson.New("owner", "",
 		"owner_since", clock.ISO(at), "owner_why", py.SliceTo(why, 300)))
 	hstate.Item(s, number).Pop("hold")
 	hstate.Item(s, number).Pop(queue.BuildNextKey)
+	hstate.Item(s, number).Pop(queue.TurnKey)
+}
+
+// Reserves is: `c` takes a lane kept for it: its own review run's (#2748), the build its planning run
+// kept a lane for (#2903), or the conflict revision of a pull request whose turn came (#2948).
+func Reserves(c *queue.Candidate) bool {
+	return c.OwnReview || (c.Kind == "build" && c.BuildNext) || (c.Kind == "revise" && c.TurnNext)
 }
 
 // Own makes `providerID` the owner of thread `number`'s item (`queue.OwnerItem`), with `why`, and

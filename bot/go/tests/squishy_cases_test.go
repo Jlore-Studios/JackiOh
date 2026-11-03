@@ -30,6 +30,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sweep"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
@@ -160,15 +161,18 @@ func TestSquishyCases_ItsLabelsAndNoSuggestions(t *testing.T) {
 		"squishy:fullsend", config.LabelTree, "human"} {
 		assertIn(t, name, labels)
 	}
-	// Squishy mirrors the night bot's live labels and its retired `working` (#2748).
+	// Squishy mirrors the night bot's live labels and its retired `working` (#2748), and its
+	// `resolving` and `waiting-turn` (#2948), which its one-run flow never puts on.
 	for _, name := range []string{"squishy:planning", "squishy:splitting", "squishy:building",
-		"squishy:revising", "squishy:fixing-ci", "squishy:reviewing", "squishy:reconciling",
-		"squishy:merging", "squishy:waiting"} {
+		"squishy:revising", "squishy:fixing-ci", "squishy:resolving", "squishy:reviewing",
+		"squishy:reconciling", "squishy:merging", "squishy:waiting", "squishy:waiting-turn"} {
 		assertIn(t, name, labels)
 		assertIn(t, "Squishy", description(name))
 	}
 	assertEqual(t, config.LiveLabels, []string{"squishy:planning", "squishy:splitting", "squishy:building",
-		"squishy:revising", "squishy:fixing-ci", "squishy:reviewing", "squishy:reconciling"})
+		"squishy:revising", "squishy:fixing-ci", "squishy:resolving", "squishy:reviewing", "squishy:reconciling"})
+	assertEqual(t, []string{config.LabelResolving, config.LabelWaitingTurn},
+		[]string{"squishy:resolving", "squishy:waiting-turn"})
 	assertNotIn(t, "squishy:working", labels)
 	assertIn(t, "squishy:working", config.RetiredLabels)
 	assertTrue(t, config.IsLive(setOf("squishy:working")))
@@ -389,6 +393,36 @@ func TestSquishyCases_ItKeepsItsOneRunFlow(t *testing.T) {
 	assertNotIn(t, "squishy:reviewing", world.gh.LabelNames(pull.Int("number")))
 	assertEqual(t, len(queue.OwnReviewsWaiting(world.ctx.Store.Load())), 0)
 	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+}
+
+// The final check before a draft goes ready (#2948) is the own review run's, which Squishy has
+// none of: its one run builds, reviews and ships as before, with no test-merges in its result and no
+// wait for its turn behind an overlapping pull request approved before it, though it has the labels.
+func TestSquishyCases_ItHasNoFinalCheckButHasItsLabels(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	assertFalse(t, world.cfg.OwnReviewRun)
+	sha := fakes.PushBranch(world.origin, world.root, "squishy/issue-40", map[string]string{"src/game.txt": "rules from #40\n"})
+	world.gh.AddPull(40, "squishy/issue-40", fakes.Pull{Labels: []string{"squishy:pr"}, SHA: sha})
+	world.ctx.Store.Update(func(s *pyjson.Object) any {
+		state.Item(s, 40).Set("cleared", pyjson.New("sha", sha, "at", "2026-09-28T00:00:00Z")).Set("merge_owner", "claude-squishy")
+		return nil
+	}, "an approved pull request")
+	world.gh.AddIssue(12, fakes.Issue{Title: "Rules v2", Body: "Make the rules v2.", Labels: []string{"squishy:build"}})
+	r := workFake(map[string]runner.Handler{
+		"build": func(request *runner.RunRequest) *runner.RunResult {
+			writeText(t, filepath.Join(request.Cwd, "src", "game.txt"), "rules v2\n")
+			return runner.NewRunResult(true, squishyCasesDone)
+		},
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }})
+	_, result := world.run(r)
+	assertEqual(t, result.Get("status"), "approved")
+	assertFalse(t, result.Has("settle"))
+	pull := world.gh.ListPulls("open", "squishy/issue-12", 200)[0]
+	assertNotIn(t, "squishy:waiting-turn", world.gh.LabelNames(pull.Int("number")))
+	assertIn(t, pull.Str("node_id"), world.gh.AutoMerge)
+	assertEqual(t, config.LiveLabel(config.LiveRun("revise", "revise", "", "conflict", false, true)), "squishy:resolving")
+	assertEqual(t, config.LabelWaitingTurn, "squishy:waiting-turn")
 }
 
 // One lane and one model from plan to own review (#2903) are the night bot's alone: Squishy chains

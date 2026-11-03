@@ -41,7 +41,9 @@ jobs:
     # for a vote on a suggestion (#929): that gate is only a substring, and the handler decides
     # whether the word stood alone on a line. The bot's own comments and labels are skipped by
     # actor. A CI run and a closed bot pull request are handled whoever caused them: the bot's own
-    # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A CI run of
+    # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A closed one
+    # also lets a draft that waited its turn behind it take its turn (#2948, `plan.SyncTurns`; the
+    # sweep does the same for any other pull request it waited behind). A CI run of
     # the merge queue's (`gh-readonly-queue/main/pr-<n>-<sha>`) is any pull request's; the handler
     # answers only the bot's own (`events.OnQueueCI`).
     if: >-

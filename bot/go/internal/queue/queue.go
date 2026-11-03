@@ -91,9 +91,10 @@ func lowered(names map[string]bool) map[string]bool {
 
 // STATE_LABELS: the queue's, every label that says a run holds the thread (`config.HeldLabels`:
 // the live labels, and the retired `bot:working`, so a run delivered now takes an old one off
-// too) and `bot:blocked`.
+// too), `bot:blocked`, and `bot:waiting-turn` (#2948): an approved draft waiting for a pull request
+// ahead of it leaves that state whenever the thread goes into any other.
 var StateLabels = slices.Concat([]string{config.LabelBuild, config.LabelRevise, config.LabelCross},
-	config.HeldLabels, []string{config.LabelBlocked})
+	config.HeldLabels, []string{config.LabelBlocked, config.LabelWaitingTurn})
 
 // LabelNames is queue.label_names.
 func LabelNames(thread *pyjson.Object) map[string]bool {
@@ -228,8 +229,8 @@ func KeptBy(names map[string]bool) string {
 // queue and state labels, its pull request, and its modes and trees. A `planned` or `stuck` label
 // left from an old run does not.
 var Owning = slices.Concat([]string{"build", "revise", "cross-review"}, config.LiveRuns,
-	[]string{"working", "blocked", "pr-open", "pr", "merging", "waiting", "needs-plan", "oneshot",
-		"split", "split-bot", "fullsend", "tree"})
+	[]string{"working", "blocked", "pr-open", "pr", "merging", "waiting", "waiting-turn", "needs-plan",
+		"oneshot", "split", "split-bot", "fullsend", "tree"})
 
 // The other bot whose thread this is (`config.OTHERS`), or None (nil): one of its owning labels
 // is on it, or it is assigned to that bot's account.
@@ -973,8 +974,10 @@ func Stop(ctx *hctx.Context, number int, by string) string {
 		record := stateItem(s, number)
 		record.Set("stop_requested", true).Set("stopped_by", by).Set("stopped_at", clock.ISO(ctx.Now())).
 			Set("forced", false).Set("pending_request", false)
-		record.Pop("hold")       // out of the queue, it waits for no owner (its `bot:waiting` is off)
-		record.Pop(BuildNextKey) // nor keeps its planner's lane for a build (#2903)
+		record.Pop("hold")         // out of the queue, it waits for no owner (its `bot:waiting` is off)
+		record.Pop(BuildNextKey)   // nor keeps its planner's lane for a build (#2903)
+		record.Pop(WaitingTurnKey) // nor waits its turn behind another pull request (#2948)
+		record.Pop(TurnKey)
 		if reserved {
 			record.Pop(OwnReviewKey)
 		}

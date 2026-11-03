@@ -37,7 +37,7 @@ stays Python (`bot/machine/`'s Lambdas and scripts, `.github/hygiene/`'s branch 
 |---|---|
 | `cmd/harness/` | `main`: the binary, a few lines around `internal/cli` |
 | `internal/cli/` | the command line (`__main__.py`): every subcommand, the companion process, `$GITHUB_OUTPUT` and the step summary |
-| `internal/<module>/` | one package per Python module, named after it (`queue`, `plan`, `work`, `deliver`, `dashboard`, …), except `herr` (`errors.py`), `hctx` (`context.py`) and `reviewrule` (`review_rule.py`) |
+| `internal/<module>/` | one package per Python module, named after it (`queue`, `plan`, `work`, `deliver`, `dashboard`, …), except `herr` (`errors.py`), `hctx` (`context.py`) and `reviewrule` (`review_rule.py`), and one per part added since the port, named for what it does (`sessions`, `spotcheck`, `usage`; `settle`, a pull request's test-merges before it goes ready, #2948) |
 | `internal/pyjson/` | JSON as the Python held it, written byte for byte as `json.dumps` writes it |
 | `internal/py/` | the Python behaviours the harness depends on, one tested copy each: text (`strip`, `split`, `lower`, slicing by code point, `splitlines`, `fnmatch`, re's Unicode classes), bytes as text, numbers (`round` to even, floor division, `sum`, the `%` format), the built-ins over JSON values (`int()`, `float()`, `x or default`, iteration) and Python's own exceptions |
 | `internal/fakes/`, `internal/testsupport/` | the tests' in-memory GitHub and git helpers (`fakes.py`), and their configs, contexts and clocks (`support.py`) |

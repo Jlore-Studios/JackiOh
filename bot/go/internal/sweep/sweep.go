@@ -22,6 +22,10 @@
 //   - an item held for its owner (#2748, `plan.SyncHolds`): `bot:waiting` and its comment go on
 //     while only its owner's 5-hour window keeps it, and come off once the owner can start again
 //     or the hold runs out (`hold_minutes`), so the next run takes it;
+//   - a pull request waiting its turn (#2948, `plan.SyncTurns`) whose turn came: each it waited
+//     behind has closed, or its wait ran out (`hold_minutes`); it is taken up again on its lane;
+//   - a pull request a person merges (`ready for merge`, `person merges`) whose head the reviews
+//     cleared and CI passed (#2948): its merge owner gives up its claim on it (`PersonMerges`);
 //   - an issue the bot has planned, and a pull request it opened, that carries no `difficulty:*` label
 //     (a planner that gave no rating line leaves none, #735): it gets its issue's label, or medium,
 //     which is how it routes anyway; an issue still waiting for its plan is left to the planner;
@@ -118,7 +122,8 @@ func Sweep(ctx *hctx.Context) []string {
 	parts := []part{
 		{"labels", Labels}, {"comments", comments}, {"reviews", reviews},
 		{"assignments", assignments}, {"failed_ci", failedCI}, {"needs_plan", needsPlan}, {"holds", holds},
-		{"green_heads", GreenHeads}, {"trees", Trees}, {"deliveries", Deliveries},
+		{"turns", turns}, {"green_heads", GreenHeads}, {"person_merges", PersonMerges}, {"trees", Trees},
+		{"deliveries", Deliveries},
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
 		{"issue_types", issueTypes}, {"difficulty_labels", difficultyLabels},
 		{"merging", Merging}, {"tracking", tracking},
@@ -322,6 +327,44 @@ func needsPlan(ctx *hctx.Context, since time.Time) []string {
 func holds(ctx *hctx.Context, since time.Time) []string {
 	state := ctx.Store.Load()
 	return plan.SyncHolds(ctx, state, plan.ReadLanes(ctx, state), false, plan.AnyQuiet)
+}
+
+// turns takes up the pull requests waiting their turn whose turn came (#2948, `plan.SyncTurns`).
+func turns(ctx *hctx.Context, since time.Time) []string {
+	return plan.SyncTurns(ctx, 0)
+}
+
+// PersonMerges: a pull request a person merges (`ready for merge`, `person merges`, #2948) waits for
+// that person once the reviews cleared its head and CI passed on it, not for a lane, so the
+// subscription whose approval shipped it gives up its claim on it: its record's `merge_owner` goes
+// (`merge_owner_gave_up` keeps whose it was, and for which head), so a conflict or red CI on it later
+// goes to whoever takes it rather than first to that lane (`plan.Housekeeping`, `events.fixCI`), and
+// no other pull request waits its turn behind it (`deliver.ahead`).
+func PersonMerges(ctx *hctx.Context, since time.Time) []string {
+	notes := []string{}
+	items := ctx.Store.Load().Obj("items")
+	act := func(pull *pyjson.Object) string {
+		if !queue.PersonMerges(queue.LabelNames(pull)) {
+			return ""
+		}
+		number := py.MustInt(py.Item(pull, "number"))
+		record := items.Obj(strconv.Itoa(number))
+		owner := py.OrStr(record.Get("merge_owner"), "")
+		head := py.OrStr(pull.Obj("head").Get("sha"), "")
+		if owner == "" || !pyjson.Equal(queue.Cleared(record).Get("sha"), head) || !stepup.Green(ctx, head) {
+			return ""
+		}
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			entry := state.Item(s, number)
+			entry.Pop("merge_owner")
+			entry.Set(queue.GaveUpKey, pyjson.New("sha", head, "provider", owner, "at", clock.ISO(ctx.Now())))
+			return nil
+		}, fmt.Sprintf("#%d waits for a person", number))
+		return fmt.Sprintf("#%d: green and waiting for a person to merge it, so `%s` gives up its claim on it",
+			number, owner)
+	}
+	each(ctx.GH.ListPulls("open", "", 200), act, &notes)
+	return notes
 }
 
 // GreenHeads is _green_heads: a bot pull request whose head met the review rule and then went

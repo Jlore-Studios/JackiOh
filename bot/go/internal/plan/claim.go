@@ -310,6 +310,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			)
 			message = fmt.Sprintf("Starting a revision now%s, because of: %s. %s",
 				RunLink(cfg), source, startMessage(assignment, cfg, chains))
+			if candidate.TurnNext {
+				// Its turn came after it waited behind another pull request (#2948): a merge of `main`
+				// the harness settles, cleanly or with no conflict left, needs no builder.
+				planned.Set("turn", true)
+			}
 			if names[labelPR] && queue.Carries(record) {
 				// The work job tells its builder and reviewer; deliver decides from git alone.
 				planned.Set("cleared", queue.Cleared(record))
@@ -343,10 +348,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
-	if record.Truthy("session") && !candidate.OwnReview {
+	if record.Truthy("session") && !candidate.OwnReview && !candidate.TurnNext {
 		// The Claude session the item's last run kept, which a run on its subscription resumes
 		// (#2748): the record only; the work job fetches the sealed file itself. Not an own review
-		// run's: it reviews and fixes in fresh sessions, never its build's (#2903).
+		// run's: it reviews and fixes in fresh sessions, never its build's (#2903); nor a turn's
+		// resolution, a fresh session too (#2948).
 		planned.Set("session", record.Get("session"))
 	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).
@@ -403,6 +409,9 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		}
 		if kind == "build" {
 			entry.Pop(queue.BuildNextKey) // the lane its planning run kept is this run's now (#2903)
+		}
+		if kind == "revise" {
+			entry.Pop(queue.TurnKey) // and the lane kept for its turn (#2948)
 		}
 		handedOff := ""
 		if kind != "review" {
@@ -571,4 +580,7 @@ func ownReviewPlan(planned *pyjson.Object, record *pyjson.Object) {
 	planned.Set("built_gates", py.Or(reserved.Get("gates"), []any{}))
 	planned.Set("built_by", reserved.Str("provider"))
 	planned.Set("source", py.OrStr(reserved.Get("source"), "build"))
+	// The CI fixes the pull request has had (#2948): its final check fixes red CI in the run only
+	// while they are not used up (`max_failures`).
+	planned.Set("ci_fixes", py.MustInt(py.Or(record.Get("ci_fixes"), 0)))
 }

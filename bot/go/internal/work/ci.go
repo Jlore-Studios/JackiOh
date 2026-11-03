@@ -113,6 +113,9 @@ func (x *Worker) ciRed(sha string) ([]*verdicts.Finding, string) {
 		} else {
 			x.ciRead = fmt.Sprintf("%d required job(s) red in %s", len(findings), url)
 		}
+		// What the final check reads again before the draft goes ready (#2948, `ciEnd`): a run
+		// that was over said its last word, and the jobs red now are judged now.
+		x.noteCI(sha, pyjson.Equal(latest.Get("status"), "completed"), findings)
 	}); err != nil {
 		x.ciRead = "CI could not be read: " + py.SliceTo(redact.Redact(herr.Str(err), nil), 200)
 		return nil, ""
@@ -121,6 +124,18 @@ func (x *Worker) ciRed(sha string) ([]*verdicts.Finding, string) {
 		return findings, ""
 	}
 	return findings, prompts.Data(redact.Redact(strings.Join(logs, "\n\n"), nil), "CI on "+first12(sha))
+}
+
+// noteCI keeps what a CI reading on `sha` judged: whether CI was over (`complete`), and the red
+// jobs, for the final check's reading of the same head (`ciEnd`).
+func (x *Worker) noteCI(sha string, complete bool, red []*verdicts.Finding) {
+	if x.final.ciComplete == nil {
+		x.final.ciComplete, x.final.ciSeen = map[string]bool{}, map[string]bool{}
+	}
+	x.final.ciComplete[sha] = x.final.ciComplete[sha] || complete
+	for _, f := range red {
+		x.final.ciSeen[strings.TrimPrefix(f.Where, "CI: ")] = true
+	}
 }
 
 // gathersRed is: the job `name` gathers others (`rust` gathers `rust (…)`), and one it gathers is

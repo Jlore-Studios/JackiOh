@@ -336,9 +336,9 @@ func TestPickupLabels_TrackingIsNeverQueuedPlannedOrBuilt(t *testing.T) {
 }
 
 // Each kind of run puts its own live label on the item it holds (#2748), and only one: a planning
-// run, a split, a build, a revision, a CI fix (red CI or the merge queue), a review run and a
-// fullsend parent's reconcile. A revision's CI fix is claimed with `bot:fixing-ci`, which the
-// item's record keeps as `live`.
+// run, a split, a build, a revision, a CI fix (red CI or the merge queue), a resolution of a merge
+// conflict (#2948), a review run and a fullsend parent's reconcile. A revision's CI fix is claimed
+// with `bot:fixing-ci`, which the item's record keeps as `live`.
 func TestPickupLabels_EachKindOfRunHasItsLiveLabel(t *testing.T) {
 	for _, c := range []struct {
 		kind, action, mode, source string
@@ -352,7 +352,7 @@ func TestPickupLabels_EachKindOfRunHasItsLiveLabel(t *testing.T) {
 		{"build", "build", "", "", false, false, config.LabelBuilding},
 		{"build", "build", "oneshot", "", false, false, config.LabelBuilding},
 		{"revise", "revise", "", "request", false, true, config.LabelRevising},
-		{"revise", "revise", "", "conflict", false, true, config.LabelRevising},
+		{"revise", "revise", "", "conflict", false, true, config.LabelResolving},
 		{"revise", "revise", "", "ci", false, true, config.LabelFixingCI},
 		{"review", "review", "", "", false, true, config.LabelReviewing},
 		{"", "", "", "", false, true, config.LabelRevising},
@@ -361,7 +361,7 @@ func TestPickupLabels_EachKindOfRunHasItsLiveLabel(t *testing.T) {
 		assertEqual(t, config.LiveLabel(config.LiveRun(c.kind, c.action, c.mode, c.source, c.reconcile, c.pr)),
 			c.want, c)
 	}
-	assertEqual(t, len(config.LiveLabels), 7)
+	assertEqual(t, len(config.LiveLabels), 8)
 	gh := fakes.NewFakeGitHub()
 	ctx := pickupLabelsCtx(gh, nil)
 	gh.AddPull(9, "bot/issue-1", fakes.Pull{Labels: []string{config.LabelPR, config.LabelRevise}})

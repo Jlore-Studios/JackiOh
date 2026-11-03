@@ -432,6 +432,20 @@ func plannersSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Sea
 	return seat
 }
 
+// turnSeat is the seat a pull request whose turn came is resolved on (#2948): the model that approved
+// it (`queue.TurnOf`'s `model`), on `builder`'s subscription when that is its owner, and only at the
+// item's tier; nil otherwise.
+func turnSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Seat) *providers.Seat {
+	if c.Kind != "revise" || !c.TurnNext || c.TurnModel == "" || builder.Provider.ID != c.Owner {
+		return nil
+	}
+	seat := cfg.Pool.Seat(c.Owner, c.TurnModel)
+	if seat == nil || !providers.TierAtLeast(seat.Tier, config.MinTier[config.AsDifficulty(c.Difficulty)]) {
+		return nil
+	}
+	return seat
+}
+
 // RunReviewer is a build or revise run's own adversarial reviewer: its strongest seat of at
 // least medium, or None, and the change goes to a review run. (`difficulty` does not change it:
 // a hard item's builder is strong, so its own reviewer is too.)
@@ -497,8 +511,9 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 		return FreeProviders(ctx, state, lanes, role, forced, quietOK)
 	}
 
-	if candidate.Kind == "build" && candidate.BuildNext {
-		lanes = lanes.Without(candidate.Number) // the lane its planning run kept for it (#2903)
+	if Reserves(candidate) && !candidate.OwnReview {
+		// The lane its planning run kept for it (#2903), or the lane kept for its turn (#2948).
+		lanes = lanes.Without(candidate.Number)
 	}
 	spread := Balance_(ctx, state, lanes)
 	if candidate.Kind == "review" && candidate.OwnReview {
@@ -566,6 +581,11 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 		// One model from plan to own review (#2903): the model that planned it builds it.
 		note = py.Strip(fmt.Sprintf("%s its planner builds it on %s, the model that planned it: one lane, one "+
 			"model.", note, seat.Describe()))
+		builder = seat
+	} else if seat := turnSeat(ctx.Cfg, candidate, builder); seat != nil {
+		// Its turn came (#2948): the model that approved it merges `main` and resolves it.
+		note = py.Strip(fmt.Sprintf("%s its turn came: %s, the model that approved it, merges `main` and "+
+			"resolves it.", note, seat.Describe()))
 		builder = seat
 	}
 	var notes []string
@@ -735,8 +755,8 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 			continue
 		}
 		room := lanes
-		if candidate.OwnReview || (candidate.Kind == "build" && candidate.BuildNext) {
-			// The lane its build reserved for it (#2748), or its planning run (#2903).
+		if Reserves(candidate) {
+			// The lane its build reserved for it (#2748), its planning run (#2903), or its turn (#2948).
 			room = lanes.Without(candidate.Number)
 		}
 		if room.Free() <= 0 && room.MachineFree() <= 0 {

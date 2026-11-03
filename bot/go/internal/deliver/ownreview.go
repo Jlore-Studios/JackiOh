@@ -289,6 +289,26 @@ func (x *Deliverer) OwnReview(number int, status string) {
 	switch status {
 	case "approved":
 		x.unstick(number)
+		x.countCIFix(number, head, pushed) // red CI its final check fixed in the run (#2948)
+		final := x.settleSaid()
+		if final != "" {
+			final = " " + final
+		}
+		var ahead []int
+		if !waiting && x.Cfg.HoldMinutes > 0 {
+			ahead = x.ahead(number, head)
+		}
+		if len(ahead) > 0 {
+			// Its final check found a pull request ahead of it that it conflicts with (#2948): it
+			// waits its turn, approved, a draft, with its clearance on record for its resolution.
+			x.approved(number, head, false, true, pushed, nil)
+			x.holdAutoMerge(number)
+			note := x.waitTurn(number, head, ahead)
+			x.GH.CreateComment(number, fmt.Sprintf("Its own review run (%s) on `%s`: %s reviewed it "+
+				"adversarially and approved it on round %d of %d.%s%s %s", x.link(), who,
+				x.ReviewSeat.Describe(), rounds, x.CyclesCap(), fixed, final, note))
+			return
+		}
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), "")
 		x.markReady(number, waiting)
 		note := x.approved(number, head, !waiting, true, pushed, nil)
@@ -301,8 +321,8 @@ func (x *Deliverer) OwnReview(number int, status string) {
 			note += " Nothing needed changing, so I asked CI to run the failed jobs again."
 		}
 		x.GH.CreateComment(number, fmt.Sprintf("Its own review run (%s) on `%s`: %s reviewed it "+
-			"adversarially and approved it on round %d of %d.%s %s", x.link(), who,
-			x.ReviewSeat.Describe(), rounds, x.CyclesCap(), fixed, note))
+			"adversarially and approved it on round %d of %d.%s%s %s", x.link(), who,
+			x.ReviewSeat.Describe(), rounds, x.CyclesCap(), fixed, final, note))
 	case "built":
 		// A medium item's verdict rounds ran out (#725): its final audit judges the kept work, on
 		// another subscription first (2026-11-02).

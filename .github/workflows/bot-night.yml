@@ -291,7 +291,10 @@ jobs:
       # it holds that run's own Claude session, sealed (`session.enc`), which this run resumes
       # (#2748, bot/go/internal/sessions). A change's own review run also reads its pull request's
       # CI with it: the CI workflow's runs and jobs for the head it reviews (bot/go/internal/work/
-      # ci.go). Nothing here writes to Actions either.
+      # ci.go), at its start and again before it goes ready. Its final check (#2948, bot/go/internal/
+      # work/settle.go) fetches `main` and the other open pull requests' heads (`refs/pull/<n>/head`)
+      # with `contents: read` and lists them with this token, as anyone may in a public repository;
+      # when it cannot, deliver test-merges them with its own. Nothing here writes to Actions either.
       actions: read
     # The plan job's outputs, or a loop's run's inputs, which the step after the checkout holds to
     # the plan and providers.json before any step is handed a secret (`plan-fetch --check`).
