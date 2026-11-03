@@ -12898,11 +12898,6 @@
       "owner": "claude-3",
       "owner_since": "2026-11-03T08:40:57Z",
       "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
-      "paused": {
-        "at": "2026-11-03T08:56:00Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "planned_at": "2026-11-03T06:31:37Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
