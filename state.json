@@ -15586,15 +15586,8 @@
     "what": "plan #2930 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-03T17:36:38Z",
-    "notes": [
-      "delivered review #2904 on claude-3 (run 41683473050): stopped",
-      "delivered review #2946 on muse (run 41673014791): approved",
-      "started plan #2930 on claude-3 (run 41686765645)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "#2907: closed, so `bot:merging` is off"
-    ],
+    "at": "2026-11-03T17:44:53Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
