@@ -28022,7 +28022,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-03T03:20:37Z",
     "last_run": "2026-11-03T02:52:18Z",
     "provider": null,
     "requested": false,
