@@ -15553,6 +15553,22 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "2941": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-03T16:24:58Z",
+      "owner_why": "it took it up",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:3dab589e-1793723060",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-03T16:24:58Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "2942": {
       "failures": 0,
       "forced": false,
@@ -15684,9 +15700,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T16:24:04Z",
+    "at": "2026-11-03T16:24:58Z",
     "url": "",
-    "what": "plan #2940 on claude-6"
+    "what": "build #2941 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T15:44:50Z",
