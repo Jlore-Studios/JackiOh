@@ -15964,11 +15964,6 @@
       "last_findings": [],
       "live": "revising",
       "merge_owner": "claude-4",
-      "paused": {
-        "at": "2026-11-03T08:56:39Z",
-        "interrupt": "usage",
-        "provider": "claude-4"
-      },
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-03T08:38:10Z",
