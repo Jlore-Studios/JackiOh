@@ -15960,13 +15960,30 @@
         "sha": "82003c48e1b036da5af13a231d56eb457898b8d0",
         "tiers": {}
       }
+    },
+    "2957": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-03T19:21:23Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:3ffe3e98-1793733649",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-03T19:21:23Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T19:20:35Z",
+    "at": "2026-11-03T19:21:23Z",
     "url": "",
-    "what": "spot-check #2951 on claude-1"
+    "what": "plan #2957 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T18:40:36Z",
