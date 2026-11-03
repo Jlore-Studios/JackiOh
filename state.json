@@ -18712,6 +18712,10 @@
         {
           "at": "2026-11-02T20:10:16Z",
           "minutes": 140.5
+        },
+        {
+          "at": "2026-11-03T07:59:34Z",
+          "minutes": 1.5
         }
       ],
       "tokens_spent": [
@@ -18935,13 +18939,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-02T21:00:00Z",
-          "utilization": 0.53
+          "resets_at": "2026-11-03T10:20:00Z",
+          "utilization": 0.16
         },
-        "observed_at": "2026-11-02T20:10:16Z",
+        "observed_at": "2026-11-03T07:59:34Z",
         "seven_day": {
           "resets_at": "2026-11-07T05:00:00Z",
-          "utilization": 0.85
+          "utilization": 0.9
         },
         "status": "allowed_warning"
       }
@@ -29198,7 +29202,11 @@
       "2026-11-03T06:36:01Z,claude-1,stream,call,41587660170,94,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
       "2026-11-03T06:46:02Z,claude-1,stream,call,41587660170,95,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
       "2026-11-03T06:47:47Z,claude-1,stream,call,41587660170,96,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
-      "2026-11-03T06:58:47Z,claude-1,stream,call,41587660170,97,2026-11-03T09:00:00Z,,,allowed_warning,100,,"
+      "2026-11-03T06:58:47Z,claude-1,stream,call,41587660170,97,2026-11-03T09:00:00Z,,,allowed_warning,100,,",
+      "2026-11-03T07:53:56Z,claude-2,ping,before,41599060980,10,2026-11-03T10:20:00Z,89,2026-11-07T05:00:00Z,allowed_warning,90,90,",
+      "2026-11-03T07:54:44Z,claude-2,stream,call,41599060980,15,2026-11-03T10:20:00Z,89,2026-11-07T05:00:00Z,allowed_warning,90,90,",
+      "2026-11-03T07:55:14Z,claude-2,stream,call,41599060980,16,2026-11-03T10:20:00Z,89,2026-11-07T05:00:00Z,allowed_warning,90,90,",
+      "2026-11-03T07:55:29Z,claude-2,stream,call,41599060980,16,2026-11-03T10:20:00Z,90,2026-11-07T05:00:00Z,allowed_warning,90,90,"
     ],
     "runs": [
       "2026-11-03T07:29:33Z,41595864147,claude-5,opus,build,2797,hard,interrupted,5-hour cap,0,0,0,0,,70,70,37,37,1577.7,claude-1,none,cap,0",
