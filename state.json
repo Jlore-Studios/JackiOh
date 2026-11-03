@@ -16174,9 +16174,12 @@
     "2964": {
       "action": "review",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "512e70406bf732deb50c477ea2c12a9ec5817376": 1
       },
+      "ci_run_id": 41721508888,
+      "ci_sha": "512e70406bf732deb50c477ea2c12a9ec5817376",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -16196,15 +16199,17 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2957,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-03T21:24:36Z",
+      "queued_at": "2026-11-03T23:14:23Z",
+      "requested_by": "jgoetzmann-bot",
       "run_id": "41721697001",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "source": "ci",
       "started_at": "2026-11-03T21:25:35Z",
       "stop_requested": false,
       "taken_asks": [],
