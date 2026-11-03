@@ -14603,6 +14603,9 @@
         }
       }
     },
+    "2922": {
+      "suggestion": true
+    },
     "2931": {
       "action": "review",
       "asks": [],
