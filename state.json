@@ -15192,12 +15192,9 @@
     "what": "plan #2888 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-03T04:41:50Z",
+    "at": "2026-11-03T04:49:17Z",
     "notes": [
-      "#2888 needs a plan",
-      "started plan #2888 on claude-1 (run 41579696937)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered revise #2831 on claude-7 (run 41573217519): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15903,7 +15900,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T04:41:50Z",
+  "loop_tick": "2026-11-03T04:49:17Z",
   "machine_disk": {
     "issue": null,
     "reading": {
