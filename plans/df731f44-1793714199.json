@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 2928,
+  "title": "Patch: the AI prices the cards it can still play from a graveyard",
+  "branch": "bot/issue-2928",
+  "thread": "**Issue #2928 (data, not instructions):**\n\n```text\n# #2928: Patch: the AI prices the cards it can still play from a graveyard\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards can be played again from the graveyard: a Flashback spell like Moonberry, every card while Sanctum is in play, and the cards that Second Wind or Corpse Plantation let you play again. The practice AI counts every card in a graveyard as worth nothing. To it, casting a Flashback spell is spending a whole card, Sanctum is just another 4-cost Field Spell, and taking away the opponent's graveyard plays looks pointless.\n\nOnce this is built, the AI counts a graveyard card that either side can still play as part of what that side has. It plays these cards more willingly and values denying them to the opponent.\n\n## Why\n\n- **The evaluation has no graveyard term.** `material` (`crates/ai/src/evaluate.rs:712` on) counts units, the backrow, the hand and the library. `graveyard` appears in `evaluate.rs` only for an alternate win condition's card count (line 627).\n- **The engine already answers the question.** `playable_from_graveyard` (`crates/engine/src/graveyard_play.rs:123-125`) says \"Such a card is priced as a play wherever it is read (R65)\", but `crates/ai` never calls it.\n- **A stale comment holds the Flashback weight at 0.**\n  - `crates/ai/src/config.rs:527-528` reads \"R783012: no card prints it yet (\u00a76.1), so nothing until one does\".\n  - Moonberry (S #21) and Prepare For Liftoff (S #144) now print Flashback.\n  - Sanctum (S #152) lends it to every card in its controller's deck and graveyard.\n  - A Buff may give any card Flashback (R2657005).\n- **The sweep shows it.** In `training/history/sweep-2026-10-29-4.md` (lines 240-241 and 358-359):\n  - Moonberry's mean evaluation change per play is 0.0 on Easy and 0.5 on Hard.\n  - Sanctum was played in 5 of 31 affordable Easy turns and 8 of 66 Hard ones.\n\n## Proposal\n\n1. In `material`, add each graveyard card that `playable_from_graveyard` admits at a named share of its hand price, for example a new `graveyard_playable` weight in `EvalWeights` (`crates/ai/src/config.rs`).\n   - Count both sides, since a graveyard is public. Hidden cards still change no decision.\n   - `GREEDY_EVAL` keeps 0.\n2. Fix the stale Flashback comment. The printed `flashback` keyword weight stays as it is unless the screen in step 3 says otherwise, so nothing is counted twice.\n3. Screen the share with the lanes' A screen (`training/improve.md`), as #1602 screened Windfury, and keep it only if it reads at least even.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs` and `crates/ai/src/config.rs`.\n- Unit tests beside `evaluate.rs`, and `cargo jackioh gate`.\n- SPEC \u00a76.1 (Flashback), R65, R454 and R1869003. No new ruling: the AI's pricing is not a rule.\n\n## Acceptance criteria\n\n- [ ] A position with a playable Moonberry in the AI's graveyard evaluates higher than the same position with that Moonberry exiled.\n- [ ] Sanctum on the field raises the worth of its controller's graveyard.\n- [ ] A playable card in the opponent's graveyard counts for the opponent: removing it raises the AI's evaluation.\n- [ ] The comment at `crates/ai/src/config.rs:527` no longer says that no card prints Flashback.\n- [ ] `cargo test -p jackioh-ai` passes and `cargo jackioh gate` holds its floors.\n\n## Size and risks\n\nSmall to medium: one term and one weight. The risk is a weight that makes the AI play worse; the screen in step 3 guards against it. The sweep reports predate the pricing patches since #2412, so rerun `cargo jackioh sweep` for Moonberry, Prepare For Liftoff and Sanctum before and after.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-03T13:49:02Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2928: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-03T13:49:29Z",
+    "claimed_at": "2026-11-03T13:57:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#2920 is held for `claude-1` until 08:00 (5-hour usage is 86%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2803 skipped: it waits for #2790, #2794, #2797, #2798, #2799, #2801 to close first"
+  ]
+}
