@@ -14650,6 +14650,9 @@
     "2873": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "34e5fc421b6745ab34358171a533f24ad4ebeb7d": 1
+      },
       "cleared": {
         "at": "2026-11-03T00:45:35Z",
         "by": "`claude` (strong)",
