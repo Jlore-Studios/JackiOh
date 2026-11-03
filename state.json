@@ -14169,6 +14169,7 @@
       "run_id": "41618359109",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 10,
       "started_at": "2026-11-03T10:19:47Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -27756,9 +27757,33 @@
         "title": "Patch: size the gather run from the deckable card count",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "94ea09a516e3e3fc482b6abf4efcdf366c1ccee0",
+        "issue": 2877,
+        "merged_at": "2026-11-03T12:52:05Z",
+        "n": 10,
+        "pr": 2916,
+        "queued_at": "2026-11-03T12:52:05Z",
+        "sha": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
+        "status": "queued",
+        "title": "Patch: hero plates keep one size however many effects they carry",
+        "tries": 0
       }
     ],
-    "count": 9
+    "count": 10
   },
   "statistics": {
     "at": "2026-11-03T12:46:30Z"
