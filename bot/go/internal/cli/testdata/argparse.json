@@ -3,7 +3,7 @@
   "argv": [
    "--help"
   ],
-  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n    usage               the usage history on the usage branch (#2749)\n\noptions:\n  -h, --help            show this help message and exit\n",
   "stderr": "",
   "exit": 0,
   "ns": null
@@ -12,7 +12,7 @@
   "argv": [
    "-h"
   ],
-  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n    usage               the usage history on the usage branch (#2749)\n\noptions:\n  -h, --help            show this help message and exit\n",
   "stderr": "",
   "exit": 0,
   "ns": null
@@ -20,7 +20,7 @@
  {
   "argv": [],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: the following arguments are required: command\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: the following arguments are required: command\n",
   "exit": 2,
   "ns": null
  },
@@ -239,7 +239,7 @@
    "bogus"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: argument command: invalid choice: 'bogus' (choose from 'plan', 'peek', 'quiet', 'wake', 'work', 'plan-fetch', 'deliver', 'event', 'sweep', 'status', 'dashboard', 'stats', 'halt', 'start', 'dispatch', 'providers', 'window', 'doctor', 'setup', 'triage', 'forget')\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: argument command: invalid choice: 'bogus' (choose from 'plan', 'peek', 'quiet', 'wake', 'work', 'plan-fetch', 'deliver', 'event', 'sweep', 'status', 'dashboard', 'stats', 'halt', 'start', 'dispatch', 'providers', 'window', 'doctor', 'setup', 'triage', 'forget', 'usage')\n",
   "exit": 2,
   "ns": null
  },
@@ -294,7 +294,7 @@
    "--bogus"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --bogus\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: --bogus\n",
   "exit": 2,
   "ns": null
  },
@@ -317,7 +317,7 @@
    "o"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --force\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: --force\n",
   "exit": 2,
   "ns": null
  },
@@ -378,7 +378,7 @@
    "2"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: 2\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: 2\n",
   "exit": 2,
   "ns": null
  },
@@ -390,7 +390,7 @@
    "extra"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: extra\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: extra\n",
   "exit": 2,
   "ns": null
  },
@@ -502,7 +502,7 @@
    "-x"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: the following arguments are required: command\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: the following arguments are required: command\n",
   "exit": 2,
   "ns": null
  },
@@ -515,7 +515,7 @@
    "--x"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --x\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: --x\n",
   "exit": 2,
   "ns": null
  },
@@ -682,7 +682,7 @@
    "--x"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: --x\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: --x\n",
   "exit": 2,
   "ns": null
  },
@@ -830,7 +830,7 @@
    "x"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: -- x\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: -- x\n",
   "exit": 2,
   "ns": null
  },
@@ -907,7 +907,7 @@
    "-"
   ],
   "stdout": "",
-  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\nharness: error: unrecognized arguments: -\n",
+  "stderr": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\nharness: error: unrecognized arguments: -\n",
   "exit": 2,
   "ns": null
  },
@@ -961,7 +961,7 @@
   "argv": [
    "--he"
   ],
-  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n\noptions:\n  -h, --help            show this help message and exit\n",
+  "stdout": "usage: harness [-h]\n               {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage} ...\n\nThe command line: `harness <command>` from the `bot/` directory. The workflows\ncall `peek`, `quiet`, `plan`, `work`, `deliver`, `event` and `sweep`. An\noperator calls `status`, `providers`, `halt`, `start`, `dispatch`, `doctor`,\n`setup` and `forget`, with a token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or\nGH_TOKEN, or a logged-in `gh`.\n\npositional arguments:\n  {plan,peek,quiet,wake,work,plan-fetch,deliver,event,sweep,status,dashboard,stats,halt,start,dispatch,providers,window,doctor,setup,triage,forget,usage}\n    plan                decide what this night run does, and claim it\n    peek                would a run find work? changes nothing\n    quiet               wait until nobody else is spending the subscription\n    wake                start the Claude sessions that are not running\n                        (wake.py)\n    work                the model job: build, review and fix one item\n    plan-fetch          read the plan the status loop made for this run\n                        (#1455)\n    deliver             check the model job's output and publish it\n    event               handle one GitHub event\n    sweep               answer any request an event handler never answered\n    status              print the status report\n    dashboard           rewrite the pinned status issue (bot-status runs it\n                        every five minutes, its runners every two)\n    stats               rewrite the pinned status issue now, with its\n                        statistics\n    halt                stop all model work\n    start               lift a halt\n    dispatch            start a night run now\n    providers           each subscription's hours, limits and readiness\n    window              each subscription's hours, limits and readiness\n    doctor              check the configuration and the repository\n    setup               create or update the labels, and create the state\n                        branch\n    triage              label, type and assign a new issue or pull request, an\n                        issue labelled human, or one a person called it on\n    forget              clear an item's failure count\n    usage               the usage history on the usage branch (#2749)\n\noptions:\n  -h, --help            show this help message and exit\n",
   "stderr": "",
   "exit": 0,
   "ns": null

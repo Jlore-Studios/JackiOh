@@ -31,6 +31,7 @@ pub mod game_records;
 pub mod glicko2;
 pub mod health;
 pub mod ladder;
+pub mod news;
 pub mod packs;
 pub mod practice;
 pub mod quests;

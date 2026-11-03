@@ -414,16 +414,22 @@ func (x *Git) FetchBundle(path string, branch string, local string) string {
 	return x.Out(true, "rev-parse", local)
 }
 
-// Push pushes with the token in an http.extraheader passed through the environment.
-func (x *Git) Push(remoteURL string, refspec string, token string, forceWithLease string /* = "" */) {
+// AuthEnv is the environment that hands git `token` for GitHub, in an http.extraheader, and no
+// credential helper: what Push runs with, and a fetch that needs the token (`usage.Branch`).
+func AuthEnv(token string) map[string]string {
 	basic := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + token))
-	env := map[string]string{
+	return map[string]string{
 		"GIT_CONFIG_COUNT":   "2",
 		"GIT_CONFIG_KEY_0":   "http.https://github.com/.extraheader",
 		"GIT_CONFIG_VALUE_0": "AUTHORIZATION: basic " + basic,
 		"GIT_CONFIG_KEY_1":   "credential.helper",
 		"GIT_CONFIG_VALUE_1": "",
 	}
+}
+
+// Push pushes with the token in an http.extraheader passed through the environment.
+func (x *Git) Push(remoteURL string, refspec string, token string, forceWithLease string /* = "" */) {
+	env := AuthEnv(token)
 	args := []string{"push", "--quiet", "--no-verify"}
 	if forceWithLease != "" {
 		args = append(args, "--force-with-lease="+forceWithLease)

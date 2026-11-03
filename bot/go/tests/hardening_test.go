@@ -301,7 +301,7 @@ func TestHardening_StopThenANewRequestIsAnsweredAfterTheStop(t *testing.T) {
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	planned, out := hardeningApprovedRun(h)
 	events.Handle(h.ctx, "issue_comment", hardeningComment(12, "/harness stop", hardeningCommentOpts{CID: 21}))
-	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelWorking))
+	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBuilding)) // the stopped run keeps its live label
 	events.Handle(h.ctx, "issue_comment",
 		hardeningComment(12, "@jgoetzmann-bot do it with a Token class instead", hardeningCommentOpts{CID: 22}))
 	clk := testsupport.ClockOf(h.ctx)

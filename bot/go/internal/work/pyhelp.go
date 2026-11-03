@@ -1,7 +1,7 @@
 package work
 
 // The few Python behaviours work.py leans on that py and herr do not hold: string.Template (the
-// prompts and the easy rule), str.format (the module's own `{name}` templates), the
+// prompts and the difficulty rule), str.format (the module's own `{name}` templates), the
 // CompletedProcess git.Run returns, and pathlib's file reads and writes. Each names the Python it
 // stands for.
 

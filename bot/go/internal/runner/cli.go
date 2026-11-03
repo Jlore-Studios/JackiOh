@@ -251,7 +251,7 @@ func (x *cliBase) launch(argv []string, request *RunRequest, env map[string]stri
 		proc := startWaiting(cmd)
 		session = append(session, proc.pid)
 		done := make(chan struct{})
-		if request.UsageStop != nil {
+		if request.UsageStop != nil || request.UsageSeen != nil {
 			go x.watch(proc, raw, request, done, &stopped)
 		}
 		func() {
@@ -341,7 +341,8 @@ func (x *cliBase) withUsage(result *RunResult, request *RunRequest) *RunResult {
 
 // watch is _Cli._watch: while the call runs, read the usage it streams (or, for a CLI that
 // `polls_usage`, its own reading every `POLL_SECONDS`), and stop it once `usage_stop` says so.
-// Without this a call (up to `call_timeout_minutes`) ran past its cap unchecked.
+// Without this a call (up to `call_timeout_minutes`) ran past its cap unchecked. Each look's
+// newest reading also goes to `UsageSeen`, for the usage history (#2749).
 func (x *cliBase) watch(proc *process, raw string, request *RunRequest, done <-chan struct{}, stopped *stopBox) {
 	defer recoverThread("(_watch)")
 	offset, pending := int64(0), ""
@@ -374,10 +375,16 @@ func (x *cliBase) watch(proc *process, raw string, request *RunRequest, done <-c
 				readings = append(readings, reading)
 			}
 		}
-		if len(readings) == 0 || request.UsageStop == nil {
+		if len(readings) == 0 {
 			continue
 		}
-		reason := request.UsageStop(readings[len(readings)-1])
+		last, reason := readings[len(readings)-1], ""
+		if request.UsageStop != nil {
+			reason = request.UsageStop(last)
+		}
+		if request.UsageSeen != nil {
+			request.UsageSeen(last)
+		}
 		if reason != "" && proc.running() {
 			stopped.add(reason)
 			kill(proc)

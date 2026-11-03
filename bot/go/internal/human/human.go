@@ -28,20 +28,21 @@ import (
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/easy"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/git"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
 )
 
 // LetsGo are the labels that say the bot has an item, which come off when it hands the item
-// over: the queue's state labels (`bot:blocked` among them), the Needs plan stage and the modes.
-// What says what a thread is (`bot:pr`, `bot:pr-open`, `bot:planned`) stays.
+// over: the queue's state labels (`bot:blocked` among them), the Needs plan stage, a hold for its
+// owner (`bot:waiting`, #2748) and the modes. What says what a thread is (`bot:pr`,
+// `bot:pr-open`, `bot:planned`) stays.
 var LetsGo = letsGo()
 
 func letsGo() map[string]bool {
-	out := map[string]bool{config.LabelNeedsPlan: true}
+	out := map[string]bool{config.LabelNeedsPlan: true, config.LabelWaiting: true}
 	for _, label := range queue.StateLabels {
 		out[label] = true
 	}
@@ -98,7 +99,7 @@ func PlanNeeds(plan string, forbidden []string) string {
 		}
 		return words
 	}
-	paths := easy.PlanPaths(text)
+	paths := issueplan.FilesToTouch(text)
 	all := len(paths) > 0
 	for _, path := range paths {
 		all = all && git.Matches(path, forbidden)

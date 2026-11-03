@@ -153,7 +153,9 @@ func ints(raw []any) []int {
 	return found
 }
 
-// Difficulties is parse's and from_dict's default `difficulties`.
+// Difficulties is parse's and from_dict's default `difficulties`: every difficulty a split may
+// name, the retired `easy` among them (#2748), which its reader takes as `config.AsDifficulty`
+// does (medium). The split prompt asks for `medium` or `hard`.
 var Difficulties = []string{"easy", "medium", "hard"}
 
 // Parse is the tree a split session answered with. Problems say what is wrong with it; a tree

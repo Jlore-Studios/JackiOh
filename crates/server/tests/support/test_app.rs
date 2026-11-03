@@ -143,6 +143,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         ),
         practice_settles: tokio::sync::watch::Sender::new(0),
         spends: jackioh_server::economy::spend_slots::SpendSlots::default(),
+        news: jackioh_server::economy::news::shipped().expect("news.json passes news::parse"),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)
