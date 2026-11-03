@@ -29849,7 +29849,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-03T10:28:56Z",
         "every": 5,
+        "findings": 0,
         "head": "a34a38cf7b36e13fbbc69d13a279042a375a0fca",
         "issue": 2888,
         "last_why": "stopped: #2909 was closed",
@@ -29857,18 +29859,19 @@
         "n": 5,
         "pr": 2909,
         "queued_at": "2026-11-03T09:35:02Z",
+        "reason": "stopped: #2909 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:4488da05-1793701240",
         "sha": "f887a784229ff9160550bbd5e705c0e9728ef976",
         "started_at": "2026-11-03T10:21:04Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: size the gather run from the deckable card count",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 7
