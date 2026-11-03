@@ -3,7 +3,8 @@
 // R670: marquee Legendary and Mythic Units replace a row entrance when their `summoned` has a `defId`.
 // R2784000: a card's entry in its set's effects table (fx/cards/tables.ts) names its bespoke recipe
 // (fx/cards/<set>/) or a shared motif per hook (fx/motifs/); `cast` and `cry` play by the readable
-// play resolving now, and `death`, `trigger` and `activate` wait for #2783's `hookResolving`.
+// play resolving now, and `death`, `trigger` and `activate` wait for #2783's `hookResolving`. A set
+// piece (R2800000, setPieces.ts) keeps its card's bespoke entrance (`entranceKeyOf`).
 // R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -14,6 +15,7 @@ import { sideOf } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import { CARD_RECIPES, isCardRecipeKey, isEntranceKey, type BespokeKey } from "./cards/bespoke.ts";
+import type { EntranceKey } from "./cards/recipe.ts";
 import type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "./cards/tables.ts";
 import { FX_CAST_ON_DRAW_TRAUMA } from "./constants.ts";
@@ -23,6 +25,7 @@ import { flavorLookOf } from "./flavorSource.ts";
 import { motifScale, type MotifSpec } from "./motifs/build.ts";
 import { motifReplaces, planMotif } from "./motifs/index.ts";
 import { isDrawnMotif } from "./motifs/names.ts";
+import { SET_PIECES } from "./setPieces.ts";
 import type { FxCue, FxPlanEnv } from "./types.ts";
 
 export type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
@@ -53,11 +56,21 @@ function bespokeOf(defId: string): BespokeKey | undefined {
   return entry?.kind === "bespoke" ? entry.key : undefined;
 }
 
+/**
+ * R670, R2800000: the bespoke entrance a card lands with: its table entry's, or that of the set piece it
+ * names (Ceaseless Void lands with its collapse, and its fold follows).
+ */
+export function entranceKeyOf(defId: string): EntranceKey | undefined {
+  const entry = FX_CARD_TABLE.get(defId);
+  if (entry?.kind === "setPiece") return SET_PIECES[entry.key].entrance;
+  return entry?.kind === "bespoke" && isEntranceKey(entry.key) ? entry.key : undefined;
+}
+
 function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
   const summoned = entranceEvent(event, HIDDEN_ID);
   if (summoned === null) return null;
-  const key = bespokeOf(summoned.defId);
-  if (key === undefined || !isEntranceKey(key)) return null;
+  const key = entranceKeyOf(summoned.defId);
+  if (key === undefined) return null;
   const tgt = targetFor(summoned, p.view);
   if (tgt === null) return null;
   return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity }), row: "replace" };
