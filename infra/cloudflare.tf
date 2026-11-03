@@ -37,10 +37,71 @@ import {
   id = "${local.cloudflare_account_id}/4a0a902b4d034376d00a1f4e6286cadf7f927235"
 }
 
-# No cloudflare_dns_record: at the first import (2026-10-25) the zone's one record was the custom
-# domain's own, read-only AAAA. A record added to the zone gets one here, with its import block
-# (<zone id>/<record id>; README.md, The first import, step 2): a record this file does not name is
-# one Terraform neither reads nor changes.
+# The zone's records beyond the custom domains' own, read-only AAAAs, each with its import block
+# (<zone id>/<record id>, the zone's id written out, since an import's id must be known before the
+# plan reads the zone; README.md, The first import, step 2): a record this file does not name is one
+# Terraform neither reads nor changes.
+#
+# Sign-in mail (docs/deploy-cloudflare.md section 8, Email): Resend sends both Supabase projects'
+# mail from no-reply@jackioh.com. Resend's own setup made its three records on 2026-11-02 (the return
+# path at send. and rsend., and the DKIM key); the DMARC policy only reports (p=none), which
+# mailboxes ask of a sender. Rotating the DKIM key in Resend changes resend_dkim's content.
+resource "cloudflare_dns_record" "resend_send" {
+  zone_id = data.cloudflare_zone.jackioh.id
+  name    = "send.jackioh.com"
+  type    = "CNAME"
+  content = "send.forge.rmta.net"
+  ttl     = 3600
+  proxied = false
+}
+
+import {
+  to = cloudflare_dns_record.resend_send
+  id = "54d7c89c10cc481c27e19f0922f6ca7a/315cf8354677e75bf55ea2ab867119e2"
+}
+
+resource "cloudflare_dns_record" "resend_rsend" {
+  zone_id = data.cloudflare_zone.jackioh.id
+  name    = "rsend.jackioh.com"
+  type    = "CNAME"
+  content = "rsend.forge.rmta.net"
+  ttl     = 3600
+  proxied = false
+}
+
+import {
+  to = cloudflare_dns_record.resend_rsend
+  id = "54d7c89c10cc481c27e19f0922f6ca7a/4c131fb7e09ee55df4b92ed6acfe4999"
+}
+
+resource "cloudflare_dns_record" "resend_dkim" {
+  zone_id = data.cloudflare_zone.jackioh.id
+  name    = "resend._domainkey.jackioh.com"
+  type    = "TXT"
+  content = "\"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDvEf8PLSg2wCTNiFMyRj1CScOyXTv31Wy1Be2le+542aGeUECxT821OXqw7KX7U5YDvJHdxlybsyapfqx8v47Lnp5xtKKHogI7kKDHaJh6HnqWcyXSTEIukDQe+RN4MwMjw3MAQDc2Lw0QiD0CahlolLBTRCW36sivK90ooBtCxQIDAQAB\""
+  ttl     = 3600
+  proxied = false
+}
+
+import {
+  to = cloudflare_dns_record.resend_dkim
+  id = "54d7c89c10cc481c27e19f0922f6ca7a/d3f383aefb311acb8a907ef091bd1688"
+}
+
+resource "cloudflare_dns_record" "dmarc" {
+  zone_id = data.cloudflare_zone.jackioh.id
+  name    = "_dmarc.jackioh.com"
+  type    = "TXT"
+  content = "\"v=DMARC1; p=none;\""
+  ttl     = 3600
+  proxied = false
+}
+
+import {
+  to = cloudflare_dns_record.dmarc
+  id = "54d7c89c10cc481c27e19f0922f6ca7a/dcd252b694315c0f8c5c2c7e1616580b"
+}
+
 
 # Staging's address (docs/deploy-cloudflare.md). Like the apex, Cloudflare makes and keeps its DNS
 # record. `jackioh-staging` must exist before the first apply: deploy-staging.yml's first run makes it.
