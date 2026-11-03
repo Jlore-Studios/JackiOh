@@ -121,7 +121,7 @@ function mirrorAnimating(source: Element, copy: Element): () => void {
 }
 
 function isStageCue(cue: FxCue): cue is FxStageCue {
-  return cue.kind === "hold" || cue.kind === "conceal" || cue.kind === "lunge";
+  return cue.kind === "hold" || cue.kind === "conceal" || cue.kind === "lunge" || cue.kind === "pull";
 }
 
 function defaultElement(testid: string): HTMLElement | null {
@@ -238,7 +238,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "brand":
       case "shield":
       case "callout":
-      case "takeover": {
+      case "takeover":
+      case "setPiece": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };
@@ -380,6 +381,27 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const extents = (ux * (a.width + b.width) + uy * (a.height + b.height)) / 2;
         const reach = Math.min(FX_LUNGE_MAX_PX, Math.max(FX_LUNGE_MIN_PX, distance - extents * FX_LUNGE_STANDOFF));
         aim(`${((dx / distance) * reach).toFixed(1)}px`, `${((dy / distance) * reach).toFixed(1)}px`);
+        return;
+      }
+      case "pull": {
+        // R2800000: a card a set piece swallows is drawn toward its centre (or sinks where it stands); board.css moves it.
+        const card = element(cue.testid);
+        if (card === null) return;
+        const from = boxOfElement(card);
+        const to = measure(cue.to);
+        const dx = from === null || to === null ? 0 : to.x + to.width / 2 - (from.x + from.width / 2);
+        const dy = from === null || to === null ? 0 : to.y + to.height / 2 - (from.y + from.height / 2);
+        card.setAttribute("data-fx-pulled", "true");
+        card.style.setProperty("--fx-pull-x", `${dx.toFixed(1)}px`);
+        card.style.setProperty("--fx-pull-y", `${dy.toFixed(1)}px`);
+        staged.push({
+          undo: () => {
+            card.removeAttribute("data-fx-pulled");
+            card.style.removeProperty("--fx-pull-x");
+            card.style.removeProperty("--fx-pull-y");
+          },
+          expiresAt,
+        });
         return;
       }
     }

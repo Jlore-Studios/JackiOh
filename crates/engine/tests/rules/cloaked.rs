@@ -7,8 +7,8 @@ use jackioh_engine::testkit::*;
 use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
     board_783 as playing, cloak_spells, cloak_units, cloaked_bolt, cloaked_field, cloaked_field_trap,
-    cloaked_mourner, cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, second_wind, toe_cracker,
-    trap_discount,
+    cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, second_wind,
+    toe_cracker, trap_discount,
 };
 use super::fixtures::play_pipeline_b::plays_of;
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
@@ -601,6 +601,43 @@ mod r783008_leaving_unrevealed {
         assert!(jackioh_engine::alt_play::is_cloaked(&bounced, &back));
         assert_eq!(hero_health(&bounced, P2), before);
         assert!(bounced.pending.is_none());
+    }
+
+    #[test]
+    fn r2855000_a_set_unit_token_destroyed_exiled_or_bounced_unrevealed_ceases_to_exist() {
+        for verb in ["destroy", "exile", "bounce"] {
+            let mut state = playing(&format!("r2855000-{verb}"));
+            let token = in_hand(&mut state, &cloaked_token().id, P1);
+            let set = cloak(&mut state, &token.id, 2);
+            // Set, it is the Field Trap R783004 makes it, and still the unit token it is printed as.
+            assert_eq!(
+                jackioh_engine::faces::card_type_of(&state, &set),
+                CardType::FieldTrap,
+                "{verb}"
+            );
+            assert!(jackioh_engine::zones::is_unit_token(&state, &set), "{verb}");
+            let target = json!({ "target": { "of": "instance", "instanceId": set.id } });
+            let effect = match verb {
+                "destroy" => jackioh_engine::effects::destroy(json_as(target)),
+                "exile" => jackioh_engine::effects::exile(json_as(target)),
+                _ => jackioh_engine::effects::bounce(json_as(target)),
+            };
+            cast_now_effect(&mut state, effect);
+            // R11: it ceased to exist, in no graveyard, exile pile, hand or backrow zone.
+            let side = &state.players.p1;
+            for (pile, cards) in [
+                ("graveyard", &side.graveyard),
+                ("exile", &side.exile),
+                ("hand", &side.hand),
+            ] {
+                assert!(
+                    cards.iter().all(|card| card.id != set.id),
+                    "{verb}: the set token is in p1's {pile}"
+                );
+            }
+            assert!(side.backrow[1].is_none(), "{verb}: its zone is empty");
+            assert!(find_instance(&state, &set.id).is_none(), "{verb}: it is nowhere");
+        }
     }
 
     /// Apply one effect for p1 and settle, as a resolving card's would.
