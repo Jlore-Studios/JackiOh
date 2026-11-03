@@ -15096,9 +15096,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-03T14:19:54Z",
-      "owner_why": "it plans it",
+      "owner": "muse",
+      "owner_since": "2026-11-03T15:49:24Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-03T19:20:00Z; it can start again only in 2h 30m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-03T15:46:43Z",
         "interrupt": "usage",
@@ -15110,13 +15110,13 @@
       "planned_by_id": "claude-1",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-1",
+      "provider": "muse",
       "queued_at": "2026-11-03T14:03:29Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
-      "run_id": "41657217022",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T14:47:42Z",
+      "run_id": "pending:cac34137-1793720922",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-03T15:49:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -15728,9 +15728,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T15:36:08Z",
+    "at": "2026-11-03T15:49:24Z",
     "url": "",
-    "what": "revise #2931 on claude-8"
+    "what": "build #2932 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T15:27:10Z",
