@@ -24,14 +24,14 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
-    Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
-    RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
-    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
+    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant,
+    CustomCardWrite, Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
+    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode,
+    ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding,
+    SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow,
+    Tx, UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -476,6 +476,7 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
+  public.practice_claim_counts,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
@@ -8248,9 +8249,61 @@ mod bots {
         assert_eq!((in_match(&bots, &c), in_match(&bots, &d)), (None, None));
     }
 
+    /// R1555000: the kickoff's narrow read answers each bot's match, grinding and retirement, retired
+    /// ones included, in `bots_list`'s order.
+    async fn r1555000_bots_states_answers_the_kickoffs_reads_in_the_lists_order(harness: &StoreHarness) {
+        let now = harness.now();
+        let version = harness.catalog_version.clone();
+        assert!(q!(harness, t => t.bots_states()).is_empty(), "no bot yet");
+
+        let older = new_bot(1, now - 3 * DAY, 900.0);
+        let retired = new_bot(3, now - 2 * DAY, 1000.0);
+        let newer = new_bot(2, now - DAY, 1100.0);
+        for bot in [&newer, &older, &retired] {
+            q!(harness, t => t.bots_create(bot));
+        }
+        q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
+        q!(harness, t => t.bots_set_grinding(&newer.profile_id, true));
+        let match_id = id();
+        let pair = (older.profile_id.clone(), newer.profile_id.clone());
+        assert!(q!(harness, t => t.bots_claim_pair(&pair, &match_id, &version, now)));
+
+        let states = q!(harness, t => t.bots_states());
+        assert_eq!(
+            states,
+            vec![
+                BotState {
+                    profile_id: older.profile_id.clone(),
+                    in_match_id: Some(match_id.clone()),
+                    grinding: false,
+                    retired_at: None,
+                },
+                BotState {
+                    profile_id: retired.profile_id.clone(),
+                    in_match_id: None,
+                    grinding: false,
+                    retired_at: Some(now),
+                },
+                BotState {
+                    profile_id: newer.profile_id.clone(),
+                    in_match_id: Some(match_id),
+                    grinding: true,
+                    retired_at: None,
+                },
+            ],
+            "oldest profile first, retired ones included"
+        );
+        let listed: Vec<BotState> = q!(harness, t => t.bots_list())
+            .iter()
+            .map(BotState::from)
+            .collect();
+        assert_eq!(states, listed, "the list's bots, in the list's order");
+    }
+
     both_stores!(
         r1555000_a_grind_counts_its_wins_and_steps_the_strength,
         r1555000_a_pair_claim_takes_two_free_bots_once,
+        r1555000_bots_states_answers_the_kickoffs_reads_in_the_lists_order,
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
         r1453_claim_for_bot_is_single_shot,
@@ -8854,7 +8907,8 @@ mod social {
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series not over holds, each one's newest live co-op match, and whose
     /// live 1v1 the viewer may watch (friends, unblocked, live, ranked or not, seating the friend and
-    /// not the viewer; no setting of the friend's refuses it, R2615000). Each answers in the order named.
+    /// not the viewer; no setting of the friend's refuses it, R2615000), and which co-op matches seat
+    /// someone the viewer stands blocked with (R2881000). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -8950,6 +9004,22 @@ mod social {
             ]
         );
         assert!(q!(harness, t => t.presence_in_duos(&[])).is_empty());
+
+        // R2881000: the co-op matches seating someone the viewer stands blocked with, either way:
+        // `blocked` blocked the viewer, and the viewer now blocks `stranger`.
+        let teamed = coop_match(&watched.id, &blocked.id, now - 250);
+        q!(harness, t => t.duos_matches_create(&teamed));
+        q!(harness, t => t.blocks_add(&viewer.id, &stranger.id, now));
+        let games: Vec<String> = [&newer.id, &teamed.id, &"not-a-uuid".to_string(), &older.id]
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.presence_duos_blocked(&viewer.id, &games)),
+            vec![teamed.id.clone(), older.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_duos_blocked(&viewer.id, &[])).is_empty());
+        assert!(q!(harness, t => t.presence_duos_blocked("not-a-uuid", &games)).is_empty());
     }
 
     /// R1435000: the friends a sharer shared a finished match with, read as the friend's own read
@@ -9517,10 +9587,11 @@ mod duos {
 mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
-    use jackioh_server::economy::practice::ClaimedResult;
+    use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
         CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
-        JloreGrant, PracticeClaim, PracticeOutcome, PracticeSeed, PracticeSettled, QuestGrant, TrackGrant,
+        JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled,
+        QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -10622,6 +10693,49 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
     }
 
+    /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
+    /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
+    /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
+    /// outcomes in byte order.
+    async fn practice_claims_count_once_per_bucket_and_utc_day(harness: &StoreHarness) {
+        let day = 86_400_000_i64;
+        assert_eq!(q!(harness, t => t.economy_practice_claim_counts()), Vec::new());
+        for bucket in ClaimBucket::ALL {
+            q!(harness, t => t.economy_practice_claim_count(*bucket, 10 * day));
+        }
+        q!(harness, t => t.economy_practice_claim_count(ClaimBucket::Paid, 11 * day - 1));
+        q!(harness, t => t.economy_practice_claim_count(ClaimBucket::Refused(ClaimRefusal::Expired), 11 * day));
+        {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.economy_practice_claim_count(ClaimBucket::Paid, 10 * day)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the count: {error}", harness.name));
+            // Dropped without a commit: the rollback.
+        }
+        let row = |day: &str, outcome: &str, count: i64| PracticeClaimCount {
+            day: day.to_string(),
+            outcome: outcome.to_string(),
+            count,
+        };
+        assert_eq!(
+            q!(harness, t => t.economy_practice_claim_counts()),
+            vec![
+                row("1970-01-11", "already_claimed", 1),
+                row("1970-01-11", "does_not_fold", 1),
+                row("1970-01-11", "economy_off", 1),
+                row("1970-01-11", "expired", 1),
+                row("1970-01-11", "not_finished", 1),
+                row("1970-01-11", "paid", 2),
+                row("1970-01-11", "result_mismatch", 1),
+                row("1970-01-11", "unknown_seed", 1),
+                row("1970-01-11", "voided", 1),
+                row("1970-01-12", "expired", 1),
+            ],
+            "{}",
+            harness.name
+        );
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10642,6 +10756,7 @@ mod economy {
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
+        practice_claims_count_once_per_bucket_and_utc_day,
     );
 }
 
@@ -10854,6 +10969,54 @@ mod cosmetic_loadouts {
             json!([
                 { "cardId": "core-004", "fullArt": "animated-gary-the-gambler" },
                 epic,
+            ])
+        );
+    }
+
+    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0079's
+    /// `augments`, and the `full_art_id` check widened to `version-…`), through a put and an upload, a row
+    /// of augments alone among them; a put with none takes them away, and an id the registry does not know
+    /// is kept too.
+    async fn r2725000_card_picks_keep_augments(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        let both = json!({
+            "cardId": "core-022",
+            "fullArt": "version-full-art",
+            "augments": ["augment-signature", "augment-animated"],
+        });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(both.clone()), now));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([both]));
+        // A put writes the row whole: the version kept, the augments gone.
+        let version = json!({ "cardId": "core-022", "fullArt": "version-full-art" });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(version.clone()), now + 1));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([version]));
+        // Augments alone are a row; the upload writes them too, one this build does not know among them.
+        let alone = json!({ "cardId": "core-008", "augments": ["augment-animated"] });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(alone.clone()), now + 2));
+        let upload = vec![picks(
+            json!({ "cardId": "core-004", "augments": ["augment-from-a-newer-client"] }),
+        )];
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, now + 3)),
+            1
+        );
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "augments": ["augment-from-a-newer-client"] },
+                alone,
+                version,
+            ])
+        );
+        // An empty list is no pick: the row of augments alone is deleted.
+        let none = json!({ "cardId": "core-008", "augments": [] });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(none), now + 4));
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "augments": ["augment-from-a-newer-client"] },
+                version,
             ])
         );
     }
@@ -11127,6 +11290,7 @@ mod cosmetic_loadouts {
         r1834000_card_picks_put_upload_get_cascade,
         r2655000_card_picks_keep_a_full_art_id,
         r2715000_card_picks_keep_an_animated_art_id,
+        r2725000_card_picks_keep_augments,
         r1834002_frozen_slots_and_loadouts_round_trip,
         r1834005_bots_keep_their_cosmetics,
         r1834005_cosmetic_owners_count_people_and_their_first_grant,

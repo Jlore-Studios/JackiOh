@@ -195,8 +195,8 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 - Hotseat: an offer from the seat holding the device hands it to the other seat to answer, and the
   answer hands it back to the player whose turn it is (`hotseat.ts`). Only the offer moves it: if
   the players pass the device back unanswered with the seat switch, the offerer plays on and the
-  offer lapses with the turn (R269). Practice draws no Offer draw
-  control (its `Game`'s `showOfferDraw={false}`, SPEC §9.9, R188; practice.css hides it on every other
+  offer lapses with the turn (R269). Practice and a dungeon fight draw no Offer draw
+  control (their `Game`'s `showOfferDraw={false}`, SPEC §9.9, R188; practice.css hides it on every other
   `.practice-table` board); an offer made anyway is declined at once and reads as declined.
 
 ## Patch v0.2.0 at the table
@@ -319,8 +319,10 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
-(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
-effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
+(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and every entry of its set's
+effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799): a cast, a cry, a card recipe, a set piece or an aura plays as the card's play, a death,
+trigger or activate motif through the gallery's own director, and a Field card's aura stands in the first backrow zone.
+It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -565,7 +567,9 @@ routes (net/navigate.ts paths, and public/_redirects):
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
                          Chat (always), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
-                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out
+                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out;
+                         with &coop=1 (a friend whose `duos` is true) the co-op seat's views on DuosBoard,
+                         drawn as a co-op replay step is (R2881000)
   /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
@@ -667,6 +671,8 @@ src/practice/
                       request, strictly in order
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
+  aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
+                      showcase holds), shared by the route and a dungeon fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
@@ -746,7 +752,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   audio engine's channel; a mark that is never cleared holds the AI for at most
   `PRACTICE_VOICE_HOLD_MAX_MS`), and while the showcase holds up the card the AI has just played
   (`data-showcase`, at most `PRACTICE_SHOWCASE_HOLD_MAX_MS`). `?pace=fast` waits for neither the
-  voice nor the showcase. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
+  voice nor the showcase. A dungeon fight's `FightScreen` holds the AI the same way, through
+  `practice/aiTable.ts`; it has no `?pace=fast`. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
 - A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
   Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the

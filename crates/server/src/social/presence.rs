@@ -9,10 +9,14 @@
 //! `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it reads as a person who is away,
 //! and in a match as a person in one (R1452).
 //!
-//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, with fewer than
+//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, or their live
+//! co-op game when the viewer is not their teammate in it and stands blocked with neither of its people
+//! (R2881000, `duos` then true), with fewer than
 //! `SPECTATORS_PER_MATCH` watchers; no setting of the friend's refuses it (R2615000), and the watch socket
-//! judges it again at its hello (`social::watch`). `standings` reads every friend's at once in the caller's
-//! transaction, by a fixed number of set-based reads, so `GET /api/friends` costs no per-friend query.
+//! judges it again at its hello (`social::watch`). Every caller hands `standings` the viewer's friends only,
+//! so a co-op game's `watchable` reads no friendship of its own. `standings` reads every friend's at once in
+//! the caller's transaction, by a fixed number of set-based reads, so `GET /api/friends` costs no per-friend
+//! query.
 
 use std::sync::Arc;
 
@@ -38,12 +42,14 @@ pub enum Status {
 }
 
 /// Where a friend is (B47): their status, the match holding them (a live 1v1 or Duos match; none
-/// between a series' games, or when not in one) and whether a friend may watch it (B50).
+/// between a series' games, or when not in one), whether a friend may watch it (B50) and whether it
+/// is a co-op game (R2881000).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Standing {
     pub status: Status,
     pub match_id: Option<String>,
     pub watchable: bool,
+    pub duos: bool,
 }
 
 impl Standing {
@@ -51,6 +57,7 @@ impl Standing {
         status: Status::Offline,
         match_id: None,
         watchable: false,
+        duos: false,
     };
 }
 
@@ -67,7 +74,8 @@ pub async fn heartbeat(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// B47, B50: each profile's standing as `viewer_id` sees it, by profile id, read in `tx` from the
-/// profiles as given and four set-based reads: heartbeats, series, Duos and watchable matches.
+/// profiles as given and five set-based reads: heartbeats, series, Duos, watchable matches and the
+/// co-op games seating someone the viewer stands blocked with (R2881000).
 pub(crate) async fn standings(
     tx: &mut Tx<'_>,
     app: &App,
@@ -90,10 +98,19 @@ pub(crate) async fn standings(
         .map(|profile| profile.id.clone())
         .collect();
 
+    // R2881000: the viewer's own co-op game rides on the same read, so a teammate is never told
+    // their own game is watchable.
+    let mut duos_ids = idle.clone();
+    duos_ids.push(viewer_id.to_string());
+
     let seen = tx.presence_last_seen(&ids).await?;
     let in_series = tx.presence_in_series(&idle).await?;
-    let in_duos = tx.presence_in_duos(&idle).await?;
+    let in_duos = tx.presence_in_duos(&duos_ids).await?;
     let watchable = tx.presence_watchable(viewer_id, &in_match).await?;
+    // R2881000: a watcher is shown the friend's teammate's duel too (§13.6), so a block with the
+    // teammate refuses the watch as one with the friend does.
+    let coop_games: Vec<String> = idle.iter().filter_map(|id| in_duos.get(id).cloned()).collect();
+    let duos_blocked = tx.presence_duos_blocked(viewer_id, &coop_games).await?;
 
     let mut standings = IndexMap::new();
     for profile in profiles {
@@ -103,19 +120,25 @@ pub(crate) async fn standings(
                 match_id: Some(match_id.clone()),
                 watchable: watchable.contains(&profile.id)
                     && watcher_count(app, match_id) < SPECTATORS_PER_MATCH,
+                duos: false,
             }
         } else if in_series.contains(&profile.id) {
             Standing {
                 status: Status::InMatch,
                 match_id: None,
                 watchable: false,
+                duos: false,
             }
         } else if let Some(duos_match) = in_duos.get(&profile.id) {
-            // Out of scope: watching a Duos game (SPEC, Out of scope).
+            // R2881000: a friend's co-op game is watched as a 1v1 match is, but by their teammate or
+            // by someone standing blocked with that teammate.
             Standing {
                 status: Status::InMatch,
                 match_id: Some(duos_match.clone()),
-                watchable: false,
+                watchable: in_duos.get(viewer_id) != Some(duos_match)
+                    && !duos_blocked.contains(duos_match)
+                    && watcher_count(app, duos_match) < SPECTATORS_PER_MATCH,
+                duos: true,
             }
         } else if seen
             .get(&profile.id)
@@ -125,6 +148,7 @@ pub(crate) async fn standings(
                 status: Status::Online,
                 match_id: None,
                 watchable: false,
+                duos: false,
             }
         } else {
             Standing::OFFLINE

@@ -85,8 +85,9 @@ func Owning(ctx *hctx.Context, state *pyjson.Object, c *queue.Candidate, lanes *
 	if c.Owner == "" || (c.Kind == "review" && !c.OwnReview) || (c.Kind == "build" && c.Part && !c.SentBack) {
 		return &Ownership{} // a part its reconcile sent back is its builder's, as owned work is
 	}
-	if c.OwnReview {
-		// Its own review run (#2748, 2026-11-02) takes the lane its build reserved for it.
+	if c.OwnReview || (c.Kind == "build" && c.BuildNext) {
+		// Its own review run (#2748, 2026-11-02) takes the lane its build reserved for it, and a
+		// build the lane its planning run kept for it (#2903).
 		lanes = lanes.Without(c.Number)
 	}
 	own := &Ownership{Owner: c.Owner}
@@ -444,11 +445,13 @@ func writeHoldComment(ctx *hctx.Context, number int, body string, create bool) {
 }
 
 // Release clears the owner of thread `number`'s item (`queue.OwnerItem`) and any hold on the
-// thread: whoever takes it up next owns it (`Claim`). `why` goes on record as `owner_why`.
+// thread, and any lane its planner kept for its build (#2903): whoever takes it up next owns it
+// (`Claim`). `why` goes on record as `owner_why`.
 func Release(s *pyjson.Object, number int, why string, at time.Time) {
 	hstate.Item(s, queue.OwnerItem(s, number)).Update(pyjson.New("owner", "",
 		"owner_since", clock.ISO(at), "owner_why", py.SliceTo(why, 300)))
 	hstate.Item(s, number).Pop("hold")
+	hstate.Item(s, number).Pop(queue.BuildNextKey)
 }
 
 // Own makes `providerID` the owner of thread `number`'s item (`queue.OwnerItem`), with `why`, and
@@ -461,6 +464,7 @@ func Own(s *pyjson.Object, number int, providerID string, why string, at time.Ti
 	hstate.Item(s, queue.OwnerItem(s, number)).Update(pyjson.New("owner", providerID,
 		"owner_since", clock.ISO(at), "owner_why", py.SliceTo(why, 300)))
 	hstate.Item(s, number).Pop("hold")
+	hstate.Item(s, number).Pop(queue.BuildNextKey)
 }
 
 // takeOver records `providerID`, whose run takes thread `number` up, as its item's owner, unless

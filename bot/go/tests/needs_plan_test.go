@@ -15,6 +15,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -251,8 +252,9 @@ func TestNeedsPlan_MusePlansWhileItBuilds(t *testing.T) {
 }
 
 // Planning comes first: claude-3 (two lanes, no caps) plans two items at once, before it builds
-// anything, so the medium models have plans to build from. Its third item it plans and builds in
-// one run, on a build lane.
+// anything. Each takes a lane of its own (#2903), which its build then takes on the same model, so
+// with both its lanes holding plans, it plans its third item on the planning lane, which takes none
+// of them, as before #2903, rather than plan and build it in one run.
 func TestNeedsPlan_AnUncappedAccountPlansAsManyItemsAtOnceAsItsLanes(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_3")})
@@ -264,11 +266,14 @@ func TestNeedsPlan_AnUncappedAccountPlansAsManyItemsAtOnceAsItsLanes(t *testing.
 		made = append(made, flowMake(ctx))
 		needsPlanRunning(gh, ctx, made[len(made)-1])
 	}
-	needsPlanIs(t, made[0], []string{"action", "number", "provider"}, "plan", 3, "claude-3")
-	needsPlanIs(t, made[1], []string{"action", "number", "provider"}, "plan", 4, "claude-3")
+	needsPlanIs(t, made[0], []string{"action", "number", "provider", "build_next"}, "plan", 3, "claude-3", true)
+	needsPlanIs(t, made[1], []string{"action", "number", "provider", "build_next"}, "plan", 4, "claude-3", true)
+	lanes := plan.ReadLanes(ctx, ctx.Store.Load())
+	assertEqual(t, []any{lanes.Count("claude-3"), lanes.PlanningBy("claude-3")}, []any{2, 0})
 	third := flowMake(ctx)
-	needsPlanIs(t, third, []string{"action", "number"}, "build", 5)
-	assertEqual(t, difficultySeatAt(t, third, "plan"), difficultySeat{"claude-3", "opus", "strong"})
+	needsPlanIs(t, third, []string{"action", "number", "provider"}, "plan", 5, "claude-3")
+	assertFalse(t, third.Has("build_next"))
+	assertEqual(t, difficultySeatAt(t, third, "plan"), difficultySeat{"claude-3", "sonnet", "medium"})
 }
 
 // A fullsend part waits on its plan for a medium subscription (Muse) to build it, so the lane

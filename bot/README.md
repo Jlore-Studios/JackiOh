@@ -14,11 +14,13 @@ who may plan, build and review it ([Difficulty and tiers](#difficulty-and-tiers)
 plans a medium or unrated item first (a strong one only when no medium one can take it now; a
 strong one alone for hard items) and rates an item nobody rated, by [how hard it
 is](#how-hard-it-is); one subscription owns the item end to end (the one that planned it, or
-took it up last; a cut-off item waits for it up to an hour, [Ownership and the
-hold](#ownership-and-the-hold)), builds it and runs the repository's checks, then opens the pull
-request (a draft, so CI starts) and hands its lane to the change's **own review run** on the same
-subscription, which reviews it in a fresh adversarial session, fixes what it finds in the same run
-and reviews again, until its lane's verdict rounds run out or its reviewer approves ([The own
+took it up last; a cut-off item waits for it up to two hours, [Ownership and the
+hold](#ownership-and-the-hold)), and one model of it works it from the plan to the merge, on one
+lane (#2903): it plans the item in a lane of its own when one is free, and that lane goes straight
+on to the build, on the model that planned it, which runs the repository's checks, then opens the
+pull request (a draft, so CI starts) and hands its lane to the change's **own review run** on the
+same subscription and model, which reviews it in a fresh adversarial session, fixes what it finds
+in the same run and reviews again, until its lane's verdict rounds run out or its reviewer approves ([The own
 review run](#the-own-review-run), the owner's decision of 2026-11-02). That approval ships it when
 it is at the item's tier: a medium or strong model's for a medium item, a strong one's for a hard
 item, which on a Claude account is Opus on the same account, so an item normally ships at the end
@@ -59,15 +61,15 @@ flowchart TD
     GA["gate (no write token)<br/>work a free subscription can take?"]
     GA -- "the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription:<br/>its run's live label (bot:building, …)"]
-    PL --> PN["planner (medium first; strong for hard)<br/>rates an unrated item, writes the plan"]
-    PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner"]
+    PL --> PN["planner (medium first; strong for hard)<br/>rates an unrated item, writes the plan,<br/>in a lane of its own when one is free"]
+    PN -- "the next run, at once,<br/>same lane and model" --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner,<br/>on the model that planned it"]
     B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests;<br/>the builder fixes the red ones (2 passes)"]
     G -- "a self_check builder (none now)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
     SC --> H
     G --> H["deliver (bot token, no model)<br/>verify the bundle, push, open the PR as a draft (CI starts);<br/>bot:reviewing: the lane reserved for its own review run"]
-    H -- "the next run, at once,<br/>same subscription and lane" --> R["its own review run: a fresh adversarial session<br/>of the lane's reviewer (Opus for hard),<br/>with the checks and the PR's CI"]
-    H -- "its subscription cannot start:<br/>held up to an hour, then" --> X
-    R -- "blocking findings, red checks or red CI<br/>(3 verdict rounds, 10 for hard)" --> F["the lane's builder fixes them<br/>in the same run; the checks again"]
+    H -- "the next run, at once,<br/>same subscription and lane" --> R["its own review run: a fresh adversarial session<br/>of the model that built it (Opus for hard),<br/>with the checks and the PR's CI"]
+    H -- "its subscription cannot start:<br/>held up to two hours, then" --> X
+    R -- "blocking findings, red checks or red CI<br/>(3 verdict rounds, 10 for hard)" --> F["the same model fixes them, fresh,<br/>in the same run; the checks again"]
     F --> R
     R -- "approved and green" --> D["deliver: push the fixes, mark the PR ready;<br/>auto-merge on an approval at the item's tier,<br/>its own lane's included"]
     R -- "rounds out, no approval (medium)" --> D2["deliver: the kept work's PR, ready"]
@@ -481,7 +483,7 @@ in place of the `bot:*` ones.
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for its final audit, a review run, before auto-merge: its own review run's reviewer did not approve it within its rounds, that run could not start in time (or a person asked for one), so one medium or strong model for a medium item, one strong model for a hard one, reviews it, on a subscription other than its builder's when one is free and on its own when none is (2026-11-02). An audit that asks for changes queues `bot:revise` for the auditor's own subscription, which owns the fix (#2748) |
 | `bot:planning`, `bot:splitting`, `bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling` | the live labels (#2748): a run holds it right now, exactly one of them, by the kind of run: a planning run, a fullsend split (or one of Squishy's splits), a fresh build (a fullsend part or a one-shot too), a revision of a pull request, a revision whose cause is a red CI run or the merge queue (`source` `ci`), a review run (an [after-merge spot-check](#the-after-merge-spot-check)'s too, on the merged pull request it reads), and the build of a fullsend parent whose parts have landed (its reconcile). The claim puts it on (`config.LiveRun`) and keeps it in the item's record (`live`), and deliver takes it off. `bot:reviewing` also goes on a bot pull request as soon as its build delivers, when that build hands its lane to its [own review run](#the-own-review-run): from then until that run delivers, no other run holds it, its lane is reserved for that run (for `own_review_reserve_minutes`, 30), and while that run cannot start it is held for its subscription (`bot:waiting` beside it) or handed off to `bot:cross-review`. They replace `bot:working`, which is retired: a thread that still carries it is held as ever (`config.HeldLabels`, `config.IsLive`), and the sweep moves it to the live label of the run its record names before it deletes the label |
-| `bot:waiting` | beside `bot:build` or `bot:revise` (or `bot:reviewing`, for an own review run its subscription cannot start yet): held for its owner (#2748): only the 5-hour session of the subscription that owns it keeps that one from taking it, and it can start again within `hold_minutes` (60), so no other subscription takes it meanwhile. The bot's one comment on the thread says for whom, until when and why, and the commands that release it (`/harness handoff …`); the planner and the sweep take the label off once the owner can start (the owner takes it next) or the hold runs out (anyone may), and so does any step that takes the item out of the queue ([Ownership and the hold](#ownership-and-the-hold)) |
+| `bot:waiting` | beside `bot:build` or `bot:revise` (or `bot:reviewing`, for an own review run its subscription cannot start yet): held for its owner (#2748): only the 5-hour session of the subscription that owns it keeps that one from taking it, and it can start again within `hold_minutes` (120), so no other subscription takes it meanwhile. The bot's one comment on the thread says for whom, until when and why, and the commands that release it (`/harness handoff …`); the planner and the sweep take the label off once the owner can start (the owner takes it next) or the hold runs out (anyone may), and so does any step that takes the item out of the queue ([Ownership and the hold](#ownership-and-the-hold)) |
 | `bot:merging` | a bot pull request whose auto-merge the bot turned on: approved, and in CI or `main`'s merge queue (#2748). It comes off when auto-merge goes off (a revision, a hold, `/harness stop`, a block after its CI fixes), when it merges or closes, and in the sweep once nothing keeps it merging (closed, or open with auto-merge off and out of the queue). A pull request a person merges (`ready for merge`) never carries it |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
@@ -761,8 +763,8 @@ difficulty sets the weakest tier that may build it, and the weakest whose plan i
 
 | Difficulty | Plan written by | Builds it | Approvals it needs |
 |---|---|---|---|
-| medium | a medium model first (any of them), a strong one only when no medium one can take it now | medium or stronger, planner preferred | one medium or strong, from any subscription: its own review run's reviewer, or else its final audit |
-| hard | strong only | strong only, planner and builder the same | one strong, from any account: its own review run's Opus reviewer on the same account, or else its final audit |
+| medium | a medium model first (any of them), a strong one only when no medium one can take it now | medium or stronger: its planner first, on the model that planned it (#2903) | one medium or strong, from any subscription: its own review run's reviewer (the model that built it), or else its final audit |
+| hard | strong only | strong only, planner and builder the same (Opus, on the same account) | one strong, from any account: its own review run's Opus reviewer on the same account, or else its final audit |
 | (unrated) | as medium, who rates it | as medium | as medium |
 
 **The usage order** (`priority`) is the owner's, and it is the tie-break inside a tier, not
@@ -805,10 +807,29 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
 
 - **Planning: the Needs plan stage.** Every build starts from a plan its difficulty may build
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
-  came from a model under its plan floor (a medium model's plan of a hard item). A
-  planner on the **planning lane** plans those first, so a subscription never plans and builds
-  the same item: `plan_lanes` runs, which take none of a subscription's own lanes, so it plans
-  while it builds, up to as many items at once as the lanes in force for it. Each still holds a runner: a slot
+  came from a model under its plan floor (a medium model's plan of a hard item). **One lane, one
+  model** (#2903, the owner's decision of 2026-11-03): a plan of an item that will be built takes
+  a lane of its planner's own subscription when that one has usage room and a free lane of its own
+  (`plan.InLanePlanners`, `start_headroom` under each cap, as a build; not a fill-in lane): the
+  weakest seat that meets both its plan floor and the tier that builds it, by the tier order and
+  the load balancer, its owner's first; its record says so (`in_lane`), and it holds that lane as
+  a build does (`plan.ReadLanes`). When the plan delivers, that lane stays **reserved for its
+  build** (`build_next` on the issue's record: the subscription, the model, until when, for
+  `own_review_reserve_minutes`, as run 1 reserves its lane for run 2; `Lanes.Reserved`), and the
+  build starts at once (`Chain_`, or the status loop's tick) on the model that planned it
+  (`planned_model`), in a fresh session, as its subscription's own work; it then hands the lane to
+  its own review run on the same model. A plan its rating puts beyond its planner's model (a
+  medium planner rating it hard) reserves nothing, and a strong model plans it next. When the
+  planner's subscription cannot start the build (a 5-hour cap, its hours, a weekly cap) the
+  [hold and the handoff](#ownership-and-the-hold) apply as to any owned item: a hold keeps no lane,
+  and a handoff drops the reservation, so the item builds on whoever takes it. Fullsend parts, a
+  split and items planned in their description keep their routing, and so do Squishy
+  (`own_review_run` off) and a `build_last` subscription (claude-2), which plans on the planning
+  lane. A subscription with no lane of its own free plans on the **planning lane**, as before
+  #2903, and its build goes to it first, on the model that planned it, when it has a lane free:
+  `plan_lanes` runs, which take none of a subscription's own lanes, so it plans while it builds,
+  up to as many items at once as the lanes in force for it. (With `plan_lanes` 0, as in most of
+  the tests, a builder plans in its own run, as below.) Each still holds a runner: a slot
   on the machine, or one of `max_parallel`'s lanes on GitHub's runners (#1455). The planning lane
   takes fullsend parts first (Muse builds those, [Fullsend](#fullsend)), then the rest in the
   usual order, ahead of every build. Each subscription offers every free seat of at least medium
@@ -840,9 +861,12 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   unrated issue is in the stage within one pass.
 - **Building, fixing, revising.** The lane's owner builds it end to end: a medium item stays with
   its owner when that one can build it (and waits for it while [held](#ownership-and-the-hold)),
-  else takes the first free medium seat; a hard item takes a strong seat only. Its revisions and
-  continuations go to its owner first too. Every Claude account builds a medium
-  item with Sonnet and a hard one with Opus, and its run may switch between the two
+  else takes the first free medium seat; a hard item takes a strong seat only. Its planner builds
+  it on the model that planned it (`planned_model`, #2903: Muse what Muse planned, agy what agy
+  planned, Sonnet what Sonnet planned, and Opus a medium item Opus planned); handed off, it builds
+  on the new owner's seat. Its revisions and continuations go to its owner first too. Every Claude
+  account builds a medium item with Sonnet (unless Opus planned it) and a hard one with Opus, and
+  its run may switch between the two
   ([below](#switching-between-opus-and-sonnet)). When that is above the item's tier (none of that
   tier is free), the run's log says so and why, and claude-2 only builds when everyone
   else is busy. A revision that
@@ -868,8 +892,9 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   own tier or above, as any owner's work does.
 - **The own review run** ([below](#the-own-review-run)). Every change is reviewed in a fresh
   adversarial session of its lane's reviewer, never an approval from its builder's context: the
-  builder's own subscription's strongest seat at or above the item's tier reads the change cold (on
-  a Claude account, Opus for a hard item). On the night bot that review is a run of its own, the
+  model that built it, on the same subscription, reads the change cold in a new instance (#2903,
+  not the subscription's strongest seat: Sonnet what Sonnet built; on a Claude account, Opus for a
+  hard item). On the night bot that review is a run of its own, the
   second of the two runs every code change takes, on the same subscription and lane; on Squishy
   it is in the build's own run, as it was before (`own_review_run`). Its findings count, its
   builder fixes them, and its approval at the item's tier ships the change (the owner's decision
@@ -914,7 +939,10 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
 The owner's decision of 2026-11-02 (#2748): after a model finishes building, it frees its own lane
 and passes it to itself, to review its change adversarially, revise it, and track its CI to the
 merge. Muse builds and Muse reviews, in two runs on the same subscription and lane; a hard item's
-are Opus on the same Claude account. `own_review_run` in `.harness/config.json` switches it on
+are Opus on the same Claude account. Since #2903 (the owner's decision of 2026-11-03) the plan
+before them takes that lane too, when it is free, and the model that planned the item builds it
+and reviews it: plan, run 1 and run 2, one lane and one model, each a fresh session
+([Planning](#difficulty-and-tiers)). `own_review_run` in `.harness/config.json` switches it on
 (Squishy's is off: its build reviews itself in the same run, as before).
 
 1. **Run 1, the build** (`bot:building`, or `bot:revising` or `bot:fixing-ci` for a revision). It
@@ -925,22 +953,26 @@ are Opus on the same Claude account. `own_review_run` in `.harness/config.json` 
    `pull_request` event with no draft filter, so CI starts on the draft while the review runs, and
    GitHub turns auto-merge on only for a pull request that is ready. A revision's push goes onto
    its pull request as it is, with auto-merge off. Then deliver **reserves the lane** for run 2:
-   the pull request's record holds `own_review` (the subscription, since when, until when the lane
-   is kept, `own_review_reserve_minutes` (30), the head it pushed, the checks it ran on it, and
-   where its verdict rounds are counted), `bot:reviewing` goes on, and the next run starts at once,
+   the pull request's record holds `own_review` (the subscription, the model that built the head,
+   since when, until when the lane is kept, `own_review_reserve_minutes` (30), the head it pushed,
+   the checks it ran on it, and where its verdict rounds are counted), `bot:reviewing` goes on, and the next run starts at once,
    the way every next run starts (`Chain_` from a deliver job; the status loop's same tick, which
    delivers before it plans, for a run the loop started). Until the reservation runs out the lane
    counts as held for that subscription (`plan.ReadLanes`, `Lanes.Reserved`), so no other item
    takes it in between; the own review run itself takes it (`Lanes.Without`), as its subscription's
-   own work, first (`plan.Pairs`). Its handoff, and its Claude session, go on on the pull request.
-2. **Run 2, its own review** (`bot:reviewing`), on the same subscription
-   (`plan.ownReviewer`: its strongest seat at or above the item's tier reviews, Opus for a hard
-   item; its weakest seat at that tier fixes, as builds go). Its first round builds nothing
+   own work, first (`plan.Pairs`). Its handoff, and its Claude session, go on on the pull request
+   (for the item's later runs there; run 2 resumes neither).
+2. **Run 2, its own review** (`bot:reviewing`), on the same subscription and the same model
+   (`plan.ownReviewer`, #2903: the model that built the head, its reservation's `model`, reviews
+   and fixes, Sonnet what Sonnet built, Opus a hard item; a reservation from before names no model,
+   and its weakest seat at the item's tier does both, as builds go). Every review and every fix is
+   a new instance: run 2 resumes no kept session (`work.Worker`'s `resumes`), and its plan carries
+   none. Its first round builds nothing
    (`work.Worker.OwnReview`): a fresh adversarial session reviews the head run 1 pushed, with the
    checks run 1 ran on it and the pull request's CI on that head, which the job reads with its own
    read-only token (`actions: read`: the CI workflow's runs and jobs, `work/ci.go`); a required
    check red there is a blocking finding of its own, with the failed job's log tail. On blocking
-   findings the lane's builder fixes them in the same run, the checks run again (installing first,
+   findings the same model fixes them in the same run, the checks run again (installing first,
    as this run runs on the builder's own login: running the builder's code here is as safe as run
    1), and a fresh session reviews again, up to `max_review_cycles` (3 medium, 10 hard), its rounds
    counted across runs where its build counted them (a build's on its issue, a revision's on its
@@ -992,11 +1024,12 @@ subscription built.
   of the CI fix (section 4), and a fullsend reconcile that sends a part back makes the subscription
   that built the part its owner (section 2). Its builds,
   continuations and revisions go to it first (`plan.BuilderSeat`, the auditor's fix on its seat of
-  the audit's tier), and so does a plan it was cut off in, on the planning lane. A
+  the audit's tier; its planner's build on the model that planned it, #2903), and so does a plan
+  it was cut off in, in a lane of its own or on the planning lane. A
   `build_last` owner (claude-2) keeps nothing: it builds only after every other.
 - **The hold.** When the owner cannot take its item now only because of its 5-hour session (its
   reading over or within `start_headroom` of the 5-hour cap in force, or a refusal on that window,
-  `providers.FiveHourWait`) and it can start again within `hold_minutes` (60,
+  `providers.FiveHourWait`) and it can start again within `hold_minutes` (120,
   `.harness/config.json`) of when the hold began, the item is held: no other subscription takes it,
   it gets `bot:waiting`, and the bot leaves one comment on the thread naming the owner, when it can
   start again, why, and the commands that release it; a later hold edits the same comment. When it
@@ -1010,7 +1043,7 @@ subscription built.
   `--force`, which is to start now. Squishy holds nothing (`hold_minutes: 0`).
 - **The hold ends** as the planner and the sweep find it (`plan.SyncHolds`, each plan and every
   sweep): as soon as the owner can start, `bot:waiting` comes off, the comment says so, and the
-  owner takes the item at its next run, ahead of its new work; when the hour runs out, or the
+  owner takes the item at its next run, ahead of its new work; when the hold runs out, or the
   owner's state turns to one that is not waited for (a weekly refusal, a suspension, …), it is
   released to anyone, and the comment says why. A held item shows in the status issue's queue,
   in `status` and in the plan's reason as "held for `<owner>` until <time> (<why>)".
@@ -1019,10 +1052,16 @@ subscription built.
   is held for it as any owner's work, or handed off, but as a final audit on another subscription
   rather than a review on its lane (`plan.HandOffOwnReview`). `/harness handoff` on a pull request
   waiting for its own review run does the same at once.
+- **A plan's build is its planner's** (#2903): a plan delivered in its subscription's own lane
+  keeps that lane for the build (`build_next`), as a build keeps its lane for its own review run,
+  and while the planner cannot start it (a 5-hour cap within `hold_minutes`) it is held for it as
+  any owner's work, with no lane kept meanwhile (`queue.BuildReserved`); anything else (a weekly
+  cap, its hours, a hold that runs out, `/harness handoff`) hands it off, and the reservation goes
+  (`plan.Release`, or the claim of the subscription that takes it).
 - **A freed lane takes its own work first.** The planner gives each subscription its own items
   (a continuation of an item paused or cut off, a revision of its pull request, its own review run
-  of a change it just built, an item that was held for it) before review runs, new plans and new
-  builds, after forced plans only
+  of a change it just built, the build its plan kept its lane for, an item that was held for it)
+  before review runs, new plans and new builds, after forced plans only
   (`plan.Pairs`), so a lane that a run just freed goes on with its own work while its session can
   still be resumed ([below](#the-self-check-loop)), and the item does not change hands because a
   review took the lane first. A run the job's time budget stopped (`job_budget_minutes`) is
@@ -1287,7 +1326,11 @@ Code session the last one left (`claude -p --resume <id>`), instead of a fresh s
 the handoff. What is kept: the last builder's session (its first pass, a fix or a revision, an
 [own review run](#the-own-review-run)'s fix passes too, which run on the builder's own
 subscription), or a cut-off planner's; reviews and self checks run fresh by design and are never
-kept. After each
+kept. The plan, run 1 and run 2 of a change each start a fresh session (#2903): a finished plan
+keeps none, so its build starts fresh, and an own review run resumes none, its build's included;
+what goes on in a kept session is a run that continues one cut off part-way (a build, a revision
+or a plan that hit a cap or the time budget) and the item's next run on its pull request, a CI
+fix after the merge queue took it out or a revision. After each
 such call the work job notes the session id the CLI's stream-json names; whenever it writes
 `result.json` (its end, and every checkpoint, so a killed job keeps it too) it packs the
 session's file (`$CLAUDE_CONFIG_DIR/projects/<the worktree's path, every character but a letter
@@ -1547,7 +1590,7 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
    the usage stop and the clock. When any of those says stop, it commits what it has as work in
    progress so the next run can pick it up ([handing work over](#the-self-check-loop)): its
    owner's next run when it is free, as for a run the clock stopped, or held for its owner up to
-   an hour when only its 5-hour session stopped it; after
+   two hours when only its 5-hour session stopped it; after
    every builder pass, check run and review it leaves a checkpoint a killed job hands on, and a
    cancel stops it the same way. An item
    cut off three runs in a row without its work moving on is blocked. A failure that is not the

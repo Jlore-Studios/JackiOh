@@ -88,6 +88,14 @@ export const FX_WALLS_HIT_AT = 0.3;
 export const FX_WALLS_TAIL_MS = 850;
 export const FX_WALLS_REACH = 0.2;            // how far each wall reaches in, of the board's width: one lane of five
 export const FX_WALLS_TRAUMA = 0.45;
+// R2795000: Classic+ #35 Rollback rewinds the lanes from 5 to 1, each ring this fraction of D after the
+// last (all of them inside Travel to Land); Classic+ #56 Book of Pain shakes this hard at its first tear.
+export const FX_ROLLBACK_STEP = 0.08;
+export const FX_INK_TEAR_TRAUMA = 0.2;
+// #2796: Meditative's Flourishes (fx/cards/meditative/, meditativeplus/): each one's shake at Land.
+export const FX_JADE_CRACK_TRAUMA = 0.3;
+export const FX_HARMONY_TRAUMA = 0.15;
+export const FX_CN_SWEEP_TRAUMA = 0.35;
 // R437: a mark branded onto a card; its sigil fades over FX_BRAND_TAIL_MS after the entry.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
@@ -175,9 +183,30 @@ export const FX_MOTIF_TRAUMA = {
   tithe: 0.1,
   tally: 0.15,
   snap: 0.4,
+  send: 0,
+  radiance: 0.15,
+  mend: 0,
+  deal: 0,
+  seal: 0.2,
 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
+export const FX_MOTIF_DEAL_MAX = 5; // deal: the cards one entry deals
+// #2793: Core's flourishes (fx/cards/core/): each shake at Land; how far in from the board's edges Craft a Card's halves start.
+export const FX_TIDE_TRAUMA = 0.35;
+export const FX_WISH_TRAUMA = 0.3;
+export const FX_FORGE_TRAUMA = 0.4;
+export const FX_FORGE_REACH = 0.2;
+// #2798: Stinkyscape's flourishes (fx/cards/stinkyscape/): each shake at Land.
+export const FX_FLASH_FREEZE_TRAUMA = 0.35;
+export const FX_DUO_BOND_TRAUMA = 0.3;
+export const FX_STRATOS_SWARM_TRAUMA = 0.3;
+// #2799: Training Grounds' flourishes (fx/cards/traininggrounds/): each shake at Land.
+export const FX_CELESTIAL_TRAUMA = 0.35;
+export const FX_DINO_STOMP_TRAUMA = 0.55;
+export const FX_GAME_DESIGN_TRAUMA = 0.45;
+// #2793: the share of a set's non-token cards its pass gives an entry other than `none`.
+export const FX_SET_PASS_FLOOR = 0.55;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
@@ -206,6 +235,12 @@ export const FX_FIRST_STRIKE_BREAK_AT = 0.4;   // the dying defender's counter-b
 export const FX_FIRST_STRIKE_BREAK_REACH = 0.6; // …this many card heights toward the attacker
 export const FX_PIERCE_REACH = 0.8;            // a Pierce's spear line runs this many card heights past each edge
 export const FX_FLYING_LUNGE_LIFT = 0.18;      // a Flying attacker's lunge scales up this much more, over the lane
+// R2791000: the tempo keyword beats (fx/motifs/beats.ts). A Stack landing bursts up-right of the
+// pile top; a Deft feint sidesteps this many card widths; a Charge landing's speed lines spread
+// this far across the hand region they leave from.
+export const FX_STACK_LAND = { x: 0.62, y: 0.35 } as const;
+export const FX_DEFT_FEINT_STEP = 0.18;
+export const FX_CHARGE_LINE_SPREAD = 0.22;
 // #1445: a Unit's summon entrance takes its flavor, at these counts at intensity "normal" (a Brute's with
 // a Legendary's weight). Every count is at least 8, so low plans strictly fewer particles and high more.
 export const FX_SUMMON_BRUTE_TRAUMA = 0.5;
@@ -275,6 +310,14 @@ export const FX_SPEED_MAX = 3;                 // …to three times the table's 
 export const FX_SPEED_DEFAULT = 1;
 export const FX_SPEED_STEP = 0.25;             // the settings panel's slider moves by this
 export const FX_INTENSITY_SCALE = { off: 0, low: 0.45, normal: 1, high: 1.6 } as const;
+// R2785000: the beat a quest's set piece asks for at speed 1, scaled and capped by `setPieceHoldMs`.
+export const FX_QUEST_HOLD_MS = 1_500;
+// R2785000: a quest's set piece lands this hard; a system's Signature this hard.
+export const FX_QUEST_TRAUMA = 0.5;
+export const FX_SYSTEM_TRAUMA = 0.3;
+// R961: the jade tally grows this much per step, at most this big.
+export const FX_JADE_SCALE_STEP = 0.15;
+export const FX_JADE_SCALE_MAX = 2;
 export const FX_SETTINGS_KEY = "jackioh.fx.v1";
 export const FX_CENTER = { x: 0.5, y: 0.45 } as const;     // viewport anchor for banners and shuffles
 export const FX_TEXT = {
@@ -296,6 +339,8 @@ export const FX_TEXT = {
   turnCutShort: "Turn cut short",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */
   autopilot: "The AI takes the turn",
+  /** R2785000: a quest's set-piece banner, the system's climax. */
+  questComplete: "Quest complete",
   /** R1843000: a full tally removes a player. */
   votedOut: "Voted out",
   /** R1843002: a player escaped the universe. */

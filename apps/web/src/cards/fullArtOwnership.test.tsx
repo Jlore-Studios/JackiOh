@@ -50,6 +50,11 @@ const HERO_IDS = HEROES.map((def) => def.id);
 function owningFullArt(ids: Iterable<string>): OwnedByCard {
   return new Map([...ids].map((id) => [id, new Set([FULL_ART_OF_CARD.get(id) ?? `no full art for ${id}`])]));
 }
+
+/** `owningFullArt`, as `ownedCardCosmetics` reads it: each still Epic owning the Full art version it implies (R2725002). */
+function readingFullArt(ids: Iterable<string>): OwnedByCard {
+  return new Map([...owningFullArt(ids)].map(([id, held]) => [id, new Set([...held, "version-full-art"])]));
+}
 const EVERY_HERO = owningFullArt(HERO_IDS);
 /** Mr. Vanilla, whose full art the viewer owns below, and Big D-fender, whose they do not. */
 const OWNED = "core-008";
@@ -303,9 +308,10 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
       ],
       account: ["full-art-tempo-timmy", "table-felt"],
     };
+    // R2725002: the still Epic also owns the Full art version it implies there.
     expect(ownedCardCosmetics(owned)).toEqual(
       new Map([
-        ["core-008", new Set(["full-art-mr-vanilla", "border-bone"])],
+        ["core-008", new Set(["full-art-mr-vanilla", "version-full-art", "border-bone"])],
         ["core-001", new Set(["foil-rainbow"])],
       ]),
     );
@@ -315,7 +321,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
   it("R1313000 readOwnedFullArt reads GET /api/cosmetics once per session, again for another, and again after a failure", async () => {
     const answer: OwnedCosmeticsResponse = { cards: [{ cardId: "core-008", cosmeticId: "full-art-mr-vanilla" }], account: [] };
     const fetchOwned = vi.fn(() => Promise.resolve(answer));
-    expect(await readOwnedFullArt("token-a", fetchOwned)).toEqual(owningFullArt(["core-008"]));
+    expect(await readOwnedFullArt("token-a", fetchOwned)).toEqual(readingFullArt(["core-008"]));
     await readOwnedFullArt("token-a", fetchOwned);
     expect(fetchOwned).toHaveBeenCalledTimes(1);
 

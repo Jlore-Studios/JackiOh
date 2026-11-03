@@ -127,6 +127,14 @@ func resumable(role, kind string) bool {
 	return kind == "plan" || (kind == "build" && (role == "build" || role == "revise"))
 }
 
+// resumes is whether this run may go on in a kept session at all: not a change's own review run
+// (#2903, the owner's decision of 2026-11-03), whose reviews and fixes are new instances of the
+// model that built it, never its build's session. A run that continues one cut off part-way (a
+// build, a revision or a plan), and a CI fix after the merge queue took a change out, may.
+func (x *Worker) resumes() bool {
+	return x.Sessions != nil && !x.OwnReviewRun()
+}
+
 // runCall is one model call and its tally on `step`, resumed when it may be: when the resume
 // fails before the call did anything, the same call runs again in a fresh session, as its own
 // step. Returns the result and the step that has it.
@@ -134,7 +142,7 @@ func (x *Worker) runCall(request *runner.RunRequest, step *pyjson.Object, reader
 	kind := sessionKind(reader, drafting)
 	fresh := *request
 	why := py.Str(step.Get("why"))
-	if x.Sessions != nil && resumable(request.Role, kind) && !x.session.decided[kind] && !x.session.settled {
+	if x.resumes() && resumable(request.Role, kind) && !x.session.decided[kind] && !x.session.settled {
 		if x.session.decided == nil {
 			x.session.decided = map[string]bool{}
 		}

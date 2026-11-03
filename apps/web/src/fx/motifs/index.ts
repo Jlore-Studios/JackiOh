@@ -8,8 +8,8 @@ import type { FxCue, FxPlanEnv } from "../types.ts";
 import { bind, conjure, mirror, offering, rise, shift, tether, transmute } from "./board.ts";
 import { readEvents, type MotifPlanner, type MotifSpec } from "./build.ts";
 import { barrage, bolt, chain, lance, nova, scorch, volley } from "./damage.ts";
-import { flight, glimpse, mana, tally, tithe } from "./hand.ts";
-import { bless, curse, drain, ward } from "./life.ts";
+import { deal, flight, glimpse, mana, seal, send, tally, tithe } from "./hand.ts";
+import { bless, curse, drain, mend, radiance, ward } from "./life.ts";
 import type { DrawnMotif } from "./names.ts";
 import { negate, vanish, wipe } from "./removal.ts";
 import { snap } from "./trap.ts";
@@ -44,6 +44,11 @@ export const MOTIF_PLANNERS: { readonly [M in DrawnMotif]: MotifPlanner } = {
   tithe,
   tally,
   snap,
+  send,
+  radiance,
+  mend,
+  deal,
+  seal,
 };
 
 export function planMotif(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {

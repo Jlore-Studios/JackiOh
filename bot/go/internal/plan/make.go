@@ -117,7 +117,7 @@ func FillLanes(ctx *hctx.Context, lanes *Lanes, taken *queue.Candidate, assignme
 	if ctx.Cfg.ControllerLoop {
 		return // the status loop plans again at once, in the same tick (`controller.start`)
 	}
-	after := lanes.WithRun(taken.Number, assignment.Provider.ID, assignment.Action, assignment.FillsIn())
+	after := lanes.WithRun(taken.Number, assignment.Provider.ID, assignment.LaneAction(), assignment.FillsIn())
 	if !after.AnyRoom() {
 		return
 	}
@@ -219,7 +219,8 @@ var PruneEvery = 24 * time.Hour
 // ShedWhenClosed is SHED_WHEN_CLOSED: what a closed thread's record sheds at once: the bulky
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
-	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review"}
+	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review",
+	"build_next"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep

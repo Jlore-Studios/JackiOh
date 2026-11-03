@@ -69,6 +69,7 @@ import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
+import { questClaim } from "../fx/systemMoments.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
@@ -220,6 +221,10 @@ export default function Game({
   // R2118000: no command menu over a board.
   useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
+  // #2924: the shown turn, active seat and viewer the selection was built on. The turn clock
+  // (§10.10) can end the turn mid-choice, so a half-built play or attack is dropped when the
+  // shown view moves to another turn, seat or viewer, as Escape already drops it.
+  const [selectionKey, setSelectionKey] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
   // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -365,8 +370,9 @@ export default function Game({
       // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
       setPieces: !silent,
       // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
+      // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry),
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -566,6 +572,16 @@ export default function Game({
   // screen can still send (emotes are live "through the results screen").
   if (emoteMenu !== null && (interaction !== IDLE || emoteMenu.viewer !== shown.viewer)) {
     setEmoteMenu(null);
+  }
+  // #2924: drop a half-built play or attack when the shown view's turn, active seat or viewer
+  // changes (React's "adjust state while rendering" pattern, as the concede dialog above does).
+  // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
+  // board back, `shown` is old and `view` is new, and comparing them would drop the selection
+  // mid-animation on every animated turn change.
+  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  if (selectionKey !== shownKey) {
+    setSelectionKey(shownKey);
+    if (interaction.stage !== "idle") setInteraction(IDLE);
   }
   useEffect(() => {
     if (shown.result !== null) setEmoteMenu(null);

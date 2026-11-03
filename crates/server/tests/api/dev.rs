@@ -9,7 +9,10 @@ use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
-use jackioh_server::cosmetics::{ANIMATED_ART_ID_PREFIX, CosmeticKind, JLORIOUS_CARD_BACK, shipped};
+use jackioh_server::cosmetics::{
+    ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK, VERSION_ID_PREFIX,
+    offered, shipped,
+};
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
@@ -449,6 +452,57 @@ async fn r1300000_giving_jlore_adds_it_marked_dev() {
 
 // Fill
 
+/// R2725001: each version and augment of `registry` on each of `cards` it is offered, as `(card, id)`.
+fn offered_pairs<'a>(registry: &'a [Cosmetic], cards: &'a [String]) -> Vec<(&'a str, &'a str)> {
+    registry
+        .iter()
+        .filter(|cosmetic| cosmetic.kind.is_offered())
+        .flat_map(|cosmetic| {
+            cards
+                .iter()
+                .filter(|card| offered(cosmetic, Some(card.as_str())))
+                .map(|card| (card.as_str(), cosmetic.id.as_str()))
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn r2725001_dev_fill_grants_each_version_on_every_offered_card() {
+    let (app, dev, _other) = dev_app().await;
+    let cards = collectable(&app);
+    let registry = shipped().expect("the registry parses");
+    let expected = offered_pairs(&registry, &cards);
+    // Every version and augment, and each on some card of every shipped set but none of the others.
+    for cosmetic in registry.iter().filter(|cosmetic| cosmetic.kind.is_offered()) {
+        let on: Vec<&str> = expected
+            .iter()
+            .filter(|(_, id)| *id == cosmetic.id)
+            .map(|(card, _)| *card)
+            .collect();
+        assert!(
+            !on.is_empty() && on.len() < cards.len(),
+            "{}: {}",
+            cosmetic.id,
+            on.len()
+        );
+    }
+    ok(&app, "/api/dev/fill", &dev, json!({})).await;
+    let held = holdings(&app, DEV).await;
+    let mut granted: Vec<(&str, &str)> = held
+        .cosmetics
+        .cards
+        .iter()
+        .filter(|row| {
+            row.cosmetic_id.starts_with(VERSION_ID_PREFIX) || row.cosmetic_id.starts_with(AUGMENT_ID_PREFIX)
+        })
+        .map(|row| (row.card_id.as_str(), row.cosmetic_id.as_str()))
+        .collect();
+    let mut expected = expected;
+    granted.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(granted, expected);
+}
+
 #[tokio::test]
 async fn r1300000_r2755000_fill_grants_every_card_and_every_cosmetic_but_the_jlorious_back_marked_dev() {
     let (app, dev, _other) = dev_app().await;
@@ -465,18 +519,19 @@ async fn r1300000_r2755000_fill_grants_every_card_and_every_cosmetic_but_the_jlo
         .filter(|cosmetic| !cosmetic.default && per_card(cosmetic.kind))
         .map(|cosmetic| cosmetic.id.as_str())
         .collect();
-    // R1313000: a full art is owned on the one card it names.
+    // R1313000: a full art is owned on the one card it names; R2725001: a version or an augment on each
+    // card it is offered.
     let full_arts: Vec<(&str, &str)> = registry
         .iter()
         .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
         .filter_map(|cosmetic| Some((cosmetic.card.as_deref()?, cosmetic.id.as_str())))
+        .chain(offered_pairs(&registry, &cards))
         .collect();
     let mut account_cosmetics: Vec<String> = registry
         .iter()
         .filter(|cosmetic| {
             !cosmetic.default
-                && !per_card(cosmetic.kind)
-                && cosmetic.kind != CosmeticKind::FullArt
+                && !cosmetic.kind.is_per_card()
                 // R2755000: only reaching Jlorious grants it.
                 && !cosmetic.jlorious
         })

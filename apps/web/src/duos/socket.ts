@@ -77,7 +77,9 @@ export type DuosServerFrame =
   | { type: "error"; code: string; message: string; nonce?: string }
   | ({ type: "clock" } & DuosClockFrame)
   | { type: "teammate"; connected: boolean; aiPlaying: boolean }
-  | { type: "ping"; from: DuosSeat; ping: PingKind; target: PingTarget };
+  | { type: "ping"; from: DuosSeat; ping: PingKind; target: PingTarget }
+  /** R2881000: how many friends watch the game, as a 1v1 match's `watchers` frame says it (B51). */
+  | { type: "watchers"; count: number };
 
 const isTimeOrNull = (value: unknown): value is number | null => value === null || typeof value === "number";
 
@@ -137,6 +139,11 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
       if (!isDuosSeat(parsed.from) || !isPingKind(parsed.ping) || target === null) return null;
       return { type: "ping", from: parsed.from, ping: parsed.ping, target };
     }
+    case "watchers": {
+      const count = parsed.count;
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return null;
+      return { type: "watchers", count };
+    }
     default:
       return null;
   }
@@ -163,6 +170,8 @@ export type DuosSnapshot = {
   teammate: { connected: boolean; aiPlaying: boolean } | null;
   /** The pings to mark, the seat's own and the teammate's, newest last (B64). */
   pings: readonly ReceivedPing[];
+  /** R2881000: the last `watchers` frame's count; 0 until one arrives. */
+  watchers: number;
 };
 
 export type DuosClient = {
@@ -210,6 +219,7 @@ const INITIAL: DuosSnapshot = {
   clock: null,
   teammate: null,
   pings: [],
+  watchers: 0,
 };
 
 function sessionToken(): string | null {
@@ -304,6 +314,9 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
         return;
       case "ping":
         patch({ pings: withPing({ from: frame.from, ping: frame.ping, target: frame.target, at: now() }) });
+        return;
+      case "watchers":
+        patch({ watchers: frame.count });
         return;
     }
   }

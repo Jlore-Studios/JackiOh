@@ -1188,6 +1188,32 @@ impl BotRow {
     }
 }
 
+/// R1555000: what the kickoff reads of a bot before it loads any (no decks, trio or cosmetics).
+/// Server-only.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BotState {
+    /// The bot's profile, which is also its R610 bot id.
+    pub profile_id: String,
+    /// The match it is in, as for a profile (§9.5).
+    pub in_match_id: Option<String>,
+    /// Whether it grinds now (migration 0053).
+    pub grinding: bool,
+    /// Epoch ms it was retired (R1454), or none while it is in the pool.
+    pub retired_at: Option<i64>,
+}
+
+impl From<&BotRow> for BotState {
+    fn from(bot: &BotRow) -> Self {
+        BotState {
+            profile_id: bot.profile_id.clone(),
+            in_match_id: bot.in_match_id.clone(),
+            grinding: bot.grinding,
+            retired_at: bot.retired_at,
+        }
+    }
+}
+
 /// R1834006: one person's seat of a match, as `cosmetics-fit` reads what people wear: the loadout
 /// it froze, the deck it played, when the match began and when the person's account was made
 /// (epoch ms). Never a bot's.
@@ -2433,6 +2459,11 @@ impl Tx<'_> {
         dispatch!(self, bots_list())
     }
 
+    /// R1555000: every ladder bot's `BotState`, retired ones included, in `bots_list`'s order.
+    pub async fn bots_states(&mut self) -> StoreResult<Vec<BotState>> {
+        dispatch!(self, bots_states())
+    }
+
     /// R1454: a new bot in one write: an `active` profile of kind `bot` made at `created_at`, with
     /// the default username a new account gets (the lowest free `Player#n`, R1434) and no auth user;
     /// its `bots` row; and its `bot_ratings` row at `seed_rating` with a new player's deviation and
@@ -3078,6 +3109,17 @@ impl Tx<'_> {
         profile_ids: &[String],
     ) -> StoreResult<Vec<String>> {
         dispatch!(self, presence_watchable(viewer, profile_ids))
+    }
+
+    /// R2881000, one read for a whole friends list: those of the named co-op matches in which
+    /// `viewer` and a person seated (a1 or a2) stand blocked, either way, in the order named. A
+    /// watcher of one seat is shown the other's duel (§13.6), so a block with either refuses it.
+    pub async fn presence_duos_blocked(
+        &mut self,
+        viewer: &str,
+        match_ids: &[String],
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, presence_duos_blocked(viewer, match_ids))
     }
 
     // profiles (B46)
