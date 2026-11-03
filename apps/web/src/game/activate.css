@@ -14,6 +14,19 @@
   translate: 0 -50%;
 }
 
+/* #2932: on a phone's field the control leaves the card for the stack hung off its corner
+   (FieldBadges.tsx, board.css), where it is one more row of that column, not placed on the card's
+   left edge. */
+.board .field-badges .activate-controls {
+  position: static;
+  translate: none;
+}
+
+/* The stack takes no pointer (board.css); its control still does. */
+.board .field-badges .activate-control {
+  pointer-events: auto;
+}
+
 .board .activate-control {
   position: relative;
   display: inline-flex;

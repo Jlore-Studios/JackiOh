@@ -2,7 +2,11 @@
 // extend it to the mobile and tablet viewports, without overflow either way. Mount `Game` in
 // `.app-shell--wide`, its narrowest product container; a bare `Board` gets space it never has.
 
+import type { ReactElement } from "react";
+
+import Username from "../../../apps/web/src/auth/Username.tsx";
 import Game from "../../../apps/web/src/game/Game.tsx";
+import RankCrest from "../../../apps/web/src/rank/RankCrest.tsx";
 import { fullBoardView, heroPower } from "../../../apps/web/src/test/fixtures.ts";
 
 /** BUILD M5-T1's viewports plus B28's landscape phone and portrait tablet. */
@@ -23,9 +27,6 @@ const BOARD = '[data-testid="board"]';
 /** BUILD M5-T1's 10 units and 10 backrow cards. */
 const FIELD_CARDS = `${BOARD} .field .card`;
 const FIELD_CARD_COUNT = 20;
-
-/** #2876's tile width-to-height cap, mirroring `--field-tile-max` (`position-switch.test.tsx` pins it). */
-const FIELD_TILE_MAX = 1.25;
 
 type Measurement = {
   viewport: string;
@@ -469,11 +470,13 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
   }
 });
 
-// #2876: on a phone held upright every field card is a tile that fills its zone: face-up units,
-// face-down backs and backrow cards are as wide as their zone's inside or the tile ratio cap,
-// the four rows share the field's height, and an ATK unit's drawn area is at least 1.5x its size
-// on `main`. The hand, `--card-h` and the screen budget stay exactly as they are.
-describe("#2876 phone portrait tiles fill their zones", () => {
+// #2932: on a phone held upright a field card keeps a card shape (its width over its height between
+// 0.72, the phone's card, and 0.86, the shape the desktop draws units at) and grows by height; the four
+// rows share the field's height; the seats are thinner and give theirs to the field; the match bar
+// rides the top strip; and a unit's Activate control and keyword marks hang off its corner. #2876's
+// other claims hold as they were: no mat above or below the lanes, and the hand, `--card-h` and the
+// screen budget unchanged.
+describe("#2876, #2932 phone portrait cards keep a card shape and the field keeps the height", () => {
   /** The issue's phones, upright. */
   const SIZES = [
     { label: "phone", width: 390, height: 844 },
@@ -483,6 +486,28 @@ describe("#2876 phone portrait tiles fill their zones", () => {
   ] as const;
   /** Sub-pixel rounding between layout boxes and their measured rects. */
   const SLACK_PX = 1;
+  /** `--field-ratio-min` and `--field-ratio-max` (`position-switch.test.tsx` pins them), and what a measured ratio may stray. */
+  const FIELD_RATIO_MIN = 0.72;
+  const FIELD_RATIO_MAX = 0.86;
+  const RATIO_SLACK = 0.02;
+  /** B29's touch floor. */
+  const TOUCH_PX = 44;
+  /** How much of current `main`'s seat a plate may still be: #2932 asks for at least 20% off. */
+  const PLATE_MAX_SHARE = 0.8;
+
+  /**
+   * Current `main`'s numbers, measured at commit 4fc70e59d on this file's board (`fullBoardView()` with
+   * no rail), the pixels before #2932 moved any of them: each seat's height at every phone, and at
+   * 390x664 an ATK unit's drawn box and its row. They are constants because `main` cannot be mounted
+   * beside this change.
+   */
+  const MAIN: Readonly<Record<string, { you: number; opponent: number }>> = {
+    "390x844": { you: 103.2, opponent: 103.2 },
+    "390x664": { you: 103.2, opponent: 103.2 },
+    "360x780": { you: 103.2, opponent: 124.4 },
+    "430x932": { you: 103.2, opponent: 103.2 },
+  };
+  const MAIN_ATK_390X664 = { width: 63.6, height: 53.9, row: 56.9 };
 
   /** A zone's inside: its border box less its borders (a zone has no padding). */
   function insideOf(zone: HTMLElement): { width: number; height: number } {
@@ -507,27 +532,117 @@ describe("#2876 phone portrait tiles fill their zones", () => {
     );
   }
 
-  /**
-   * Resolve `--card-h` to pixels with a hidden probe in the board's scope. Custom properties
-   * compute to their specified value (`clamp(44px, …)`), so `getComputedStyle` never yields
-   * pixels for one; a probe with `height: var(--card-h)` does. The probe is absolute, so it
-   * takes no space, and it is removed before the assertion returns.
-   */
-  function cardHPx(board: HTMLElement): number {
+  /** A match's rail as a phone draws it: Back and the compact rank line, as `routes/match.tsx` builds them. */
+  function RankRail(): ReactElement {
+    return (
+      <>
+        <nav className="row screen-nav">
+          <button type="button" className="link-button" data-testid="nav-back">
+            ← Back
+          </button>
+        </nav>
+        <p className="match-ranks" data-testid="match-ranks">
+          <span className="match-ranks__full">Ranked match · MihoMain (you) Raisin vs LazyPirate Raisin</span>
+          <span className="match-ranks__short">
+            <span className="match-ranks__label">Ranked · </span>
+            <Username name="MihoMain" /> (you) <RankCrest rank={{ tier: "raisin", placementsPlayed: 2, placementGames: 5 }} size="small" />{" "}
+            <span className="match-ranks__tier">Raisin</span> vs <Username name="LazyPirate" />{" "}
+            <RankCrest rank={{ tier: "raisin", placementsPlayed: 2, placementGames: 5 }} size="small" />{" "}
+            <span className="match-ranks__tier">Raisin</span>
+          </span>
+        </p>
+      </>
+    );
+  }
+
+  function mountTopRail(view: ReturnType<typeof fullBoardView> = fullBoardView()): void {
+    cy.mount(
+      <div className="app-shell app-shell--wide">
+        <Game view={view} legal={[]} onAction={() => undefined} phoneRailTop boardRail={<RankRail />} />
+      </div>,
+    );
+  }
+
+  /** The probe's height, in pixels: a hidden, absolutely placed `div` in the board's scope takes no space. */
+  function probePx(board: HTMLElement, height: string): number {
     const probe = board.ownerDocument.createElement("div");
     probe.style.position = "absolute";
     probe.style.visibility = "hidden";
-    probe.style.height = "var(--card-h)";
+    probe.style.height = height;
     board.appendChild(probe);
     const px = probe.getBoundingClientRect().height;
     probe.remove();
     return px;
   }
 
+  /**
+   * Resolve `--card-h` to pixels with a hidden probe in the board's scope. Custom properties
+   * compute to their specified value (`clamp(44px, …)`), so `getComputedStyle` never yields
+   * pixels for one; a probe with `height: var(--card-h)` does.
+   */
+  function cardHPx(board: HTMLElement): number {
+    return probePx(board, "var(--card-h)");
+  }
+
+  function overlaps(a: DOMRect, b: DOMRect): boolean {
+    return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  }
+
   for (const size of SIZES) {
     const where = `${size.label} ${size.width}x${size.height}`;
+    const key = `${size.width}x${size.height}`;
 
-    it(`#2876 field cards are as wide as their zone or the tile cap at ${where}`, () => {
+    it(`#2932 every field card's width over height is 0.72 to 0.86, in ATK and DEF, in all five lanes, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      mountBoard(false);
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const cards = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .zone > .card`)];
+        expect(cards, "twenty cards in their zones").to.have.length(FIELD_CARD_COUNT);
+        expect(
+          cards.filter((card) => card.dataset.position === "DEF").length,
+          "fullBoardView's DEF units are among them",
+        ).to.be.at.least(2);
+        expect(new Set(cards.map((card) => card.parentElement?.dataset.lane)).size, "all five lanes").to.eq(5);
+        for (const card of cards) {
+          // The layout box, not the rect: a DEF card's rect is its box turned on its side.
+          const ratio = card.offsetWidth / card.offsetHeight;
+          expect(ratio, `${card.dataset.testid ?? "a back"}'s width over height at ${where}`).to.be.within(
+            FIELD_RATIO_MIN - RATIO_SLACK,
+            FIELD_RATIO_MAX + RATIO_SLACK,
+          );
+        }
+      });
+    });
+
+    it(`#2932 every ATK unit and backrow card is as wide as its zone's inside, or at the 0.86 cap at its row's height, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      mountBoard(false);
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const cards = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .zone > .card:not([data-position="DEF"])`)];
+        expect(cards.length, "ATK units and backrow cards are mounted").to.be.greaterThan(0);
+        for (const card of cards) {
+          const zone = card.parentElement;
+          expect(zone, "a field card sits in a zone").to.not.eq(null);
+          if (zone === null) continue;
+          const room = insideOf(zone);
+          const name = card.dataset.testid ?? "a back";
+          expect(card.offsetWidth, `${name} is as wide as its zone or the cap at ${where}`).to.be.closeTo(
+            Math.min(room.width, FIELD_RATIO_MAX * room.height),
+            SLACK_PX,
+          );
+          expect(card.offsetHeight, `${name} is as tall as its row or the shape floor lets it at ${where}`).to.be.closeTo(
+            Math.min(room.height, room.width / FIELD_RATIO_MIN),
+            SLACK_PX,
+          );
+        }
+      });
+    });
+
+    it(`#2932 all four rows are one height, and every lane fills the field's inside height, at ${where}`, () => {
       cy.viewport(size.width, size.height);
       mountBoard(false);
       cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
@@ -536,33 +651,24 @@ describe("#2876 phone portrait tiles fill their zones", () => {
         const field = doc.querySelector<HTMLElement>(`${BOARD} .field`);
         expect(field, "the field is mounted").to.not.eq(null);
         if (field === null) return;
-        const board = field.closest<HTMLElement>(BOARD);
-        expect(board, "the board is mounted").to.not.eq(null);
-        if (board === null) return;
-        // Rows may grow past the zone's width (tall viewports), so a tile filling its zone can be
-        // narrower than 0.74 of its height; what proves the 0.72 shape is gone is beating it.
-        const cardH = cardHPx(board);
-        expect(cardH, "--card-h resolves to pixels").to.be.greaterThan(0);
-        const oldWidth = 0.72 * cardH;
-        for (const card of field.querySelectorAll<HTMLElement>('.zone > .card:not([data-position="DEF"])')) {
-          const zone = card.parentElement;
-          expect(zone, "a field card sits in a zone").to.not.eq(null);
-          if (zone === null) continue;
-          const room = insideOf(zone);
-          const box = card.getBoundingClientRect();
-          const expected = Math.min(room.width, FIELD_TILE_MAX * box.height);
-          expect(box.width, `${card.dataset.testid ?? "a back"} is inside its zone at ${where}`).to.be.at.most(
-            room.width + SLACK_PX,
+        const style = getComputedStyle(field);
+        const inner = field.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+        expect(inner, `the field has a height at ${where}`).to.be.greaterThan(0);
+        const zones = [...field.querySelectorAll<HTMLElement>(".zone")];
+        expect(zones, "4 rows of 5 zones").to.have.length(20);
+        const first = zones[0]?.getBoundingClientRect().height ?? 0;
+        for (const zone of zones) {
+          // The backrow rows are not shrunk to make the unit rows bigger: every zone is the first one's height.
+          expect(zone.getBoundingClientRect().height, `${zone.dataset.testid ?? "a zone"} is as tall as the first at ${where}`).to.be.closeTo(
+            first,
+            SLACK_PX,
           );
-          expect(box.width, `${card.dataset.testid ?? "a back"} fills its zone or the cap at ${where}`).to.be.at.least(
-            expected - 1.5,
+        }
+        for (const lane of field.querySelectorAll<HTMLElement>(".lane")) {
+          expect(lane.getBoundingClientRect().height, `lane ${lane.dataset.lane ?? "?"} fills the field at ${where}`).to.be.closeTo(
+            inner,
+            SLACK_PX,
           );
-          // Where the zone is wider than the old cap, the old shape would have bound: beating it
-          // proves the tile. Where the zone binds the old shape too (390x844, 360x780), old and
-          // new widths coincide and the taller rows (the lanes and area its) carry the proof.
-          if (oldWidth < room.width - 1) {
-            expect(box.width, `the 0.72 portrait shape no longer applies at ${where}`).to.be.greaterThan(oldWidth);
-          }
         }
       });
     });
@@ -587,33 +693,201 @@ describe("#2876 phone portrait tiles fill their zones", () => {
         }
       });
     });
+
+    it(`#2932 each hero plate is at least 20% shorter than on main, and every button in one is a 44px target, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      mountBoard(false);
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const main = MAIN[key];
+        expect(main, `main's seat heights are recorded for ${where}`).to.not.eq(undefined);
+        if (main === undefined) return;
+        for (const side of ["you", "opponent"] as const) {
+          const seat = doc.querySelector<HTMLElement>(`${BOARD} .seat-${side}`);
+          expect(seat, `the ${side} seat is mounted`).to.not.eq(null);
+          if (seat === null) continue;
+          expect(seat.getBoundingClientRect().height, `the ${side} seat's height at ${where} (main ${String(main[side])}px)`).to.be.at.most(
+            PLATE_MAX_SHARE * main[side],
+          );
+          const hero = doc.querySelector<HTMLElement>(`[data-testid="hero-${side}"]`);
+          expect(hero?.getBoundingClientRect().height ?? 0, `hero-${side} keeps B29's floor`).to.be.at.least(TOUCH_PX - SLACK_PX);
+          for (const button of seat.querySelectorAll<HTMLElement>("button")) {
+            const box = button.getBoundingClientRect();
+            if (box.width === 0 || box.height === 0) continue;
+            const name = button.dataset.testid ?? button.className;
+            if (box.width >= TOUCH_PX - SLACK_PX && box.height >= TOUCH_PX - SLACK_PX) continue;
+            // A smaller button takes its tap across a 44px band round its center (index.css, R2122000).
+            const reach = TOUCH_PX / 2 - 2;
+            for (const [x, y] of [
+              [box.left + box.width / 2, box.top + box.height / 2 - reach],
+              [box.left + box.width / 2, box.top + box.height / 2 + reach],
+            ] as const) {
+              const hit = doc.elementFromPoint(x, y);
+              expect(hit !== null && (hit === button || button.contains(hit)), `a tap 22px off ${name}'s center reaches it at ${where}`).to.eq(true);
+            }
+          }
+        }
+      });
+    });
+
+    it(`#2932 the rail and Back share the top strip with the turn banner, above the opponent's seat, and nothing sits below End turn, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      mountTopRail();
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      cy.document({ log: false }).should((doc) => {
+        const game = doc.querySelector<HTMLElement>('[data-testid="game"]');
+        const rail = doc.querySelector<HTMLElement>(".game > .board-rail");
+        const back = doc.querySelector<HTMLElement>('[data-testid="nav-back"]');
+        const ranks = doc.querySelector<HTMLElement>('[data-testid="match-ranks"]');
+        const banner = doc.querySelector<HTMLElement>(".game > .turn-banner");
+        const seat = doc.querySelector<HTMLElement>(`${BOARD} .seat-opponent`);
+        const endTurn = doc.querySelector<HTMLElement>('[data-testid="end-turn"]');
+        expect(game?.dataset.railTop, "the game is in its top-strip layout").to.eq("true");
+        expect(doc.querySelector(".control-bar .board-rail"), "the control bar holds no rail").to.eq(null);
+        for (const [name, element] of [["the rail", rail], ["Back", back], ["the ranks", ranks], ["the banner", banner], ["the opponent's seat", seat], ["End turn", endTurn]] as const) {
+          expect(element, `${name} is mounted at ${where}`).to.not.eq(null);
+        }
+        if (rail === null || back === null || ranks === null || banner === null || seat === null || endTurn === null) return;
+        const [backBox, ranksBox, bannerBox, seatBox, endBox] = [back, ranks, banner, seat, endTurn].map((element) => element.getBoundingClientRect());
+        if (backBox === undefined || ranksBox === undefined || bannerBox === undefined || seatBox === undefined || endBox === undefined) return;
+        // One strip: the three overlap vertically, all above the opponent's seat.
+        for (const [name, box] of [["the ranks", ranksBox], ["the banner", bannerBox]] as const) {
+          expect(box.top < backBox.bottom && backBox.top < box.bottom, `${name} and Back share a row at ${where}`).to.eq(true);
+          expect(box.bottom, `${name} sits above the opponent's seat at ${where}`).to.be.at.most(seatBox.top + SLACK_PX);
+        }
+        expect(backBox.bottom, `Back sits above the opponent's seat at ${where}`).to.be.at.most(seatBox.top + SLACK_PX);
+        // One line: the rank line's visible parts share a row.
+        const parts = [...ranks.querySelectorAll<HTMLElement>(".match-ranks__short > :not(.match-ranks__label):not(.match-ranks__tier)")];
+        expect(parts.length, "the rank line has its names and crests").to.be.greaterThan(2);
+        const middles = parts.map((part) => {
+          const box = part.getBoundingClientRect();
+          return box.top + box.height / 2;
+        });
+        expect(Math.max(...middles) - Math.min(...middles), `the rank line is one line at ${where}`).to.be.at.most(4);
+        expect(ranksBox.height, `the rank line is one line tall at ${where}`).to.be.at.most(24);
+        // The strip's words stay in the page for a screen reader, hidden the visually-hidden way.
+        expect(ranks.querySelector(".match-ranks__label")?.textContent, "the label stays in the page").to.contain("Ranked");
+        // Nothing below the End-turn row.
+        for (const element of doc.querySelectorAll<HTMLElement>(`${BOARD} .hand, ${BOARD} .seat, ${BOARD} .field, .game > .board-rail, .game > .turn-banner`)) {
+          expect(element.getBoundingClientRect().bottom, `${element.className} is not below End turn at ${where}`).to.be.at.most(endBox.bottom + SLACK_PX);
+        }
+        expect(endBox.bottom, `End turn is on screen at ${where}`).to.be.at.most(size.height + SLACK_PX);
+      });
+    });
+
+    it(`#2932 a unit's Activate control and keyword marks hang outside its card's top-left, on and off DEF, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      const badged = (position: "ATK" | "DEF"): ReturnType<typeof fullBoardView> => {
+        const base = fullBoardView();
+        const first = base.you.units[0];
+        if (first === null || first === undefined) throw new Error("fullBoardView has a unit in lane 1");
+        const unit = {
+          ...first,
+          position,
+          keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
+          activations: [{ ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true }],
+        };
+        return { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 0 ? unit : each)) } };
+      };
+      const seen: { atk?: DOMRect[] } = {};
+
+      const stackOf = (doc: Document): { card: HTMLElement; marks: HTMLElement[] } => {
+        const card = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="1"] > .card`);
+        const stack = card?.parentElement?.querySelector<HTMLElement>(":scope > .field-badges") ?? null;
+        expect(card, "the badged unit is mounted").to.not.eq(null);
+        expect(stack, "its zone holds the badge stack").to.not.eq(null);
+        const marks = stack === null ? [] : [...stack.querySelectorAll<HTMLElement>(".activate-control, .keyword-icon:not([data-chip=\"hidden\"])")];
+        return { card: card as HTMLElement, marks };
+      };
+
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={badged("ATK")} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      cy.document({ log: false }).should((doc) => {
+        const { card, marks } = stackOf(doc);
+        expect(marks.length, "the Activate control and both keyword marks").to.be.at.least(3);
+        const cardBox = card.getBoundingClientRect();
+        const name = card.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
+        const stats = [...card.querySelectorAll<HTMLElement>(".stat")].map((stat) => stat.getBoundingClientRect());
+        expect(name, "the card has its name").to.not.eq(undefined);
+        expect(stats.length, "the card has its stat badges").to.be.at.least(2);
+        const boxes = marks.map((mark) => mark.getBoundingClientRect());
+        for (const box of boxes) {
+          expect(box.right, `a mark is outside the card's left edge at ${where}`).to.be.at.most(cardBox.left + 3);
+          expect(box.top, `a mark hangs from the card's top at ${where}`).to.be.at.least(cardBox.top - SLACK_PX);
+          if (name !== undefined) expect(overlaps(box, name), `a mark overlaps the name at ${where}`).to.eq(false);
+          for (const stat of stats) expect(overlaps(box, stat), `a mark overlaps a stat at ${where}`).to.eq(false);
+        }
+        expect(card.querySelectorAll(".activate-control, .keyword-icon").length, `no mark stays on the face at ${where}`).to.eq(0);
+        seen.atk = boxes;
+      });
+
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={badged("DEF")} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      cy.document({ log: false }).should((doc) => {
+        const { card, marks } = stackOf(doc);
+        expect(card.dataset.position, "the unit is in DEF").to.eq("DEF");
+        const before = seen.atk ?? [];
+        expect(marks.length, "the same marks in DEF").to.eq(before.length);
+        marks.forEach((mark, index) => {
+          const box = mark.getBoundingClientRect();
+          const was = before[index];
+          expect(was, "a mark was measured in ATK").to.not.eq(undefined);
+          if (was === undefined) return;
+          // DEF rotates neither the control nor the marks, and moves neither.
+          for (const side of ["left", "top", "right", "bottom"] as const) {
+            expect(box[side], `a mark's ${side} is the same in DEF at ${where}`).to.be.closeTo(was[side], 0.5);
+          }
+        });
+      });
+    });
   }
 
-  it("#2876 an ATK unit's drawn area is at least 1.5x main's at 390x664", () => {
+  it("#2932 an ATK unit's drawn area at 390x664 is larger than before #2900, and its height beats main's row", () => {
     cy.viewport(390, 664);
     mountBoard(false);
     cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
 
-    const out: { measured?: { mainArea: number; newArea: number } } = {};
+    const out: { measured?: Record<string, number | boolean> } = {};
 
     cy.document({ log: false }).should((doc) => {
       const board = doc.querySelector<HTMLElement>(BOARD);
       expect(board, "the board is mounted").to.not.eq(null);
       if (board === null) return;
-      const cardH = cardHPx(board);
-      expect(cardH, "--card-h resolves to pixels").to.be.greaterThan(0);
-      const mainArea = 0.72 * cardH * cardH;
+      // Before #2900 a field card was `0.72 × --card-h` wide and `--card-h` tall, `--card-h` coming off the
+      // board's height as `clamp(44px, (100cqh - 312px) / 5.24, 90px)`.
+      const cqh = probePx(board, "100cqh");
+      expect(cqh, "the board's height resolves to pixels").to.be.greaterThan(0);
+      const beforeH = Math.min(90, Math.max(44, (cqh - 312) / 5.24));
+      const beforeArea = 0.72 * beforeH * beforeH;
+      const mainArea = MAIN_ATK_390X664.width * MAIN_ATK_390X664.height;
       const card = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-row="units"] > .card[data-position="ATK"]`);
       expect(card, "an ATK unit is on the field").to.not.eq(null);
       if (card === null) return;
       const box = card.getBoundingClientRect();
       const newArea = box.width * box.height;
-      expect(newArea, "an ATK unit's drawn area at 390x664").to.be.at.least(1.5 * mainArea);
-      out.measured = { mainArea: Math.round(mainArea), newArea: Math.round(newArea) };
+      expect(newArea, "an ATK unit's drawn area is larger than before #2900").to.be.greaterThan(beforeArea);
+      expect(box.height, "an ATK unit is taller than main's row").to.be.greaterThan(MAIN_ATK_390X664.row);
+      out.measured = {
+        beforeArea: Math.round(beforeArea),
+        mainArea: Math.round(mainArea),
+        newArea: Math.round(newArea),
+        newOverBefore: Number((newArea / beforeArea).toFixed(2)),
+        reached1_5x: newArea >= 1.5 * beforeArea,
+      };
     });
 
     cy.then(() => {
-      cy.task("layout:report", { issue: 2876, size: "phone 390x664", ...out.measured }, { log: false });
+      cy.task("layout:report", { issue: 2932, size: "phone 390x664", ...out.measured }, { log: false });
     });
   });
 

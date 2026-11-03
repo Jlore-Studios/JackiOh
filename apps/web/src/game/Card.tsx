@@ -47,6 +47,8 @@ import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisual
 import { TheirCopy } from "../cards/loadouts.ts";
 import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
+import FieldBadges from "./FieldBadges.tsx";
+import { usePhonePortrait } from "./phoneBar.ts";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
@@ -193,6 +195,12 @@ export type CardProps = {
   target?: ClickTarget | null;
   /** Units carry the switch-position button (BUILD M5-T2). */
   switchTarget?: boolean;
+  /**
+   * #2932: a face-up card standing in a field zone (a unit in the units row, a unit or a card in the
+   * backrow). On the phone portrait layout its Activate control and keyword marks hang off its top-left
+   * corner (`FieldBadges.tsx`); anywhere else, and in a hand or an inspect view, they sit on the face.
+   */
+  onField?: boolean;
   draggable?: boolean;
   highlight?: Highlight;
   animating?: AnimatingMap;
@@ -229,6 +237,9 @@ export default function Card(props: CardProps): ReactElement {
   // The preview opens only while the panel's "Hover previews" is on too (useInspectTrigger.tsx).
   const panelHover = useSetting("hoverPreviews");
   const form = formOf(card, unit, props.type);
+  // #2932: hooks run on every render, backs included. Not cached: a test swaps `matchMedia`.
+  const portrait = usePhonePortrait();
+  const offFace = props.onField === true && portrait;
   const acting = useActingSeat();
   const wearer = useWearerSeat();
   const { cardBack } = useSeatDeckCosmetics(props.backOf ?? null);
@@ -455,7 +466,7 @@ export default function Card(props: CardProps): ReactElement {
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} />
+        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} />
       ) : (
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
         // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
@@ -545,8 +556,9 @@ export default function Card(props: CardProps): ReactElement {
       {buried > 0 && <PileDepth buried={buried} top={face} className="buried-badge" />}
 
       {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
-          view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none. */}
-      <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+          view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none.
+          #2932: on a phone's field they hang off the card's corner instead (FieldBadges, below). */}
+      {offFace ? null : <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />}
 
       <PopLayer pops={props.pops} />
     </div>
@@ -554,11 +566,22 @@ export default function Card(props: CardProps): ReactElement {
 
   // The overlay is a sibling of the root, never its child, so the root's handlers never see an event from
   // inside a preview or a sheet. #258: so is the switch (⟳): a full 44 px target (board.css), never rotated by DEF.
+  // #2932: and so, on a phone's field, are the Activate control and the keyword marks (FieldBadges.tsx).
   // R1313000, R1655000: the viewer's own card's overlay prints its full art and cosmetics; R1834004: another
   // seat's card wears that seat's loadout.
   return (
     <TheirCopy loadout={theirs}>
       {root}
+      {offFace && (
+        <FieldBadges
+          card={unit ?? card}
+          unit={unit}
+          chinese={face.chinese === true}
+          highlight={props.highlight}
+          animating={props.animating}
+          onClick={props.onClick}
+        />
+      )}
       {props.switchTarget === true && unit !== undefined && unit !== null && (
         <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
       )}

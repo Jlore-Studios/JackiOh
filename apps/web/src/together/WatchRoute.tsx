@@ -334,6 +334,7 @@ export function WatchRoute({
             resultForm="chip"
             loadouts={loadouts}
             matchStatus={status}
+            phoneRailTop
             boardRail={
               <>
                 <BackLink to={paths.together} label="← Play together" showSettings={false} />

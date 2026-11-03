@@ -70,21 +70,54 @@ describe("#37 positionSwitched turns the card between its two resting transforms
   });
 });
 
-describe("#2876 a phone held upright draws field cards as tiles that fill their zones", () => {
-  it("the phone block names the tile cap, sizes zones, and lifts the 0.72 cap for field cards", () => {
-    const start = board.indexOf("@media (max-width: 600px) {");
-    expect(start, "board.css has a phone portrait block").toBeGreaterThan(-1);
-    const end = board.indexOf("@media (max-width: 380px) {");
-    expect(end, "the narrow-phone block follows the phone portrait block").toBeGreaterThan(start);
-    const phone = board.slice(start, end);
-    expect(phone).toContain("--field-tile-max: 1.25;");
+/** The phone portrait block of board.css, which ends where the narrow phone's begins. */
+function phoneBlock(): string {
+  const start = board.indexOf("@media (max-width: 600px) {");
+  expect(start, "board.css has a phone portrait block").toBeGreaterThan(-1);
+  const end = board.indexOf("@media (max-width: 380px) {");
+  expect(end, "the narrow-phone block follows the phone portrait block").toBeGreaterThan(start);
+  return board.slice(start, end);
+}
+
+describe("#2932 a phone held upright draws field cards in a card shape that grows by height", () => {
+  it("the phone block names the shape bounds, drops #2900's tile, and sizes the card off its zone", () => {
+    const phone = phoneBlock();
+    expect(phone).toContain("--field-ratio-min: 0.72;");
+    expect(phone).toContain("--field-ratio-max: 0.86;");
+    expect(phone).not.toContain("field-tile-max");
+    expect(phone).not.toContain("--tile-w");
     expect(phone).toMatch(/\.zone\s*\{[^}]*container-type:\s*size;/);
-    const tile = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
-    expect(tile, "board.css has a phone `.zone > .card` rule").toBeDefined();
-    if (tile === undefined) return;
-    expect(tile).toContain("--tile-w: min(100%, calc(100cqh * var(--field-tile-max)))");
-    expect(tile).toContain("max-width: 100%");
-    expect(tile).toMatch(/--def-scale:\s*min\(1,\s*tan\(atan2\(/);
+    const card = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(card, "board.css has a phone `.zone > .card` rule").toBeDefined();
+    if (card === undefined) return;
+    expect(card).toContain("--field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));");
+    expect(card).toContain("--field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));");
+    expect(card).toContain("width: var(--field-card-w);");
+    expect(card).toContain("height: var(--field-card-h);");
+    expect(card).toContain("max-width: 100%");
+    expect(card).toMatch(/--def-scale:\s*min\(1,\s*tan\(atan2\(100cqw, var\(--field-card-h\)\)\),\s*tan\(atan2\(100cqh, var\(--field-card-w\)\)\)\)/);
+  });
+
+  it("the four rows still share the field's height, none shrunk for the others", () => {
+    const phone = phoneBlock();
+    expect(phone).toMatch(/\.field\s*\{[^}]*align-content:\s*stretch;/);
+    const lane = /\.lane\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(lane, "the phone block sizes the lane").toBeDefined();
+    expect(lane).toContain("height: 100%;");
+    expect(lane).toContain("grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));");
+  });
+
+  it("the badges hang off the zone's corner, the match bar rides the top strip, and the seats are thinner", () => {
+    const phone = phoneBlock();
+    const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(badges, "the phone block places `.field-badges`").toBeDefined();
+    expect(badges).toContain("position: absolute;");
+    expect(badges).toContain("right: calc(100% - 2px);");
+    // It hangs over the zone beside it, whose switch sits at that corner: only the Activate control takes a press.
+    expect(badges).toContain("pointer-events: none;");
+    expect(phone).toMatch(/\.app-shell--wide\s*>\s*\.game\[data-rail-top="true"\]\s*\{[^}]*display:\s*grid;/);
+    expect(phone).toMatch(/\.game\[data-rail-top="true"\]\s*>\s*\.turn-banner\s*\{[^}]*grid-row:\s*1;/);
+    expect(phone).toMatch(/\.hero\s*\{[^}]*--hero-h:\s*44px;/);
   });
 });
 
