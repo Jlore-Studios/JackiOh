@@ -30310,7 +30310,9 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-03T22:12:30Z",
         "every": 5,
+        "findings": 0,
         "head": "a368a8dd912d8ef1ce8362db509eb6f078bfb899",
         "issue": 2930,
         "last_why": "stopped: #2961 was closed",
@@ -30318,18 +30320,19 @@
         "n": 30,
         "pr": 2961,
         "queued_at": "2026-11-03T21:33:06Z",
+        "reason": "stopped: #2961 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:d5f45db9-1793743405",
         "sha": "a1bcc2af170bc25ac91309f1375519ac73577c83",
         "started_at": "2026-11-03T22:03:48Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: card tests use the crate's scenario helper instead of registering the catalog before every scenario",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 30
