@@ -24,14 +24,14 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
-    Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
-    RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
-    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
+    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant,
+    CustomCardWrite, Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
+    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode,
+    ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding,
+    SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow,
+    Tx, UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -8249,9 +8249,61 @@ mod bots {
         assert_eq!((in_match(&bots, &c), in_match(&bots, &d)), (None, None));
     }
 
+    /// R1555000: the kickoff's narrow read answers each bot's match, grinding and retirement, retired
+    /// ones included, in `bots_list`'s order.
+    async fn r1555000_bots_states_answers_the_kickoffs_reads_in_the_lists_order(harness: &StoreHarness) {
+        let now = harness.now();
+        let version = harness.catalog_version.clone();
+        assert!(q!(harness, t => t.bots_states()).is_empty(), "no bot yet");
+
+        let older = new_bot(1, now - 3 * DAY, 900.0);
+        let retired = new_bot(3, now - 2 * DAY, 1000.0);
+        let newer = new_bot(2, now - DAY, 1100.0);
+        for bot in [&newer, &older, &retired] {
+            q!(harness, t => t.bots_create(bot));
+        }
+        q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
+        q!(harness, t => t.bots_set_grinding(&newer.profile_id, true));
+        let match_id = id();
+        let pair = (older.profile_id.clone(), newer.profile_id.clone());
+        assert!(q!(harness, t => t.bots_claim_pair(&pair, &match_id, &version, now)));
+
+        let states = q!(harness, t => t.bots_states());
+        assert_eq!(
+            states,
+            vec![
+                BotState {
+                    profile_id: older.profile_id.clone(),
+                    in_match_id: Some(match_id.clone()),
+                    grinding: false,
+                    retired_at: None,
+                },
+                BotState {
+                    profile_id: retired.profile_id.clone(),
+                    in_match_id: None,
+                    grinding: false,
+                    retired_at: Some(now),
+                },
+                BotState {
+                    profile_id: newer.profile_id.clone(),
+                    in_match_id: Some(match_id),
+                    grinding: true,
+                    retired_at: None,
+                },
+            ],
+            "oldest profile first, retired ones included"
+        );
+        let listed: Vec<BotState> = q!(harness, t => t.bots_list())
+            .iter()
+            .map(BotState::from)
+            .collect();
+        assert_eq!(states, listed, "the list's bots, in the list's order");
+    }
+
     both_stores!(
         r1555000_a_grind_counts_its_wins_and_steps_the_strength,
         r1555000_a_pair_claim_takes_two_free_bots_once,
+        r1555000_bots_states_answers_the_kickoffs_reads_in_the_lists_order,
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
         r1453_claim_for_bot_is_single_shot,

@@ -38,7 +38,7 @@ use crate::config::{
     TERMS_VERSION, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CodeAttemptResult,
     CollectionEntry, CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome,
     CustomCardWrite, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow, FavoriteCard, FoldedRecords,
     FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode, LastBoardEntry, LastBoardKind,
@@ -3760,6 +3760,34 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
             .then_with(|| a.profile_id.cmp(&b.profile_id))
     });
     Ok(rows)
+}
+
+/// R1555000: `bots_list`'s join and order, without the decks, trio, cosmetics or ratings.
+pub fn bots_states(f: &mut FakeTx<'_>) -> Result<Vec<BotState>, StoreError> {
+    call(f, "bots.states")?;
+    let tables = f.tables();
+    let mut rows: Vec<(i64, BotState)> = tables
+        .ladder_bots
+        .iter()
+        .filter_map(|bot| {
+            let profile = tables.profiles.iter().find(|row| row.id == bot.profile_id)?;
+            Some((
+                profile.created_at,
+                BotState {
+                    profile_id: bot.profile_id.clone(),
+                    in_match_id: profile.in_match_id.clone(),
+                    grinding: bot.grinding,
+                    retired_at: bot.retired_at,
+                },
+            ))
+        })
+        .collect();
+    rows.sort_by(|(a_created, a), (b_created, b)| {
+        a_created
+            .cmp(b_created)
+            .then_with(|| a.profile_id.cmp(&b.profile_id))
+    });
+    Ok(rows.into_iter().map(|(_, state)| state).collect())
 }
 
 /// R1454: an id that is taken is refused, as the primary key would.
