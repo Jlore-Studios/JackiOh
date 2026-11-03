@@ -1,9 +1,9 @@
 // R2784000 #2792: `/dev/fx`, the motif gallery: it offers every drawn motif, every flavor's
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
 // each plays something; #2793: every Core entry other than `none` plays as its card's play, #2796 every
-// Meditative and Meditative+ one, R2795000 every Classic+ one, a Field card wearing its aura, and #2798
-// every Stinkyscape part-two one. R2785000: it plays a card as the fixture set piece, which holds the
-// board until a click skips it.
+// Meditative and Meditative+ one, R2795000 every Classic+ one, a Field card wearing its aura, #2798
+// every Stinkyscape part-two one, and #2799 every Training Grounds one. R2785000: it plays a card as the
+// fixture set piece, which holds the board until a click skips it.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -55,9 +55,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // #2793: Core's 91 entries other than `none` (76 on the board, 7 through the director, 5 recipes, 3 set
     // pieces); #2796: Meditative's 116 and Meditative+'s 29; R2795000: Classic+'s 96 (74 cards and 22
     // tokens); #2798: Stinkyscape part two's 89 (R2801000: its six Starship cards among them); then the other
-    // sets' 6 motif cards, 4 aura-only Field Spells, 2 set pieces and Training Grounds #30's `death: wipe`
-    // through the director.
-    expect(cards).toHaveLength(434);
+    // sets' 4 motif cards, 3 aura-only Field Spells and 2 set pieces, and #2799: Training Grounds' 51.
+    expect(cards).toHaveLength(481);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -145,6 +144,12 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
     // R2801000: the pass's 83 and the Starship part's six.
     expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 89);
+  });
+
+  it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {
+    const file = FX_CARD_FILES.find((candidate) => candidate.file === "traininggrounds.json5");
+    if (file === undefined) throw new Error("no traininggrounds.json5");
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 51);
   });
 
   it("R2784000 #2796 the gallery plays every Meditative and Meditative+ entry", () => {

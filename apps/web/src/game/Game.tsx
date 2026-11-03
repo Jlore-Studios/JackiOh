@@ -222,6 +222,10 @@ export default function Game({
   // R2118000: no command menu over a board.
   useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
+  // #2924: the shown turn, active seat and viewer the selection was built on. The turn clock
+  // (§10.10) can end the turn mid-choice, so a half-built play or attack is dropped when the
+  // shown view moves to another turn, seat or viewer, as Escape already drops it.
+  const [selectionKey, setSelectionKey] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
   // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -570,6 +574,16 @@ export default function Game({
   // screen can still send (emotes are live "through the results screen").
   if (emoteMenu !== null && (interaction !== IDLE || emoteMenu.viewer !== shown.viewer)) {
     setEmoteMenu(null);
+  }
+  // #2924: drop a half-built play or attack when the shown view's turn, active seat or viewer
+  // changes (React's "adjust state while rendering" pattern, as the concede dialog above does).
+  // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
+  // board back, `shown` is old and `view` is new, and comparing them would drop the selection
+  // mid-animation on every animated turn change.
+  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  if (selectionKey !== shownKey) {
+    setSelectionKey(shownKey);
+    if (interaction.stage !== "idle") setInteraction(IDLE);
   }
   useEffect(() => {
     if (shown.result !== null) setEmoteMenu(null);

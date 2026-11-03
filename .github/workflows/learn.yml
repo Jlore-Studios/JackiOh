@@ -31,10 +31,10 @@
 #             `learn-<run>` artifact and in its summary, whether or not it passed.
 #   import    once the retrain has ended, however it ended: the export's games filed as development
 #             records (`cargo jackioh stats from-selfplay`, R1676000, folded by the export's own build
-#             as the retrain's positions are) and imported into staging's card statistics (the
-#             JackiOh-Staging project's; production's holds live games alone) as totals only
-#             (`jackioh-server stats-import --totals-only`, R1976000) over
-#             STATS_IMPORT_DATABASE_URL; without it, nothing is filed
+#             as the retrain's positions are) and imported into both projects' card statistics
+#             (R1933001) as totals only (`jackioh-server stats-import --totals-only`, R1976000), over
+#             STATS_IMPORT_DATABASE_URL (staging's) and PRODUCTION_STATS_IMPORT_DATABASE_URL; each
+#             only where its secret is set
 #   next      the next run, started as this one ends, unless another is already on its way (a chain
 #             on this export, or the schedule's) or this one took under LEARN_NEXT_MIN_MINUTES (it
 #             broke early: the schedule tries again within 12 hours), so the PC is always
@@ -418,12 +418,13 @@ jobs:
       actions: read
     steps:
       - id: db
-        name: the stats database
+        name: the stats databases
         env:
-          DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so the export's games are filed nowhere (training/learn.md, Setting it up)"
+          if [ -z "$STATS_IMPORT_DATABASE_URL$PRODUCTION_STATS_IMPORT_DATABASE_URL" ]; then
+            echo "::notice::neither STATS_IMPORT_DATABASE_URL nor PRODUCTION_STATS_IMPORT_DATABASE_URL is set, so the export's games are filed nowhere (training/learn.md, Setting it up)"
             echo "set=false" >> "$GITHUB_OUTPUT"
           else
             echo "set=true" >> "$GITHUB_OUTPUT"
@@ -480,14 +481,28 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           echo "filed=$(grep -c . "$RUNNER_TEMP/records.jsonl" || true)" >> "$GITHUB_OUTPUT"
-      - name: import them (jackioh-server stats-import --totals-only)
+      - name: import them (jackioh-server stats-import --totals-only), into staging's and production's
         if: ${{ steps.db.outputs.set == 'true' && steps.file.outputs.filed != '0' }}
         env:
-          DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
         run: |
           set -euo pipefail
           cargo build --release -q -p jackioh-server
-          target/release/jackioh-server stats-import --totals-only "$RUNNER_TEMP/records.jsonl" | tee -a "$GITHUB_STEP_SUMMARY"
+          # R1933001: staging's first, then production's. Each database claims the file by its SHA-256,
+          # so after a failure the rerun files only where it is missing.
+          for where in staging production; do
+            case "$where" in
+              staging) url=$STATS_IMPORT_DATABASE_URL secret=STATS_IMPORT_DATABASE_URL ;;
+              production) url=$PRODUCTION_STATS_IMPORT_DATABASE_URL secret=PRODUCTION_STATS_IMPORT_DATABASE_URL ;;
+            esac
+            if [ -z "$url" ]; then
+              echo "::notice::$secret is not set, so $where's statistics get none of the export's games"
+              continue
+            fi
+            echo "### Filed into $where's" >> "$GITHUB_STEP_SUMMARY"
+            DATABASE_URL=$url target/release/jackioh-server stats-import --totals-only "$RUNNER_TEMP/records.jsonl" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
 
   next:
     name: start the next run
