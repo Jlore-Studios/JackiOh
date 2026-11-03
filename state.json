@@ -27913,7 +27913,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-03T13:42:03Z",
         "every": 5,
+        "findings": 0,
         "head": "94ea09a516e3e3fc482b6abf4efcdf366c1ccee0",
         "issue": 2877,
         "last_why": "stopped: #2916 was closed",
@@ -27921,18 +27923,19 @@
         "n": 10,
         "pr": 2916,
         "queued_at": "2026-11-03T12:52:05Z",
+        "reason": "stopped: #2916 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:bd952c78-1793712828",
         "sha": "4817b81cd04fcff94f04cc81dcc380120edb18c2",
         "started_at": "2026-11-03T13:34:27Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: hero plates keep one size however many effects they carry",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 11
