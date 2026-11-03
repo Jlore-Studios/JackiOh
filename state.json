@@ -15129,9 +15129,7 @@
       "started_at": "2026-11-03T04:14:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6594903126"
-      ]
+      "taken_asks": []
     },
     "2883": {
       "action": "build",
