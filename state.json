@@ -15023,11 +15023,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-03T04:04:31Z",
+        "at": "2026-11-03T04:25:33Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "least-sure line was whether per-reason counts could reuse practice_seeds, but settled stores only paid/refused, early refusals store nothing, and the prune deletes rows, so a new table (a database migration) is unavoidable"
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 5 and the hard line: it adds a database migration (crates/server/migrations/0077) plus 15 files, so hard holds as muse rated it"
       },
       "failures": 0,
       "forced": false,
