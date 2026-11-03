@@ -15459,6 +15459,13 @@
     "2941": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T18:05:12Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No engine-rules, AI, cross-crate, migration, or 40-file signal: both failed jobs are web-side (component layout + web unit tests)."
+      },
       "kind": "build",
       "live": "building",
       "owner": "muse",
