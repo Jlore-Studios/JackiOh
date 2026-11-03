@@ -1,0 +1,141 @@
+// R2784000 #2793: Core's pass over its animation table (core.json5): at least FX_SET_PASS_FLOOR of its
+// non-token cards wear an entry other than `none`, every Spell, Field Spell, Trap and Field Trap has a
+// `cast` (or a recipe or set piece of its own), every Field Spell an aura, every hook a drawn motif, and
+// every play's motif draws on its gallery fixture as that card's play, a hidden play keying none (R202).
+// core.md, the pass's per-card table, holds one row per Core card that matches the table.
+
+import type { GameEvent, PlayerId } from "@jackioh/shared";
+import { describe, expect, it } from "vitest";
+
+import { fullBoardView } from "../../test/fixtures.ts";
+import { CATALOG } from "../../wire/cards.ts";
+import { planCardMotif } from "../cardFx.ts";
+import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
+import { createFxMemory } from "../memory.ts";
+import { motifScale } from "../motifs/build.ts";
+import { galleryEntry, motifFixture } from "../motifs/gallery.ts";
+import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
+import type { FxPlanEnv } from "../types.ts";
+import rawTable from "./core.md?raw";
+import { FX_CARD_TABLE, type FxCardEntry } from "./tables.ts";
+
+const CORE = Object.keys(CATALOG).filter((id) => CATALOG[id]?.set === "Core");
+const CARDS = CORE.filter((id) => CATALOG[id]?.token !== true);
+
+function entryOf(id: string): FxCardEntry {
+  const entry = FX_CARD_TABLE.get(id);
+  if (entry === undefined) throw new Error(`${id} has no entry`);
+  return entry;
+}
+
+/** An entry as core.md's Entry column writes it. */
+function describeEntry(entry: FxCardEntry): string {
+  switch (entry.kind) {
+    case "none":
+      return `none: ${entry.reason}`;
+    case "bespoke":
+      return `bespoke ${entry.key}`;
+    case "setPiece":
+      return `setPiece ${entry.key}`;
+    case "hooks": {
+      const parts: string[] = [];
+      for (const hook of FX_CARD_HOOKS) {
+        const spec = entry.hooks[hook];
+        if (spec === undefined) continue;
+        parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
+      }
+      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
+      return parts.join("; ");
+    }
+  }
+}
+
+function envOf(): FxPlanEnv {
+  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+}
+
+const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });
+
+/** The play's motif on its gallery fixture, as the board plans it once the play's `cardPlayed` is remembered. */
+function playMotif(defId: string, instanceId: string, motif: Parameters<typeof motifFixture>[0]) {
+  const view = fullBoardView();
+  const env = envOf();
+  env.memory.remember([played("p1", instanceId, defId)]);
+  const entry = { ...galleryEntry(motifFixture(motif, view, instanceId, "p1"), view), durationMs: 400 };
+  return planCardMotif(entry, view, env);
+}
+
+/** Each Core card's play motif: its `cry` (a Unit) or `cast`, when a drawn motif. */
+function playMotifs(): { id: string; motif: Parameters<typeof motifFixture>[0] }[] {
+  return CORE.flatMap((id) => {
+    const entry = entryOf(id);
+    if (entry.kind !== "hooks") return [];
+    const hook = entry.hooks[CATALOG[id]?.type === "Unit" ? "cry" : "cast"];
+    return hook !== undefined && isDrawnMotif(hook.motif) ? [{ id, motif: hook.motif }] : [];
+  });
+}
+
+describe("R2784000 #2793 Core's card animation pass", () => {
+  it("R2784000 at least FX_SET_PASS_FLOOR of Core's non-token cards have an entry other than none", () => {
+    expect(CARDS).toHaveLength(100);
+    const drawn = CARDS.filter((id) => entryOf(id).kind !== "none");
+    expect(drawn.length).toBeGreaterThanOrEqual(Math.ceil(FX_SET_PASS_FLOOR * CARDS.length));
+  });
+
+  it("R2784000 every Core non-Unit has a cast, bespoke or set piece, and every Field Spell an aura", () => {
+    const fields = CORE.filter((id) => CATALOG[id]?.type === "Field Spell");
+    expect(fields).toHaveLength(16);
+    for (const id of CORE) {
+      const type = CATALOG[id]?.type;
+      if (type === "Unit") continue;
+      const entry = entryOf(id);
+      const plays = entry.kind === "bespoke" || entry.kind === "setPiece" || (entry.kind === "hooks" && entry.hooks.cast !== undefined);
+      expect(plays, `${id} (${String(type)})`).toBe(true);
+      if (type === "Field Spell") expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+    }
+  });
+
+  it("R2784000 every Core hook names a drawn motif", () => {
+    for (const id of CORE) {
+      const entry = entryOf(id);
+      if (entry.kind !== "hooks") continue;
+      for (const [hook, spec] of Object.entries(entry.hooks)) expect(isDrawnMotif(spec.motif), `${id} ${hook} ${spec.motif}`).toBe(true);
+    }
+  });
+
+  it("R2784000 every Core cast and cry motif draws on its gallery fixture as its card's play", () => {
+    const motifs = playMotifs();
+    expect(motifs.length).toBeGreaterThan(0);
+    for (const { id, motif } of motifs) {
+      const result = playMotif(id, "ex", motif);
+      expect(result, `${id} ${motif}`).not.toBeNull();
+      expect(result?.cues.length ?? 0, `${id} ${motif}`).toBeGreaterThan(0);
+      // R202: no cue names a definition.
+      expect(JSON.stringify(result?.cues), id).not.toMatch(/core-\d{3}/);
+    }
+  });
+
+  it("R202 a hidden play keys no Core entry", () => {
+    for (const { id, motif } of playMotifs()) expect(playMotif("hidden", "hidden", motif), `${id} ${motif}`).toBeNull();
+  });
+
+  it("R2784000 core.md has one row per Core card, in order, with its name, type, entry, scale, census and why", () => {
+    const rows = rawTable
+      .split("\n")
+      .filter((line) => line.startsWith("| `core-"))
+      .map((line) => line.slice(1, -1).split(" | ").map((cell) => cell.trim()));
+    expect(rows.map((row) => row[0])).toEqual(CORE.map((id) => `\`${id}\``));
+    const view = fullBoardView();
+    for (const [cell, name, type, entry, scale, census, why] of rows) {
+      const id = (cell ?? "").replace(/`/g, "");
+      const def = CATALOG[id];
+      const own = entryOf(id);
+      expect(name, id).toBe(def?.name.replace(/\s+/g, " ").trim());
+      expect(type, id).toBe(def?.type);
+      expect(entry, id).toBe(describeEntry(own));
+      expect(scale, id).toBe(own.kind === "none" ? "—" : motifScale(id, view, 1).toFixed(2));
+      expect(census, id).toMatch(/\S/);
+      expect(why, id).toMatch(/\S/);
+    }
+  });
+});
