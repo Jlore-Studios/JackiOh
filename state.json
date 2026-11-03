@@ -16456,10 +16456,12 @@
     "what": "review #2955 on gpt"
   },
   "last_sweep": {
-    "at": "2026-11-03T23:22:16Z",
+    "at": "2026-11-03T23:30:27Z",
     "notes": [
-      "could not start review #2955 on gpt: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 500: ",
-      "pruned 3 plan file(s) older than 7 days"
+      "could not deliver review #2967 on claude-4 (run 41736367277), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/2967/labels: HTTP 500: ): it is tried again next tick (2 more)",
+      "started revise #2964 on muse (run 41740003738)",
+      "started review #2955 on gpt (run 41740099449)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17161,7 +17163,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T23:22:16Z",
+  "loop_tick": "2026-11-03T23:30:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
