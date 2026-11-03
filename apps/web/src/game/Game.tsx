@@ -66,6 +66,7 @@ import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
@@ -746,6 +747,9 @@ export default function Game({
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
       {silent ? null : <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />}
+      {/* R2787000: the standing look of every Field Spell and lasting modifier the board shows, begun and
+          ended with the shown view; the newest view's events say which play added a modifier. */}
+      {silent ? null : <AuraLayer view={shown} latest={view} />}
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
       {silent ? null : <CardShowcase view={view} queue={runner} />}

@@ -5,6 +5,7 @@
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -59,7 +60,7 @@
   "classicplus-032-2": { cast: { motif: "wipe" } }, // Brawl
   "classicplus-032-3": "none: pending", // Blade Storm
   "classicplus-033": "none: pending", // Ivory Tower
-  "classicplus-034": "none: pending", // Memory Leak
+  "classicplus-034": { aura: { look: "frost", palette: "Tech", scope: "lane" } }, // Memory Leak
   "classicplus-035": "none: pending", // Rollback
   "classicplus-036": "none: pending", // Conjure Bones
   "classicplus-036-1": "none: pending", // Bone Storm

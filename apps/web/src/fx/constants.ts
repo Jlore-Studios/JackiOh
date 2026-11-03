@@ -180,6 +180,19 @@ export const FX_MOTIF_TRAUMA = {
 export const FX_MOTIF_TITHE_MAX = 5;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
+// R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
+// AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
+// all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS
+// with a burst (px/s, decaying by AURA_BURST_DECAY per second) and out over AURA_FADE_OUT_MS; the layer
+// remembers the source of at most AURA_SOURCES_LIMIT modifiers (oldest evicted).
+export const AURA_MAX_PER_ZONE = 2;
+export const AURA_MOTES_PER_AURA = 24;
+export const AURA_PARTICLE_SHARE = 0.25;
+export const AURA_FADE_IN_MS = 600;
+export const AURA_FADE_OUT_MS = 500;
+export const AURA_BURST_SPEED = 220;
+export const AURA_BURST_DECAY = 4;
+export const AURA_SOURCES_LIMIT = 64;
 // R2789000: the combat keyword beats (fx/motifs/beats.ts). A callout is the keyword's icon over the unit; a
 // hit's beats start FX_BEAT_STAGGER_MS apart (a later one at most FX_BEAT_STAGGER_MAX of D in), at most
 // FX_CALLOUTS_PER_HIT of them each with a callout. The fractions are of D, the lengths in ms, and all of it

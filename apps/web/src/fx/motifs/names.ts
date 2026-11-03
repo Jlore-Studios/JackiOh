@@ -1,6 +1,7 @@
 // R2784000: the names a card's effects table may give a motif (docs/polish/9-card-animations.md), and
-// the hooks it may give one to. A name is accepted before its part draws it (`aura` waits for #2787):
-// such an entry plays its event rows only, as a card with no entry does.
+// the hooks it may give one to. A name is accepted before its part draws it: such an entry plays its
+// event rows only, as a card with no entry does. `aura` on a hook plays nothing either: a card's standing
+// look is its entry's `aura` field, which the aura layer draws (fx/aura/, R2787000).
 
 /** Every motif name a table may use: the drawn motifs, then `aura`, which waits for #2787. */
 export const FX_MOTIF_NAMES = [

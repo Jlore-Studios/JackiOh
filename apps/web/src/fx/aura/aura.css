@@ -1,0 +1,94 @@
+/* R2787000: the aura layer (AuraLayer.tsx), the standing look of a Field Spell or a lasting modifier.
+ *
+ *   .aura-layer[data-aura="on|still"]  >  canvas.aura-canvas  +  div.aura × n
+ *
+ * One fixed overlay over the viewport, under the effects layer (fx.css's 38) and over the board. Each
+ * `.aura` covers the box of the zones it holds over, its tint a fill of the card's body color (::before)
+ * and its edge a glow in the card's glow color (::after), both at the look's opacity, carried as
+ * `--aura-*` in its style. The motes are the canvas's. A begun aura fades in and an ended one fades out,
+ * opacity only (fx.css's rule for what the compositor runs). R200: the layer takes no pointer event,
+ * never carries `data-animating` and adds no scrollable width. Under reduced motion, the media query or
+ * the settings panel's `data-reduce-motion`, nothing moves and the tint and the edge stand still.
+ */
+
+.aura-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 37;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.aura-layer * {
+  pointer-events: none;
+}
+
+.aura-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.aura {
+  position: absolute;
+  border-radius: var(--radius-lg);
+}
+
+.aura::before,
+.aura::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.aura::before {
+  background: var(--aura-body);
+  opacity: var(--aura-tint);
+}
+
+.aura::after {
+  box-shadow:
+    inset 0 0 var(--aura-glow-px) var(--aura-glow),
+    0 0 var(--aura-glow-px) var(--aura-glow);
+  opacity: var(--aura-edge);
+}
+
+.aura[data-aura-phase="begin"] {
+  animation: aura-in var(--aura-in-ms) ease-out both;
+}
+
+.aura[data-aura-phase="end"] {
+  animation: aura-out var(--aura-out-ms) ease-in both;
+}
+
+@keyframes aura-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes aura-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aura {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion="true"] .aura {
+  animation: none !important;
+}
