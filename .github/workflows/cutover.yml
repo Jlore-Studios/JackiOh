@@ -39,7 +39,15 @@
 #                       and data, the four statistics tables' live rows alone and none of
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
 #                       auth.users counted on both sides, which must agree. With `dry_run` (the default)
-#                       it dumps and counts and writes nothing.
+#                       it loads the whole copy the same way and rolls it back, so nothing stays.
+#   after-cutover       once https://jackioh.com/api/catalog answers from Cloudflare (x-deployed-commit):
+#                       suspends Render's jackioh-server, which then bills nothing (section 4, step 7.1),
+#                       and gives staging's project its own Site URL and Redirect URLs, infra/supabase.tf's.
+#   delete-render       once after-cutover has run: prints Render's CODE_PEPPER encrypted to `public_key`
+#                       (its only readable copy: a Worker's secret cannot be read back), for a person to
+#                       decrypt into the repository secret CODE_PEPPER; then deletes the Blueprint and the
+#                       suspended jackioh-server, the owners' call of 2026-11-03 (section 4, step 7.1).
+#                       production-auth and email never read Render, so they still run afterwards.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
 # and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
@@ -66,11 +74,17 @@ on:
           - production-auth
           - email
           - copy
+          - after-cutover
+          - delete-render
       dry_run:
-        description: "copy, production-auth and email: show what it would do, and write nothing"
+        description: "copy, production-auth, email and after-cutover: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
+      public_key:
+        description: "delete-render only: an RSA public key (SPKI DER, base64) that CODE_PEPPER is encrypted to in the log"
+        required: false
+        type: string
 
 env:
   CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
@@ -106,6 +120,7 @@ jobs:
           rust: "false"
 
       - name: read jackioh-server's settings from Render, and staging's database address
+        if: ${{ inputs.step != 'production-auth' && inputs.step != 'email' }}
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
@@ -166,6 +181,7 @@ jobs:
           id=$(render "/services?name=$RENDER_SERVICE&limit=20" |
             jq -r --arg n "$RENDER_SERVICE" '[.[].service | select(.name == $n)][0].id // empty')
           [ -n "$id" ] || { echo "::error::Render has no service named $RENDER_SERVICE"; exit 1; }
+          echo "$id" > "$RUNNER_TEMP/render.id"
           vars=$(render "/services/$id/env-vars?limit=100")
           # Every value masked before anything else can print it, but for those under eight characters
           # (TRUSTED_PROXY_HOPS's `1`, CYPRESS_INSTALL_BINARY's `0`): no secret is that short, and masking
@@ -521,13 +537,117 @@ jobs:
             echo "deleted the earlier $KEY_NAME key $gone"
           done
 
+      - name: after the move, Render suspended and staging's sign-in its own
+        if: ${{ inputs.step == 'after-cutover' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SITE: https://jackioh.com
+          # infra/supabase.tf's, for staging's project.
+          STAGING_SITE: https://staging.jackioh.com
+          STAGING_REDIRECTS: https://staging.jackioh.com/login
+        run: |
+          set -euo pipefail
+          # Only once production's own server answers on jackioh.com: Render's never says which commit.
+          commit=$(curl -fsS -D - -o /dev/null --max-time 60 "$SITE/api/catalog" | tr -d '\r' |
+            awk -F': ' 'tolower($1) == "x-deployed-commit" { print $2 }')
+          [ -n "$commit" ] || { echo "::error::$SITE/api/catalog names no x-deployed-commit: production is not on Cloudflare yet"; exit 1; }
+          echo "$SITE serves $commit from Cloudflare"
+
+          id=$(cat "$RUNNER_TEMP/render.id")
+          render() {
+            curl -fsS --retry 3 --max-time 60 -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Accept: application/json" "$@"
+          }
+          state=$(render "https://api.render.com/v1/services/$id" | jq -r .suspended)
+          echo "Render's $RENDER_SERVICE: $state"
+          if [ "$state" != suspended ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "dry_run: would suspend Render's $RENDER_SERVICE"
+            else
+              render -X POST "https://api.render.com/v1/services/$id/suspend" > /dev/null
+              echo "Render's $RENDER_SERVICE: $(render "https://api.render.com/v1/services/$id" | jq -r .suspended)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+          config="https://api.supabase.com/v1/projects/$STAGING_REF/config/auth"
+          auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json")
+          curl -fsS "${auth[@]}" "$config" | jq -r '"staging'"'"'s sign-in: site_url \(.site_url), redirects \(.uri_allow_list)"'
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would set staging's site_url to $STAGING_SITE and its redirects to $STAGING_REDIRECTS"
+            exit 0
+          fi
+          jq -n --arg site "$STAGING_SITE" --arg urls "$STAGING_REDIRECTS" '{site_url: $site, uri_allow_list: $urls}' |
+            curl -fsS "${auth[@]}" -X PATCH "$config" --data-binary @- > /dev/null
+          curl -fsS "${auth[@]}" "$config" | jq -r '"staging'"'"'s sign-in now: site_url \(.site_url), redirects \(.uri_allow_list)"' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Render deleted, its CODE_PEPPER kept
+        if: ${{ inputs.step == 'delete-render' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PUBLIC_KEY: ${{ inputs.public_key }}
+          SITE: https://jackioh.com
+        run: |
+          set -euo pipefail
+          umask 077
+          commit=$(curl -fsS -D - -o /dev/null --max-time 60 "$SITE/api/catalog" | tr -d '\r' |
+            awk -F': ' 'tolower($1) == "x-deployed-commit" { print $2 }')
+          [ -n "$commit" ] || { echo "::error::$SITE/api/catalog names no x-deployed-commit: production is not on Cloudflare"; exit 1; }
+          id=$(cat "$RUNNER_TEMP/render.id")
+          render() {
+            curl -fsS --retry 3 --max-time 60 -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Accept: application/json" "$@"
+          }
+          state=$(render "https://api.render.com/v1/services/$id" | jq -r .suspended)
+          [ "$state" = suspended ] || { echo "::error::Render's $RENDER_SERVICE is $state: run after-cutover first"; exit 1; }
+
+          # CODE_PEPPER, encrypted to the key a person holds (RSA-OAEP, SHA-256), so only they can read it.
+          [ -n "$PUBLIC_KEY" ] || { echo "::error::public_key is empty: CODE_PEPPER must be kept before Render goes"; exit 1; }
+          base64 -d <<<"$PUBLIC_KEY" > "$RUNNER_TEMP/key.der"
+          openssl pkey -pubin -inform DER -in "$RUNNER_TEMP/key.der" -out "$RUNNER_TEMP/key.pem"
+          pepper=$(jq -r '.CODE_PEPPER // empty' "$RUNNER_TEMP/render.json")
+          [ -n "$pepper" ] || { echo "::error::Render holds no CODE_PEPPER"; exit 1; }
+          sealed=$(printf %s "$pepper" | openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/key.pem" \
+            -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 | base64 -w0)
+          echo "CODE_PEPPER (${#pepper} characters), sealed: $sealed"
+
+          blueprints=$(render "https://api.render.com/v1/blueprints?limit=100" |
+            jq -r '.[] | (.blueprint // .) | select((.repo // "") | test("JackiOh"; "i")) | .id')
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would delete Render's Blueprint(s) ${blueprints:-none} and $RENDER_SERVICE ($id)"
+            exit 0
+          fi
+          for blueprint in $blueprints; do
+            render -X DELETE "https://api.render.com/v1/blueprints/$blueprint" > /dev/null
+            echo "deleted Render's Blueprint $blueprint"
+          done
+          render -X DELETE "https://api.render.com/v1/services/$id" > /dev/null
+          echo "deleted Render's $RENDER_SERVICE ($id)" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}
         env:
           DRY_RUN: ${{ inputs.dry_run }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Until production leaves it, staging's database serves two servers, Render's and staging's,
+          # each up to 10 connections with its ladder bots, through a session pooler of 15 clients,
+          # which they kept full (runs 41581788146, 41582767500). 30 is half of Postgres' 60 on the
+          # project's compute; the copy needs one.
+          STAGING_POOL: "30"
         run: |
           set -euo pipefail
           umask 077
+          pooler="https://api.supabase.com/v1/projects/$STAGING_REF/config/database/pooler"
+          auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json")
+          # No size set reads as null: the compute's default, 15.
+          size=$(curl -sS --fail-with-body "${auth[@]}" "$pooler" | jq -r '(if type == "array" then map(.default_pool_size) | max else .default_pool_size end) // 15')
+          echo "staging's pooler: $size clients"
+          if [ "$size" -lt "$STAGING_POOL" ]; then
+            curl -sS --fail-with-body "${auth[@]}" -X PATCH "$pooler" -d "{\"default_pool_size\": $STAGING_POOL}" > /dev/null
+            echo "staging's pooler: now $(curl -sS --fail-with-body "${auth[@]}" "$pooler" | jq -r 'if type == "array" then map(.default_pool_size) | max else .default_pool_size end') clients"
+          fi
           # PostgreSQL 17's client, from PGDG: a dump made by a current pg_dump opens with `\restrict`,
           # which an older psql refuses.
           sudo apt-get install -y -qq postgresql-common > /dev/null
@@ -551,11 +671,34 @@ jobs:
           done
 
           mkdir -p "$RUNNER_TEMP/copy" && cd "$RUNNER_TEMP/copy"
-          supabase db dump --db-url "$staging" -f roles.sql --role-only
-          supabase db dump --db-url "$staging" -f schema.sql
-          supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
+          # Staging's session pooler holds 15 clients, and the servers on it keep theirs open while
+          # they idle (run 41581788146 found it full): each dump waits for a free one, five minutes at most.
+          retry() {
+            for wait in 30 60 60 60 90 0; do
+              "$@" && return 0
+              [ "$wait" = 0 ] && return 1
+              echo "::notice::the pooler is busy, trying again in ${wait}s"
+              sleep "$wait"
+            done
+          }
+          retry supabase db dump --db-url "$staging" -f roles.sql --role-only
+          # A role's setting only a superuser may make, which Supabase's postgres is not (the first real
+          # run, 41540999815, stopped at `log_min_messages`): left out, and named. The rest are named too.
+          # Grants on a parameter (GRANT SET ON PARAMETER …), which need the grant option on it, go too.
+          superuser='^(ALTER ROLE .* SET "?(log_[a-z_]+|session_preload_libraries|auto_explain\.[a-z_]+)"? |(GRANT|REVOKE) .* ON PARAMETER )'
+          { grep -E "$superuser" roles.sql || true; } | sed -E "s/'[^']*'/'…'/g; s/^/  left out of roles.sql: /"
+          sed -i -E "/$superuser/d" roles.sql
+          # What is left, every quoted value blanked (a password's hash among them).
+          grep -vE '^(--|$)' roles.sql | sed -E "s/'[^']*'/'…'/g; s/^/  roles.sql: /"
+          retry supabase db dump --db-url "$staging" -f schema.sql
+          # The data leaves out the tables Supabase's postgres may not write (run 41583636531 stopped at
+          # storage.buckets_vectors): each project fills its own migrations' tables, and staging holds
+          # nothing in Storage or Vault (0 buckets, 0 objects, 0 secrets on 2026-11-03).
+          retry supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
             -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
-            -x public.game_record_batches
+            -x public.game_record_batches \
+            -x storage.buckets_vectors -x storage.vector_indexes -x storage.migrations \
+            -x vault.secrets -x auth.schema_migrations
           for table in $stats; do
             psql "$staging" -Xq -v ON_ERROR_STOP=1 -c "\\copy (select * from public.$table where source = 'live') to '$table.csv' csv"
           done
@@ -569,11 +712,6 @@ jobs:
             for file in roles.sql schema.sql data.sql; do echo "$file: $(du -h "$file" | cut -f1)"; done
             for table in $stats; do echo "$table: $(wc -l < "$table.csv") live rows"; done
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          if [ "$DRY_RUN" = true ]; then
-            echo "dry run: nothing written to JackiOh-Production" | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
           copies=()
           for table in $stats; do copies+=(-c "\\copy public.$table from '$table.csv' csv"); done
           # The last statement of the one transaction: counts that differ roll the whole copy back.
@@ -581,8 +719,16 @@ jobs:
           # shellcheck disable=SC2016
           check=$(printf 'do $check$ begin if (%s) <> %s then raise exception %s; end if; end $check$' \
             "$counts" "'$profiles $matches $users'" "'the counts differ from staging''s: $from'")
+          # A dry run loads everything, checks the counts, and rolls it all back (psql then warns that
+          # its closing COMMIT finds no transaction), so a load that would fail fails here first.
+          last=()
+          [ "$DRY_RUN" = true ] && last=(-c rollback)
           psql "$production" -X -q --single-transaction -v ON_ERROR_STOP=1 -f roles.sql -f schema.sql \
-            -c 'set session_replication_role = replica' -f data.sql "${copies[@]}" -c "$check"
+            -c 'set session_replication_role = replica' -f data.sql "${copies[@]}" -c "$check" "${last[@]}"
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry run: the whole copy loaded and its counts agreed, then rolled back; JackiOh-Production holds $(q "$production" "select count(*) from information_schema.tables where table_schema = 'public'") public tables" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           read -r profiles matches users <<<"$(q "$production" "$counts")"
           echo "JackiOh-Production holds $profiles profiles, $matches matches, $users users, as staging does" | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f ./*.sql ./*.csv
