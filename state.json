@@ -15459,6 +15459,7 @@
     "2941": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-03T18:05:12Z",
         "difficulty": "medium",
@@ -15467,6 +15468,8 @@
         "why": "No engine-rules, AI, cross-crate, migration, or 40-file signal: both failed jobs are web-side (component layout + web unit tests)."
       },
       "failures": 0,
+      "forced": false,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
