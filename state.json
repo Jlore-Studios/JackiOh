@@ -16433,6 +16433,7 @@
       "run_id": "41736367277",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 32,
       "started_at": "2026-11-03T23:05:44Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -30261,7 +30262,7 @@
         "verdict": "failed"
       }
     ],
-    "count": 31
+    "count": 32
   },
   "statistics": {
     "at": "2026-11-03T23:39:14Z"
