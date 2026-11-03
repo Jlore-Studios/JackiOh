@@ -1,6 +1,7 @@
 // R502, R670, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card
 // recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2795000:
 // Classic+'s Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
+// R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -21,6 +22,9 @@ import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
 import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
+import { pageMend } from "./classic/bookOfHeal.ts";
+import { crownSwap } from "./classic/kingWagtoggle.ts";
+import { recycleLoop } from "./classic/recycle.ts";
 
 export const CARD_RECIPES = {
   manaCrack,
@@ -41,6 +45,9 @@ export const CARD_RECIPES = {
   celestialCall,
   dinoStomp,
   gameDesign,
+  pageMend,
+  recycleLoop,
+  crownSwap,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;

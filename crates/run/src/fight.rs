@@ -9,12 +9,17 @@ use jackioh_engine::custom::custom_def;
 use jackioh_engine::damage::DamageTarget;
 use jackioh_engine::reduce::{begin_game, reduce};
 use jackioh_engine::replay::ReplayInput;
-use jackioh_engine::state::{CreateGameOptions, GameState, SetupKind, create_recorded_game, validate_setup};
+use jackioh_engine::state::{
+    CreateGameOptions, GameState, SetupKind, create_recorded_game, starting_hero_health, validate_setup,
+};
 use jackioh_engine::wire::{CardDefs, CustomCard, DeckMark, GameEvent, PlayerId, SetName, Winner};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
-use crate::{RunAction, RunContent, RunEnemy, RunPoolCard, RunState, run_enemy, run_placeholder_content};
+use crate::{
+    RunAction, RunContent, RunEnemy, RunFightEffect, RunPassiveKind, RunPoolCard, RunState, passive_def,
+    run_enemy, run_placeholder_content,
+};
 
 /// What the caller hands `createGame` for the fight being played: the human is P1, the enemy P2.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -29,13 +34,15 @@ pub struct RunFightSetup {
     pub seed: String,
     /// The run deck's ids, in the run's order, which `human_marks` index.
     pub human_deck: Vec<String>,
-    /// `HUMAN_HANDICAP`, its `deck_size` the deck's length and its `hero_health` the run's HP (DR5).
+    /// `HUMAN_HANDICAP`, its `deck_size` the deck's length and its `hero_health` the run's HP (DR5),
+    /// then each Combat artifact held, once per level (R2922001).
     pub human_handicap: Handicap,
     /// Each Radiant card of the run deck, and each buffed one with its buffs as upgrades.
     pub human_marks: Vec<DeckMark>,
     pub enemy_deck: Vec<String>,
     /// Easy's handicap, Medium's with Looming Presence, Hard's with Overwhelming Presence (DR5, R180),
-    /// its `deck_size` the enemy deck's length and its `hero_health` the enemy's.
+    /// its `deck_size` the enemy deck's length and its `hero_health` the enemy's, then each curse taken
+    /// (R2922001).
     pub enemy_handicap: Handicap,
     pub enemy: RunEnemy,
 }
@@ -90,9 +97,35 @@ fn deck_size(deck: &[String]) -> i32 {
     i32::try_from(deck.len()).unwrap_or(i32::MAX)
 }
 
-/// DR5, DR14: the setup of the fight being played, `None` outside `RunPhase::Fight`. `content` is
-/// not read yet: it is the surface's for when Combat artifacts and curses change a fight (M4).
-pub fn run_fight_setup(state: &RunState, _content: &RunContent) -> Option<RunFightSetup> {
+/// R2922001: one fight effect, `times` over, on the two seats' handicaps. A negative amount counts as
+/// none, so every setup stays one the engine takes.
+fn apply_fight_effect(effect: RunFightEffect, times: i32, human: &mut Handicap, enemy: &mut Handicap) {
+    let grow = |n: i32| n.max(0).saturating_mul(times.max(0));
+    match effect {
+        RunFightEffect::EnemyHealth { n } => {
+            enemy.hero_health = Some(starting_hero_health(Some(enemy)).saturating_add(grow(n)));
+        }
+        RunFightEffect::EnemyOpeningCards { n } => {
+            enemy.extra_opening_cards = enemy.extra_opening_cards.saturating_add(grow(n));
+        }
+        RunFightEffect::EnemyMana { n } => {
+            enemy.mana_bonus = enemy.mana_bonus.saturating_add(grow(n));
+            enemy.mana_cap = enemy.mana_cap.saturating_add(grow(n));
+        }
+        RunFightEffect::OwnOpeningCards { n } => {
+            human.extra_opening_cards = human.extra_opening_cards.saturating_add(grow(n));
+        }
+        RunFightEffect::OwnArmor { n } => {
+            let armor = human.hero_armor.unwrap_or(0).saturating_add(grow(n));
+            human.hero_armor = (armor > 0).then_some(armor);
+        }
+    }
+}
+
+/// DR5, DR14: the setup of the fight being played, `None` outside `RunPhase::Fight`. R2922001: after
+/// Presence sets the enemy's tier, each curse taken strengthens the enemy once and each Combat artifact
+/// held helps the human once per level.
+pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup> {
     let enemy = run_enemy(state)?;
     let row = state.row?;
     let human_deck: Vec<String> = state.deck.iter().map(|card| card.id.clone()).collect();
@@ -115,21 +148,38 @@ pub fn run_fight_setup(state: &RunState, _content: &RunContent) -> Option<RunFig
     } else {
         AI_DIFFICULTY.easy
     };
+    let mut human_handicap = Handicap {
+        deck_size: deck_size(&human_deck),
+        hero_health: Some(state.hp),
+        ..HUMAN_HANDICAP
+    };
+    let mut enemy_handicap = Handicap {
+        deck_size: deck_size(&enemy.deck),
+        hero_health: Some(enemy.hero_health),
+        ..tier
+    };
+    // R2922001: after Presence, each curse taken once and each Combat artifact held once per level.
+    let curses = state
+        .curses
+        .iter()
+        .filter_map(|id| content.curses.iter().find(|c| &c.id == id))
+        .filter_map(|curse| curse.fight_effect.map(|effect| (effect, 1)));
+    let artifacts = state.artifacts.iter().filter_map(|held| {
+        passive_def(content, &held.id)
+            .filter(|def| def.kind == RunPassiveKind::Combat)
+            .and_then(|def| def.fight_effect)
+            .map(|effect| (effect, held.level))
+    });
+    for (effect, times) in curses.chain(artifacts) {
+        apply_fight_effect(effect, times, &mut human_handicap, &mut enemy_handicap);
+    }
     Some(RunFightSetup {
         seed: format!("{}-{row}-{}", state.seed, state.col),
-        human_handicap: Handicap {
-            deck_size: deck_size(&human_deck),
-            hero_health: Some(state.hp),
-            ..HUMAN_HANDICAP
-        },
+        human_handicap,
         human_deck,
         human_marks,
         enemy_deck: enemy.deck.clone(),
-        enemy_handicap: Handicap {
-            deck_size: deck_size(&enemy.deck),
-            hero_health: Some(enemy.hero_health),
-            ..tier
-        },
+        enemy_handicap,
         enemy: enemy.clone(),
     })
 }

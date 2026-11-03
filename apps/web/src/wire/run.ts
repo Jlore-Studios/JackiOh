@@ -16,6 +16,7 @@ export type { RunEnemy } from "./generated/RunEnemy.ts";
 export type { RunEnemyDef } from "./generated/RunEnemyDef.ts";
 export type { RunEventDef } from "./generated/RunEventDef.ts";
 export type { RunEventOption } from "./generated/RunEventOption.ts";
+export type { RunFightEffect } from "./generated/RunFightEffect.ts";
 export type { RunFightSetup } from "./generated/RunFightSetup.ts";
 export type { RunFile } from "./generated/RunFile.ts";
 export type { RunNode } from "./generated/RunNode.ts";

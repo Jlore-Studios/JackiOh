@@ -188,7 +188,10 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
 
         it("/practice board", () => {
           cy.visit(practiceUrl(SEED));
-          cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          // No HUD above the board (#2878): the enemy hero's seat names the AI and the difficulty.
+          cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
+          cy.get(ts(PRACTICE_HUD)).should("not.exist");
           cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
           // The opening mulligan (R265), whose card options are a prompt's.
           cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");

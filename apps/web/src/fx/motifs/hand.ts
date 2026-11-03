@@ -1,7 +1,7 @@
 // R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,
 // tithe, tally and send (#2793), then #2796's deal (cards dealt into a hand or deck) and seal (a
-// lasting modifier laid on a seat). Like the damage motifs (damage.ts) each plays in the entry's
-// phases (build.ts) and plans nothing without an event it reads.
+// lasting modifier laid on a seat), and R2794000's recall. Like the damage motifs (damage.ts) each
+// plays in the entry's phases (build.ts) and plans nothing without an event it reads.
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { animTestid, locateInstance, type AnimationEntry } from "../../game/animations.ts";
@@ -46,6 +46,35 @@ export const flight: MotifPlanner = {
       const to = tid(animTestid.hand(side));
       cues.push({ kind: "ghost", from, to, delayMs: t.T, durationMs: t.L - t.T });
       cues.push(motifBurst(spec, to, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    }
+    return cues;
+  },
+};
+
+const RECALL_READS = ["addedToHand"] as const;
+
+/**
+ * R2794000 recall: a card back flying from its owner's graveyard pile into the hand (#2794): a small
+ * gather on the pile, the flight from Travel to Land and the hand's sparkle on Land. The hand's own
+ * glint still plays, and nothing shakes.
+ */
+export const recall: MotifPlanner = {
+  reads: RECALL_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, RECALL_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    const cues: FxCue[] = [];
+    for (const h of hits) {
+      const event = h.event;
+      if (event.type !== "addedToHand") continue;
+      const side = sideOf(view, event.player);
+      const grave = tid(animTestid.graveyard(side));
+      const hand = tid(animTestid.hand(side));
+      cues.push(motifBurst(spec, grave, "point", t.G, MOTIF_TUNING.small));
+      cues.push({ kind: "ghost", from: grave, to: hand, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, hand, "point", t.L, MOTIF_TUNING.small, "sparkle"));
     }
     return cues;
   },

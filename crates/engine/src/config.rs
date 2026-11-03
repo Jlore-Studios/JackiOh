@@ -380,6 +380,12 @@ pub struct Handicap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub deck_copies: Option<i32>,
+    /// R2922000: the Armor this seat's hero starts the game with, on the hero as any Armor it gains
+    /// (§4.4 step 2, R124). Absent or 0 means none, so every other game hashes as before the field
+    /// existed. Only a dungeon run's fight sets it (R2922001).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hero_armor: Option<i32>,
 }
 
 /// R180: this spec's own resources. A seat with no handicap plays with these.
@@ -394,6 +400,7 @@ pub const HUMAN_HANDICAP: Handicap = Handicap {
     pool_hold: None,
     tutorial_cards_only: None,
     deck_copies: None,
+    hero_armor: None,
 };
 
 string_union! {
@@ -444,6 +451,7 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         pool_hold: None,
         tutorial_cards_only: None,
         deck_copies: None,
+        hero_armor: None,
     },
     hard: Handicap {
         deck_size: DECK_SIZE + HARD_EXTRA_DECK_CARDS,
@@ -456,6 +464,7 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         pool_hold: None,
         tutorial_cards_only: None,
         deck_copies: None,
+        hero_armor: None,
     },
 };
 
@@ -481,6 +490,7 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     tutorial_cards_only: Some(true),
     // R2533001: lesson 1's opponent holds copies of the set's vanilla units, as its human does.
     deck_copies: Some(TUTORIAL_DECK_COPIES),
+    hero_armor: None,
 };
 
 /// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds
