@@ -29137,12 +29137,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:76bcc826-1793725574",
+        "run_id": "",
         "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
         "started_at": "2026-11-03T17:06:48Z",
         "status": "queued",
         "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 22
