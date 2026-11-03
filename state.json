@@ -15613,6 +15613,8 @@
       "stop_requested": false
     },
     "2946": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T14:17:04Z",
@@ -15626,8 +15628,11 @@
         "trail": "- Pausing until the test run delivers its result.Pausing until the test run delivers its result.\n- The test run is still compiling the WASM module (active `rustc` on the emscripten target as of 14:46; the shared machine is also running another agent's job, so it's slow but progressing). I'll continue once its result arrives.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a finished game counts once in your statistics, even after you watch its replay\"} -->\n- ## What changed\n- - [`apps/web/src/stats/useGameStats.ts`](/home/agent-muse/actions-runner-3/_work/_temp/work/item-2923/apps/web/src/stats/useGameStats.ts): the record condition now also requires that this mount has seen an unfinished view (`before !== null && outcomeOfView(before) === null`), so a mount whose first\u2026\n- - [`apps/web/src/stats/useGameStats.test.tsx`](/home/agent-muse/actions-runner-3/_work/_temp/work/item-2923/apps/web/src/stats/useGameStats.test.tsx): extended the existing `R639 useGameStats` block with a `syncPlayerStats` spy (wrapping the real implementation, a silent no-op with no session) plus\u2026\n- ## How I tested it\n- - Wrote the two tests first: the remount test failed exactly as predicted (`expected 2 to be 1` on `games` after remount), while the two-games guard passed pre-fix.\n- - After the fix: `pnpm --dir apps/web test src/stats` \u2014 14 files, 255 tests, all green, including all 7 in `useGameStats.test.tsx`.\n- - `pnpm --dir apps/web typecheck` clean; `eslint` on both touched files clean.\n- - `git status` confirms only the two intended files changed; no spec, ruling, route, or helper file touched, and no new ruling (R639's once-per-game now holds).\n- ## Decisions\n- - Followed the plan's failing-test-first order (tests added and run before the fix) rather than its listed edit order, to observe the authentic failure; no code departure from the plan otherwise.\n- - The known accepted behavior change stands: a game the player was away from when it ended, then opened already finished, no longer counts on the device with an empty log. The server's own online records are unaffected.\n- - The spy approach (`vi.spyOn` on the `./sync.ts` namespace) was verified to intercept the hook's call \u2014 the pre-fix run's first sync-count assertion passed, so the counts are genuine.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-2923 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-2923/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2923,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T16:19:26Z",
         "from_run": "41652177211",
         "gates": [
           {
@@ -15686,8 +15691,15 @@
         "source": "build",
         "until": "2026-11-03T16:47:56Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T16:17:56Z",
+      "run_id": "pending:a8ea281d-1793722727",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-03T16:19:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15701,9 +15713,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T15:52:46Z",
+    "at": "2026-11-03T16:19:26Z",
     "url": "",
-    "what": "plan #2928 on claude-3"
+    "what": "review #2946 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T15:44:50Z",
