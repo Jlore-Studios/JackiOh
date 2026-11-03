@@ -1,10 +1,11 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields and R2722001 takeovers.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers
+// and R2800000 set pieces.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -58,6 +59,12 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** R2722001: a takeover's layers, bottom to top (fx.css). */
 const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
+
+/** R2800000: each set piece shape's layers, bottom to top (fx.css). */
+const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
+  vortex: ["dark", "spiral", "core"],
+  fold: ["edges", "light"],
+};
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -300,6 +307,23 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       for (const part of TAKEOVER_PARTS) {
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
+        el.appendChild(child);
+      }
+      break;
+    }
+    case "setPiece": {
+      // R2800000: a board clear's vortex or fold, centred on `at`; the cards it swallows are the stage's (`pull`).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-shape", cue.shape);
+      el.setAttribute("data-side", cue.side ?? "both");
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-spin", String(cue.spin));
+      el.style.setProperty("--fx-hold", `${Math.max(0, cue.holdMs)}ms`);
+      for (const part of SET_PIECE_PARTS[cue.shape]) {
+        const child = doc.createElement("div");
+        child.className = `fx-setPiece-${part}`;
         el.appendChild(child);
       }
       break;

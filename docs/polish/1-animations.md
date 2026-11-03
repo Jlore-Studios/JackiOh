@@ -948,6 +948,12 @@ Visual pass 2 (stage effects), and the review that followed it:
   clamped to [`FX_LUNGE_MIN_PX`, `FX_LUNGE_MAX_PX`], and throws a spark burst at the target at
   `FX_LUNGE_CONTACT_AT·D`. Without the layer, jk-lunge falls back to BUILD's straight lunge.
   *Observed:* `stage.test.tsx`.
+- **R2800000** Pulled cards. A board clear's set piece (`fx/setPieces.ts`, `docs/polish/9-card-animations.md`)
+  sends a `pull` for each card its wipe takes: the director marks it `data-fx-pulled` and writes
+  `--fx-pull-x/y`, the line from its centre to the set piece's (zero when it sinks in place), and
+  board.css draws it in over the hold; an "after" `conceal` at the swallow keeps it hidden. Both are
+  stage effects, undone by `release()` or `FX_HOLD_MAX_MS`. *Observed:* `stage.test.tsx`,
+  `setPieces.test.ts`.
 - **B49** The killing blow. A finished view no longer drains the runner — the burst that ended the
   game plays out first — so the layer keeps drained entries only when a drain (a seat hand-over) cut
   them short and plays `planLethal` before `planResult`, which waits `leadMs`. *Observed:* `cues.test.ts`,

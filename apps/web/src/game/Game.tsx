@@ -67,6 +67,7 @@ import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
@@ -322,6 +323,8 @@ export default function Game({
   const inFlightLead = inFlight === null ? 0 : leadMs(inFlight);
   const setPiece = inFlight?.setPiece;
   const takeoverHold = setPiece?.key === TAKEOVER_SET_PIECE ? setPiece.holdMs : 0;
+  // R2800000: a board clear's set piece twists (or folds) the sides its wipe takes from, over its hold.
+  const setPieceShape = setPiece === undefined ? undefined : setPieceShapeOf(setPiece.key);
   useEffect(() => {
     if (reducedMotion || inFlightSlam === undefined) return undefined;
     const landsAt = inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT;
@@ -357,7 +360,9 @@ export default function Game({
       entranceOf: entranceResolver,
       // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
       setPieces: !silent,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? null,
+      // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
+      wipeOf: hasSetPiece,
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -660,6 +665,8 @@ export default function Game({
       data-reduced-motion={reducedMotion ? "true" : undefined}
       data-takeover={takeoverHold > 0 ? "mythic" : undefined}
       data-set-piece={setPiece?.key}
+      data-set-piece-shape={setPieceShape}
+      data-set-piece-sides={setPieceShape === undefined ? undefined : inFlight?.wipe?.sides.join(" ")}
       style={impactFeel === undefined && inFlightSlam === undefined && setPiece === undefined ? undefined : {
         ...(impactFeel === undefined ? {} : {
           "--impact-number-scale": String(impactFeel.numberScale),

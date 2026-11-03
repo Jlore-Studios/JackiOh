@@ -1588,6 +1588,85 @@ button.modifier-badge[data-open="true"] {
   animation-delay: var(--set-piece-hold, 0ms);
 }
 
+/* R2800000: a board clear's set piece. Over its hold the vortex twists the sides its wipe takes from
+   (`data-set-piece-sides`): each lane bends by `--set-piece-bend`, -2 at the left to 2 at the right,
+   the two sides turning opposite ways into one spiral, until 90% of the hold, and then snaps flat.
+   Every card the wipe takes is drawn in along it, spun and swallowed at the vortex's centre (the
+   effects layer's `pull` sets `--fx-pull-x/y` and `data-fx-pulled`); under the fold it sinks into the
+   black where it stands. The effects layer conceals it at the swallow. None of it plays under Reduce
+   motion, which holds nothing. Transform and opacity only. */
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="1"] {
+  --set-piece-bend: -2;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="2"] {
+  --set-piece-bend: -1;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="4"] {
+  --set-piece-bend: 1;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-lane="5"] {
+  --set-piece-bend: 2;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"][data-set-piece-sides~="you"] .field .zone[data-side="you"],
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"][data-set-piece-sides~="opponent"] .field .zone[data-side="opponent"] {
+  animation: set-piece-twist var(--set-piece-hold, 0ms) var(--ease-in-out) both;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .field .zone[data-side="opponent"] {
+  --set-piece-turn: -1;
+}
+
+@keyframes set-piece-twist {
+  0% {
+    transform: none;
+  }
+  90% {
+    transform: translateX(calc(var(--set-piece-bend, 0) * -9%)) rotate(calc(var(--set-piece-bend, 0) * var(--set-piece-turn, 1) * 8deg)) scale(0.9);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="vortex"] .board .card[data-fx-pulled] {
+  animation: set-piece-swallow var(--set-piece-hold, 0ms) var(--ease-in) both;
+  animation-delay: 0ms;
+}
+
+.game:not([data-reduced-motion="true"])[data-set-piece-shape="fold"] .board .card[data-fx-pulled] {
+  animation: set-piece-sink var(--set-piece-hold, 0ms) var(--ease-in-out) both;
+  animation-delay: 0ms;
+}
+
+@keyframes set-piece-swallow {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--fx-pull-x, 0px), var(--fx-pull-y, 0px)) rotate(540deg) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes set-piece-sink {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.6) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="summoned"],
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="animated"] {
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms));

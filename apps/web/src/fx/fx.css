@@ -2237,6 +2237,196 @@
   }
 }
 
+/* --------------------------------------------------------------------------- set piece --- */
+
+/* R2800000: a board clear's set piece, over the whole layer and centred on `--fx-x/--fx-y` (the board,
+   the middle of the one side it takes from, or a Trap's or a Unit's own zone). The vortex darkens the
+   sides its wipe takes from (one side's only, `data-side`), turns a spiral there (`--fx-spin` says
+   which way) that shrinks into its centre until the swallow at `--fx-hold`, and flashes its core
+   there; the fold closes black in from the board's edges until the swallow, and then the light comes
+   back at its centre. The cards it takes are the board's own (board.css). It names no card (R202), and
+   the whole cue fades out by --fx-ms, inside the effects' tail (R200). Transform and opacity only. */
+.fx-setPiece {
+  inset: 0;
+  z-index: 0;
+  animation: fx-set-piece-in var(--fx-ms) linear both;
+}
+
+@keyframes fx-set-piece-in {
+  0% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-setPiece-dark {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-core) 30%, var(--pal-black)) 0,
+    color-mix(in srgb, var(--fx-tint-glow) 12%, color-mix(in srgb, var(--pal-black) 60%, transparent)) 35%,
+    color-mix(in srgb, var(--pal-black) 90%, transparent) 75%
+  );
+  animation: fx-set-piece-dark var(--fx-hold) ease-in both;
+}
+
+/* One side's wipe darkens that side alone: an ellipse over its half of the board. */
+.fx-setPiece[data-side="you"] .fx-setPiece-dark,
+.fx-setPiece[data-side="opponent"] .fx-setPiece-dark {
+  background: radial-gradient(
+    ellipse 62% 30% at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-core) 30%, var(--pal-black)) 0,
+    color-mix(in srgb, var(--pal-black) 80%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+@keyframes fx-set-piece-dark {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.8;
+  }
+}
+
+.fx-setPiece-spiral {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 120vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  /* Soft arms that blend into one another, so the turning spiral reads as a swirl, not a starburst. */
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--fx-tint-glow) 34%, transparent) 0deg,
+    transparent 16deg,
+    color-mix(in srgb, var(--fx-tint-rim) 30%, transparent) 30deg,
+    transparent 44deg,
+    color-mix(in srgb, var(--fx-tint-glow) 34%, transparent) 60deg
+  );
+  mask-image: radial-gradient(circle, transparent 0, var(--pal-black) 5%, var(--pal-black) 20%, transparent 46%);
+  animation: fx-set-piece-spiral var(--fx-hold) cubic-bezier(0.5, 0, 0.9, 0.6) both;
+}
+
+.fx-setPiece[data-side="you"] .fx-setPiece-spiral,
+.fx-setPiece[data-side="opponent"] .fx-setPiece-spiral {
+  width: 80vmax;
+}
+
+@keyframes fx-set-piece-spiral {
+  0% {
+    transform: rotate(0deg) scale(1.1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: rotate(calc(var(--fx-spin, 1) * 720deg)) scale(0.05);
+    opacity: 0.9;
+  }
+}
+
+.fx-setPiece-core {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 28vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    var(--pal-white) 0,
+    color-mix(in srgb, var(--fx-tint-core) 80%, transparent) 30%,
+    transparent 70%
+  );
+  animation: fx-set-piece-core calc(var(--fx-ms) - var(--fx-hold)) ease-out var(--fx-hold) both;
+}
+
+@keyframes fx-set-piece-core {
+  0% {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* #100 Ceaseless Void: the board's edges fold in to black, and the light comes back where it stands. */
+.fx-setPiece-edges {
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--fx-x) var(--fx-y);
+  background: radial-gradient(
+    ellipse at var(--fx-x) var(--fx-y),
+    transparent 0,
+    transparent 22%,
+    color-mix(in srgb, var(--fx-tint-core) 40%, var(--pal-black)) 48%,
+    var(--pal-black) 72%
+  );
+  animation: fx-set-piece-fold var(--fx-hold) cubic-bezier(0.6, 0, 0.8, 0.4) both;
+}
+
+@keyframes fx-set-piece-fold {
+  0% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+}
+
+.fx-setPiece-light {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 46vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--fx-tint-glow) 70%, var(--pal-white)) 0,
+    color-mix(in srgb, var(--fx-tint-rim) 40%, transparent) 40%,
+    transparent 70%
+  );
+  animation: fx-set-piece-light calc(var(--fx-ms) - var(--fx-hold)) ease-out var(--fx-hold) both;
+}
+
+@keyframes fx-set-piece-light {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer

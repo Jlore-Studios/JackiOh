@@ -10,12 +10,15 @@
 // very objects in `view.events`.
 // PLAYS IN PROGRESS (R506): a cue reads the innermost open play (`playing`), as #21 Hinder's rider and
 // #27's Radiant cards do. A sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
+// SET PIECES (R2800000): a board clear's held entry sends its bed as it starts (setPieceBeds.ts), and its
+// wipe's removals sound once, condensed, after the hold.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
 import { newEventsSince, type AnimationEntry } from "../game/animations.ts";
 import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS, PLAY_STACK_MAX } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
+import { setPieceBed } from "./setPieceBeds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
 
@@ -161,7 +164,8 @@ export function createSoundDirector(
     return owed.some((item) => item.event === event);
   }
 
-  function flush(items: readonly Owed[]): void {
+  /** Voices `items` as one burst; `offsetMs` (a set piece's hold) delays all of it. */
+  function flush(items: readonly Owed[], offsetMs = 0): void {
     const effects: SoundCue[] = [];
     let endCue: SoundCue | null = null;
     let line: Extract<SoundCue, { kind: "voice" }> | null = null;
@@ -197,11 +201,11 @@ export function createSoundDirector(
     const kept = unique.slice(0, endCue === null ? FLUSH_MAX_SFX : FLUSH_MAX_SFX - 1);
     if (endCue !== null) kept.push(endCue);
     kept.forEach((cue, j) => {
-      send(cue, j * FLUSH_GAP_MS);
+      send(cue, offsetMs + j * FLUSH_GAP_MS);
     });
 
-    if (cardEffect !== null) send(cardEffect, cardEffect.delayMs);
-    if (line !== null) send(line, line.delayMs);
+    if (cardEffect !== null) send(cardEffect, offsetMs + cardEffect.delayMs);
+    if (line !== null) send(line, offsetMs + line.delayMs);
   }
 
   return {
@@ -231,10 +235,13 @@ export function createSoundDirector(
       if (first === undefined) return;
       const at = owed.findIndex((item) => item.event === first);
       if (at > 0) flush(owed.splice(0, at));
+      // R2800000: a set piece's bed, laid across its hold.
+      for (const cue of setPieceBed(entry)) send(cue, cue.delayMs);
 
       // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
       // stack a sound per card; condense the entry to one of each sfx and its most important line.
-      if (entry.sweep !== undefined || entry.zone !== undefined) {
+      // R2800000: so is a wipe, voiced once its set piece's hold is over.
+      if (entry.sweep !== undefined || entry.zone !== undefined || entry.wipe !== undefined) {
         const items: Owed[] = [];
         for (const event of entry.events) {
           const index = owed.findIndex((item) => item.event === event);
@@ -246,7 +253,7 @@ export function createSoundDirector(
           if (view === null) continue;
           items.push({ event, view });
         }
-        flush(items);
+        flush(items, entry.setPiece?.holdMs ?? 0);
         return;
       }
 
