@@ -14808,7 +14808,9 @@
     },
     "2929": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6605588846"
+      ],
       "difficulty_by": {
         "at": "2026-11-03T14:10:33Z",
         "difficulty": "hard",
@@ -14847,9 +14849,7 @@
       "started_at": "2026-11-03T13:57:49Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6605588846"
-      ]
+      "taken_asks": []
     },
     "2930": {
       "action": "build",
