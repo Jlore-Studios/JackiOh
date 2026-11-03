@@ -2892,7 +2892,9 @@ button.modifier-badge[data-open="true"] {
     /* Four field rows and your hand (1.24) stacked; the opponent's hand sits beside their seat.
        The 90px cap keeps each card of a seven-card fan 44px wide at 390px (B30). */
     --card-h: clamp(44px, 10.6vh, 92px);
-    --card-h: clamp(44px, calc((100cqh - 312px) / 5.24), 90px);
+    /* #2877: the budget holds both seats' fixed tray channels too, 18px past the padding the
+       seats already had. */
+    --card-h: clamp(44px, calc((100cqh - 348px) / 5.24), 90px);
     --card-w: calc(var(--card-h) * 0.72);
     /* #2876: a field card is a tile a little wider than it is tall and fills its zone, as on a
        phone held sideways (`--card-w: calc(var(--card-h) * 1.25)` there, whose faces already
@@ -2945,6 +2947,17 @@ button.modifier-badge[data-open="true"] {
   .board > .seat-opponent {
     grid-column: 1;
     grid-row: 1;
+    /* #2877: the opponent's tray hangs below the plate, off the plate and out of flow, but the
+       field's zones pack edge to edge with only the seat's padding and the board's gap between
+       them — so the seat reserves a fixed channel for the tray, which never reaches a zone.
+       The channel is constant: the plate, the seat and the field never move however many
+       effects the seat carries. */
+    padding-bottom: 22px;
+  }
+
+  /* #2877: your tray hangs above your plate; your seat reserves its channel the same way. */
+  .board > .seat-you {
+    padding-top: 22px;
   }
 
   .board > .hand-opponent {
@@ -2996,7 +3009,7 @@ button.modifier-badge[data-open="true"] {
      duos.css's own budget, for its taller rail, the stronger rule. */
   .board:where(:has(> .control-bar > .board-rail)) {
     --board-rail-phone-h: 62px;
-    --card-h: clamp(44px, calc((100cqh - 312px - var(--board-rail-phone-h)) / 5.24), 90px);
+    --card-h: clamp(44px, calc((100cqh - 348px - var(--board-rail-phone-h)) / 5.24), 90px);
   }
 
   .board .control-bar .control {

@@ -333,17 +333,18 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         ];
         expect(solids.length, "zones and hands are mounted").to.be.greaterThan(0);
         const hits: string[] = [];
-        for (const tray of trays) {
-          if (tray === null) continue;
+        (["you", "opponent"] as const).forEach((side, i) => {
+          const tray = trays[i];
+          if (tray === undefined || tray === null) return;
           for (const solid of solids) {
             const box = solid.getBoundingClientRect();
             // Sub-pixel rounding between boxes, too small to hide a real overlap.
             const overlap =
               tray.left < box.right - 1 && tray.right > box.left + 1 && tray.top < box.bottom - 1 && tray.bottom > box.top + 1;
-            if (overlap) hits.push(`${(solid as HTMLElement).dataset.testid ?? "a zone"}`);
+            if (overlap) hits.push(`${(solid as HTMLElement).dataset.testid ?? "a zone"}-by-tray-${side}`);
           }
-        }
-        expect(hits, `no tray covers a zone or a hand at ${where}`).to.deep.eq([]);
+        });
+        expect(hits.join(" "), `no tray covers a zone or a hand at ${where}`).to.eq("");
       });
     });
   }
