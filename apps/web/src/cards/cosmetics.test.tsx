@@ -58,6 +58,8 @@ import {
   type CosmeticKind,
 } from "./cosmetics.ts";
 import { FullArtOwned, OwnCopy } from "./fullArt.ts";
+import { AUGMENT_ANIMATED_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
+import { FULL_ART_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
@@ -973,8 +975,10 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     return out;
   }
 
-  /** The non-default entries of the kinds a player picks, as `[id, kind]`. */
-  const PICKED = COSMETICS.filter((cosmetic) => !cosmetic.default && cosmetic.kind !== "fullArt" && cosmetic.kind !== "portrait");
+  /** The non-default entries of the kinds a player picks, as `[id, kind]`; a card's own version and augments (R2725000) are none. */
+  const PICKED = COSMETICS.filter(
+    (cosmetic) => !cosmetic.default && !(["fullArt", "portrait", "version", "augment"] as readonly string[]).includes(cosmetic.kind),
+  );
 
   it("R1833000 R2755000 every non-default foil, finish, border, table, field and card back has a rule that styles it", () => {
     // Nine of each kind, and the Jlorious card back (R2755000).
@@ -1282,9 +1286,9 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
 
   it("R1953001 every Legendary and Mythic foil, finish, border, table, card back and field moves in a game, in the Collection's samples and on its mini boards", () => {
     // The chase mark is exactly Legendary and Mythic (R1333000), and every kind a player equips has
-    // some, a card's full art among them since #2655 (R2655000).
+    // some, a card's full art among them since #2655 (R2655000), and its version and augments since #2725 (R2725000).
     expect(CHASES.map((cosmetic) => cosmetic.id)).toEqual(COSMETICS.filter((cosmetic) => cosmetic.chase).map((cosmetic) => cosmetic.id));
-    expect(new Set(CHASES.map((cosmetic) => cosmetic.kind))).toEqual(new Set([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS, "fullArt"]));
+    expect(new Set(CHASES.map((cosmetic) => cosmetic.kind))).toEqual(new Set([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS, "fullArt", "version", "augment"]));
     for (const { id } of COSMETICS) expect(isChaseCosmetic(id), id).toBe(CHASES.some((chase) => chase.id === id));
     expect(isChaseCosmetic("no-such-cosmetic")).toBe(false);
 
@@ -1317,6 +1321,14 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
           // R2655000: every Legendary and Mythic full art moves its art wherever its card prints it, by
           // its tier's class, which CardFace sets on every full face of that tier (fullArtTiers.test.tsx).
           expect(animates(cosmeticsCss, '.cf.cf-full-art--animated[data-full-art-motion="animated"] '), id).toBe(true);
+          break;
+        case "version":
+          // R2725000: the Full art version is still, as the Epic full art was; Animated moves it (R2725003).
+          expect(id).toBe(VERSION_FULL_ART_ID);
+          break;
+        case "augment":
+          // R2725000: the Signature signs itself wherever it is worn, by its class on the face.
+          expect(animates(cosmeticsCss, '.cf.cf-full-art--signed[data-full-art-motion="animated"] '), id).toBe(true);
           break;
         default:
           throw new Error(`${id} is a chase of a kind no player equips`);
@@ -1388,5 +1400,44 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
     expect(cf.getAttribute("data-frame")).toBe(PICKS.border);
     expect(cf.getAttribute("data-cosmetic-foil")).toBeNull();
     expect(cf.getAttribute("data-finish")).toBeNull();
+  });
+});
+
+describe("R2725004 no version or augment wears Radiant's gold", () => {
+  /** palette.css's `--pal-*` colors by name: what a `var(--pal-…)` in a rule draws. */
+  const PALETTE = new Map(
+    [...readFileSync(join(HERE, "..", "palette.css"), "utf8").matchAll(/(--pal-[a-z0-9-]+):\s*(#[0-9a-fA-F]+)/g)].map((match) => [match[1] ?? "", match[2] ?? ""]),
+  );
+
+  /** Every color `body` draws: its `#…` colors and the palette colors it names, without the `#`. */
+  function colorsOf(body: string): string[] {
+    const named = [...body.matchAll(/var\((--pal-[a-z0-9-]+)\)/g)].map((match) => {
+      const hex = PALETTE.get(match[1] ?? "");
+      expect(hex, match[1]).toBeDefined();
+      return hex ?? "";
+    });
+    return [...hexes(body), ...hexes(named.join(" "))];
+  }
+
+  it("R2725004 no version or augment colour is within the Radiant gold window", () => {
+    // The rules that draw the Full art version's band and the augments: the signature, its ink, pen and burst.
+    const drawn = rules(cosmeticsCss).filter(
+      (rule) => /\.cf-signature|\.cf-full-art-sweep|\.cf-full-art--animated|\.cf-full-art--signed/.test(rule.selector),
+    );
+    expect(drawn.length).toBeGreaterThan(5);
+    const colors = drawn.flatMap((rule) => colorsOf(rule.body).map((hex) => [rule.selector, hex] as const));
+    expect(colors.length).toBeGreaterThan(0);
+    for (const [selector, hex] of colors) expect(inRadiantGold(hex), `${selector}: #${hex}`).toBe(false);
+    // The window does hold the Radiant face's own golds, so the test can fail.
+    expect(inRadiantGold("ffd24a") && inRadiantGold("f6d77a")).toBe(true);
+
+    // R2725000: a card offered Animated with no motion of its own borrows one that draws no gold particle.
+    const borrowers = ["core-022", "core-083", "classic-044", "stinkyscape-001"].filter((id) => offeredOn(AUGMENT_ANIMATED_ID, id) && FULL_ART_MOTION[id] === undefined);
+    expect(borrowers.length).toBeGreaterThan(1);
+    for (const id of borrowers) {
+      const markup = particleMarkup(artMotionFor(id), id);
+      expect(markup, id).not.toBe("");
+      for (const hex of hexes(markup)) expect(inRadiantGold(hex), `${id}'s particles: #${hex}`).toBe(false);
+    }
   });
 });

@@ -242,7 +242,8 @@ impl FullArtPick {
 }
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
-/// wears of its own: a foil, a finish, a border and its full-art pick ([`FullArtPick`], R2655000). A kind
+/// wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may
+/// name a version, and the augments layered on it (migration 0079, R2725000). A kind
 /// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
 /// id is kept as written, an unknown one too, and judged only where it is worn (`loadout::freeze_loadout`,
 /// R1834002).
@@ -258,12 +259,19 @@ pub struct CardPicks {
     pub border: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub full_art: Option<FullArtPick>,
+    /// R2725000: the augments the card layers on its version, by id, as written: none is no pick.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub augments: Vec<String>,
 }
 
 impl CardPicks {
     /// Whether the card has no pick of its own at all, which the store keeps as no row.
     pub fn is_empty(&self) -> bool {
-        self.foil.is_none() && self.finish.is_none() && self.border.is_none() && self.full_art.is_none()
+        self.foil.is_none()
+            && self.finish.is_none()
+            && self.border.is_none()
+            && self.full_art.is_none()
+            && self.augments.is_empty()
     }
 }
 
@@ -1586,6 +1594,11 @@ mod pg {
         Ok(true)
     }
 
+    /// R2725000: a pick's augments as migration 0079's column holds them: NULL for none.
+    fn augments_of(picks: &CardPicks) -> Option<&[String]> {
+        (!picks.augments.is_empty()).then_some(picks.augments.as_slice())
+    }
+
     fn card_picks_of(row: &PgRow) -> Result<CardPicks, StoreError> {
         Ok(CardPicks {
             card_id: row.try_get("card_id")?,
@@ -1593,13 +1606,16 @@ mod pg {
             finish: row.try_get("finish")?,
             border: row.try_get("border")?,
             full_art: FullArtPick::of_row(row.try_get("full_art")?, row.try_get("full_art_id")?),
+            augments: row
+                .try_get::<Option<Vec<String>>, _>("augments")?
+                .unwrap_or_default(),
         })
     }
 
     pub async fn card_picks_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<CardPicks>, StoreError> {
         run_as(t, Some(profile_id)).await?;
         sqlx::query(
-            r#"select card_id, foil, finish, border, full_art, full_art_id from public.card_cosmetic_picks
+            r#"select card_id, foil, finish, border, full_art, full_art_id, augments from public.card_cosmetic_picks
                 where profile_id = $1::uuid
                 order by card_id collate "C""#,
         )
@@ -1629,13 +1645,13 @@ mod pg {
             return Ok(());
         }
         sqlx::query(
-            "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at, full_art_id)
+            "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at, full_art_id, augments)
              values ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::boolean,
-                     to_timestamp($7::double precision / 1000.0), $8::text)
+                     to_timestamp($7::double precision / 1000.0), $8::text, $9::text[])
              on conflict (profile_id, card_id) do update
                 set foil = excluded.foil, finish = excluded.finish, border = excluded.border,
                     full_art = excluded.full_art, full_art_id = excluded.full_art_id,
-                    updated_at = excluded.updated_at",
+                    augments = excluded.augments, updated_at = excluded.updated_at",
         )
         .bind(profile_id)
         .bind(picks.card_id.as_str())
@@ -1645,6 +1661,7 @@ mod pg {
         .bind(picks.full_art.as_ref().map(FullArtPick::prints))
         .bind(at)
         .bind(picks.full_art.as_ref().and_then(FullArtPick::id))
+        .bind(augments_of(picks))
         .execute(&mut **t)
         .await?;
         Ok(())
@@ -1660,9 +1677,9 @@ mod pg {
         let mut written = 0;
         for card in picks.iter().filter(|card| !card.is_empty()) {
             written += sqlx::query(
-                "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at, full_art_id)
+                "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at, full_art_id, augments)
                  values ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::boolean,
-                         to_timestamp($7::double precision / 1000.0), $8::text)
+                         to_timestamp($7::double precision / 1000.0), $8::text, $9::text[])
                  on conflict (profile_id, card_id) do nothing",
             )
             .bind(profile_id)
@@ -1673,6 +1690,7 @@ mod pg {
             .bind(card.full_art.as_ref().map(FullArtPick::prints))
             .bind(at)
             .bind(card.full_art.as_ref().and_then(FullArtPick::id))
+            .bind(augments_of(card))
             .execute(&mut **t)
             .await?
             .rows_affected();

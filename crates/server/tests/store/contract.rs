@@ -10973,6 +10973,54 @@ mod cosmetic_loadouts {
         );
     }
 
+    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0079's
+    /// `augments`, and the `full_art_id` check widened to `version-…`), through a put and an upload, a row
+    /// of augments alone among them; a put with none takes them away, and an id the registry does not know
+    /// is kept too.
+    async fn r2725000_card_picks_keep_augments(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        let both = json!({
+            "cardId": "core-022",
+            "fullArt": "version-full-art",
+            "augments": ["augment-signature", "augment-animated"],
+        });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(both.clone()), now));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([both]));
+        // A put writes the row whole: the version kept, the augments gone.
+        let version = json!({ "cardId": "core-022", "fullArt": "version-full-art" });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(version.clone()), now + 1));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([version]));
+        // Augments alone are a row; the upload writes them too, one this build does not know among them.
+        let alone = json!({ "cardId": "core-008", "augments": ["augment-animated"] });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(alone.clone()), now + 2));
+        let upload = vec![picks(
+            json!({ "cardId": "core-004", "augments": ["augment-from-a-newer-client"] }),
+        )];
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, now + 3)),
+            1
+        );
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "augments": ["augment-from-a-newer-client"] },
+                alone,
+                version,
+            ])
+        );
+        // An empty list is no pick: the row of augments alone is deleted.
+        let none = json!({ "cardId": "core-008", "augments": [] });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(none), now + 4));
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "augments": ["augment-from-a-newer-client"] },
+                version,
+            ])
+        );
+    }
+
     /// R1834002: a Best-of-1 ticket and a room freeze their deck's slots beside the deck, a trio's
     /// decks theirs inside it, a match both seats' loadouts, and a bot's decks and trio theirs; each
     /// reads back as it was written, and one written without them reads back without them.
@@ -11242,6 +11290,7 @@ mod cosmetic_loadouts {
         r1834000_card_picks_put_upload_get_cascade,
         r2655000_card_picks_keep_a_full_art_id,
         r2715000_card_picks_keep_an_animated_art_id,
+        r2725000_card_picks_keep_augments,
         r1834002_frozen_slots_and_loadouts_round_trip,
         r1834005_bots_keep_their_cosmetics,
         r1834005_cosmetic_owners_count_people_and_their_first_grant,
