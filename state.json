@@ -14920,10 +14920,8 @@
       ]
     },
     "2930": {
-      "action": "build",
-      "asks": [
-        "c:6605595402"
-      ],
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T14:29:46Z",
         "difficulty": "hard",
@@ -14942,27 +14940,30 @@
         "reason": "rated difficulty:hard, which needs a stronger model than this run's to plan it",
         "trail": "ame bulk edit |\n- | `crates/cards/src/scripts/training_grounds/*.rs` with an adjacent pair | change | same bulk edit |\n- | 9 cards files with differing `ids` (step 6 list) | change | rename only, per mapping in step 6 |\n- | engine rules files with common `ids`/`input`/`by` (enumerated in step 5) | change | delete def, extend the harness `use` |\n- | 12 engine files with differing bodies (step 6 list) | change | rename only, per mapping in step 6 |\n- | `crates/ai/tests/ai/determinize_sides.rs`, `crates/cards/tests/cross/setup_and_mulligan.rs` | change | delete common `ids`, import the home's `ids` |\n- Must not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`, anything under `crates/engine/src/`, and `spec/` \u2014 a pure refactor with no rules decision, so no ruling note and no new R-number (CLAUDE.md rules 3, 4, 6, 9 all hold: tests stay in their files, helpers stay pure, no numbers added).\n- ## Steps\n- 1. Record the before counts first (verified on base `c7145e4`: cards lib **8252** passed, `tests/cards.rs` **1079** passed, rules **2471** passed, rules_2 **1298** passed, all 0 failed). Re-run `cargo test -p jackioh-cards 2>&1 | grep \"test result\"` and `cargo test -p jackioh-engine --features test\u2026\n- 2. In `crates/engine/tests/rules/fixtures/harness.rs`, add after `ids_of` (line 140): `/// The cards' ids, the rules tests' common `ids` over `ids_of` (#2930).` plus `pub fn ids(cards: &[CardInstance]) -> Vec<String> { ids_of(cards) }`. Decision: a thin wrapper so ~36 files keep their `ids(...)` ca\u2026\n- 3. In `crates/cards/src/lib.rs` after `scenario` (~line 217), add `/// The cards' ids, the card tests' shared `ids` (#2930).` plus `#[cfg(test)] pub(crate) fn ids(cards: &[jackioh_engine::CardInstance]) -> Vec<String> { cards.iter().map(|card| card.id.clone()).collect() }`. Decision: cards unit tes\u2026\n- 4. Bulk card pass over `grep -rl 'register_all();' crates/cards/src/scripts` (501 files, 2240 pairs): delete line L iff line L+1 contains `scenario(` \u2014 strictly adjacent, exactly matching the issue's grep and the step-8 check. Loop-header, blank-line, `setup(`-caller (e.g. `c005_guy_att.rs`) and `u\u2026\n- 5. Engine common deletions. `ids`: for each file from `grep -rln 'fn ids(cards: &\\[CardInstance\\])' crates/engine/tests/rules`, delete the 3-line def and add `ids` to its `use crate::rules::fixtures::harness::{...}` list. `input`: same with `grep -rln -e 'fn input(body: Value)' -e 'fn input(literal\u2026\n- 6. Renames (def plus every call site in the same file, nothing else). Engine: `effects_choose.rs`, `play_choices.rs`, `play_choices_filters.rs` `ids(selections)` \u2192 `selection_ids`; `scorer.rs` `ids(scored)` \u2192 `scored_ids`; `modifiers.rs` nested `ids(effects)` \u2192 `effect_ids`; `rotation.rs` `ids(&[&C\u2026\n- 7. In `determinize_sides.rs` delete its common `ids` and add `ids` to the existing `use super::support::{...}` list. In `setup_and_mulligan.rs` delete its common `ids` and change line 20 to `use super::{ids, register_fixture_script};`. Call sites keep their spelling.\n- 8. In `crates/tools/tests/acceptance.rs`: add `\"ids\", \"input\", \"by\"` to the harness row's `names`; add `\"ids\"` to the cross row's and the ai row's `names`; insert a new row after the harness row with `home: \"crates/cards/src/lib.rs\"`, `names: &[\"ids\"]`, `statics: &[]`, `structs: &[]`, `dirs: &[\"cra\u2026\n- 9. Run `cargo fmt --check`, then the commands in Tests, then `cargo clippy -p jackioh-cards --all-targets -- -D warnings`, `cargo clippy -p jackioh-engine --all-targets --features testkit -- -D warnings`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, and `cargo jackioh spec check`.\n- ## Tests\n- - `cargo test -p jackioh-tools --test acceptance helpers_` \u2014 existing scanner tests still pass.\n- - `cargo test -p jackioh-tools --test acceptance card_tests` \u2014 the new scan test passes; prove it fails by temporarily re-adding one adjacent pair, then revert.\n- - `cargo test -p jackioh-cards` \u2014 passes with lib 8252 and integration 1079, matching step 1.\n- - `cargo test -p jackioh-engine --features testkit --test 'rules*'` \u2014 passes with rules 2471 and rules_2 1298, matching step 1.\n- - `cargo test -p jackioh-ai --test ai` and `cargo test -p jackioh-cards --test cards setup_and_mulligan` \u2014 touched suites pass.\n- ## Done when\n- - [ ] No adjacent `register_all();`/`scenario(` pair remains under `crates/cards/src/scripts/`, and the new acceptance test names one if reintroduced.\n- - [ ] No rules, cards or AI test file defines `ids`, `input` or `by` outside the four homes, and the acceptance suite fails on a planted copy of each.\n- - [ ] All four `test result` totals match step 1; no test renamed, no assertion touched.\n- - [ ] `cargo fmt --check`, the three step-9 clippy invocations, and `cargo jackioh spec check` pass.\n- ## Risks\n- - Merge conflicts with in-flight card PRs: hundreds of one-line files change; the per-set grouping above allows landing set by set in a quiet window.\n- - `use crate::scenario;` beside `use jackioh_engine::testkit::*;` relies on explicit-over-glob shadowing (the `c021_moonberry.rs` precedent); the compiler rejects any module where it does not resolve \u2014 build each set.\n- - `register_all` is idempotent (`OnceLock`), and `crate::scenario` registers on first call, so deletion is safe even inside loops; registers serving `setup()`, fixture catalogs or `under_kept` stay by the adjacency rule.\n- - Scan false positives: comment stripping mirrors the existing scanners; a prose `scenario(` on the line after a register in a comment would flag \u2014 reword the comment, never weaken the check.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-2930 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-2930/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-03T13:58:30Z",
-      "owner_why": "it took it up",
+      "live": "planning",
+      "owner": "claude-3",
+      "owner_since": "2026-11-03T17:42:00Z",
+      "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
       "pending_request": false,
       "planned_at": "2026-11-03T14:29:55Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-03T13:52:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41649181662",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-11-03T13:58:30Z",
+      "run_id": "pending:3e27bea9-1793727687",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-03T17:42:00Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6605595402"
+      ]
     },
     "2931": {
       "action": "revise",
@@ -15587,9 +15588,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T17:23:10Z",
+    "at": "2026-11-03T17:42:00Z",
     "url": "",
-    "what": "plan #2929 on claude-7"
+    "what": "plan #2930 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T17:15:26Z",
