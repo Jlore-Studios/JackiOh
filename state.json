@@ -14002,9 +14002,12 @@
         "by": "`muse` (medium)",
         "sha": "334ef21b562192c1792374b8e2c7dccbebc1bb00"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T10:32:47Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2790,
       "kind": "revise",
       "last_findings": [],
