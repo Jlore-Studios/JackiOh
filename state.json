@@ -16450,7 +16450,10 @@
       "issue": 2790,
       "kind": "revise",
       "merge_owner": "muse",
+      "queued_at": "2026-11-03T10:31:00Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
