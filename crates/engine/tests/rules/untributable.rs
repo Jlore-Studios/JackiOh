@@ -7,8 +7,8 @@ use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes};
 use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::credit::{body, in_hand, playing, put, safe, safe_field, slot, tribute_one};
-use crate::rules::fixtures::harness::{act, live, sink_for};
+use crate::rules::fixtures::credit::{body, playing, safe, safe_field, tribute_one};
+use crate::rules::fixtures::harness::{act, in_hand, live, put, sink_for, slot};
 
 mod r1220_untributable {
     use super::*;
