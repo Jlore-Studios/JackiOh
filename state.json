@@ -16442,6 +16442,8 @@
       }
     },
     "2965": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T19:19:50Z",
@@ -16455,8 +16457,11 @@
         "trail": "mmand\": \"grep -B2 -A12 'data-name-tier is nameTier' /tmp/rn/vitest.log | grep -v '^\\\\s*$' | head -30 | cut -c1-250\", \"description\": \"Read the first web failure detail\"}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/rn/vitest.log 2>/dev/null; do sleep 20; done; grep -E 'Test Files|Tests |exit=' /tmp/rn/vitest.log; grep -E '^ FAIL ' /tmp/rn/vitest.log | cut -c1-250\", \"desc\u2026\n- Bash: {\"command\": \"grep -c '' /tmp/rn/vitest.log; grep -E '\\u00d7' /tmp/rn/vitest.log | cut -c1-200 | head -20; tail -3 /tmp/rn/test2.log | cut -c1-150\", \"description\": \"Check interim web and cargo status\"}\n- Bash: {\"command\": \"grep -rn 'R923001 a word matches part of the name' apps/web/src | head -2\", \"description\": \"Locate the R923001 web test\"}\n- Bash: {\"command\": \"sed -n '1,60p' apps/web/src/practice/sandbox.test.ts; git diff apps/web/src/practice/sandbox.test.ts\", \"description\": \"Read the sandbox search test and its diff\"}\n- Bash: {\"command\": \"sed -i 's/searchCards(pool, \\\"BIGO\\\", pool.length)/searchCards(pool, \\\"SPECIE\\\", pool.length)/' apps/web/src/practice/sandbox.test.ts && grep -n 'SPECIE\\\"' apps/web/src/practice/sandbox.\u2026\n- Bash: {\"command\": \"git grep -n -I -i -E 'bigo|eugen|\\\\borienta[^t]|jork|cn-?vi|great repl|repl[a-z]* theor|\\u504f\\u6267\\u8005|\\u4e54\\u514b' -- . ':!crates/cards/patches' ':!training/history' ':!reviews' ':\u2026\n- Bash: {\"command\": \"echo \\\"- 23:15 web: sandbox.test.ts searched \\\\\\\"BIGO\\\\\\\" (prefix the perl missed) -> \\\\\\\"SPECIE\\\\\\\". Other web failures so far look like timeouts under load (cargo tests running); reche\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/rn/vitest.log 2>/dev/null; do sleep 20; done; grep -E 'Test Files|Tests |exit=' /tmp/rn/vitest.log; grep -E '\\u00d7' /tmp/rn/vitest.log | cut -c1-200\", \"descr\u2026\n- Bash: {\"command\": \"sed -n '/Failed Tests 7/,$p' /tmp/rn/vitest.log | grep -E 'FAIL|Error|timed out|expected|AssertionError' | cut -c1-250 | head -30\", \"description\": \"Read failure reasons from vitest summa\u2026\n- Bash: {\"command\": \"grep -E 'test result|Running' /tmp/rn/test2.log | tail -6 | cut -c1-160; grep -E '^test .* FAILED|^failures:' /tmp/rn/test2.log | head\", \"description\": \"Check cargo test progress\"}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/rn/test2.log 2>/dev/null; do sleep 20; done; grep -E '^exit=' /tmp/rn/test2.log; grep -E '^test .* FAILED' /tmp/rn/test2.log | head -20\", \"description\": \"Wait\u2026\n- said: The full workspace test suite passes (exit 0). Checking the wire directory is clean and rerunning the timed-out web files without the CPU load.\n- Bash: {\"command\": \"grep -E 'test result' /tmp/rn/test2.log | awk '{p+=$4; f+=$6} END {print \\\"binaries:\\\", NR, \\\"passed:\\\", p, \\\"failed:\\\", f}'; git status --porcelain -- apps/web/src/wire; echo \\\"wire-sta\u2026\n- Bash: {\"command\": \"git diff --stat -- apps/web/src/wire; git diff -- apps/web/src/wire | grep '^[-+]' | grep -v '^[-+][-+]'\", \"description\": \"Confirm wire diff is only the doc comment\"}\n- Bash: {\"command\": \"echo \\\"- 23:40 cargo test --workspace (testkit,ts, --no-fail-fast): 41 binaries, 17717 passed, 0 failed; wire diff = only GameEvent.ts doc line (ts-rs output matches). Rerunning timed-ou\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2953 && cargo fmt --check && echo FMT-OK; cargo clippy --workspace --all-targets -- -D warnings > /tmp/rn/clippy.log 2>&1; echo \\\"exit=$?\\\" >> /tmp/r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2953 && grep -n '\\\"typecheck\\\"\\\\|\\\"lint\\\"' e2e/package.json package.json apps/web/package.json\", \"description\": \"Look for an e2e typecheck script\"}\n- Bash: {\"command\": \"timeout 1200 pnpm --dir e2e typecheck > /tmp/rn/e2e-tc.log 2>&1; echo \\\"exit=$?\\\"; tail -5 /tmp/rn/e2e-tc.log | cut -c1-200; timeout 600 pnpm exec tsc -p e2e/cypress/component/tsconfig.j\u2026\n- Bash: {\"command\": \"head -12 /tmp/rn/e2e-tc.log | cut -c1-200; git status --short | grep -v -E '^( M|RM|R ) ' | head\", \"description\": \"Check whether pnpm changed anything\"}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/rn/clippy.log 2>/dev/null; do sleep 20; done; tail -4 /tmp/rn/clippy.log | cut -c1-200; cat /tmp/claude-1001/-home-runner-work--temp-work-item-2953/87686683-e\u2026\n- said: Clippy and fmt are clean. Rebuilding the release tools in this worktree to re-run the catalog, patches, spec and golden checks on the final tree.\n- Bash: {\"command\": \"echo \\\"- 23:55 cargo fmt --check ok; clippy --workspace --all-targets -D warnings ok; e2e typecheck + component tsc ok; 6 timed-out web files pass on rerun (371 tests).\\\" >> .bot-notes.m\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/rn/checks.log 2>/dev/null; do sleep 15; done; cat /tmp/rn/checks.log | cut -c1-200\", \"description\": \"Wait for the jackioh checks\", \"timeout\": 590000}\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/headsnap && git worktree remove --force ../jackioh-wt/base && git worktree prune && git worktree list; git branch --list 'wt/*'\", \"description\":\u2026\n- Bash: {\"command\": \"P='Bigot|bigot|BIGOT|Oriental|oriental|ORIENTAL|Great Replacement|great_replacement|great-replacement|GREAT_REPLACEMENT|Replacement Theory|Eugenics|eugenics|EUGENICS|CN-Vir|CN Viral|cn_v\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\n- Build run 1 (opus): DONE. All steps built; every check green lo\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json,re\\nc=json.load(open('crates/cards/catalog.json'))\\nfor id,d in c.items():\\n words=re.split(r'[^a-z0-9]+', d['name'].lower())\\n if any(w.startswith('breed'\u2026\n- Bash: {\"command\": \"git grep -n 'eugenic\\\\|breed' -- 'apps/web/src/cards/art/*.test.*' | head\", \"description\": \"Check art tests for motif word expectations\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: rename six cards whose names wouldn't pass Roblox moderation\"} --> This renames the six cards (eight catalog entries) from #2953 on every platform. Ids, costs, stats, effects, tags (Super-Virus keeps `CN`), pictures and voice lines are unchanged. One fi\u2026"
       },
       "issue": 2953,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T22:03:09Z",
         "from_run": "41702257788",
         "gates": [
           {
@@ -16548,7 +16553,11 @@
         "source": "build",
         "until": "2026-11-03T22:32:02Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-03T22:02:02Z",
+      "run_id": "pending:fceea938-1793743364",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16567,6 +16576,9 @@
         "provider": "claude-6",
         "run": "41702257788"
       },
+      "started_at": "2026-11-03T22:03:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16580,9 +16592,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T21:51:52Z",
+    "at": "2026-11-03T22:03:09Z",
     "url": "",
-    "what": "spot-check #2961 on claude-8"
+    "what": "review #2965 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-03T21:47:12Z",
