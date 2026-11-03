@@ -262,11 +262,13 @@
 }
 
 .power-used {
-  /* #2877: a corner tag on the chip, first in its DOM order so the chip's clip never takes it
-     and assistive tech still reads it first; absolute, so the chip keeps one width used or not. */
+  /* #2877: a corner tag on the chip, first in its DOM order so assistive tech still reads it
+     first; absolute, so the chip keeps one width used or not. It sits inside the chip's corner:
+     the chip's `overflow: hidden` (which the name's ellipsis needs) clips anything hung outside
+     the padding box. */
   position: absolute;
-  top: -8px;
-  right: -4px;
+  top: 0;
+  right: 0;
   flex: none;
   padding: 0 5px;
   border: 1px solid var(--line-bright);
@@ -346,12 +348,9 @@ button.modifier-badge[data-open="true"] {
 
 /* #2877: the hero's status tray (`HeroTray.tsx`): the seat's modifiers, secrets and Rift flag in
    one row hung off the plate, out of flow, toward the field — above your hero, below the
-   opponent's — so the plate keeps one size however many effects the seat carries. The seat keeps
-   its stacking over the field, so the opponent's tray paints over the mat, never under it. */
-.seat:has(.hero-tray) {
-  z-index: var(--z-popover);
-}
-
+   opponent's — so the plate keeps one size however many effects the seat carries. Only the tray
+   itself is raised, over the mat and never under it: raising the whole seat hid the name of a
+   card lifted over the seat's empty lower half (B45), and every seat holds a tray. */
 .hero-tray {
   position: absolute;
   z-index: var(--z-popover);

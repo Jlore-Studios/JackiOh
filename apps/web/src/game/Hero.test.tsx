@@ -253,7 +253,13 @@ describe("#2877 a used Heroic Power's mark is an overlay on a fixed-width chip",
   it("#2877 board.css pins the mark to an overlay and the chip to one width", () => {
     const boardCss = readSheet("src/game/board.css");
     expect(boardCss).toMatch(/\.power-used\s*\{[^}]*position:\s*absolute;/);
+    // Inside the chip's corner: the chip's `overflow: hidden` clips anything hung outside it.
+    expect(boardCss).toMatch(/\.power-used\s*\{[^}]*top:\s*0;/);
+    expect(boardCss).toMatch(/\.power-used\s*\{[^}]*right:\s*0;/);
     expect(boardCss).toMatch(/\.power-button,\s*\.power-tag\s*\{[^}]*width:\s*14ch;/);
+    // B45: no seat-wide raise — only the tray itself carries the popover level, so a lifted
+    // card's name never slides under a seat.
+    expect(boardCss).not.toMatch(/\.seat:has\(\.hero-tray\)/);
   });
 });
 
