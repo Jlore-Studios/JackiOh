@@ -15470,11 +15470,11 @@
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "41578223588",
+            "run": "41587423898",
             "tier": "strong"
           }
         ],
-        "sha": "d192b6ecaaee4d15b226243a53082b3c99909119",
+        "sha": "11f2d406774d9e4c49a2ac41c0606582ac8cad98",
         "tiers": {
           "claude": "strong"
         }
