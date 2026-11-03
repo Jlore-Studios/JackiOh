@@ -14887,8 +14887,15 @@
     "what": "build #2878 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-03T02:03:42Z",
-    "notes": [],
+    "at": "2026-11-03T02:10:19Z",
+    "notes": [
+      "#2878 needs a plan",
+      "delivered plan #2877 on muse (run 41562940233): planned",
+      "started build #2877 on muse (run 41564599735)",
+      "started build #2878 on muse (run 41564656268)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15593,7 +15600,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T02:03:42Z",
+  "loop_tick": "2026-11-03T02:10:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
