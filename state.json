@@ -13252,12 +13252,30 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "docs/polish/9-card-animations.md"
+          ],
+          "from": "c218167df2955acbb4808d7f67c04f8831d45c3f",
+          "main": "2c11d3a71f9472aadf1f5d75be0ef3a601e8dc3b"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "c218167df2955acbb4808d7f67c04f8831d45c3f",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "41573217519",
+            "tier": "strong"
+          }
+        ],
+        "sha": "9b4250776601821ca947bf855f8f5668bce9d4e2",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2832": {
