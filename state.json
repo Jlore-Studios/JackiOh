@@ -14579,13 +14579,10 @@
     "what": "review #2920 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-03T11:02:57Z",
+    "at": "2026-11-03T11:12:42Z",
     "notes": [
-      "delivered review #2917 on muse (run 41618453833): approved",
-      "delivered build #2797 on claude-1 (run 41608299088): built",
-      "started review #2920 on claude-1 (run 41624685425)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "CI on #2917: #2917: re-ran the failed jobs of run 41618199472",
+      "delivered revise #2913 on muse (run 41620162550): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15291,7 +15288,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T11:02:57Z",
+  "loop_tick": "2026-11-03T11:12:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
