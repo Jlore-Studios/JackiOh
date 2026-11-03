@@ -1,5 +1,6 @@
 // R502, R670, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card
-// recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts).
+// recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2795000:
+// Classic+'s Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -7,7 +8,10 @@ import { fusionForge } from "./core/craftACard.ts";
 import { manaCrack } from "./core/hinder.ts";
 import { legendaryTide } from "./core/transmogulate.ts";
 import { perfectWish } from "./core/zephrys.ts";
+import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
+import { constantStamp } from "./classicplus/kysConstant.ts";
+import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
@@ -22,6 +26,9 @@ export const CARD_RECIPES = {
   legendaryTide,
   perfectWish,
   fusionForge,
+  rollbackSweep,
+  constantStamp,
+  inkTear,
   jadeCrack,
   cnSweep,
   harmonyWave,
