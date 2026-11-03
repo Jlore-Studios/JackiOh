@@ -15459,15 +15459,8 @@
       }
     },
     "2940": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41673819881",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-03T16:56:04Z",
-        "until": "2026-11-03T17:26:04Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15479,25 +15472,24 @@
         "reason": "planned on opus",
         "trail": ",480p apps/web/src/cards/CardFace.tsx\", \"description\": \"Read CardFace look and art rendering\"}\n- Bash: {\"command\": \"grep -n \\\"data-frame\\\" apps/web/src/cards/cosmetics.css | head -20; grep -n \\\"^\\\\.cf\\\\[data-frame\\\\]\\\\|\\\\.cf\\\\[data-frame\\\\] \\\" apps/web/src/cards/cosmetics.css | head; grep -n \\\"\\\\-\\\\-c\u2026\n- said: Appending three `version` entries breaks **11 assertions in 9 tests**: 10 are unit tests in `crates/server/src/cosmetics.rs`, and one is in `tests/api/cosmetics.rs`. Every one of them either cuts the registry by position from its end or asserts an exact count or id list. The rest of the server and \u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art; awk 'NR>=166 && NR<=240' stinkyscape.ts | grep -n \\\"defId\\\"; grep -n \\\"ART_BOX =\\\\|export const BOX\\\\|const BOX =\\\\|SVG_OPEN =\\\" procedural.ts stinkyscape.ts t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2940; grep -rn \\\"export function isGlitch\\\" -A 5 apps/web/src/cards/ | head; grep -n \\\"GLITCH_ID\\\\|const GLITCH\\\" apps/web/src/cards/glitch.ts | head\u2026\n- Bash: {\"command\": \"grep -n \\\"GLITCH_DEF_ID\\\" apps/web/src/cards/glitch.ts | head -3; grep -rn \\\"GLITCH_DEF_ID =\\\" apps/web/src | head -3\", \"description\": \"Find Glitch definition id\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nprint(type(d), len(d))\\nvals = d.values() if isinstance(d, dict) else d\\nfrom collections import Counter\\nc\u2026\n- Bash: {\"command\": \"sed -n 520,560p apps/web/src/cards/fullArtTiers.test.tsx; sed -n 665,760p apps/web/src/cards/fullArtTiers.test.tsx\", \"description\": \"Read offered-look drawing tests to copy pattern\"}\n- Bash: {\"command\": \"sed -n 1287,1340p apps/web/src/cards/cosmetics.test.tsx\", \"description\": \"Read chase motion test with version case\"}\n- Bash: {\"command\": \"sed -n 495,512p apps/web/src/collection/collection.test.tsx; echo ----; sed -n 645,662p apps/web/src/collection/collection.test.tsx; echo ----; sed -n 710,728p apps/web/src/collection/co\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nfor k in ['core-002','core-022','core-083','core-001','classicplus-012','stinkyscape-154','core-008']:\\n v=\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nxs=[(k,v['name']) for k,v in d.items() if not v.get('token') and v['set']=='Core' and v['type']=='Spell' an\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\.cf-art-frame\\\" apps/web/src/cards/cards.css | head -20; sed -n 436,470p apps/web/src/cards/cards.css; sed -n 268,280p apps/web/src/cards/cards.css\", \"description\": \"Read art\u2026\n- Bash: {\"command\": \"sed -n 40,60p apps/web/src/cards/cosmetics.css; sed -n 96,104p apps/web/src/cards/cosmetics.css; grep -n \\\"\\\\-\\\\-cf-edge\\\" apps/web/src/cards/cards.css apps/web/src/cards/cosmetics.css |\u2026\n- Bash: {\"command\": \"sed -n 120,140p apps/web/src/collection/CardCosmeticsView.tsx; grep -n \\\"collection-strip__picture\\\" apps/web/src/collection/collection.css | head\", \"description\": \"Read StripPicture in \u2026\n- Bash: {\"command\": \"sed -n 780,862p apps/web/src/cards/cosmetics.css\", \"description\": \"Read signature CSS block\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\-\\\\-pal-slate\\\\|\\\\-\\\\-pal-white\\\\|\\\\-\\\\-pal-paper\\\\|\\\\-\\\\-pal-ink\\\\|\\\\-\\\\-pal-graphite\\\\|\\\\-\\\\-pal-grey\\\\|\\\\-\\\\-pal-gray\\\" apps/web/src/palette.css | head -20\", \"description\"\u2026\n- Bash: {\"command\": \"grep -n \\\"fn r2725001\\\\|fn r2725000\\\\|fn r2725002\\\" crates/server/tests/api/*.rs crates/server/src/**/*.rs crates/server/src/*.rs crates/server/tests/store/*.rs 2>/dev/null\", \"descriptio\u2026\n- Bash: {\"command\": \"sed -n 495,580p crates/server/tests/api/card_picks.rs; grep -n \\\"not offered on that card\\\" crates/server/tests/api/tokens.rs crates/server/tests/api/cosmetic_packs.rs | head\", \"descript\u2026\n- Bash: {\"command\": \"grep -n \\\"async fn \\\\|fn r\\\" crates/server/tests/api/tokens.rs | awk -F: '$1<1300' | tail -2; sed -n 1270,1310p crates/server/tests/api/tokens.rs; grep -n \\\"async fn \\\\|fn r\\\" crates/ser\u2026\n- Bash: {\"command\": \"sed -n 652,708p apps/web/src/collection/collection.test.tsx\", \"description\": \"Read strip offer test fully\"}\n- Bash: {\"command\": \"grep -rln \\\"VERSION_FULL_ART_ID\\\\|COSMETIC_OFFERS\\\\|kind === \\\\\\\"version\\\\\\\"\\\\|chaseCandidates\\\\|tokenCandidates\\\" apps/web/src e2e --include=*.test.ts --include=*.test.tsx --include=*.c\u2026\n- Bash: {\"command\": \"grep -n \\\"VERSION_FULL_ART_ID\\\\|COSMETIC_OFFERS\\\\|\\\\\\\"version\\\\\\\"\\\\|toHaveLength\\\\|offeredOn\\\" apps/web/src/collection/TokenOffer.test.tsx apps/web/src/shop/Shop.test.tsx | head -30; gre\u2026\n- Bash: {\"command\": \"git show HEAD -- crates/server/README.md | sed -n 1,60p | grep \\\"^+\\\" ; grep -n \\\"version\\\\|Version\\\" apps/web/README.md | head\", \"description\": \"Check READMEs Part 1 touched for version\u2026\n- Bash: {\"command\": \"sed -n 80,177p e2e/cypress/component/card-versions.cy.tsx\", \"description\": \"Read rest of component spec\"}\n- Bash: {\"command\": \"git show HEAD -- spec/rulings/R1313000.md spec/rulings/R2655000.md | grep \\\"^[+-]\\\" | grep -v \\\"^+++\\\\|^---\\\"; git show HEAD -- spec/14-economy.md | grep \\\"^[-+]\\\" | head -5 | cut -c1-30\u2026\n- Bash: {\"command\": \"grep -rn \\\"export function writeCardVersion\\\" apps/web/src; sed -n 1,40p apps/web/src/cards/fullArtTiers.test.tsx | grep -n \\\"import\\\" ; sed -n 115,125p apps/web/src/cards/fullArtTiers.t\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2940/.bot-plan.md\", \"content\": \"# Draft plan for #2940 (planner's working notes) \\u2014 plan complete below; final message = the plan section\\n\\nSurve\u2026\n- Bash: {\"command\": \"sed -n 1515,1560p apps/web/src/cards/art/procedural.ts | grep -n \\\"defId\\\\|seed\\\"; grep -n \\\"it(\\\\\\\"R2725003 augments layer\\\" -A 40 apps/web/src/cards/fullArtTiers.test.tsx | sed -n 14,4\u2026\n- said: **Goal** Ship part 2 of #2725, three new card versions: - **Alt art** (`version-alt-art`, Rare): the same subject in a new scene, in the normal frame. - **Sketch** (`version-sketch`, Rare): the art in pencil and ink on paper, with the frame drawn as a pencilled outline. - **Alt full art** (`version\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-6",
-      "owner_since": "2026-11-03T16:24:04Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-4",
+      "owner_since": "2026-11-03T21:16:04Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-03T16:55:55Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-6",
+      "provider": "claude-4",
       "queued_at": "2026-11-03T15:59:27Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41673819881",
+      "run_id": "pending:6eadcd71-1793740532",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T16:24:04Z",
+      "started_at": "2026-11-03T21:16:04Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16235,9 +16227,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T21:15:14Z",
+    "at": "2026-11-03T21:16:04Z",
     "url": "",
-    "what": "plan #2962 on muse"
+    "what": "build #2940 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-03T20:56:57Z",
