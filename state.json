@@ -19140,10 +19140,6 @@
       "refused_until": "2026-11-03T03:50:00Z",
       "spent": [
         {
-          "at": "2026-10-26T16:29:17Z",
-          "minutes": 88.2
-        },
-        {
           "at": "2026-10-26T18:15:57Z",
           "minutes": 21.6
         },
@@ -19938,16 +19934,13 @@
         {
           "at": "2026-11-03T07:07:10Z",
           "minutes": 21.1
+        },
+        {
+          "at": "2026-11-03T08:18:34Z",
+          "minutes": 3.8
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-25T22:10:23Z",
-          "cache": 97443916,
-          "cost": 35.1167,
-          "input": 586,
-          "output": 191530
-        },
         {
           "at": "2026-10-26T00:12:12Z",
           "cache": 25884414,
@@ -21340,14 +21333,21 @@
           "cost": 3.2543,
           "input": 131,
           "output": 29143
+        },
+        {
+          "at": "2026-11-03T08:18:34Z",
+          "cache": 5449694,
+          "cost": 2.7374,
+          "input": 71,
+          "output": 20419
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-03T09:00:00Z",
-          "utilization": 0.91
+          "utilization": 0.98
         },
-        "observed_at": "2026-11-03T07:07:10Z",
+        "observed_at": "2026-11-03T08:18:34Z",
         "status": "allowed_warning"
       }
     },
@@ -29371,6 +29371,15 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": false
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-03T08:06:45Z,claude-3,stream,call,41600541765,94,2026-11-03T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-03T08:07:30Z,claude-3,stream,call,41600541765,95,2026-11-03T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-03T08:07:45Z,claude-3,stream,call,41600541765,96,2026-11-03T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-03T08:08:45Z,claude-3,stream,call,41600541765,97,2026-11-03T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-03T08:09:45Z,claude-3,stream,call,41600541765,98,2026-11-03T09:00:00Z,,,allowed_warning,,,"
+    ]
   },
   "version": 1
 }
