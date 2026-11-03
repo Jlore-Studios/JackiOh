@@ -14265,10 +14265,12 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-03T13:11:13Z",
+        "at": "2026-11-03T15:04:21Z",
         "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "fc3a720de9a7978cda053dbff629f94d96239194"
+        "carried_from": "fc3a720de9a7978cda053dbff629f94d96239194",
+        "resolved_by": "`muse` (medium)",
+        "sha": "95b7bd4138c3520c02608375e9a352b0e2dcccbd"
       },
       "died": 0,
       "difficulty": "medium",
