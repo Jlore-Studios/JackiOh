@@ -16787,6 +16787,8 @@
       }
     },
     "2917": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T07:50:13Z",
@@ -16800,8 +16802,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: no practice HUD over the board; the enemy hero sits at the top\"} -->\n- # Patch: no practice HUD over the board; the enemy hero sits at the top\n- Fixes #2878. In a practice game nothing but gameplay is drawn above the board: the `practice-hud` header is gone from `routes/practice.tsx`, and every item it held is re-homed. The enemy hero's seat label names the AI (`AI \u00b7 Easy`, `AI \u00b7 Sandbox`); New game and Menu ride the control bar beside Conc\u2026\n- ## This pass: merge-conflict resolution\n- `main` moved during the build and the merge left conflict markers in two files. Resolved keeping both sides' meaning:\n- - `apps/web/src/routes/practice.tsx`: keeps the #2878 re-homed props (`enemyLabel`, `controlExtras`, `matchStatus`, `boardNotice`, `onOpenResult`) **and** `main`'s `showOfferDraw={false}` (#2883, \u00a79.9/R188 \u2014 the AI declines every draw offer, so practice draws no Offer draw).\n- - `apps/web/src/routes/practice.test.tsx`: keeps `main`'s two new #2883 tests (no Offer draw on desktop bar; Concede and no Offer draw in the phone `\u22ef` menu), re-anchored from `findByTestId(T.hud)` to `findByTestId(\"game\")` since the HUD no longer renders, plus the #2878 control-bar think-indicator\u2026\n- - Both files staged with `git add` so the harness can commit; nothing committed or pushed.\n- ## How it was tested\n- All commands run in this worktree, all green:\n- - `pnpm --dir apps/web test src/routes/practice.test.tsx` \u2014 141/141 pass (139 carried + 2 #2883).\n- - `pnpm --dir apps/web test` on `Board`, `DrawOffer`, `practice-tutorial`, `practice-custom`, `board-ux` \u2014 5 files, 141/141 pass.\n- - `pnpm --dir apps/web test src/game/Game.test.tsx src/routes/match.test.tsx` \u2014 91/91 pass (match chip still works and clears the bar).\n- - `pnpm --dir apps/web typecheck` \u2014 clean. `pnpm exec eslint` on the touched web files \u2014 clean. `cargo fmt --check` \u2014 clean.\n- - Not run here: Cypress component/e2e specs (no Xvfb on this box) and the practice e2e spec (needs dev + match servers) \u2014 written for CI: `practice-table.cy.tsx` at all six viewports mid-game and game-over, `board-layout.cy.tsx`/`mobile-ux.cy.tsx` untouched. `cargo jackioh spec check` was green on \u2026\n- ## Decisions\n- - Kept the #2883 tests' assertions exactly, changing only their wait anchor (`practice-hud` \u2192 `game`): the HUD's absence is what #2878 requires, so anchoring on it would fail for the right reason.\n- - `git add` (stage) but no commit: the harness commits after handoff; staging was needed to clear the unmerged (`UU`) state.\n- - Rejected running the whole web suite or workspace clippy: the harness/CI owns those; only touched-area gates were run.\n- ## For the reviewer\n- Look twice at the merged `Game` props block in `practice.tsx` (both prop sets on one component) and the two re-anchored #2883 tests. Tests that asserted on the HUD's or chip's old place changed only to the new place; the pull request lists them: `practice.test.tsx` (enemy label, thinking/new-game/m\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-2878 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-2878/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2878,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T10:20:27Z",
         "from_run": "41598965137",
         "gates": [
           {
@@ -16860,8 +16865,15 @@
         "source": "build",
         "until": "2026-11-03T10:48:48Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T10:18:48Z",
+      "run_id": "pending:588dca35-1793701202",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-03T10:20:27Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16875,9 +16887,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T10:19:47Z",
+    "at": "2026-11-03T10:20:27Z",
     "url": "",
-    "what": "review #2916 on muse"
+    "what": "review #2917 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T10:05:10Z",
