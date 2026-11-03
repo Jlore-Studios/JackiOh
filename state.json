@@ -13324,11 +13324,11 @@
       "review_floor": "",
       "review_notes": "try again",
       "round_tier": "strong",
-      "run_id": "41547564472",
+      "run_id": "pending:eaa53b3c-1793670179",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-02T23:43:09Z",
+      "started_at": "2026-11-03T01:43:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -14812,9 +14812,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-03T01:42:46Z",
+    "at": "2026-11-03T01:43:17Z",
     "url": "",
-    "what": "plan #2876 on muse"
+    "what": "revise #2835 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-03T01:34:03Z",
