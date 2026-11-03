@@ -305,6 +305,17 @@ describe("scripts/server-image.sh prune", () => {
     expect(r.text).not.toContain("secret");
   });
 
+  it("deletes nothing when a kept tag's digest cannot be read, since an older tag may share it", () => {
+    const w = world();
+    w.images = [{ name: "jackioh-server", tags: ["20261103000015-aaaaaaaaaa15", "20261103000014-aaaaaaaaaa14", "a0816719"] }];
+    w.digests = { "jackioh-server:20261103000015-aaaaaaaaaa15": "sha256:d15", "jackioh-server:a0816719": "sha256:d14" };
+    w.apps = [{ image: "registry.cloudflare.com/acct/jackioh-server@sha256:d15" }];
+    const r = run(w, ["prune", "20261103000015-aaaaaaaaaa15"]);
+    expect(r.status).not.toBe(0);
+    expect(r.text).toContain("no digest for jackioh-server:20261103000014-aaaaaaaaaa14, a tag kept: nothing deleted");
+    expect(r.calls.filter((c) => c.includes("images delete"))).toEqual([]);
+  });
+
   it("deletes nothing when what a container application runs cannot be told", () => {
     for (const apps of [[], [{ image: "registry.cloudflare.com/acct/jackioh-server:gone" }], [{ image: "docker.io/library/x:1" }]]) {
       const w = world();

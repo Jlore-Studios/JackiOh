@@ -242,7 +242,11 @@ prune() {
       local mine kept
       mine=$(grep -E "$TAG_PATTERN" <<<"$all" | grep -vx -- "$keep" | sort -r || true)
       kept=$(head -n $((KEPT - 1)) <<<"$mine")
-      for t in $kept; do live=$(printf '%s\n%s\n' "$live" "$(digest_of "$repository" "$t" || true)"); done
+      for t in $kept; do
+        digest=$(digest_of "$repository" "$t" || true)
+        [ -n "$digest" ] || fail "the registry gives no digest for $repository:$t, a tag kept: nothing deleted"
+        live=$(printf '%s\n%s\n' "$live" "$digest")
+      done
       candidates=$(
         {
           grep -vE "$TAG_PATTERN" <<<"$all" || true
