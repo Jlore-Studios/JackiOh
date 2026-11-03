@@ -11,6 +11,7 @@
 //! plays one the browser's worker recorded instead. Every amount is read through its constant and
 //! the hook's own math, so the tests hold whatever #1333 sets.
 
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -31,19 +32,19 @@ use jackioh_server::config::{
     PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SHUTDOWN_DRAIN_SECONDS,
     STARTER_CARDS,
 };
-use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
+use jackioh_server::db::fake::{CallOutcome, E2eStoreOptions, FakeCatalog, FakeTables, create_e2e_store};
 use jackioh_server::db::store::{LastBoardKind, ProfileStatus, StoreError};
 use jackioh_server::economy::math::{level_span_xp, xp_to_next_level};
-use jackioh_server::economy::practice::{self, ClaimedResult};
+use jackioh_server::economy::practice::{self, ClaimBucket, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action, track_level};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, JloreGrant, JloreReason, PracticeClaim, PracticeDeck, PracticeOutcome,
-    PracticeSeed, PracticeSetup, QuestChange, QuestGrant,
+    PracticeSeed, PracticeSettled, PracticeSetup, QuestChange, QuestGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
 
-use crate::support::deps::{add_user, call, record_logs, test_app as built_app};
+use crate::support::deps::{RecordingLogger, add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};
 
 const A: &str = "profile-a";
@@ -1327,8 +1328,8 @@ async fn r2379000_another_accounts_claimed_or_unknown_seed_is_a_404_that_changes
 
 // A pay the store fails (R1688000).
 
-/// From here on, counts the store's `lastBoards.put` calls, the last write of a claim's pay, and
-/// fails the first `failing` of them, which rolls that try back whole (R1688000).
+/// From here on, counts the store's `lastBoards.put` calls, the pay's last write before its count
+/// (#2884), and fails the first `failing` of them, which rolls that try back whole (R1688000).
 async fn fail_board_writes(app: &Arc<App>, failing: usize) -> Arc<AtomicUsize> {
     let writes = Arc::new(AtomicUsize::new(0));
     let seen = Arc::clone(&writes);
@@ -1631,6 +1632,227 @@ async fn r2422000_a_shutdown_waits_for_the_pay_of_a_claim_whose_caller_has_gone(
         .expect("serve_until's task ends")
         .expect("serve_until answers Ok");
     assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+}
+
+// Each claim counted by how it ended (#2884).
+
+/// A's store's practice claim counts by outcome, summed over the days, so a test holds across a
+/// UTC midnight.
+async fn claim_counts(app: &Arc<App>) -> BTreeMap<String, i64> {
+    let mut counts = BTreeMap::new();
+    for row in store!(app, |t| t.economy_practice_claim_counts()) {
+        *counts.entry(row.outcome).or_insert(0) += row.count;
+    }
+    counts
+}
+
+fn counted(counts: &[(&str, i64)]) -> BTreeMap<String, i64> {
+    counts
+        .iter()
+        .map(|(outcome, count)| ((*outcome).to_string(), *count))
+        .collect()
+}
+
+/// What each `practice.claim.refused` line logged, in order.
+fn refused_lines(logs: &RecordingLogger) -> Vec<Value> {
+    logs.named("practice.claim.refused")
+        .into_iter()
+        .map(|entry| entry.data["data"].clone())
+        .collect()
+}
+
+#[test]
+fn claim_buckets_are_paid_and_each_refusal_by_its_answer() {
+    let names: Vec<&str> = ClaimBucket::ALL.iter().map(|bucket| bucket.name()).collect();
+    assert_eq!(
+        names,
+        vec![
+            "paid",
+            "economy_off",
+            "unknown_seed",
+            "already_claimed",
+            "expired",
+            "does_not_fold",
+            "not_finished",
+            "voided",
+            "result_mismatch",
+        ]
+    );
+    // A refusal's bucket is named as the claim's answer names it. `voided` has no game here (a
+    // Glitch's void): this and the store's walk of every bucket cover it.
+    for bucket in ClaimBucket::ALL {
+        if let ClaimBucket::Refused(reason) = bucket {
+            assert_eq!(json!(bucket.name()), json!(reason));
+        }
+    }
+}
+
+#[tokio::test]
+async fn every_claim_outcome_counts_once_in_its_bucket() {
+    let logs = record_logs();
+    let (off, token) = authed_with(economy_app(false).await).await;
+    assert_eq!(
+        claim(&off, &token, "practice-count-off", "loss", &[]).await,
+        refusal("economy_off")
+    );
+    assert_eq!(claim_counts(&off).await, counted(&[("economy_off", 1)]));
+
+    let (app, token) = authed().await;
+    let setup = setup(Difficulty::Easy, Vec::new());
+    assert_eq!(
+        claim(&app, &token, "practice-never-issued", "loss", &[]).await,
+        refusal("unknown_seed")
+    );
+    insert(&app, "practice-count-expired", &setup, now_ms() - TTL_MS - 1).await;
+    assert_eq!(
+        claim(&app, &token, "practice-count-expired", "loss", &[]).await,
+        refusal("expired")
+    );
+    // A forged log: the human's first action under the wrong nonce.
+    insert(&app, "practice-count-forged", &setup, now_ms()).await;
+    let forged = [Action::new(ActionBody::Concede, PlayerId::P2, "h1")];
+    assert_eq!(
+        claim(&app, &token, "practice-count-forged", "loss", &forged).await,
+        refusal("does_not_fold")
+    );
+    insert(&app, "practice-count-unfinished", &setup, now_ms()).await;
+    assert_eq!(
+        claim(&app, &token, "practice-count-unfinished", "loss", &[]).await,
+        refusal("not_finished")
+    );
+    let (mismatched, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&mismatched, &kept_setup(&app, &mismatched).await, Human::Concede);
+    assert_eq!(
+        claim(&app, &token, &mismatched, "win", &log).await,
+        refusal("result_mismatch")
+    );
+    assert_eq!(
+        claim(&app, &token, &mismatched, "win", &log).await,
+        refusal("already_claimed")
+    );
+    let (paid, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&paid, &kept_setup(&app, &paid).await, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert_eq!(
+        claim(&app, &token, &paid, "loss", &log).await,
+        first_paid(JLORE_PRACTICE_LOSS, xp, false)
+    );
+
+    assert_eq!(
+        claim_counts(&app).await,
+        counted(&[
+            ("already_claimed", 1),
+            ("does_not_fold", 1),
+            ("expired", 1),
+            ("not_finished", 1),
+            ("paid", 1),
+            ("result_mismatch", 1),
+            ("unknown_seed", 1),
+        ])
+    );
+    // One line per refusal, its seed and reason and nothing of the account.
+    assert_eq!(
+        refused_lines(&logs),
+        vec![
+            json!({ "seed": "practice-count-off", "reason": "economy_off" }),
+            json!({ "seed": "practice-never-issued", "reason": "unknown_seed" }),
+            json!({ "seed": "practice-count-expired", "reason": "expired" }),
+            json!({ "seed": "practice-count-forged", "reason": "does_not_fold" }),
+            json!({ "seed": "practice-count-unfinished", "reason": "not_finished" }),
+            json!({ "seed": mismatched, "reason": "result_mismatch" }),
+            json!({ "seed": mismatched, "reason": "already_claimed" }),
+        ]
+    );
+}
+
+/// A refusal before the burn counts best effort: a count the store fails is logged, and the claim
+/// answers as it did before the counts.
+#[tokio::test]
+async fn a_refusal_whose_count_fails_answers_as_before() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    fake_ref(&app).lock().await.on_call = Some(Arc::new(|method: &str| -> Result<(), StoreError> {
+        if method == "economy.practiceClaimCounts.count" {
+            return Err(StoreError::Other("the store is away".to_string()));
+        }
+        Ok(())
+    }));
+    assert_eq!(
+        claim(&app, &token, "practice-never-issued", "loss", &[]).await,
+        refusal("unknown_seed")
+    );
+    fake_ref(&app).lock().await.on_call = None;
+    assert_eq!(claim_counts(&app).await, BTreeMap::new());
+    assert_eq!(logs.named("practice.claim.countFailed").len(), 1);
+    assert_eq!(
+        refused_lines(&logs),
+        vec![json!({ "seed": "practice-never-issued", "reason": "unknown_seed" })]
+    );
+}
+
+/// [[R2422000]]: a claim whose pay finds the seed marked by another settle answers
+/// `already_claimed` and counts nothing: the settle that marked it counted it. The rival's mark is
+/// made here without its count, so the counts show this claim's alone.
+#[tokio::test]
+async fn a_claim_another_settle_marked_first_counts_nothing_more() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let rival = seed.clone();
+    fake_ref(&app).lock().await.before_call = Some(Arc::new(move |called: &str, tables: &mut FakeTables| {
+        if called == "economy.practiceSeeds.settle"
+            && let Some(held) = tables
+                .economy
+                .practice_seeds
+                .iter_mut()
+                .find(|held| held.seed == rival)
+        {
+            held.settled = Some(PracticeSettled {
+                outcome: PracticeOutcome::Paid,
+                at: now_ms(),
+            });
+            held.claim = None;
+        }
+        CallOutcome::Proceed
+    }));
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        refusal("already_claimed")
+    );
+    fake_ref(&app).lock().await.before_call = None;
+
+    assert_unpaid(&app).await;
+    assert_eq!(claim_counts(&app).await, BTreeMap::new());
+    assert_eq!(
+        refused_lines(&logs),
+        vec![json!({ "seed": seed, "reason": "already_claimed" })]
+    );
+}
+
+/// [[R2422000]]: the sweep counts each claim it settles, once, as the settle that marks it.
+#[tokio::test]
+async fn the_sweep_counts_each_claim_it_settles_once() {
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let unfinished = "practice-count-swept-unfinished";
+    insert(&app, unfinished, &setup(Difficulty::Easy, Vec::new()), now_ms()).await;
+    // Both burns committed and the server died before their settles ran.
+    let claimed_at = now_ms() - GRACE_MS - 1;
+    for (seed, log) in [(seed.as_str(), log), (unfinished, Vec::new())] {
+        let kept = PracticeClaim {
+            result: ClaimedResult::Loss,
+            log,
+        };
+        assert!(store!(app, |t| t.economy_practice_seed_claim(A, seed, claimed_at, &kept)));
+    }
+
+    assert_eq!(sweep(&app).await, Swept { paid: 1, refused: 1 });
+    let counts = counted(&[("not_finished", 1), ("paid", 1)]);
+    assert_eq!(claim_counts(&app).await, counts);
+    assert_eq!(sweep(&app).await, Swept::default());
+    assert_eq!(claim_counts(&app).await, counts);
 }
 
 /// The browser's worker's game (`apps/web/src/practice/claim.test.ts` records it).

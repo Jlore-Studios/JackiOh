@@ -2,8 +2,9 @@
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
 // each plays something; #2793: every Core entry other than `none` plays as its card's play, #2796 every
 // Meditative and Meditative+ one, R2795000 every Classic+ one, a Field card wearing its aura, #2798
-// every Stinkyscape part-two one, and R2794000 every Classic one, a marquee Unit's entrance as it lands.
-// R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
+// every Stinkyscape part-two one, #2799 every Training Grounds one, and R2794000 every Classic one, a
+// marquee Unit's entrance as it lands. R2785000: it plays a card as the fixture set piece, which holds the
+// board until a click skips it.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -56,9 +57,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // pieces); #2796: Meditative's 116 and Meditative+'s 29; R2795000: Classic+'s 96 (74 cards and 22
     // tokens); #2798: Stinkyscape part two's 83; R2794000: Classic's 79 (its plays' motifs, its hooks'
     // through the director, its three Flourishes, Plague Nuke's set piece and its two marquee entrances);
-    // then the other sets' 4 motif cards, 2 aura-only Field Spells, 1 set piece and Training Grounds #30's
-    // `death: wipe` through the director.
-    expect(cards).toHaveLength(502);
+    // then the other sets' 2 motif cards, 1 aura-only Field Spell and 1 set piece, and #2799: Training
+    // Grounds' 51.
+    expect(cards).toHaveLength(549);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -178,6 +179,12 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
     expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 83);
+  });
+
+  it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {
+    const file = FX_CARD_FILES.find((candidate) => candidate.file === "traininggrounds.json5");
+    if (file === undefined) throw new Error("no traininggrounds.json5");
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 51);
   });
 
   it("R2784000 #2796 the gallery plays every Meditative and Meditative+ entry", () => {

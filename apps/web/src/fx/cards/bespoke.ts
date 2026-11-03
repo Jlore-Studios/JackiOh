@@ -19,6 +19,9 @@ import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
+import { celestialCall } from "./traininggrounds/celestialCaller.ts";
+import { dinoStomp } from "./traininggrounds/dinoSize.ts";
+import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
 import { pageMend } from "./classic/bookOfHeal.ts";
 import { crownSwap } from "./classic/kingWagtoggle.ts";
 import { recycleLoop } from "./classic/recycle.ts";
@@ -39,6 +42,9 @@ export const CARD_RECIPES = {
   duoBond,
   flashFreeze,
   stratosSwarm,
+  celestialCall,
+  dinoStomp,
+  gameDesign,
   pageMend,
   recycleLoop,
   crownSwap,

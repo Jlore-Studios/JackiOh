@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
-| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json`, `idempotency.rs`, `news.rs`, `news.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), 0047's practice seeds, and 0067's idempotency keys, a spend's key and the answer it committed, read and written in the spend's transaction under that lock so a retry replays its answer and spends nothing again (R2124000); the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup to the claimed result, no AI move re-run (§14.8, R1303000–R1303003, R2560000); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), a quest for the cards of every set that ships, and position switches and Radiant upgrades counted as the game's record counts them (R2253000), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001), and a held quest's daily replace by a fresh draw, counted from the day's `removed` rows (R2210000); and the news (§14.13): `news.json`'s entries, checked at boot (a slug id, a summary of at most `NEWS_SUMMARY_MAX_SENTENCES` sentences, a patch's version in `patches.json`, a known reward, a left-out one defaulting by its patch, R2875003), each live `NEWS_TTL_DAYS` from its `postedAt` (R2875001), and its reward's claim, once per account and entry (R2875000) |
+| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json`, `idempotency.rs`, `news.rs`, `news.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), 0047's practice seeds, and 0067's idempotency keys, a spend's key and the answer it committed, read and written in the spend's transaction under that lock so a retry replays its answer and spends nothing again (R2124000); the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup to the claimed result, no AI move re-run (§14.8, R1303000–R1303003, R2560000); each claim's outcome counted by UTC day in 0078's `practice_claim_counts` (`ClaimBucket`, #2884); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), a quest for the cards of every set that ships, and position switches and Radiant upgrades counted as the game's record counts them (R2253000), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001), and a held quest's daily replace by a fresh draw, counted from the day's `removed` rows (R2210000); and the news (§14.13): `news.json`'s entries, checked at boot (a slug id, a summary of at most `NEWS_SUMMARY_MAX_SENTENCES` sentences, a patch's version in `patches.json`, a known reward, a left-out one defaulting by its patch, R2875003), each live `NEWS_TTL_DAYS` from its `postedAt` (R2875001), and its reward's claim, once per account and entry (R2875000) |
 | Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill, the clears and a token bar filled so it pays (R1310003), each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (and, under `E2E=1`, to any but the `e2e-econ` fixture, R1310004) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -444,6 +444,7 @@ target/release/jackioh-server stats-import v0.2.5-dev.jsonl                 # lo
 target/release/jackioh-server stats-import --totals-only v0.2.5-dev.jsonl   # the same file as counts alone: no row per game, the file claimed once (R1976000)
 target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # read beside the same patch's live games
 target/release/jackioh-server stats-export --out=live.jsonl                 # the records still held in full, a line each, in id order
+target/release/jackioh-server stats-export --claims --out=claims.jsonl      # how practice claims ended, per UTC day and outcome (#2884)
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
 target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
 target/release/jackioh-server stats-cards --window > window.json            # every card over its own window, off the totals (R1367000)
@@ -496,6 +497,13 @@ writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stat
 only development records (a live record is refused, R378). It reads
 `DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
 or `--source=all` asks for a development run's (R378).
+
+`stats-export --claims` writes migration 0078's practice claim counts instead (#2884): one
+`{ day, outcome, count }` per line, oldest UTC day first, `outcome` `paid` or a refusal as the claim's answer
+names it (`economy::practice::ClaimBucket`). It holds no account, seed or log, and takes no `--source`,
+`--mode` or `--patch`. `expired` counts the claims that came after their seed lapsed
+(`PRACTICE_SEED_TTL_SECONDS`, R1303001), so a change to that TTL has numbers behind it; `does_not_fold`
+counts the logs that do not replay from their seed's setup, which is what a forged log answers (§9.8). To look one refusal up, each also logs `practice.claim.refused` with its seed and reason.
 
 `balance-watch --patch=<version> [--source=live|all] [--file=<records.jsonl>]…` is the offline, advisory outlier watch whose
 Markdown pastes into #699: per card it prints the in-deck win rate with its games, z-score against
@@ -638,7 +646,8 @@ series still makes its picks.
   `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
   (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), seated by the same coin (R1989000), and
   neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
-  whose actor is not in memory, which no socket would come back to rebuild after a restart.
+  whose actor is not in memory, which no socket would come back to rebuild after a restart. The sweep
+  decides on `bots_states` (no decks or cosmetics) and loads `bots_list` only to choose a pair.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
   `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
   the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
@@ -1092,6 +1101,25 @@ entry, its key `(profile_id, news_id)`, the id a slug of `news.json`'s, a row go
 and a client reading only its own and writing none. A claim's reward is paid in the ledgers, whose
 reason checks (0050's) gain `news`, in the claim's transaction. `tests/sql/43_news_claims.sql` checks the
 table, its policy, grants and trigger, the reasons, the duplicate refused, the cascade and the re-apply.
+
+Migration 0078 counts how practice claims end (#2884): `practice_claim_counts`, one row per UTC day and
+outcome, `paid` or one of the eight refusals, with no account, no foreign key, RLS on, no policy and no grant.
+The claim adds one as the last statement of the transaction that decides its outcome
+(`Tx::economy_practice_claim_count`). A claim whose seed burned counts once, in the settle that marks the
+seed paid or refused, the sweep's included; `already_claimed` from a settle that found the seed marked counts
+nothing more (R2422000). A refusal before the burn counts once per request, best effort: a count the store
+fails is logged (`practice.claim.countFailed`) and the claim answers as before. At most nine rows a day, so
+nothing purges it. `tests/sql/44_practice_claim_counts.sql` checks the shape, the checks, the refusal to
+client roles and the re-apply.
+
+Migration 0079 adds `augments` to `card_cosmetic_picks` (R2725000) and rewrites no row: the augment ids
+(`augment-…`, Animated and Signature) a card layers on the version it wears, NULL for none.
+`card_cosmetic_picks_augments_check` holds the list to one id or more, each `augment-` and a slug of at
+most 40 characters, none NULL; `card_cosmetic_picks_full_art_id_check` widens again to take a version's id
+(`version-…`, the Full art version `version-full-art` first), still only beside `full_art = true`; and
+`card_cosmetic_picks_some_check` counts an augments list as a pick. Nothing is granted: a retired full art
+owns the version and augments it combines where the server reads it (R2725002), never as a row.
+`tests/sql/45_card_versions.sql` checks the column, the ids kept, the shapes refused and the re-apply.
 
 ## Tests
 

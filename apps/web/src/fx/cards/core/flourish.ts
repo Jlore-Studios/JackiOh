@@ -1,6 +1,7 @@
 // #2793: what Core's bespoke flourishes (transmogulate.ts, zephrys.ts, craftACard.ts) share, and
-// Stinkyscape's (#2798, ../stinkyscape/): the caster's look and scale, as a motif reads them
-// (motifs/build.ts), so each is built from the motif primitives at the scale its cost and rarity give it.
+// Stinkyscape's (#2798, ../stinkyscape/) and Training Grounds' (#2799, ../traininggrounds/): the caster's
+// look and scale, as a motif reads them (motifs/build.ts), so each is built from the motif primitives at
+// the scale its cost and rarity give it.
 
 import { FLAVOR_FALLBACK } from "../../../cards/flavor.ts";
 import { FLAVOR_LOOKS } from "../../flavors.ts";

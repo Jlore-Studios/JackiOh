@@ -352,9 +352,10 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * 中国 turns every one of the viewer's hand cards into one CN card and summons a CN Unit, and Harmony
  * Spirit sets every unit to 3/3. #2798: iKwzki Duos with the player's first unit, Flash Freeze freezes
  * every unit on both sides and Stratos Swarm fills the player's empty zones with Stratos (its first unit
- * zone, a full board having none). R2794000: Classic's Flourishes take their own fixtures
- * (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards into the
- * deck and draws one, and King Wagtoggle swaps the decks.
+ * zone, a full board having none). #2799: Celestial Caller summons a Sun in lane 2 and a Moon in lane 4,
+ * Dino-size sets the viewer's first unit to 10/10 and Goetzmann Game Design adds its card. R2794000:
+ * Classic's Flourishes take their own fixtures (fx/cards/classic/): Book of Heal heals the viewer's first
+ * unit, Recycle shuffles two cards into the deck and draws one, and King Wagtoggle swaps the decks.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -425,6 +426,20 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       lane,
     }));
   },
+  celestialCall: (_view, _instanceId, player) => [
+    { type: "summoned", player, instanceId: "fx-sun", defId: "traininggrounds-006", row: "units", lane: 2 },
+    { type: "summoned", player, instanceId: "fx-moon", defId: "traininggrounds-007", row: "units", lane: 4 },
+  ],
+  dinoStomp: (view) => {
+    const mine = unitsOf(view.you)[0];
+    return mine === undefined
+      ? []
+      : [
+          { type: "numberChanged", instanceId: mine.instanceId, defId: mine.defId, key: "attack", value: 10 },
+          { type: "numberChanged", instanceId: mine.instanceId, defId: mine.defId, key: "health", value: 10 },
+        ];
+  },
+  gameDesign: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-designed", defId: "core-055" }],
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,

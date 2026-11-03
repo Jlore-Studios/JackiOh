@@ -22,7 +22,7 @@ use crate::config::{
     CARD_TOKEN_BAR_SIZE, CosmeticTokenStep, TOKEN_BAR_POINTS_BY_CARD_RARITY,
     TOKEN_BAR_POINTS_BY_COSMETIC_RARITY,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity};
+use crate::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, offered, row_owns};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::packs::{bar_before, cycle_at};
@@ -199,8 +199,20 @@ pub(crate) struct Choice {
     /// per-card cosmetic, and no card for an account cosmetic.
     pub fits: bool,
     /// The account already owns the cosmetic there: a default or a starter, which §14.2 gives
-    /// every account, or a ledger row.
+    /// every account, or a ledger row, a retired full art's owning what it implies (R2725002).
     pub owned: bool,
+}
+
+/// R2725000, R2725001: why no token or Chase Shard bar buys `cosmetic` on `card_id`, a 400's words: a retired
+/// full art, which nothing sells, or a version or an augment the card is not offered. `None` when either may.
+pub(crate) fn unsold(cosmetic: &Cosmetic, card_id: Option<&str>) -> Option<&'static str> {
+    if cosmetic.kind == CosmeticKind::FullArt {
+        Some("that cosmetic is retired")
+    } else if cosmetic.kind.is_offered() && !offered(cosmetic, card_id) {
+        Some("that cosmetic is not offered on that card")
+    } else {
+        None
+    }
 }
 
 pub(crate) fn choice_of(
@@ -216,16 +228,16 @@ pub(crate) fn choice_of(
             Some(card_id) => cosmetics
                 .cards
                 .iter()
-                .any(|held| held.card_id == card_id && held.cosmetic_id == cosmetic.id),
+                .any(|held| held.card_id == card_id && row_owns(&held.cosmetic_id, &cosmetic.id)),
             None => cosmetics.account.contains(&cosmetic.id),
         };
-    let card_fits = match (cosmetic.kind.is_per_card(), card_id, cosmetic.card.as_deref()) {
-        // A full art is owned on the one card it names (R1313000): only that card, owned, takes it.
-        (true, Some(card_id), Some(names)) => card_id == names && card_owns(card_id),
-        (true, Some(card_id), None) => card_owns(card_id),
-        (true, _, _) => false,
-        (false, None, _) => true,
-        (false, Some(_), _) => false,
+    let card_fits = match (cosmetic.kind.is_per_card(), card_id) {
+        // A per-card cosmetic fits an owned card it is offered (R2725001): a full art the one card it names
+        // (R1313000), a version or an augment a card its offer takes.
+        (true, Some(card_id)) => offered(cosmetic, Some(card_id)) && card_owns(card_id),
+        (true, None) => false,
+        (false, None) => true,
+        (false, Some(_)) => false,
     };
     Choice {
         fits: card_fits,
@@ -274,6 +286,9 @@ pub async fn redeem_cosmetic_token_once(
         .iter()
         .find(|entry| entry.id == cosmetic_id)
         .ok_or_else(|| bad_request(format!("no cosmetic is named \"{cosmetic_id}\"")))?;
+    if let Some(why) = unsold(cosmetic, card_id) {
+        return Err(bad_request(why));
+    }
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
     if let Some(before) = replayed(&mut tx, profile_id, request).await? {
