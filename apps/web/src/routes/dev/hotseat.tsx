@@ -10,8 +10,6 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { Action, ActionBody, CardDefs, PlayerId, PlayerView, SetName } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
 
-import Username from "../../auth/Username.tsx";
-import RankCrest from "../../rank/RankCrest.tsx";
 import Game from "../../game/Game.tsx";
 import { getAudioEngine } from "../../audio/index.ts";
 import type { EmoteHands } from "../../emotes/hand.ts";
@@ -423,35 +421,7 @@ function Hotseat({
       </button>
     </>
   );
-  const wantRail = new URLSearchParams(window.location.search).has("rail");
-  const game = (
-    <Game
-      view={view}
-      legal={legal}
-      onAction={dispatch}
-      error={error}
-      resultActions={resultActions}
-      emotes={emotes}
-      wearCosmetics
-      phoneRailTop
-      boardRail={
-        wantRail ? (
-          <>
-            <button type="button" className="link-button" data-testid="nav-back">← Back</button>
-            <p className="match-ranks" data-testid="match-ranks">
-              <span className="match-ranks__full">Ranked match · MihoMain (you) Raisin vs LazyPirate Raisin</span>
-              <span className="match-ranks__short">
-                <span className="match-ranks__label">Ranked · </span>
-                <Username name="MihoMain" /> (you) <RankCrest rank={{ tier: "normal", division: 2, pips: 2, pipsPerDivision: 5, floor: "rotten" }} size="small" />{" "}
-                <span className="match-ranks__tier">Normal II</span> vs <Username name="LazyPirate" />{" "}
-                <RankCrest rank={{ tier: "raisin", placementsPlayed: 1, placementGames: 5 }} size="small" /> <span className="match-ranks__tier">Raisin</span>
-              </span>
-            </p>
-          </>
-        ) : undefined
-      }
-    />
-  );
+  const game = <Game view={view} legal={legal} onAction={dispatch} error={error} resultActions={resultActions} emotes={emotes} wearCosmetics />;
 
   return (
     <div className="app-shell app-shell--wide">
