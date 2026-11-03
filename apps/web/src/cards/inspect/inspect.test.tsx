@@ -307,19 +307,17 @@ describe("hover preview (B22)", () => {
     expect(screen.getByTestId(INSPECT_LOC)).toHaveTextContent(/lines of code/);
   });
 
-  it("B22 a pen resting on the card opens the preview too", () => {
-    render(<Trigger id="a" subject={subjectOf("b22-pen", "core-043")} />);
-    enter(screen.getByTestId("a"), "pen");
-    advance(HOVER_DELAY_MS);
-    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
-  });
-
-  it("B22 a pointerenter with no pointerType counts as a mouse", () => {
-    render(<Trigger id="a" subject={subjectOf("b22-none", "core-043")} />);
-    enter(screen.getByTestId("a"));
-    advance(HOVER_DELAY_MS);
-    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
-  });
+  for (const row of [
+    { kind: "pen" as PointerKind, name: "a pen rest" },
+    { kind: undefined, name: "a pointerenter with no pointerType" },
+  ]) {
+    it(`B22 ${row.name} opens the preview too`, () => {
+      render(<Trigger id="a" subject={subjectOf("b22-kind", "core-043")} />);
+      enter(screen.getByTestId("a"), row.kind);
+      advance(HOVER_DELAY_MS);
+      expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+    });
+  }
 
   it("B22 leaving before HOVER_DELAY_MS opens nothing, then or later", () => {
     render(<Trigger id="a" subject={subjectOf("b22-early", "core-043")} />);
@@ -470,24 +468,26 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
     expect(openOverlays()).toEqual([]);
   });
 
-  it("B23 Escape closes the preview", () => {
-    openPreview("b23-escape");
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
-  });
-
-  it("B23 a window blur closes the preview", () => {
-    openPreview("b23-blur");
-    fireEvent.blur(window);
-    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
-  });
-
-  it("B23 a scroll anywhere in the page closes the preview (the listener captures)", () => {
-    openPreview("b23-scroll");
-    // `scroll` does not bubble: only a capturing listener sees one fired on an inner region.
-    fireEvent.scroll(screen.getByTestId("scroller"));
-    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
-  });
+  for (const row of [
+    {
+      name: "Escape",
+      key: "b23-escape",
+      close: () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }),
+    },
+    { name: "a window blur", key: "b23-blur", close: () => fireEvent.blur(window) },
+    {
+      name: "a scroll anywhere in the page",
+      key: "b23-scroll",
+      // `scroll` does not bubble: only a capturing listener sees one fired on an inner region.
+      close: () => fireEvent.scroll(screen.getByTestId("scroller")),
+    },
+  ]) {
+    it(`B23 ${row.name} closes the preview`, () => {
+      openPreview(row.key);
+      row.close();
+      expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+    });
+  }
 
   it("B23 the page turning hidden closes the preview", () => {
     openPreview("b23-hidden");
@@ -795,26 +795,25 @@ describe("long-press (B24)", () => {
     expect(onClick, "the one after it").toHaveBeenCalledTimes(1);
   });
 
-  it("B24 the suppressor disarms after CLICK_SUPPRESS_MS", () => {
-    const onClick = vi.fn<() => void>();
-    render(<Trigger id="a" subject={subjectOf("b24-expire", "core-043")} options={{ onLongPress: () => undefined }} onClick={onClick} />);
-    const trigger = screen.getByTestId("a");
-    longPress(trigger);
-    advance(CLICK_SUPPRESS_MS);
-    fireEvent.click(trigger);
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("B24 the suppressor disarms on the next pointerdown", () => {
-    const onClick = vi.fn<() => void>();
-    render(<Trigger id="a" subject={subjectOf("b24-rearm", "core-043")} options={{ onLongPress: () => undefined }} onClick={onClick} />);
-    const trigger = screen.getByTestId("a");
-    longPress(trigger);
-    press(trigger, "touch");
-    lift(trigger, "touch");
-    fireEvent.click(trigger);
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
+  for (const row of [
+    { name: "after CLICK_SUPPRESS_MS", key: "b24-expire", touch: false },
+    { name: "on the next pointerdown", key: "b24-rearm", touch: true },
+  ]) {
+    it(`B24 the suppressor disarms ${row.name}`, () => {
+      const onClick = vi.fn<() => void>();
+      render(<Trigger id="a" subject={subjectOf(row.key, "core-043")} options={{ onLongPress: () => undefined }} onClick={onClick} />);
+      const trigger = screen.getByTestId("a");
+      longPress(trigger);
+      if (row.touch) {
+        press(trigger, "touch");
+        lift(trigger, "touch");
+      } else {
+        advance(CLICK_SUPPRESS_MS);
+      }
+      fireEvent.click(trigger);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+  }
 
   it("B24 contextmenu is prevented while a touch press is pending and after it has fired", () => {
     render(<Trigger id="a" subject={subjectOf("b24-menu", "core-043")} options={{ onLongPress: () => undefined }} />);
@@ -980,26 +979,30 @@ describe("closing the sheet and the detail (B25)", () => {
     return outside;
   }
 
-  it("B25 inspect-close closes the sheet and gives focus back", () => {
-    const outside = openSheet("b25-close");
-    realClick(screen.getByTestId(INSPECT_CLOSE));
-    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
-    expect(outside).toHaveFocus();
-  });
-
-  it("B25 inspect-scrim closes the sheet and gives focus back", () => {
-    const outside = openSheet("b25-scrim");
-    realClick(screen.getByTestId(INSPECT_SCRIM));
-    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
-    expect(outside).toHaveFocus();
-  });
-
-  it("B25 Escape closes the sheet and gives focus back", () => {
-    const outside = openSheet("b25-escape");
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
-    expect(outside).toHaveFocus();
-  });
+  for (const row of [
+    {
+      name: "inspect-close",
+      key: "b25-close",
+      close: () => realClick(screen.getByTestId(INSPECT_CLOSE)),
+    },
+    {
+      name: "inspect-scrim",
+      key: "b25-scrim",
+      close: () => realClick(screen.getByTestId(INSPECT_SCRIM)),
+    },
+    {
+      name: "Escape",
+      key: "b25-escape",
+      close: () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }),
+    },
+  ]) {
+    it(`B25 ${row.name} closes the sheet and gives focus back`, () => {
+      const outside = openSheet(row.key);
+      row.close();
+      expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+      expect(outside).toHaveFocus();
+    });
+  }
 
   for (const path of ["inspect-close", "inspect-scrim", "Escape"] as const) {
     it(`B25 CardDetail asks to close on ${path}`, () => {
@@ -1124,50 +1127,37 @@ describe("events inside an overlay stay inside it (B25)", () => {
     expect(spies.click).toHaveBeenCalledTimes(1);
   });
 
-  it("B25 no event inside the hover preview reaches an ancestor's handler", () => {
-    const spies = fenceSpies();
-    render(
-      <Fence spies={spies}>
-        <Trigger id="a" subject={subjectOf("b25-hover", "core-043")} />
-      </Fence>,
-    );
-    hover(screen.getByTestId("a"));
-    const preview = screen.getByTestId(INSPECT_HOVER);
-    clearSpies(spies);
-    fireEverything(faceIn(preview));
-    expectFenceUntouched(spies);
-  });
-
-  it("B25 no event inside the sheet reaches an ancestor's handler", () => {
-    const spies = fenceSpies();
-    render(
-      <Fence spies={spies}>
-        <Trigger id="a" subject={subjectOf("b25-sheet", "core-043")} />
-      </Fence>,
-    );
-    openSheetBy(screen.getByTestId("a"));
-    const sheet = screen.getByTestId(INSPECT_SHEET);
-    clearSpies(spies);
-    fireEverything(faceIn(sheet));
-    fireEvent.keyDown(screen.getByTestId(INSPECT_CLOSE), { key: "Enter" });
-    realClick(screen.getByTestId(INSPECT_CLOSE));
-    expectFenceUntouched(spies);
-  });
-
-  it("B25 no event inside CardDetail reaches an ancestor's handler", () => {
-    const spies = fenceSpies();
-    render(
-      <Fence spies={spies}>
-        <CardDetail def={defOf("core-043")} onClose={() => undefined} />
-      </Fence>,
-    );
-    const detail = screen.getByTestId(INSPECT_DETAIL);
-    fireEverything(faceIn(detail));
-    fireEvent.keyDown(screen.getByTestId(INSPECT_CLOSE), { key: "Enter" });
-    realClick(screen.getByTestId(INSPECT_CLOSE));
-    realClick(screen.getByTestId(INSPECT_SCRIM));
-    expectFenceUntouched(spies);
-  });
+  for (const container of ["hover preview", "sheet", "CardDetail"] as const) {
+    it(`B25 no event inside the ${container} reaches an ancestor's handler`, () => {
+      const spies = fenceSpies();
+      if (container === "CardDetail") {
+        render(
+          <Fence spies={spies}>
+            <CardDetail def={defOf("core-043")} onClose={() => undefined} />
+          </Fence>,
+        );
+      } else {
+        render(
+          <Fence spies={spies}>
+            <Trigger id="a" subject={subjectOf(container === "hover preview" ? "b25-hover" : "b25-sheet", "core-043")} />
+          </Fence>,
+        );
+      }
+      if (container === "hover preview") hover(screen.getByTestId("a"));
+      if (container === "sheet") openSheetBy(screen.getByTestId("a"));
+      const overlay = screen.getByTestId(
+        container === "hover preview" ? INSPECT_HOVER : container === "sheet" ? INSPECT_SHEET : INSPECT_DETAIL,
+      );
+      clearSpies(spies);
+      fireEverything(faceIn(overlay));
+      if (container !== "hover preview") {
+        fireEvent.keyDown(screen.getByTestId(INSPECT_CLOSE), { key: "Enter" });
+        realClick(screen.getByTestId(INSPECT_CLOSE));
+      }
+      if (container === "CardDetail") realClick(screen.getByTestId(INSPECT_SCRIM));
+      expectFenceUntouched(spies);
+    });
+  }
 
   it("B25 clicks and keys inside a board card's sheet never reach the Board's onClick", () => {
     const view = fullBoardView();

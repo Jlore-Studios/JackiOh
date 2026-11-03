@@ -541,6 +541,11 @@ enemy controls (the enemy hero's first) and the rest, enemy first (#1062), and i
 5 `switchPosition` ·
 6 `endTurn`.
 
+Tiers 0, 1 and 1b are ranked together by the static trader's values (crates/ai/src/reply.rs), best
+first, ties in the order above (#2825): an attack on the enemy hero by `face_value` (`reply_face_value`
+of its `projected_hero_damage`), a kill by `trade_value`. While the seat's ready attacks reach the face
+together (`ready_gap` at most 0), every attack on the hero is worth `AI_EVAL.win` and so stays first.
+
 #### `src/simulate.ts` (B1)
 
 ```ts
