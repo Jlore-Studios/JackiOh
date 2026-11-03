@@ -15107,28 +15107,13 @@
     "what": "revise #2919 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-03T14:09:34Z",
+    "at": "2026-11-03T14:28:34Z",
     "notes": [
-      "#2932 needs a plan",
-      "#2933 needs a plan",
-      "delivered build #2929 on muse (run 41649078100): planned",
-      "delivered plan #2928 on claude-4 (run 41648965263): planned",
-      "delivered plan #2927 on claude-7 (run 41648871314): planned",
-      "delivered plan #2926 on claude-7 (run 41648778351): planned",
-      "delivered plan #2922 on claude-6 (run 41648687351): planned",
-      "delivered plan #2925 on claude-6 (run 41648595678): planned",
-      "delivered plan #2923 on muse (run 41648504752): planned",
-      "delivered plan #2924 on muse (run 41648417037): planned",
-      "started build #2924 on muse (run 41652059899)",
-      "started build #2923 on muse (run 41652177211)",
-      "started build #2925 on claude-6 (run 41652293007)",
-      "started build #2926 on claude-7 (run 41652408665)",
-      "started build #2927 on claude-7 (run 41652523525)",
-      "started plan #2932 on claude-1 (run 41652634826)",
-      "started revise #2920 on claude-4 (run 41652766379)",
-      "started build #2933 on muse (run 41652889079)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 115h 38m; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 86h 37m",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered build #2930 on muse (run 41649181662): planned",
+      "delivered review #2913 on muse (run 41646895674): approved",
+      "delivered revise #2919 on claude-3 (run 41642365440): approved",
+      "started revise #2919 on claude-3 (run 41654756179)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` 7-day usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T10:00:17Z; it takes reviews only; it can start a build or a plan again in 115h 26m; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 86h 26m"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15834,7 +15819,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T14:09:34Z",
+  "loop_tick": "2026-11-03T14:28:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
