@@ -15923,10 +15923,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "5764c5ec58c82cd1904732b04da1c1b62261bc0c",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "2957": {
