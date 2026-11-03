@@ -15604,6 +15604,8 @@
       "taken_asks": []
     },
     "2951": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T16:36:58Z",
@@ -15617,8 +15619,11 @@
         "trail": "t 900 cargo run --release -q -p jackioh-tools -- patches check 2>&1 | tail -3\", \"description\": \u2026\n- said: Catalog and patches checks pass. Waiting on the workspace tests before the golden check and classify (they would compete for the same build).\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"workspace cargo test failures or completion\", \"timeout_ms\": 600000, \"command\": \"until grep -q \\\"^exit=\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-2922/3664f57c-5b83-4807-91\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: until grep -q \"^exit=\" /tmp/claude-1001/-home-runner-work--temp-work-item-2922/3664f57c-5b83-4807-918c-e56fc0ed32\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked\\\" /tmp/ws-test-2922.log | grep -vc \\\"test result: ok\\\"; grep -c \\\"^test result: ok\\\" /tmp/ws-test-2922.log; tail -c 300 /tmp/ws-test-2922.log\", \"de\u2026\n- Bash: {\"command\": \"grep -rn \\\"deckCopies\\\\|heroFloor\\\" docs/ crates/engine/README.md apps/web/README.md 2>/dev/null | head -10\", \"description\": \"Find docs that list a handicap's fields\"}\n- Bash: {\"command\": \"grep -rn \\\"hero_floor\\\\|heroFloor\\\\|\\u00a79.9\\\" spec/09-*.md | head -8\", \"description\": \"Check \\u00a79.9's text about handicap fields\"}\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked\\\" /tmp/ws-test-2922.log | grep -v \\\"test result: ok\\\" | head; grep -c \\\"^test result: ok\\\" /tmp/ws-test-2922.log; tail -c 200 /tmp/ws-test-2922.log\u2026\n- said: The workspace build is still compiling (the wasm crates now). Nothing has failed so far; I'll keep checking.\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -q \\\"^test result\\\" /tmp/ws-test-2922.log && ! grep -q \\\"error\\\\[\\\" /tmp/ws-test-2922.log; do sleep 10; done'; grep -E \\\"^test result|FAILED|panicked|er\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -q \\\"Running tests/rules.rs\\\" /tmp/ws-test-2922.log && ! grep -qE \\\"FAILED|panicked|error\\\\[\\\" /tmp/ws-test-2922.log; do sleep 10; done'; grep -E \\\"FAIL\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -qE \\\"^failures:|error\\\\[|Doc-tests jackioh_tools\\\" /tmp/ws-test-2922.log; do sleep 15; done'; grep -E \\\"^failures:|FAILED|error\\\\[\\\" /tmp/ws-test-2922.\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-2922/3664f57c-5b83-4807-918c-e56fc0ed32af/tasks/bu33argww.output\"}\n- Bash: {\"command\": \"grep -c \\\"^test result:\\\" /tmp/ws-test-2922.log; grep \\\"^test result:\\\" /tmp/ws-test-2922.log | grep -v \\\" 0 failed\\\" | head; grep -E \\\"Running tests/rules|Running tests/rules_2\\\" -A0 /t\u2026\n- said: All 41 test binaries passed (17,708 tests, 0 failed), and the workspace run left `apps/web/src/wire` the same as I generated it. Next: golden check and classify.\n- Bash: {\"command\": \"echo \\\"- Workspace cargo test (harness command): exit 0, 41 binaries, 17708 passed. catalog check, patches check ok. Next golden, classify, wasm+web.\\\" >> .bot-notes.md; timeout 1500 car\u2026\n- Bash: {\"command\": \"git rev-parse origin/main 2>/dev/null; git log -1 --format=%H origin/main 2>/dev/null; timeout 2400 cargo run --release -q -p jackioh-tools -- classify --base origin/main --claims 2>&1 |\u2026\n- Bash: {\"command\": \"timeout 2400 cargo run --release -q -p jackioh-tools -- classify --base origin/main --claims; echo exit=$?\", \"description\": \"Confirm classify's exit code\", \"timeout\": 2450000}\n- said: Golden check passes (`972f5b85`) and classify reports `Internal`, exit 0, so no patch fragment is needed. Now building wasm for the web typecheck and tests.\n- Bash: {\"command\": \"timeout 2400 sh scripts/build-wasm.sh > /tmp/wasm-2922.log 2>&1; echo wasm-exit=$?; tail -5 /tmp/wasm-2922.log\", \"description\": \"Build the engine to WebAssembly for the web\", \"timeout\": \u2026\n- Bash: {\"command\": \"git diff spec/15-dungeon-run.md docs/dungeon-run.md spec/04-combat.md | grep \\\"^[-+]\\\" | grep -v \\\"^+++\\\\|^---\\\"\", \"description\": \"Review the spec and plan wording changes\"}\n- said: Small wording fix: the mana effect is \"n more crystals\", not always one.\n- Bash: {\"command\": \"sed -i 's/or one more crystal every turn, bonus and cap together (\\\\[\\\\[R181\\\\]\\\\])/or more crystals every turn, bonus and cap together ([[R181]])/' spec/15-dungeon-run.md && sed -i 's/o\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -q \\\"wasm-exit=\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-2922/3664f57c-5b83-4807-918c-e56fc0ed32af/tasks/brcqkpsza.output 2>/dev/null; do sl\u2026\n- Bash: {\"command\": \"timeout 600 pnpm --dir apps/web typecheck 2>&1 | tail -8; echo \\\"typecheck-status=${PIPESTATUS[0]}\\\"\", \"description\": \"Typecheck the web client with the wasm package built\", \"timeout\": 6\u2026\n- Bash: {\"command\": \"timeout 1200 pnpm --dir apps/web exec vitest run src/wasm/run.test.ts src/practice/core-run.test.ts src/dungeon 2>&1 | tail -15\", \"description\": \"Run the web's run, practice and dungeon \u2026\n- said: Typecheck is clean and the web's run, practice and dungeon tests pass (12 files, 96 tests). Now the harness's exact web command:\n- Bash: {\"command\": \"timeout 1500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | grep -E \u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec eslint apps/web/src/wire/run.ts 2>&1 | tail -5; echo eslint=$?; timeout 600 cargo run --release -q -p jackioh-tools -- spec check 2>&1 | tail -2; cargo fmt --check \u2026\n- said: Every check passes. Updating the notes, then the report.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('- Checks so far:')\\nend=s.index('## Log')\\ns=s[:start]+\\\"\\\"\\\"- Checks, all green: cargo fmt --check; clippy --works\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the dungeon run's curses and Combat artifacts change its fights\"} --> ## What changed In a dungeon run, curses now make every fight's enemy stronger and held Combat artifacts help the human. Both work through the two handicaps `run_fight_setup` hands th\u2026"
       },
       "issue": 2922,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T17:54:51Z",
         "from_run": "41676032688",
         "gates": [
           {
@@ -15710,7 +15715,11 @@
         "source": "build",
         "until": "2026-11-03T18:23:26Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-03T17:53:26Z",
+      "run_id": "pending:02e169c6-1793728459",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15729,6 +15738,9 @@
         "provider": "claude-4",
         "run": "41676032688"
       },
+      "started_at": "2026-11-03T17:54:51Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15742,9 +15754,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T17:42:00Z",
+    "at": "2026-11-03T17:54:51Z",
     "url": "",
-    "what": "plan #2930 on claude-3"
+    "what": "review #2951 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-03T17:44:53Z",
