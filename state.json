@@ -28442,5 +28442,10 @@
     "issue": 2890,
     "pinned": false
   },
+  "usage_spool": {
+    "runs": [
+      "2026-11-03T05:28:47Z,41581633292,claude-7,opus,plan,2795,hard,planned,,21.6,150,139002,14435820,8.2217,,,,,,,none,,1"
+    ]
+  },
   "version": 1
 }
