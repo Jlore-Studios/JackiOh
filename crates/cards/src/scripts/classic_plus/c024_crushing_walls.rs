@@ -48,6 +48,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -63,7 +65,6 @@ mod tests {
     const FILLER: &str = "core-005";
 
     fn walls(radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [{ "def": WALLS, "radiant": radiant_face }, FILLER],
@@ -138,7 +139,6 @@ mod tests {
 
             #[test]
             fn s4_5_a_destroyed_backrow_card_that_prints_death_fires_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WALLS, FILLER], "library": [FILLER, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -178,7 +178,6 @@ mod tests {
 
             #[test]
             fn r418_an_ivory_tower_is_destroyed_like_any_backrow_card_whatever_it_has_fused_in() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [WALLS, FILLER], "library": [FILLER, FILLER] },
@@ -196,7 +195,6 @@ mod tests {
 
             #[test]
             fn r46_an_indestructible_one_stays_knocked_to_attack_position() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WALLS, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": ROCK, "lane": 5, "position": "DEF" }] },
@@ -208,7 +206,6 @@ mod tests {
 
             #[test]
             fn s3_2_a_card_dormant_beneath_resumes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WALLS, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": 1 }, { "def": FIENDER, "lane": 1, "stack": true }] },
@@ -225,7 +222,6 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_immune_to_spells_is_passed_by() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WALLS, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": TOP, "lane": 1, "radiant": true }] },
@@ -236,7 +232,6 @@ mod tests {
 
             #[test]
             fn r383_an_animated_card_is_hit_where_it_stands_in_its_backrow_zone_on_the_opponent_s_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WALLS, FILLER] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": FROST, "lane": 5 }] },
@@ -249,7 +244,6 @@ mod tests {
 
             #[test]
             fn r383_an_animated_card_is_hit_where_it_stands_animated_into_unit_zone_1_from_backrow_lane_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {

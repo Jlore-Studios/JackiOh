@@ -46,6 +46,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const PILE_ON: &str = "classic-060";
@@ -87,7 +89,6 @@ mod tests {
 
             #[test]
             fn s2_3_at_the_mana_cap_of_4_it_cannot_be_played_refused_and_legalactions_offers_no_play_of_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [VANILLA] }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
                 assert!(
@@ -102,7 +103,6 @@ mod tests {
 
             #[test]
             fn s2_3_with_5_mana_it_is_offered_and_plays() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
                 assert!(
@@ -117,7 +117,6 @@ mod tests {
 
             #[test]
             fn recruits_every_permanent_of_the_deck_top_to_bottom_each_into_its_row_spells_stay_in_order() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": MIXED_DECK, "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, GARY, BIGOT, null, null]));
@@ -127,7 +126,6 @@ mod tests {
 
             #[test]
             fn r1_no_recruited_cards_cry_fires_bigot_destroys_nothing_gary_flips_no_coins() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PILE_ON, FILLER], "library": [BIGOT, GARY], "mana": 5 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -140,7 +138,6 @@ mod tests {
 
             #[test]
             fn r33_a_recruited_trap_or_field_trap_is_set_face_down_and_never_named_in_the_opponents_view_a_field_spell_is_face_up() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [SHEEPISH, MANA_WELL, BREAD], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 let (trap, field, field_trap) = (s.backrow(PlayerId::P1, 1), s.backrow(PlayerId::P1, 2), s.backrow(PlayerId::P1, 3));
@@ -165,7 +162,6 @@ mod tests {
 
             #[test]
             fn stops_filling_a_row_once_it_is_full_the_permanents_that_no_longer_fit_stay_in_the_deck_in_order() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [PILE_ON, FILLER],
@@ -183,7 +179,6 @@ mod tests {
 
             #[test]
             fn r11_a_unit_token_card_in_the_deck_is_no_card_a_recruit_takes_it_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [RUSH_TOKEN, VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, null, null, null, null]));
@@ -192,7 +187,6 @@ mod tests {
 
             #[test]
             fn with_an_empty_deck_it_recruits_nothing_and_still_goes_to_the_bottom_of_the_deck() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
@@ -201,7 +195,6 @@ mod tests {
 
             #[test]
             fn no_event_carries_a_deck_position_the_summons_name_only_the_zone_each_lands_in() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": MIXED_DECK, "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(&pile_on, json!({}));
@@ -223,7 +216,6 @@ mod tests {
 
             #[test]
             fn its_return_is_a_replacement_after_it_resolves_it_goes_to_the_bottom_of_your_deck_never_the_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [LUNAR, STOCKPILE], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(&pile_on, json!({}));
@@ -235,7 +227,6 @@ mod tests {
 
             #[test]
             fn discarded_it_goes_to_the_bottom_of_your_deck_instead() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ZAO_GAO, PILE_ON, LUNAR], "library": [STOCKPILE] }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(ZAO_GAO, json!({}));
@@ -273,7 +264,6 @@ mod tests {
 
             #[test]
             fn counts_as_a_played_spell_and_the_recruited_cards_are_summoned_summoning_sick() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 s.expect_events(json!(["cardPlayed", "summoned", "cardResolved"]));
@@ -286,7 +276,6 @@ mod tests {
 
             #[test]
             fn recruits_every_permanent_of_the_deck_the_same_way() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PILE_ON, "radiant": true }, FILLER], "library": MIXED_DECK, "mana": 5 },
                     "p2": { "hand": [FILLER] },
@@ -299,7 +288,6 @@ mod tests {
 
             #[test]
             fn has_no_return_clause_after_it_resolves_it_goes_to_the_graveyard_as_any_spell_does() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": PILE_ON, "radiant": true }, FILLER], "library": [VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(&pile_on, json!({}));
@@ -309,7 +297,6 @@ mod tests {
 
             #[test]
             fn discarded_it_goes_to_the_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ZAO_GAO, { "def": PILE_ON, "radiant": true }, LUNAR] }, "p2": { "hand": [FILLER] } }));
                 s.play(ZAO_GAO, json!({}));
                 s.expect_in_zone(PILE_ON, "graveyard");
@@ -317,7 +304,6 @@ mod tests {
 
             #[test]
             fn r33_a_recruited_trap_is_face_down_and_hidden_from_the_opponent() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PILE_ON, "radiant": true }, FILLER], "library": [SHEEPISH], "mana": 5 },
                     "p2": { "hand": [FILLER] },
@@ -328,7 +314,6 @@ mod tests {
 
             #[test]
             fn s2_3_at_the_mana_cap_of_4_it_cannot_be_played() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": PILE_ON, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.expect_refused(|s| s.play(PILE_ON, json!({})));
             }

@@ -2432,6 +2432,166 @@
   }
 }
 
+/* ------------------------------------------------------ launch: a Starship lifting off --- */
+
+/* R2801000: a Starship's launch (fx/starship.ts), over the ship. Through its set piece's hold a 3-2-1
+   countdown pops in above it, each count at its `--fx-count-at` and gone by the next (the counts end at
+   the ignition, so each lasts a third of `--fx-ignite`); from `--fx-ignite` its engines burn below it, a
+   flickering flame, and a contrail climbs from it, both as big as `data-size`. The canvas draws the
+   exhaust, the sparks and the landing. Under Reduce Motion it is `data-still`: no count, the flame and
+   the contrail standing, nothing moving. It names no card (R202). */
+
+.fx-launch {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w, 82px);
+  height: var(--fx-h, 110px);
+  translate: -50% -50%;
+  z-index: 3;
+  --fx-launch-reach: 1;
+  animation: fx-launch-in var(--fx-ms) linear both;
+}
+
+.fx-launch[data-size="medium"] {
+  --fx-launch-reach: 1.4;
+}
+
+.fx-launch[data-size="large"] {
+  --fx-launch-reach: 1.9;
+}
+
+@keyframes fx-launch-in {
+  0% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-launch-count {
+  position: absolute;
+  left: 50%;
+  top: -12%;
+  translate: -50% -50%;
+  opacity: 0;
+  animation: fx-launch-count calc(var(--fx-ignite) / 3) cubic-bezier(0.2, 0.8, 0.2, 1) var(--fx-count-at) both;
+}
+
+.fx-launch-count::before {
+  content: attr(data-text);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(var(--type-2xl), 6vmin, var(--type-4xl));
+  line-height: 1;
+  color: var(--fx-tint-glow);
+  -webkit-text-stroke: 2px var(--fx-ink);
+  text-shadow: 0 0 18px var(--fx-tint-rim);
+}
+
+@keyframes fx-launch-count {
+  0% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+.fx-launch-flame {
+  position: absolute;
+  left: 50%;
+  top: 92%;
+  width: 46%;
+  height: calc(55% * var(--fx-launch-reach));
+  translate: -50% 0;
+  transform-origin: 50% 0;
+  border-radius: 50% 50% 45% 45% / 30% 30% 70% 70%;
+  background: radial-gradient(
+    ellipse 50% 80% at 50% 10%,
+    var(--fx-tint-glow) 0%,
+    var(--fx-tint-rim) 45%,
+    color-mix(in srgb, var(--fx-tint-core) 50%, transparent) 75%,
+    transparent 100%
+  );
+  animation:
+    fx-launch-ignite 180ms ease-out var(--fx-ignite) both,
+    fx-launch-flicker 110ms ease-in-out var(--fx-ignite) infinite alternate;
+}
+
+@keyframes fx-launch-ignite {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fx-launch-flicker {
+  0% {
+    transform: scale(0.9, 0.82);
+  }
+  100% {
+    transform: scale(1.06, 1.12);
+  }
+}
+
+.fx-launch-trail {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  width: 30%;
+  height: calc(150% * var(--fx-launch-reach));
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  border-radius: 50% 50% 0 0 / 20% 20% 0 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 0%,
+    color-mix(in srgb, var(--fx-tint-core) 30%, transparent) 60%,
+    transparent 100%
+  );
+  animation: fx-launch-trail calc(var(--fx-ms) - var(--fx-ignite)) ease-in var(--fx-ignite) both;
+}
+
+@keyframes fx-launch-trail {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  45% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+/* R2801000: the still frame drawn under Reduce Motion: the flame and the contrail stand. */
+.fx-launch[data-still="true"],
+.fx-launch[data-still="true"] * {
+  animation: none;
+}
+
+.fx-launch[data-still="true"] .fx-launch-trail {
+  opacity: 0.7;
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer
@@ -2451,8 +2611,10 @@
     visibility: hidden;
   }
 
-  /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped. */
-  .fx-dom > .fx-callout[data-still="true"] {
+  /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped;
+     R2801000: so is a Starship launch's still frame. */
+  .fx-dom > .fx-callout[data-still="true"],
+  .fx-dom > .fx-launch[data-still="true"] {
     visibility: visible;
   }
 }

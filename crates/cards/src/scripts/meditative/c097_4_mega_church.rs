@@ -130,7 +130,6 @@ mod tests {
 
         #[test]
         fn r1282_pays_mixed_5_card_payment_to_each_owner_s_graveyard_and_church_stays_its_player_s() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [
@@ -199,7 +198,6 @@ mod tests {
 
         #[test]
         fn r1282_dear_or_dormant_card_is_neither_offered_nor_accepted() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [
@@ -237,7 +235,6 @@ mod tests {
 
         #[test]
         fn r1282_activate_steals_once_a_turn() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -319,7 +316,6 @@ mod tests {
 
         #[test]
         fn r1282_a_sheep_is_worth_2() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [SHEEP, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT],
@@ -378,7 +374,6 @@ mod tests {
 
         #[test]
         fn r1282_a_hand_card_never_pays() {
-            crate::register_all();
             let s = crate::scenario(json!({
                 "p1": {
                     "field": [CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT, CHEAP_UNIT],
@@ -439,7 +434,6 @@ mod tests {
 
         #[test]
         fn r15_with_no_free_zone_the_stolen_permanent_stays_put() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [ID, VANILLA, VANILLA, VANILLA, VANILLA],
@@ -479,7 +473,6 @@ mod tests {
 
         #[test]
         fn r1282_radiant_face_has_divine_shield_and_makes_stolen_card_radiant() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "radiant": true, "lane": 1 }],

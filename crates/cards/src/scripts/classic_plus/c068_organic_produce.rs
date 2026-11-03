@@ -53,6 +53,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -147,7 +149,6 @@ mod tests {
 
         #[test]
         fn r386_the_count_reads_through_param_an_upgrade_of_fruits_adds_two() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [PRODUCE, FILLER] }, "p2": { "hand": [FILLER] } }));
             step_param(s.card_mut(PRODUCE), "fruits", 1);
             assert_eq!(play_produce(&mut s).len(), 2);
@@ -155,7 +156,6 @@ mod tests {
 
         #[test]
         fn r213_r214_a_fruit_you_play_while_it_stands_is_made_radiant_as_it_is_played_and_resolves_on_its_radiant_face() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FIG, FILLER], "backrow": [PRODUCE], "health": 10, "mana": 10 },
                 "p2": { "hand": [FILLER] }
@@ -168,7 +168,6 @@ mod tests {
 
         #[test]
         fn r70_r213_a_fruit_you_cast_is_made_radiant_too() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [FILLER], "backrow": [PRODUCE] }, "p2": { "hand": [FILLER] } }));
             let mut events: Vec<GameEvent> = Vec::new();
             {
@@ -202,7 +201,6 @@ mod tests {
 
         #[test]
         fn r213_a_non_fruit_you_play_is_untouched_and_so_are_the_opponent_s_fruits() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [FILLER], "backrow": [PRODUCE] },
@@ -219,7 +217,6 @@ mod tests {
 
         #[test]
         fn r119_r1837000_it_never_catches_its_own_play_and_a_second_organic_produce_is_no_fruit_its_base_cry_adds_1() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [PRODUCE, PRODUCE, FILLER], "mana": 8 }, "p2": { "hand": [FILLER] } }));
             let hand = s.hand(P1);
             let (first, second) = (hand[0].id.clone(), hand[1].id.clone());
@@ -262,7 +259,6 @@ mod tests {
 
         #[test]
         fn r177_a_fruit_trap_set_face_down_is_made_radiant_and_the_opponent_reads_only_that_some_card_changed() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [TRAP, FIG, FILLER], "backrow": [PRODUCE], "mana": 10 },
                 "p2": { "hand": [FILLER] }
@@ -323,7 +319,6 @@ mod tests {
 
         #[test]
         fn its_cry_adds_2_random_fruits_that_cost_0() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
             let before = hand_ids(&s);
             s.play(PRODUCE, json!({ "zone": 1 }));
@@ -340,7 +335,6 @@ mod tests {
 
         #[test]
         fn r213_its_aura_is_the_same_a_fruit_you_play_resolves_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FIG, FILLER], "backrow": [{ "def": PRODUCE, "radiant": true }], "health": 10, "mana": 10 },
                 "p2": { "hand": [FILLER] }
@@ -379,7 +373,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_of_fruits_adds_three() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
             step_param(s.card_mut(PRODUCE), "fruits", 1);
             let before = hand_ids(&s);
@@ -389,7 +382,6 @@ mod tests {
 
         #[test]
         fn r386_a_degrade_makes_the_radiant_fruits_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
             assert!(!crate::can_upgrade_number(&s, PRODUCE, "setCost"));
             assert_eq!(crate::degrade_number(&mut s, PRODUCE, "setCost"), 1);

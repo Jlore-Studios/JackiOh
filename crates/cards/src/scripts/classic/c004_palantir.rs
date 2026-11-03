@@ -145,6 +145,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -240,7 +242,6 @@ mod tests {
 
             #[test]
             fn s2_4_the_start_of_turn_draw_counts_after_it_every_other_draw_that_turn_is_stopped() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TIMMY], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [VANILLA, VANILLA] },
                     "p2": { "hand": [dear_stockpile(), VANILLA], "library": DECK },
@@ -312,7 +313,6 @@ mod tests {
 
             #[test]
             fn its_controller_s_own_draws_are_not_limited() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, TIMMY], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [VANILLA, VANILLA, VANILLA] },
                     "p2": { "hand": [VANILLA] },
@@ -600,7 +600,6 @@ mod tests {
 
             #[test]
             fn r70_a_1_cost_spell_cast_on_draw_is_stolen_too_and_cast_by_you() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [TIMMY],
@@ -672,7 +671,6 @@ mod tests {
 
             #[test]
             fn its_own_controller_s_spells_are_never_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, TIMMY],

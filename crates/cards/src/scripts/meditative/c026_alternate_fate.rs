@@ -49,6 +49,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -67,7 +69,6 @@ mod tests {
     /// p1 holds Fate (Radiant on `radiant`); both sides hold fillers in hand and library so no
     /// turn auto-ends (R82).
     fn casting(seed: &str, radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -89,7 +90,6 @@ mod tests {
     fn r941_while_it_acts_each_refresh_gives_only_the_rider() {
         // Each side also holds a (0) Coin: with no mana, a (1) filler is no legal play, and a turn
         // with nothing but ending it would end by itself (R82), on and on until a deck ran out.
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "fate-aura",
             "p1": {
@@ -123,7 +123,6 @@ mod tests {
 
     #[test]
     fn r941_the_coin_hinder_and_a_mana_well_still_work() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "fate-coin",
             "p1": {
@@ -205,7 +204,6 @@ mod tests {
 
     /// `casting`, with every backrow zone but Fate's own lane 1 locked: no Well is ever summoned.
     fn alone(seed: &str, hand: Value, p2_hand: Value) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "mana": 10, "hand": hand, "library": library() },
@@ -289,7 +287,6 @@ mod tests {
 
     #[test]
     fn r942_an_occupied_zone_gets_no_well() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "fate-occupied",
             "p1": { "mana": 10, "hand": [FATE, FILLER], "library": library() },

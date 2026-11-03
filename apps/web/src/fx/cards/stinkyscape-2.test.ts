@@ -44,6 +44,8 @@ const STARSHIP_PARTS = [
   "stinkyscape-t-ai-05",
 ];
 const STARSHIP_PART = "Starship part";
+/** R2801000: the Starship parts the Starship's moment gives an entry: the Retrofitting Program's send, the Launchers' conjure and Launch Sequencer's tithe. */
+const STARSHIP_ENTRIES = ["stinkyscape-130", "stinkyscape-140", "stinkyscape-141", "stinkyscape-142", "stinkyscape-143", "stinkyscape-t-ai-05"];
 
 function entryOf(id: string): FxCardEntry {
   const entry = TABLE.get(id);
@@ -138,12 +140,13 @@ describe("R2784000 #2798 Stinkyscape's card animation pass, part two", () => {
     }
   });
 
-  it("R2784000 #2798 exactly the Starship parts are none: Starship part", () => {
+  it("R2784000 #2798 exactly the Starship parts without an entry of their own are none: Starship part", () => {
     const held = RANGE.filter((id) => {
       const entry = entryOf(id);
       return entry.kind === "none" && entry.reason === STARSHIP_PART;
     });
-    expect(held).toEqual(STARSHIP_PARTS);
+    expect(held).toEqual(STARSHIP_PARTS.filter((id) => !STARSHIP_ENTRIES.includes(id)));
+    for (const id of STARSHIP_ENTRIES) expect(entryOf(id).kind, id).toBe("hooks");
   });
 
   it("R2784000 #2798 every hook names a drawn motif, and every recipe is a card recipe", () => {

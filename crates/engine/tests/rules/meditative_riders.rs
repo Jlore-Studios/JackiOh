@@ -12,7 +12,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::harness::{
-    act, act_ok, in_hand, new_game, put, run_as_p1 as run, run_effect, sink_for, slot,
+    act, act_ok, in_hand, input, new_game, put, run_as_p1 as run, run_effect, sink_for, slot,
 };
 use crate::rules::fixtures::meditative_riders::{
     GRANT_KEY, LOG_LANE, RIDER_SCRIPTS, bearer, book, closed_mic, ear, fuser, granter, log_card, mind, notes,
@@ -32,10 +32,6 @@ fn game(seed: &str) -> GameState {
     let state = new_game(&format!("riders-{seed}"), None);
     register();
     state
-}
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 /// Past both mulligans, in p1's main phase on turn 1, with the note log in p2's backrow.

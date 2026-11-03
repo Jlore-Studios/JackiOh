@@ -173,6 +173,24 @@ export type FxSetPieceCue = {
   delayMs: number;
   durationMs: number;
 };
+/**
+ * R2801000: a Starship's launch over it, `at`: a 3-2-1 countdown, each count popping in at its
+ * `countsMs` (none for a launch the queue does not hold), its engines igniting at `igniteMs`, and a
+ * flame and a contrail as big as `size` says. `still` draws one still frame of it, for reduced motion.
+ * It names no card (R202).
+ */
+export type StarshipSize = "small" | "medium" | "large";
+export type FxLaunchCue = {
+  kind: "launch";
+  at: FxAnchor;
+  tint: FxTint;
+  size: StarshipSize;
+  countsMs: readonly number[];
+  igniteMs: number;
+  delayMs: number;
+  durationMs: number;
+  still?: true;
+};
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -233,7 +251,8 @@ export type FxDomCue =
   | FxFogCue
   | FxZoneCue
   | FxTakeoverCue
-  | FxSetPieceCue;
+  | FxSetPieceCue
+  | FxLaunchCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 

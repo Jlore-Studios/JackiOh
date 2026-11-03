@@ -59,6 +59,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -99,7 +101,6 @@ mod tests {
 
         #[test]
         fn events_every_exile_it_causes_is_an_exiled_event_naming_the_card() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
             let vanilla = s.card(VANILLA).clone();
             let targets = pick::unit_at(&s, P2, 1);
@@ -113,7 +114,6 @@ mod tests {
 
             #[test]
             fn cry_exiles_every_card_in_both_graveyards_each_to_its_owners_exile() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VOID, FILLER], "graveyard": [STOCKPILE, VANILLA] },
                     "p2": { "hand": [FILLER], "graveyard": [HIT_JOB, GARY] },
@@ -129,7 +129,6 @@ mod tests {
 
             #[test]
             fn cry_with_both_graveyards_empty_it_exiles_nothing_and_voidwalker_still_enters() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VOID, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(VOID, json!({}));
                 assert!(exiled_events(&s).is_empty());
@@ -138,7 +137,6 @@ mod tests {
 
             #[test]
             fn aura_a_unit_that_dies_is_exiled_and_so_is_the_spell_that_killed_it_once_it_resolves() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
                 let vanilla = s.card(VANILLA).clone();
                 let hit_job = s.card(HIT_JOB).clone();
@@ -153,7 +151,6 @@ mod tests {
 
             #[test]
             fn aura_your_opponents_cards_too_their_spell_is_exiled_as_it_resolves() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [VOID] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [FILLER, FILLER] },
@@ -166,7 +163,6 @@ mod tests {
 
             #[test]
             fn aura_discarded_cards_are_exiled() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ZAO_GAO, LUNAR, GARY], "field": [VOID] }, "p2": { "hand": [FILLER] } }));
                 let (lunar, gary) = (s.card(LUNAR).clone(), s.card(GARY).clone());
                 s.play(ZAO_GAO, json!({}));
@@ -192,7 +188,6 @@ mod tests {
 
             #[test]
             fn aura_a_trap_spent_after_it_fires_is_exiled() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VANILLA, FILLER], "field": [VOID] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
@@ -206,7 +201,6 @@ mod tests {
 
             #[test]
             fn r11_a_unit_token_still_ceases_to_exist_it_reaches_neither_a_graveyard_nor_an_exile() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [RUSH_TOKEN] } }));
                 let token = s.card(RUSH_TOKEN).clone();
                 let targets = pick::unit_at(&s, P2, 1);
@@ -217,7 +211,6 @@ mod tests {
 
             #[test]
             fn a_reborn_unit_the_aura_exiles_has_not_died_no_reborn_body_comes_back_and_its_death_hook_does_not_fire() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] },
                     "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "radiant": true }] },
@@ -236,7 +229,6 @@ mod tests {
 
             #[test]
             fn r398_its_own_card_reaches_its_owners_graveyard_when_it_dies_its_aura_left_the_field_with_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FILLER], "field": [VOID] }, "p2": { "hand": [HIT_JOB, FILLER] }, "active": "p2" }));
                 let voidwalker = s.card(VOID).clone();
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": voidwalker.id }] }));
@@ -247,7 +239,6 @@ mod tests {
 
             #[test]
             fn r398_and_once_it_has_gone_cards_reach_the_graveyard_again() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [VOID] },
                     "p2": { "hand": [HIT_JOB, STOCKPILE, FILLER], "library": [FILLER, FILLER] },
@@ -261,7 +252,6 @@ mod tests {
 
             #[test]
             fn r398_a_second_voidwalker_still_on_the_field_exiles_the_first_ones_card_as_it_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FILLER], "field": [VOID, VOID] }, "p2": { "hand": [HIT_JOB, FILLER] }, "active": "p2" }));
                 let Some(first) = s.unit(P1, 1) else {
                     panic!("the first Voidwalker should be on the board");
@@ -273,7 +263,6 @@ mod tests {
 
             #[test]
             fn s3_2_a_voidwalker_dormant_under_a_stack_pile_is_not_on_the_field_cards_reach_the_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID, { "def": FIENDER, "stack": true }] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -286,7 +275,6 @@ mod tests {
 
             #[test]
             fn in_a_hand_it_replaces_nothing_the_aura_is_the_card_on_the_fields() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VOID, HIT_JOB, FILLER] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
                 let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
@@ -296,7 +284,6 @@ mod tests {
 
             #[test]
             fn s10_8_an_exiled_card_is_public_both_players_read_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ZAO_GAO, LUNAR, GARY], "field": [VOID] }, "p2": { "hand": [FILLER] } }));
                 s.play(ZAO_GAO, json!({}));
                 let seen: Vec<String> = js(&s.view(P2))["opponent"]["exile"]
@@ -315,7 +302,6 @@ mod tests {
 
             #[test]
             fn cry_exiles_only_your_opponents_graveyard_yours_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": VOID, "radiant": true }, FILLER], "graveyard": [STOCKPILE, VANILLA] },
                     "p2": { "hand": [FILLER], "graveyard": [HIT_JOB, GARY] },
@@ -329,7 +315,6 @@ mod tests {
 
             #[test]
             fn aura_only_cards_your_opponent_owns_are_exiled_their_dead_unit_is_your_resolved_spell_is_not() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -342,7 +327,6 @@ mod tests {
 
             #[test]
             fn r2618000_aura_judged_by_owner_a_stolen_unit_of_theirs_dying_on_your_side_is_yours_and_reaches_your_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }], "mana": 7 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -360,7 +344,6 @@ mod tests {
 
             #[test]
             fn r2618000_aura_judged_by_owner_a_unit_of_yours_they_stole_dying_on_their_side_is_exiled() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }, VANILLA] },
                     "p2": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "mana": 7 },
@@ -382,7 +365,6 @@ mod tests {
 
             #[test]
             fn aura_your_own_cards_reach_your_graveyard_your_unit_that_dies_your_discards() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }, GARY] },
                     "p2": { "hand": [HIT_JOB, FILLER] },
@@ -396,7 +378,6 @@ mod tests {
 
             #[test]
             fn aura_your_opponents_discards_are_exiled() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }] },
                     "p2": { "hand": [ZAO_GAO, LUNAR, GARY] },
@@ -409,7 +390,6 @@ mod tests {
 
             #[test]
             fn r398_its_own_card_reaches_your_graveyard_when_it_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }] },
                     "p2": { "hand": [HIT_JOB, FILLER] },
@@ -422,7 +402,6 @@ mod tests {
 
             #[test]
             fn r11_an_enemy_unit_token_still_ceases_to_exist() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }] },
                     "p2": { "hand": [FILLER], "field": [RUSH_TOKEN] },

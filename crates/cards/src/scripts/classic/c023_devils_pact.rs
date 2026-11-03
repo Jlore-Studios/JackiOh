@@ -96,6 +96,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -183,7 +185,6 @@ mod tests {
 
             #[test]
             fn cry_discard_666_cards_the_whole_hand_with_no_prompt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PACT, VANILLA, TIMMY, STOCKPILE], "library": [TIMMY] },
                     "p2": { "hand": [FILLER] },
@@ -198,7 +199,6 @@ mod tests {
 
             #[test]
             fn cry_with_an_empty_hand_discards_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PACT], "field": [VANILLA] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(PACT, json!({ "zone": 1 }));
@@ -469,7 +469,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_its_discards_stays_the_whole_hand_an_upgrade_499_is_still_more_than_any_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PACT, VANILLA, TIMMY], "library": [TIMMY] }, "p2": { "hand": [FILLER] } }));
                 step_param(s.card_mut(PACT), "discards", -1);
 
@@ -520,7 +519,6 @@ mod tests {
 
             #[test]
             fn r682_cry_discard_6_cards_at_random_with_no_prompt() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_pact_and_eight() }, "p2": { "hand": [FILLER] } }));
 
                 s.play(PACT, json!({ "zone": 1 }));
@@ -532,7 +530,6 @@ mod tests {
 
             #[test]
             fn r682_the_random_discards_come_from_the_match_rng_the_same_game_discards_the_same_cards() {
-                crate::register_all();
                 let mk = || scenario(json!({ "p1": { "hand": radiant_pact_and_eight() }, "p2": { "hand": [FILLER] } }));
                 let mut first = mk();
                 first.play(PACT, json!({ "zone": 1 }));
@@ -552,7 +549,6 @@ mod tests {
 
             #[test]
             fn r682_with_6_or_fewer_in_hand_it_discards_all_of_them_asking_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PACT, "radiant": true }, VANILLA, TIMMY] },
                     "p2": { "hand": [FILLER] },
@@ -594,7 +590,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_its_discards_takes_one_step_of_167_the_base_face_s_so_the_radiant_6_goes_to_its_floor_of_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_pact_and_eight() }, "p2": { "hand": [FILLER] } }));
                 step_param(s.card_mut(PACT), "discards", -1);
 

@@ -68,7 +68,10 @@ A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answere
 any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
 never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
 and spend a decision's budget on a guess up to thirty times a turn, and worked out each answer costs
-one redaction (R1184002).
+one redaction (R1184002); and so is C+ #42 KY's Test's Easy problem (#2929). Ahead, a simulated step
+answers such a question of the AI's own the same way, judged right on its world, a sequence until
+`AI_KY_COMPETITION_EXPECTED_STREAK` (6, Radiant 12) and then Stop (`simulate::worked_step`,
+R1563005); the greedy baseline's simulation does not.
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
@@ -117,6 +120,11 @@ target `legal_actions` lists, beside the same attack by the unit's hookless twin
 keywords granted, its text given back before scoring), and prices the controller's evaluation after the
 one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
+A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
+Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
+counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
+spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
+`GREEDY_EVAL` keeps 0 (#2928).
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -215,7 +223,8 @@ card holding either, and a play the other side's Pareto Optimality judges, per c
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
 A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
-reply's, and the beam's look past the seat's own; #891, #1112) tries at most
+reply's, and the beam's look past the seat's own; #891, #1112), but the seat's own question it works
+out (`worked_step`, #2929), tries at most
 `AI_SEARCH.max_auto_answer_options` answers, one node each: all of them, in `action_key` order, when
 there are no more, and otherwise that many drawn from the whole set on a stream of the world's seed
 and the prompt's id (`AI_SEARCH.auto_answer_seed`; #1382), so neither a late place in the list nor

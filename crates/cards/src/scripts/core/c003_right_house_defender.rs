@@ -31,6 +31,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// p2's attacker in `lane`, as an instance id: a string reference survives every later step.
     fn foe(s: &Scenario, lane: i32) -> String {
         match s.unit(PlayerId::P2, lane) {
@@ -46,7 +48,6 @@ mod tests {
 
         #[test]
         fn s6_1_taunt_is_printed_on_both_faces_so_the_enemy_must_come_through_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "lane": 1 }, { "def": "core-008", "lane": 2 }] },
@@ -67,7 +68,6 @@ mod tests {
 
         #[test]
         fn s6_1_the_radiant_face_keeps_taunt_too() {
-            crate::register_all();
             let s = scenario(json!({ "p1": { "field": [{ "def": "core-003", "radiant": true }] } }));
 
             assert_eq!(s.unit(PlayerId::P1, 1).map(|unit| unit.radiant), Some(true));
@@ -76,7 +76,6 @@ mod tests {
 
         #[test]
         fn the_divine_shield_eats_the_first_hit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": ["core-003"] },
@@ -90,7 +89,6 @@ mod tests {
 
         #[test]
         fn r64_r83_dies_returns_at_1_health_in_its_own_reserved_zone() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "lane": 3 }] },
@@ -111,7 +109,6 @@ mod tests {
 
         #[test]
         fn r78_the_reborn_body_has_no_reborn_so_its_next_death_is_final() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "lane": 3 }] },
@@ -134,7 +131,6 @@ mod tests {
 
         #[test]
         fn r8_r64_radiant_death_summons_a_base_right_house_defender_beside_the_reserved_zone() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "radiant": true, "lane": 1 }] },
@@ -164,7 +160,6 @@ mod tests {
 
         #[test]
         fn r8_radiant_death_fires_on_the_second_death_too_for_two_base_bodies_in_all() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "radiant": true, "lane": 1 }] },

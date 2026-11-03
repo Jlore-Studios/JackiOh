@@ -46,6 +46,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -329,7 +331,6 @@ mod tests {
 
         #[test]
         fn r752_playing_it_costs_0_and_uses_nothing_the_power_is_then_one_activation_a_turn_for_its_x() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "hp-play", "p1": { "hand": [HEROIC, SPARE], "mana": 8 } }));
             let in_hand = must(s.hand(P1).into_iter().next(), "the Heroic Power");
             let card = set_power(&mut s, &in_hand, "burn");

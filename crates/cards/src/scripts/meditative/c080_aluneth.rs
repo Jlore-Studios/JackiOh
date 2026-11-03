@@ -135,7 +135,6 @@ mod tests {
     /// Aluneth's end of turn draws three (3) Menaces: each costs (1) less; p1's next turn's own draw,
     /// a fourth, does not.
     fn discounted_draws(radiant: bool) {
-        crate::register_all();
         let mut s = crate::scenario(json!({
             "seed": "aluneth-discount",
             "p1": {
@@ -214,7 +213,6 @@ mod tests {
 
             #[test]
             fn burns_past_the_hand_cap_and_takes_fatigue_past_the_deck() {
-                crate::register_all();
                 let mut s = crate::scenario(json!({
                     "seed": "aluneth-burn",
                     "p1": {

@@ -60,6 +60,8 @@ mod tests {
     use jackioh_engine::subsystems::craft::{points_budget, whole_palette};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -92,7 +94,6 @@ mod tests {
     }
 
     fn crafting(radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(sides(radiant));
         s.play(ID, json!({ "zone": 1 }));
         s
@@ -185,7 +186,6 @@ mod tests {
 
         #[test]
         fn r70_a_cast_prime_opens_the_crafter_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "mana": 10, "library": [VANILLA] },
                 "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },

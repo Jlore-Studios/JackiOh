@@ -52,6 +52,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// The number of `healed` events in the most recent step.
     fn heals_in_last_step(s: &Scenario) -> usize {
         s.last_events().iter().filter(|event| event.event_type().as_str() == "healed").count()
@@ -62,7 +64,6 @@ mod tests {
 
         #[test]
         fn s6_3_raises_a_hero_at_12_to_30() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 12 } }));
 
             s.play("core-053", json!({}));
@@ -72,7 +73,6 @@ mod tests {
 
         #[test]
         fn s6_3_heal_up_to_30_is_a_floor_not_a_ceiling_a_hero_at_35_stays_35() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 35 } }));
 
             s.play("core-053", json!({}));
@@ -82,7 +82,6 @@ mod tests {
 
         #[test]
         fn a_hero_exactly_at_30_is_untouched_and_29_goes_up_by_1() {
-            crate::register_all();
             let mut at_30 = scenario(json!({ "p1": { "hand": ["core-053"], "health": 30 } }));
             at_30.play("core-053", json!({}));
             at_30.expect_health(PlayerId::P1, 30);
@@ -93,7 +92,6 @@ mod tests {
 
         #[test]
         fn the_cry_is_gated_on_below_30_the_branch_its_yellow_glow_reports_at_exactly_30_no_heal_is_emitted() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 30 } }));
             let view = s.view(Some(PlayerId::P1));
             let HandView::Cards(hand) = &view.you.hand else {
@@ -109,7 +107,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_your_means_the_controller_the_enemy_hero_is_not_raised() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 12 }, "p2": { "health": 12 } }));
 
             s.play("core-053", json!({}));
@@ -119,7 +116,6 @@ mod tests {
 
         #[test]
         fn the_unit_still_enters_the_field_with_its_printed_4_6_s10_4_layer_1() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 12 } }));
 
             s.play("core-053", json!({}));
@@ -177,7 +173,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_heals_up_to_38_and_a_degrade_up_to_22() {
         for (upgrade, floor) in [(true, 38), (false, 22)] {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053", "core-005"], "health": 12 } }));
             let moved = if upgrade {
                 crate::upgrade_number(&mut s, "core-053", "health")

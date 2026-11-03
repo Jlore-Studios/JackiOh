@@ -7,16 +7,20 @@
 use std::cell::{Cell, OnceCell};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
+use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult, Rng,
-    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
-    opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view,
-    units_on_field_of,
+    ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameEvent, GameState, KY_COMPETITION_MAX,
+    PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection, TurnLog, active_units_of,
+    effective_life, find_instance, is_sick, legal_actions, max_mana_for, opponent_of, owed_mana_of,
+    reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view, units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::candidates::action_key;
-use crate::config::{AI_EVAL, AI_SEARCH};
+use crate::config::{
+    AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
+};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
 use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
@@ -442,9 +446,79 @@ pub(crate) fn best_auto_answer(
     Some(best.map(|(state, _)| state).ok_or(failure))
 }
 
+/// #2929 (R1563005, R1184002): the answer `seat`'s own open question gets in a simulation when `decide`
+/// would work it out (`worked_answer`: KY's Competition, KY's Test's Easy problem), and the copy of
+/// `state` to step it on. The copy's `ANSWER_KEY` is the worked option's letter, written over any key it
+/// held, so the step judges it right on a world with no key and the true key is never read (R465). A
+/// sequence is answered right until its streak is the face's expected one, then Stopped, which summons
+/// that Kenny (R1184000). `None` for any other prompt, which keeps `best_auto_answer`.
+pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameState, ActionBody)> {
+    if state.result.is_some() {
+        return None;
+    }
+    let pending = state.pending.as_ref()?;
+    if pending.player_id != seat || pending.kind != PromptKind::Answer {
+        return None;
+    }
+    let worked = worked_answer(&pending.prompt)?.to_string();
+    let option = pending
+        .options
+        .iter()
+        .find(|option| option.label == worked && option.key != ANSWER_STOP_KEY)?;
+    let Selection::Mode { option: letter } = &option.selection else {
+        return None;
+    };
+    if let Some(streak) = pending.streak {
+        let expected = if pending.resume.radiant {
+            AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK
+        } else {
+            AI_KY_COMPETITION_EXPECTED_STREAK
+        };
+        if streak >= expected {
+            return Some((state.clone(), stop_answer(state)?));
+        }
+    }
+    let answer = ActionBody::Answer {
+        choice_id: pending.id.clone(),
+        selection: vec![option.selection.clone()],
+    };
+    let letter = letter.clone();
+    let mut keyed = state.clone();
+    if let Some(pending) = keyed.pending.as_mut() {
+        pending
+            .resume
+            .data
+            .insert(ANSWER_KEY.to_string(), Value::String(letter));
+    }
+    Some((keyed, answer))
+}
+
+/// #2929: `seat`'s `answer` stepped on `state` as `best_auto_answer` steps each it tries: one node
+/// (`None` once `counter` is spent), a refused step a failed simulation. Its callers catch a panic.
+fn step_answer(
+    state: &GameState,
+    seat: PlayerId,
+    answer: ActionBody,
+    counter: &dyn NodeCounter,
+    prefix: &str,
+) -> Option<SimStep> {
+    if !counter.take() {
+        return None;
+    }
+    let action = Action::new(answer, seat, format!("{prefix}:{}", counter.used()));
+    let next = reduce_unpiloted(state, &action);
+    if let Some(error) = next.error {
+        note_sim_error(counter);
+        return Some(Err(error));
+    }
+    charge_announced(counter, state, &action.body, &next);
+    Some(Ok(next.state))
+}
+
 /// #1112: what a state waiting on `seat`'s own prompt is worth once its prompts are answered, which is
 /// how the beam ranks a child that waits there (search.rs): every prompt open on the way, either seat's,
-/// gets its holder's best auto-answer (`best_auto_answer`, each answer one node of `counter`), at most
+/// gets its holder's best auto-answer (`best_auto_answer`, each answer one node of `counter`), but the
+/// seat's own question it works out answered as `decide` would (`worked_step`, #2929), at most
 /// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by `open_score`. Only a score: the
 /// child stays at its prompt, and keeps its plain evaluation on `None`.
 pub fn own_prompt_score(
@@ -463,7 +537,16 @@ pub fn own_prompt_score(
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<f64> {
         let mut current = state.clone();
         let mut answered: usize = 0;
+        let mut worked: usize = 0;
         while let Some(answerer) = holder(&current) {
+            if let Some((keyed, answer)) = worked_step(&current, seat) {
+                if worked >= KY_COMPETITION_MAX as usize {
+                    return None;
+                }
+                current = step_answer(&keyed, seat, answer, counter, "ahead")?.ok()?;
+                worked += 1;
+                continue;
+            }
             if answered >= AI_SEARCH.max_auto_answers as usize {
                 return None;
             }
@@ -540,11 +623,32 @@ fn simulate_answering(
         charge_announced(counter, state, action, &first);
         let mut current = first.state;
         let mut answered: usize = 0;
-        loop {
-            let other = match (&current.result, &current.pending) {
-                (None, Some(pending)) if pending.player_id != seat => pending.player_id,
-                _ => break,
-            };
+        let mut worked: usize = 0;
+        while let (None, Some(pending)) = (&current.result, &current.pending) {
+            let other = pending.player_id;
+            if other == seat {
+                // #2929: the seat's own question it works out is answered as `decide` answers it; the
+                // greedy baseline's simulation (`First`, the gates' yardstick) leaves the seat's prompts
+                // open, as before.
+                let step = if tried == AnswersTried::Drawn {
+                    worked_step(&current, seat)
+                } else {
+                    None
+                };
+                let Some((keyed, answer)) = step else {
+                    break;
+                };
+                if worked >= KY_COMPETITION_MAX as usize {
+                    note_sim_error(counter);
+                    return Some(Err("too many worked answers in one step".to_string()));
+                }
+                current = match step_answer(&keyed, seat, answer, counter, "sim")? {
+                    Ok(next) => next,
+                    Err(error) => return Some(Err(error)),
+                };
+                worked += 1;
+                continue;
+            }
             if answered >= AI_SEARCH.max_auto_answers as usize {
                 note_sim_error(counter);
                 return Some(Err("too many opponent prompts in one step".to_string()));

@@ -121,6 +121,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -275,7 +277,6 @@ mod tests {
 
             #[test]
             fn face_down_and_indestructible_cards_are_included() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE], "field": [ROCK] },
                     "p2": { "hand": [STOCKPILE], "field": [SEVEN], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
@@ -288,7 +289,6 @@ mod tests {
 
             #[test]
             fn r65_costs_at_resolution_a_set_card_at_its_own_cost_a_2_trap_under_toe_cracker_costs_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE], "field": [TOE_CRACKER], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -306,7 +306,6 @@ mod tests {
 
             #[test]
             fn r65_a_costmod_counts_on_the_field_the_menace_at_2_goes_with_a_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE], "field": [{ "def": MENACE, "costMod": -1 }] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": SEVEN, "costMod": -2 }] },
@@ -318,7 +317,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_on_the_field_costs_its_x_played_for_3_a_3_exiles_it_and_a_0_does_not() {
-                crate::register_all();
                 let mut three = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": BILLY, "statsOverride": { "attack": 9, "health": 9 } }] },
@@ -340,7 +338,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_on_the_field_with_no_x_chosen_costs_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": BILLY, "statsOverride": { "attack": 3, "health": 3 } }] },
@@ -379,7 +376,6 @@ mod tests {
 
             #[test]
             fn r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [FELINORS, { "def": MENACE, "stack": true }] },
@@ -424,7 +420,6 @@ mod tests {
 
             #[test]
             fn r65_a_hand_card_at_its_hand_cost_a_2_trap_under_toe_cracker_costs_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GLITCH, "radiant": true }, STOCKPILE] },
                     "p2": { "hand": [EXPERIMENT, STOCKPILE], "field": [TOE_CRACKER], "library": [REPLENISH] },
@@ -435,7 +430,6 @@ mod tests {
 
             #[test]
             fn r65_a_deck_card_at_its_own_cost_a_2_trap_in_the_deck_costs_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GLITCH, "radiant": true }, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [TOE_CRACKER], "library": [EXPERIMENT] },
@@ -452,7 +446,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_in_a_hand_or_a_deck_costs_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GLITCH, "radiant": true }, STOCKPILE] },
                     "p2": { "hand": [DIVIDEND, STOCKPILE], "library": [BILLY] },

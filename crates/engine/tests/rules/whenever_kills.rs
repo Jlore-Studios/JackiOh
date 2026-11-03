@@ -10,11 +10,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::damage_combat::{
     gone_killer, grunt, notes, playing, reborn_gone_killer, recorder, replays_to, turncoat,
 };
-use crate::rules::fixtures::harness::{act, put, slot};
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
+use crate::rules::fixtures::harness::{act, input, put, slot};
 
 fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))

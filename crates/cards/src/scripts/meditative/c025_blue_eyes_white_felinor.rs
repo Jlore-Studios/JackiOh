@@ -38,6 +38,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -70,7 +72,6 @@ mod tests {
 
     /// p1 holds the Felinor with two tributes on its field; p2 holds a filler hand and library.
     fn tributing(seed: &str) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -145,7 +146,6 @@ mod tests {
     #[test]
     fn r940_made_cn_by_rcta_it_is_still_immune_and_gaokao_still_buffs_it() {
         // One game: RCTA (aim: help) reaches the Felinor and makes it CN, then Gaokao resolves.
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "felinor-rcta-gaokao",
             "p1": {
@@ -195,7 +195,6 @@ mod tests {
     #[test]
     fn r940_economic_anxietys_bonus_does_not_apply_against_it() {
         // p1's Human behind Economic Anxiety shares no tag with the Felinor nor the untagged Scarab.
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "felinor-anxiety",
             "p1": { "field": [VANILLA], "backrow": [ANXIETY], "library": library() },
@@ -299,7 +298,6 @@ mod tests {
 
     #[test]
     fn r940_in_hand_or_deck_it_protects_nothing() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "felinor-off-field",
             "p1": { "mana": 10, "hand": [BREAKER, FILLER], "library": library() },
@@ -387,7 +385,6 @@ mod tests {
 
     #[test]
     fn r23_radiant_is_immutable_no_nerf_buff_transform_or_vanilla() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "felinor-immutable",
             "p1": { "hand": [FILLER], "library": library() },

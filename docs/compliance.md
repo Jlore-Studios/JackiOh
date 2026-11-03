@@ -73,10 +73,9 @@ line only after that review.
    version's row with the digest the failure prints; never edit an old row.
 3. Re-quote the changed text in `apps/web/static-pages.ts`.
 4. Every account is asked to agree again, on its next gated screen (never on `/account` and never in
-   a match). The server deploys on merge and the production web up to a day later: until the web
-   catches up, its sign-up and consent screen send the old version and are told to reload, and a
-   pending account cannot redeem. Ship a terms change to production at once: `/promote` on the
-   `production merge` issue.
+   a match). Staging gets the change on merge and production with the next daily promotion, the site
+   and its server together (`docs/deploy-cloudflare.md` §2). Ship a terms change to production
+   sooner: `/promote` on the `production merge` issue, which merges once its super run passes.
 5. Each agreement is a row of `terms_acceptances` (account, version, source, time). Accounts made
    before migration 0034 hold a `baseline` row at their creation time.
 

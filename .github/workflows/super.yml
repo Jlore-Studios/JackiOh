@@ -22,18 +22,20 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
-# It is also production's gate (#2750; production manual since 2026-11-02): a `/promote` on the
-# production issue opens a pull request of a commit of main into `production`, this workflow runs on
-# it (`pull_request` below), and promote-production.yml merges it only once every job here passed. A
-# red run on such a pull request opens its own issue, CANDIDATE_TITLE, handed to the night bot as
-# `priority:high` and `difficulty:hard`, since production waits on it; the pull request stays open,
-# and re-running the failed jobs merges it once they pass. A run that passes on one closes that issue,
-# never the daily one.
+# It is also production's gate (#2750). The daily promotion (since 2026-11-03): when the daily run on
+# main passes every job, promote-production.yml, woken by its completion, merges the commit it tested
+# into `production` and deploys it. Sooner: a `/promote` on the production issue opens a pull request
+# of a commit of main into `production`, this workflow runs on it (`pull_request` below), and
+# promote-production.yml merges it only once every job here passed. A red run on such a pull request
+# opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
+# `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
+# failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
 #
 # A failed run on the default branch hands the issue to the night bot (.harness/config.json's
 # bot_login), as ci-duration.yml hands over its report: a new issue is assigned to it and queued with
-# bot:build, and an open one nobody is assigned to is handed over the same way, so main's red run is
-# worked on without anyone asking. A dispatched run on any other branch tests that branch's change,
+# bot:build and `priority:high` (production waits for the next run on main that passes), and an open
+# one nobody is assigned to is handed over the same way, so main's red run is worked on without anyone
+# asking. A dispatched run on any other branch tests that branch's change,
 # so it is reported but never handed over, and its report says the branch's author owns it.
 #
 # The release binaries and the built client travel between jobs as artifacts, built once per run:
@@ -501,9 +503,9 @@ jobs:
           # Main's red run is the night bot's to fix, and so is a promotion's, first; a branch's is its
           # author's.
           if [ "$candidate" = true ]; then
-            owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`). #$PR promotes \`${SHA:0:12}\`, a commit of \`$DEFAULT_BRANCH\`, so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, a person comments \`/promote\` on the production issue, which tests the newer commit."
+            owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`). #$PR promotes \`${SHA:0:12}\`, a commit of \`$DEFAULT_BRANCH\`, so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests the newer commit sooner."
           elif [ "$REF" = "$DEFAULT_BRANCH" ]; then
-            owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours, and it comes first (\`priority:high\`): production promotes itself only from a run on \`$DEFAULT_BRANCH\` that passes every job, so it waits on this fix. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
           else
             owner="This run is on \`$REF\`, not \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi
@@ -523,9 +525,9 @@ jobs:
             "_Posted by \`.github/workflows/super.yml\`._")
 
           # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
-          # would, for a red run on the default branch or on a promotion pull request only, the
-          # promotion's as high priority and hard (docs/issues-and-patches.md). A failure here leaves
-          # the report standing for a person.
+          # would, for a red run on the default branch or on a promotion pull request only, both as
+          # high priority since production waits on either, the promotion's as hard too
+          # (docs/issues-and-patches.md). A failure here leaves the report standing for a person.
           hand_over() {
             if [ "$candidate" = true ]; then
               gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
@@ -539,7 +541,8 @@ jobs:
               return 0
             fi
             gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
-              && echo "handed #$1 to @$BOT_LOGIN" \
+              --add-label "priority:high" \
+              && echo "handed #$1 to @$BOT_LOGIN, high priority" \
               || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
           }
 

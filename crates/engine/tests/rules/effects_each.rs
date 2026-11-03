@@ -12,7 +12,7 @@ use std::sync::Arc;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{Bench, new_game, set_library};
+use crate::rules::fixtures::harness::{Bench, ids, new_game, set_library};
 
 const DRAWER: &str = "each-drawer";
 
@@ -93,10 +93,6 @@ fn board(seed: &str, asks_after: AsksAfter) -> (GameState, Vec<CardInstance>) {
     );
     state.players[PlayerId::P1].hand = vec![];
     (state, library)
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 mod for_each_card_r113_r66 {

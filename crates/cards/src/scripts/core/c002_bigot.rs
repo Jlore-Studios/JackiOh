@@ -41,12 +41,13 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     mod n2_bigot {
         use super::*;
 
         #[test]
         fn destroys_the_chosen_enemy_non_human_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-025", "core-008"] }
@@ -60,7 +61,6 @@ mod tests {
 
         #[test]
         fn r90_a_human_is_not_targetable_the_play_is_refused() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-008"] }
@@ -75,7 +75,6 @@ mod tests {
 
         #[test]
         fn medina_enforcer_is_human_so_bigot_cannot_target_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["meditative-083"] }
@@ -90,7 +89,6 @@ mod tests {
 
         #[test]
         fn r90_no_legal_target_the_play_is_still_legal_the_unit_enters_and_the_cry_fizzles() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-008"] }
@@ -102,7 +100,6 @@ mod tests {
 
         #[test]
         fn radiant_clears_every_enemy_non_human_while_the_humans_survive() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-002", "radiant": true }] },
                 "p2": { "field": ["core-025", "core-008", "core-012", "core-020"] }
@@ -117,7 +114,6 @@ mod tests {
 
         #[test]
         fn radiant_needs_no_target_and_destroys_nothing_when_every_enemy_unit_is_human() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-002", "radiant": true }] },
                 "p2": { "field": ["core-008", "core-020"] }

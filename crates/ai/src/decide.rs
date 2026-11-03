@@ -2,7 +2,8 @@
 //!
 //! 1. ai_to_act / redact — the only two reads of the true state (R185).
 //! 2. an unanswered draw offer is declined at once (R188).
-//! 3. the mulligan keeps the cheap cards; a question of a sequence is answered with no search (R1184002).
+//! 3. the mulligan keeps the cheap cards; a question of a sequence, or C+ #42 KY's Test's Easy problem
+//!    (#2929), is answered with no search (R1184002).
 //! 4. a single candidate is played with no search, listed on a throwaway determinization (the seat's own
 //!    legal actions never depend on the hidden cards, so `options.rng` is untouched).
 //! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
@@ -26,8 +27,8 @@ use jackioh_engine::{
 
 use crate::candidates::candidate_actions;
 use crate::config::{
-    AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE,
-    AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
+    AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_KY_TEST_ACCURACY,
+    AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
 };
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{Prices, activation_prices, attack_hook_prices, death_prices, turn_hook_prices};
@@ -75,22 +76,23 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 }
 
 /// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
-/// Competition), worked out from the redacted prompt's statement (`worked_answer`), so the key is never
-/// read (R465) and no search spends the budget on a guess, past the turn clock (R79). It never stops.
-/// R1563005: right `AI_KY_COMPETITION_ACCURACY` of the time (the Radiant face's own when Radiant), else
-/// wrong, drawn from its own stream. `None` for any other prompt, or a statement it cannot work out,
-/// which the search then answers.
+/// Competition), or C+ #42 KY's Test's Easy problem (#2929), worked out from the redacted prompt's
+/// statement (`worked_answer`), so the key is never read (R465) and no search spends the budget on a
+/// guess, past the turn clock (R79). It never stops. R1563005: right `AI_KY_COMPETITION_ACCURACY` of the
+/// time (the Radiant face's own when Radiant; `AI_KY_TEST_ACCURACY` with no streak), else wrong, drawn
+/// from its own stream. `None` for any other prompt, or a statement it cannot work out, which the search
+/// then answers.
 fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
-    if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
+    if pending.player_id != seat || pending.kind != PromptKind::Answer {
         return None;
     }
     let answer = worked_answer(&pending.prompt)?.to_string();
     let option = pending.options.iter().find(|option| option.label == answer)?;
-    let accuracy = if pending.resume.radiant {
-        AI_KY_COMPETITION_RADIANT_ACCURACY
-    } else {
-        AI_KY_COMPETITION_ACCURACY
+    let accuracy = match pending.streak {
+        None => AI_KY_TEST_ACCURACY,
+        Some(_) if pending.resume.radiant => AI_KY_COMPETITION_RADIANT_ACCURACY,
+        Some(_) => AI_KY_COMPETITION_ACCURACY,
     };
     let selection = if rng.chance(accuracy) {
         option.selection.clone()
@@ -360,8 +362,8 @@ fn plan(
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
-    // 3, R1184002: a question of a sequence, worked out from its statement, at once (R1563005: right
-    // most of the time).
+    // 3, R1184002: a question of a sequence, or C+ #42 KY's Test's Easy problem (#2929), worked out from
+    // its statement, at once (R1563005: right most of the time).
     if let Some(answer) = worked_answer_action(&public, seat, rng) {
         return Plan::Immediate(answer, DecisionReason::Prompt);
     }

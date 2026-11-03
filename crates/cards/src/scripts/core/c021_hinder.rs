@@ -72,6 +72,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -165,7 +167,6 @@ mod tests {
 
             #[test]
             fn r431_r90_with_an_empty_hand_there_is_nothing_to_discard_no_prompt_and_the_rest_still_lands() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "hinder-empty",
                     "p1": { "field": [CONTROL], "library": [HINDER, CONTROL, CONTROL, CONTROL] },

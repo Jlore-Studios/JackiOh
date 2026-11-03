@@ -19,6 +19,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     mod n20_pointmaster_base {
         use super::*;
 
@@ -41,7 +43,6 @@ mod tests {
 
         #[test]
         fn s4_4_step_1_divine_shield_negates_the_whole_counter_attack_and_is_then_gone() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "core-020", "radiant": true }] },
                 // A radiant #19 is an 18/18 with Taunt: it survives the 14 and hits back for 18.
@@ -60,7 +61,6 @@ mod tests {
 
         #[test]
         fn first_strike_still_lets_the_radiant_face_kill_outright_without_taking_a_hit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "core-020", "radiant": true }] },
                 "p2": { "field": ["core-019"] },

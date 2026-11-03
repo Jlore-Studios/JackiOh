@@ -8,12 +8,23 @@ import { describe, expect, it } from "vitest";
 
 import { SET_PIECE_KEYS, hasSetPiece, wipeClaim } from "../fx/setPieces.ts";
 import type { FxBigMoments } from "../fx/settings.ts";
-import { TAKEOVER_SET_PIECE, newEventsSince, planEntries, setPieceEntries, type AnimationEntry } from "../game/animations.ts";
+import { FX_STARSHIP_COUNT_AT, FX_STARSHIP_IGNITE_AT, FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
+import { starshipClaim } from "../fx/starship.ts";
+import {
+  ANIMATIONS,
+  STARSHIP_LAUNCH_HOLD_MS,
+  STARSHIP_SET_PIECE,
+  TAKEOVER_SET_PIECE,
+  newEventsSince,
+  planEntries,
+  setPieceEntries,
+  type AnimationEntry,
+} from "../game/animations.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { createPlayTracker } from "../game/runs.ts";
-import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { baseView, dormantStarship, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { createSoundDirector } from "./director.ts";
-import { SET_PIECE_BEDS, setPieceBed } from "./setPieceBeds.ts";
+import { SET_PIECE_BEDS, STARSHIP_BEEP_AMOUNT, STARSHIP_LAUNCH_BED, setPieceBed } from "./setPieceBeds.ts";
 import { SFX_IDS } from "./sfx.ts";
 import type { CardHook, PlayableLineKind, SfxId, SoundSink } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
@@ -134,5 +145,75 @@ describe("R2800000 a set piece's sound bed", () => {
     const { sent } = voiceNether();
     expect(sent).toContainEqual(expect.objectContaining({ kind: "voice", defId: NETHER, line: "cast" }));
     expect(sent).toContainEqual(expect.objectContaining({ kind: "effect", defId: NETHER, hook: "cast" }));
+  });
+});
+
+describe("R2801000 a Starship launch's sound bed", () => {
+  const HULL = "stinkyscape-t-dormant-starship";
+  const PIECES = ["stinkyscape-140", "stinkyscape-141"];
+
+  /** p1's Starship launching, or two pieces fusing into it, voiced by a director as Game's board voices it. */
+  function voiceStarship(events: GameEvent[], bigMoments: FxBigMoments = "full") {
+    const view = baseView({ you: emptySide("p1", { units: [null, null, dormantStarship("p1", PIECES, { instanceId: "ship" }), null, null] }) });
+    const before = withEvents(view, START);
+    const after = withEvents(view, [...START, ...events]);
+    const sink = recorder();
+    const director = createSoundDirector(sink, undefined, (defId) => cueCard(lookup, defId), undefined, () => 0);
+    director.onView(before);
+    director.onView(after);
+    const planned = planEntries(newEventsSince(before.events, after.events), before, false, createPlayTracker());
+    const entries = setPieceEntries(planned, starshipClaim, { reduced: false, bigMoments, speed: 1 });
+    const byEntry = new Map<AnimationEntry, Sent[]>();
+    for (const entry of entries) {
+      const from = sink.sent.length;
+      director.onEntryStart(entry);
+      byEntry.set(entry, sink.sent.slice(from));
+    }
+    director.onIdle();
+    const starship = entries.find((entry) => entry.launch !== undefined || entry.fuse !== undefined);
+    if (starship === undefined) throw new Error("no Starship entry");
+    return { entry: starship, sent: byEntry.get(starship) ?? [] };
+  }
+
+  const LAUNCH: GameEvent[] = [{ type: "starshipLaunched", player: "p1", instanceId: "ship", defId: HULL, name: "Ember of Departure", pieces: PIECES }];
+
+  it("R2801000 the launch's bed: three ticks, burn, landing after the hold; its own entrance at the hold's end", () => {
+    const holdMs = STARSHIP_LAUNCH_HOLD_MS;
+    const motionMs = ANIMATIONS.starshipLaunched.durationMs;
+    const bed = setPieceBed({ setPiece: { key: STARSHIP_SET_PIECE, holdMs }, durationMs: holdMs + motionMs });
+    expect(bed).toEqual([
+      ...FX_STARSHIP_COUNT_AT.map((at, k) => ({ kind: "sfx", id: "clockTick", params: { amount: STARSHIP_BEEP_AMOUNT + k }, delayMs: Math.round(at * holdMs) })),
+      { kind: "sfx", id: "burn", delayMs: Math.round(FX_STARSHIP_IGNITE_AT * holdMs) },
+      { kind: "sfx", id: "summon", params: { slamTier: "huge" }, delayMs: Math.round(holdMs + FX_STARSHIP_LAND_AT * motionMs) },
+    ]);
+    for (const step of STARSHIP_LAUNCH_BED) expect(SFX_IDS).toContain(step.id);
+    // Each beep is higher than the one before.
+    const beeps = STARSHIP_LAUNCH_BED.flatMap((step) => (step.id === "clockTick" ? [step.params?.amount ?? 0] : []));
+    expect(beeps).toEqual([...beeps].sort((a, b) => a - b));
+    expect(new Set(beeps).size).toBe(FX_STARSHIP_COUNT_AT.length);
+
+    // On the board: the bed as the held launch starts, then its own roar (`entrance`) as the hold ends.
+    const { entry, sent } = voiceStarship(LAUNCH);
+    expect(entry.setPiece).toEqual({ key: STARSHIP_SET_PIECE, holdMs });
+    const asSent = setPieceBed(entry).map((cue) => ({ kind: "sfx", id: cue.kind === "sfx" ? cue.id : "", delayMs: cue.delayMs }));
+    expect(sent.slice(0, asSent.length)).toEqual(asSent);
+    expect(sent.slice(asSent.length)).toEqual([{ kind: "sfx", id: "entrance", delayMs: holdMs }]);
+
+    // Big moments "off": no hold, no bed, and its roar at once.
+    const off = voiceStarship(LAUNCH, "off");
+    expect(off.entry.setPiece).toBeUndefined();
+    expect(off.sent).toEqual([{ kind: "sfx", id: "entrance", delayMs: 0 }]);
+  });
+
+  it("R2801000 a fuse run sounds once", () => {
+    const fusion = (piece: string, pieces: number): GameEvent[] => [
+      { type: "fused", instanceIds: ["ship", `${piece}-copy`], resultInstanceId: "ship", defId: HULL },
+      { type: "starshipFused", player: "p1", instanceId: "ship", pieceId: piece, defId: PIECES[0] ?? HULL, pieces },
+    ];
+    const { entry, sent } = voiceStarship([...fusion("a", 3), ...fusion("b", 4), ...fusion("c", 5)]);
+    expect(entry.fuse?.pieces).toHaveLength(3);
+    const sfx = sent.flatMap((s) => (s.kind === "sfx" ? [s.id] : []));
+    expect(sfx.length).toBeGreaterThan(0);
+    expect(new Set(sfx).size).toBe(sfx.length);
   });
 });

@@ -91,7 +91,6 @@ mod tests {
     const SEEDS: usize = 20;
 
     fn stimmy_board(seed: &str, radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -151,7 +150,6 @@ mod tests {
 
         #[test]
         fn at_0_it_gains_1_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [STIMMY, FILLER], "mana": 0 },
                 "p2": { "hand": [FILLER] },

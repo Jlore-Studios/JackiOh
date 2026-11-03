@@ -5,8 +5,10 @@
 //! face and 93% on the Radiant one, a miss one of the wrong answers, drawn from its own stream.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AiOptions, DecisionReason,
-    decide, play_ai_turn, redact,
+    AI_BUDGET, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_EXPECTED_STREAK,
+    AI_KY_COMPETITION_RADIANT_ACCURACY, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AiOptions, DecisionReason,
+    NodeCounter, Prices, create_node_counter, decide, own_prompt_score, play_ai_turn, redact, simulate,
+    simulate_first_answers,
 };
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::testkit::{
@@ -19,6 +21,7 @@ use super::support::{AI, act, register_cards, scenario};
 const COMPETITION: &str = "meditativeplus-020";
 const KENNY: &str = "meditativeplus-020-1";
 const FILLER: &str = "core-005";
+const VANILLA: &str = "core-008";
 
 /// The AI's seat, p1, mid-turn with the Competition cast and its first question open.
 fn asked(seed: &str, radiant: bool) -> GameState {
@@ -47,6 +50,43 @@ fn kenny_x(state: &GameState) -> Vec<i32> {
         .filter(|card| card.def_id == KENNY)
         .map(x_of)
         .collect()
+}
+
+/// The AI's seat, p1, in its main phase with the Competition (`radiant` or not) and a filler in hand
+/// and the 2 mana to cast either, each side a library to draw from.
+fn holding(seed: &str, radiant: bool) -> GameState {
+    register_cards();
+    let library = [VANILLA; 6];
+    scenario(json!({
+        "seed": seed,
+        "p1": { "hand": [{ "def": COMPETITION, "radiant": radiant }, FILLER], "mana": 2, "library": library },
+        "p2": { "hand": [FILLER], "library": library },
+    }))
+    .state()
+    .clone()
+}
+
+/// The cast of the Competition `state`'s AI holds.
+fn cast(state: &GameState) -> ActionBody {
+    let id = state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == COMPETITION)
+        .map(|card| card.id.clone())
+        .unwrap_or_else(|| panic!("the Competition in hand"));
+    legal_actions(state, AI)
+        .into_iter()
+        .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id))
+        .unwrap_or_else(|| panic!("its cast is legal"))
+}
+
+/// The right answers the search expects of the face's sequence (#2929).
+fn expected_streak(radiant: bool) -> i32 {
+    if radiant {
+        AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK
+    } else {
+        AI_KY_COMPETITION_EXPECTED_STREAK
+    }
 }
 
 mod r1184002_the_ai_works_a_question_out_from_its_statement {
@@ -207,5 +247,88 @@ mod r1184002_the_ai_works_a_question_out_from_its_statement {
                 .is_none_or(|pending| pending.kind != PromptKind::Answer)
         );
         assert_ne!(turn.state.active, AI);
+    }
+}
+
+// #2929: the search expects the AI's own sequence to be answered as `decide` answers it, right until the
+// streak its accuracy earns on average and then Stop, so a cast is worth that Kenny and not the 1/1 of
+// the best immediate answer, which is to stop at once.
+mod r1563005_the_search_expects_the_streak_the_ai_will_answer_to {
+    use super::*;
+
+    #[test]
+    fn r1563005_a_simulated_cast_summons_the_kenny_of_the_expected_streak_on_either_face() {
+        for radiant in [false, true] {
+            let public = redact(&holding(&format!("r2929-sim-{radiant}"), radiant), AI);
+            let counter = create_node_counter(AI_BUDGET.nodes, None);
+            let next = simulate(&public, AI, &cast(&public), &counter, Prices::NONE)
+                .and_then(Result::ok)
+                .unwrap_or_else(|| panic!("radiant {radiant}: the cast simulates"));
+            assert!(
+                next.pending.is_none(),
+                "radiant {radiant}: the sequence ends inside the cast's step"
+            );
+            let expected = expected_streak(radiant);
+            assert_eq!(kenny_x(&next), vec![expected], "radiant {radiant}");
+            // One node for the cast, one for each right answer and one for the Stop.
+            assert_eq!(counter.used(), expected as usize + 2, "radiant {radiant}");
+        }
+    }
+
+    #[test]
+    fn r1563005_r465_ahead_its_own_question_is_worked_out_from_the_statement_never_the_key() {
+        for radiant in [false, true] {
+            let state = asked(&format!("r2929-ahead-{radiant}"), radiant);
+            let mut twin = state.clone();
+            let key = state
+                .pending
+                .as_ref()
+                .and_then(|pending| answer_key_of(&pending.resume.data));
+            if let Some(pending) = twin.pending.as_mut() {
+                pending.resume.data.insert(
+                    ANSWER_KEY.to_string(),
+                    json!(if key.as_deref() == Some("A") { "B" } else { "A" }),
+                );
+            }
+            let ahead = |state: &GameState| {
+                let counter = create_node_counter(AI_BUDGET.nodes, None);
+                let score = own_prompt_score(state, AI, &counter, Prices::NONE);
+                (score, counter.used())
+            };
+            let (score, used) = ahead(&state);
+            assert!(score.is_some(), "radiant {radiant}: the sequence is scored");
+            // One node for each right answer and one for the Stop.
+            assert_eq!(used, expected_streak(radiant) as usize + 1, "radiant {radiant}");
+            assert_eq!(
+                ahead(&twin),
+                ahead(&state),
+                "radiant {radiant}: the key changes nothing"
+            );
+            assert_eq!(ahead(&redact(&state, AI)), ahead(&state), "radiant {radiant}");
+        }
+    }
+
+    #[test]
+    fn r1563005_the_greedy_baselines_simulation_leaves_the_question_open() {
+        let public = redact(&holding("r2929-greedy", false), AI);
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let next = simulate_first_answers(&public, AI, &cast(&public), &counter)
+            .and_then(Result::ok)
+            .unwrap_or_else(|| panic!("the cast simulates"));
+        assert_eq!(
+            next.pending
+                .as_ref()
+                .map(|pending| (pending.player_id, pending.kind)),
+            Some((AI, PromptKind::Answer))
+        );
+        assert_eq!(counter.used(), 1);
+    }
+
+    #[test]
+    fn r1563005_with_the_radiant_competition_in_hand_and_the_mana_to_cast_it_the_ai_casts_it() {
+        let state = holding("r2929-cast", true);
+        let decision = decide(&state, AI, &mut AiOptions::new(create_rng("r2929-cast", 0)))
+            .unwrap_or_else(|| panic!("a decision"));
+        assert_eq!(decision.action, cast(&state));
     }
 }

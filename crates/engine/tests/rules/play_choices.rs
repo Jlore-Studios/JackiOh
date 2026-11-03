@@ -254,7 +254,7 @@ fn on_instance(id: &str) -> Selection {
     }
 }
 
-fn ids(selections: &[Selection]) -> Vec<String> {
+fn selection_ids(selections: &[Selection]) -> Vec<String> {
     selections
         .iter()
         .filter_map(|selection| match selection {
@@ -347,7 +347,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let decl = first_decl(&state, &card);
         // R13: a dormant card is not "on the field" for effects, so it is never offered.
         assert_eq!(
-            ids(&play_choices::legal_selections_for(
+            selection_ids(&play_choices::legal_selections_for(
                 &state,
                 PlayerId::P1,
                 &card,
@@ -358,7 +358,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let combos: Vec<Vec<String>> =
             play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None)
                 .iter()
-                .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
+                .map(|combo| selection_ids(combo.targets.as_deref().unwrap_or(&[])))
                 .collect();
         assert_eq!(combos, vec![vec![top.id.clone()]]);
 
@@ -401,7 +401,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let decl = first_decl(&state, &card);
 
         // §9.1: a hand pick only ever offers the chooser's own hand, and never the card leaving it.
-        let offered = ids(&play_choices::legal_selections_for(
+        let offered = selection_ids(&play_choices::legal_selections_for(
             &state,
             PlayerId::P1,
             &card,
@@ -461,7 +461,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert_eq!(decl.min, 1);
         assert_eq!(decl.max, 2);
         assert_eq!(
-            ids(&play_choices::legal_selections_for(
+            selection_ids(&play_choices::legal_selections_for(
                 &state,
                 PlayerId::P1,
                 &card,
@@ -498,7 +498,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         let combos = play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None);
         let picked: Vec<Vec<String>> = combos
             .iter()
-            .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
+            .map(|combo| selection_ids(combo.targets.as_deref().unwrap_or(&[])))
             .collect();
         assert_eq!(
             picked,
@@ -782,7 +782,7 @@ mod r703_a_pick_the_play_needs {
         let combos: Vec<Vec<String>> =
             play_choices::play_choice_combinations(&state, PlayerId::P1, &needed, None)
                 .iter()
-                .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))
+                .map(|combo| selection_ids(combo.targets.as_deref().unwrap_or(&[])))
                 .collect();
         assert_eq!(combos, vec![vec![foe.id.clone()]]);
         assert!(offers(&state, &needed));

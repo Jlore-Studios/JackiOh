@@ -3,15 +3,16 @@
 //! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
 //! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
 //! #1086 prices what a side has banked in public state, #1224 what its coming refreshes will or will
-//! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see. The
-//! decision's root prices each Death the seat can read by what it leaves behind (#2424; a Starship
-//! Piece's by the copy it fuses into, #2566; a backrow card's, either side's, and a hand Field Spell's,
-//! #2687), each turn hook by one firing (#2477, #2565; the start of the opponent's turn too, #2689),
-//! each Activate by one use (#2564; a face-up backrow card's, #2603) and each attack hook by the unit's
-//! next attack against its hookless twin's (#2688), and the rest read them (`Prices`), counting a
-//! start-of-turn or end-of-turn firing once for each time its controller's turn runs it (Meditative #9
-//! Joint Filing's extra runs, #2689). It reads only what the seat may know or what a determinization
-//! sampled, and nothing here reads a handicap or a difficulty (R180).
+//! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see, #2928
+//! the cards a side may still play from its graveyard. The decision's root prices each Death the seat
+//! can read by what it leaves behind (#2424; a Starship Piece's by the copy it fuses into, #2566; a
+//! backrow card's, either side's, and a hand Field Spell's, #2687), each turn hook by one firing
+//! (#2477, #2565; the start of the opponent's turn too, #2689), each Activate by one use (#2564; a
+//! face-up backrow card's, #2603) and each attack hook by the unit's next attack against its hookless
+//! twin's (#2688), and the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
+//! once for each time its controller's turn runs it (Meditative #9 Joint Filing's extra runs, #2689).
+//! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
+//! handicap or a difficulty (R180).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -32,9 +33,9 @@ use jackioh_engine::{
     effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
     first_entry_zone, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_standing_unit,
     is_starship_piece, is_temporary_card, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
-    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
+    query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
     why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
@@ -707,8 +708,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
 /// banked, what its coming refreshes will or will not give, the backrow (an enemy face-down card by the
-/// cost it shows, never a Unit standing there, R2490000), the hand, the library and the fatigue draws it
-/// has taken.
+/// cost it shows, never a Unit standing there, R2490000), the hand, the cards in its graveyard it may
+/// still play from there (#2928), the library and the fatigue draws it has taken.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights, prices: &Prices) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -812,6 +813,17 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         } else {
             unseen
         };
+    }
+    // #2928, R454, R65: a card in this graveyard its owner may still play from there is one more play
+    // the side has, at `graveyard_playable` of its hand price. A graveyard is public (R185), so the
+    // enemy's counts card by card too, the same in every world a determinization samples. No call at
+    // a zero share (the frozen baseline's).
+    if w.graveyard_playable != 0.0 {
+        for card in &side.graveyard {
+            if playable_from_graveyard(state, card) {
+                value += w.graveyard_playable * hand_card_value(state, card, w);
+            }
+        }
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);

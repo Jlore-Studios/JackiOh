@@ -68,6 +68,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -131,7 +133,6 @@ mod tests {
         #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
             for (radiant_face, size) in [(false, 4), (true, 8)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOT, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -160,7 +161,6 @@ mod tests {
 
             #[test]
             fn r42_a_kill_in_a_forced_attack_counts_moths_to_the_flame_s_compulsion() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "field": [{ "def": BOT, "lane": 2 }], "library": DECK },

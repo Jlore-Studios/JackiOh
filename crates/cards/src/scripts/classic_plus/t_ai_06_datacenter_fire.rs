@@ -88,6 +88,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const FIRE: &str = "classicplus-t-ai-06";
     const DATACENTER: &str = "classicplus-078"; // (2) Field Spell
     const TWINSPELL: &str = "core-079"; // (2) Field Spell
@@ -106,7 +108,6 @@ mod tests {
     use crate::js;
 
     fn fire(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": FIRE, "radiant": radiant_face }, VANILLA], "library": [VANILLA] }), p1),
             "p2": merged(json!({ "hand": [VANILLA], "library": [VANILLA] }), p2),
@@ -223,7 +224,6 @@ mod tests {
             #[test]
             fn r588_r383_an_animated_field_spell_standing_in_a_unit_zone_is_a_unit_there_neither_destroyed_nor_counted() {
                 // C+ #12.8 Frostspatula, "Animated on your turn": p1's turn starts and it steps into a unit zone.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FIRE, VANILLA], "backrow": [up("classicplus-012-8", 1)], "library": [VANILLA] },

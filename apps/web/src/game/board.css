@@ -3330,4 +3330,12 @@ button.modifier-badge[data-open="true"] {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* B46: the clock keeps its words on one line beside the cut first span (clock.css keeps the
+     urgent pill's words too). Squeezed word-by-word it stood the bar three lines tall, and the
+     board's cards — already at their 44px floor at 390x664 — spilled 9px past the screen. */
+  .app-shell--wide:has(> .game) > .match-bar > .clock {
+    flex: none;
+    white-space: nowrap;
+  }
 }

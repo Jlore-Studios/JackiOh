@@ -115,7 +115,7 @@ and three parameters:
 | `flight` | drawn | drawn | a card back flying from the library into the hand, landing with its sparkle |
 | `glimpse` | predicted, secretRevealed | nothing | a sheen and a small flare on the hero's badge |
 | `mana` | manaChanged, manaSpent | manaChanged | one sparkle per crystal gained spread across Travel to Land, landing together; a soft pulse where a spend drained |
-| `tithe` | costChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202) |
+| `tithe` | costChanged, modifierChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202); a price added for a player glints on their modifier badges and on their Dormant Starship, whose launch it may price (R2801000) |
 | `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
 | `snap` | trapFired | trapFired | a tight ring on the trap's own zone, then its reveal: in the card's flavor when the view names it, else the entry palette (R154, R202); a firing again is a short flare |
 
@@ -457,6 +457,39 @@ theirs clears one side), the Anomaly Found! token (its caster's side) and Traini
 Floodgates (`death: wipe`, its own side, from its Death's marker). Stinkyscape
 #12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
 ids R97 hides on both seats.
+
+## The Starship
+
+Stinkyscape's signature system (R1852000, R1852003) has two moments of its own (R2801000), drawn by
+`fx/starship.ts` and keyed on nothing but the public Starship.
+
+- **The fuse (a Signature, no hold).** Pieces fusing one after another into one Starship, each
+  `fused` with the `starshipFused` after it, are one entry (`game/runs.ts` `fuseRunAt`) of
+  `starshipFuseMs(n)`: `STARSHIP_FUSE_MS` and `FX_STARSHIP_FUSE_STAGGER_MS` for each later piece, up
+  to `STARSHIP_FUSE_STAGGERED_MAX`. Each dead piece's card back flies from where it stood (else its
+  graveyard) to the Starship, a stagger apart, and bolts on with a spark, a clank ring and a short
+  shake. Unpinned, the burst budget may squeeze it; every beat keeps its share. A Dormant Starship's
+  face bolts on a hull plate a piece (`cards/StarshipHull.tsx`, up to `STARSHIP_HULL_PLATES_MAX`),
+  read from the view. R2791000's Equip beat stays off it: a piece's copy comes from the graveyard,
+  never the hand.
+- **The launch (a set piece, held).** `starshipLaunched` is claimed as the `starship` set piece
+  (`starshipClaim`, `STARSHIP_LAUNCH_HOLD_MS` at speed 1), held, capped, scaled, shortened and
+  skipped as R2785000 holds every set piece. Through the hold a 3-2-1 countdown pops over the ship
+  (`FX_STARSHIP_COUNT_AT`), the board shaking harder at each count, and its engines ignite in Tech's
+  rocket exhaust (`FX_STARSHIP_IGNITE_AT`); as the hold ends it lifts off (`jk-starship-launch`) with
+  a contrail, its Dormant badge burning away, and lands as its launched self. Its exhaust, contrail
+  and shake are `STARSHIP_TUNING`'s step for its pieces (small from 0, medium from 3, large from 6).
+  Its bed (`STARSHIP_LAUNCH_BED`) beeps each count, higher each time, burns at the ignition and
+  thuds at the landing; its own row's roar sounds at the lift-off. Under Big moments' "off" it plays
+  unheld, with no countdown; under Reduce Motion it is one still frame of the launch, which holds
+  nothing, as a Mythic's still card does.
+
+| Card | Entry | Ties to the ship |
+|---|---|---|
+| Stinkyscape #130 Jlockeed's Starship Retrofitting Program | `cast: send`, Tech/rocket | the Jlockeed card it adds, a Starship Piece from then on, flies to the hand in the rocket's exhaust |
+| Stinkyscape #140 to #143, the Launchers | `cry: conjure`, Tech/rocket | each lands in a ring of exhaust, the Activate a launched Starship takes from it |
+| Stinkyscape T-AI-5 Launch Sequencer | `cast: tithe`, Tech/rocket | "Your Starship launch costs (1)": a glint on the badge and on the Dormant Starship whose launch it prices |
+| the Dormant Starship | `none` | its fuse and launch are the Starship's own |
 
 ## Examples
 

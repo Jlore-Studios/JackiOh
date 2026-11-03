@@ -29,6 +29,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const GUY: &str = "classicplus-005";
     const SHEEPISH: &str = "core-041"; // (1) Trap.
     const MY_PAWN: &str = "core-096"; // (1) Trap: fires only on a lethal attack, so a play never sets it off.
@@ -45,7 +47,6 @@ mod tests {
     use crate::merged;
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(
                 json!({
@@ -180,7 +181,6 @@ mod tests {
 
         #[test]
         fn r1_a_recruited_guy_att_fires_no_cry_your_backrow_stays() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [COOKIE_GUILD, FILLER], "library": [GUY, STOCKPILE], "backrow": my_backrow(), "mana": 8 },
                 "p2": { "hand": [FILLER] },
@@ -242,7 +242,6 @@ mod tests {
 
         #[test]
         fn s4_5_a_destroyed_backrow_card_that_prints_death_fires_it_the_opponent_s_frostspatula_resummons_its_kill() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {

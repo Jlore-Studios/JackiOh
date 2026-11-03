@@ -10,14 +10,9 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::field::{flush, playing as field_playing, tower};
 use crate::rules::fixtures::harness::{
-    act, act_result, events_of_type, in_hand, json_of, live, matches_object, past_the_mulligans as playing,
-    put, sink_for, slot,
+    act, act_result, events_of_type, in_hand, input, json_of, live, matches_object,
+    past_the_mulligans as playing, put, sink_for, slot,
 };
-
-/// An `ActionInput` from a JSON body (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
 
 fn expect_match(actual: impl Serialize, expected: Value) {
     let actual = json_of(actual);

@@ -132,6 +132,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const PRESTIGE: &str = "meditative-053";
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
@@ -139,7 +141,6 @@ mod tests {
     /// p1 holds Prestige (base unless `radiant_face`) with a Radiant vanilla Unit on each side's
     /// field; both sides keep cards in hand so no turn auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -214,7 +215,6 @@ mod tests {
     /// p1 holds Prestige (base unless `radiant_face`) and plenty of mana; p2's backrow holds a
     /// Radiant Field Spell and a Radiant face-down Trap, and its field a plain Unit.
     fn backrow_game(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -258,7 +258,6 @@ mod tests {
 
         #[test]
         fn deradiants_a_radiant_card_in_your_hand() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-hand",
                 "p1": {
@@ -288,7 +287,6 @@ mod tests {
 
         #[test]
         fn r831005_the_next_card_you_play_this_turn_becomes_radiant_and_only_that_one() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-next",
                 "p1": { "mana": 10, "hand": [PRESTIGE, VANILLA, VANILLA, FILLER], "library": filler(4) },
@@ -313,7 +311,6 @@ mod tests {
 
         #[test]
         fn r831005_unused_it_ends_with_the_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-expiry",
                 "p1": { "mana": 10, "hand": [PRESTIGE, VANILLA, FILLER], "library": filler(4) },
@@ -386,7 +383,6 @@ mod tests {
 
         #[test]
         fn radiant_only_keywords_are_lost_and_no_cry_runs() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-kpop",
                 "p1": { "mana": 10, "hand": [PRESTIGE, FILLER], "library": filler(4) },
@@ -409,7 +405,6 @@ mod tests {
 
         #[test]
         fn the_card_follows_its_base_text_from_then_on() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-base-text",
                 "p1": {
@@ -438,7 +433,6 @@ mod tests {
 
         #[test]
         fn r440_deradianted_is_hidden_in_a_hand_and_public_on_the_field() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-hidden",
                 "p1": {
@@ -624,7 +618,6 @@ mod tests {
                 s.play(PRESTIGE, pick(&unit.id));
                 assert!(!s.card(&unit.id).radiant);
             }
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "prestige-offered-hand",
                 "p1": {
@@ -646,7 +639,6 @@ mod tests {
             assert_eq!(play_reason(&s).as_deref(), Some(NEEDS_A_TARGET));
             s.expect_refused_with(|s| s.play(PRESTIGE, json!({})), NEEDS_A_TARGET);
             // A Radiant card in the opponent's hand is no hand pick of yours (§9.1).
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "prestige-their-hand",
                 "p1": { "hand": [PRESTIGE, FILLER], "library": filler(4) },
@@ -657,7 +649,6 @@ mod tests {
 
         #[test]
         fn r1851003_the_radiant_face_with_no_radiant_enemy_card_on_the_field_is_not_offered_your_own_counting_for_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-radiant-empty",
                 "p1": {
@@ -746,7 +737,6 @@ mod tests {
 
         #[test]
         fn r1851000_r214_a_base_prestige_the_next_play_makes_radiant_answers_the_radiant_faces_gate() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-r214",
                 "p1": {

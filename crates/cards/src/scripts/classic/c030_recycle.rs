@@ -69,9 +69,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ids;
     use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -83,10 +86,6 @@ mod tests {
     const A: &str = "core-019";
     const B: &str = "core-001";
     const C: &str = "core-020";
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
-    }
 
     fn library_and_hand(s: &Scenario) -> Vec<String> {
         let mut all = ids(&s.pile(P1, "library"));
@@ -131,7 +130,6 @@ mod tests {
 
             #[test]
             fn shuffles_every_graveyard_card_into_the_deck_then_draws_1_the_spell_itself_lands_in_the_graveyard_after() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RECYCLE], "library": [X, Y], "graveyard": [A, B, C] },
                     "p2": { "hand": [FILLER] },
@@ -155,7 +153,6 @@ mod tests {
 
             #[test]
             fn r78_each_card_keeps_its_id_and_its_costmod() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RECYCLE], "library": [X], "graveyard": [{ "def": A, "costMod": 1 }] },
                     "p2": { "hand": [FILLER] },
@@ -170,7 +167,6 @@ mod tests {
 
             #[test]
             fn an_empty_graveyard_only_draws() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RECYCLE], "library": [X, Y] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RECYCLE, json!({}));
@@ -185,7 +181,6 @@ mod tests {
 
             #[test]
             fn r80_r316_a_card_the_full_deck_turns_away_stays_in_the_graveyard_reported_by_libraryoverflow() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RECYCLE], "library": nearly_full_library(), "graveyard": [A, B] },
                     "p2": { "hand": [FILLER] },
@@ -220,7 +215,6 @@ mod tests {
 
             #[test]
             fn r97_r311_the_positions_are_blank_in_both_views_and_your_own_deck_list_names_the_cards() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RECYCLE], "library": [X], "graveyard": [A, B] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RECYCLE, json!({}));
@@ -251,7 +245,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_draw_makes_it_draw_2() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RECYCLE], "library": [X, Y, A] }, "p2": { "hand": [FILLER] } }));
                 step_param(s.card_mut(RECYCLE), "draw", 1);
 
@@ -266,7 +259,6 @@ mod tests {
 
             #[test]
             fn r78_each_shuffled_card_costs_1_less_a_costmod_it_keeps() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RECYCLE, "radiant": true }], "library": [X], "graveyard": [A, B] },
                     "p2": { "hand": [FILLER] },
@@ -283,7 +275,6 @@ mod tests {
 
             #[test]
             fn r65_r78_the_discount_adds_to_what_the_card_already_carries_a_card_at_1_ends_at_0_and_one_at_0_at_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RECYCLE, "radiant": true }], "library": [X], "graveyard": [{ "def": A, "costMod": 1 }, B] },
                     "p2": { "hand": [FILLER] },
@@ -299,7 +290,6 @@ mod tests {
 
             #[test]
             fn r177_the_cost_change_inside_the_deck_is_read_by_neither_player() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RECYCLE, "radiant": true }], "library": [X, Y, C], "graveyard": [A] },
                     "p2": { "hand": [FILLER] },
@@ -324,7 +314,6 @@ mod tests {
 
             #[test]
             fn r80_a_card_the_cap_left_in_the_graveyard_is_not_discounted() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RECYCLE, "radiant": true }], "library": nearly_full_library(), "graveyard": [A, B] },
                     "p2": { "hand": [FILLER] },
@@ -339,7 +328,6 @@ mod tests {
 
             #[test]
             fn then_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": RECYCLE, "radiant": true }], "library": [X] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RECYCLE, json!({}));
@@ -349,7 +337,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_the_discount_makes_them_cost_2_less() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RECYCLE, "radiant": true }], "library": [X, Y], "graveyard": [A] },
                     "p2": { "hand": [FILLER] },

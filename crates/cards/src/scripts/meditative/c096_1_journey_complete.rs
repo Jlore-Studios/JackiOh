@@ -85,6 +85,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -104,10 +105,6 @@ mod tests {
             },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
         }))
-    }
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
     }
 
     /// What M #96 writes on the Journey Complete it shuffles in (R1246).

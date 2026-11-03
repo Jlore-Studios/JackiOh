@@ -44,11 +44,12 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
 
     fn spa(seed: &str, radiant: bool, library: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": library },

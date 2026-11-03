@@ -177,6 +177,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -193,7 +195,6 @@ mod tests {
 
     /// p1 holds Showdown (Radiant on `radiant`) over `library`; p2 holds fillers.
     fn casting(seed: &str, radiant: bool, library: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -242,7 +243,6 @@ mod tests {
 
     #[test]
     fn r945_plays_are_refused_there_and_summons_still_land() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "showdown-refuse",
             "p1": {
@@ -281,7 +281,6 @@ mod tests {
 
     #[test]
     fn r946_radiant_casts_book_of_buff_on_a_card_played_into_the_lane() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "showdown-book",
             "p1": {
@@ -325,7 +324,6 @@ mod tests {
 
     #[test]
     fn r946_radiant_casts_on_a_summon_into_the_lane_and_not_on_other_lanes() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "showdown-summon",
             "p1": {
@@ -349,7 +347,6 @@ mod tests {
 
     #[test]
     fn r946_the_watch_ends_with_the_turn_and_the_book_counts_as_a_play() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "showdown-watch-end",
             "p1": {
@@ -381,7 +378,6 @@ mod tests {
         /// p1 (Showdown on the Radiant face on `radiant`) faces p2's Vanillas in lanes 2 and 3 and a
         /// face-down Trap in p2's backrow lane 5, so lanes 1 and 4 are the empty ones.
         fn crowded(radiant: bool) -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "seed": "showdown-empty",
                 "p1": {
@@ -496,7 +492,6 @@ mod tests {
 
         /// p1 holds two Showdowns on one face and a Stockpile over the six-card library.
         fn holding_two(radiant: bool) -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "seed": "showdown-trade",
                 "p1": {
