@@ -15561,15 +15561,8 @@
       }
     },
     "2949": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41683611055",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-03T17:51:23Z",
-        "until": "2026-11-03T18:21:23Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15581,10 +15574,9 @@
         "reason": "planned on opus",
         "trail": "\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2949/apps/web/src/cards/cosmetics.test.tsx\", \"offset\": 1404, \"limit\": 40}\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\\|ParticleKind\\\\|GOLD_PARTICLES\\\\|kinds\\\" apps/web/src/cards/art/motion.test.ts | head -30; grep -n \\\"Signature\\\\|signature\\\\|Mythic\\\" apps/web/src/cards/art/mo\u2026\n- Bash: {\"command\": \"grep -n \\\"Mythic\\\\|FULL_ART_MOTION\\\\|artMotionOf\\\\|artMotionFor\\\\|it(\\\\\\\"R\\\\|it('R\\\\|it(\\\\`R\\\" apps/web/src/cards/fullArtTiers.test.tsx | head -60\", \"description\": \"Find Mythic and motio\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2949/apps/web/src/cards/fullArtTiers.test.tsx\", \"offset\": 460, \"limit\": 20}\n- Bash: {\"command\": \"grep -rn \\\"\\\\.offer\\\\b\\\\|offer:\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v generated | head; grep -n \\\"is_none_or\\\\|channel\\\" rust-toolchain.toml; grep -rn \\\"is_none_or\\\" cr\u2026\n- Bash: {\"command\": \"python3 -I /tmp/plan2949/offer.py version-full-art 45 55 60 | grep \\\"^version-full-art [0-9]\\\"; grep -n \\\"pub mod replay\\\\|pub use replay\\\" crates/engine/src/lib.rs\", \"description\": \"Com\u2026\n- Bash: {\"command\": \"ls crates/server/tests/ | head -30; grep -n \\\"VERSION_OFFER\\\" apps/web/src/wire/*.ts apps/web/src/wire/generated/*.ts 2>/dev/null | head\", \"description\": \"List server tests and check con\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/server/tests/export_config.rs | grep -v \\\"^$\\\" | head -40\", \"description\": \"Read server config export test head\"}\n- Bash: {\"command\": \"sed -n 325,360p apps/web/src/collection/collection.test.tsx; sed -n 645,730p apps/web/src/collection/collection.test.tsx\", \"description\": \"Read collection tests on strips and augments\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2949/apps/web/src/collection/CardCosmeticsView.tsx\", \"offset\": 166, \"limit\": 180}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"Full art\\\\\\\"\\\\|\\\\\\\"Animated\\\\\\\"\\\\|\\\\\\\"Signature\\\\\\\"\\\\|\\\\\\\"Locked\\\\\\\"\\\\|\\\\\\\"Needs\\\" apps/web/src/i18n/zh-CN.json | head; tail -5 apps/web/src/i18n/zh-CN.json; grep -n \\\"coll\u2026\n- Bash: {\"command\": \"sed -n 1400,1436p apps/web/src/cards/art/stinkyscape.ts; sed -n 920,956p apps/web/src/cards/art/traininggrounds.ts\", \"description\": \"Read the set painters' entry functions\"}\n- Bash: {\"command\": \"grep -rn \\\"ParticleKind\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"^apps/web/src/cards/art/motion.ts\\\" | head; grep -n \\\"pal-slate-100\\\\|pal-slate-200\\\\|pal-white:\\\" apps/\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2949/crates/server/src/cosmetics.rs\", \"offset\": 1228, \"limit\": 135}\n- Bash: {\"command\": \"sed -n 95,135p crates/server/src/loadout.rs; sed -n 500,540p crates/server/src/loadout.rs\", \"description\": \"Read AccountPicks default and loadout test helpers\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\.augments\\\" crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/loadout.rs:9[0-9][0-9]\\\\|tests\\\" | head -20; grep -rn \\\"PickRefusal::\\\" crates/server/src --inclu\u2026\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/patches/cardArt.ts | head -45; sed -n 210,240p apps/web/src/cards/art/CardArt.test.tsx\", \"description\": \"Read the patches art mirror and its test\"}\n- Bash: {\"command\": \"grep -rln \\\"screenshot\\\\|compareSnapshot\\\\|matchImage\\\" e2e/cypress/component | head; grep -n \\\"test:component\\\" e2e/package.json\", \"description\": \"Check component specs for screenshots\"}\n- Bash: {\"command\": \"sed -n 1,30p e2e/cypress/component/signature.cy.tsx; grep -n \\\"screenshot\\\\|it(\\\\|describe(\\\" e2e/cypress/component/signature.cy.tsx e2e/cypress/component/animated-art.cy.tsx | head -20\"\u2026\n- Bash: {\"command\": \"sed -n 25,130p e2e/cypress/component/animated-art.cy.tsx\", \"description\": \"Read the animated-art spec's screenshot helpers\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"core-[0-9]*\\\\\\\"\\\\|\\\\\\\"classic[a-z]*-[0-9]*\\\\\\\"\\\\|\\\\\\\"meditative[a-z]*-[0-9]*\\\\\\\"\\\\|\\\\\\\"stinkyscape-[0-9]*\\\\\\\"\\\\|\\\\\\\"traininggrounds-[0-9]*\\\\\\\"\\\" crates/server/src/economy/r\u2026\n- Bash: {\"command\": \"grep -rn \\\"const [A-Z_]*: &str = \\\\\\\"[a-z]*-[0-9]\\\" crates/server/src/economy crates/server/tests/api | head -20; python3 -I -c \\\"\\nimport json\\nF=set(json.load(open('/dev/stdin')))\\n\\\" \u2026\n- Bash: {\"command\": \"grep -n \\\"version-full-art\\\\|augment-animated\\\\|augment-signature\\\" crates/server/cosmetics.json; wc -l crates/server/cosmetics.json; tail -5 crates/server/cosmetics.json | cut -c1-200\",\u2026\n- Bash: {\"command\": \"grep -rln \\\"art window's lower\\\\|signs over its art window\\\\|Signature on the normal face\\\\|signature on the normal face\\\\|on either face\\\" --include=*.md --include=*.ts --include=*.tsx \u2026\n- Bash: {\"command\": \"sed -n 780,812p apps/web/src/cards/cosmetics.css\", \"description\": \"Read the signature placement CSS rules\"}\n- Bash: {\"command\": \"grep -rn \\\"cf-art-frame > .cf-signature\\\\|cf-art-frame>.cf-signature\\\\|art-frame.*signature\\\" apps/web/src --include=*.ts --include=*.tsx | head; grep -n \\\"test(\\\\|it(\\\" apps/web/src/car\u2026\n- Bash: {\"command\": \"ls apps/web/src/collection/ | grep -i \\\"equip\\\\|test\\\" | head -20; grep -rln \\\"EquipButton\\\" apps/web/src --include=*.test.tsx | head\", \"description\": \"Find EquipButton tests\"}\n- Bash: {\"command\": \"grep -rln \\\"EquipButton\\\\|equip-\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"import EquipButton\\\\|from \\\\\\\"./EquipButton\\\\|from \\\\\\\"../collection/EquipButt\u2026\n- Bash: {\"command\": \"sed -n 378,395p apps/web/src/collection/collection.test.tsx; sed -n 501,515p apps/web/src/collection/collection.test.tsx\", \"description\": \"Read collection tests listing Signature\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2949/.bot-plan.md\", \"content\": \"# Draft plan for #2949 (planner; near final)\\n\\nDecisions so far (see final plan for details):\\n- Signature fits = pic\u2026\n- said: I've finished reading the code and the plan is ready. Here it is. **Goal** - **Signature rule.** Signature (`augment-signature`) is worn only beside the Full art version and the Animated augment, each owned and offered on the card. - The server returns a 400 and writes nothing for a pick that names\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-03T17:22:19Z",
       "owner_why": "it plans it",
@@ -15597,9 +15589,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-03T16:34:45Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41683611055",
+      "run_id": "pending:b8ea5388-1793728506",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T17:22:19Z",
+      "started_at": "2026-11-03T17:55:39Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15754,9 +15746,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T17:54:51Z",
+    "at": "2026-11-03T17:55:39Z",
     "url": "",
-    "what": "review #2951 on claude-4"
+    "what": "build #2949 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-03T17:44:53Z",
