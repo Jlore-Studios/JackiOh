@@ -86,6 +86,15 @@ trap backrow. This file binds every agent, not only Claude.
     or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its
     check of the running image, and the deploy jobs poll `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
     runs. That nothing in the tree calls it is no proof it is dead (#900).
+14. A Claude session outside the bots' harness (Claude Code on the web, the desktop app, a cloud session a
+    person started) that works an issue or pull request reads its handoffs before it starts and leaves one
+    before it stops: the item's `bot-journal` file (`<issue>.md`) and the handoff comments already on it
+    first; then, at the end of every turn that pushes or leaves the work unfinished, its own comment on
+    the issue (on the pull request when there is none), edited in place, marked
+    `<!-- jackioh-session:handoff -->`, saying what was asked, what was done, what is left, what was
+    tried and failed, and every check still red by name (rule 12). `.claude/skills/handoff/SKILL.md` says
+    how. The bots' runs are exempt: the harness journals them, and their next run reads these comments
+    (#2748 section 10).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 

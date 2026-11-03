@@ -340,7 +340,16 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if journalOf == 0 {
 		journalOf = number
 	}
-	if text := journal.Read(ctx.GH, journalOf, journal.ReadChars); text != "" {
+	text := journal.Read(ctx.GH, journalOf, journal.ReadChars)
+	// And the handoffs people's Claude sessions left on the issue or its pull request (CLAUDE.md
+	// rule 14, #2748 section 10), which no session can write to the journal's branch.
+	if handoffs := journal.SessionHandoffs(ctx.GH, journal.TrustedAuthor(ctx.Trust), journalOf, number); handoffs != "" {
+		if text != "" {
+			text = strings.TrimRight(text, "\n") + "\n\n"
+		}
+		text += handoffs
+	}
+	if text != "" {
 		planned.Set("journal", text)
 	}
 	if wip, isDict := record.Get("wip").(*pyjson.Object); kind == "revise" && isDict && wip != nil {
