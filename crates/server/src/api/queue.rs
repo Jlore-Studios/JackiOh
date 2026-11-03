@@ -1202,16 +1202,18 @@ async fn start_bot_match(
 /// `BOT_VS_BOT_MAX_LIVE` are live, no ticket is open, a bot is grinding, none ended in the last
 /// `BOT_VS_BOT_MIN_GAP_SECONDS`, and `choose_bot_pair` names a pair, claimed in one statement
 /// (`bots_claim_pair`). R1989000: the seed's coin seats them; rated as any bot game (R610, R611,
-/// R640000). A bot match a restart cut off is folded back first (§9.5).
+/// R640000). A bot match a restart cut off is folded back first (§9.5). Every sweep decides on each
+/// bot's `bots_states`, so the bots' decks, trio and cosmetics (`bots_list`) are loaded only once
+/// every check has passed and a pair is to be chosen.
 pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<String>, ApiError> {
-    let (bots, queued) = {
+    let (states, queued) = {
         let mut tx = app.db.begin(None).await?;
-        let bots = tx.bots_list().await?;
+        let states = tx.bots_states().await?;
         let queued = tx.tickets_count_open().await?;
         tx.commit().await?;
-        (bots, queued)
+        (states, queued)
     };
-    let live = bot_matches(&bots);
+    let live = bot_matches(&states);
     for match_id in live.iter().filter(|match_id| !app.matches.has(match_id)) {
         if let Err(error) = app.matches.actor_for(app, match_id).await {
             tracing::warn!(event = "bots.match.resume_failed", matchId = %match_id, message = %error);
@@ -1219,25 +1221,28 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
     }
     if queued > 0
         || live.len() >= BOT_VS_BOT_MAX_LIVE
-        || !bots.iter().any(|bot| bot.grinding && bot.retired_at.is_none())
+        || !states.iter().any(|bot| bot.grinding && bot.retired_at.is_none())
     {
         return Ok(None);
     }
-    let (busy, games) = {
+    let games = one_tx!(app.db, |t| {
+        t.ranked_bot_games_since(bot_match_gap_since(now)).await?
+    })?;
+    if !bot_match_gap_passed(&games, now) {
+        return Ok(None);
+    }
+    let (bots, busy) = {
         let mut tx = app.db.begin(None).await?;
+        let bots = tx.bots_list().await?;
         let busy: IndexSet<String> = tx
             .series_active()
             .await?
             .into_iter()
             .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
             .collect();
-        let games = tx.ranked_bot_games_since(bot_match_gap_since(now)).await?;
         tx.commit().await?;
-        (busy, games)
+        (bots, busy)
     };
-    if !bot_match_gap_passed(&games, now) {
-        return Ok(None);
-    }
     let mut recent: IndexMap<String, Vec<String>> = IndexMap::new();
     for grinder in bots.iter().filter(|bot| bot.grinding && bot.retired_at.is_none()) {
         let faced = one_tx!(app.db, |t| {

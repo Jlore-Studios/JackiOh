@@ -638,7 +638,8 @@ series still makes its picks.
   `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
   (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), seated by the same coin (R1989000), and
   neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
-  whose actor is not in memory, which no socket would come back to rebuild after a restart.
+  whose actor is not in memory, which no socket would come back to rebuild after a restart. The sweep
+  decides on `bots_states` (no decks or cosmetics) and loads `bots_list` only to choose a pair.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
   `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
   the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule

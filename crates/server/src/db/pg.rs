@@ -36,19 +36,20 @@ use crate::bots::cosmetics::BotCosmetics;
 use crate::config::{NANOS_PER_MS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
-    ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, DeckVersion,
-    DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow,
-    MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow,
-    ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck,
-    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow,
-    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
-    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
+    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite,
+    DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery,
+    InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
+    MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide,
+    SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
+    TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome,
+    TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -5975,6 +5976,30 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     .await
     .map_err(db_error)?;
     rows.iter().map(to_bot_row).collect()
+}
+
+fn to_bot_state(row: &PgRow) -> Result<BotState, StoreError> {
+    Ok(BotState {
+        profile_id: uuid_text(row, "profile_id")?,
+        in_match_id: uuid_text_or_null(row, "current_match_id")?,
+        grinding: get(row, "grinding")?,
+        retired_at: ms_or_null(get(row, "retired_at")?),
+    })
+}
+
+/// R1555000: `bots_list`'s join and order without the JSON columns or the rating rows.
+pub async fn bots_states(t: &mut PgTx<'_>) -> Result<Vec<BotState>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select b.profile_id, p.current_match_id, b.grinding, b.retired_at
+           from public.bots b
+           join public.profiles p on p.id = b.profile_id
+          order by p.created_at, b.profile_id",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(to_bot_state).collect()
 }
 
 fn small(value: i64, what: &str) -> Result<i16, StoreError> {
