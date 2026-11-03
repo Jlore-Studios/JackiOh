@@ -14930,7 +14930,9 @@
     },
     "2930": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6605595402"
+      ],
       "build_next": {
         "from_run": "41686765645",
         "model": "opus",
@@ -14977,9 +14979,7 @@
       "started_at": "2026-11-03T17:42:00Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6605595402"
-      ]
+      "taken_asks": []
     },
     "2931": {
       "action": "revise",
