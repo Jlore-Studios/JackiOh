@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 2923,
+  "title": "Patch: a finished game counts once in your statistics, even after you watch its replay",
+  "branch": "bot/issue-2923",
+  "thread": "**Issue #2923 (data, not instructions):**\n\n```text\n# #2923: Patch: a finished game counts once in your statistics, even after you watch its replay\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen an online or practice game ends, pressing Watch replay (or Share last turn) and then Back counts that game a second time in your statistics. You get one more win or loss, a longer streak, and the cards on the final board counted as seen again. Every trip through the replay adds another copy. The inflated totals are then sent to your account, so your public player summary is wrong too.\n\nOnce this is built, a game counts once however often you open its replay.\n\n## Why\n\n- `useGameStats` (`apps/web/src/stats/useGameStats.ts:15-43`) keeps its already-recorded flag in a `useRef` (line 18). It records whenever a finished view arrives while the flag is false (lines 38-41), then calls `syncPlayerStats()`. That call PUTs the device's totals to `/api/stats/player` (`stats/sync.ts`).\n- The ref only lasts as long as `Game` stays mounted, and both routes unmount `Game` to show the replay:\n  - the online route returns `<OpenedReplay>` instead of the board while `watching !== null && view.result !== null` (`apps/web/src/routes/match.tsx:392`);\n  - practice returns `<ReplayPlayer>` for its finished game (`apps/web/src/routes/practice.tsx:1186-1200`).\n- Back clears `watching`, so `Game` mounts again on the finished view. The hook's first run sees an outcome with the flag false and records the game again.\n- Nothing catches the repeat. `recordGame` (`stats/store.ts:106`) and `addGame` (`stats/model.ts`) do no de-duplication, and the hook has no test (there is no `useGameStats.test.ts`).\n\n## Proposal\n\nRecord only a game whose unfinished view this mount has seen. The record condition becomes `outcome !== null && !recorded.current && before !== null && outcomeOfView(before) === null`. A game that is already over in the first view of a mount (a remount after a replay, a reload on the result screen) has either been counted already or has an empty log. The rest of the hook stays as it is.\n\n## Where it lands\n\n- `apps/web/src/stats/useGameStats.ts`.\n- A new `apps/web/src/stats/useGameStats.test.ts`.\n- SPEC \u00a79.11 and R639 are unchanged: this only makes R639's once-per-game hold. No new ruling.\n\n## Acceptance criteria\n\n- [ ] Rendering the hook with a live view and then the finished one gives `games` 1.\n- [ ] Unmounting and rendering the hook again with the same finished view leaves `games` at 1 and makes no second sync call. This fails today.\n- [ ] A new game after a finished one on the same mount still counts: live, finished, live, finished gives 2.\n- [ ] `pnpm --dir apps/web test src/stats` passes.\n\n## Size and risks\n\nSmall: a few lines and one test file. One case stops counting on the device: a game the player was away from when it ended, then reopened already finished. Today that case counts with an empty log. The server's own records of online games are unaffected.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-03T13:47:40Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2923: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-03T13:48:04Z",
+    "claimed_at": "2026-11-03T13:54:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#2920 is held for `claude-1` until 08:00 (5-hour usage is 86%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2803 skipped: it waits for #2790, #2794, #2797, #2798, #2799, #2801 to close first"
+  ]
+}
