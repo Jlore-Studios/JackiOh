@@ -16578,9 +16578,12 @@
       }
     },
     "2912": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "10fa2fdc740eb0a157019bd4de72f984d1f5a2e3": 1
       },
+      "ci_run_id": 41607552142,
+      "ci_sha": "10fa2fdc740eb0a157019bd4de72f984d1f5a2e3",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -16596,10 +16599,17 @@
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T05:04:24Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2791,
       "kind": "revise",
       "merge_owner": "muse",
+      "pending_request": false,
+      "queued_at": "2026-11-03T09:14:02Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
