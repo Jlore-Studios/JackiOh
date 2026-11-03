@@ -28091,6 +28091,12 @@
         "number": 2606,
         "title": "Patch: a stolen card on your side says it is the opponent's",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-11-03T03:45:51Z",
+        "number": 2880,
+        "title": "Patch: the fuzz deals leaned All Random decks the way the server does",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
