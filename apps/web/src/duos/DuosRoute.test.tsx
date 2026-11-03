@@ -370,3 +370,29 @@ describe("R2092000 Play again on the co-op result", () => {
     expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Your teammate wants to play again");
   });
 });
+
+describe("R2881000 the co-op seat's watcher count", () => {
+  function deliver(frame: Record<string, unknown>): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify(frame) });
+    });
+  }
+
+  it("R2881000 a co-op seat is told how many friends watch", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+    deliver({ type: "view", view: duosView(1), legal: [] });
+    expect(screen.queryByTestId(duosTestid.watchers)).toBeNull();
+
+    deliver({ type: "watchers", count: 1 });
+    expect(screen.getByTestId(duosTestid.watchers)).toHaveTextContent("A friend is watching");
+    deliver({ type: "watchers", count: 3 });
+    expect(screen.getByTestId(duosTestid.watchers)).toHaveTextContent("3 friends are watching");
+    expect(screen.getByTestId(duosTestid.watchers)).toHaveAttribute("data-count", "3");
+    deliver({ type: "watchers", count: 0 });
+    expect(screen.queryByTestId(duosTestid.watchers)).toBeNull();
+  });
+});

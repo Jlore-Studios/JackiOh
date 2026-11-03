@@ -323,6 +323,7 @@
   "Temporal Rift has granted this player's one extra turn this game; another Rift grants none": "时空裂隙已给予该玩家本局唯一的额外回合；之后的时空裂隙不再给予额外回合",
   "Your modifiers": "你的持续效果",
   "Opponent modifiers": "对手的持续效果",
+  "{count} more effects": "还有{count}个效果",
   "{power}: Activate, spend ({x})": "{power}：激活，花费({x})",
   "Used": "已使用",
   "{power}: used this turn": "{power}：本回合已使用",
