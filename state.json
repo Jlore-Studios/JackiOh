@@ -15378,6 +15378,14 @@
         "sha": "c927c030782ee5fbe6cd720ae35b36ca8b915e06",
         "tiers": {}
       }
+    },
+    "2938": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-03T14:18:31Z",
+      "issue": 2926,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
