@@ -15182,6 +15182,9 @@
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
+      "owner": "claude-3",
+      "owner_since": "2026-11-03T06:02:39Z",
+      "owner_why": "it planned it",
       "pending_request": false,
       "planned_at": "2026-11-03T04:25:36Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -15331,6 +15334,8 @@
       "taken_asks": []
     },
     "2896": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "approver": {
           "family": "claude",
@@ -15348,11 +15353,18 @@
       "feedback_since": "2026-11-03T04:27:16Z",
       "issue": 2884,
       "kind": "revise",
+      "live": "revising",
       "merge_owner": "claude-3",
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-03T06:02:13Z",
+      "run_id": "pending:be8ce9df-1793685721",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-11-03T06:02:39Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -15418,9 +15430,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T05:48:36Z",
+    "at": "2026-11-03T06:02:39Z",
     "url": "",
-    "what": "build #2725 on claude-6"
+    "what": "revise #2896 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-03T05:46:50Z",
