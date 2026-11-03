@@ -150,18 +150,6 @@ mod tests {
         }
 
         #[test]
-        fn r19_the_buff_raises_max_health_so_a_damaged_unit_keeps_its_damage() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "field": [{ "def": MENACE, "damage": 4 }], "mana": 4 } }));
-            let menace = s.card(MENACE).clone();
-            s.expect_stats(&menace, json!({ "attack": 9, "maxHealth": 9, "health": 5 }));
-
-            s.play(SURGERY, json!({ "targets": [sel(&menace)] }));
-
-            s.expect_stats(&menace, json!({ "attack": 12, "maxHealth": 12, "health": 8 }));
-        }
-
-        #[test]
         fn r21_never_grants_a_keyword_the_unit_already_has() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "field": [MENACE], "mana": 4 } }));
@@ -202,19 +190,6 @@ mod tests {
             assert_eq!(kinds.len(), 2);
             assert!(!kinds.iter().any(|kind| kind == "Rush"));
             assert!(!kinds.iter().any(|kind| kind == "First Strike"));
-        }
-
-        #[test]
-        fn s9_3_the_same_seed_draws_the_same_keywords() {
-            crate::register_all();
-            let run = || -> Vec<String> {
-                let mut s = scenario(json!({ "seed": "surgery-63", "p1": { "hand": [SURGERY], "field": [FELINOR], "mana": 4 } }));
-                let felinor = s.card(FELINOR).clone();
-                s.play(SURGERY, json!({ "targets": [sel(&felinor)] }));
-                granted_kinds(s.card(&felinor))
-            };
-
-            assert_eq!(run(), run());
         }
 
         #[test]

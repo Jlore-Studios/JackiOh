@@ -119,7 +119,7 @@ mod tests {
         }
 
         #[test]
-        fn r1183005_the_choosers_view_names_no_card_and_the_opponents_holds_nothing() {
+        fn r1183005_the_choosers_view_names_no_card_and_the_opponents_holds_only_a_count() {
             let s = casting("intuition-view", false, 1);
             let behind = offered(&s);
             let mine = js(&view_for(s.state(), P1).pending);
@@ -140,7 +140,8 @@ mod tests {
                 );
             }
             let theirs = js(&view_for(s.state(), P2).pending);
-            assert_eq!(theirs, json!({ "forYou": false, "pendingFor": "p1" }));
+            // R2739000: a Discover of catalog cards shows the other seat how many, never which.
+            assert_eq!(theirs, json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 }));
         }
 
         #[test]

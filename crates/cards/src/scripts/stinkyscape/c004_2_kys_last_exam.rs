@@ -170,7 +170,8 @@ mod tests {
         #[test]
         fn r1870002_key_in_neither_view() {
             let s = exam("kys-last-exam-key", false, HERO_HEALTH);
-            assert_eq!(js(&s.view(P2))["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
+            // R2739000: the other seat is shown how many answers, never them.
+            assert_eq!(js(&s.view(P2))["pending"], json!({ "forYou": false, "pendingFor": "p1", "optionCount": 4 }));
             for viewer in [P1, P2] {
                 let text = serde_json::to_string(&s.view(viewer)).expect("a view is JSON");
                 assert!(!text.contains(ANSWER_KEY), "{viewer:?}");

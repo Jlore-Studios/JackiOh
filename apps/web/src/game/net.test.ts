@@ -545,6 +545,54 @@ describe("portraits and emotes", () => {
   });
 });
 
+// The opponent's hovered option (R2739001)
+describe("choice hovers", () => {
+  it("R2739001 parses a choiceHover frame", () => {
+    expect(parseServerFrame(JSON.stringify({ type: "choiceHover", from: "p2", index: 1 }))).toEqual({ type: "choiceHover", from: "p2", index: 1 });
+    expect(parseServerFrame(JSON.stringify({ type: "choiceHover", from: "p1", index: 0 }))).toEqual({ type: "choiceHover", from: "p1", index: 0 });
+    expect(parseServerFrame(JSON.stringify({ type: "choiceHover", from: "p2", index: null }))).toEqual({ type: "choiceHover", from: "p2", index: null });
+    for (const frame of [
+      { type: "choiceHover", from: "p2", index: -1 },
+      { type: "choiceHover", from: "p2", index: 1.5 },
+      { type: "choiceHover", from: "p2", index: "1" },
+      { type: "choiceHover", from: "p2" },
+      { type: "choiceHover", from: "p3", index: 1 },
+      { type: "choiceHover", index: 1 },
+    ]) {
+      expect(parseServerFrame(JSON.stringify(frame)), JSON.stringify(frame)).toBeNull();
+    }
+  });
+
+  it("R2739001 a relayed hover reaches the snapshot, a null or a dropped socket clears it", () => {
+    const h = connected();
+    expect(h.client.snapshot().choiceHover).toBeNull();
+    h.socket().deliver({ type: "choiceHover", from: "p2", index: 2 });
+    expect(h.client.snapshot().choiceHover).toEqual({ from: "p2", index: 2 });
+    h.socket().deliver({ type: "choiceHover", from: "p2", index: null });
+    expect(h.client.snapshot().choiceHover).toBeNull();
+
+    h.socket().deliver({ type: "choiceHover", from: "p2", index: 0 });
+    h.socket().drop();
+    expect(h.client.snapshot().choiceHover).toBeNull();
+  });
+
+  it("R2739001 `sendChoiceHover` writes {type:'choiceHover', index}, and a socket that is not open drops it", () => {
+    const h = connected();
+    h.client.sendChoiceHover(1);
+    h.client.sendChoiceHover(null);
+    expect(h.socket().frames().slice(-2)).toEqual([
+      { type: "choiceHover", index: 1 },
+      { type: "choiceHover", index: null },
+    ]);
+
+    const idle = harness();
+    idle.client.connect(); // connecting, never `open()`ed
+    idle.client.sendChoiceHover(0);
+    expect(idle.socket().sent).toEqual([]);
+    expect(idle.client.snapshot().error).toBeNull();
+  });
+});
+
 // Loadouts (R1834003)
 describe("loadouts", () => {
   const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";

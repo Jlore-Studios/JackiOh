@@ -58,8 +58,8 @@ pub fn script_v0_4_12c() -> CardScripts {
 }
 
 // #75 Infinite Reserves — SPEC §8.3, BUILD M4-T4.
-// The empty-library draw is `library: []` plus `startTurn()` (§2.2); the control without the card
-// takes R3's fatigue.
+// The empty-library draw is `library: []` plus `startTurn()` (§2.2); R3's fatigue without the card is
+// the engine's (`crates/engine/tests/rules/draw.rs`).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -97,23 +97,6 @@ mod tests {
             assert_eq!(s.state().players.p1.fatigue_count, 0);
             s.expect_events(json!(["turnStarted", "drawn", "addedToHand"]));
             assert!(s.unit(P1, 1).is_none());
-        }
-
-        #[test]
-        fn without_infinite_reserves_the_very_same_draw_takes_r3s_fatigue_damage_control() {
-            let mut s = setup(json!({
-                "seed": "core-075-control",
-                "p1": { "library": [], "hand": ["core-005"] },
-                "p2": { "hand": ["core-005"], "library": ["core-035"] },
-            }));
-
-            s.start_turn();
-
-            assert!(rush_tokens_in_hand(&s, P1).is_empty());
-            // The Nth empty draw deals N damage; this is the first.
-            s.expect_health(P1, 29);
-            assert_eq!(s.state().players.p1.fatigue_count, 1);
-            assert_eq!(s.hand(P1).len(), 1);
         }
 
         #[test]

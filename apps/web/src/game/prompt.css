@@ -1236,6 +1236,44 @@
   }
 }
 
+/* --- the opponent's card picker, face down (R2739000, R2739001) --- */
+
+/* OpponentChoice.tsx: the other seat's Discover, one back per option, laid out as the bare picker above,
+   over the waiting notice's lighter dim (the board is still the thing to watch). */
+.prompt-scrim:has(> .prompt-opponent-choice) {
+  background: color-mix(in srgb, var(--pal-wood-950) 30%, transparent);
+}
+
+/* On a phone the chooser's picker is the sheet docked to the bottom edge, which its cards fill; a row of
+   backs there would sit on the viewer's own hand and control bar, so the backs float in the middle of the
+   screen at every width, over the board. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .prompt-scrim:has(> .prompt-opponent-choice) {
+    place-items: center stretch;
+  }
+}
+
+/* The back fills its option's box, as a face fills a card option's; it takes no hit (`.prompt` above). The
+   back is laid over the box (cards.css `.cf-back`, `inset: 0`), so nothing inside grows it as a face grows a
+   card option: the box keeps a card's 5:7 itself (`.cf-option`), or a phone's option box (--card-h tall)
+   draws a squat back. */
+.prompt-card.prompt-card--back {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--pal-slate-700);
+}
+
+/* R2739001: the back under the opponent's pointer, outlined as R738 marks the card they aim with
+   (opponentAim.css `.opponent-aim-origin`), and still, so Reduce Motion draws it the same. */
+.prompt-card--back[data-hovered] {
+  border-color: color-mix(in srgb, var(--pal-ember-500) 90%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--pal-ember-500) 90%, transparent),
+    0 0 14px color-mix(in srgb, var(--pal-ember-500) 25%, transparent);
+}
+
 /* --- a Choose one of lanes is its lanes on the board (#2757) --- */
 
 /* Last in the sheet, so each rule beats the small pickers' docks of the same weight above. No dim and no

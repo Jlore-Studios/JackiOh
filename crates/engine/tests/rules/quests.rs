@@ -634,9 +634,10 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             &memory_of(&state, &card),
             &json!({ "active": [], "done": ["draws"] })
         ));
+        // R2739000: the quest is public, so the other seat is shown how many rewards, never which.
         assert_eq!(
             json_of(&view_for(&state, P2).pending),
-            json!({ "forYou": false, "pendingFor": "p1" })
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": 2 })
         );
 
         let health = state.players.p1.hero.health;

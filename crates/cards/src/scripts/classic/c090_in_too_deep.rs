@@ -1737,7 +1737,8 @@ mod tests {
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(s.state().active, P2);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:C", "mode:D"]);
-                assert_eq!(json!(s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1" }));
+                // R2739000: the quest is public, so the other seat is shown how many rewards, never which.
+                assert_eq!(json!(s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1", "optionCount": 2 }));
                 let reports: Vec<String> = s
                     .view(P2)
                     .events

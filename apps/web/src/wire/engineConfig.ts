@@ -66,6 +66,7 @@ export const LOADOUT_DECKS = 3;
 export const LOSER_DRAWS_REASONS: readonly GameOverReason[] = ["fled"];
 export const MAX_COPIES = 1;
 export const MAX_MANA = 4;
+export const PROMPT_CARD_OPTION_LIMIT = 4;
 export const RANDOM_ATTACK_TARGET = "random";
 export const REPLAY_CHECKPOINT_EVERY = 16;
 export const REPLAY_PAGE_STEPS = 16;
