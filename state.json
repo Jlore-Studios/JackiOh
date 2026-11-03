@@ -22645,12 +22645,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-03T10:30:00Z",
-          "utilization": 0.29
+          "utilization": 0.7
         },
-        "observed_at": "2026-11-03T05:58:20Z",
+        "observed_at": "2026-11-03T07:36:19Z",
         "seven_day": {
           "resets_at": "2026-11-09T09:00:00Z",
-          "utilization": 0.31
+          "utilization": 0.37
         },
         "status": "allowed_warning"
       }
@@ -29060,6 +29060,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": false
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-03T07:29:33Z,claude-5,ping,before,41595864147,70,2026-11-03T10:30:00Z,37,2026-11-09T09:00:00Z,allowed_warning,40,60,"
+    ]
   },
   "version": 1
 }
