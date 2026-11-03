@@ -42,7 +42,7 @@
   "traininggrounds-029": { cry: { motif: "lance", palette: "Hustle/jade" } }, // Oriental
   "traininggrounds-030": { trigger: { motif: "bless" }, death: { motif: "wipe" } }, // Floodgates
   "traininggrounds-031": { cast: { motif: "conjure" }, trigger: { motif: "radiance" }, aura: { look: "holy", scope: "side" } }, // Level Up!
-  "traininggrounds-032": { death: { motif: "bless" } }, // Selfless Protector
+  "traininggrounds-032": { cry: { motif: "bless" }, death: { motif: "bless" } }, // Selfless Protector
   "traininggrounds-033": { cry: { motif: "barrage", palette: "Beast/felinor" } }, // Guerilla Felinor
   "traininggrounds-034": { bespoke: "dinoStomp" }, // Dino-size
   "traininggrounds-035": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "board" } }, // Corpse Recycler
