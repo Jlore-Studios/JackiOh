@@ -13576,6 +13576,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
+      "spot_check_n": 20,
       "started_at": "2026-11-03T15:35:23Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -29128,9 +29129,25 @@
         "status": "queued",
         "title": "Patch: the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
         "tries": 0
+      },
+      {
+        "approver": {},
+        "builder": {},
+        "difficulty": "hard",
+        "every": 5,
+        "head": "98dc08c430b014676e8de2d13897e3dd1eda6c7e",
+        "issue": 2725,
+        "merged_at": "2026-11-03T16:24:08Z",
+        "n": 20,
+        "pr": 2904,
+        "queued_at": "2026-11-03T16:24:08Z",
+        "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
+        "status": "queued",
+        "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
+        "tries": 0
       }
     ],
-    "count": 19
+    "count": 20
   },
   "statistics": {
     "at": "2026-11-03T16:02:17Z"
