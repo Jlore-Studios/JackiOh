@@ -14241,24 +14241,23 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/README.md",
-            "apps/web/src/fx/cards/bespoke.ts",
             "apps/web/src/fx/motifs/gallery.ts",
-            "apps/web/src/routes/dev/fx.test.tsx"
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "docs/polish/9-card-animations.md"
           ],
-          "from": "ab0d4e9f6dd9b4e2f620559c43730ffc2b150074",
-          "main": "b0e465602a388222016a02b080e0f57de1da7e26"
+          "from": "408c2b31f0568b0838c570778345b1efa5dd91b3",
+          "main": "4817b81cd04fcff94f04cc81dcc380120edb18c2"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "41629190810",
+            "run": "41640003628",
             "tier": "strong"
           }
         ],
-        "sha": "408c2b31f0568b0838c570778345b1efa5dd91b3",
+        "sha": "a50c132492067e2aed9845a677736571b33e849a",
         "tiers": {
           "claude": "strong"
         }
