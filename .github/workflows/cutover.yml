@@ -40,6 +40,9 @@
 #                       game_record_batches (R1933000), in one transaction; then profiles, matches and
 #                       auth.users counted on both sides, which must agree. With `dry_run` (the default)
 #                       it loads the whole copy the same way and rolls it back, so nothing stays.
+#   after-cutover       once https://jackioh.com/api/catalog answers from Cloudflare (x-deployed-commit):
+#                       suspends Render's jackioh-server, which then bills nothing (section 4, step 7.1),
+#                       and gives staging's project its own Site URL and Redirect URLs, infra/supabase.tf's.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
 # and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
@@ -66,8 +69,9 @@ on:
           - production-auth
           - email
           - copy
+          - after-cutover
       dry_run:
-        description: "copy, production-auth and email: show what it would do, and write nothing"
+        description: "copy, production-auth, email and after-cutover: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
@@ -166,6 +170,7 @@ jobs:
           id=$(render "/services?name=$RENDER_SERVICE&limit=20" |
             jq -r --arg n "$RENDER_SERVICE" '[.[].service | select(.name == $n)][0].id // empty')
           [ -n "$id" ] || { echo "::error::Render has no service named $RENDER_SERVICE"; exit 1; }
+          echo "$id" > "$RUNNER_TEMP/render.id"
           vars=$(render "/services/$id/env-vars?limit=100")
           # Every value masked before anything else can print it, but for those under eight characters
           # (TRUSTED_PROXY_HOPS's `1`, CYPRESS_INSTALL_BINARY's `0`): no secret is that short, and masking
@@ -520,6 +525,51 @@ jobs:
             resend -X DELETE "$api/api-keys/$gone" > /dev/null
             echo "deleted the earlier $KEY_NAME key $gone"
           done
+
+      - name: after the move, Render suspended and staging's sign-in its own
+        if: ${{ inputs.step == 'after-cutover' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          SITE: https://jackioh.com
+          # infra/supabase.tf's, for staging's project.
+          STAGING_SITE: https://staging.jackioh.com
+          STAGING_REDIRECTS: https://staging.jackioh.com/login
+        run: |
+          set -euo pipefail
+          # Only once production's own server answers on jackioh.com: Render's never says which commit.
+          commit=$(curl -fsS -D - -o /dev/null --max-time 60 "$SITE/api/catalog" | tr -d '\r' |
+            awk -F': ' 'tolower($1) == "x-deployed-commit" { print $2 }')
+          [ -n "$commit" ] || { echo "::error::$SITE/api/catalog names no x-deployed-commit: production is not on Cloudflare yet"; exit 1; }
+          echo "$SITE serves $commit from Cloudflare"
+
+          id=$(cat "$RUNNER_TEMP/render.id")
+          render() {
+            curl -fsS --retry 3 --max-time 60 -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Accept: application/json" "$@"
+          }
+          state=$(render "https://api.render.com/v1/services/$id" | jq -r .suspended)
+          echo "Render's $RENDER_SERVICE: $state"
+          if [ "$state" != suspended ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "dry_run: would suspend Render's $RENDER_SERVICE"
+            else
+              render -X POST "https://api.render.com/v1/services/$id/suspend" > /dev/null
+              echo "Render's $RENDER_SERVICE: $(render "https://api.render.com/v1/services/$id" | jq -r .suspended)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+          config="https://api.supabase.com/v1/projects/$STAGING_REF/config/auth"
+          auth=(-H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json")
+          curl -fsS "${auth[@]}" "$config" | jq -r '"staging'"'"'s sign-in: site_url \(.site_url), redirects \(.uri_allow_list)"'
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry_run: would set staging's site_url to $STAGING_SITE and its redirects to $STAGING_REDIRECTS"
+            exit 0
+          fi
+          jq -n --arg site "$STAGING_SITE" --arg urls "$STAGING_REDIRECTS" '{site_url: $site, uri_allow_list: $urls}' |
+            curl -fsS "${auth[@]}" -X PATCH "$config" --data-binary @- > /dev/null
+          curl -fsS "${auth[@]}" "$config" | jq -r '"staging'"'"'s sign-in now: site_url \(.site_url), redirects \(.uri_allow_list)"' | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: copy staging's database into JackiOh-Production
         if: ${{ inputs.step == 'copy' }}
