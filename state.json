@@ -15897,10 +15897,10 @@
       "pending_request": false,
       "provider": "gpt",
       "queued_at": "2026-11-03T23:14:23Z",
-      "run_id": "",
+      "run_id": "pending:4d464a19-1793748781",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
-      "started_at": "2026-11-03T23:23:46Z",
+      "started_at": "2026-11-03T23:33:28Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16451,9 +16451,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T23:32:46Z",
+    "at": "2026-11-03T23:33:28Z",
     "url": "",
-    "what": "revise #2964 on muse"
+    "what": "review #2955 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-03T23:22:16Z",
