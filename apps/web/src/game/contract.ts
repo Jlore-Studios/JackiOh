@@ -18,6 +18,7 @@ import type {
   PortraitId,
   Row,
 } from "@jackioh/shared";
+import { PROMPT_CARD_OPTION_LIMIT } from "@jackioh/engine/config";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
@@ -30,8 +31,9 @@ export type Side = "you" | "opponent";
  * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
  * while it offers this many options or fewer; more options keep the plain mode list. #2646: so is
  * every other choice of options that name no card, each option a choice card (ChoiceCard.tsx).
+ * The engine's (R2739000): it counts the other seat's backs by the same limit (OpponentChoice.tsx).
  */
-export const DISCOVER_OPTION_LIMIT = 4;
+export const DISCOVER_OPTION_LIMIT = PROMPT_CARD_OPTION_LIMIT;
 
 /**
  * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the

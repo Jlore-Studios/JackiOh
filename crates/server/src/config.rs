@@ -614,6 +614,8 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
 /// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
 /// Ten a second follows a hover from target to target and bounds what a scripted client can push.
+/// R2739001's `choiceHover` relays are coalesced per seat by the same interval, on a window of their
+/// own.
 pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
 /// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000
@@ -2859,6 +2861,31 @@ pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
 /// R1310000): finished games pay (R1302006), quests arrive (R1304002) and the client prints a full
 /// art only on its owner's own copies (R1313000). Exported to `serverConfig.ts`.
 pub const ECONOMY_LIVE: bool = true;
+
+// ---- News (SPEC §14.13, #2875) ----
+
+/// §14.13, R2875001: how many days a news entry lives after its `postedAt`, on the server's clock:
+/// past them it leaves `GET /api/news` and its reward can no longer be claimed. Exported to
+/// `serverConfig.ts`.
+pub const NEWS_TTL_DAYS: i64 = 14;
+/// §14.13: the most sentences a news entry's summary holds (`economy::news::parse` refuses more).
+pub const NEWS_SUMMARY_MAX_SENTENCES: usize = 2;
+/// §14.13, R2875003: the Jlore a news entry's Jlore reward pays, a ladder win's worth
+/// (`JLORE_LADDER_WIN`), since patches ship several a day. Exported to `serverConfig.ts`.
+pub const NEWS_REWARD_JLORE: i64 = 20;
+/// §14.13, R2875003: the unopened card packs a news entry's card pack reward adds to the
+/// inventory. Exported to `serverConfig.ts`.
+pub const NEWS_REWARD_CARD_PACKS: i64 = 1;
+/// §14.13, R2875003: the card tokens a news entry's card token reward adds. Exported to
+/// `serverConfig.ts`.
+pub const NEWS_REWARD_CARD_TOKENS: i64 = 1;
+/// §14.13, R2875003: the cosmetic tokens of its tier a news entry's cosmetic token reward adds.
+/// Exported to `serverConfig.ts`.
+pub const NEWS_REWARD_COSMETIC_TOKENS: i64 = 1;
+/// §14.13, R2875003: the unopened cosmetic packs a news entry's cosmetic pack reward adds.
+/// Exported to `serverConfig.ts`.
+pub const NEWS_REWARD_COSMETIC_PACKS: i64 = 1;
+
 /// §14.12, R1310000, R1705002: the starter cards, what a new account owns on becoming active
 /// (R111): the 50 cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new
 /// account can queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which

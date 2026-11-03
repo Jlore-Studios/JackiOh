@@ -14,6 +14,9 @@
 // Hearthstone draws a Discover: no panel, title, count or quest banner, and no Confirm when one tap
 // answers (`immediate` with `min` of at least 1). Folded (#1204), read-only (R2211000) and a lesson's
 // mulligan (`worded`) keep every word, and an `answer` keeps its problem (R420).
+// R2739000: the other seat's card picker is its backs (OpponentChoice.tsx) when the view counts its options,
+// else the notice (`Waiting`). R2739001: an engine card picker sends the option under the pointer or the
+// focus as it changes (`choiceHover`), and the backs outline the one the opponent's is on.
 // #2757: a Choose one of lanes (`lane-<n>`, Showdown) is no picker at all: LanePick.tsx lights each lane on the
 // board and R514's board answer picks it, so the modal is only its hint and a play's Cancel.
 
@@ -86,8 +89,10 @@ import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { abilityLabel, usesWords } from "./ActivateControl.tsx";
 import { ChoiceCard, choiceSeed } from "./ChoiceCard.tsx";
+import { useChoiceHoverEmitter, type ChoiceHover } from "./choiceHover.ts";
 import LanePick, { neighbourZone, type LaneChoice } from "./LanePick.tsx";
 import { modeText } from "./modeText.ts";
+import OpponentChoice from "./OpponentChoice.tsx";
 import { useWearerSeat } from "./wearer.ts";
 import "./prompt.css";
 
@@ -105,6 +110,11 @@ export type PromptProps = {
   lesson?: boolean;
   /** R2211000: a replay's board: the open prompt as offered, folded and inert; nothing calls `onAction`. */
   readOnly?: boolean;
+  /**
+   * R2739001: a live online board's relay of card-picker hovers: this seat's engine card picker sends through
+   * `emit`, and the opponent's backs outline `opponent`. Absent (hotseat, practice, a replay), nothing is sent.
+   */
+  choiceHover?: ChoiceHover;
 };
 
 /**
@@ -1105,6 +1115,8 @@ function CardChoice(props: {
   fits: (key: string) => boolean;
   pick: (key: string) => void;
   readOnly: boolean;
+  /** R2739001: the option under the pointer or the focus, by its place among the cards, or null when none is. */
+  onHover?: (index: number | null) => void;
 }) {
   const { picker } = props;
   const budget = picker.budget;
@@ -1115,6 +1127,17 @@ function CardChoice(props: {
   // options are numbers with words of their own (#51's cost brackets) is choice cards instead.
   const numbers = picker.items.every((item) => item.defId === undefined && item.detail === undefined && NUMBER_OPTION.test(item.label));
   const artSource = picker.artSource ?? picker.sourceDefId;
+  /**
+   * R2739001: an option's index is its place among the cards drawn, which is its place in the prompt's
+   * options as the engine counts them for the other seat (R2739000): an answer's Stop, a button after
+   * them, is no card on either side.
+   */
+  const hoverAt = (target: EventTarget): void => {
+    const option = target instanceof Element ? target.closest('[data-testid^="prompt-option-"]') : null;
+    const key = option?.getAttribute("data-testid")?.slice("prompt-option-".length);
+    const at = key === undefined ? -1 : picker.items.findIndex((item) => item.key === key);
+    props.onHover?.(at < 0 ? null : at);
+  };
   return (
     <>
       {budget === undefined ? null : (
@@ -1127,6 +1150,13 @@ function CardChoice(props: {
         data-testid="prompt-cards"
         data-choice={picker.chrome}
         {...(props.label === undefined ? {} : { role: "group", "aria-label": props.label })}
+        onPointerOver={(event) => hoverAt(event.target)}
+        onPointerLeave={() => props.onHover?.(null)}
+        onFocus={(event) => hoverAt(event.target)}
+        onBlur={(event) => {
+          const next = event.relatedTarget;
+          if (!(next instanceof Node && event.currentTarget.contains(next))) props.onHover?.(null);
+        }}
       >
         {picker.items.map((item) =>
           item.defId !== undefined || item.code === true || numbers ? (
@@ -1169,10 +1199,14 @@ function PromptModal(props: {
   animating?: string;
   /** R2211000: a replay's picker: folded as it opens, its options greyed, and nothing it draws sends. */
   readOnly?: boolean;
+  /** R2739001: where an engine card picker sends the option under the pointer or the focus; absent, it sends nothing. */
+  onHover?: ((index: number | null) => void) | undefined;
 }) {
   useLocale();
   const { picker } = props;
   const readOnly = props.readOnly === true;
+  // R2739001: one send per change, and null when the picker folds or closes.
+  const hover = useChoiceHoverEmitter(props.onHover);
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
   /**
    * What is typed in the X field, apart from what is chosen: a cleared field, or a number the engine did not
@@ -1189,6 +1223,10 @@ function PromptModal(props: {
    * R2211000: a read-only one opens folded.
    */
   const [folded, setFolded] = useState(readOnly);
+  // R2739001: a folded picker shows no card, so none is hovered.
+  useEffect(() => {
+    if (folded) hover(null);
+  }, [folded, hover]);
   /**
    * #2738: a live card picker is its cards alone, as Hearthstone draws a Discover: no panel (prompt.css
    * keys on `data-bare`), no title, count or quest banner. Folded (#1204) it is the bar under its title;
@@ -1335,6 +1373,7 @@ function PromptModal(props: {
                 fits={(key) => fits([...selected, key])}
                 pick={pick}
                 readOnly={readOnly}
+                onHover={hover}
               />
               {stopButton}
             </>
@@ -1376,6 +1415,7 @@ function PromptModal(props: {
           fits={(key) => fits([...selected, key])}
           pick={pick}
           readOnly={readOnly}
+          onHover={hover}
         />
       );
     }
@@ -1645,7 +1685,8 @@ function PromptModal(props: {
 }
 
 /**
- * §10.6, §10.8: the other seat learns that a choice is open and nothing else. The chooser is always the
+ * §10.6, §10.8: the other seat learns that a choice is open and nothing else; a card picker whose options the
+ * view counts is OpponentChoice.tsx instead (R2739000). The chooser is always the
  * viewer's opponent (a prompt for the viewer is `forYou`), so the line names the opponent. R2211000: on a
  * replay's board, the viewer's own craft, market or board-only placement is this panel, under the prompt's words.
  */
@@ -1787,7 +1828,18 @@ export default function Prompt(props: PromptProps) {
   if (mulligan?.youReady === true && (pending === null || !pending.forYou)) {
     return <MulliganWaiting view={props.view} mulligan={mulligan} />;
   }
-  if (pending !== null && !pending.forYou) return <Waiting pendingFor={pending.pendingFor} />;
+  if (pending !== null && !pending.forYou) {
+    // R2739000: the backs only where the view counts them; the client never works out whether it may.
+    if (pending.optionCount === undefined) return <Waiting pendingFor={pending.pendingFor} />;
+    return (
+      <OpponentChoice
+        view={props.view}
+        pendingFor={pending.pendingFor}
+        count={pending.optionCount}
+        hovered={props.choiceHover?.opponent ?? null}
+      />
+    );
+  }
 
   // R243: an option naming a match-made card (a crafted card in a hand pick) reads its definition
   // from the view, and a Heroic Power on the field its power.
@@ -1837,6 +1889,9 @@ export default function Prompt(props: PromptProps) {
           {...(props.onInteraction === undefined ? {} : { onInteraction: props.onInteraction })}
           {...(props.onCancel === undefined ? {} : { onCancel: props.onCancel })}
           readOnly={readOnly}
+          // R2739001: an engine prompt only (a play's own picker opens none of the sender's); never the
+          // mulligan, whose cards the other seat is never shown a count of (R265), nor a replay's.
+          onHover={pending.kind === "mulligan" || readOnly ? undefined : props.choiceHover?.emit}
         />
       </MatchCardsProvider>
     );

@@ -22,30 +22,9 @@
   "call_timeout_minutes": 150,
   "job_budget_minutes": 330,
   "min_minutes_for_a_call": 25,
-  "max_review_cycles": { "hard": 10, "medium": 3, "easy": 3 },
+  "max_review_cycles": { "hard": 10, "medium": 3 },
   "max_self_check_rounds": 3,
   "controller": true,
-  "easy": {
-    "max_files": 10,
-    "max_lines": 400,
-    "off_limits": [
-      "SPEC.md",
-      "spec/",
-      "BUILD.md",
-      "crates/engine/src/",
-      "crates/ai/src/",
-      "crates/cards/catalog.json",
-      "crates/cards/patches/",
-      "crates/cards/src/scripts/",
-      "crates/server/migrations/",
-      "e2e/"
-    ],
-    "generated": [
-      "apps/web/src/wire/generated/",
-      "apps/web/src/wire/engineConfig.ts",
-      "apps/web/src/wire/serverConfig.ts"
-    ]
-  },
   "max_failures": 3,
   "auto_merge": true,
   "merge_method": "squash",
@@ -130,6 +109,15 @@
     "crates/server/migrations/"
   ],
   "upload_transcripts": false,
+  "resume_sessions": true,
+  "hold_minutes": 60,
+  "hold_exempt": ["muse"],
+  "spot_check_every": 5,
+  "fullsend_adopt": true,
+  "fullsend_send_backs": 1,
+  "own_review_run": true,
+  "own_review_reserve_minutes": 30,
+  "usage_history": true,
   "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
     { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },

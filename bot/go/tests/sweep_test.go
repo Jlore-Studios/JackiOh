@@ -5,6 +5,7 @@ package tests
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +16,9 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sweep"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
@@ -530,6 +533,46 @@ func TestSweep_ARetiredLabelIsDeletedFromEveryThread(t *testing.T) {
 	assertEqual(t, gh.LabelNames(647), setOf("priority:low"))
 }
 
+// `difficulty:easy` is retired (#2748): before the sweep deletes it, every open thread that
+// carries it gets `difficulty:medium` in its place, so a person's easy label is a person's medium
+// label and a bot's rating stays the bot's. A closed thread loses it with the label. One thread
+// GitHub refuses keeps the label in the repository, and the next tick tries again.
+func TestSweep_ARetiredEasyLabelBecomesMediumBeforeItIsDeleted(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	gh.Labels = pyjson.New()
+	for _, name := range append(config.Labels.Keys(), "difficulty:easy") {
+		gh.Labels.Set(name, pyjson.New("name", name))
+	}
+	gh.AddIssue(40, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:easy"}})            // a person's
+	gh.AddIssue(41, fakes.Issue{Labels: []string{"bot:planned", "difficulty:easy"}})                // the bot's rating
+	gh.AddIssue(42, fakes.Issue{Labels: []string{"human", "difficulty:easy", "difficulty:medium"}}) // both
+	gh.AddIssue(43, fakes.Issue{Labels: []string{"difficulty:easy"}}).Set("state", "closed")
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
+	flowUpdateItem(ctx, 41, pyjson.New("difficulty_by", pyjson.New("difficulty", "easy", "provider", "muse")))
+	refused := true
+	gh.Patch.RemoveLabel = func(number int, name string) {
+		if number == 42 && refused {
+			herr.Raise(&herr.GitHubError{Msg: "refused", Status: 502})
+		}
+		gh.Own().RemoveLabel(number, name)
+	}
+	notes := sweep.Labels(ctx, testsupport.Day)
+	assertIn(t, "#40: `difficulty:easy` is retired, so `difficulty:medium`", notes)
+	assertIn(t, "difficulty:easy", gh.Labels) // #42 still carries it
+	refused = false
+	notes = sweep.Labels(ctx, testsupport.Day)
+	assertIn(t, "deleted the retired label `difficulty:easy`", notes)
+	assertNotIn(t, "difficulty:easy", gh.Labels)
+	assertEqual(t, gh.LabelNames(40), setOf(config.LabelBuild, "difficulty:medium"))
+	assertEqual(t, gh.LabelNames(41), setOf("bot:planned", "difficulty:medium"))
+	assertEqual(t, gh.LabelNames(42), setOf("human", "difficulty:medium"))
+	assertEqual(t, gh.LabelNames(43), setOf())
+	record := func(n int) *pyjson.Object { return ctx.Store.Load().Obj("items").Obj(strconv.Itoa(n)) }
+	assertEqual(t, queue.RatingSource(gh.LabelNames(40), record(40)), "person")
+	assertEqual(t, queue.RatingSource(gh.LabelNames(41), record(41)), "bot")
+	assertEqual(t, queue.DifficultyOf(gh.LabelNames(40), ""), "medium")
+}
+
 func TestSweep_EverySweepRunsIt(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
@@ -591,20 +634,108 @@ func TestSweep_PlannedIssuesAndBotPullsGetADifficulty(t *testing.T) {
 	w.gh.AddIssue(30, fakes.Issue{Labels: []string{"bot:planned"}})     // planned, no rating line
 	w.gh.AddIssue(31, fakes.Issue{Labels: []string{config.LabelBuild}}) // still waiting for its plan
 	w.gh.AddIssue(32, fakes.Issue{Labels: []string{"bot:planned", "human"}})
-	w.gh.AddIssue(33, fakes.Issue{Labels: []string{"bot:planned", "difficulty:easy"}})
-	w.gh.AddPull(34, "bot/issue-33", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue says easy
+	w.gh.AddIssue(33, fakes.Issue{Labels: []string{"bot:planned", "difficulty:hard"}})
+	w.gh.AddPull(34, "bot/issue-33", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue says hard
 	w.gh.AddPull(35, "bot/issue-30", fakes.Pull{Labels: []string{config.LabelPR}}) // its issue had none
 	w.gh.AddPull(36, "feature/x")                                                  // not the bot's
 	notes := sweep.Sweep(w.ctx)
 	assertEqual(t, w.difficulties(30), setOf("difficulty:medium"))
-	assertEqual(t, w.difficulties(31), setOf()) // the planner may still rate it easy
+	assertEqual(t, w.difficulties(31), setOf()) // the planner rates it
 	assertEqual(t, w.difficulties(32), setOf())
-	assertEqual(t, w.difficulties(33), setOf("difficulty:easy"))
-	assertEqual(t, w.difficulties(34), setOf("difficulty:easy"))
+	assertEqual(t, w.difficulties(33), setOf("difficulty:hard"))
+	assertEqual(t, w.difficulties(34), setOf("difficulty:hard"))
 	assertEqual(t, w.difficulties(35), setOf("difficulty:medium"))
 	assertEqual(t, w.difficulties(36), setOf())
 	assertIn(t, "#30: planned with no difficulty, so `difficulty:medium`", notes)
 	// It is the bot's own rating, so a later planner may raise it.
 	record := dig(t, w.ctx.Store.Load(), "items", "30")
 	assertEqual(t, dig(t, record, "difficulty_by", "difficulty"), "medium")
+}
+
+// `bot:working` is retired (#2748): before the sweep deletes it, every thread that carries it,
+// closed ones too (a run goes on after its thread closes), gets the live label of the run its
+// record names, so a thread a run holds stays held: the one its claim kept (`live`), or, for a
+// claim from before, what its kind, action, revision's source and fullsend tree say.
+func TestSweep_TheRetiredWorkingLabelMovesToItsRunsLiveLabel(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	gh.Labels = pyjson.New()
+	for _, name := range append(config.Labels.Keys(), config.LabelWorking) {
+		gh.Labels.Set(name, pyjson.New("name", name))
+	}
+	working := config.LabelWorking
+	gh.AddIssue(50, fakes.Issue{Labels: []string{working}})                              // no record: a build
+	gh.AddIssue(51, fakes.Issue{Labels: []string{working, config.LabelNeedsPlan}})       // a planning run
+	gh.AddPull(52, "bot/issue-9", fakes.Pull{Labels: []string{config.LabelPR, working}}) // a CI fix
+	gh.AddPull(53, "bot/issue-8", fakes.Pull{Labels: []string{config.LabelPR, working}}) // a review run
+	gh.AddPull(54, "bot/issue-7", fakes.Pull{Labels: []string{config.LabelPR, working}}) // a revision
+	gh.AddIssue(55, fakes.Issue{Labels: []string{working, "bot:fullsend"}})              // its reconcile
+	gh.AddIssue(56, fakes.Issue{Labels: []string{working, "bot:fullsend"}})              // its split
+	gh.AddIssue(57, fakes.Issue{Labels: []string{working}, State: "closed"})             // closed, still going
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
+	for number, record := range map[int]*pyjson.Object{
+		51: pyjson.New("kind", "build", "action", "plan"),
+		52: pyjson.New("kind", "revise", "action", "revise", "source", "ci"),
+		53: pyjson.New("kind", "review", "action", "review"),
+		54: pyjson.New("kind", "revise", "action", "revise", "source", "request"),
+		55: pyjson.New("kind", "build", "action", "build", "tree", pyjson.New("mode", "fullsend")),
+		56: pyjson.New("kind", "build", "action", "build"),
+		57: pyjson.New("kind", "build", "action", "build", "live", "building"),
+	} {
+		flowUpdateItem(ctx, number, record)
+	}
+	assertEqual(t, len(plan.WorkingThreads(ctx)), 8) // held before the move
+	notes := sweep.Labels(ctx, testsupport.Day)
+	assertIn(t, "#52: `bot:working` is retired, so `bot:fixing-ci`", notes)
+	assertIn(t, "deleted the retired label `bot:working`", notes)
+	assertNotIn(t, working, gh.Labels)
+	for number, want := range map[int][]string{
+		50: {config.LabelBuilding}, 51: {config.LabelPlanning, config.LabelNeedsPlan},
+		52: {config.LabelPR, config.LabelFixingCI}, 53: {config.LabelPR, config.LabelReviewing},
+		54: {config.LabelPR, config.LabelRevising}, 55: {config.LabelReconciling, "bot:fullsend"},
+		56: {config.LabelSplitting, "bot:fullsend"}, 57: {config.LabelBuilding},
+	} {
+		assertEqual(t, gh.LabelNames(number), setOf(want...), number)
+	}
+	// Every one is held still, by its live label now.
+	assertEqual(t, len(plan.WorkingThreads(ctx)), 8)
+}
+
+// `bot:merging` (#2748) comes off a bot pull request merging no more: closed, or open with
+// auto-merge off and out of `main`'s merge queue. One with auto-merge on, or in the queue (whose
+// REST `auto_merge` reads null), keeps it.
+func TestSweep_AStaleMergingLabelComesOff(t *testing.T) {
+	w := newSweepBase(t)
+	for _, n := range []int{60, 61, 62, 63} {
+		w.gh.AddPull(n, "bot/issue-"+strconv.Itoa(n-30), fakes.Pull{Labels: []string{config.LabelPR, config.LabelMerging}})
+	}
+	w.gh.Threads.Item(60).Set("auto_merge", pyjson.New("merge_method", "squash")) // merging
+	w.gh.MergeQueue = map[string]bool{"PR_61": true}                              // queued
+	w.gh.Threads.Item(63).Set("state", "closed")                                  // merged meanwhile
+	notes := sweep.Merging(w.ctx, testsupport.Day)
+	assertEqual(t, sortedOf(notes), []string{
+		"#62: auto-merge is off and it is out of the merge queue, so `bot:merging` is off",
+		"#63: closed, so `bot:merging` is off"})
+	assertEqual(t, w.gh.LabelNames(60), setOf(config.LabelPR, config.LabelMerging))
+	assertEqual(t, w.gh.LabelNames(61), setOf(config.LabelPR, config.LabelMerging))
+	assertEqual(t, w.gh.LabelNames(62), setOf(config.LabelPR))
+	assertEqual(t, w.gh.LabelNames(63), setOf(config.LabelPR))
+	assertEqual(t, sweep.Merging(w.ctx, testsupport.Day), []string{})
+}
+
+// The production countdown (the open issue labelled `production merge`) gets `tracking` (#2748),
+// and nothing else about it changes; the pull requests that carry `production merge` are left
+// alone, and so is a countdown that has it.
+func TestSweep_TheProductionCountdownIsTracking(t *testing.T) {
+	w := newSweepBase(t)
+	countdown := w.gh.AddIssue(70, fakes.Issue{Title: "Merging to production in 3 hours",
+		Labels: []string{"production merge", "human"}})
+	w.gh.AddPull(71, "promote/x", fakes.Pull{Labels: []string{"production merge", "human"}})
+	body := countdown.Str("body")
+	notes := sweep.Sweep(w.ctx)
+	assertIn(t, "#70: the production countdown, so `tracking`", notes)
+	assertEqual(t, w.gh.LabelNames(70), setOf("production merge", "human", config.LabelTracking))
+	assertEqual(t, w.gh.LabelNames(71), setOf("production merge", "human"))
+	assertEqual(t, []any{countdown.Str("title"), countdown.Str("body")}, []any{"Merging to production in 3 hours", body})
+	assertEqual(t, w.replies(70), []string{})
+	assertNotIn(t, "#70: the production countdown, so `tracking`", sweep.Sweep(w.ctx))
 }

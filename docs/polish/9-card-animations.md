@@ -45,9 +45,33 @@ Drawn so far, the damage and removal family (#2784):
 | `vanish` | exiled, bounced | exiled | each card drawn in, glinting, and gone in a soft flare; no shake |
 | `negate` | countered | countered | a ring closes on the countered card, which shatters and fizzles out in smoke |
 
-Named and not drawn yet: A2's motifs (#2786). A table may name one already: it parses, and until its
-part lands the card plays its event rows only (`planCardMotif` returns nothing). `aura` on a hook plays
-nothing either: a card's standing look is its entry's `aura` field (Auras, below).
+Drawn in #2786, life and stats, board, cards and mana, and traps, on the same four phases
+and three parameters:
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `drain` | healthLost, healthSet | healthLost, healthSet | a liquid stream from the victim to the gainer (the entry's healed target, else the resolving play's hero), pooling where it lands; the loss's number only in place of the row |
+| `bless` | buffed, upgraded, keywordGranted | all three | arrows up, a sheen and a burst over a card made better |
+| `curse` | degraded, buffed, keywordGranted | all three | arrows down and a void burst over a card made worse |
+| `ward` | damageAbsorbed, divineShieldLost | both | Armor's full shield over a hit it took whole (under `keep` a burst, the armor row drawing the flash); gold and shards where a Divine Shield broke |
+| `conjure` | summoned | nothing | a summoning circle where the card arrives: a gather, a landing and an afterglow |
+| `rise` | summoned, animated, awakened | nothing | the card rising out of its zone, from below to where it stands |
+| `offering` | destroyed | nothing | the unit sinking under a glyph in its lane: a cost paid, never a kill |
+| `shift` | swapped, rotated, positionSwitched, flickered | nothing | the path of every unit that moved; a board swap or a rotation walks both rows, a rotation along R14's ring from the resolving play's seat |
+| `bind` | locked, unlocked | both | frost and chains over a Locked unit; gold shards when it releases |
+| `tether` | stolen, controlChanged, held | nothing | an arcane line from where the card was to whose it is now |
+| `mirror` | transformed | nothing | a translucent double peeling off the source toward the copy |
+| `transmute` | transformed | nothing | smoke and sparks as one card becomes another |
+| `flight` | drawn | drawn | a card back flying from the library into the hand, landing with its sparkle |
+| `glimpse` | predicted, secretRevealed | nothing | a sheen and a small flare on the hero's badge |
+| `mana` | manaChanged, manaSpent | manaChanged | one sparkle per crystal gained spread across Travel to Land, landing together; a soft pulse where a spend drained |
+| `tithe` | costChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202) |
+| `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
+| `snap` | trapFired | trapFired | a tight ring on the trap's own zone, then its reveal: in the card's flavor when the view names it, else the entry palette (R154, R202); a firing again is a short flare |
+
+Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
+nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
+(Auras, below).
 
 ### Phases
 

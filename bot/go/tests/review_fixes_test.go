@@ -26,12 +26,14 @@ import (
 )
 
 // reviewFixesMediumPR is medium_pr: a pull request a medium model (Muse, the first of them)
-// built and approved by day, waiting for its review run.
+// built by day, whose own reviewer never approved it in the run (an approval there would ship it,
+// 2026-11-02), waiting for its review run.
 func reviewFixesMediumPR(t *testing.T, h *flowHarness) int {
 	t.Helper()
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": crossTimedBuilder(map[string]string{"src/game.txt": "rules v2\n"}),
-		"review": workReviewer(workApprove)}))
+		"fix":    workBuilder(map[string]string{"src/game.txt": "rules v2, fixed\n"}),
+		"review": workReviewer(workChanges("It skips the replay check."))}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	return pr
@@ -46,43 +48,41 @@ func reviewFixesEmptyOut(t *testing.T, h *flowHarness, name string) string {
 
 // ---------------------------------------------------------------------------- AutoMergeTests
 
-func TestReviewFixes_ARevisionByAnotherModelTurnsStrongAutoMergeOff(t *testing.T) {
-	// Muse keeps the medium item it planned (one lane, one owner, #725), and its in-run
-	// approval waits for a Strong final; the Strong audit turns auto-merge on. Then Muse
-	// revises by day, whose medium approval alone never ships a medium item, so the strong
-	// approval of the old head is gone.
+func TestReviewFixes_ARevisionItsOwnReviewerDoesNotApproveTurnsAutoMergeOff(t *testing.T) {
+	// Muse keeps the medium item it planned (one lane, one owner, #725), and its in-run approval
+	// ships it (2026-11-02, #2748): auto-merge on. Then Muse revises it by day, and its own
+	// reviewer never approves the revision: the approval of the old head is gone with it, and the
+	// new head waits for its final audit.
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: []string{"muse"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	flowUpdateItem(h.ctx, 12, pyjson.New("planned_at", clock.ISO(testsupport.Day), "planned_tier", "medium",
 		"planned_by_id", "muse"))
+	testsupport.ClockOf(h.ctx).At = testsupport.Day
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
 	pr := crossPullOf(t, h.gh, "bot/issue-12")
-	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	crossNextRun(h, "778")
-	h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)})) // claude-3 audits at night
-	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)                             // Strong: auto-merge on
-	// A revision is queued by a path that leaves auto-merge alone, and Muse does it by day:
-	// its medium approval alone is not enough, so the strong approval of the old head is gone.
+	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge) // its own lane's approval: auto-merge on
+	// A revision is queued by a path that leaves auto-merge alone, and Muse does it by day.
 	thread := h.gh.Threads.Item(pr)
 	thread.Set("labels", append(thread.List("labels"), pyjson.New("name", config.LabelRevise)))
-	testsupport.ClockOf(h.ctx).At = testsupport.Day
+	crossNextRun(h, "778")
 	planned, result := h.night(workFake(map[string]runner.Handler{
 		"revise": workBuilder(map[string]string{"src/game.txt": "v2.1\n"}),
-		"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "approved"})
+		"fix":    workBuilder(map[string]string{"src/game.txt": "v2.2\n"}),
+		"review": workReviewer(workChanges("It skips the replay check."))}))
+	assertEqual(t, []any{planned.Get("provider"), result.Get("status")}, []any{"muse", "built"})
 	assertNotIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross))
+	assertIn(t, config.LabelCross, h.gh.LabelNames(pr))
 }
 
 func TestReviewFixes_AutoMergeIsPinnedToTheApprovedCommit(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
-	// By day no Strong seat is free; at night claude-3 reviews, and its one strong
-	// approval pins auto-merge to the head (#695).
+	// Muse built it and its own reviewer did not approve it; agy, a medium model on another
+	// subscription, reviews it, and its one approval pins auto-merge to the head (#2748).
 	h.committedHours()
 	planned, _ := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")}, []any{"claude-3", "strong"})
+	assertEqual(t, []any{planned.Get("provider"), dig(t, planned, "seats", "review", "tier")}, []any{"agy", "medium"})
 	votes := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
 	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], dig(t, votes, "sha"))
 }
@@ -92,7 +92,7 @@ func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *test
 	d := deliver.NewDeliverer(h.ctx, pyjson.New("action", "review", "provider", "agy"), reviewFixesEmptyOut(t, h, "o"),
 		h.deliverRepo, "", nil, "")
 	medium := func() *pyjson.Object { return pyjson.New("gpt", "medium", "muse", "medium", "gemini", "medium") }
-	// Only a Strong approval ships (#695): medium ones, weak with medium, never do.
+	// Votes from before #2748 (no `built_by`) keep their rule: only a strong approval ships.
 	assertFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "muse"}, "tiers", medium()), "medium"))
 	assertFalse(t, d.RuleMet(pyjson.New("approvals", []any{"gpt", "muse"}, "tiers", medium(),
 		"rejections", []any{"gemini"}), "medium")) // votes are by family
@@ -104,6 +104,16 @@ func TestReviewFixes_ARejectionStandsUntilItsModelApprovesOrTheHeadMoves(t *test
 	assertTrue(t, d.RuleMet(pyjson.New("approvals", []any{"claude", "gemini"},
 		"tiers", pyjson.New("claude", "strong", "gemini", "medium"),
 		"rejections", []any{}), "medium"))
+	// Since #2748 a medium approval ships a medium item (from any subscription, its builder's own
+	// included, since 2026-11-02), and a rejection stands against it as before.
+	since := func(rejections ...any) *pyjson.Object {
+		return pyjson.New("built_by", "gpt", "approvals", []any{"gpt", "muse"}, "rejections", rejections,
+			"reviews", []any{pyjson.New("family", "gpt", "tier", "medium", "provider", "gpt"),
+				pyjson.New("family", "muse", "tier", "medium", "provider", "muse")})
+	}
+	assertTrue(t, d.RuleMet(since(), "medium"))
+	assertFalse(t, d.RuleMet(since("gemini"), "medium"))
+	assertFalse(t, d.RuleMet(since(), "hard"))
 }
 
 func TestReviewFixes_OnlyTheBotsOwnPullRequestsGetASecondReview(t *testing.T) {
@@ -112,15 +122,41 @@ func TestReviewFixes_OnlyTheBotsOwnPullRequestsGetASecondReview(t *testing.T) {
 	assertNotEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("number"), 30)
 }
 
-func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing.T) {
+// With only its builder set up, its builder's own approval ships it (2026-11-02, #2748): agy's
+// in-run approval turns auto-merge on, and nothing waits for another subscription.
+func TestReviewFixes_WithOnlyItsBuilderSetUpItsOwnApprovalShipsIt(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets(), Machine: []string{"agy"}, At: testsupport.Day})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
 	comment := lastOf(t, h.gh.BotComments(12))
-	// Only a Strong approval ships a medium item (#725): agy's in-run approval is recorded,
-	// and the head waits for a Strong seat no setup has.
-	assertIn(t, "`gemini` (medium) approved it, so it waits for one strong model's final audit (Opus)", comment)
+	assertIn(t, "Auto-merge is on", comment)
+	assertNotIn(t, "No subscription that could give that review is set up", comment)
+	assertIn(t, fmt.Sprintf("PR_%d", crossPullOf(t, h.gh, "bot/issue-12")), h.gh.AutoMerge)
+}
+
+// A person asks a medium model for a hard item's final audit (`/harness review medium`), and agy,
+// the only subscription set up, approves it: a medium approval does not ship a hard item, and no
+// subscription set up could give the strong one it needs, so it waits for a person.
+func TestReviewFixes_WithNoStrongSeatSetUpAHardItemWaitsForAPerson(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: providersSecrets(), Machine: []string{"agy"}, At: testsupport.Day})
+	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
+	fakes.Git(h.clone, "fetch", "-q", "origin")
+	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
+	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelPROpen, "difficulty:hard"}})
+	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12",
+		Labels: []string{config.LabelPR, config.LabelCross, "difficulty:hard"}, SHA: start})
+	flowUpdateItem(h.ctx, 40, pyjson.New("issue", 12, "difficulty", "hard", "review_floor", "medium",
+		"votes", pyjson.New("sha", start, "builder", "claude", "built_by", "claude-3", "approvals", []any{},
+			"rejections", []any{}, "tiers", pyjson.New(), "reviews", []any{})))
+	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), review.Get("verdict")},
+		[]any{"review", "agy", "approve"})
+	assertEqual(t, h.gh.AutoMerge, map[string]string{})
+	assertIn(t, config.LabelCross, h.gh.LabelNames(40))
+	comment := lastOf(t, h.gh.BotComments(40))
+	assertIn(t, "`gemini` (medium) approved it, so it waits for one strong model's approval (Opus) in a final "+
+		"audit, another subscription's when one is free or else its own", comment)
 	assertIn(t, "No subscription that could give that review is set up", comment)
 }
 
@@ -129,7 +165,7 @@ func TestReviewFixes_WithOnlyItsBuilderSetUpItWaitsForAStrongReviewer(t *testing
 func TestReviewFixes_ACommentDuringTheReviewGetsItsRevisionBeforeAnyMerge(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
-	h.committedHours() // claude-3 works all day: the Strong final can audit
+	h.committedHours() // claude-3 works all day: a strong model is free too
 
 	commented := func(request *runner.RunRequest) *runner.RunResult {
 		flowUpdateItem(h.ctx, pr, pyjson.New("pending_request", true))
@@ -153,15 +189,16 @@ func TestReviewFixes_AReviewWhoseRunDiesBacksOffItsSubscriptionAndIsCounted(t *t
 		deliver.NewDeliverer(h.ctx, planned, reviewFixesEmptyOut(t, h, fmt.Sprintf("died-%d", attempt)), h.deliverRepo,
 			"", nil, "").Run()
 	}
-	// Each death backs its subscription off; the next strong seat takes it.
-	assertEqual(t, seen, []string{"claude-3", "claude-7"})
+	// Each death backs its subscription off; the next medium seat on another subscription than
+	// Muse, its builder, takes it.
+	assertEqual(t, seen, []string{"agy", "gpt"})
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelBlocked, "difficulty:medium"))
 	assertIn(t, "died 2 times", lastOf(t, h.gh.BotComments(pr)))
 }
 
 func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
-	h.committedHours() // claude-3 works all day: the Strong final can audit
+	h.committedHours() // claude-3 works all day: a strong model is free too
 	log := filepath.Join(h.root, "installs.log")
 	env := map[string]string{"GITHUB_SERVER_URL": "file://" + filepath.Join(h.root, "remote"),
 		"BOT_GITHUB_TOKEN": strings.Repeat("t", 20)}
@@ -172,7 +209,7 @@ func TestReviewFixes_ASecondReviewRunsNoneOfTheBuildersCode(t *testing.T) {
 		CommittedHours: true, // the Strong final can audit
 		Overrides: pyjson.New("gates", []any{pyjson.New("name", "rules exist", "run", "true", "timeout_minutes", 1)},
 			"install", pyjson.New("run", "pwd >> "+log, "timeout_minutes", 1),
-			"max_review_cycles", 2)})
+			"max_review_cycles", 2, "own_review_run", false)}) // the build reviews itself, as the harness's do
 	h.ctx = testsupport.MakeCtx(h.gh, testsupport.Ctx{Cfg: h.cfg, At: testsupport.Day})
 	pr := reviewFixesMediumPR(t, h)
 	builds := strings.Count(readText(t, log), "\n")

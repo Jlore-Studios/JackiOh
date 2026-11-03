@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView } from "../test/fixtures.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SHIELD_TAIL_MS } from "./constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_MOTIF_PHASES, FX_SHIELD_TAIL_MS } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { mountDomEffect } from "./dom.ts";
 import { createFxMemory } from "./memory.ts";
@@ -53,10 +53,12 @@ describe("R1363 the shield flash", () => {
   it("R1363 a hit Armor took whole blooms a full shield with a ring and sparks, through its own row", () => {
     expect(ANIMATIONS.damageAbsorbed.fx).toEqual({ recipe: "armor" });
     const D = ANIMATIONS.damageAbsorbed.durationMs;
+    // The armor row draws as the ward motif, so the bloom lands on Land.
+    const land = Math.round(FX_MOTIF_PHASES.land * D);
     const cues = plan([whole(3)]);
-    expect(shields(cues)).toEqual([{ kind: "shield", size: "full", at: AT, delayMs: 0, durationMs: D + FX_SHIELD_TAIL_MS }]);
-    expect(cues).toContainEqual(expect.objectContaining({ kind: "ring", at: AT, delayMs: 0 }));
-    expect(cues).toContainEqual(expect.objectContaining({ kind: "burst", preset: "spark", at: AT, delayMs: 0 }));
+    expect(shields(cues)).toEqual([{ kind: "shield", size: "full", at: AT, delayMs: land, durationMs: D - land + FX_SHIELD_TAIL_MS }]);
+    expect(cues).toContainEqual(expect.objectContaining({ kind: "ring", at: AT, delayMs: land }));
+    expect(cues).toContainEqual(expect.objectContaining({ kind: "burst", preset: "spark", at: AT, delayMs: land }));
     // A hero's shield is drawn on its portrait.
     const hero = shields(plan([whole(2, "hero-p1")]));
     expect(hero.map((cue) => cue.at)).toEqual([{ kind: "testid", testid: testid.hero("you") }]);

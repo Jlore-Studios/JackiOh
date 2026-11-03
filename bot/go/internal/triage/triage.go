@@ -30,7 +30,9 @@ package triage
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -56,7 +58,7 @@ var HumanLabel = config.LabelHuman
 var HumanLabels = map[string]bool{config.LabelHuman: true, config.LabelHumanRequired: true}
 
 // Queued is the bot's queue labels `human` takes off: people do the issue now. A run that holds
-// it (`bot:working`) or a pull request it opened keep theirs.
+// it (its live label, `bot:building` and the rest) or a pull request it opened keep theirs.
 var Queued = map[string]bool{config.LabelBuild: true, config.LabelNeedsPlan: true}
 
 // PrefixType is one of PrefixTypes: a title prefix and the type label it names.
@@ -210,10 +212,11 @@ func FormLabels(body string) []string {
 			break
 		}
 	}
-	// DIFFICULTY_LABELS is {f"difficulty:{name}": name for name in DIFFICULTIES}.
-	for _, level := range config.Difficulties {
+	// DIFFICULTY_LABELS is {f"difficulty:{name}": name for name in DIFFICULTIES}. An older form's
+	// "Easy" (an issue triaged again) is a retired difficulty, which reads as medium (#2748).
+	for _, level := range append(slices.Clone(config.Difficulties), slices.Sorted(maps.Keys(config.RetiredDifficulties))...) {
 		if strings.HasPrefix(difficulty, level) {
-			labels = append(labels, "difficulty:"+level)
+			labels = append(labels, "difficulty:"+config.AsDifficulty(level))
 			break
 		}
 	}

@@ -3,6 +3,8 @@
 //!   Radiant: {cards} different random cards of that board straight to your hand, each costing (0).
 //! The board is the caster's last board, a setup input frozen into the match (B5 E30,
 //! `subsystems/last_boards`); an empty one (hotseat, a first game) gives nothing (R129).
+//! R2739000: the base face sets `secret_option_counts`, since how many cards its Discover offers is read
+//! off a board no view shows, so the other seat is never told it.
 
 use jackioh_engine::effects::{add_from_last_board, add_random_from_last_board, discover_from_last_board};
 use jackioh_engine::prelude::*;
@@ -36,6 +38,7 @@ pub fn script() -> CardScripts {
             hook(|ctx| vec![add_from_last_board(json_as(json!({ "costOverride": param(&*ctx, "setCost") })))]),
         )]),
         preview: Some(preview()),
+        secret_option_counts: true,
         ..Script::default()
     };
     let radiant = Script {
@@ -289,7 +292,7 @@ mod tests {
             }
 
             #[test]
-            fn r97_r177_the_options_reach_the_chooser_only_the_opponent_sees_a_prompt_open_then_a_card_added_under_the_sentinel() {
+            fn r2739000_r97_r177_the_options_reach_the_chooser_only_the_opponent_sees_a_prompt_open_then_a_card_added_under_the_sentinel() {
                 crate::register_all();
                 let mut s = game(&BOARD, false, 1);
                 s.play(PORTAL, json!({}));

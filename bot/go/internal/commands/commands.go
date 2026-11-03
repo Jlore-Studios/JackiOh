@@ -32,7 +32,7 @@ import (
 
 // VERBS
 var Verbs = []string{"build", "revise", "review", "rebuild", "stop", "status", "help", "halt",
-	"start", "suggest", "run", "suspend", "oneshot", "split", "fullsend"}
+	"start", "suggest", "run", "suspend", "oneshot", "split", "fullsend", "handoff"}
 
 // ALIASES, in order (`misspelt` and `help <verb>` read it in order).
 var Aliases = pyjson.New(
@@ -60,6 +60,7 @@ var Levels = pyjson.New(
 	"review", 2,
 	"rebuild", 2,
 	"stop", 2,
+	"handoff", 2,
 	"suggest", 2,
 	"request", 2,
 	"approve", 2,
@@ -285,19 +286,20 @@ func CommandLines(body string) []string {
 //
 // Each is its pattern's `.match(args)` on what `_strip_force` leaves, which holds no newline.
 var mentionArgs = map[string]func(string) bool{
-	"status":   empty,     // ^$
-	"help":     oneWord,   // ^\S*$
-	"stop":     empty,     // ^$
-	"rebuild":  empty,     // ^$
-	"review":   reviewArg, // ^(?i:strong|medium)?$
-	"halt":     empty,     // ^$
-	"start":    oneWord,   // ^\S*$
-	"suggest":  empty,     // ^$
-	"run":      runArg,    // ^(#?\d+)?$
-	"suspend":  oneWord,   // ^\S*$
-	"oneshot":  empty,     // ^$
-	"split":    splitArg,  // ^(?i:bot)?$
-	"fullsend": empty,     // ^$
+	"status":   empty,      // ^$
+	"help":     oneWord,    // ^\S*$
+	"stop":     empty,      // ^$
+	"rebuild":  empty,      // ^$
+	"review":   reviewArg,  // ^(?i:strong|medium)?$
+	"halt":     empty,      // ^$
+	"start":    oneWord,    // ^\S*$
+	"suggest":  empty,      // ^$
+	"run":      runArg,     // ^(#?\d+)?$
+	"suspend":  oneWord,    // ^\S*$
+	"oneshot":  empty,      // ^$
+	"split":    splitArg,   // ^(?i:bot)?$
+	"fullsend": empty,      // ^$
+	"handoff":  handoffArg, // ^(?i:medium|hard|human)?$
 }
 
 func empty(args string) bool { return args == "" }
@@ -317,6 +319,10 @@ func runArg(args string) bool {
 }
 
 func splitArg(args string) bool { return args == "" || py.FoldEqual(args, "bot") }
+
+func handoffArg(args string) bool {
+	return args == "" || py.FoldEqual(args, "medium") || py.FoldEqual(args, "hard") || py.FoldEqual(args, "human")
+}
 
 // _WRAP
 const wrap = "`*_~"
@@ -539,6 +545,7 @@ var HelpRows = [][2]string{
 	{"review", "| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |"},
 	{"rebuild", "| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |"},
 	{"stop", "| `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |"},
+	{"handoff", "| `handoff [medium\\|hard\\|human]` | release this item from the subscription that owns it, and from any hold for it: to anyone, at that difficulty, or to people | issue or PR | 2 |"},
 	{"suggest", "| `suggest` | ask for improvement suggestions the next time a lane has nothing to start | anywhere | 2 |"},
 	{"suggest", "| `approve`, `reject` | alone on a line, no prefix needed: build one of my suggestions, or close it unbuilt | suggestion | 2 |"},
 	{"status", "| `status` | halt state, each subscription, the queue | anywhere | 1 |"},
@@ -597,7 +604,7 @@ func helpTable() string {
 		"\n" +
 		"Anything else after `{slash}` or `@{bot}` is a request: a build on an issue, a revision on a PR, with your words as the notes. A single word that looks like a misspelt verb (`stauts`) runs nothing; I ask what you meant.\n" +
 		"After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.\n" +
-		"Add `--force` (level 3) to {forced} to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.\n" +
+		"Add `--force` (level 3) to {forced} to start now, outside a subscription's hours if need be. Label an issue `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.\n" +
 		"Labels do the same as the verbs: `{prefix}build` on an issue, `{prefix}revise` on a PR; assigning @{bot} queues the thread.\n" +
 		"An issue is mine (my `{prefix}…` labels) or people's, never both: `human` keeps me off it, and `human required` is my hand-over when I find I cannot do it (I take my labels off, unassign myself, assign you and say what a person must do). Take either label off to hand it back, then `{slash} build`.\n" +
 		"On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.\n"
@@ -635,6 +642,13 @@ var VerbHelp = pyjson.New(
 		"{slash} rebuild"},
 	"stop", [3]string{"stop", "Take this issue or pull request out of the queue. A run working on it gives " +
 		"up at its next checkpoint and keeps what it has.", "{slash} stop"},
+	"handoff", [3]string{"handoff [medium|hard|human]", "Release this item from the subscription that " +
+		"owns it (the one that planned it, or took it up last), and from any hold for it " +
+		"(`{prefix}waiting`): the next subscription that may build it at its difficulty takes it, " +
+		"and owns it from then on. With `medium` or `hard`, at that difficulty, as your label, which " +
+		"I never change. With `human`, to people: labelled `human`, my labels off, and I unassign " +
+		"myself. On one of my pull requests it is its issue's item. A run working on it keeps it " +
+		"until it delivers, and the handoff follows.", "{slash} handoff hard"},
 	"suggest", [3]string{"suggest", "Ask for a suggestion survey the next time a lane has nothing to " +
 		"start, without waiting out the 30 idle minutes a survey otherwise waits for.",
 		"@{bot} suggest"},

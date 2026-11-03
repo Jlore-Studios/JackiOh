@@ -42,7 +42,7 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::{DRAW_OFFER_BLOCK_TURNS, VIEW_EVENT_LIMIT};
+use crate::config::{CUSTOM_ID_PREFIX, DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -75,8 +75,8 @@ use crate::wire::{
     CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
     HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
     MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
-    PlayerView, PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView,
-    Zone, ZoneName, opponent_of,
+    PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection, SideView,
+    TuningChange, UnitView, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -1610,7 +1610,8 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
     }
 }
 
-/// §10.6, R81: the other player learns that a prompt is open and whose it is, never its options.
+/// §10.6, R81: the other player learns that a prompt is open and whose it is, never its options; of a
+/// card picker whose count hides nothing, how many cards it offers (R2739000).
 fn pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
     let Some(pending) = &state.pending else {
         return mulligan_pending_view(state, viewer);
@@ -1619,6 +1620,7 @@ fn pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
         return Some(PendingView::Elsewhere(PendingElsewhereView {
             for_you: false,
             pending_for: pending.player_id,
+            option_count: shown_option_count(state, viewer, pending),
         }));
     }
     Some(prompt_view(state, viewer, pending))
@@ -1635,6 +1637,64 @@ fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -
         return None;
     }
     Some((pending.resume.def_id.clone(), pending.resume.radiant))
+}
+
+/// R2739000: the `optionCount` `viewer`'s view gives the prompt the other seat holds, or `None`. The AI's
+/// redaction (R185) keeps that many blank options where it drops the other seat's, so a world's view
+/// counts what the true one does.
+pub fn other_seats_option_count(state: &GameState, viewer: PlayerId) -> Option<i32> {
+    let pending = state
+        .pending
+        .as_ref()
+        .filter(|pending| pending.player_id != viewer)?;
+    shown_option_count(state, viewer, pending)
+}
+
+/// R2739000: how many cards the other seat's card picker offers, for the seat not holding it, or
+/// `None` (§10.6's bare notice). Only a picker the client draws as cards (a Discover, or a short
+/// `mode`, `reward` or `answer`), asked by a card this viewer may read, whose script does not read its
+/// options off a hidden zone, and whose every option is a mode or a card this viewer may read.
+fn shown_option_count(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> Option<i32> {
+    let def_id = pending.resume.def_id.as_str();
+    let asking = pending.resume.instance_id.as_deref()?;
+    let card = find_instance(state, asking)?;
+    // R81: a prompt's shape narrows a hidden asker, so a hidden or changed one shows nothing. The state
+    // holds every card tested here, so `may_read` never reaches for a replacement.
+    if card.def_id != def_id || !may_read(state, viewer, asking, &Replacements::default()) {
+        return None;
+    }
+    let scripts = crate::scripts::script_of(state, def_id);
+    if def_id.starts_with(CUSTOM_ID_PREFIX)
+        || scripts.base.secret_option_counts
+        || scripts.radiant.secret_option_counts
+    {
+        return None;
+    }
+    // R1184000: a question sequence's Stop is a button, never a card.
+    let cards: Vec<&PromptOption> = pending
+        .options
+        .iter()
+        .filter(|option| {
+            !(pending.kind == PromptKind::Answer && option.key == crate::prompts::ANSWER_STOP_KEY)
+        })
+        .collect();
+    let readable = cards.iter().all(|option| match &option.selection {
+        Selection::Mode { .. } => true,
+        Selection::Instance { instance_id } => {
+            find_instance(state, instance_id).is_some()
+                && may_read(state, viewer, instance_id, &Replacements::default())
+        }
+        _ => false,
+    });
+    let drawn = match pending.kind {
+        PromptKind::Discover => true,
+        PromptKind::Mode | PromptKind::Reward | PromptKind::Answer => cards.len() <= PROMPT_CARD_OPTION_LIMIT,
+        _ => false,
+    };
+    if !readable || !drawn || cards.is_empty() {
+        return None;
+    }
+    i32::try_from(cards.len()).ok()
 }
 
 /// The chooser's own prompt, field by field: `resume` never travels, so nothing a prompt keeps for its
@@ -1673,9 +1733,11 @@ fn mulligan_pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingV
     if mulligan_prompt_for(state, other).is_none() {
         None
     } else {
+        // R265: the mulligan shows no count, its hand being hidden.
         Some(PendingView::Elsewhere(PendingElsewhereView {
             for_you: false,
             pending_for: other,
+            option_count: None,
         }))
     }
 }

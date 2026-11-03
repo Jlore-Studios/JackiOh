@@ -146,7 +146,38 @@ export const FX_MOTIF_VOLLEY_MAX = 5;          // volley: the shots one entry fi
 export const FX_MOTIF_BARRAGE_MAX = 8;         // barrage: the hits that land one by one…
 export const FX_MOTIF_BARRAGE_STEP = 0.02;     // …this fraction of D apart, never past linger
 export const FX_MOTIF_CENTER_LANE = 3;         // nova: the lane a one-sided blast centres on
-export const FX_MOTIF_TRAUMA = { bolt: 0.25, volley: 0.3, barrage: 0.35, chain: 0.3, lance: 0.4, nova: 0.45, wipe: 0.6, vanish: 0, scorch: 0.3, negate: 0.25 } as const;
+export const FX_MOTIF_TRAUMA = {
+  bolt: 0.25,
+  volley: 0.3,
+  barrage: 0.35,
+  chain: 0.3,
+  lance: 0.4,
+  nova: 0.45,
+  wipe: 0.6,
+  vanish: 0,
+  scorch: 0.3,
+  negate: 0.25,
+  drain: 0.3,
+  bless: 0.2,
+  curse: 0.25,
+  ward: 0.2,
+  conjure: 0.3,
+  rise: 0.35,
+  offering: 0.3,
+  shift: 0.15,
+  bind: 0.2,
+  tether: 0.25,
+  mirror: 0.25,
+  transmute: 0.3,
+  flight: 0,
+  glimpse: 0.1,
+  mana: 0,
+  tithe: 0.1,
+  tally: 0.15,
+  snap: 0.4,
+} as const;
+/** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
+export const FX_MOTIF_TITHE_MAX = 5;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most

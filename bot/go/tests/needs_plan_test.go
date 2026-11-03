@@ -144,9 +144,9 @@ func TestNeedsPlan_QueuedItemsWithoutAStrongPlanCarryTheLabel(t *testing.T) {
 	ctx := needsPlanLaneCtx(gh)
 	difficultyBusy(gh, ctx, needsPlanFour()...)       // nobody plans yet
 	difficultyQueue(gh, ctx, 3, false)                // no plan
-	difficultyQueue(gh, ctx, 4, true, difficultyEasy) // an easy item with a strong plan
+	difficultyQueue(gh, ctx, 4, true, difficultyHard) // a hard item with a strong plan
 	flowUpdateItem(ctx, 4, pyjson.New("planned_tier", "strong"))
-	difficultyQueue(gh, ctx, 5, true, difficultyEasy) // an easy item with a medium plan
+	difficultyQueue(gh, ctx, 5, true, difficultyEasy) // one still labelled easy (medium) with a medium plan
 	flowUpdateItem(ctx, 5, pyjson.New("planned_tier", "medium"))
 	difficultyQueue(gh, ctx, 6, true) // a medium item with a medium plan
 	flowUpdateItem(ctx, 6, pyjson.New("planned_tier", "medium"))
@@ -158,19 +158,21 @@ func TestNeedsPlan_QueuedItemsWithoutAStrongPlanCarryTheLabel(t *testing.T) {
 			labelled[n] = true
 		}
 	}
-	// A medium plan is enough for an easy or medium item; only a hard one needs a strong model's
-	// (#317 part 6, #695).
+	// A medium plan is enough for a medium item; only a hard one needs a strong model's (#317
+	// part 6, #695).
 	assertEqual(t, labelled, map[int]bool{3: true})
 }
 
 // ---------------------------------------------------------------------------- PlanningLaneTests
 
-// claude-3 plans while it builds; claude-1, capped like the rest, plans only when it holds
-// nothing else; the weak one builds once a strong model planned it. The load balancer
+// A medium item is planned by a medium model first (#2748): with Muse, agy and GPT busy (Muse on
+// all four of its lanes), the Claude accounts' Sonnet seats plan. claude-3 plans while it builds;
+// claude-1, capped like the rest, plans only when it holds nothing else. The load balancer
 // (`plan.balance`) gives the first plan to claude-1, which holds nothing, over claude-3, which
 // builds; claude-2, claude-5, claude-6, claude-7 and claude-8, idle too, would plan the second,
-// so they have no secret here.
-func TestNeedsPlan_PlanningComesFirstEasyFirstAndTakesNoBuildLane(t *testing.T) {
+// so they have no secret here. Neither planner builds the other's item meanwhile, and the item
+// is built from its plan, not planned again.
+func TestNeedsPlan_PlanningComesFirstOnMediumSeatsAndTakesNoBuildLane(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	names := []string{}
 	for _, s := range providers.SecretNames {
@@ -181,19 +183,19 @@ func TestNeedsPlan_PlanningComesFirstEasyFirstAndTakesNoBuildLane(t *testing.T) 
 	}
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Env: providersSecrets(names...)})
 	difficultyBusy(gh, ctx, "claude-3", 50, "claude-4", 52,
-		"agy", 53, "muse", 54, "gpt", 55)
+		"agy", 53, "muse", 54, "muse", 56, "muse", 57, "muse", 58, "gpt", 55)
 	difficultyQueue(gh, ctx, 3, false, "priority:high")                // medium and urgent
-	difficultyQueue(gh, ctx, 4, false, difficultyEasy, "priority:low") // easy: the weak one's, once planned
+	difficultyQueue(gh, ctx, 4, false, difficultyEasy, "priority:low") // still labelled easy: medium
 	planned := flowMake(ctx)
-	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 4, "claude-1") // claude-1 holds nothing else
-	assertEqual(t, difficultySeatAt(t, planned, "plan"), difficultySeat{"claude-1", "opus", "strong"})
-	assertEqual(t, gh.LabelNames(4), setOf(config.LabelWorking, config.LabelNeedsPlan, difficultyEasy,
-		"priority:low"))
+	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 3, "claude-1") // claude-1 holds nothing else
+	assertEqual(t, difficultySeatAt(t, planned, "plan"), difficultySeat{"claude-1", "sonnet", "medium"})
+	assertEqual(t, gh.LabelNames(3), setOf(config.LabelPlanning, config.LabelNeedsPlan, "priority:high"))
 	needsPlanRunning(gh, ctx, planned)
 	planned = flowMake(ctx)
-	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 3, "claude-3") // building #50 does not stop it planning
+	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 4, "claude-3") // building #50 does not stop it planning
+	assertEqual(t, difficultySeatAt(t, planned, "plan"), difficultySeat{"claude-3", "sonnet", "medium"})
 	needsPlanRunning(gh, ctx, planned)
-	// Both planning lanes are taken, and claude-1, planning, does not build too.
+	// Nothing is left to plan, and claude-1, planning, does not build too.
 	action := py.Str(flowMake(ctx).Get("action"))
 	assertTrue(t, action != "plan" && action != "build", action)
 	needsPlanPlannedBy(ctx, 4)
@@ -204,8 +206,48 @@ func TestNeedsPlan_PlanningComesFirstEasyFirstAndTakesNoBuildLane(t *testing.T) 
 	}
 	gh.Threads.Item(4).Set("labels", labels)
 	planned = flowMake(ctx)
-	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "build", 4, "lite")
+	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "build", 4, "claude-3")
 	assertIsNone(t, difficultySeatAt(t, planned, "plan")) // built from the plan, not planned again
+}
+
+// A strong planner plans a medium item only when no medium one can take it now (#2748), so
+// nothing stalls: claude-3 alone, its Sonnet switched off here, plans it on Opus; with its Sonnet,
+// on Sonnet.
+func TestNeedsPlan_AStrongPlannerPlansAMediumItemOnlyWhenNoMediumOneCan(t *testing.T) {
+	for _, c := range []struct {
+		sonnet bool
+		seat   difficultySeat
+	}{{false, difficultySeat{"claude-3", "opus", "strong"}}, {true, difficultySeat{"claude-3", "sonnet", "medium"}}} {
+		gh := fakes.NewFakeGitHub()
+		ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_3")})
+		if !c.sonnet {
+			ctx = difficultyWithPool(gh, testsupport.Night, ctx.Cfg, func(p *providers.Pool) {
+				difficultyReplaceProvider(p, "claude-3", func(x *providers.Provider) { x.ExtraModels = nil })
+			})
+		}
+		difficultyQueue(gh, ctx, 3, false)
+		planned := flowMake(ctx)
+		assertEqual(t, []any{planned.Get("action"), difficultySeatAt(t, planned, "plan")}, []any{"plan", c.seat})
+	}
+}
+
+// Muse, capped at its whole plan, plans a medium item while a lane of its four is free (#2748),
+// as it builds: first of the medium planners, ahead of every strong one.
+func TestNeedsPlan_MusePlansWhileItBuilds(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := needsPlanLaneCtx(gh)
+	difficultyBusy(gh, ctx, "muse", 54, "muse", 56)
+	difficultyQueue(gh, ctx, 3, false)
+	planned := flowMake(ctx)
+	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 3, "muse")
+	assertEqual(t, difficultySeatAt(t, planned, "plan"), difficultySeat{"muse", "muse-spark-1.3-contributor", "medium"})
+	// A hard item still goes to a strong planner (Opus) only.
+	gh = fakes.NewFakeGitHub()
+	ctx = needsPlanLaneCtx(gh)
+	difficultyQueue(gh, ctx, 3, false, difficultyHard)
+	planned = flowMake(ctx)
+	seat := difficultySeatOf(t, planned, "plan")
+	assertEqual(t, []any{planned.Get("action"), seat[1], seat[2]}, []any{"plan", "opus", "strong"})
 }
 
 // Planning comes first: claude-3 (two lanes, no caps) plans two items at once, before it builds
@@ -241,25 +283,40 @@ func TestNeedsPlan_TheLanePlansFullsendPartsBeforeTheRest(t *testing.T) {
 	needsPlanIs(t, planned, []string{"action", "number"}, "plan", 4)
 }
 
-// One lane (#695): while it holds a run it takes nothing more, neither a second build nor a plan
-// — two runs deciding from one reading go past a cap together. Once the run ends, it plans.
-func TestNeedsPlan_Claude1NeverPlansWhileItBuilds(t *testing.T) {
-	gh := fakes.NewFakeGitHub()
-	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN")})
-	difficultyBusy(gh, ctx, "claude-1", 50)
-	difficultyQueue(gh, ctx, 3, false)
-	assertEqual(t, flowMake(ctx).Get("action"), "none")
-	gh.Runs.Delete("50")
-	assertEqual(t, flowMake(ctx).Get("action"), "plan")
+// A capped subscription counts its plans against its own lanes (#695), and has as many as its
+// 5-hour cap in force allows (`lanes_by_cap`, #2748). claude-1 has two in its hours (its 100%
+// cap): while it builds one item it plans another in its second lane, and holding both it takes
+// nothing more. claude-5 (40%) has one: while it builds it takes nothing more, neither a second
+// build nor a plan, since two runs deciding from one reading go past a cap together. Once its
+// build ends, each plans.
+func TestNeedsPlan_ACappedSubscriptionPlansOnlyInALaneOfItsOwn(t *testing.T) {
+	for _, c := range []struct {
+		provider, secret string
+		lanes            int
+	}{{"claude-1", "CLAUDE_CODE_OAUTH_TOKEN", 2}, {"claude-5", "CLAUDE_CODE_OAUTH_TOKEN_5", 1}} {
+		gh := fakes.NewFakeGitHub()
+		ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets(c.secret)})
+		difficultyBusy(gh, ctx, c.provider, 50)
+		difficultyQueue(gh, ctx, 3, false)
+		difficultyQueue(gh, ctx, 4, false)
+		if c.lanes == 2 {
+			planned := flowMake(ctx)
+			needsPlanIs(t, planned, []string{"action", "provider"}, "plan", c.provider)
+			needsPlanRunning(gh, ctx, planned)
+		}
+		assertEqual(t, flowMake(ctx).Get("action"), "none", c.provider)
+		gh.Runs.Delete("50")
+		needsPlanIs(t, flowMake(ctx), []string{"action", "provider"}, "plan", c.provider)
+	}
 }
 
-// claude-2 (capped) has one lane (#695): while it holds a run it takes nothing more, neither a
-// second build nor a plan. Once the run ends, it plans; the mid-run refusal checks still guard the
-// spending.
+// claude-2 (capped at 90%) has two lanes (`lanes_by_cap`, #2748; one before, #695): while its
+// runs hold both it takes nothing more, neither a third build nor a plan. Once one ends, it plans;
+// the mid-run refusal checks still guard the spending.
 func TestNeedsPlan_ACappedSubscriptionTakesNothingWhileHolding(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2")})
-	difficultyBusy(gh, ctx, "claude-2", 50)
+	difficultyBusy(gh, ctx, "claude-2", 50, "claude-2", 51)
 	difficultyQueue(gh, ctx, 3, false)
 	assertEqual(t, flowMake(ctx).Get("action"), "none")
 	gh.Runs.Delete("50")
@@ -267,7 +324,7 @@ func TestNeedsPlan_ACappedSubscriptionTakesNothingWhileHolding(t *testing.T) {
 	needsPlanIs(t, planned, []string{"action", "provider"}, "plan", "claude-2")
 	needsPlanRunning(gh, ctx, planned)
 	difficultyQueue(gh, ctx, 4, true)
-	assertEqual(t, flowMake(ctx).Get("action"), "none") // the lane is held again
+	assertEqual(t, flowMake(ctx).Get("action"), "none") // the lanes are held again
 }
 
 // At 87% of its 5-hour window claude-2 (cap 90%, long runs start under 85%) starts neither a
@@ -350,7 +407,7 @@ func TestNeedsPlan_AMediumModelRatesAndPlansAnUnratedItemOnTheLane(t *testing.T)
 	planned = flowMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "provider"}, "plan", "muse")
 	assertEqual(t, difficultySeatAt(t, planned, "plan"), difficultySeat{"muse", "muse-spark-1.3-contributor", "medium"})
-	// An easy item nobody planned is never the weak one's.
+	// An item nobody planned is never the weak one's.
 	gh = fakes.NewFakeGitHub()
 	ctx = needsPlanLaneCtx(gh, needsPlanLane{At: testsupport.Day, Machine: []string{"lite"}})
 	difficultyQueue(gh, ctx, 3, false, difficultyEasy)
@@ -383,13 +440,15 @@ func needsPlanBody() string {
 		"delay the draw.\n" + issueplan.End + "\n"
 }
 
-func TestNeedsPlan_ItCountsAsAStrongPlanAndTheWeakOneBuildsFromIt(t *testing.T) {
+func TestNeedsPlan_ItCountsAsAStrongPlanAndTheBuilderBuildsFromIt(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{"lite"}})
 	difficultyBusy(gh, ctx, needsPlanFour()...) // no strong model is free
 	gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild, difficultyEasy}, Body: needsPlanBody()})
 	planned := flowMake(ctx)
-	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "build", 3, "lite")
+	// The weak one builds nothing (#2748): the first free Sonnet does, from the person's plan.
+	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "build", 3, "claude-7")
+	assertEqual(t, difficultySeatAt(t, planned, "build"), difficultySeat{"claude-7", "sonnet", "medium"})
 	assertIsNone(t, difficultySeatAt(t, planned, "plan")) // not planned again
 	assertTrue(t, !gh.LabelNames(3)[config.LabelNeedsPlan])
 	assertEqual(t, planned.Obj("handoff").Get("notes"), "1. In `apps/web/src/cards/art/Art.tsx`, delay the draw.")

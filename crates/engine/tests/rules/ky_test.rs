@@ -350,7 +350,7 @@ mod c_42_kys_test_the_two_prompts_r420 {
     }
 
     #[test]
-    fn r465_the_key_never_reaches_a_view_the_chooser_sees_labels_statement_and_options_the_opponent_only_that_a_prompt_is_open()
+    fn r465_the_key_never_reaches_a_view_the_chooser_sees_labels_statement_and_options_the_opponent_only_how_many()
      {
         let mut state = offered("kt-view", false);
         answer_keys(&mut state, &["mode:Medium"]);
@@ -367,9 +367,10 @@ mod c_42_kys_test_the_two_prompts_r420 {
             .map(|option| option.label.clone())
             .collect();
         assert_eq!(shown, offered_labels);
+        // R2739000: the other seat is shown how many answers, never them.
         assert_eq!(
             json_of(view_for(&state, P2).pending),
-            json!({ "forYou": false, "pendingFor": "p1" })
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": shown.len() })
         );
         // Two states differing only in the key show both seats the same view.
         let mut twin = round_trip(&state);

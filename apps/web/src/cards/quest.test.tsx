@@ -322,8 +322,8 @@ describe("R404 In Too Deep through the real engine", () => {
     render(withCatalog(<Log view={asked} />, catalog));
     expect(screen.getByTestId(testid.log).textContent).toContain("Your In Too Deep completed a quest");
     cleanup();
-    // The other seat is told p1 is choosing, and has no picker of its own.
-    expect(game.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1" });
+    // The other seat is told p1 is choosing and how many rewards (R2739000), and has no picker of its own.
+    expect(game.view("p2").pending).toEqual({ forYou: false, pendingFor: "p1", optionCount: 2 });
 
     const onAction = vi.fn<(action: ActionBody) => void>();
     render(withCatalog(<Prompt view={asked} legal={game.legal("p1")} onAction={onAction} />, catalog));

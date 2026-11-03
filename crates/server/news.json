@@ -1,0 +1,500 @@
+{
+  "news": [
+    {
+      "id": "patch-v0-4-0d",
+      "kind": "patch",
+      "version": "v0.4.0d",
+      "title": "Zephyrs is spelled Zephrys",
+      "summary": "Zephyrs is renamed Zephrys, spelled like Zephrys Zealotism, and nothing plays differently.",
+      "postedAt": "2026-10-20T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-0e",
+      "kind": "patch",
+      "version": "v0.4.0e",
+      "title": "The Maestro's button shows its real numbers",
+      "summary": "The Maestro's Activate button now shows the Plague Counter price and exile count it will use as other cards change them. The ability itself is unchanged.",
+      "postedAt": "2026-10-21T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-0f",
+      "kind": "patch",
+      "version": "v0.4.0f",
+      "title": "Face-down Traps keep borrowed effects asleep",
+      "summary": "A lasting effect a Trap borrowed in a fusion now waits while the Trap is face-down and works once it is revealed or face-up. The Trap still fires as a Trap.",
+      "postedAt": "2026-10-21T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-1",
+      "kind": "patch",
+      "version": "v0.4.1",
+      "title": "Meditative+ balance changes and Float",
+      "summary": "Float arrives: mana you leave unspent at the end of your turn makes \"Float reduces cost\" cards cheaper. Rollback, Book of Buff, the Expeditions and more are rebalanced, and Garage Sale and Leg Day are new.",
+      "postedAt": "2026-10-21T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-2",
+      "kind": "patch",
+      "version": "v0.4.2",
+      "title": "A graveyard card you can't play says why",
+      "summary": "Your own graveyard now says why a card it admits cannot be played. No card plays differently.",
+      "postedAt": "2026-10-22T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-3",
+      "kind": "patch",
+      "version": "v0.4.3",
+      "title": "Charge and Indestructible leave the random combat keywords",
+      "summary": "A random combat keyword is never Charge or Indestructible, so Plastic Surgery, Zao Gao and the other cards that grant one draw from the other 14.",
+      "postedAt": "2026-10-22T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-4",
+      "kind": "patch",
+      "version": "v0.4.4",
+      "title": "Your choices stay private",
+      "summary": "While you make a choice, your opponent now sees only that you are choosing, not what kind of choice it is.",
+      "postedAt": "2026-10-22T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-4b",
+      "kind": "patch",
+      "version": "v0.4.4b",
+      "title": "Meditative+ balance changes II",
+      "summary": "A second round of Meditative+ balance: KY's Papaya, Felinor Feelings and Spa Day cost more, The House and AI Slop cost less, and Appropriations and In Too Deep are toned down.",
+      "postedAt": "2026-10-23T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-5",
+      "kind": "patch",
+      "version": "v0.4.5",
+      "title": "Decks hold 25 cards",
+      "summary": "Decks now hold 25 cards, up from 20, and a deck saved at 20 stays a draft until you add five. Medium and Hard AI decks hold 30 and 35.",
+      "postedAt": "2026-10-23T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-6",
+      "kind": "patch",
+      "version": "v0.4.6",
+      "title": "Buffs and Nerfs choose better",
+      "summary": "A Buff or a Nerf on a card on the field no longer changes its cost, and Buffs and Nerfs can now change many more numbers, from Hinder's discard to Outbreak's draws.",
+      "postedAt": "2026-10-24T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-7",
+      "kind": "patch",
+      "version": "v0.4.7",
+      "title": "Trample only works on attack",
+      "summary": "Trample now sends excess damage to a hero only when the unit with it is attacking. A Trample unit that is attacked strikes back for its full attack without hitting the attacker's hero.",
+      "postedAt": "2026-10-24T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-8",
+      "kind": "patch",
+      "version": "v0.4.8",
+      "title": "Fused Activates work separately",
+      "summary": "Each Activate on a card with several now has its own uses and cooldown, so using one leaves the others ready. Clicking Activate on such a card opens a panel to choose which one.",
+      "postedAt": "2026-10-24T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-9",
+      "kind": "patch",
+      "version": "v0.4.9",
+      "title": "Immune to tribal tag based hate is an ability",
+      "summary": "Blue-Eyes White Felinor's immunity to tribal tag based hate is now printed as an ability instead of a keyword, so a Nerf can no longer take it away.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-10",
+      "kind": "patch",
+      "version": "v0.4.10",
+      "title": "Meditative+ balance changes III",
+      "summary": "A third round of Meditative+ balance: Shrinking Felinor and Felinor Fuser get smaller, Jungle Loser attacks at the end of every turn of yours, and Supply Drop is renamed Jlockeed's Supply Drop.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-10b",
+      "kind": "patch",
+      "version": "v0.4.10b",
+      "title": "A Unit on a carrier counts on the field",
+      "summary": "A Unit standing on a carrier now counts as one of your Units on the field for every effect, cost and count, and can be picked to take Plague Counters.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-11",
+      "kind": "patch",
+      "version": "v0.4.11",
+      "title": "Uncovered Units are summoning sick",
+      "summary": "A Unit left on top when the card stacked on it leaves is now summoning sick that turn, as if just played. It still can't attack again if it already attacked before it was covered.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-11b",
+      "kind": "patch",
+      "version": "v0.4.11b",
+      "title": "Prestige needs a card to De-Radiant",
+      "summary": "Prestige can now be played only when there is a Radiant card for it to De-Radiant, and a face-down card doesn't count. It can still be Traded with nothing to De-Radiant.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-12",
+      "kind": "patch",
+      "version": "v0.4.12",
+      "title": "Five new tags, and four cards lose one",
+      "summary": "Five new tags arrive: Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean. Felinor Feelings, Friend of Felinors, Fruit Tree and Organic Produce lose a tag.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-12b",
+      "kind": "patch",
+      "version": "v0.4.12b",
+      "title": "Showdown and Prestige are Tradable",
+      "summary": "Tradable arrives: in your main phase, shuffle the card from your hand into your deck and draw a card at no mana, once per turn. Showdown and Prestige are Tradable.",
+      "postedAt": "2026-10-25T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-12c",
+      "kind": "patch",
+      "version": "v0.4.12c",
+      "title": "Flickered tokens keep their size",
+      "summary": "A token summoned at a size, like the Bread Token's 5/5 and its Armor, now keeps it when Flickered instead of coming back as a 0/0 that dies at once.",
+      "postedAt": "2026-10-26T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-4-12d",
+      "kind": "patch",
+      "version": "v0.4.12d",
+      "title": "Infinite Reserves draws a card",
+      "summary": "Infinite Reserves now draws 1 card when played, and its Radiant face still draws 3.",
+      "postedAt": "2026-10-27T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-0",
+      "kind": "patch",
+      "version": "v0.5.0",
+      "title": "Stinkyscape",
+      "summary": "The Stinkyscape set is here: 176 cards and 52 tokens, with Dormant cards, Starships to launch, Resources, the Marketplace, Anomalies and Quests. Cards that pick from every set can now offer them.",
+      "postedAt": "2026-10-28T00:00:00Z",
+      "reward": {
+        "kind": "cardPack",
+        "pack": "Stinkyscape"
+      }
+    },
+    {
+      "id": "patch-v0-5-0b",
+      "kind": "patch",
+      "version": "v0.5.0b",
+      "title": "Buffs on the field skip a paid Tribute",
+      "summary": "A Buff or a Nerf on a card on the field no longer changes its Tribute, which was already paid. One that changed a card's Tribute in your hand or deck now changes the Tribute its play asks for.",
+      "postedAt": "2026-10-28T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-1",
+      "kind": "patch",
+      "version": "v0.5.1",
+      "title": "Stinkyscape's first pass",
+      "summary": "A first pass on Stinkyscape: a Frozen card can't Activate until it thaws, an awakened Dormant card can't attack that turn, and Equip cards can't be played onto a Dormant card.",
+      "postedAt": "2026-10-28T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-1b",
+      "kind": "patch",
+      "version": "v0.5.1b",
+      "title": "Printed trigger conditions hold",
+      "summary": "Prison now captures only when your opponent plays a Unit, as printed, and a trap's text fused onto a Unit springs only when that trap would.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-2",
+      "kind": "patch",
+      "version": "v0.5.2",
+      "title": "The Starship's new look",
+      "summary": "A Dormant Starship now arrives in the middle of your backrow, and in play it shows the Starship Pieces fused into it. Every Starship wears its own art, which changes with its pieces and its launch.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-3",
+      "kind": "patch",
+      "version": "v0.5.3",
+      "title": "Meditative balance changes IV",
+      "summary": "A fourth round of Meditative balance reworks cards from Blood Moon to Wondrous Wand, and Indestructible Units can no longer be in Defense Position. Temporary can now take a number that counts down each turn.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-4",
+      "kind": "patch",
+      "version": "v0.5.4",
+      "title": "Resources in your hand, a Marketplace of your own",
+      "summary": "Resources now go into your hand and give you their Credits when played or discarded. At the start of your turn the Marketplace offers you 3 cards of its own that only you see and buy.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-4b",
+      "kind": "patch",
+      "version": "v0.5.4b",
+      "title": "Attack timings, and Classic Golem as designed",
+      "summary": "\"When this attacks\" now happens before the damage, and \"After this attacks\" only if the attacker is still alive. Classic Golem transforms the Unit it attacks before the damage, as designed.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-4c",
+      "kind": "patch",
+      "version": "v0.5.4c",
+      "title": "Stratos is spelled one way",
+      "summary": "The Stinkyscape Unit that Stratos Swarm fills your board with is now spelled Stratos, as the Swarm spells it, and nothing plays differently.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-5",
+      "kind": "patch",
+      "version": "v0.5.5",
+      "title": "Training Grounds",
+      "summary": "The Training Grounds set is here: 40 cards, a token and 20 Core cards made again join the deck builder, the Almanac, packs and random decks. A deck holds a Core card or its Training Grounds copy, never both.",
+      "postedAt": "2026-10-29T00:00:00Z",
+      "reward": {
+        "kind": "cardPack",
+        "pack": "Training Grounds"
+      }
+    },
+    {
+      "id": "patch-v0-5-5b",
+      "kind": "patch",
+      "version": "v0.5.5b",
+      "title": "Animated cards need stats to become Units",
+      "summary": "A Field Spell, Trap or Field Trap now becomes a Unit only when it has both Animated and stats. Rod of Ages and Twice Forward One Step Backwards lose their stats and stay in your backrow until they fuse a Unit.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-6",
+      "kind": "patch",
+      "version": "v0.5.6",
+      "title": "The first player opens on three cards",
+      "summary": "The player who goes first now opens with three cards, down from four. The player who goes second still opens with four and The Coin.",
+      "postedAt": "2026-10-29T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-6b",
+      "kind": "patch",
+      "version": "v0.5.6b",
+      "title": "Trigor",
+      "summary": "A Trigor you played whose stats were set this turn, by Dino-size for instance, now summons its successor when it dies, as its text says.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-6c",
+      "kind": "patch",
+      "version": "v0.5.6c",
+      "title": "A Trap fused into a Unit stays quiet",
+      "summary": "A Trap fused into a Unit no longer springs from it, whatever fused it, so Wormhole eaten by 饕餮 no longer steals your opponent's Spells.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-6d",
+      "kind": "patch",
+      "version": "v0.5.6d",
+      "title": "Flying Units fill your backrow",
+      "summary": "Filling your board with a Flying Unit now fills your backrow too, after your unit row, so Drone Core VIII and Stratos Swarm fill both rows.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-6e",
+      "kind": "patch",
+      "version": "v0.5.6e",
+      "title": "Field Spells can be Buffed to Immutable",
+      "summary": "A Buff can now give a Field Spell Immutable as well as Indestructible.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-6f",
+      "kind": "patch",
+      "version": "v0.5.6f",
+      "title": "Quest cards show the stage they are on",
+      "summary": "Quest cards now print only the stage they are on, with its progress, and their whole text is still in the card's preview. Nothing plays differently.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-7",
+      "kind": "patch",
+      "version": "v0.5.7",
+      "title": "Cards show what they remember",
+      "summary": "Cards that remember something now show it in their text, like the Unit Carnivorous Cube ate or the deaths Eschews has counted. Shockwave447 can now give seven more complicated cards, Trigor among them.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-7b",
+      "kind": "patch",
+      "version": "v0.5.7b",
+      "title": "When, Whenever and After this attacks",
+      "summary": "Prem Panther, Boots on the Ground and CN Golem now get their effect even when they die in that attack. Badger, Honey Badger, Windfurious Prime and Nature Titan now say \"When this attacks\" but play as before.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-7c",
+      "kind": "patch",
+      "version": "v0.5.7c",
+      "title": "Megabase becomes a Unit",
+      "summary": "Megabase is now a Unit played straight into a unit zone.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-7d",
+      "kind": "patch",
+      "version": "v0.5.7d",
+      "title": "AI Girlfriend becomes a Unit",
+      "summary": "AI Girlfriend is now a Unit instead of an Animated Field Spell, and its printed text drops Animated on both faces.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-8",
+      "kind": "patch",
+      "version": "v0.5.8",
+      "title": "Training Grounds' Core copies become Legacy cards",
+      "summary": "The twenty Training Grounds copies of Core cards are now Legacy cards, so a deck may hold one beside the Core card it copies. Each is named Legacy: and its Core card's name, like Legacy: Bigot.",
+      "postedAt": "2026-10-30T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-8b",
+      "kind": "patch",
+      "version": "v0.5.8b",
+      "title": "CN Tech and NA Tech read new win rates",
+      "summary": "CN Tech and NA Tech can now pick cards of every set, Stinkyscape and Training Grounds included. Their win rates come from AI test games until enough live games are played.",
+      "postedAt": "2026-10-31T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-9",
+      "kind": "patch",
+      "version": "v0.5.9",
+      "title": "Stinkyscape balance changes I",
+      "summary": "The first Stinkyscape balance pass makes the five Faction cards cheaper and retunes the Beams, Cannons and Repeaters, which can no longer target heroes. Preemptive Strike and Cloaking Module are new cards.",
+      "postedAt": "2026-10-31T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-9b",
+      "kind": "patch",
+      "version": "v0.5.9b",
+      "title": "Siphon Squad Tribute loop fix",
+      "summary": "Siphon Squad no longer enters an infinite Tribute loop when fused or granted with Job Application.",
+      "postedAt": "2026-10-31T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-9c",
+      "kind": "patch",
+      "version": "v0.5.9c",
+      "title": "Units on the board show only the keywords that work there",
+      "summary": "A Unit on the board no longer shows Equip, Tradable, Cloaked, Crater, Flashback, Stack or Temporary, which do nothing once it is in play. Its preview still lists every keyword.",
+      "postedAt": "2026-10-31T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-9d",
+      "kind": "patch",
+      "version": "v0.5.9d",
+      "title": "Hold a card on a phone to see it up close",
+      "summary": "On a touch screen, holding a card now shows it enlarged until you let go, on either turn and every screen. The hold never plays or picks the card.",
+      "postedAt": "2026-10-31T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-9e",
+      "kind": "patch",
+      "version": "v0.5.9e",
+      "title": "A card goes to the graveyard of the side it died on",
+      "summary": "A Unit you took from your opponent that dies now goes to your graveyard as your card, not back to theirs. A Starship Piece you took fuses into your own Starship when it dies.",
+      "postedAt": "2026-10-31T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-9f",
+      "kind": "patch",
+      "version": "v0.5.9f",
+      "title": "Cleaner card faces",
+      "summary": "Cards no longer wear a Token or Created mark on the board, in hand or in the backrow. Hover over a card, or hold it on a touch screen, to see either.",
+      "postedAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10",
+      "kind": "patch",
+      "version": "v0.5.10",
+      "title": "Stinkyscape Balance Changes II",
+      "summary": "Can't Defend becomes a keyword, and the second Stinkyscape balance pass retunes cards from Jlockeed's J15 Fighter to ZolarKeth. Float now reduces a card's cost only while it is in your hand.",
+      "postedAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10b",
+      "kind": "patch",
+      "version": "v0.5.10b",
+      "title": "See how every coin and die lands",
+      "summary": "When Gary the Gambler, Mid Loser, Ace in the Hole or Dice of Doom flips coins or rolls dice, both players now watch every coin spin and every die tumble. The game log says each result in words.",
+      "postedAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10c",
+      "kind": "patch",
+      "version": "v0.5.10c",
+      "title": "Animated and signed full arts, and fifteen more full-art cards",
+      "summary": "Every full-art card gets two new chase versions, an animated Legendary full art and a signed Mythic one, and fifteen more cards print full art. In the Collection you can pick which full art a card wears.",
+      "postedAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10d",
+      "kind": "patch",
+      "version": "v0.5.10d",
+      "title": "Behind-the-scenes tidying",
+      "summary": "The code behind the card faces and the game screens was tidied, and nothing looks or plays differently.",
+      "postedAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10e",
+      "kind": "patch",
+      "version": "v0.5.10e",
+      "title": "The Jlorious card back",
+      "summary": "The Jlorious card back puts the logo's gold J and star on a violet card. The only way to own it is to reach Jlorious, and it is yours to keep.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10f",
+      "kind": "patch",
+      "version": "v0.5.10f",
+      "title": "Set watermarks",
+      "summary": "Every card now shows its set's symbol faintly behind its text, and Meditative+ has a symbol of its own. Turn it off under Settings, Visuals, Set watermarks.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-10g",
+      "kind": "patch",
+      "version": "v0.5.10g",
+      "title": "Finishes on full-art cards",
+      "summary": "A card's finish now shows on its full art, as a band of its color and texture round the art's edge.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-11",
+      "kind": "patch",
+      "version": "v0.5.11",
+      "title": "Buffs can Cloak cards in your hand and clear their Crater",
+      "summary": "A Buff on a Unit, Spell or Field Spell in your hand can now give it Cloaked, and a Buff on a card in your hand can now remove its Crater.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-11b",
+      "kind": "patch",
+      "version": "v0.5.11b",
+      "title": "Legacy cards get their own art",
+      "summary": "Each Training Grounds Legacy card now has art of its own: its Core card's picture redrawn in the training yard, with a touch of its own.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-11c",
+      "kind": "patch",
+      "version": "v0.5.11c",
+      "title": "Full-art cards in your hand",
+      "summary": "A full-art card in your hand now shows just its art, its cost and, on a Unit, its attack and health. Hover over it, or hold it on a touch screen, to see the whole card.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    },
+    {
+      "id": "patch-v0-5-11d",
+      "kind": "patch",
+      "version": "v0.5.11d",
+      "title": "Quieter Legendary and Mythic cards",
+      "summary": "Mythic cards no longer shine with a rainbow foil and edge by default, and stand out like Legendary cards by their crest, gem and music. Turn on Rarity foil in Settings, Visuals, to bring the foil back.",
+      "postedAt": "2026-11-02T00:00:00Z"
+    }
+  ]
+}
