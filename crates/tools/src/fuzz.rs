@@ -3723,7 +3723,7 @@ pub(crate) mod tests {
         #[test]
         fn a_reducer_that_accepts_a_play_while_a_prompt_is_open_fails_the_prompt_open_probe() {
             // Seed 2's game opens a prompt, as the malformed-answer test above relies on.
-            assert_caught_at(2, takes_prompt_open_plays, PROMPT_OPEN_PROBE);
+            assert_caught(2, takes_prompt_open_plays, PROMPT_OPEN_PROBE);
         }
 
         #[test]
