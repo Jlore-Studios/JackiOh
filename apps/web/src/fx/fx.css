@@ -192,7 +192,7 @@
 
 /* Issue #2790: Armor's splat of the amount it took whole (R1361): grey steel, not a wound. */
 .fx-splat[data-tone="absorb"] {
-  --fx-splat-color: #9aa3ad;
+  --fx-splat-color: var(--fx-steel);
 }
 
 .fx-splat[data-tone="loss"]::before {

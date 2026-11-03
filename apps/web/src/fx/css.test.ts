@@ -329,7 +329,7 @@ describe("B40 — fx.css", () => {
     expect(color).not.toContain("var(--fx-damage)");
     expect(color).not.toContain("var(--fx-heal)");
     expect(color).not.toContain("var(--fx-loss)");
-    expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    expect(color).toBe("var(--fx-steel)");
   });
 
   it("B40 the Divine Shield cocoon hangs off the card root's ::after with a radial gradient and a slow pulse", () => {
