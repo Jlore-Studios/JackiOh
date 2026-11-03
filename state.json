@@ -14886,11 +14886,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-03T14:10:33Z",
+        "at": "2026-11-03T18:47:44Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI: the change is to its decisions and its search (crates/ai/src/decide.rs, simulate.rs, search.rs)."
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 2, the AI: it changes how the AI's search simulates its own prompts (crates/ai/src/simulate.rs) and how decide answers one"
       },
       "failures": 0,
       "forced": false,
