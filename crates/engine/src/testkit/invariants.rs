@@ -247,6 +247,10 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             );
             tie(&mut ties, object.get("newInstanceId"), &[object.get("toDefId")]);
             tie(&mut ties, object.get("resultInstanceId"), &[object.get("defId")]);
+            // R2783000: a hook's marker names its card by `sourceId`, as the card stood when the hook began.
+            if object.get("type").and_then(Value::as_str) == Some("hookResolving") && !unread_here {
+                tie(&mut ties, object.get("sourceId"), &[object.get("defId")]);
+            }
             let Some(id) = card_id(id) else {
                 return;
             };
@@ -1335,6 +1339,43 @@ pub fn malformed_actions(
         }
     }
     out
+}
+
+/// The prompt-blocked probe's variants (#2829), each named in its failure.
+pub const PROMPT_OPEN_PLAY_ACTION: &str = "prompt-open-play";
+pub const PROMPT_OPEN_END_TURN_ACTION: &str = "prompt-open-end-turn";
+
+/// #2829: the seat's non-answer action while a non-mulligan prompt is open, with the seat that
+/// sends it, as `reduce` refuses it (§9.3, §10.6, R79): a `Play` naming the seat's first held card
+/// when it holds one, else `EndTurn`. `None` with no prompt open or a mulligan one (R265-R266,
+/// whose own path `malformed_actions` covers).
+pub fn prompt_blocked_action(
+    state: &GameState,
+    player: PlayerId,
+) -> Option<(&'static str, PlayerId, ActionBody)> {
+    let pending = state.pending.as_ref()?;
+    if pending.kind == PromptKind::Mulligan {
+        return None;
+    }
+    match state.players[player].hand.first() {
+        Some(held) => Some((
+            PROMPT_OPEN_PLAY_ACTION,
+            player,
+            ActionBody::Play {
+                instance_id: held.id.clone(),
+                zone: None,
+                x: None,
+                embiggen: None,
+                equip: None,
+                tributes: None,
+                targets: None,
+                modes: None,
+                plague: None,
+                face_down: None,
+            },
+        )),
+        None => Some((PROMPT_OPEN_END_TURN_ACTION, player, ActionBody::EndTurn)),
+    }
 }
 
 /// The turn and stint of an instance's latest declared attack, and how many it has declared in them.
