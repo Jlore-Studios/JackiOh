@@ -2,6 +2,7 @@
 // cards with an entry other than `none`, every Spell, Field Spell, Trap and Field Trap naming its cast, a
 // set piece or a bespoke recipe, every Field Spell given an entry wearing an aura), its 3 to 6 Flourishes,
 // the tokens it gave entries, and R202: a hidden play keys none of it, as every readable play keys its own.
+// classicplus.md, the pass's per-card table, holds one row per Classic+ card that matches the table.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -10,16 +11,16 @@ import { HIDDEN_ID, planEntries } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE } from "../constants.ts";
+import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
 import { createFxMemory } from "../memory.ts";
-import { galleryCardEvents, galleryCardOf } from "../motifs/gallery.ts";
-import { isDrawnMotif } from "../motifs/names.ts";
+import { motifScale } from "../motifs/build.ts";
+import { galleryCardEvents, galleryPlayOf } from "../motifs/gallery.ts";
+import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
 import type { FxPlanEnv } from "../types.ts";
 import { CARD_RECIPES, isCardRecipeKey } from "./bespoke.ts";
+import rawTable from "./classicplus.md?raw";
 import { FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
-/** The share of Classic+'s 78 cards (its tokens apart) that must have an entry other than `none` (#2795). */
-const ENTRY_SHARE = 0.55;
 /** How many bespoke Flourishes the set may hold (#2795). */
 const BESPOKE_MIN = 3;
 const BESPOKE_MAX = 6;
@@ -33,6 +34,7 @@ const TOKENS_WITH_ENTRIES = [
   "classicplus-012-5",
   "classicplus-012-6",
   "classicplus-019-3",
+  "classicplus-019-4",
   "classicplus-032-1",
   "classicplus-032-2",
   "classicplus-036-1",
@@ -40,6 +42,7 @@ const TOKENS_WITH_ENTRIES = [
   "classicplus-065-1",
   "classicplus-065-2",
   "classicplus-065-3",
+  "classicplus-065-4",
   "classicplus-075-1",
   "classicplus-076-1",
   "classicplus-t-ai-06",
@@ -61,6 +64,28 @@ function namesItsCast(entry: FxCardEntry | undefined): boolean {
   if (entry.kind === "setPiece") return true;
   if (entry.kind === "bespoke") return isCardRecipeKey(entry.key);
   return entry.kind === "hooks" && entry.hooks.cast !== undefined && isDrawnMotif(entry.hooks.cast.motif);
+}
+
+/** An entry as classicplus.md's Entry column writes it (core.test.ts's form). */
+function describeEntry(entry: FxCardEntry): string {
+  switch (entry.kind) {
+    case "none":
+      return `none: ${entry.reason}`;
+    case "bespoke":
+      return `bespoke ${entry.key}`;
+    case "setPiece":
+      return `setPiece ${entry.key}`;
+    case "hooks": {
+      const parts: string[] = [];
+      for (const hook of FX_CARD_HOOKS) {
+        const spec = entry.hooks[hook];
+        if (spec === undefined) continue;
+        parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
+      }
+      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
+      return parts.join("; ");
+    }
+  }
 }
 
 function envOf(): FxPlanEnv {
@@ -90,7 +115,7 @@ describe("R2795000 Classic+'s card animation table", () => {
     const cards = ENTRIES.filter(([defId]) => !isToken(defId));
     expect(cards).toHaveLength(78);
     const given = cards.filter(([, entry]) => entry.kind !== "none");
-    expect(given.length).toBeGreaterThanOrEqual(Math.ceil(ENTRY_SHARE * cards.length));
+    expect(given.length).toBeGreaterThanOrEqual(Math.ceil(FX_SET_PASS_FLOOR * cards.length));
     const nonUnits = cards.filter(([defId]) => NON_UNIT.has(typeOf(defId) ?? ""));
     expect(nonUnits).toHaveLength(55);
     for (const [defId, entry] of nonUnits) expect(namesItsCast(entry), defId).toBe(true);
@@ -123,19 +148,40 @@ describe("R2795000 Classic+'s card animation table", () => {
 
   it("R2795000 R202 a hidden play keys no Classic+ entry, while each readable play keys its own", () => {
     const played = ENTRIES.flatMap(([defId, entry]) => {
-      const card = galleryCardOf(defId, entry);
-      return card !== null && (card.hook === "cast" || card.hook === "cry" || card.hook === "bespoke") ? [card] : [];
+      const play = galleryPlayOf(defId, entry);
+      return play !== null && (play.kind === "board" || play.kind === "recipe") ? [{ defId, play }] : [];
     });
     expect(played.length).toBeGreaterThan(40);
     const view = fullBoardView();
     for (const card of played) {
-      const events = galleryCardEvents(card, view);
+      const events = galleryCardEvents(card.defId, card.play, view);
       expect(keysAny(events), card.defId).toBe(true);
       expect(keysAny(hidden(events)), `${card.defId} hidden`).toBe(false);
     }
   });
 
-  it("R2795000 the tokens given entries are the nineteen the pass lists", () => {
+  it("R2795000 classicplus.md has one row per Classic+ card, in order, with its name, type, entry, scale, census and why", () => {
+    const rows = rawTable
+      .split("\n")
+      .filter((line) => line.startsWith("| `classicplus-"))
+      .map((line) => line.slice(1, -1).split(" | ").map((cell) => cell.trim()));
+    expect(rows.map((row) => row[0])).toEqual(ENTRIES.map(([defId]) => `\`${defId}\``));
+    const view = fullBoardView();
+    for (const [cell, name, type, entry, scale, census, why] of rows) {
+      const defId = (cell ?? "").replace(/`/g, "");
+      const def = CATALOG[defId];
+      const own = TABLE.get(defId);
+      if (own === undefined) throw new Error(`${defId} has no entry`);
+      expect(name, defId).toBe(def?.name.replace(/\s+/g, " ").trim());
+      expect(type, defId).toBe(def?.type);
+      expect(entry, defId).toBe(describeEntry(own));
+      expect(scale, defId).toBe(own.kind === "none" ? "—" : motifScale(defId, view, 1).toFixed(2));
+      expect(census, defId).toMatch(/\S/);
+      expect(why, defId).toMatch(/\S/);
+    }
+  });
+
+  it("R2795000 the tokens given entries are the twenty-one the pass lists", () => {
     const tokens = ENTRIES.filter(([defId, entry]) => isToken(defId) && entry.kind !== "none").map(([defId]) => defId);
     expect(tokens).toEqual(TOKENS_WITH_ENTRIES);
     expect(ENTRIES.filter(([defId]) => isToken(defId))).toHaveLength(38);

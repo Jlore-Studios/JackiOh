@@ -249,8 +249,8 @@ func TestOwnReview_AStopDropsTheReservation(t *testing.T) {
 
 // The build leaves its subscription at its 5-hour cap: its own review run cannot start, so the
 // hold applies, as the item's owner's (`bot:waiting`, its comment, no lane kept meanwhile); when the
-// hour runs out before the subscription can start, its review is handed off to its final audit on
-// another subscription (Muse), whose approval ships it.
+// hold (`hold_minutes`) runs out before the subscription can start, its review is handed off to its
+// final audit on another subscription (Muse), whose approval ships it.
 func TestOwnReview_ACapAfterTheBuildHoldsItsOwnReviewThenHandsItToAFinalAudit(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Machine: []string{"muse"}, Chain: true})
 	h.gh.AddIssue(12, fakes.Issue{Title: "Make the rules v2", Labels: []string{config.LabelBuild}})
@@ -271,9 +271,10 @@ func TestOwnReview_ACapAfterTheBuildHoldsItsOwnReviewThenHandsItToAFinalAudit(t 
 	assertIn(t, "**Its own review is held for `claude-1`**", said)
 	assertIn(t, "it goes to its final audit on another subscription instead", said)
 	assertFalse(t, plan.ReadLanes(h.ctx, h.ctx.Store.Load()).Reserved[pr]) // a capped lane keeps no slot
-	// The hour runs out and claude-1 still cannot start: its final audit goes to Muse.
-	testsupport.ClockOf(h.ctx).At = testsupport.Night.Add(61 * time.Minute)
-	ownershipReading(h.ctx, "claude-1", 0.99, 150, 0.2, 5000)
+	// The hold runs out and claude-1 still cannot start: its final audit goes to Muse.
+	hold := h.cfg.HoldMinutes
+	testsupport.ClockOf(h.ctx).At = testsupport.Night.Add(time.Duration(hold+1) * time.Minute)
+	ownershipReading(h.ctx, "claude-1", 0.99, hold+90, 0.2, 5000)
 	crossNextRun(h, "779")
 	audit, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{audit.Get("action"), audit.Get("number"), audit.Get("provider"), audit.Truthy("own_review"),
@@ -522,8 +523,9 @@ func TestOwnReview_TheLoopStartsItsOwnReviewRunInTheTickThatDeliversItsBuild(t *
 	assertEqual(t, len(again), 1, notes)
 	assertIn(t, fmt.Sprintf("started review #%d on claude-1", pr), again[0])
 	review := controllerFetch(t, ctx, h.gh.Dispatches[len(h.gh.Dispatches)-1].Inputs["plan_ref"])
-	assertEqual(t, []any{review.Get("own_review"), review.Get("provider"), dig(t, review, "seats", "review", "model")},
-		[]any{true, "claude-1", "opus"})
+	// Sonnet built the medium item, so Sonnet reviews it and fixes what it finds (#2903), not Opus.
+	assertEqual(t, []any{review.Get("own_review"), review.Get("provider"), dig(t, review, "seats", "review", "model"),
+		dig(t, review, "seats", "build", "model")}, []any{true, "claude-1", "sonnet", "sonnet"})
 }
 
 // A person's `/harness handoff` releases a waiting own review from its lane: it goes to its final

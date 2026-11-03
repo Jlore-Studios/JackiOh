@@ -20,7 +20,7 @@ import { planFx } from "../../cues.ts";
 import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
 import { createFxMemory } from "../../memory.ts";
 import { timesOf } from "../../motifs/build.ts";
-import { recipeFixture } from "../../motifs/gallery.ts";
+import { RECIPE_FIXTURES } from "../../motifs/gallery.ts";
 import type { FxCue, FxPlanEnv } from "../../types.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import type { CardRecipeKey } from "../bespoke.ts";
@@ -78,7 +78,7 @@ const resolved = (player: PlayerId, instanceId: string, defId: string): GameEven
 /** `player` plays `defId` under the instance `instanceId` and its recipe's fixture resolves under it. */
 function stream(defId: string, key: CardRecipeKey, view: PlayerView, player: PlayerId = "p1", instanceId = "ex"): GameEvent[] {
   const shownId = instanceId === "hidden" ? "hidden" : defId;
-  return [played(player, instanceId, shownId), ...recipeFixture(key, view, instanceId, player), resolved(player, instanceId, shownId)];
+  return [played(player, instanceId, shownId), ...RECIPE_FIXTURES[key](view, instanceId, player), resolved(player, instanceId, shownId)];
 }
 
 /** The cues of every entry of the play but its own `cardPlayed` and `cardResolved`. */
@@ -174,7 +174,7 @@ describe("R2795000 Classic+'s Flourishes", () => {
   it("R2795000 R202 a hidden play keys none", () => {
     for (const [defId, key] of FLOURISHES) {
       const view = fullBoardView();
-      const fixture = recipeFixture(key, view, "hidden", "p2");
+      const fixture = RECIPE_FIXTURES[key](view, "hidden", "p2");
       const hiddenPlay = effectCues(stream(defId, key, view, "p2", "hidden"));
       const bare = planAll(fixture, view, envOf(), 400).flatMap(({ cues }) => cues);
       expect(hiddenPlay, defId).toEqual(bare);

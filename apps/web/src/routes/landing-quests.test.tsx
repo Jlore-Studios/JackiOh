@@ -85,7 +85,8 @@ describe("R2035000 the landing's quests bookmark", () => {
     expect(await screen.findByTestId(landingTestid.questsCount)).toHaveTextContent("2");
     const bookmark = screen.getByTestId(landingTestid.questsBookmark);
     expect(bookmark.tagName).toBe("BUTTON");
-    expect(bookmark).toHaveAccessibleName("Quests");
+    // WCAG 2.5.3 (spec 38): the name holds the count the bubble shows.
+    expect(bookmark).toHaveAccessibleName("Quests, 2 held");
     expect(bookmark).toHaveAttribute("aria-expanded", "false");
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
     expect(within(ctas).getByTestId(landingTestid.questsBookmark)).toBe(bookmark);
@@ -353,6 +354,7 @@ describe("R2035000 the landing's quests bookmark", () => {
     const bookmark = await screen.findByTestId(landingTestid.questsBookmark);
     expect(bookmark).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId(landingTestid.questsCount)).toBeNull();
+    expect(bookmark).toHaveAccessibleName("Quests");
     fireEvent.click(bookmark);
     expect(await screen.findByText("No quests yet.")).toBeInTheDocument();
     expect(screen.getByTestId(questsTestid.next)).toHaveTextContent(/^Next quest in /);

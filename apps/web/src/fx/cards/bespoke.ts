@@ -4,13 +4,26 @@
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
+import { fusionForge } from "./core/craftACard.ts";
 import { manaCrack } from "./core/hinder.ts";
+import { legendaryTide } from "./core/transmogulate.ts";
+import { perfectWish } from "./core/zephrys.ts";
 import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
 import { constantStamp } from "./classicplus/kysConstant.ts";
 import { rollbackSweep } from "./classicplus/rollback.ts";
 
-export const CARD_RECIPES = { manaCrack, bloodDrain, crushingWalls, rollbackSweep, constantStamp, inkTear } as const satisfies Readonly<Record<string, CardRecipe>>;
+export const CARD_RECIPES = {
+  manaCrack,
+  bloodDrain,
+  crushingWalls,
+  legendaryTide,
+  perfectWish,
+  fusionForge,
+  rollbackSweep,
+  constantStamp,
+  inkTear,
+} as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
 
