@@ -14730,6 +14730,13 @@
     "2925": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T14:13:43Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Web-only (apps/web): moves five hooks into one module and calls them from two screens, plus tests and docs; no engine, AI, migration or cross-crate contract, about 11 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
