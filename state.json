@@ -16210,6 +16210,13 @@
     "2962": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T21:22:17Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "medium: it is none of the hard lines (engine rules, the AI, design across crates, a migration, about 40 files) \u2014 one Cypress config gap plus at most one spec's robust fix"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
