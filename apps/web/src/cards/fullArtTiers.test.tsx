@@ -44,7 +44,7 @@ import {
   type FullArtTier,
 } from "./fullArt.ts";
 import fullArtTokens from "./fullArtTokens.json";
-import { TheirCopy, type SeatLoadout } from "./loadouts.ts";
+import { TheirCopy, parseCardLoadouts, type SeatLoadout } from "./loadouts.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -627,6 +627,48 @@ describe("R2725000 a card's version and augments on its face", () => {
       expect(cf.querySelector(".cf-signature") !== null, where).toBe(worn?.includes(AUGMENT_SIGNATURE_ID) ?? false);
       cleanup();
     }
+  });
+
+  it("R2725000 R2725001 the other seat's copy wears the version and augments its owner's frozen loadout names, and nothing its card is not offered", () => {
+    // The cards' entries as the server froze and sent them (a `cardLoadouts` frame, R1834003), read as the board
+    // reads them. Carnivorous Cube is offered the version and both augments; Bigot (core-002, a Common) is offered none,
+    // so a frame naming them there (a newer client's, or a forged one) draws its normal face.
+    const OFFERED = "core-022";
+    const UNOFFERED = "core-002";
+    expect(COSMETIC_OFFERS[VERSION_FULL_ART_ID]).toContain(OFFERED);
+    for (const id of [VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]) expect(COSMETIC_OFFERS[id]).not.toContain(UNOFFERED);
+    const frame = parseCardLoadouts({
+      seat: "p2",
+      cards: [
+        { cardId: OFFERED, fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, "augment-from-a-newer-client"] },
+        { cardId: UNOFFERED, fullArt: VERSION_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID] },
+      ],
+    });
+    if (frame === null) throw new Error("the frame did not parse");
+    const theirs = (face: ReactElement) => <TheirCopy loadout={loadout(frame.cards)}>{face}</TheirCopy>;
+    // The viewer owns nothing and picks nothing of their own: what prints is the owner's.
+    writeCardVersion(OFFERED, false, []);
+    const worn = drawn(OFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+    expect(worn.getAttribute("data-full-art")).toBe("true");
+    expect(worn.getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
+    expect(worn.getAttribute("data-augments")).toBe(`${AUGMENT_ANIMATED_ID} ${AUGMENT_SIGNATURE_ID}`);
+    expect(worn.getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(worn.getAttribute("data-art-motion")).toBe("animated");
+    expect(worn.querySelector(".cf-signature text")?.textContent).toBe(CATALOG[OFFERED]?.name);
+    cleanup();
+    const refused = drawn(UNOFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+    expect(refused.getAttribute("data-full-art")).toBeNull();
+    expect(refused.getAttribute("data-version")).toBeNull();
+    expect(refused.getAttribute("data-augments")).toBeNull();
+    expect(refused.querySelector(".cf-signature")).toBeNull();
+    cleanup();
+    // The Full-art cards setting off: the other seat's copy prints its normal face, augments and all off.
+    writeCardSettings({ fullArt: false });
+    const off = drawn(OFFERED, { worn: false, owned: NO_FULL_ART, wrap: theirs });
+    expect(off.getAttribute("data-full-art")).toBeNull();
+    expect(off.getAttribute("data-version")).toBeNull();
+    expect(off.getAttribute("data-augments")).toBeNull();
+    expect(off.querySelector(".cf-signature")).toBeNull();
   });
 
   /** R2725001: the cards offered the Full art version and the Animated augment, and each offered card by its set. */
