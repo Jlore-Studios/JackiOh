@@ -14982,6 +14982,9 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
+      "ci_reruns": {
+        "bd411027d8ec37ac0310c1cb5085f4a5495bc040": 1
+      },
       "cleared": {
         "approver": {
           "family": "claude",
