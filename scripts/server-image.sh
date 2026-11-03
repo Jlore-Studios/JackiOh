@@ -37,7 +37,9 @@
 # deployed and the newest KEPT of this script's (so a Worker rolled back a few versions, or a deploy
 # of the other site in flight, still finds its image), and every tag of LEGACY_REPOSITORIES, the
 # repository wrangler pushed staging's to; never one whose digest a container application runs
-# (`wrangler containers list`) or the deployed tag's, since deleting a tag deletes its manifest.
+# (`wrangler containers list`, whether it names its image by digest or by tag: the other site's
+# may be older than every kept tag) or the deployed tag's, since deleting a tag deletes its
+# manifest.
 #
 # Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, as `wrangler deploy` does; Node with the
 # workspace installed (wrangler from apps/edge, json5 to check the config it rewrites); and for
@@ -196,7 +198,7 @@ use() {
 }
 
 prune() {
-  local keep=$1 password auth live keep_digest all candidates repository t digest
+  local keep=$1 password auth live keep_digest apps image all candidates repository t digest
   password=$(curl -fsS -X POST \
     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
     -d '{"expiration_minutes": 5, "permissions": ["pull"]}' \
@@ -211,12 +213,28 @@ prune() {
       tr -d '\r' | awk -F': ' 'tolower($1) == "docker-content-digest" { print $2 }'
   }
 
-  # The digests no tag may take with it: what each container application runs, and what the tags
-  # kept below point at (two tags can share one).
-  live=$(wrangler containers list --json | jq -r '.[].image // empty' | sed -n 's/.*@\(sha256:[0-9a-f]*\)$/\1/p')
+  # The digests no tag may take with it: the deployed tag's, what each container application runs
+  # (named by digest, as wrangler's own pushes left it, or by a tag, as `use` leaves it), and what
+  # the tags kept below point at (two tags can share one). An application whose image cannot be
+  # told, or none listed at all, stops the prune before it deletes anything.
   keep_digest=$(digest_of "$REPOSITORY" "$keep" || true)
   [ -n "$keep_digest" ] || fail "the registry has no $REPOSITORY:$keep"
-  live=$(printf '%s\n%s\n' "$live" "$keep_digest")
+  live=$keep_digest
+  apps=$(wrangler containers list --json | jq -r '.[] | .image // .configuration.image // "?"')
+  [ -n "$apps" ] || fail "wrangler lists no container application, so what runs is unknown: nothing deleted"
+  while IFS= read -r image; do
+    case $image in
+      *@sha256:*) digest=${image##*@} ;;
+      "$REGISTRY/$CLOUDFLARE_ACCOUNT_ID/"*:*)
+        t=${image#"$REGISTRY/$CLOUDFLARE_ACCOUNT_ID/"}
+        digest=$(digest_of "${t%%:*}" "${t#*:}" || true)
+        ;;
+      *) digest= ;;
+    esac
+    [ -n "$digest" ] || fail "a container application runs $image, whose digest the registry does not give: nothing deleted"
+    say "a container application runs $image ($digest)"
+    live=$(printf '%s\n%s\n' "$live" "$digest")
+  done <<<"$apps"
   for repository in "$REPOSITORY" $LEGACY_REPOSITORIES; do
     all=$(tags "$repository")
     if [ "$repository" = "$REPOSITORY" ]; then

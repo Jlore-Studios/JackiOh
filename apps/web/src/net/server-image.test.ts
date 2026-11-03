@@ -282,26 +282,43 @@ describe("scripts/server-image.sh prune", () => {
       { name: "jackioh-staging-server", tags: ["05a67597", "082c1cff"] },
     ];
     w.digests = Object.fromEntries(mine.map((t, i) => [`jackioh-server:${t}`, `sha256:d${10 + i}`]));
-    // 12 shares the deployed 15's digest; a0816719 and 082c1cff are what the two sites run.
+    // 12 shares the deployed 15's digest. One site runs a0816719 by its digest, as wrangler's own push
+    // left it; the other runs 10 by its tag, as `use` leaves it, older than every tag kept.
     w.digests["jackioh-server:20261103000012-aaaaaaaaaa12"] = "sha256:d15";
     w.digests["jackioh-server:a0816719"] = "sha256:aaaa1";
     w.digests["jackioh-staging-server:05a67597"] = "sha256:cccc3";
     w.digests["jackioh-staging-server:082c1cff"] = "sha256:bbbb2";
     w.apps = [
       { image: "registry.cloudflare.com/acct/jackioh-server@sha256:aaaa1" },
-      { image: "registry.cloudflare.com/acct/jackioh-staging-server@sha256:bbbb2" },
+      { image: "registry.cloudflare.com/acct/jackioh-server:20261103000010-aaaaaaaaaa10" },
     ];
     const r = run(w, ["prune", "20261103000015-aaaaaaaaaa15"]);
     expect(r.status, r.text).toBe(0);
     const deleted = r.calls.flatMap((c) => /images delete (\S+) -y$/u.exec(c)?.[1] ?? []).sort();
     // The newest nine others (23 to 16, and 14) stay, beside the deployed 15.
     expect(deleted).toEqual([
-      "jackioh-server:20261103000010-aaaaaaaaaa10",
       "jackioh-server:20261103000011-aaaaaaaaaa11",
       "jackioh-server:20261103000013-aaaaaaaaaa13",
       "jackioh-staging-server:05a67597",
+      "jackioh-staging-server:082c1cff",
     ]);
     expect(r.text).not.toContain("secret");
+  });
+
+  it("deletes nothing when what a container application runs cannot be told", () => {
+    for (const apps of [[], [{ image: "registry.cloudflare.com/acct/jackioh-server:gone" }], [{ image: "docker.io/library/x:1" }]]) {
+      const w = world();
+      w.images = [
+        { name: "jackioh-server", tags: ["20261103000015-aaaaaaaaaa15"] },
+        { name: "jackioh-staging-server", tags: ["05a67597"] },
+      ];
+      w.digests = { "jackioh-server:20261103000015-aaaaaaaaaa15": "sha256:d15", "jackioh-staging-server:05a67597": "sha256:cccc3" };
+      w.apps = apps;
+      const r = run(w, ["prune", "20261103000015-aaaaaaaaaa15"]);
+      expect(r.status, JSON.stringify(apps)).not.toBe(0);
+      expect(r.text).toContain("nothing deleted");
+      expect(r.calls.filter((c) => c.includes("images delete"))).toEqual([]);
+    }
   });
 
   it("refuses a tag the registry does not hold, and deletes nothing", () => {
