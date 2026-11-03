@@ -4,7 +4,8 @@
 //
 // R2715001: given a full-art card's motion (motion.ts), the same picture moves: its layers are tagged
 // by role and a `<style>` after the `<defs>` animates them, with particles over it. Given none, it is
-// the still picture, byte for byte.
+// the still picture, byte for byte. R2949000: given a seed other than the card's id (pictures.ts), a
+// painter draws the card's picture of that look instead, cached under that seed.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -155,7 +156,9 @@ export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId
 
 // The memo behind `CardArt`, keyed as the Surface fixes plus the motif (R503). Transient `t-<n>` defs
 // can be minted without bound, so the map is cleared rather than grown. R2715001: a moving picture adds
-// `|moving` (a card's motion is fixed by its id, motion.ts), so the still one keeps its key.
+// `|moving` (a card's motion is fixed by its id, motion.ts), so the still one keeps its key. R2949000: a
+// picture of its own is keyed by its seed (`artSeedOf`) in the card's id's place, so the Signature look's
+// picture and motion are never served for the card's normal or Animated one.
 const proceduralCache = new Map<string, string>();
 
 /** R2715001: what a moving picture's memo key ends with. */
@@ -191,7 +194,10 @@ export function starshipArtUri(pieces: number, launched: boolean, radiant: boole
   return uri;
 }
 
-/** R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. */
+/**
+ * R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. R2949000:
+ * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it.
+ */
 export function stinkyscapeArtUri(
   defId: string,
   name: string | undefined,
@@ -199,17 +205,18 @@ export function stinkyscapeArtUri(
   type: CardType,
   radiant: boolean,
   motion: ArtMotion | null = null,
+  seedId = defId,
 ): string {
-  const key = `${defId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
+  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(stinkyscapeSvg(defId, name, tags, type, radiant, motion))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
-/** R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised as Stinkyscape's is. */
+/** R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is. */
 export function trainingGroundsArtUri(
   defId: string,
   name: string | undefined,
@@ -217,12 +224,13 @@ export function trainingGroundsArtUri(
   type: CardType,
   radiant: boolean,
   motion: ArtMotion | null = null,
+  seedId = defId,
 ): string {
-  const key = `${defId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
+  const key = `${seedId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant, motion))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
