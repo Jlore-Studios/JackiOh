@@ -16151,10 +16151,12 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-03T08:21:11Z",
+        "at": "2026-11-03T09:35:32Z",
         "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "1b92233b89b7ea54824c5812a3aea3774e2d807a"
+        "carried_from": "1b92233b89b7ea54824c5812a3aea3774e2d807a",
+        "resolved_by": "`muse` (medium)",
+        "sha": "c649b83df4b6883265d4b79ba3efd7db2c77f339"
       },
       "difficulty": "medium",
       "failures": 0,
