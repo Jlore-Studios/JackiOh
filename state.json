@@ -15567,7 +15567,7 @@
       "started_at": "2026-11-03T06:34:46Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2896": {
       "action": "revise",
