@@ -14494,8 +14494,14 @@
     "what": "review #2919 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-03T10:40:18Z",
-    "notes": [],
+    "at": "2026-11-03T10:51:32Z",
+    "notes": [
+      "delivered build #2799 on claude-3 (run 41608169224): built",
+      "started review #2919 on claude-3 (run 41623371020)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days",
+      "#2906: closed, so `bot:merging` is off"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15200,7 +15206,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T10:40:18Z",
+  "loop_tick": "2026-11-03T10:51:32Z",
   "machine_disk": {
     "issue": null,
     "reading": {
