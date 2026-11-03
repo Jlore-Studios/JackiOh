@@ -15964,6 +15964,13 @@
     "2957": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T19:31:07Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "test-only split of one integration-test binary; touches no rule in crates/engine/src/, no AI, no cross-crate design, no migration, under 10 files"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
