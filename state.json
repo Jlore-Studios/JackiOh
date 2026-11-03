@@ -13687,10 +13687,12 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "at": "2026-11-03T11:22:14Z",
+        "at": "2026-11-03T12:54:36Z",
         "built_by": "claude-1",
         "by": "`claude` (strong)",
-        "sha": "406831ae089a4a5ff47e992df33886fda4ad60df"
+        "carried_from": "406831ae089a4a5ff47e992df33886fda4ad60df",
+        "resolved_by": "`claude` (strong)",
+        "sha": "f1baed117ad78824d0fdd5cbd98c9b7a7bad7b0c"
       },
       "died": 0,
       "difficulty": "hard",
