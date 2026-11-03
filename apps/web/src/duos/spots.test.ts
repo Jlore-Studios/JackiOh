@@ -100,7 +100,8 @@ describe("#936 S6 the co-op socket", () => {
       jloreCapped: false,
     });
     expect(parseDuosFrame("not json")).toBeNull();
-    expect(parseDuosFrame(JSON.stringify({ type: "watchers", count: 2 }))).toBeNull();
+    // A 1v1 match frame the co-op socket does not read (a `watchers` frame it reads since R2881000).
+    expect(parseDuosFrame(JSON.stringify({ type: "emote", emote: "wave" }))).toBeNull();
   });
 
   it("S6 the co-op socket is the match socket's server at /ws/duos", () => {
