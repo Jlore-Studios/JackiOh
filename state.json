@@ -14598,11 +14598,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-03T14:13:08Z",
+        "at": "2026-11-03T16:35:13Z",
         "difficulty": "hard",
-        "provider": "claude-6",
-        "tier": "medium",
-        "why": "Rule 1: starting Armor is a new `Handicap` field read by `create_game` in crates/engine/src, with a ruling; the change also spans engine, run and the web's wire types (rule 3)."
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 1: a new engine rules fact (Handicap.hero_armor in crates/engine/src, with a ruling), and rule 3: engine, run crate and web types must agree"
       },
       "failures": 0,
       "forced": false,
