@@ -29137,7 +29137,9 @@
         "approver": {},
         "builder": {},
         "difficulty": "hard",
+        "done_at": "2026-11-03T17:38:26Z",
         "every": 5,
+        "findings": 0,
         "head": "98dc08c430b014676e8de2d13897e3dd1eda6c7e",
         "issue": 2725,
         "last_why": "stopped: #2904 was closed",
@@ -29145,18 +29147,19 @@
         "n": 20,
         "pr": 2904,
         "queued_at": "2026-11-03T16:24:08Z",
+        "reason": "stopped: #2904 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:ec7e3ac1-1793726458",
         "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
         "started_at": "2026-11-03T17:21:29Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 22
