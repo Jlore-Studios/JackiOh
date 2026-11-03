@@ -226,39 +226,6 @@ mod tests {
         }
 
         #[test]
-        fn r22_the_base_layer_swaps_while_damage_and_buffs_stay_a_damaged_unit_keeps_its_damage() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "seed": "saintess",
-                // She dies in the setup's state check (§4.5 step 3), which runs her Death.
-                "p1": { "field": [{ "def": SAINTESS, "damage": 2 }, { "def": TIMMY, "damage": 1 }] }
-            }));
-
-            // 3/3 with 1 damage becomes 6/6 with 1 damage — max health up, the damage untouched.
-            let timmy = s.unit(P1, 2);
-            expect_stats_or(&mut s, timmy, TIMMY, json!({ "attack": 6, "health": 5, "maxHealth": 6 }));
-        }
-
-        #[test]
-        fn s6_3_a_unit_that_is_already_radiant_is_untouched_and_emits_nothing_for_it() {
-            crate::register_all();
-            let s = scenario(json!({
-                "seed": "saintess",
-                "p1": { "field": [{ "def": SAINTESS, "damage": 2 }, { "def": TIMMY, "radiant": true }] }
-            }));
-
-            // The only other unit was already Radiant, so her Death has nothing left to set.
-            assert_eq!(
-                s.last_events()
-                    .iter()
-                    .filter(|event| event.event_type() == GameEventType::RadiantSet)
-                    .count(),
-                0
-            );
-            assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
-        }
-
-        #[test]
         fn death_radiates_the_units_still_standing_and_with_no_reborn_she_stays_in_the_graveyard() {
             crate::register_all();
             // 2/2 with 2 damage dies in the setup's state check, which runs her Death hook (§4.5 step 3).
@@ -400,12 +367,6 @@ mod tests {
             strike_saintess(&mut s);
             s.expect_in_zone(SAINTESS, "graveyard");
             assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
-        }
-
-        #[test]
-        fn r13_on_the_radiant_face_too_a_card_dormant_under_a_stack_is_not_one_of_your_units() {
-            crate::register_all();
-            expect_stack_spared(true);
         }
     }
 

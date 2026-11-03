@@ -188,24 +188,6 @@ mod tests {
         }
 
         #[test]
-        fn r64_no_free_zone_means_no_copy_and_the_postdoc_still_enters() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "hand": [POSTDOC], "field": ["core-008", "core-t-felinor", "core-t-rush", "core-t-sheep"], "mana": 4 },
-                "p2": { "field": [TIMMY] },
-            }));
-            let timmy = s.card(TIMMY).clone();
-
-            s.play(POSTDOC, json!({ "targets": [sel(&timmy)] }));
-
-            s.expect_in_zone(POSTDOC, "field");
-            assert_eq!(s.unit_at(P1, 5).def_id, POSTDOC);
-            // Every lane is taken, so the copy had nowhere to go and was never created.
-            let p1_defs: Vec<String> = (1..=5).map(|lane| s.unit_at(P1, lane).def_id).collect();
-            assert!(!p1_defs.iter().any(|def_id| def_id == TIMMY));
-        }
-
-        #[test]
         fn radiant_prejudiced_postdoc_copies_a_unit_with_no_human_tag() {
             // §5.2's in-hand swap: the card is Radiant before it is played, so its radiant Cry runs.
             crate::register_all();

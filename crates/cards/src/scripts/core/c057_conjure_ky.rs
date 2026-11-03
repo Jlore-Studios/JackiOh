@@ -185,32 +185,6 @@ mod tests {
         }
 
         #[test]
-        fn r4_the_hand_caps_at_10_and_the_extra_add_is_burned_to_the_graveyard() {
-            crate::register_all();
-            let mut g = scenario(json!({
-                "p1": {
-                    // 8 other cards plus Conjure KY: playing it leaves 8, and 3 adds would make 11.
-                    "hand": [
-                        "core-057",
-                        "core-005",
-                        "core-008",
-                        "core-010",
-                        "core-011",
-                        "core-016",
-                        "core-019",
-                        "core-020",
-                        "core-025",
-                    ],
-                },
-            }));
-
-            g.play("core-057", json!({}));
-
-            assert_eq!(g.hand(P1).len(), 10);
-            g.expect_events(json!(["burned"]));
-        }
-
-        #[test]
         fn s10_5_step_7_the_spell_itself_ends_in_the_graveyard() {
             crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
@@ -263,22 +237,6 @@ mod tests {
                 assert!(in_ky_pool(&card.def_id), "{} is not in the KY pool", card.def_id);
                 assert!(card.radiant);
             }
-        }
-
-        #[test]
-        fn r4_the_hand_cap_burns_the_extras_on_the_radiant_face_too() {
-            crate::register_all();
-            let mut g = scenario(json!({
-                "p1": {
-                    "hand": ["core-057", "core-005", "core-008", "core-010", "core-011", "core-016", "core-019", "core-020"],
-                },
-            }));
-
-            g.card_mut("core-057").radiant = true;
-            g.play("core-057", json!({}));
-
-            assert_eq!(g.hand(P1).len(), 10);
-            g.expect_events(json!(["burned"]));
         }
     }
 

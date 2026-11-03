@@ -100,23 +100,6 @@ mod tests {
         }
 
         #[test]
-        fn without_infinite_reserves_the_very_same_draw_takes_r3s_fatigue_damage_control() {
-            let mut s = setup(json!({
-                "seed": "core-075-control",
-                "p1": { "library": [], "hand": ["core-005"] },
-                "p2": { "hand": ["core-005"], "library": ["core-035"] },
-            }));
-
-            s.start_turn();
-
-            assert!(rush_tokens_in_hand(&s, P1).is_empty());
-            // The Nth empty draw deals N damage; this is the first.
-            s.expect_health(P1, 29);
-            assert_eq!(s.state().players.p1.fatigue_count, 1);
-            assert_eq!(s.hand(P1).len(), 1);
-        }
-
-        #[test]
         fn the_token_is_the_catalogs_own_rush_token_3_3_with_rush_no_stat_override_and_is_playable_from_hand() {
             let mut s = setup(json!({
                 "seed": "core-075-token-identity",

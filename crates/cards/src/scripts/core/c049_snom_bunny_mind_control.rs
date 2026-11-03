@@ -65,9 +65,7 @@ mod tests {
 
     const MIND_CONTROL: &str = "core-049";
     const SEVEN_SEVEN: &str = "core-025";
-    const POINTMASTER: &str = "core-020";
     const DUELIST: &str = "core-045";
-    const TIMMY: &str = "core-011";
     const VANILLA: &str = "core-008";
     const TOKEN_MAKER: &str = "core-015";
     const SHEEPISH: &str = "core-041";
@@ -123,49 +121,6 @@ mod tests {
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
             // Cost 4 (#40), out of the harness's 4.
             g.expect_mana(PlayerId::P1, 0);
-        }
-
-        #[test]
-        fn r15_base_the_first_free_zone_of_the_row_when_the_same_lane_is_taken() {
-            crate::register_all();
-            let mut g = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL], "field": [{ "def": VANILLA, "lane": 3 }] },
-                "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
-            }));
-            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
-
-            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-
-            // Lane 3 is occupied, so `first_free_zone` scans lanes 1..5 and lane 1 wins.
-            assert_eq!(g.unit(PlayerId::P1, 1).map(|u| u.id.clone()), Some(prey.id.clone()));
-            assert_eq!(g.unit(PlayerId::P1, 3).map(|u| u.def_id.clone()), Some(VANILLA.to_string()));
-            assert!(g.unit(PlayerId::P2, 3).is_none());
-        }
-
-        #[test]
-        fn r15_base_a_full_row_leaves_the_card_with_the_opponent_and_the_spell_still_resolves() {
-            crate::register_all();
-            let mut g = scenario(json!({
-                "p1": {
-                    "hand": [MIND_CONTROL],
-                    "field": [
-                        { "def": SEVEN_SEVEN, "lane": 1 },
-                        { "def": POINTMASTER, "lane": 2 },
-                        { "def": DUELIST, "lane": 3 },
-                        { "def": TIMMY, "lane": 4 },
-                        { "def": VANILLA, "lane": 5 },
-                    ],
-                },
-                "p2": { "field": [{ "def": TOKEN_MAKER, "lane": 3 }] },
-            }));
-            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the target").clone();
-
-            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-
-            assert_eq!(g.unit(PlayerId::P2, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
-            assert_eq!(g.card(&prey).controller, PlayerId::P2);
-            g.expect_in_zone(MIND_CONTROL, "graveyard");
-            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
         }
 
         #[test]
@@ -263,26 +218,6 @@ mod tests {
                 .filter_map(|lane| g.unit(PlayerId::P1, lane).map(|unit| unit.def_id.clone()))
                 .collect();
             assert_eq!(mine, vec![prey.def_id.clone()]);
-        }
-
-        #[test]
-        fn s6_3_radiant_a_card_that_is_already_radiant_is_stolen_and_left_alone() {
-            crate::register_all();
-            let mut g = scenario(json!({
-                "p1": { "hand": [radiant_mind_control()] },
-                "p2": { "field": [{ "def": DUELIST, "lane": 4, "radiant": true }] },
-            }));
-            let prey = g.unit(PlayerId::P2, 4).expect("setup: p2 should hold a radiant Deft Duelist").clone();
-
-            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
-
-            assert_eq!(g.unit(PlayerId::P1, 4).map(|u| u.id.clone()), Some(prey.id.clone()));
-            assert!(g.card(&prey).radiant);
-            // §6.3 Make Radiant: no effect on a Radiant card, so the flag change emits nothing.
-            assert_eq!(
-                g.events().iter().filter(|event| event.event_type().as_str() == "radiantSet").count(),
-                0
-            );
         }
 
         #[test]

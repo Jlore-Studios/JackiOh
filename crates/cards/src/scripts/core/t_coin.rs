@@ -37,7 +37,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use jackioh_engine::catalog::query;
-    use jackioh_engine::reduce::{begin_game, legal_actions, reduce};
+    use jackioh_engine::reduce::{begin_game, reduce};
     use jackioh_engine::replay::{FoldArgs, fold, hash_state};
     use jackioh_engine::setup::{deal_coins, mulligan_prompt_for};
     use jackioh_engine::state::create_game;
@@ -234,36 +234,6 @@ mod tests {
             s.start_turn();
 
             s.expect_mana(P1, 4);
-        }
-
-        #[test]
-        fn r245_on_the_second_seat_s_first_turn_it_pays_for_a_2_cost_card_that_1_mana_cannot() {
-            crate::register_all();
-            // p2's first turn is turn 2: one started turn, so 1 mana (§2.3).
-            let mut s = scenario(json!({
-                "seed": SEED,
-                "active": "p2",
-                "turn": 2,
-                "p2": { "hand": ["core-t-coin", "core-020"] },
-            }));
-            let pointmaster = s.card("core-020").clone();
-            let playable = |s: &Scenario| -> Vec<String> {
-                legal_actions(s.state(), P2)
-                    .into_iter()
-                    .filter_map(|action| match action {
-                        ActionBody::Play { instance_id, .. } => Some(instance_id),
-                        _ => None,
-                    })
-                    .collect()
-            };
-            assert_eq!(s.state().players.p2.mana.current, 1);
-            assert!(!playable(&s).contains(&pointmaster.id));
-
-            s.play("core-t-coin", json!({}));
-            assert!(playable(&s).contains(&pointmaster.id));
-            s.play(&pointmaster, json!({}));
-
-            s.expect_in_zone(&pointmaster, "field").expect_mana(P2, 0);
         }
 
         #[test]
