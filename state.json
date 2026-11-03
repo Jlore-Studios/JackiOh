@@ -29425,6 +29425,7 @@
         "every": 5,
         "head": "90403063cd7b7ab74c238e5247c51de4ea75d07e",
         "issue": 2922,
+        "last_why": "stopped: #2951 was closed",
         "merged_at": "2026-11-03T18:23:54Z",
         "n": 25,
         "pr": 2951,
@@ -29435,12 +29436,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:65a9c39a-1793730680",
+        "run_id": "",
         "sha": "a40d16827f642753b8bc3973c45b842343f50781",
         "started_at": "2026-11-03T18:31:55Z",
         "status": "queued",
         "title": "Patch: the dungeon run's curses and Combat artifacts change its fights",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 25
