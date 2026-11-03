@@ -51,7 +51,7 @@
   "stinkyscape-127": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Jlockeed's Siege Tank
   "stinkyscape-128": "none: vanilla", // Jlockeed's Yamato Cannon
   "stinkyscape-129": { trigger: { motif: "volley", palette: "Tech/rocket" } }, // Jlockeed's Missile Pod
-  "stinkyscape-130": "none: Starship part", // Jlockeed's Starship Retrofitting Program
+  "stinkyscape-130": { cast: { motif: "send", palette: "Tech/rocket" } }, // Jlockeed's Starship Retrofitting Program
   "stinkyscape-131": { cast: { motif: "snap", palette: "Hustle/cash" } }, // Spacerace Stimulus
   "stinkyscape-132": "none: its Death's Armor shows no event; its fuse is the Starship part's", // Defensive Crystal
   "stinkyscape-133": "none: Starship part", // Ultra Capacitor
@@ -66,10 +66,10 @@
   "stinkyscape-137-4": { cast: { motif: "send", palette: "Tech/rocket" } }, // Space Doctrine
   "stinkyscape-138": { cast: { motif: "snap" } }, // Pocket Peptides
   "stinkyscape-139": { cast: { motif: "negate", palette: "Tech/starfield" } }, // Wormhole
-  "stinkyscape-140": "none: Starship part", // Rush Token Launcher
-  "stinkyscape-141": "none: Starship part", // Fruit Launcher
-  "stinkyscape-142": "none: Starship part", // Jade Launcher
-  "stinkyscape-143": "none: Starship part", // Book Launcher
+  "stinkyscape-140": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Rush Token Launcher
+  "stinkyscape-141": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Fruit Launcher
+  "stinkyscape-142": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Jade Launcher
+  "stinkyscape-143": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Book Launcher
   "stinkyscape-144": { cast: { motif: "snap" } }, // Prepare For Liftoff
   "stinkyscape-145": { cast: { motif: "ward" } }, // Fortify Flesh
   "stinkyscape-146": { bespoke: "flashFreeze" }, // Flash Freeze
@@ -125,7 +125,7 @@
   "stinkyscape-t-ai-02": { cast: { motif: "send", palette: "Hustle/ore" } }, // Mining Subroutine
   "stinkyscape-t-ai-03": { cast: { motif: "send", palette: "Tech/hologram" } }, // Route Optimizer
   "stinkyscape-t-ai-04": "none: token", // Predictive Shield
-  "stinkyscape-t-ai-05": "none: Starship part", // Launch Sequencer
+  "stinkyscape-t-ai-05": { cast: { motif: "tithe", palette: "Tech/rocket" } }, // Launch Sequencer
   "stinkyscape-t-ai-06": { cast: { motif: "send", palette: "Tech/hologram" } }, // Probe Relay
   "stinkyscape-t-ai-07": { cry: { motif: "bless", palette: "Tech/hologram" } }, // Combat Subroutine
   "stinkyscape-t-ai-08": { cast: { motif: "conjure", palette: "Tech/hologram" }, trigger: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "storm", palette: "Tech/hologram", scope: "zone" } }, // Drone Uplink

@@ -2,6 +2,7 @@
 // R2722001: a Mythic's takeover of the board, caught mid-flight and at rest.
 // R2785000: a set piece (that takeover) skipped by Space and by a click, and the board caught up at once.
 // R2800000: each board clear's set piece (Twisting Nether's vortex, Ceaseless Void's fold, the shared vortex), mid-flight and at rest.
+// R2801000: a Starship's fuse run and its launch, mid-flight and at rest.
 // The watcher must see the splat before synchronous `getImageData`: a later read can miss R200's brief effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
@@ -10,7 +11,7 @@ import { CATALOG } from "@jackioh/cards";
 import { FX_MAX_DPR } from "../../../apps/web/src/fx/constants.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
-import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.ts";
+import { baseView, dormantStarship, emptySide, fullBoardView, unit, withEvents } from "../../../apps/web/src/test/fixtures.ts";
 
 type PlayerView = ReturnType<typeof fullBoardView>;
 type GameEvent = Parameters<typeof withEvents>[1][number];
@@ -378,4 +379,86 @@ describe("R2800000 a board clear's set piece on a real board", () => {
       cy.screenshot(`set-piece-${key}-rest`, { capture: "viewport", overwrite: true });
     });
   }
+});
+
+describe("R2801000 a Starship on a real board", () => {
+  const GAME = '[data-testid="game"]';
+  const HULL = "stinkyscape-t-dormant-starship";
+  const LAUNCHERS = ["stinkyscape-140", "stinkyscape-141"];
+
+  /** The viewer's board: `pieces` in lanes 1 and on, and their Starship in lane 5 (Dormant unless `launched`). */
+  function starshipBoard(pieces: readonly string[], fused: readonly string[], launched = false): PlayerView {
+    const units = [null, null, null, null, null] as (ReturnType<typeof unit> | null)[];
+    pieces.forEach((defId, k) => {
+      units[k] = unit("p1", { instanceId: `fx-piece-${String(k)}`, defId, attack: 0 });
+    });
+    units[4] = launched
+      ? unit("p1", { instanceId: "fx-ship", defId: HULL, attack: 0, starship: { pieces: fused.map((defId) => ({ defId })), name: "Ember of Departure", launched: 1 } })
+      : dormantStarship("p1", fused, { instanceId: "fx-ship" });
+    return baseView({ you: emptySide("p1", { units }), opponent: emptySide("p2") });
+  }
+
+  function mountWith(before: PlayerView, after: PlayerView, events: GameEvent[]): void {
+    const lookup = lookupFromDefs(CATALOG);
+    const noop = (): void => undefined;
+    const board = (shown: PlayerView) => (
+      <CatalogContext.Provider value={lookup}>
+        <div className="app-shell app-shell--wide">
+          <Game view={shown} legal={[]} onAction={noop} />
+        </div>
+      </CatalogContext.Provider>
+    );
+    cy.mount(board(before)).then(({ rerender }) => {
+      cy.get(LAYER).should("have.attr", "data-fx", "on");
+      cy.then(() => rerender(board(withEvents(after, events))));
+    });
+  }
+
+  it("R2801000 a fuse run of two pieces mid-flight and at rest", () => {
+    cy.viewport(1280, 720);
+    const before = starshipBoard(LAUNCHERS, [HULL]);
+    const after = starshipBoard([], [HULL, ...LAUNCHERS]);
+    const events: GameEvent[] = LAUNCHERS.flatMap((defId, k): GameEvent[] => [
+      { type: "destroyed", instanceId: `fx-piece-${String(k)}`, defId, owner: "p1", controller: "p1", attack: 0, maxHealth: 4, killerId: null },
+    ]);
+    LAUNCHERS.forEach((defId, k) => {
+      events.push(
+        { type: "fused", instanceIds: ["fx-ship", `fx-copy-${String(k)}`], resultInstanceId: "fx-ship", defId: HULL },
+        { type: "starshipFused", player: "p1", instanceId: "fx-ship", pieceId: `fx-piece-${String(k)}`, defId, pieces: k + 2 },
+      );
+    });
+    mountWith(before, after, events);
+    // Mid-flight: a dead piece's card back flies to the Starship.
+    cy.get('[data-testid="card-fx-ship"][data-animating="starshipFused"]', { timeout: 4_000 }).should("exist");
+    cy.get(`${FX_DOM} [data-fx="ghost"]`).should("exist");
+    cy.screenshot("starship-fuse-mid", { capture: "viewport", overwrite: true });
+    // At rest: the board shows the Starship with a plate for each of its three pieces.
+    cy.get("[data-animating]", { timeout: 8_000 }).should("not.exist");
+    cy.get('[data-testid="card-fx-ship"] .cf-starship-plate').should("have.length", 3);
+    cy.get(`${FX_DOM} [data-fx="ghost"]`, { timeout: 4_000 }).should("not.exist");
+    cy.screenshot("starship-fuse-rest", { capture: "viewport", overwrite: true });
+    cy.get('[data-testid="card-fx-ship"]').screenshot("starship-hull-rest", { overwrite: true });
+  });
+
+  it("R2801000 a launch mid-flight and at rest", () => {
+    cy.viewport(1280, 720);
+    const fused = [HULL, ...LAUNCHERS];
+    const before = starshipBoard([], fused);
+    const after = starshipBoard([], fused, true);
+    const events: GameEvent[] = [
+      { type: "awakened", player: "p1", instanceId: "fx-ship", defId: HULL },
+      { type: "starshipLaunched", player: "p1", instanceId: "fx-ship", defId: HULL, name: "Ember of Departure", pieces: fused },
+    ];
+    mountWith(before, after, events);
+    // Mid-flight: the queue holds the launch, and its countdown stands over the Starship.
+    cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "starship");
+    cy.get(`${FX_DOM} [data-fx="launch"] .fx-launch-count`).should("have.length", 3);
+    cy.screenshot("starship-launch-mid", { capture: "viewport", overwrite: true });
+    // At rest: nothing animating, the hold over, and the launch gone; the Starship wears no hull plates.
+    cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    cy.get(GAME).should("not.have.attr", "data-set-piece");
+    cy.get(`${FX_DOM} [data-fx="launch"]`, { timeout: 4_000 }).should("not.exist");
+    cy.get('[data-testid="card-fx-ship"] .cf-starship-hull').should("not.exist");
+    cy.screenshot("starship-launch-rest", { capture: "viewport", overwrite: true });
+  });
 });

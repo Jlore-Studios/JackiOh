@@ -820,6 +820,8 @@ function deftBeat(event: AttackEvent, ctx: Ctx): Beat[] {
  * bless row's.
  */
 function equipBeat(event: Extract<GameEvent, { type: "fused" }>, ctx: Ctx): Beat[] {
+  // R2801000: a dead piece's copy fusing into its Starship is no Equip: its fuse run draws it (fx/starship.ts).
+  if (ctx.entry.fuse !== undefined) return [];
   const at = locateInstance(ctx.view, event.resultInstanceId);
   if (at === null || !at.startsWith("card-")) return [];
   const place = placeOf(ctx.view, event.resultInstanceId);

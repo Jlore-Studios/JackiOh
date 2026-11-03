@@ -70,6 +70,7 @@ import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
+import { starshipClaim } from "../fx/starship.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
@@ -383,8 +384,9 @@ export default function Game({
       setPieces: !silent,
       // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
       // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
+      // R2801000: and a Starship's launch after both.
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry),
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
