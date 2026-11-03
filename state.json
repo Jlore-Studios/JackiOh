@@ -14574,9 +14574,16 @@
     "what": "spot-check #2916 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-03T12:37:41Z",
+    "at": "2026-11-03T12:51:40Z",
     "notes": [
-      "delivered review #2916 on muse (run 41618359109): approved"
+      "delivered revise #2915 on claude-4 (run 41629190810): approved",
+      "delivered revise #2907 on claude-1 (run 41627178903): approved",
+      "delivered review #2921 on claude-3 (run 41627093182): approved",
+      "started revise #2915 on claude-4 (run 41640003628)",
+      "started revise #2907 on claude-1 (run 41640169016)",
+      "started review #2916 on claude-6 (run 41640294021)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15282,7 +15289,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T12:37:41Z",
+  "loop_tick": "2026-11-03T12:51:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
