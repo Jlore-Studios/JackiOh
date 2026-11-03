@@ -16161,6 +16161,8 @@
       }
     },
     "2960": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T18:56:39Z",
@@ -16174,8 +16176,11 @@
         "trail": "Kenny.\n- Bash: {\"command\": \"grep -n \\\"simulate\\\\|fn find_lethal\\\\|fn trim_lethal\\\\|verified\\\\|every determinization\\\" crates/ai/src/lethal.rs | head -30; grep -rn \\\"simulate(\\\" crates/ai/src/*.rs | grep -v \\\"^crate\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/ai/src/lethal.rs; sed -n 230,345p crates/ai/src/lethal.rs\", \"description\": \"Read the lethal solver's search\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State')\\nj=s.index('## Log')\\nstate='''## State\\n\\n- Build run 1 (opus, 2026-11-03): plan steps 1-7 all built as wri\u2026\n- Bash: {\"command\": \"grep -rn \\\"classicplus-042\\\" training/history/*.md crates/ai/src/shadow_ban.rs | head -10\", \"description\": \"Find KY's Test's earlier sweep rows\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"git diff crates/ai/src/simulate.rs | head -150\", \"description\": \"Review the simulate.rs diff\"}\n- Bash: {\"command\": \"sleep 1; tail -4 /tmp/sweep-2929.err\", \"description\": \"Check the sweep's progress\"}\n- Bash: {\"command\": \"until grep -q \\\"meditativeplus-020 KY's Competition @hard\\\" /tmp/sweep-2929.err; do sleep 5; done; sleep 3; tail -2 /tmp/sweep-2929.err; cat /tmp/sweep-2929.txt | head -60\", \"description\u2026\n- Bash: {\"command\": \"until [ -s /tmp/sweep-2929.txt ]; do sleep 10; done; sleep 2; cat /tmp/sweep-2929.txt | head -80; tail -5 /tmp/sweep-2929.err\", \"description\": \"Wait for the sweep's report\", \"timeout\": 3\u2026\n- Bash: {\"command\": \"grep -E \\\"meditativeplus-020|classicplus-042\\\" /tmp/sweep-2929.txt | grep \\\"^|\\\"; grep -n \\\"watched\\\\|Watch\\\\|SHADOW_WATCH\\\" /tmp/sweep-2929.txt | head; grep -n \\\"^## \\\\|^### \\\" /tmp/swe\u2026\n- Bash: {\"command\": \"sed -n 390,430p /tmp/sweep-2929.txt\", \"description\": \"Read the sweep's shadow-ban section\"}\n- Bash: {\"command\": \"grep -rn \\\"AI_GENERATION\\\\|ai_generation\\\\|generation\\\" crates/ai/src/config.rs crates/ai/src/shadow_ban.rs | head -10; grep -n \\\"classicplus-042\\\\|meditativeplus-020\\\" crates/ai/src/sha\u2026\n- Bash: {\"command\": \"sed -n 8,30p crates/ai/src/shadow_ban.rs; sed -n 235,248p crates/ai/src/shadow_ban.rs; sed -n 445,455p crates/ai/src/shadow_ban.rs; grep -rn \\\"generation\\\" crates/ai/src/sweep.rs | head \u2026\n- Bash: {\"command\": \"grep -rn \\\"fn .*generation\\\\|generation moved\\\\|GENERATION\\\" crates/tools/src/*.rs crates/ai/src/*.rs 2>/dev/null | head -10\", \"description\": \"Find how the AI generation is computed\"}\n- Bash: {\"command\": \"echo \\\"- $(date -u +%H:%M) sweep: M+ #20 cleared (pass 2 hard 7 plays/39 affordable, easy 12/34; record had 0/118, 3/115); C+ #42 cleared in pass 2 (hard 4/21, easy 14/22), watched from \u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -5 | cut -c1-1500\", \"description\": \"Read what classify checks\"}\n- Bash: {\"command\": \"git rev-parse --short origin/main 2>&1; timeout 600 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Classify the change against origin/main\", \"timeou\u2026\n- Bash: {\"command\": \"grep -n \\\"Kind::Ai\\\\|ChangeKind::Ai\\\\|Ai =>\\\" crates/tools/src/claims.rs crates/tools/src/classify.rs | head -10\", \"description\": \"Check what claims requires of an AI change\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/tools/src/claims.rs | grep -n \\\"//\\\" | head -25\", \"description\": \"Read the claims module header\"}\n- Bash: {\"command\": \"grep -n \\\"selfplay\\\\|self_play\\\\|self-play\\\" crates/tools/src/claims.rs | head -10; grep -n \\\"fn check_claims\\\\|pub fn claims\\\" crates/tools/src/claims.rs | head\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"grep -n \\\"selfplay\\\\|self_play\\\\|self-play\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check classify's self-play stage\"}\n- said: The classifier only decides AI versus Internal for an AI-only change and asks for no pending fragment, so there is nothing to claim. I'll wait for the workspace tests.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/ws-test-2929.log; do sleep 15; done; grep -E \\\"test result|FAILED|panicked|^exit|error(\\\\[|:)\\\" /tmp/ws-test-2929.log | grep -v \\\"test result: ok\\\" | head -\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: sweep pass 1 for M+ #20 and C+ #42 (running, /tmp/sweep-2929.txt), full workspace cargo test, PR text.\\\",\\n\\\u2026\n- Bash: {\"command\": \"tail -5 /tmp/ws-test-2929.log\", \"description\": \"Show the latest test log lines\"}\n- said: Still compiling the workspace; I'll wait for the run to report.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/ws-test-2929.log; do sleep 20; done; echo done\", \"description\": \"Wait until the workspace tests finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked|^exit|^error\\\" /tmp/ws-test-2929.log | grep -v \\\"test result: ok\\\" | head -30; echo \\\"ok results: $(grep -c 'test result: ok' /tmp/ws-test-2929.log)\u2026\n- Bash: {\"command\": \"grep \\\"test result: ok\\\" /tmp/ws-test-2929.log | awk '{p+=$4; i+=$8} END {print p\\\" passed, \\\"i\\\" ignored\\\"}'; cargo fmt --check && echo fmt-ok\", \"description\": \"Total the workspace test\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | tail -2; grep -n \\\"zz_probe\\\\|PROBE\\\" crates/ai/tests/ai/*.rs | head\", \"description\": \"Recheck clippy and that no probe rem\u2026\n- Bash: {\"command\": \"git diff crates/ai/tests/ai/ky_competition.rs | sed -n 1,80p; git diff spec/rulings/R1563005.md | tail -4 | cut -c1-400\", \"description\": \"Review the test helper diff and ruling note\"}\n- said: Everything is green. Last, the notes, then the report.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: full workspace cargo test (running, /tmp/ws-test-2929.log), then the PR text.\\\",\\n\\\"- Full workspace cargo t\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI's search expects its own quiz answers as it will really give them, so it casts KY's Competition\"} --> ## What changed The AI now plans the Radiant KY's Competition (M+ #20) and casts it, and it works out KY's Test's (C+ #42) Easy problem. **The b\u2026"
       },
       "issue": 2929,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T20:14:25Z",
         "from_run": "41698596635",
         "gates": [
           {
@@ -16267,7 +16272,11 @@
         "source": "build",
         "until": "2026-11-03T20:43:06Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-03T20:13:06Z",
+      "run_id": "pending:120a9eff-1793736835",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16286,6 +16295,9 @@
         "provider": "claude-7",
         "run": "41698596635"
       },
+      "started_at": "2026-11-03T20:14:25Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16299,9 +16311,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T20:03:20Z",
+    "at": "2026-11-03T20:14:25Z",
     "url": "",
-    "what": "review #2958 on claude-8"
+    "what": "review #2960 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-03T19:59:22Z",
