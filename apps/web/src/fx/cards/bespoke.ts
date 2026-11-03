@@ -2,28 +2,30 @@
 // recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2797000:
 // Stinkyscape's three (fx/cards/stinkyscape/).
 
-import type { DrawnMotif } from "../motifs/names.ts";
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
+import { fusionForge } from "./core/craftACard.ts";
 import { manaCrack } from "./core/hinder.ts";
+import { legendaryTide } from "./core/transmogulate.ts";
+import { perfectWish } from "./core/zephrys.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
 import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
 import { terminusRift } from "./stinkyscape/terminusRift.ts";
 
-export const CARD_RECIPES = { manaCrack, bloodDrain, crushingWalls, terminusRift, magiBoot, battleshipWarp } as const satisfies Readonly<Record<string, CardRecipe>>;
+export const CARD_RECIPES = {
+  manaCrack,
+  bloodDrain,
+  crushingWalls,
+  legendaryTide,
+  perfectWish,
+  fusionForge,
+  terminusRift,
+  magiBoot,
+  battleshipWarp,
+} as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;
-
-/**
- * R2797000: the motif fixture (motifs/gallery.ts) a card recipe plays over in the /dev/fx gallery: the
- * events its card's play makes. A recipe with none is left out of the gallery's cards.
- */
-export const CARD_RECIPE_FIXTURES: Readonly<Partial<Record<CardRecipeKey, DrawnMotif>>> = {
-  terminusRift: "forge",
-  magiBoot: "conjure",
-  battleshipWarp: "conjure",
-};
 
 export type BespokeKey = CardRecipeKey | EntranceKey;
 

@@ -117,6 +117,7 @@ holds the rules and the label (`RELEASE_LABEL`).
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
 | GitHub secret | `CLOUDFLARE_BILLING_TOKEN`: a custom token with the account's Billing: Read alone | `cf-spend.yml` |
 | GitHub secret | `BOT_GITHUB_TOKEN` (already set) | moving `production` |
+| GitHub secret | `CODE_PEPPER`: both Workers' pepper, the one copy that can be read back (a Worker's secret cannot), kept from Render's on 2026-11-03 | a person setting it on a new Worker, or `mint-code` |
 | `infra/terraform.tfvars` (git ignores it) | `staging_team_emails`: who Access lets into staging | `terraform apply` |
 
 Everything else is in the repo: the Workers, their settings that are not secrets (`vars`), the
@@ -238,13 +239,17 @@ Replace `$SITE` with `https://staging.jackioh.com`. A browser asks for an Access
 
 ### Step 7: Turn Render and Vercel off
 
-Only once step 6 has run cleanly for a day or so, and with the owners' say-so (CLAUDE.md rule 13):
+Done on 2026-11-03, the owners' call (CLAUDE.md rule 13), straight after step 6 rather than a day
+later, so Render would stop billing:
 
-1. Render -> `jackioh-server` -> Settings -> Suspend Web Service; after a week with nothing missing
-   it, Delete Web Service, and delete the Blueprint.
-2. Vercel -> the `jackioh` project -> Settings -> Git -> Disconnect, then Settings -> Delete Project.
-3. GitHub -> Settings -> Secrets and variables -> Actions: delete `RENDER_DEPLOY_HOOK_URL`,
-   `RENDER_API_KEY` and `VERCEL_DEPLOY_HOOK_URL`.
+1. Actions -> cutover, step `after-cutover`, once `https://jackioh.com/api/catalog` answered with an
+   `x-deployed-commit`: suspended Render's `jackioh-server` and gave staging's project its own Site URL
+   and Redirect URLs. Step `delete-render` then kept Render's `CODE_PEPPER`, sealed to a key a person
+   held and opened straight into the repository secret `CODE_PEPPER` (section 3), and deleted the
+   Blueprint and the service. The owners deleted the Render workspace's card and the Vercel project.
+2. The repository secrets `RENDER_DEPLOY_HOOK_URL`, `RENDER_API_KEY` and `VERCEL_DEPLOY_HOOK_URL` are
+   deleted, so cutover's steps that read Render (`staging-secrets`, `production-secrets`, `copy`,
+   `after-cutover`, `delete-render`) cannot run again; `production-auth` and `email` still can.
 
 ## 5. Day-to-day operation
 

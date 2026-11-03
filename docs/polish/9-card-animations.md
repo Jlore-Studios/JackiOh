@@ -24,6 +24,23 @@ Hinder, #27 Blood Ridden Glowy Jelly Bean, Classic+ #24 Crushing Walls and the m
 BOOM! Big Max, Nature Titan and Spell Tyrant, and #100 Ceaseless Void's, which its set piece now
 names, below).
 
+Core's pass (#2793) adds three flourishes, each built from the motif primitives at the card's motif
+scale (`fx/cards/core/flourish.ts`) and drawn over the event rows (`keep`):
+
+| Card | Recipe | Why bespoke |
+|---|---|---|
+| #83 Transmogulate | `legendaryTide` | its transforms land in a hand and a deck the board does not show: Legendary rays over the caster's Deck and hand piles at the first, a sheen on each hand card the viewer reads |
+| #97 Zephrys | `perfectWish` | its "perfect" card blows in from the far side: a star from the other hero into the caster's hand pile in Mythic rays |
+| #99 Craft a Card | `fusionForge` | its Discovered Units fuse off the board and no motif reads `fused`: two halves forged at the board's centre, the card flying on into the hand |
+
+Stinkyscape's first pass (#2797, R2797000) adds three more, in `fx/cards/stinkyscape/`, the same way:
+
+| Card | Recipe | Why bespoke |
+|---|---|---|
+| #4 Olivian Expanse | `terminusRift` | a Mythic whose whole play is one Discover: a void rift tears open over the board's centre at its first card added, and the card flies out of it into the caster's hand |
+| #18 Imitated Instrumentality | `magiBoot` | its three Field Spells come online one after another: a hologram beam from the caster's hero into each zone, booting with a ring and a burst, `FX_MAGI_STAGGER` of the entry apart within one |
+| #36 Drone Core X | `battleshipWarp` | the Mythic top of the Drone Core line: stars gather where the Drone Battleship will stand and it streaks in from the board's top edge (`FX_WARP_FROM`), landing in exhaust |
+
 ## The motifs
 
 A motif is a pure planner, `(spec, entry, view, env) => FxCue[]`, built from the cue kinds the effects
@@ -61,13 +78,29 @@ and three parameters:
 | `bind` | locked, unlocked | both | frost and chains over a Locked unit; gold shards when it releases |
 | `tether` | stolen, controlChanged, held | nothing | an arcane line from where the card was to whose it is now |
 | `mirror` | transformed | nothing | a translucent double peeling off the source toward the copy |
-| `transmute` | transformed | nothing | smoke and sparks as one card becomes another |
+| `transmute` | transformed, fused | nothing | smoke and sparks as one card becomes another, or at the host as an Equip fuses into it (#2797) |
 | `flight` | drawn | drawn | a card back flying from the library into the hand, landing with its sparkle |
 | `glimpse` | predicted, secretRevealed | nothing | a sheen and a small flare on the hero's badge |
 | `mana` | manaChanged, manaSpent | manaChanged | one sparkle per crystal gained spread across Travel to Land, landing together; a soft pulse where a spend drained |
 | `tithe` | costChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202) |
 | `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
 | `snap` | trapFired | trapFired | a tight ring on the trap's own zone, then its reveal: in the card's flavor when the view names it, else the entry palette (R154, R202); a firing again is a short flare |
+
+Drawn in #2793, Core's pass, for three events no motif read that come up on three or more Core cards
+each:
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `send` | addedToHand, shuffledIn | nothing | a gather at the caster's hero (the receiver's with no play), a card back flying to the hand or the library, and its sparkle there; no shake |
+| `radiance` | radiantSet | nothing | a sheen and a burst over the card made Radiant (its hand pile for a hand card the viewer may not read), and once a play the Radiant rays |
+| `mend` | healed | nothing | a sheen over the healed hero or unit, a ring closing as it lands and a soft afterglow; the heal's number stays on its row; no shake |
+
+Drawn in #2797, Stinkyscape's first pass (R2797000), for a mark, which five of its first half's
+cards put on or lift (Freeze Ray, Absolute Zero, CASPER, Kwzka, Siva 1):
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `hex` | marked | nothing | a mark put on (a Freeze, an Allure) closes a ring on the card, a sheen crosses it and it flares as the mark takes; a mark lifted flares in a ring of sparkles; the mark's row keeps its color |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -193,12 +226,12 @@ Stinkyscape is split so its two set passes merge without conflicts.
 
 ```json5
 {
-  "core-034": "none: pending", // Collateral Damage
+  "classic-001": "none: pending", // Curse of the Forgotten Classic
   "core-035": { cast: { motif: "bolt" } }, // Lunar Eclipse
   "classic-016": { cast: { motif: "scorch", palette: "Fire" } }, // Book of Flame
   "classic-071": { cry: { motif: "lance" } }, // Lane Eater
   "core-021": { bespoke: "manaCrack" }, // Hinder
-  "core-046": { aura: { look: "void", scope: "board" } }, // Suppressive Aura
+  "core-046": { cast: { motif: "bolt" }, aura: { look: "void", scope: "board" } }, // Suppressive Aura
 }
 ```
 
@@ -206,13 +239,31 @@ Stinkyscape is split so its two set passes merge without conflicts.
   `tables.test.ts` holds each file to the catalog: every card present, in order, each comment its
   name, no card twice, no unknown hook, motif, look, scope, palette, field or recipe.
 - **Hooks by kind:** `cast` is a non-Unit's play (a Spell's, a Field Spell's, a Trap's), `cry` a
-  Unit's; a `cry` on a non-Unit or a `cast` on a Unit fails the loader. `death`, `trigger` and
-  `activate` are accepted and plan nothing until #2783's `hookResolving` marker lands. A Trap's
-  `cast` is inert too: a firing opens no play.
+  Unit's; a `cry` on a non-Unit or a `cast` on a Unit fails the loader. `death`, `trigger` (a
+  start-of-turn or end-of-turn hook or a Whenever trigger) and `activate` play from the hook's own
+  `hookResolving` marker (R2783000), and a Trap's `cast` from its `trapFired` (R2797000, Dispatch).
+  A hook no marker reports (an attack's own, a Starship's launch) plays nothing.
 - **row:** `"replace"` (the default) draws the numbers (the damage splat, an Armor flash) in place of
   the events the motif replaces; `"keep"` plays over the event's own recipe, as a bespoke recipe's
   `keep` does.
 - A bad table fails at load, naming its file and card (`fx/cards/<file>: <id>: <problem>`).
+
+### A set's pass
+
+A set's pass (#2782's parts, Core's #2793 the first) fills its table from `cargo jackioh fx census`
+(#2788), overriding the census's suggestion only with a reason, and leaves two files beside it:
+
+- `fx/cards/<set>.test.ts` holds the table to the pass: at least `FX_SET_PASS_FLOOR` of the set's
+  non-token cards wear an entry other than `none`, every Spell, Field Spell, Trap and Field Trap has a
+  `cast` (or a recipe or set piece of its own), every Field Spell an `aura`, every hook names a drawn
+  motif, every play's motif draws on its gallery fixture as that card's play, and a hidden play keys
+  none (R202).
+- `fx/cards/<set>.md` is its per-card table, one row per card, tokens included, in catalog order:
+  its name, type, entry, motif scale, the census's suggestion and why. The test holds each row's
+  name, type, entry and scale to the catalog and the table.
+
+A motif joins the vocabulary when three or more of a set's cards show an event no motif reads; a
+card no motif can say takes a recipe of its own (Tiers, above).
 
 ### Dispatch
 
@@ -226,6 +277,14 @@ answering it keeps its own row) and leaves a run over a whole pile to its one wa
 each hit of a run that sweeps no whole side its own entry, so the play remembers the ids its hits
 landed on (`FxPlay.hits`): a volley gathers once, a chain hops on from its last hit, a lance beams a lane once,
 and a card its hits already reached dies under its own row, so a lethal bolt flies once.
+
+A card's hook is an entry too (R2797000): a Death's, a start-of-turn or end-of-turn hook's, a
+Whenever trigger's or an Activate's `hookResolving` marker, and a Trap's `trapFired`, opens one for
+its card in the memory, innermost (`FxPlay.hook`), so the events after it are the hook's and its
+card's `death`, `trigger`, `activate` or `cast` names the motif. A Cry's marker opens none: its
+play already keys it. The hook's entry ends at the next marker or firing, a `cardResolved` or
+`countered`, an attack, a turn's end or start and the game's end; a hidden marker keys nothing
+(R202), and a modifier a hook adds wears no aura (R2787000).
 
 ## Constraints
 
@@ -279,9 +338,20 @@ effects off, nothing. **R202:** a beat reads `via`, public keywords and shown id
 
 `/dev/fx` (dev builds only, as `/dev/hotseat`; a plain `build` leaves it out) is the review surface of
 every pass. Over the fixture board (`fullBoardView`) it plays any drawn motif in any flavor's palette
-or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry
-names a motif, as that card's play through the real board's effects layer. "Play as a set piece" plays
-the same card as the fixture set piece (R2785000): its play's entry holds the board for
+or sub-look at any of `FX_GALLERY_SCALES`, through a director of its own, and any card whose entry is
+not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in one of five ways:
+
+| Play | Entry | How it plays |
+|---|---|---|
+| board | a drawn motif on `cast` or `cry` | the card resolves over the motif's fixture through the real board's effects layer |
+| hook | a drawn motif on `death`, `trigger` or `activate` only | the hook's marker under the card's play, then the motif's fixture, through the real board's effects layer (R2797000) |
+| recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`) |
+| set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds |
+| aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
+
+A Field Spell or Field Trap of any play stands in that zone as it plays (`galleryFieldView`), so its
+aura shows too. A bespoke entrance has no play there: its card's summon is the hotseat's. "Play as a
+set piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
 
 ## Set pieces
@@ -308,7 +378,7 @@ the removals sound once, condensed, as it ends.
 The clears of one side, or too small to hold the game, take `wipe` on their hook: Classic+ #32.2
 Brawl (it spares a Unit), both Calls to Chaos (Classic+ #73, Stinkyscape #151: one random effect of
 theirs clears one side), the Anomaly Found! token (its caster's side) and Training Grounds #30
-Floodgates (`death: wipe`, its own side, which plans nothing until `death` hooks draw). Stinkyscape
+Floodgates (`death: wipe`, its own side, from its Death's marker). Stinkyscape
 #12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
 ids R97 hides on both seats.
 
@@ -331,7 +401,16 @@ Twelve cards across the sets wear the first motifs, as the pattern for the passe
 | Training Grounds #10 Fan of Knives | `cast: volley` |
 | Training Grounds #26 Path of Exile | `cast: vanish` |
 
-No `negate` example: every counter in the catalog is a Trap, whose firing opens no play.
+No `negate` example: every counter in the catalog is a Trap, whose `cast` plays from its firing
+(R2797000).
+
+Stinkyscape 001 to 090 (#2797, `stinkyscape-1.md`) is the first half of Stinkyscape's pass. It takes
+`send` (#2793) for the cards it makes into a hand or a deck, `mend` for Healing Capsule's heals, `hex`
+for its marks and `transmute` for its eight Equip Cries, and it keeps each Tech card apart by its
+sub-look (#2792): `Tech/rocket` for the Drone Cores, Cannons and Flaks, `Tech/laser` for the Beams,
+Repeaters and Weapon Equips, `Tech/hologram` for the MAGI and the Prototypes and `Tech/starfield` for
+the Warp Disruptors, Imprisoned Cosmality and the Battleship. The second half (#2798) uses the same
+names.
 
 ## Open
 

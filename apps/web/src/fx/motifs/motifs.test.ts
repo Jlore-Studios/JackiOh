@@ -101,8 +101,12 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   tally: ["burst@240", "shake@240"],
   // The ring closes at gather, the reveal lands on jk-trap-flip's stop, the shake on Land.
   snap: ["ring@0", "burst@120", "shake@240"],
-  // R2797000: with no play resolving there is no source to fly from, so the card lands with its sparkle alone.
-  forge: ["burst@240", "shake@240"],
+  // #2793: a gather at the caster's hero, a card back flying to the hand, its sparkle there; no shake.
+  send: ["burst@0", "ghost@80", "burst@240"],
+  // A sheen over the hand card, its landing, the Radiant rays once a play, the shake.
+  radiance: ["sheen@80", "burst@240", "rays@240", "shake@240"],
+  // A sheen over the healed unit, a ring burst and ring closing as it lands, the afterglow; no shake.
+  mend: ["sheen@80", "burst@240", "ring@240", "burst@300"],
   // R2797000: a ring closes on the frozen card, a sheen crosses it and the mark takes on Land.
   hex: ["ring@0", "sheen@80", "burst@240", "shake@240"],
 };
@@ -276,7 +280,7 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
       const look = paletteLook(hook?.palette ?? "") ?? flavorLookOf(defId, "ex", fullBoardView());
       const colors = look?.colors ?? [];
       const drawn = effectCues(defId, motif);
-      const plain = effectCues("core-016", motif);
+      const plain = effectCues("core-008", motif);
       expect(colored(drawn, colors), defId).toBeGreaterThan(colored(plain, colors));
       expect(drawn, defId).not.toEqual(plain);
     }
@@ -454,6 +458,21 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
     expect(rotationPaths("right", null)).toEqual([]);
   });
 
+  it("R2784000 #2793 radiance's rays play once a play: at the first card of its first Radiant entry, not on a later one", () => {
+    const view = fullBoardView();
+    const env = envOf();
+    env.memory.remember([played("p1", "ex", "core-029")]);
+    const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+    const radiant = (k: number): GameEvent => ({ type: "radiantSet", instanceId: hand[k]?.instanceId ?? "", defId: hand[k]?.defId ?? "", zone: { z: "hand", player: "p1" } });
+    const raysOf = (events: GameEvent[]): number => {
+      env.memory.remember(events);
+      const entry = { ...galleryEntry(events, view), durationMs: 400 };
+      return planMotif(specOf("radiance"), entry, view, env).filter((cue) => cue.kind === "rays").length;
+    };
+    expect(raysOf([radiant(0), radiant(1)])).toBe(1);
+    expect(raysOf([radiant(2)])).toBe(0);
+  });
+
   it("R2784000 drain shows a life loss's number once: in place of its row under replace, left to the row under keep", () => {
     const view = fullBoardView();
     const env = envOf();
@@ -491,38 +510,8 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
   });
 });
 
-describe("R2797000 forge, hex and transmute's fusion", () => {
+describe("R2797000 hex and transmute's fusion", () => {
   const at = (cue: FxCue | undefined): string => (cue !== undefined && "at" in cue && cue.at.kind === "testid" ? cue.at.testid : "");
-
-  it("R2797000 forge flies a card back from the play's source into the hand or the library, and the rows still play", () => {
-    const view = fullBoardView();
-    const made: GameEvent[] = [
-      { type: "addedToHand", player: "p1", instanceId: "fx-made", defId: "core-055" },
-      { type: "shuffledIn", player: "p1", instanceId: "fx-shuffled", defId: "core-055", position: 0 },
-    ];
-    const entry = { ...galleryEntry(made, view), durationMs: 400 };
-    const ghosts = (cues: readonly FxCue[]): string[] =>
-      cues.flatMap((cue) => (cue.kind === "ghost" && cue.from.kind === "testid" && cue.to.kind === "testid" ? [`${cue.from.testid}>${cue.to.testid}@${String(cue.delayMs)}`] : []));
-    // A Spell's play flies from its caster's hero, a card on the board (a Unit's Cry, a hook) from the card.
-    const spell = envOf();
-    spell.memory.remember([played("p1", "ex", "core-035")]);
-    const fromHero = planMotif(specOf("forge"), entry, view, spell);
-    expect(ghosts(fromHero)).toEqual([`${testid.hero("you")}>hand-you@80`, `${testid.hero("you")}>library-you@80`]);
-    expect(at(fromHero[0])).toBe(testid.hero("you"));
-    const sparkles = fromHero.filter((cue) => cue.kind === "burst" && cue.preset === "sparkle" && cue.delayMs === timesOf(400).L).map(at);
-    expect(sparkles).toEqual(["hand-you", "library-you"]);
-    const source = view.you.units[0]?.instanceId ?? "";
-    const unit = envOf();
-    unit.memory.remember([played("p1", source, "core-004")]);
-    expect(ghosts(planMotif(specOf("forge"), entry, view, unit))).toEqual([`${testid.card(source)}>hand-you@80`, `${testid.card(source)}>library-you@80`]);
-    // Over the rows: it replaces nothing, so the hand's glint and the shuffle still play.
-    expect(motifReplaces(specOf("forge"), entry, view, spell).size).toBe(0);
-    // R202: a card added to the other hand flies to its back by count, naming no card.
-    const theirs = { ...galleryEntry([{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }], view), durationMs: 400 };
-    const cues = planMotif(specOf("forge"), theirs, view, spell);
-    expect(ghosts(cues)).toEqual([`${testid.hero("you")}>hand-opponent@80`]);
-    expect(JSON.stringify(cues)).not.toMatch(/core-\d{3}/);
-  });
 
   it("R2797000 hex rings a card marked and flares one unmarked", () => {
     const view = fullBoardView();

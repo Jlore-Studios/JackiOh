@@ -126,10 +126,11 @@ describe("R2797000 Stinkyscape's Flourishes", () => {
     boots.forEach(({ entry, cues }, k) => {
       // Each its own entry: each boots from Travel to Land, rings its zone and shakes the board.
       const t = timesOf(entry.durationMs);
-      const zone = tid(testid.zone("you", "backrow", 3 + k));
+      const zoneId = testid.zone("you", "backrow", 3 + k);
+      const zone = tid(zoneId);
       const beam = cues.find((cue) => cue.kind === "shot");
       expect(beam).toEqual(expect.objectContaining({ shot: { motion: "beam" }, from: tid(testid.hero("you")), to: zone, delayMs: t.T, flightMs: t.L - t.T }));
-      expect(cues.some((cue) => cue.kind === "ring" && cue.delayMs === t.L && cue.at.kind === "testid" && cue.at.testid === zone.testid)).toBe(true);
+      expect(cues.some((cue) => cue.kind === "ring" && cue.delayMs === t.L && cue.at.kind === "testid" && cue.at.testid === zoneId)).toBe(true);
       expect(cues.some((cue) => cue.kind === "shake" && cue.delayMs === t.L)).toBe(true);
     });
     // One entry holding several: each beam leaves FX_MAGI_STAGGER of D after the one before, the fourth no later than the third.
@@ -154,10 +155,11 @@ describe("R2797000 Stinkyscape's Flourishes", () => {
     const results = planAll(stream, view);
     const [first, second] = cuesOn(results, "summoned");
     const t = timesOf(results.find(({ entry }) => entry.events.some((event) => event.type === "summoned"))?.entry.durationMs ?? 0);
-    const zone = tid(testid.zone("you", "units", 3));
+    const zoneId = testid.zone("you", "units", 3);
+    const zone = tid(zoneId);
     const shot = first?.find((cue) => cue.kind === "shot");
     expect(shot).toEqual(expect.objectContaining({ shot: { motion: "bolt", trail: "star" }, from: tid(testid.board, FX_WARP_FROM), to: zone, delayMs: t.T, flightMs: t.L - t.T }));
-    const presets = (first ?? []).flatMap((cue) => (cue.kind === "burst" && cue.at.kind === "testid" && cue.at.testid === zone.testid ? [`${cue.preset}@${String(cue.delayMs)}`] : []));
+    const presets = (first ?? []).flatMap((cue) => (cue.kind === "burst" && cue.at.kind === "testid" && cue.at.testid === zoneId ? [`${cue.preset}@${String(cue.delayMs)}`] : []));
     expect(presets).toEqual(expect.arrayContaining([`star@${String(t.G)}`, `exhaust@${String(t.L)}`, `star@${String(t.Li)}`]));
     expect(first?.some((cue) => cue.kind === "ring" && cue.preset === "star" && cue.delayMs === t.T)).toBe(true);
     expect(first?.some((cue) => cue.kind === "shake" && cue.delayMs === t.L)).toBe(true);

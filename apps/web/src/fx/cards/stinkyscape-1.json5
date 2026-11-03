@@ -25,19 +25,19 @@
   "stinkyscape-004-6": "none: its effects resolve under each Call to Chaos it casts, whose own entry plays", // The Big Crunch
   "stinkyscape-005": { cast: { motif: "snap" }, aura: { look: "ember", scope: "zone" } }, // Masochism Unmasked
   "stinkyscape-006": "none: its Cry completes Quest stages (questCompleted), which no motif reads", // Tylannt
-  "stinkyscape-007": { cast: { motif: "forge", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "zone" } }, // The Greatest Heist
-  "stinkyscape-008": { cast: { motif: "forge" } }, // Conjure Rosemary Triscuit
+  "stinkyscape-007": { cast: { motif: "send", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "zone" } }, // The Greatest Heist
+  "stinkyscape-008": { cast: { motif: "send" } }, // Conjure Rosemary Triscuit
   "stinkyscape-008-1": { cast: { motif: "mana" } }, // Rosemary Triscuit
   "stinkyscape-009": { cast: { motif: "tether" }, aura: { look: "void", scope: "zone" } }, // Ticketed
-  "stinkyscape-010": { cast: { motif: "forge" } }, // Otherworldly Endurance
+  "stinkyscape-010": { cast: { motif: "send" } }, // Otherworldly Endurance
   "stinkyscape-010-1": { cast: { motif: "bless" } }, // Inner Fire
   "stinkyscape-010-2": { cast: { motif: "bless" } }, // Divine Spirit
   "stinkyscape-010-3": { cast: { motif: "bless" } }, // Power Word Shield
-  "stinkyscape-011": { cast: { motif: "forge" } }, // Otherworldly Magic
+  "stinkyscape-011": { cast: { motif: "send" } }, // Otherworldly Magic
   "stinkyscape-011-1": { cast: { motif: "bolt", palette: "Spirit" } }, // Frostbolt
   "stinkyscape-011-2": { cast: { motif: "barrage", palette: "Nerd" } }, // Arcane Missiles
   "stinkyscape-011-3": { cast: { motif: "nova" } }, // Flame Strike
-  "stinkyscape-012": { cast: { motif: "forge" } }, // Otherworldly Nightmare
+  "stinkyscape-012": { cast: { motif: "send" } }, // Otherworldly Nightmare
   "stinkyscape-012-1": { cast: { motif: "bolt", palette: "Dark/shadow" } }, // Shadow Word Death
   "stinkyscape-012-2": { cast: { motif: "scorch", palette: "Dark/shadow" } }, // Shadow Word Pain
   "stinkyscape-012-3": { cast: { motif: "wipe" } }, // Psychic Scream
@@ -48,11 +48,11 @@
   "stinkyscape-017": { trigger: { motif: "conjure", palette: "Physical/steel" } }, // Imprisoned Ship Smith
   "stinkyscape-018": { bespoke: "magiBoot" }, // Imitated Instrumentality
   "stinkyscape-018-1": { activate: { motif: "bless", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // MELCHIOR
-  "stinkyscape-018-2": { activate: { motif: "forge", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // BALTHASAR
+  "stinkyscape-018-2": { activate: { motif: "send", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // BALTHASAR
   "stinkyscape-018-3": { activate: { motif: "hex", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // CASPER
   "stinkyscape-019": { trigger: { motif: "barrage", palette: "Tech/starfield" } }, // Imprisoned Cosmality
   "stinkyscape-020": "none: its Cry copies a card's text, which moves nothing on the board", // Tnack Trav
-  "stinkyscape-021": { cast: { motif: "forge" } }, // Moonberry
+  "stinkyscape-021": { cast: { motif: "send" } }, // Moonberry
   "stinkyscape-022": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Gatinsir
   "stinkyscape-023": { cast: { motif: "shift", palette: "Tech/starfield" }, aura: { look: "storm", palette: "Tech/starfield", scope: "board" } }, // Warp Disruptor
   "stinkyscape-024": { cast: { motif: "shift", palette: "Tech/starfield" }, aura: { look: "storm", palette: "Tech/starfield", scope: "board" } }, // Warp Disruptor II
@@ -70,13 +70,13 @@
   "stinkyscape-036": { bespoke: "battleshipWarp" }, // Drone Core X
   "stinkyscape-037": { death: { motif: "hex" }, trigger: { motif: "hex" } }, // Kwzka
   "stinkyscape-038": "none: its trigger (it survives an attack) runs on afterAttack, which no hookResolving marks", // Shield Amplifier
-  "stinkyscape-039": { cast: { motif: "conjure" }, trigger: { motif: "forge", palette: "Hustle/ore" }, aura: { look: "toxic", scope: "zone" } }, // The Narcor Project
+  "stinkyscape-039": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Hustle/ore" }, aura: { look: "toxic", scope: "zone" } }, // The Narcor Project
   "stinkyscape-040": { cry: { motif: "tally" }, trigger: { motif: "nova" } }, // Poison Capsule
-  "stinkyscape-041": { cast: { motif: "forge", palette: "Tech/rocket" } }, // Drone Sympathizer
-  "stinkyscape-042": { cry: { motif: "forge" } }, // Core Researcher
-  "stinkyscape-043": "none: its end-of-turn heal has no motif; the heal rows play", // Healing Capsule
-  "stinkyscape-044": { cast: { motif: "forge" } }, // Great Replacement Theory
-  "stinkyscape-045": { cry: { motif: "forge" } }, // Drone Commander
+  "stinkyscape-041": { cast: { motif: "send", palette: "Tech/rocket" } }, // Drone Sympathizer
+  "stinkyscape-042": { cry: { motif: "send" } }, // Core Researcher
+  "stinkyscape-043": { trigger: { motif: "mend" } }, // Healing Capsule
+  "stinkyscape-044": { cast: { motif: "send" } }, // Great Replacement Theory
+  "stinkyscape-045": { cry: { motif: "send" } }, // Drone Commander
   "stinkyscape-046": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", scope: "lane" } }, // Circadian Halfcycler
   "stinkyscape-047": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", scope: "side" } }, // Circadian Fullcycler
   "stinkyscape-048": "none: vanilla", // Ultralight Chassis
@@ -93,12 +93,12 @@
   "stinkyscape-059": { activate: { motif: "bolt", palette: "Tech/laser" } }, // Repeater v5
   "stinkyscape-060": { activate: { motif: "bolt", palette: "Tech/rocket" } }, // Cannon v5
   "stinkyscape-061": { activate: { motif: "barrage", palette: "Tech/rocket" } }, // Flak v5
-  "stinkyscape-062": { activate: { motif: "forge", palette: "Hustle/ore" } }, // Miner v1
-  "stinkyscape-063": { activate: { motif: "forge", palette: "Hustle/ore" } }, // Miner v2
-  "stinkyscape-064": { activate: { motif: "forge", palette: "Hustle/ore" } }, // Miner v3
-  "stinkyscape-065": { activate: { motif: "forge", palette: "Hustle/ore" } }, // Miner v4
-  "stinkyscape-066": { activate: { motif: "forge", palette: "Hustle/ore" } }, // Miner v5
-  "stinkyscape-067": { trigger: { motif: "forge", palette: "Hustle/ore" } }, // Tractor Beam
+  "stinkyscape-062": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v1
+  "stinkyscape-063": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v2
+  "stinkyscape-064": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v3
+  "stinkyscape-065": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v4
+  "stinkyscape-066": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v5
+  "stinkyscape-067": { trigger: { motif: "send", palette: "Hustle/ore" } }, // Tractor Beam
   "stinkyscape-068": "none: vanilla", // Stratos
   "stinkyscape-069": "none: vanilla", // Falcon
   "stinkyscape-070": { cry: { motif: "rise" } }, // Z'Zoth
@@ -115,12 +115,12 @@
   "stinkyscape-081": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Radix
   "stinkyscape-082": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Phalanx
   "stinkyscape-083": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Halo
-  "stinkyscape-084": { cast: { motif: "forge" } }, // Power Cell
-  "stinkyscape-084-1": { cast: { motif: "forge", palette: "Hustle/ore" } }, // Metal Scraps
+  "stinkyscape-084": { cast: { motif: "send" } }, // Power Cell
+  "stinkyscape-084-1": { cast: { motif: "send", palette: "Hustle/ore" } }, // Metal Scraps
   "stinkyscape-085": { cry: { motif: "transmute", palette: "Tech/hologram" } }, // Prototype-X1
   "stinkyscape-086": { cry: { motif: "transmute", palette: "Tech/hologram" } }, // Prototype-X2
   "stinkyscape-087": { cry: { motif: "hex", palette: "Beast/felinor" } }, // Siva 1
   "stinkyscape-088": "none: an Aura with no hook", // Siva 2
-  "stinkyscape-089": { cast: { motif: "forge", palette: "Hustle/ore" } }, // Spice
+  "stinkyscape-089": { cast: { motif: "send", palette: "Hustle/ore" } }, // Spice
   "stinkyscape-090": "none: its one hook, When launched, is the Starship's own moment (#2782's Starship part)", // After Burner
 }

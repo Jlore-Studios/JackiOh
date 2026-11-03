@@ -1,5 +1,5 @@
 // R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,
-// tithe and tally, and R2797000's forge. Like the damage motifs (damage.ts) each plays in the entry's
+// tithe, tally and send (#2793). Like the damage motifs (damage.ts) each plays in the entry's
 // phases (build.ts) and plans nothing without an event it reads.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -11,11 +11,11 @@ import { FX_MANA_MAX_SPARKS, FX_MOTIF_TITHE_MAX } from "../constants.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../types.ts";
 import {
   flies,
-  hitAnchor,
   MOTIF_TUNING,
   motifBurst,
   motifShake,
   readEvents,
+  sourceOf,
   timesOf,
   type MotifPlanner,
   type MotifSpec,
@@ -44,34 +44,6 @@ export const flight: MotifPlanner = {
       cues.push({ kind: "ghost", from, to, delayMs: t.T, durationMs: t.L - t.T });
       cues.push(motifBurst(spec, to, "point", t.L, MOTIF_TUNING.small, "sparkle"));
     }
-    return cues;
-  },
-};
-
-const FORGE_READS = ["addedToHand", "shuffledIn"] as const;
-
-/**
- * R2797000 forge: a card made where none was, into a hand or a library (a Discover, a card added or
- * shuffled in, a Resource gained): a gather where the resolving play or hook stands (its card on the
- * board, else its hero), a card back flying from it to the hand or the library, and a sparkle as it
- * lands. Over the rows (`replaces: []`): a hidden card is a back by count, as the row draws it (R202).
- */
-export const forge: MotifPlanner = {
-  reads: FORGE_READS,
-  replaces: [],
-  plan(spec, entry, view, env) {
-    const hits = readEvents(entry, view, env, FORGE_READS);
-    if (hits.length === 0) return [];
-    const t = timesOf(entry.durationMs);
-    const play = env.memory.resolving();
-    const from = play === undefined ? null : (hitAnchor(view, play.instanceId) ?? tid(testid.hero(sideOf(view, play.player))));
-    const cues: FxCue[] = [];
-    if (from !== null) cues.push(motifBurst(spec, from, "point", t.G, MOTIF_TUNING.gather));
-    for (const h of hits) {
-      if (flies(from, h.at)) cues.push({ kind: "ghost", from, to: h.at, delayMs: t.T, durationMs: t.L - t.T });
-      cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
-    }
-    cues.push(...motifShake(spec, t.L));
     return cues;
   },
 };
@@ -187,6 +159,33 @@ export const tally: MotifPlanner = {
     const t = timesOf(entry.durationMs);
     const cues: FxCue[] = [];
     for (const h of hits) cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    cues.push(...motifShake(spec, t.L));
+    return cues;
+  },
+};
+
+const SEND_READS = ["addedToHand", "shuffledIn"] as const;
+
+/**
+ * send (#2793): a card made and sent into a hand or a deck: a gather at the caster's hero (the
+ * receiver's with no play), a card back flying to the hand or the library, and its sparkle there.
+ * The back names no card (R202); the hand's or the library's own row still plays.
+ */
+export const send: MotifPlanner = {
+  reads: SEND_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, SEND_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    const cues: FxCue[] = [];
+    for (const h of hits) {
+      if (h.event.type !== "addedToHand" && h.event.type !== "shuffledIn") continue;
+      const from = sourceOf(h.event, view, env) ?? tid(testid.hero(sideOf(view, h.event.player)));
+      cues.push(motifBurst(spec, from, "point", t.G, MOTIF_TUNING.small));
+      if (flies(from, h.at)) cues.push({ kind: "ghost", from, to: h.at, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, h.at, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    }
     cues.push(...motifShake(spec, t.L));
     return cues;
   },

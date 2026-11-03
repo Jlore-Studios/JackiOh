@@ -429,7 +429,9 @@ describe("R666 OAuth providers, behind configuration", () => {
     render(<LoginRoute />);
     const buttons = screen.getAllByTestId(loginTestid.oauth);
     expect(buttons.map((button) => button.getAttribute("data-provider"))).toEqual(["github", "google"]);
-    expect(buttons.map((button) => button.textContent)).toEqual(["GitHub", "Google"]);
+    expect(buttons.map((button) => button.textContent)).toEqual(["Continue with GitHub", "Continue with Google"]);
+    // #1890: Google's button carries its own mark, as its branding asks; no other provider's does.
+    expect(buttons.map((button) => button.querySelector("svg") !== null)).toEqual([false, true]);
 
     fireEvent.click(buttons[1] as HTMLElement);
     await waitFor(() => {
