@@ -11596,7 +11596,7 @@
       "started_at": "2026-11-03T05:48:36Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2
+      "verdict_rounds": 4
     },
     "2726": {
       "cleared": {
