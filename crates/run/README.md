@@ -24,7 +24,7 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 | `run_score`, `run_embers` | the score so far, and the Embers a score pays (DR9) |
 | `run_placeholder_content()` | pseudo cards and temporary bosses, artifacts, blessings, events and curses (`src/placeholder.json`) until the designer's lists land |
 | `run_catalog_content(&CardDefs, &[CustomCard])` | the content a run on the cards that ship deals from: every card a deck may hold (`deckable`) and the custom cards given, the starting cards `RUN_STARTER_CARDS`, and the placeholder's enemies (their pseudo boss cards dropped), passives, events and curses (DR14) |
-| `run_fight_setup(&RunState, &RunContent) -> Option<RunFightSetup>` | in `RunPhase::Fight`, the game to start: its seed (`"{run seed}-{row}-{col}"`), both decks, the human's marks (Radiant and buffed cards) and both handicaps, the human's with the run's HP, the enemy's its Presence's tier with its health (DR5); `None` in any other phase |
+| `run_fight_setup(&RunState, &RunContent) -> Option<RunFightSetup>` | in `RunPhase::Fight`, the game to start: its seed (`"{run seed}-{row}-{col}"`), both decks, the human's marks (Radiant and buffed cards) and both handicaps, the human's with the run's HP and each Combat artifact held, once per level, the enemy's its Presence's tier with its health and each curse taken (DR5, R2922001); `None` in any other phase |
 | `run_fight_report(&ReplayInput, PlayerId) -> Result<RunAction, _>` | the `RunAction::FightOver` a finished game sends for that seat, folded from its record: the win, the hero's final health, the damage dealt to the enemy's side, the healing on its own, its draws and the turns; a game with no result, or a setup the engine refuses, is refused |
 | `run_level_cost(level)` | the Embers from `level` to the next (`RUN_LEVEL_EMBERS`), `None` at the ladder's top |
 | `run_constants()` | the numbers the screens show (the slot ladder, the starting deck's size, its artifacts' count and points, the tiers' points), so the client states none (rule 9) |
@@ -46,7 +46,7 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 
 ## What it does not do yet
 
-Combat artifacts and curses change no fight (M4), a ghost's deck is random until snapshots exist (M7),
+A ghost's deck is random until snapshots exist (M7),
 and the extended campaign is not built (M8). The starting cards, the enemies, the artifacts, the
 blessings, the events and the curses are placeholders until the designer's lists land (M9). CI does not
 hold the generated `Run*.ts` to the Rust until `ci.yml` runs `cargo test -p jackioh-run --features ts`
@@ -56,9 +56,10 @@ and fails on its diff, which only a person can add.
 
 `src/tests.rs`, on the placeholder content: seeds, the map's shape, enemy decks, the starting deck's
 slots, ownership and artifact points, a whole run played out and its file folded back, extraction,
-packs, campfires, shops and the score. `src/fight_tests.rs`, on the real catalog (`jackioh-cards`, a
-dev-dependency): the catalog's content, the starting cards, a fight's setup and seed, a scripted game's
-report and the levels' costs (DR14's B5 to B11). The `ts` feature writes the public types to
+packs, campfires, shops, the score and the placeholders' fight effects. `src/fight_tests.rs`, on the
+real catalog (`jackioh-cards`, a dev-dependency): the catalog's content, the starting cards, a fight's
+setup and seed, the curses and Combat artifacts in it (R2922001), a scripted game's report and the
+levels' costs (DR14's B5 to B11). The `ts` feature writes the public types to
 `apps/web/src/wire/generated/`, which `apps/web/src/wire/run.ts` re-exports as `@jackioh/run`; commit
 any diff.
 

@@ -273,6 +273,10 @@ export type HeroAside = { own?: ReactNode; enemy?: ReactNode };
 export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
+  /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
+  enemyLabel?: string;
+  /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */
+  controlExtras?: ReactNode;
   animating?: AnimatingMap;
   /**
    * The animation entries the runner has started since the board last caught up (M5-T4), each one

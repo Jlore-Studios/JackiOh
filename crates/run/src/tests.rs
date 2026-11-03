@@ -439,3 +439,47 @@ fn bosses_and_curses_multiply_the_score() {
     assert!(run_score(&cursed, &content) > run_score(&plain, &content));
     assert!(run_embers(run_score(&plain, &content)) > 0);
 }
+
+#[test]
+fn r2922001_every_placeholder_curse_and_combat_artifact_has_a_fight_effect_its_text_states() {
+    // R2922001: each placeholder curse and Combat artifact changes a fight, and its text says by how
+    // much; no other passive has a fight effect, and none says it changes nothing.
+    let content = content();
+    let amount = |effect: RunFightEffect| match effect {
+        RunFightEffect::EnemyHealth { n }
+        | RunFightEffect::EnemyOpeningCards { n }
+        | RunFightEffect::EnemyMana { n }
+        | RunFightEffect::OwnOpeningCards { n }
+        | RunFightEffect::OwnArmor { n } => n,
+    };
+    let combat = content
+        .passives
+        .iter()
+        .filter(|p| p.kind == RunPassiveKind::Combat)
+        .map(|p| (&p.id, &p.text, p.fight_effect));
+    let curses = content.curses.iter().map(|c| (&c.id, &c.text, c.fight_effect));
+    for (id, text, effect) in combat.chain(curses) {
+        let effect = effect.unwrap_or_else(|| panic!("{id} has a fight effect"));
+        let n = amount(effect);
+        assert!(n > 0, "{id}");
+        assert!(text.contains(&n.to_string()), "{id}: {text:?} states {n}");
+        for nothing in ["no fight", "nothing in a fight", "do nothing"] {
+            assert!(!text.contains(nothing), "{id}: {text:?}");
+        }
+    }
+    for passive in content
+        .passives
+        .iter()
+        .filter(|p| p.kind != RunPassiveKind::Combat)
+    {
+        assert_eq!(passive.fight_effect, None, "{}", passive.id);
+    }
+
+    let json =
+        |id: &str| serde_json::to_value(content.passives.iter().find(|p| p.id == id).unwrap()).unwrap();
+    assert!(json("temp-picky").get("fightEffect").is_none());
+    assert_eq!(
+        json("temp-thick-skin")["fightEffect"],
+        serde_json::json!({"type": "ownArmor", "n": 1})
+    );
+}

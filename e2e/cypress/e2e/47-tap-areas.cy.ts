@@ -261,7 +261,9 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
 
     it("R2122000 the board, a practice game: the mulligan, then the first turn", () => {
       cy.visit(`${routes.practice()}?${new URLSearchParams({ seed: SEED, difficulty: "easy", deck: "random", seat: "p1", pace: "fast" }).toString()}`);
-      cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+      // No HUD above the board (#2878): the enemy hero's seat names the AI and the difficulty.
+      cy.get(ts("hero-opponent"), { timeout: BOOT_TIMEOUT }).should("contain.text", "AI · Easy");
+      cy.get(ts(PRACTICE_HUD)).should("not.exist");
       cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
       cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
       cy.settled();

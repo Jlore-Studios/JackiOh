@@ -410,9 +410,9 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
     }
 }
 
-/// The engine's verdict on a fight's setup, as `createGame` would take it.
-fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
-    let options = CreateGameOptions {
+/// A fight's setup as the `createGame` options the caller builds from it.
+fn fight_options(setup: &RunFightSetup) -> CreateGameOptions {
+    CreateGameOptions {
         seed: setup.seed.clone(),
         decks: (setup.human_deck.clone(), setup.enemy_deck.clone()),
         handicaps: Some(PerPlayerOpt {
@@ -424,7 +424,12 @@ fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
             p2: None,
         }),
         ..Default::default()
-    };
+    }
+}
+
+/// The engine's verdict on a fight's setup, as `createGame` would take it.
+fn engine_takes(setup: &RunFightSetup) -> Result<(), String> {
+    let options = fight_options(setup);
     validate_setup(
         &options,
         registered_catalog(),
@@ -527,4 +532,269 @@ fn with_deck_of(at: &RunState, deck: &RunState) -> RunState {
         deck: deck.deck.clone(),
         ..at.clone()
     }
+}
+
+/// `fight_at`'s first fight, its enemy one of known health and deck carrying `artifacts`.
+fn known_fight(content: &RunContent, artifacts: &[&str]) -> RunState {
+    let mut state = fight_at(content, 0);
+    let (row, col) = (state.row.unwrap(), state.col);
+    state.map[row][col].enemy = Some(RunEnemy {
+        id: "test-enemy".into(),
+        name: "Test Enemy".into(),
+        hero_health: 20,
+        deck: content.pool[..7].iter().map(|c| c.id.clone()).collect(),
+        artifacts: artifacts.iter().map(|id| (*id).to_string()).collect(),
+    });
+    state
+}
+
+/// `state` holding exactly `artifacts`, each at its level.
+fn holding(state: &RunState, artifacts: &[(&str, i32)]) -> RunState {
+    RunState {
+        artifacts: artifacts
+            .iter()
+            .map(|(id, level)| RunArtifact {
+                id: (*id).to_string(),
+                level: *level,
+            })
+            .collect(),
+        ..state.clone()
+    }
+}
+
+/// `state` under exactly `curses`.
+fn cursed(state: &RunState, curses: &[&str]) -> RunState {
+    RunState {
+        curses: curses.iter().map(|id| (*id).to_string()).collect(),
+        ..state.clone()
+    }
+}
+
+/// The plain enemy handicap of `known_fight`, under `tier`.
+fn known_enemy(tier: Handicap) -> Handicap {
+    Handicap {
+        deck_size: 7,
+        hero_health: Some(20),
+        ..tier
+    }
+}
+
+#[test]
+fn r2922001_a_run_with_no_curse_and_no_combat_artifact_gets_the_setup_it_got_before() {
+    // R2922001: with nothing that changes a fight, the setup is the one before curses and Combat
+    // artifacts acted, field for field. An Economic artifact, a blessing and an enemy's own artifact
+    // other than Presence change no fight.
+    let content = catalog_content();
+    let state = known_fight(&content, &[]);
+    assert!(state.curses.is_empty() && state.artifacts.is_empty());
+    let enemy = run_enemy(&state).unwrap().clone();
+    let human_deck: Vec<String> = state.deck.iter().map(|card| card.id.clone()).collect();
+    let before = RunFightSetup {
+        seed: format!("{}-0-0", state.seed),
+        human_handicap: Handicap {
+            deck_size: 10,
+            hero_health: Some(state.hp),
+            ..HUMAN_HANDICAP
+        },
+        human_deck,
+        human_marks: Vec::new(),
+        enemy_deck: enemy.deck.clone(),
+        enemy_handicap: known_enemy(AI_DIFFICULTY.easy),
+        enemy,
+    };
+    assert_eq!(run_fight_setup(&state, &content), Some(before.clone()));
+
+    let greedy = holding(&state, &[("temp-greedy", 2)]);
+    assert_eq!(run_fight_setup(&greedy, &content), Some(before.clone()));
+    let mut blessed = state.clone();
+    blessed.blessings = vec!["temp-blessing-vitality".into()];
+    assert_eq!(run_fight_setup(&blessed, &content), Some(before.clone()));
+    let crowned = known_fight(&content, &["temp-crown"]);
+    let setup = run_fight_setup(&crowned, &content).unwrap();
+    assert_eq!(setup.human_handicap, before.human_handicap);
+    assert_eq!(setup.enemy_handicap, before.enemy_handicap);
+
+    let json = serde_json::to_value(&setup).unwrap();
+    assert!(json["humanHandicap"].get("heroArmor").is_none(), "{json}");
+    assert!(json["enemyHandicap"].get("heroArmor").is_none(), "{json}");
+}
+
+#[test]
+fn r2922001_each_curse_strengthens_the_enemy_by_its_effect_and_all_three_stack() {
+    // R2922001: each curse taken changes only its own fields of the enemy's handicap, once; the
+    // human's is untouched.
+    let content = catalog_content();
+    let state = known_fight(&content, &[]);
+    let plain = run_fight_setup(&state, &content).unwrap();
+    let easy = known_enemy(AI_DIFFICULTY.easy);
+    let health = Handicap {
+        hero_health: Some(25),
+        ..easy
+    };
+    let cards = Handicap {
+        extra_opening_cards: easy.extra_opening_cards + 1,
+        ..easy
+    };
+    let mana = Handicap {
+        mana_bonus: easy.mana_bonus + 1,
+        mana_cap: easy.mana_cap + 1,
+        ..easy
+    };
+    let all = Handicap {
+        hero_health: Some(25),
+        extra_opening_cards: easy.extra_opening_cards + 1,
+        mana_bonus: easy.mana_bonus + 1,
+        mana_cap: easy.mana_cap + 1,
+        ..easy
+    };
+    let cases = [
+        (vec!["temp-curse-1"], health),
+        (vec!["temp-curse-2"], cards),
+        (vec!["temp-curse-3"], mana),
+        (vec!["temp-curse-1", "temp-curse-2", "temp-curse-3"], all),
+    ];
+    for (curses, expected) in cases {
+        let setup = run_fight_setup(&cursed(&state, &curses), &content).unwrap();
+        assert_eq!(setup.enemy_handicap, expected, "{curses:?}");
+        assert_eq!(setup.human_handicap, plain.human_handicap, "{curses:?}");
+    }
+
+    // After Presence: the crystal joins the tier's bonus and raises its cap.
+    for (presence, bonus, cap) in [(RUN_LOOMING_PRESENCE, 2, 6), (RUN_OVERWHELMING_PRESENCE, 2, 8)] {
+        let state = cursed(&known_fight(&content, &[presence]), &["temp-curse-3"]);
+        let setup = run_fight_setup(&state, &content).unwrap();
+        assert_eq!(
+            (setup.enemy_handicap.mana_bonus, setup.enemy_handicap.mana_cap),
+            (bonus, cap),
+            "{presence}"
+        );
+    }
+}
+
+#[test]
+fn r2922001_each_combat_artifact_helps_the_human_by_its_effect_times_its_level() {
+    // R2922001: a Combat artifact held changes the human's handicap once per level; the enemy's is
+    // untouched.
+    let content = catalog_content();
+    let state = known_fight(&content, &[]);
+    let plain = run_fight_setup(&state, &content).unwrap();
+    for level in 1..=RUN_ARTIFACT_LEVEL_MAX {
+        let human = |id: &str| {
+            let setup = run_fight_setup(&holding(&state, &[(id, level)]), &content).unwrap();
+            assert_eq!(setup.enemy_handicap, plain.enemy_handicap, "{id} at {level}");
+            setup.human_handicap
+        };
+        assert_eq!(
+            human("temp-thick-skin"),
+            Handicap {
+                hero_armor: Some(level),
+                ..plain.human_handicap
+            }
+        );
+        assert_eq!(
+            human("temp-quick-start"),
+            Handicap {
+                extra_opening_cards: level,
+                ..plain.human_handicap
+            }
+        );
+        assert_eq!(
+            human("temp-crown"),
+            Handicap {
+                hero_armor: Some(2 * level),
+                ..plain.human_handicap
+            }
+        );
+        assert_eq!(
+            human("temp-final-relic"),
+            Handicap {
+                extra_opening_cards: 2 * level,
+                ..plain.human_handicap
+            }
+        );
+    }
+    let both = holding(&state, &[("temp-thick-skin", 2), ("temp-crown", 1)]);
+    assert_eq!(
+        run_fight_setup(&both, &content)
+            .unwrap()
+            .human_handicap
+            .hero_armor,
+        Some(4)
+    );
+}
+
+#[test]
+fn r2922001_only_known_curses_and_held_combat_artifacts_count_and_never_below_none() {
+    // R2922001: no other kind's fight effect is read, an unknown curse is none, and a negative amount
+    // counts as none.
+    let mut content = catalog_content();
+    let set = |content: &mut RunContent, id: &str, effect: RunFightEffect| {
+        if let Some(def) = content.passives.iter_mut().find(|p| p.id == id) {
+            def.fight_effect = Some(effect);
+        }
+        if let Some(def) = content.curses.iter_mut().find(|c| c.id == id) {
+            def.fight_effect = Some(effect);
+        }
+    };
+    set(&mut content, "temp-greedy", RunFightEffect::OwnArmor { n: 4 });
+    set(
+        &mut content,
+        "temp-thick-skin",
+        RunFightEffect::OwnArmor { n: -2 },
+    );
+    set(
+        &mut content,
+        "temp-curse-1",
+        RunFightEffect::EnemyHealth { n: -5 },
+    );
+    let state = known_fight(&content, &[]);
+    let plain = run_fight_setup(&state, &content).unwrap();
+
+    let greedy = holding(&state, &[("temp-greedy", 1)]);
+    assert_eq!(run_fight_setup(&greedy, &content), Some(plain.clone()));
+    let unknown = cursed(&state, &["no-such-curse"]);
+    assert_eq!(run_fight_setup(&unknown, &content), Some(plain.clone()));
+
+    let thin = holding(&state, &[("temp-thick-skin", 2)]);
+    assert_eq!(
+        run_fight_setup(&thin, &content)
+            .unwrap()
+            .human_handicap
+            .hero_armor,
+        None
+    );
+    let weak = cursed(&state, &["temp-curse-1"]);
+    assert_eq!(
+        run_fight_setup(&weak, &content)
+            .unwrap()
+            .enemy_handicap
+            .hero_health,
+        Some(20)
+    );
+}
+
+#[test]
+fn r2922001_thick_skins_armor_reaches_the_fights_hero_and_every_cursed_setup_starts() {
+    // R2922001, R2922000: the human's starting Armor is on its hero when the game is created, and a
+    // setup with every curse and every Combat artifact at its highest level is one the engine takes.
+    let content = catalog_content();
+    let state = holding(&fight_at(&content, 0), &[("temp-thick-skin", 2)]);
+    let setup = run_fight_setup(&state, &content).unwrap();
+    let game = create_recorded_game(&fight_options(&setup));
+    assert_eq!(game.players[PlayerId::P1].hero.armor, 2);
+    assert_eq!(game.players[PlayerId::P2].hero.armor, 0);
+    assert_eq!(
+        game.players[PlayerId::P1].handicap.and_then(|h| h.hero_armor),
+        Some(2)
+    );
+
+    let every: Vec<&str> = content.curses.iter().map(|c| c.id.as_str()).collect();
+    let combat: Vec<(&str, i32)> = content
+        .passives
+        .iter()
+        .filter(|p| p.kind == RunPassiveKind::Combat)
+        .map(|p| (p.id.as_str(), RUN_ARTIFACT_LEVEL_MAX))
+        .collect();
+    let all = cursed(&holding(&fight_at(&content, 0), &combat), &every);
+    assert_eq!(engine_takes(&run_fight_setup(&all, &content).unwrap()), Ok(()));
 }

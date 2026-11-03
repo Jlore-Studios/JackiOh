@@ -100,8 +100,9 @@
   }
 }
 
-/* The chip's button: the same size as "Result" beside it. */
-.result-overlay__their-hand {
+/* The chip's buttons: "Their hand" and "Result", the same size beside each other. */
+.result-overlay__their-hand,
+.result-overlay__open {
   min-height: 44px;
   padding: 8px 14px;
   border-radius: var(--radius-md);

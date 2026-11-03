@@ -3,10 +3,10 @@
 // palette or sub-look at any gallery scale, through a director of its own as the stat showcase's, and
 // any card's table entry as that card's play through the real board's effects layer (#2793: a motif,
 // a recipe, a set piece or a Field card's aura, the card standing in the backrow; R2797000: a `death`,
-// `trigger` or `activate` motif from its hook's marker under the play), or as the fixture set piece
-// (R2785000), its play holding the board for the set piece's beat until a tap, a click or Space. Dev
-// only: chunks.tsx loads it behind DEV_ONLY, so a production build leaves it out and serves a 404 here,
-// as at `/dev/hotseat`.
+// `trigger` or `activate` motif from its hook's marker under the play; R2794000: a marquee Unit's
+// entrance as it lands), or as the fixture set piece (R2785000), its play holding the board for the set
+// piece's beat until a tap, a click or Space. Dev only: chunks.tsx loads it behind DEV_ONLY, so a
+// production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
 
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -60,7 +60,7 @@ function isSystemMomentName(name: string): name is SystemMoment {
   return (SYSTEM_MOMENTS as readonly string[]).includes(name);
 }
 
-/** What a card's option says it plays: its motif, its recipe, a set piece or its aura. */
+/** What a card's option says it plays: its motif, its recipe or entrance (R2794000), a set piece or its aura. */
 function playLabel(play: GalleryCardPlay): string {
   switch (play.kind) {
     case "board":
@@ -68,6 +68,7 @@ function playLabel(play: GalleryCardPlay): string {
     case "hook":
       return `${play.hook} ${play.motif}`;
     case "recipe":
+    case "entrance":
       return play.key;
     case "setPiece":
       return "set piece";
