@@ -14731,17 +14731,8 @@
       "taken_asks": []
     },
     "2924": {
-      "action": "plan",
-      "asks": [
-        "c:6605490871"
-      ],
-      "build_next": {
-        "from_run": "41648417037",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-03T14:15:17Z",
-        "until": "2026-11-03T14:45:17Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-03T14:15:08Z",
         "difficulty": "medium",
@@ -14760,10 +14751,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- 1. Re-read `apps/web/src/game/Game.tsx` lines 220\u2013260 (the `interaction` state and the `shown` view), 505\u2013575 (`legal` gated on `shown === view`, the concede adjust-during-render block at line 564 to copy), and `apps/web/src/game/contract.ts` lines 58\u201370 (`testid.card`, `testid.handCard`).\n- 2. In `Game`, directly after `const [interaction, setInteraction] = useState<Interaction>(IDLE);` (~line 223), add:\n- `const [selectionKey, setSelectionKey] = useState<string | null>(null);`\n- with a comment naming the turn clock (\u00a710.10): the key is the shown turn, active seat, and viewer the selection was built on.\n- 3. After the emote-menu adjust-during-render block (~line 571, before the `useEffect` on `shown.result`), add the reset, computing the key from `shown`, never from `view`:\n- `const shownKey = `${shown.turn}:${shown.active}:${shown.viewer}`;`\n- `if (selectionKey !== shownKey) { setSelectionKey(shownKey); if (interaction.stage !== \"idle\") setInteraction(IDLE); }`\n- Keying on the remembered shown key (not `shown` vs `view`) matters: while an animation holds the board back, `shown` is old and `view` is new, and comparing them would drop the selection mid-animation on every animated turn change. This copies the concede dialog's pattern at line 564, so no effect \u2026\n- 4. Do not change `actions.ts`, `Prompt.tsx`, or `DragLayer.tsx`. `highlightFor` and `outstandingNeed` already render only the passed `interaction`; once it is `IDLE` the glow and the play picker vanish on their own.\n- 5. In `Game.test.tsx`, extend the fixtures import (line 15) with `card` and `waitingPending`. Add the three tests from **Tests** below. Build every view with `events: []` (the `baseView` default): with no new events the runner stays idle and `shown` swaps to the new view synchronously, so no timer \u2026\n- 6. Run `pnpm --dir apps/web test src/game/Game.test.tsx` and keep all tests green.\n- ## Tests\n- All in `apps/web/src/game/Game.test.tsx`, new block `describe(\"a half-built play or attack is dropped at the turn change (#2924)\")`. Shared setup inside the block:\n- ```tsx\n- const attacker = (): PlayerView => baseView({\n- you: emptySide(\"p1\", { units: [unit(\"p1\", { instanceId: \"u1\" }), null, null, null, null] }),\n- opponent: emptySide(\"p2\", { units: [unit(\"p2\", { instanceId: \"e1\" }), null, null, null, null] }),\n- });\n- const attack: ActionBody = { type: \"attack\", attackerId: \"u1\", targetId: \"e1\" };\n- ```\n- - Test 1, `it(\"drops the selected attacker when the turn changes and keeps it dropped next turn\")`: render `attacker()` with `legal={[attack]}`; `fireEvent.click(screen.getByTestId(testid.card(\"u1\")))`; assert `card-u1` has `data-selected=\"true\"` and `[data-testid=\"card-e1\"][data-glow]` is present.\u2026\n- - Test 2, `it(\"closes a play's own picker when the view moves to the opponent's turn\")`: `mine = baseView({ you: emptySide(\"p1\", { hand: [card({ instanceId: \"h1\" })] }) })`, `plays = [{ type: \"play\", instanceId: \"h1\", zone: { row: \"units\", lane: 1 } }, { type: \"play\", instanceId: \"h1\", zone: { row:\u2026\n- - Test 3, `it(\"keeps the selected attacker through view updates within the same turn\")`: select `u1` as in test 1; rerender `{ ...first, clockMs: 59000 }` with the same legal and assert `card-u1` still has `data-selected=\"true\"`; rerender with `pending: waitingPending` and assert still selected; re\u2026\n- - Command: `pnpm --dir apps/web test src/game/Game.test.tsx`.\n- ## Done when\n- - [ ] Selecting an attacker, moving to the opponent's turn, and returning next turn leaves nothing selected, nothing glowing, and a click on the old target sends nothing.\n- - [ ] A play's own picker open at the turn change is gone on the opponent's turn.\n- - [ ] A selection survives a same-turn view update (clock tick; opponent's trap prompt appearing and resolving).\n- - [ ] `pnpm --dir apps/web test src/game/Game.test.tsx` passes with no other test touched.\n- ## Risks\n- - Resetting too eagerly within a turn (every animated view swap, every `pending` change) would break in-progress plays. Avoided by keying the remembered state on `turn`/`active`/`viewer` only, never on view identity or `events`.\n- - Game over changes `result` but not turn/active/viewer, so the reset does not fire there; the selection stays in state but invisible via `highlightFor`'s empty-legal path under the result overlay. That matches today; no change needed.\n- - A pointer drag in flight across the turn change still ends through `DragLayer`'s own cancel path; this change only drops the committed `interaction` state.\n- - No named constants are added (CLAUDE.md rule 9); the key is a render-local string, not a tunable.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2924 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2924/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-03T13:53:28Z",
       "owner_why": "it plans it",
@@ -14776,12 +14766,14 @@
       "provider": "muse",
       "queued_at": "2026-11-03T13:47:38Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41648417037",
+      "run_id": "pending:7de2113d-1793715355",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-03T13:53:28Z",
+      "started_at": "2026-11-03T14:16:23Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6605490871"
+      ]
     },
     "2925": {
       "action": "plan",
@@ -15153,9 +15145,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T13:58:30Z",
+    "at": "2026-11-03T14:16:23Z",
     "url": "",
-    "what": "build #2930 on muse"
+    "what": "build #2924 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T13:50:15Z",
