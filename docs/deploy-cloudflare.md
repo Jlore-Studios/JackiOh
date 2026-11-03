@@ -13,7 +13,7 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 | Worker | `jackioh-staging` (`wrangler.jsonc` `env.staging`) | `jackioh` (`wrangler.jsonc`'s top level) |
 | Builds from | `main`, after main's push-to-main CI run passes (`deploy-staging.yml`) | `production`, by hand: `/promote` on the production issue, once the super run passed (`promote-production.yml`) |
 | Game server | one `jackioh-staging-server` container | one `jackioh-server` container |
-| Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project), where the development lanes file too | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi`: live games only (section 8) |
+| Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project) | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi` (section 8) |
 | Routing and headers | `apps/web/public/_redirects` and `_headers`, `wrangler.jsonc` | the same |
 
 Each site is one Worker at one origin (`apps/edge/README.md`). Every path but `/api/*` and `/ws/*` is
@@ -344,8 +344,8 @@ Each site has a Supabase project of its own, both in the jlore-studios organizat
 | --- | --- | --- |
 | Project | JackiOh-Staging, `exmjdaswedxhnzmpzqrq`: the original project, which production used until the move | JackiOh-Production, `fuzpvmjdejvbjcarypyi`, made on 2026-11-01 |
 | Named in | `apps/web/.env.staging`, `wrangler.jsonc` `env.staging`, `infra/supabase.tf` | `apps/web/.env.production`, `wrangler.jsonc`'s top level, `infra/supabase.tf` |
-| Card statistics | the development lanes' (`gather.yml`, `learn.yml`'s import, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | live games only |
-| Read by | `db-size.yml` through `STATS_IMPORT_DATABASE_URL` | `winrates-refresh.yml` and `db-size.yml` through `STATS_DATABASE_URL`, a read-only login |
+| Card statistics | the development lanes' (`gather.yml`, `learn.yml`'s import, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | the same development lanes' (through `PRODUCTION_STATS_IMPORT_DATABASE_URL`) and players' games (R1933001) |
+| Read by | `db-size.yml` through `STATS_IMPORT_DATABASE_URL` | `winrates-refresh.yml` and `db-size.yml` through `STATS_DATABASE_URL`, the read-only login `stats_reader` |
 
 `apps/web/src/net/env-production.test.ts` fails when the two builds name one project, or when a
 build's project is not its own server's `SUPABASE_URL`.
@@ -359,8 +359,10 @@ token), copies staging's to production, first with `dry_run` to list the changes
 not hand back, SMTP's password and each provider's client secret among them, it leaves out whole and
 names in the run's warnings: those are set by hand. The new
 project has its own signing keys, so every player signs in once more after the switch, with the same
-password. `STATS_DATABASE_URL` moves to a read-only login on this project, made as `training/learn.md`
-makes `stats_importer` but granted only `select`.
+password. The project's two statistics logins, `stats_importer` and `stats_reader` (read-only), came
+with the copy; Actions -> cutover, step `stats-logins`, gives each a password of its own and prints
+their addresses sealed to a key a person holds, who opens them into `PRODUCTION_STATS_IMPORT_DATABASE_URL`
+and `STATS_DATABASE_URL` (done on 2026-11-03).
 
 **Email.** Both projects send their sign-in mail (confirmations, password resets, invites) through
 Resend, from `JackiOh <no-reply@jackioh.com>`, at most 30 an hour each: Supabase's own mailer reaches
@@ -393,9 +395,11 @@ holds only the development imports' batches, so none of it comes. Then Advisors 
 project (row-level security is on for every `public` table, as on staging), and the counts of
 `profiles`, `matches` and `auth.users` on both sides, which must agree.
 
-**Production's figures count live games alone** (R1933000, the owner's decision of 2026-11-01).
-§9.11's publication gate pads a patch's public figures with development games until it has
-`PUBLIC_STATS_MIN_LIVE_GAMES` live games; production holds none, so its `/stats` shows live games
-from the first game (`not enough games` until a card has `CARD_STATS_MIN_SAMPLE`), and
-`winrates-refresh.yml`'s provisional refresh (R2386000) waits for live games too. That is why the
-copy leaves the development rows behind. Staging's site still reads both.
+**Production's figures count the development games too** (R1933001, the owner's decision of
+2026-11-03, which replaced R1933000's live games alone). §9.11's publication gate pads a patch's
+public figures with development games until it has `PUBLIC_STATS_MIN_LIVE_GAMES` live games, and with
+fewer than 100 players online at once a patch seldom gets there before the next ships. The copy left
+the development rows behind (R1933000 was in force); Actions -> cutover, step `dev-stats`, then
+replaced production's development rows with staging's, and the development lanes have filed into
+both since. Run `dev-stats` again whenever the two may have drifted, such as after an import that
+reached staging's and failed on production's and was not rerun.
