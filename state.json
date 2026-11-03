@@ -15032,25 +15032,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-8",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/fx/motifs/hand.ts",
-            "apps/web/src/routes/dev/fx.test.tsx"
-          ],
-          "from": "7adc619cd89cc22543a41a385a1ec87ed628a0ba",
-          "main": "c7145e4d941c6131378b5ef01be606e08775daf8"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "41648331449",
+            "run": "41665596168",
             "tier": "strong"
           }
         ],
-        "sha": "8e4ba07f0b0b64e1b07ac9645815d1b9c22c96ef",
+        "sha": "9ee40eb7373843e5751aa8724539bafd8c4f77ec",
         "tiers": {
           "claude": "strong"
         }
