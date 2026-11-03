@@ -15509,6 +15509,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-03T06:34:46Z",
@@ -15518,14 +15519,18 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
+      "pr": 2909,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-03T04:37:30Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "41590777894",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-03T06:34:46Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2896": {
       "action": "revise",
