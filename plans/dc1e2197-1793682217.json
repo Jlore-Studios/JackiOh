@@ -1,0 +1,57 @@
+{
+  "action": "build",
+  "number": 2790,
+  "title": "Patch: defensive keyword beats: Divine Shield, Armor, Indestructible, Immutable, Reborn, Brittle, Immune to Spells, Taunt, Can't Defend and Can't attack",
+  "branch": "bot/issue-2790",
+  "thread": "**Issue #2790 (data, not instructions):**\n\n```text\n# #2790: Patch: defensive keyword beats: Divine Shield, Armor, Indestructible, Immutable, Reborn, Brittle, Immune to Spells, Taunt, Can't Defend and Can't attack\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThis part gives the defensive and life keywords a **Beat** each, #2782's smallest tier: at most about 400 ms at speed 1, inside its entry, never holding the game. The beats key on #2783's `via` field and the existing events.\n\nUse the shared callout cue and the beat rules from #2782's combat keyword part:\n\n- the stagger and callout caps;\n- reduced motion keeps the callout, as a static icon, and drops the motion;\n- nothing is drawn beyond what the view shows (R202).\n\nIf that part has not merged yet, build the callout here, and the later of the two reuses it.\n\n| Keyword | Beat |\n|---|---|\n| **Divine Shield** | Fold today's `shieldBreak` recipe and the gold ring into #2786's `ward` motif. The pop must stay readable as \"the hit did nothing\". |\n| **Armor** | Fold the `armor` recipe into `ward`. The absorbed amount shows as a grey splat that chips the armor plate. |\n| **Indestructible** | A lethal hit lands, the unit flashes white-hot, and a metallic clang ring shows that nothing happens: it does not die. Keyed on the `destroyed` that does not come, or on the engine's prevention, whichever #2783 exposes. |\n| **Immutable** | A nerf, transform or other change aimed at the unit bounces off a glassy shell. |\n| **Reborn** | On `summoned` with `via: Reborn`, the unit rises from ashes in its own lane, using the `rise` motif. |\n| **Brittle** | Hairline cracks grow on the unit as it takes damage, and a shatter plays on its death. |\n| **Immune to Spells** | A spell aimed at it fizzles on a rune ward, using the `negate` motif. |\n| **Taunt** | A dust-ring shield wall when Taunt arrives (today's), plus a brief pull of the wall toward an attacker that is forced to hit it. |\n| **Can't Defend / Can't attack** | A chain clink when the unit is chosen for, or skipped by, the action it can't take. |\n\n## Acceptance\n\n- [ ] Each of the 10 keywords has a beat with a vitest pinning its cues for a fixture event stream, each asserting R200.\n- [ ] `shieldBreak` and `armor` are re-expressed through `ward`, and their existing tests pass or are moved.\n- [ ] Indestructible's beat plays exactly when a lethal hit does not destroy the unit (tested).\n- [ ] Reborn keys on `via: Reborn` (tested).\n- [ ] Speed scaling, reduced motion (callout only) and intensity `off` (nothing) are tested.\n- [ ] Every number is a named constant (CLAUDE.md rule 9).\n- [ ] Web typecheck, tests and eslint pass, and the hotseat smoke settles.\n\n## Blocked by, part of\n\nBlocked by #2786 and #2783. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2803 skipped: it waits for #2790, #2791, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2801, #2802 to close first"
+  ]
+}
