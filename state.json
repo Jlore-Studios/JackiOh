@@ -15046,21 +15046,22 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/routes/dev/fx.test.tsx"
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "spec/rulings/R2784000.md"
           ],
-          "from": "9ee40eb7373843e5751aa8724539bafd8c4f77ec",
-          "main": "35844cd8b76e362c1af00eba5e3531588e7c06dd"
+          "from": "01b384eb3ec9f6f5d7d67effb6355d991f18fe62",
+          "main": "a40d16827f642753b8bc3973c45b842343f50781"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "41680723525",
+            "run": "41694413516",
             "tier": "strong"
           }
         ],
-        "sha": "01b384eb3ec9f6f5d7d67effb6355d991f18fe62",
+        "sha": "bd411027d8ec37ac0310c1cb5085f4a5495bc040",
         "tiers": {
           "claude": "strong"
         }
