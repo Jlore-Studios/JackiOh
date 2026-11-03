@@ -14942,6 +14942,13 @@
     "2883": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-03T03:56:33Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "line 8 fails: practice.css already hides Offer draw with display:none, so the builder must keep that rule beside a new prop and not drop it, and the plan's 9 files sit near line 1's 10-file limit"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
