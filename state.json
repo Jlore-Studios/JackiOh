@@ -16438,6 +16438,8 @@
       "waiting_comment": 6617025366
     },
     "2967": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-03T21:16:04Z",
@@ -16451,8 +16453,11 @@
         "trail": "ta-art-picture\\\")).toBe(\\\"alt\\\")\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 600 pnpm exec vitest run src/collection/collection.test.tsx src/cards/art/pictures.test.ts 2>&1 | grep -E \\\"\\u00d7|FAIL|Test Files|Tests |AssertionError\\\" | head -\u2026\n- Bash: {\"command\": \"sleep 240; tail -3 /tmp/server-tests2.log; tail -4 /tmp/web-tests.log\", \"description\": \"Wait and check background tests\", \"timeout\": 400000}\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: tail -3 /tmp/server-tests2.log tail -4 /tmp/web-tests.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; do\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2940 && grep -n \\\"version-full-art\\\\|R2725\\\\|R2949\\\\|Signature\\\" crates/server/README.md | head -10\", \"description\": \"Check server README mentions of\u2026\n- Bash: {\"command\": \"git status --short\", \"description\": \"List changed and untracked files\"}\n- Bash: {\"command\": \"git diff HEAD -- apps/web/src/wire/generated/cosmetics.ts | cut -c1-200\", \"description\": \"Review the generated registry diff\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^exit=\\\" /tmp/server-tests2.log && grep -q \\\"^exit=\\\" /tmp/web-tests.log; do sleep 5; done; tail -1 /tmp/server-tests2.log; tail -1 /tmp/web-tests.log\", \"description\": \"W\u2026\n- Bash: {\"command\": \"grep -c \\\"^test .* ok$\\\" /tmp/server-tests2.log; grep -E \\\"FAILED|panicked\\\" /tmp/server-tests2.log | head; grep -E \\\"\\u00d7|FAIL\\\" /tmp/web-tests.log | head\", \"description\": \"Peek at in\u2026\n- said: Both test runs are still going with no failures so far. I'll wait for the completion notice.\n- Bash: {\"command\": \"until grep -q \\\"^exit=\\\" /tmp/server-tests2.log; do sleep 5; done; grep -E \\\"test result|^exit\\\" /tmp/server-tests2.log\", \"description\": \"Wait for server tests and show results\", \"timeou\u2026\n- said: The server suite passes: 1700 server tests, 202 lib, and 670 in the last binary. One test is ignored, and that was already the case before this change. Now waiting on the web suite.\n- Bash: {\"command\": \"until grep -q \\\"^exit=\\\" /tmp/web-tests.log; do sleep 5; done; grep -E \\\"Test Files|Tests |^exit|\\u00d7|FAIL\\\" /tmp/web-tests.log | head -20\", \"description\": \"Wait for web tests and show\u2026\n- said: Two web tests fail on my CSS. Let me read why.\n- Bash: {\"command\": \"grep -A25 \\\"FAIL |web| src/palette.test.ts\\\" /tmp/web-tests.log | head -40; grep -A30 \\\"FAIL |web| src/cards/borders.test.ts\\\" /tmp/web-tests.log | head -40\", \"description\": \"Show the tw\u2026\n- Bash: {\"command\": \"sed -n 60,90p apps/web/src/cards/borders.test.ts; grep -n \\\"UNMIGRATED\\\\|function colorsIn\\\\|const COLOR\\\\|rgb\\\\|hsl\\\" apps/web/src/palette.test.ts | head -20; grep -n \\\"pal-black\\\\|pal-\u2026\n- Bash: {\"command\": \"grep -rn \\\"cf-edge\\\\|cf-bezel\\\" apps/web/src --include=*.test.* | head\", \"description\": \"Find tests constraining edge and bezel\"}\n- Bash: {\"command\": \"sed -n 150,175p apps/web/src/cards/foil.test.ts; sed -n 1,12p apps/web/src/cards/borders.test.ts\", \"description\": \"Read foil test edge constraint and borders header\"}\n- Bash: {\"command\": \"grep -n \\\"const cardsCss\\\\|const cosmeticsCss\\\\|readFileSync(join(HERE\\\" apps/web/src/cards/cosmetics.test.tsx | head\", \"description\": \"Check which sheets cosmetics.test reads\"}\n- Bash: {\"command\": \"grep -n \\\"cardsCss\\\" apps/web/src/cards/cosmetics.test.tsx | head -5\", \"description\": \"Check whether cosmetics.test reads cards.css\"}\n- said: Now restructure the CSS: edge and bezel to `cards.css` beside the Radiant face, ring stays in `cosmetics.css` with a palette black.\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for old,new in pairs:\\n assert s.count(old)==1, (p, old)\\n s=s.replace(old,new)\\n open(p,'w').write(s)\\n\\nedit('apps/web/src/c\u2026\n- Bash: {\"command\": \"grep -c \\\"var(--pal-\\\" apps/web/src/cards/cards.css; python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for old,new in pairs:\\n assert s.count(old)==1, (p, old)\\n s=s.replace(ol\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/palette.test.ts src/cards/borders.test.ts src/cards/cosmetics.test.tsx src/cards/versionLooks.test.tsx src/cards/foil.test.ts src/card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2940 && echo \\\"- run 2: full web suite found palette.test (one-off rgb) and borders.test (--cf-edge only per border in cosmetics.css) failures; moved\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2940/e2e/artifacts/component/screenshots/card-versions.cy.tsx/card-versions-part-2.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2940 && grep -rl \\\"cards.css\\\\|cosmetics.css\\\" apps/web/src --include=*.test.* | tr '\\\\n' ' '\", \"description\": \"List tests reading the card styleshee\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/typescale.test.ts src/typography.test.ts src/patches/CardHistory.test.tsx src/cards/keywordVisuals.test.tsx src/cards/radiantDiff.test\u2026\n- said: Every test that reads the card sheets passes. Final lint/typecheck pass after the last edits:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2940 && pnpm --dir apps/web typecheck 2>&1 | tail -3; pnpm exec eslint apps/web e2e 2>&1 | tail -5; pnpm --dir e2e typecheck:component 2>&1 | tail -2\u2026\n- Bash: {\"command\": \"git diff HEAD --binary > /tmp/mine.patch; git ls-files --others --exclude-standard > /tmp/untracked.txt; export GIT_INDEX_FILE=/tmp/classify-index; rm -f $GIT_INDEX_FILE; git read-tree o\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('> **Edited for the owner')\\nstate='''## State\\n\\nRun 2 (build, opus, 2026-11-03): DONE, ev\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Alt art, Sketch and Alt full art card versions\"} --> This adds part 2 of #2725's card versions: **Alt art** (Rare), **Sketch** (Rare) and **Alt full art** (Legendary, a chase). Each is a registry entry whose offer is data and goes to a varied set of car\u2026"
       },
       "issue": 2940,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T23:05:44Z",
         "from_run": "41720238471",
         "gates": [
           {
@@ -16544,8 +16549,15 @@
         "source": "build",
         "until": "2026-11-03T23:34:37Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-03T23:04:37Z",
+      "run_id": "pending:c95f38df-1793747116",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-03T23:05:44Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16559,9 +16571,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T22:36:09Z",
+    "at": "2026-11-03T23:05:44Z",
     "url": "",
-    "what": "revise #2920 on claude-3"
+    "what": "review #2967 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-03T22:50:53Z",
