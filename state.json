@@ -14407,7 +14407,7 @@
       "failures": 0,
       "feedback_since": "2026-11-03T09:06:14Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 2797,
       "kind": "revise",
       "live": "revising",
