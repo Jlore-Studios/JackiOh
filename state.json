@@ -29614,12 +29614,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:33c8b33e-1793699551",
+        "run_id": "",
         "sha": "f887a784229ff9160550bbd5e705c0e9728ef976",
         "started_at": "2026-11-03T09:53:08Z",
         "status": "queued",
         "title": "Patch: size the gather run from the deckable card count",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 5
