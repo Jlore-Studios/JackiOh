@@ -2762,12 +2762,48 @@ button.modifier-badge[data-open="true"] {
     --card-h: clamp(44px, 10.6vh, 92px);
     --card-h: clamp(44px, calc((100cqh - 312px) / 5.24), 90px);
     --card-w: calc(var(--card-h) * 0.72);
+    /* #2876: a field card is a tile a little wider than it is tall and fills its zone, as on a
+       phone held sideways (`--card-w: calc(var(--card-h) * 1.25)` there, whose faces already
+       render at this shape): the tile's width-to-height cap (CLAUDE.md rule 9). */
+    --field-tile-max: 1.25;
     /* Your hand takes the height a phone held upright still has spare under the controls, so its
        cards read without a tap; B30's strips still hold for a 7- and a 10-card hand. */
     --hand-card-h: calc(var(--card-h) * 1.24);
     --hand-card-w: calc(var(--hand-card-h) * 0.68);
     grid-template-columns: minmax(0, 1fr) minmax(0, 34%);
     grid-template-rows: auto 1fr auto auto auto;
+  }
+
+  /* #2876: the lanes share the field's height, so no band of mat stays above the opponent's
+     backrow or below yours (the roomy pattern: the field is the board's `1fr` row). */
+  .field {
+    align-content: stretch;
+  }
+
+  .lane {
+    align-self: center;
+    height: 100%;
+    grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
+  }
+
+  /* #2876: a zone answers its card's size to itself, so the tile below reads the zone's own
+     box. Face internals resolve against `.cf-scale`, its own size container, and the pad and
+     badges use `%`/`px`/`em`, so nothing else moves. */
+  .zone {
+    container-type: size;
+  }
+
+  /* #2876: a field card is a tile as wide as its zone's inside or the tile cap, at the row's
+     height (`height: 100%` above still holds). `max-width` lifts the `0.72 × --card-h` cap for
+     field cards only: hand cards are no `.zone > .card`. `--def-scale` mirrors the base
+     `.lane` formula with the zone's live dims and the tile's width in place of `--card-w`. */
+  .zone > .card {
+    --zone-inside-w: 100cqw;
+    --zone-inside-h: 100cqh;
+    --tile-w: min(100%, calc(100cqh * var(--field-tile-max)));
+    --def-scale: min(1, tan(atan2(var(--zone-inside-w), var(--zone-inside-h))), tan(atan2(var(--zone-inside-h), var(--tile-w))));
+    width: var(--tile-w);
+    max-width: 100%;
   }
 
   .board > * {

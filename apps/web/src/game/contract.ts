@@ -299,6 +299,8 @@ export type BoardProps = {
   boardNotices?: ReactNode;
   /** R1853003: the Marketplace's shop, drawn in the control bar (#2645); absent (a replay), none. */
   market?: { legal: readonly ActionBody[]; onAction: (body: ActionBody) => void };
+  /** §9.9, R188: Offer draw, in the bar or ⋯'s menu (#2645); absent or true, it is drawn. Practice turns it off (#2883). */
+  showOfferDraw?: boolean;
   /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
   sandDisabled?: boolean;
   onClick?: (target: ClickTarget) => void;

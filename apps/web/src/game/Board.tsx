@@ -564,6 +564,7 @@ export default function Board({
   heroAside,
   boardNotices,
   market,
+  showOfferDraw = true,
   sandDisabled = false,
   onClick,
   onControl,
@@ -638,7 +639,9 @@ export default function Board({
   const theirBackdrop = theirSlots.field === DEFAULT_CARD_COSMETICS.field ? undefined : theirSlots.field;
   const theirTable = theirSlots.table === DEFAULT_CARD_COSMETICS.table ? undefined : theirSlots.table;
 
-  const offerDraw = (
+  // §9.9, R188: a board against the practice AI, which declines every draw offer at once, draws no Offer
+  // draw (`showOfferDraw`), in the bar or ⋯'s menu. It only hides the control: the action stays legal.
+  const offerDraw = showOfferDraw ? (
     <ControlButton
       control="offer-draw"
       testId={testid.offerDraw}
@@ -648,7 +651,7 @@ export default function Board({
       animating={animating}
       onPress={() => onControl?.("offer-draw")}
     />
-  );
+  ) : null;
   const concede = (
     <ControlButton
       control="concede"
@@ -805,9 +808,9 @@ export default function Board({
             <MatchMenu
               open={menuOpen}
               onOpenChange={openMenu}
-              dot={offerDrawText.title !== undefined}
-              glow={glowAttr(highlight, testid.offerDraw) ?? glowAttr(highlight, testid.concede)}
-              animating={animating?.get(testid.offerDraw) ?? animating?.get(testid.concede)}
+              dot={offerDraw !== null && offerDrawText.title !== undefined}
+              glow={(offerDraw === null ? undefined : glowAttr(highlight, testid.offerDraw)) ?? glowAttr(highlight, testid.concede)}
+              animating={(offerDraw === null ? undefined : animating?.get(testid.offerDraw)) ?? animating?.get(testid.concede)}
             >
               {offerDraw}
               {concede}

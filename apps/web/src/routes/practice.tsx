@@ -1285,6 +1285,8 @@ function PracticeScreen({
         }
         onOpenResult={config.lesson === undefined ? onShowResult : undefined}
         openResultTestId={practiceTestid.outcome}
+        // §9.9, R188: the AI declines every draw offer at once, so a practice game draws no Offer draw.
+        showOfferDraw={false}
       />
     </FullArtAllowed>
   );
