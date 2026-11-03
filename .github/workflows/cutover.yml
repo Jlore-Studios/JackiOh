@@ -551,7 +551,17 @@ jobs:
           done
 
           mkdir -p "$RUNNER_TEMP/copy" && cd "$RUNNER_TEMP/copy"
-          supabase db dump --db-url "$staging" -f roles.sql --role-only
+          # Staging's session pooler holds 15 clients, and the servers on it keep theirs open while
+          # they idle (run 41581788146 found it full): each dump waits for a free one, five minutes at most.
+          retry() {
+            for wait in 30 60 60 60 90 0; do
+              "$@" && return 0
+              [ "$wait" = 0 ] && return 1
+              echo "::notice::the pooler is busy, trying again in ${wait}s"
+              sleep "$wait"
+            done
+          }
+          retry supabase db dump --db-url "$staging" -f roles.sql --role-only
           # A role's setting only a superuser may make, which Supabase's postgres is not (the first real
           # run, 41540999815, stopped at `log_min_messages`): left out, and named. The rest are named too.
           # Grants on a parameter (GRANT SET ON PARAMETER …), which need the grant option on it, go too.
@@ -560,8 +570,8 @@ jobs:
           sed -i -E "/$superuser/d" roles.sql
           # What is left, every quoted value blanked (a password's hash among them).
           grep -vE '^(--|$)' roles.sql | sed -E "s/'[^']*'/'…'/g; s/^/  roles.sql: /"
-          supabase db dump --db-url "$staging" -f schema.sql
-          supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
+          retry supabase db dump --db-url "$staging" -f schema.sql
+          retry supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
             -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
             -x public.game_record_batches
           for table in $stats; do
