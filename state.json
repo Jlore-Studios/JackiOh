@@ -15318,6 +15318,8 @@
       }
     },
     "2937": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T14:21:26Z",
@@ -15331,8 +15333,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: unsquish the game-over screen's \\\"Their hand\\\" cards on a phone\"} -->\n- ## What changed and why\n- **[`apps/web/src/game/reveal.css`](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2933/apps/web/src/game/reveal.css)** \u2014 three rules, one root cause deeper than the issue's guess:\n- 1. `.their-hand__card` now sizes both axes from one token (`--their-hand-h: 92px`, `width: calc(var(--their-hand-h) * 5 / 7)`); the phone media query sets the token to 66px so width follows. `aspect-ratio` is gone \u2014 no box dimension derives from it anymore.\n- 2. New `.their-hand__card > .cf { width: 100%; height: 100%; }` so the face fills the button exactly.\n- 3. New `.app-shell .their-hand__card { padding: 0; }` \u2014 this was the actual sliver. `.app-shell button` ([`index.css`](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2933/apps/web/src/index.css:338)) pads every button 9px 16px at specificity (0,1,1), beating the card's `padding: 0` (0\u2026\n- **[`e2e/cypress/component/their-hand.cy.tsx`](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2933/e2e/cypress/component/their-hand.cy.tsx)** (new) \u2014 layout spec mounting the finished game with the real catalog: face is 5:7 within 1px, fills the button on all four edges, name readable \u2026\n- Shared CardFace styles needed no change (`cards.css` untouched): `.cf` fills once given a real box, and `.cf-back` is `position: absolute; inset: 0`, so unknown cards fill on their own. `TheirHand.tsx`, `CardListSheet`, and everything under `crates/`/`spec/` are untouched.\n- ## How it was tested\n- - `pnpm --dir e2e exec cypress run --component --spec cypress/component/their-hand.cy.tsx` \u2014 pre-fix **0/4 pass** (face left edge 16px inside the button at all widths, Electron reproduces the sliver class), post-fix **4/4 pass**.\n- - `pnpm --dir apps/web test src/game/reveal.test.tsx` \u2014 7/7 pass, R434 suite green and unchanged.\n- - `pnpm --dir e2e typecheck:component` \u2014 clean. `pnpm exec eslint e2e/cypress/component/their-hand.cy.tsx` \u2014 clean (CSS files aren't covered by eslint config). `cargo fmt --check` \u2014 clean.\n- - `ui-walkthrough` at iPhone SE 320px on `/dev/hotseat`: before/after screenshots at `.cache/browse/their-hand-before.png` (syllable-per-line slivers) and `.cache/browse/their-hand-after.png` (six full readable faces). Out-of-scope check: the chip's `CardListSheet` faces measure 107.1\u00d7150 with exac\u2026\n- ## Decisions the issue didn't settle\n- - **Padding reset over aspect-ratio-only fix.** The issue's likely cause (WebKit aspect-ratio) is real insurance, but measured evidence in Chromium showed the padding override as the sliver's cause. Rejected alternative: explicit width alone \u2014 verified live that faces stayed 15px until the padding \u2026\n- - **10-card scroll half runs at 568\u00d7320 landscape.** At portrait phone heights ten 66px cards fit under `max-height: 42vh` without scrolling, so the scroll assertion would be vacuous; landscape forces genuine overflow and also covers the media query's landscape arm.\n- - **Base `padding: 0` kept** alongside the qualified override (documents intent for bare mounts; mirrors the `.cf .card-name` belt-and-suspenders precedent in `cards.css`).\n- ## For the reviewer\n- - WebKit/Safari still needs the issue owner's re-verify: Cypress ran Electron/Chromium. The fix removes every engine-dependent sizing path (both axes from one token, face at 100%/100%, padding explicitly zeroed), so there is nothing left for WebKit to resolve differently.\n- - Mid-session the Vite dev server served a stale transform (old media rule lingered post-HMR); I restarted it and curl-verified the served CSS before the after-measurements. Worth knowing if HMR ever shows a half-applied state again.\n- - Environment only, not delivered: Cypress binary installed by unsetting `CYPRESS_INSTALL_BINARY`; Xvfb run via a user-namespace bind of the cached `xkbcomp` (`~/bin/Xvfb` wrapper).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2933 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-2933/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2933,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-03T15:33:55Z",
         "from_run": "41652889079",
         "gates": [
           {
@@ -15391,8 +15396,15 @@
         "source": "build",
         "until": "2026-11-03T15:59:33Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-03T15:29:33Z",
+      "run_id": "pending:133fd798-1793720009",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-03T15:33:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -15690,9 +15702,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-03T15:33:16Z",
+    "at": "2026-11-03T15:33:55Z",
     "url": "",
-    "what": "review #2939 on claude-6"
+    "what": "review #2937 on muse"
   },
   "last_sweep": {
     "at": "2026-11-03T15:11:41Z",
