@@ -455,6 +455,7 @@ describe("scripts/ci-scope.sh", () => {
         "vitest.config.ts",
         "scripts/browse.sh",
         "scripts/promote-production.sh",
+        "scripts/server-image.sh",
         "scripts/worktree.sh",
       ],
     },

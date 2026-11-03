@@ -37,9 +37,13 @@ always equal that commit's.
 2. CI runs again on the push to main. When it passes, `deploy-staging.yml` checks out that commit
    (or main's newest green commit, if a newer one already passed, so staging never goes backwards),
    builds the web with `apps/web/.env.staging`, checks the bundle, and runs `wrangler deploy --env
-   staging`, which builds the server's image on the runner and deploys the Worker, the static files
-   and the container together. It then polls `https://staging.jackioh.com/api/catalog` (through
-   Access, with a service token) until the server reports the commit in `x-deployed-commit`.
+   staging`, which deploys the Worker, the static files and the container together. The server's
+   image is `scripts/server-image.sh`'s: named by what it is built from, so it is pushed to
+   Cloudflare's registry once (from CI's `deploy-image`, or built on CI's layer cache) and a commit
+   that changes none of it reuses it; the WASM modules likewise come from GitHub's cache when
+   nothing under `crates/` changed. It then polls `https://staging.jackioh.com/api/catalog`
+   (through Access, with a service token) until the server reports the commit in
+   `x-deployed-commit`.
 3. Production moves only when someone asks (section 2.1): a `/promote` on the open issue labeled
    `production merge`. `promote-production.yml` then takes the newest commit of `main` whose
    push-to-main CI run succeeded (or the one named), and opens a pull request from
@@ -324,9 +328,11 @@ once a day and opens a `human` issue once the period's spend, or its projection,
   §4.1), and now without Render's "keep the old instance until the new one is healthy".
 - **Cold starts.** The first request after ten idle minutes waits for the container and the
   server's boot (step 5, item 7 measures it).
-- **Every deploy builds the image.** `wrangler deploy` runs `docker build` on a fresh runner, so a
-  deploy takes as long as a cold release build of the server. Caching the build's layers between
-  runs is the next improvement.
+- **A deploy whose image is new still waits for its rollout.** Since 2026-11-03 neither deploy
+  compiles the server when the registry or CI has its image (`scripts/server-image.sh`), and a
+  promotion of a commit staging already ran pushes nothing. The registry keeps the newest ten tags
+  (and whatever a site runs), so a Worker rolled back further than that finds no image: promote a
+  revert instead.
 - **Containers are in beta** on Cloudflare: limits and behaviour can change; read their changelog
   when something surprises you.
 
