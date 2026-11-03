@@ -14896,11 +14896,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-03T04:05:16Z",
+        "at": "2026-11-03T04:34:40Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Easy line 2 fails (server + web + spec, ~30 files) and line 3 fails (spec change); 'design across crates' is hard per the rule, which I apply rather than guessing scope down."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "design across crates (server actor, social API, web client, spec ruling) in about 28 files; nothing on the easy list holds"
       },
       "failures": 0,
       "forced": false,
