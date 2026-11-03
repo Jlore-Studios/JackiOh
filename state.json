@@ -15377,11 +15377,24 @@
       }
     },
     "2897": {
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "at": "2026-11-03T06:01:11Z",
+        "built_by": "claude-4",
+        "by": "`claude` (strong)",
+        "sha": "54c12b84d503a73fd9bf28847f89cea6c677aa88"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-03T03:57:19Z",
       "issue": 2883,
       "kind": "revise",
+      "merge_owner": "claude-4",
       "self_check_findings": [],
       "votes": {
         "approvals": [
