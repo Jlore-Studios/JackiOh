@@ -110,7 +110,7 @@
   ],
   "upload_transcripts": false,
   "resume_sessions": true,
-  "hold_minutes": 60,
+  "hold_minutes": 120,
   "hold_exempt": ["muse"],
   "spot_check_every": 5,
   "fullsend_adopt": true,

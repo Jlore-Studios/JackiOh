@@ -68,14 +68,14 @@ const DELEGATED: readonly Delegated[] = [
   {
     recipe: "buff",
     events: () => [{ type: "upgraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: 1, health: 1 } }],
-    motif: "bless",
-    flavor: "Holy",
+    motif: "transmute",
+    flavor: "Nerd",
   },
   {
     recipe: "buff",
     events: () => [{ type: "degraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: -1, health: -1 } }],
-    motif: "curse",
-    flavor: "Dark",
+    motif: "transmute",
+    flavor: "Nerd",
   },
   { recipe: "armor", events: () => [{ type: "damageAbsorbed", sourceId: null, targetId: ENEMY, absorbed: 5, combat: false }], motif: "ward", flavor: "Holy" },
   { recipe: "shieldBreak", events: () => [{ type: "divineShieldLost", instanceId: ENEMY }], motif: "ward", flavor: "Holy" },

@@ -84,6 +84,10 @@ const S2 = {
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
   FX_WALLS_TRAUMA: 0.45,
+  // #2796: Meditative's Flourishes.
+  FX_JADE_CRACK_TRAUMA: 0.3,
+  FX_HARMONY_TRAUMA: 0.15,
+  FX_CN_SWEEP_TRAUMA: 0.35,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
   // MN05: Armor's shield flash (R1363).
@@ -155,8 +159,20 @@ const S2 = {
     tithe: 0.1,
     tally: 0.15,
     snap: 0.4,
+    send: 0,
+    radiance: 0.15,
+    mend: 0,
+    deal: 0,
+    seal: 0.2,
   },
   FX_MOTIF_TITHE_MAX: 5,
+  FX_MOTIF_DEAL_MAX: 5,
+  // Issue #2793: Core's flourishes, and a set pass's floor.
+  FX_TIDE_TRAUMA: 0.35,
+  FX_WISH_TRAUMA: 0.3,
+  FX_FORGE_TRAUMA: 0.4,
+  FX_FORGE_REACH: 0.2,
+  FX_SET_PASS_FLOOR: 0.55,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
@@ -176,6 +192,10 @@ const S2 = {
   FX_FIRST_STRIKE_BREAK_REACH: 0.6,
   FX_PIERCE_REACH: 0.8,
   FX_FLYING_LUNGE_LIFT: 0.18,
+  // Issue #2791: the tempo keyword beats (R2791000).
+  FX_STACK_LAND: { x: 0.62, y: 0.35 },
+  FX_DEFT_FEINT_STEP: 0.18,
+  FX_CHARGE_LINE_SPREAD: 0.22,
   FX_SUMMON_BRUTE_TRAUMA: 0.5,
   FX_SUMMON_FLAVOR_TUNING: {
     physicalSpark: { count: 8, power: 1.2 },
@@ -245,6 +265,11 @@ const S2 = {
   FX_COUNTER_TRAUMA: 0.25,
   FX_REWIND_TRAUMA: 0.35,
   FX_INTENSITY_SCALE: { off: 0, low: 0.45, normal: 1, high: 1.6 },
+  FX_QUEST_HOLD_MS: 1_500,
+  FX_QUEST_TRAUMA: 0.5,
+  FX_SYSTEM_TRAUMA: 0.3,
+  FX_JADE_SCALE_STEP: 0.15,
+  FX_JADE_SCALE_MAX: 2,
   FX_SETTINGS_KEY: "jackioh.fx.v1",
   FX_CENTER: { x: 0.5, y: 0.45 },
   FX_TEXT: {
@@ -260,6 +285,7 @@ const S2 = {
     diceRolled: "Dice roll",
     turnCutShort: "Turn cut short",
     autopilot: "The AI takes the turn",
+    questComplete: "Quest complete",
     votedOut: "Voted out",
     escaped: "Escaped the universe",
     victory: "Victory",
@@ -296,6 +322,7 @@ describe("S2 the effects constants", () => {
       constants.FX_REDIRECT_FLIGHT_FRACTION,
       constants.FX_WALLS_HIT_AT,
       constants.FX_WALLS_REACH,
+      constants.FX_FORGE_REACH,
       constants.FX_DEATH_BOLT_FLIGHT_FRACTION,
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
@@ -340,6 +367,10 @@ describe("S2 the effects constants", () => {
       constants.FX_RESULT_TRAUMA,
       constants.FX_TAKEOVER_TRAUMA,
       constants.FX_BEAT_TRAUMA,
+      // #2796: Meditative's Flourishes.
+      constants.FX_JADE_CRACK_TRAUMA,
+      constants.FX_HARMONY_TRAUMA,
+      constants.FX_CN_SWEEP_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);

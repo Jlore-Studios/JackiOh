@@ -33,12 +33,18 @@ export const FX_MOTIF_NAMES = [
   "tithe",
   "tally",
   "snap",
+  "send",
+  "radiance",
+  "mend",
+  "deal",
+  "seal",
   "aura",
 ] as const;
 
 /**
  * The motifs `MOTIF_PLANNERS` draws: #2784's damage and removal family, then #2786's life and
- * stats, board, cards and mana, and trap motifs.
+ * stats, board, cards and mana, and trap motifs, then #2793's send, radiance and mend, then #2796's
+ * `deal` and `seal`.
  */
 export const FX_DRAWN_MOTIFS = [
   "bolt",
@@ -69,6 +75,11 @@ export const FX_DRAWN_MOTIFS = [
   "tithe",
   "tally",
   "snap",
+  "send",
+  "radiance",
+  "mend",
+  "deal",
+  "seal",
 ] as const;
 
 /**

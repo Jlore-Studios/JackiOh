@@ -531,6 +531,19 @@ func Report(ctx *hctx.Context) string {
 		lines = append(lines, fmt.Sprintf("- Waiting for their own review run (`%s`): %s.",
 			config.LabelOwnReview, strings.Join(reviews, "; ")))
 	}
+	var builds []string // planned in a lane of their own, which waits for their build (#2903)
+	for _, number := range queue.BuildsNext(state) {
+		kept := queue.BuildNextOf(state.Obj("items").Obj(strconv.Itoa(number)))
+		line := fmt.Sprintf("#%d on `%s` (`%s`)", number, kept.Str("provider"), kept.Str("model"))
+		if until := clock.ParseISOValue(kept.Get("until")); until.After(ctx.Now()) {
+			line += " (its lane kept until " + plan.Clock(ctx, until) + ")"
+		}
+		builds = append(builds, line)
+	}
+	if len(builds) > 0 {
+		lines = append(lines, fmt.Sprintf("- Waiting for their build on the model that planned them: %s.",
+			strings.Join(builds, "; ")))
+	}
 	var owners []string // held for their owners (#2748), as the planner or the sweep last found them
 	for _, issue := range labelled(config.LabelWaiting, nil) {
 		line := "#" + py.Str(issue.Get("number"))
