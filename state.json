@@ -16179,6 +16179,7 @@
       "run_id": "41713586341",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 30,
       "started_at": "2026-11-03T20:32:54Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -30040,9 +30041,33 @@
         "title": "Patch: the dungeon run's curses and Combat artifacts change its fights",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "a368a8dd912d8ef1ce8362db509eb6f078bfb899",
+        "issue": 2930,
+        "merged_at": "2026-11-03T21:33:06Z",
+        "n": 30,
+        "pr": 2961,
+        "queued_at": "2026-11-03T21:33:06Z",
+        "sha": "a1bcc2af170bc25ac91309f1375519ac73577c83",
+        "status": "queued",
+        "title": "Patch: card tests use the crate's scenario helper instead of registering the catalog before every scenario",
+        "tries": 0
       }
     ],
-    "count": 29
+    "count": 30
   },
   "statistics": {
     "at": "2026-11-03T21:06:16Z"
