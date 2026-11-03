@@ -4,6 +4,8 @@
 // `{ bespoke: "<recipe>" }` (bespoke.ts), `{ setPiece: "<key>" }` (a board clear's set piece, setPieceKeys.ts,
 // R2800000) or a motif per hook: `{ cast: { motif, palette?, row? } }`. The tables are bundled data keyed by
 // a definition the viewer reads; a hidden play never keys one (R202).
+// R2787000: a hooks entry may also carry, or be only, an `aura: { look, palette?, scope }`, the standing
+// look its card wears while it holds (fx/aura/); a `zone` or `lane` aura stands in a Field card's zone.
 
 import JSON5 from "json5";
 
@@ -12,6 +14,7 @@ import type { CardDefs, SetName } from "@jackioh/shared";
 import { messageOf } from "../../net/errors.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isRecord } from "../../wire/json.ts";
+import { isAuraFieldType, isAuraLook, isAuraScope, type AuraLook, type AuraScope } from "../aura/looks.ts";
 import { isPalette, type FxPalette } from "../flavors.ts";
 import { isCardHook, isMotifName, type FxCardHook, type MotifName } from "../motifs/names.ts";
 import { isSetPieceKey, type SetPieceKey } from "../setPieceKeys.ts";
@@ -46,13 +49,17 @@ export const FX_STINKYSCAPE_SPLIT = "stinkyscape-091";
 /** A motif on one hook. `palette` is a flavor or `"<Flavor>/<sub-look>"` (the card's own look by default); `row` defaults to `replace`. */
 export type FxHookSpec = { motif: MotifName; palette?: FxPalette; row?: "keep" | "replace" };
 
+/** R2787000: a card's standing look. `palette` is a flavor or `"<Flavor>/<sub-look>"` (the card's own look by default). */
+export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope };
+
 export type FxCardEntry =
   | { kind: "none"; reason: string }
   | { kind: "bespoke"; key: BespokeKey }
   | { kind: "setPiece"; key: SetPieceKey }
-  | { kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>> };
+  | { kind: "hooks"; hooks: Partial<Record<FxCardHook, FxHookSpec>>; aura?: FxAuraSpec };
 
 const HOOK_FIELDS: readonly string[] = ["motif", "palette", "row"];
+const AURA_FIELDS: readonly string[] = ["look", "palette", "scope"];
 
 function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => never): FxHookSpec {
   if (!isRecord(value)) fail(`${hook} must be { motif, palette?, row? }`);
@@ -69,6 +76,25 @@ function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => 
   if (row !== undefined) {
     if (row !== "keep" && row !== "replace") fail(`row in ${hook} must be "keep" or "replace"`);
     spec.row = row;
+  }
+  return spec;
+}
+
+function parseAura(value: unknown, type: string, fail: (problem: string) => never): FxAuraSpec {
+  if (!isRecord(value)) fail("aura must be { look, palette?, scope }");
+  for (const field of Object.keys(value)) {
+    if (!AURA_FIELDS.includes(field)) fail(`unknown field "${field}" in aura`);
+  }
+  const { look, palette, scope } = value;
+  if (typeof look !== "string" || !isAuraLook(look)) fail(`unknown aura look "${String(look)}"`);
+  if (typeof scope !== "string" || !isAuraScope(scope)) fail(`unknown aura scope "${String(scope)}"`);
+  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type)) {
+    fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is side or board`);
+  }
+  const spec: FxAuraSpec = { look, scope };
+  if (palette !== undefined) {
+    if (typeof palette !== "string" || !isPalette(palette)) fail(`unknown palette "${String(palette)}" in aura`);
+    spec.palette = palette;
   }
   return spec;
 }
@@ -92,14 +118,19 @@ function parseEntry(value: unknown, type: string, fail: (problem: string) => nev
     return { kind: "setPiece", key };
   }
   const hooks: Partial<Record<FxCardHook, FxHookSpec>> = {};
+  let aura: FxAuraSpec | undefined;
   for (const [hook, spec] of Object.entries(value)) {
+    if (hook === "aura") {
+      aura = parseAura(spec, type, fail);
+      continue;
+    }
     if (!isCardHook(hook)) fail(`unknown hook "${hook}"`);
     hooks[hook] = parseHook(spec, hook, fail);
   }
-  if (Object.keys(hooks).length === 0) fail("names no hook");
+  if (Object.keys(hooks).length === 0 && aura === undefined) fail("names no hook");
   if (hooks.cry !== undefined && type !== "Unit") fail(`cry is a Unit's play; this card is a ${type}, whose play is cast`);
   if (hooks.cast !== undefined && type === "Unit") fail("cast is a non-Unit's play; a Unit's is cry");
-  return { kind: "hooks", hooks };
+  return aura === undefined ? { kind: "hooks", hooks } : { kind: "hooks", hooks, aura };
 }
 
 /**

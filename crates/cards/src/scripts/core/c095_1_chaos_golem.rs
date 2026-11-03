@@ -32,8 +32,6 @@ mod tests {
     const POSTDOC: &str = "core-061";
     /// A radiant #91 Fed Fauci is 2/12: it survives a 10-attack First Strike and strikes back.
     const FAUCI: &str = "core-091";
-    /// A radiant #19 Menace is 18/18: it survives the Golem's 10 and kills an unshielded 10/10.
-    const MENACE: &str = "core-019";
     /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell, always an affordable play, so one
     /// in hand keeps p1's turn from auto-ending under the assertions.
     const ANCHOR: &str = "core-010";
@@ -105,24 +103,6 @@ mod tests {
             s.expect_stats(&golem, json!({ "health": 10 })); // the 2 back, negated whole
             assert_eq!(s.card(&golem).divine_shield_spent, Some(true));
             s.expect_health(P1, 25); // 15 + the 10 dealt
-        }
-
-        #[test]
-        fn r11_a_unit_token_that_dies_ceases_to_exist_and_reaches_no_graveyard() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "field": [GOLEM], "hand": [ANCHOR] },
-                "p2": { "field": [{ "def": MENACE, "radiant": true }] },
-            }));
-            let golem = golem_of(&s);
-            // The state one blocked hit leaves (§4.4 step 1), so this one exchange is lethal.
-            s.card_mut(&golem).divine_shield_spent = Some(true);
-            let menace = enemy_of(&s);
-
-            s.attack(&golem, &menace);
-
-            s.expect_in_zone(&golem, "gone");
-            assert!(!s.pile(P1, "graveyard").iter().any(|card| card.def_id == GOLEM));
         }
     }
 

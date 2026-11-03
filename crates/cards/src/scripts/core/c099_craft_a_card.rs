@@ -279,9 +279,9 @@ mod tests {
                 assert!(!crate::card_def(id).token);
             }
 
-            // §10.8: the opponent is told a prompt is open and nothing about its options.
+            // §10.8: the opponent is told a prompt is open and nothing about its options but how many (R2739000).
             let as_seen_by_p2 = js(&s.view(PlayerId::P2))["pending"].clone();
-            assert_eq!(as_seen_by_p2, json!({ "forYou": false, "pendingFor": "p1" }));
+            assert_eq!(as_seen_by_p2, json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 }));
         }
 
         #[test]

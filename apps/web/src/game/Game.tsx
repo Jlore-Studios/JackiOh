@@ -30,6 +30,7 @@ import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
+import type { ChoiceHover } from "./choiceHover.ts";
 import Board from "./Board.tsx";
 import { useMarkBoardShown } from "./boardShown.ts";
 import ConfirmConcede from "./ConfirmConcede.tsx";
@@ -66,6 +67,7 @@ import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
@@ -142,6 +144,8 @@ export type GameProps = {
   loadouts?: SeatLoadouts | null;
   /** R738: `emit` sends this seat's aim as it changes; `opponent` is the opponent's as last relayed. */
   aim?: GameAim;
+  /** R2739001: `emit` sends the option of this seat's card picker under its pointer; `opponent` is theirs as last relayed. */
+  choiceHover?: ChoiceHover;
   /** #511: a replay's board: no drag, glow or R345 preference, and no prompt but `replayPrompt`'s. */
   replay?: boolean;
   /** R2211000: on a `replay` board, the open prompt is drawn read-only (Prompt's `readOnly`). */
@@ -212,6 +216,7 @@ export default function Game({
   deckCosmetics = null,
   loadouts = null,
   aim,
+  choiceHover,
   replay = false,
   replayPrompt = false,
   lesson = false,
@@ -760,6 +765,9 @@ export default function Game({
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
       {silent ? null : <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />}
+      {/* R2787000: the standing look of every Field Spell and lasting modifier the board shows, begun and
+          ended with the shown view; the newest view's events say which play added a modifier. */}
+      {silent ? null : <AuraLayer view={shown} latest={view} />}
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
       {silent ? null : <CardShowcase view={view} queue={runner} />}
@@ -783,6 +791,8 @@ export default function Game({
           lesson={lesson}
           // R2211000: a replay's prompt is drawn as offered and sends nothing.
           readOnly={replay}
+          // R2739001: hovers go both ways until the game ends, as aims do.
+          choiceHover={shown.result === null ? choiceHover : undefined}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
           // and must be answered, so it offers none: the button would do nothing.
           onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}

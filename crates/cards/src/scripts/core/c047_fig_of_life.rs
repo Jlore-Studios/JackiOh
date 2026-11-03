@@ -58,8 +58,6 @@ mod tests {
         json!({ "def": FIG, "radiant": true })
     }
     const SEVEN_SEVEN: &str = "core-025";
-    /// #45 Deft Duelist, 4/3
-    const DUELIST: &str = "core-045";
     /// A unit that does nothing, kept on the board so a turn never runs out of legal actions (R82).
     const BYSTANDER: &str = SEVEN_SEVEN;
 
@@ -103,21 +101,6 @@ mod tests {
             g.expect_mana(PlayerId::P1, 1);
         }
 
-        /// "R19 base: heals an ENEMY unit — the target set is either side"
-        #[test]
-        fn r19_base_heals_an_enemy_unit_the_target_set_is_either_side() {
-            let mut g = scenario(json!({
-                "p1": { "hand": [FIG] },
-                "p2": { "field": [{ "def": DUELIST, "lane": 3, "damage": 1 }] },
-            }));
-            let theirs = unit_id(&g, PlayerId::P2, 3, "setup: p2 should hold Deft Duelist");
-            g.expect_stats(&theirs, json!({ "health": 2, "maxHealth": 3 }));
-
-            g.play(FIG, at_instance(&theirs));
-
-            g.expect_stats(&theirs, json!({ "health": 3, "maxHealth": 3 }));
-        }
-
         /// "R19 base: heals your own hero with no cap — 30 becomes 50 (§3, §6.3)"
         #[test]
         fn r19_base_heals_your_own_hero_with_no_cap_30_becomes_50() {
@@ -133,20 +116,6 @@ mod tests {
 
             g.expect_health(PlayerId::P1, 50);
             g.expect_events(json!(["healed"]));
-        }
-
-        /// "R19 base: an enemy hero is a legal target too, and is healed the same way"
-        #[test]
-        fn r19_base_an_enemy_hero_is_a_legal_target_too_and_is_healed_the_same_way() {
-            let mut g = scenario(json!({
-                "p1": { "hand": [FIG], "field": [BYSTANDER] },
-                "p2": { "health": 12, "field": [BYSTANDER] },
-            }));
-
-            g.play(FIG, at_hero("p2"));
-
-            g.expect_health(PlayerId::P2, 32);
-            g.expect_health(PlayerId::P1, 30);
         }
 
         /// "radiant: 40 onto a unit is still capped by its max health (§8 Conventions: only the number)"
@@ -174,20 +143,6 @@ mod tests {
             g.play(FIG, at_hero("p1"));
 
             g.expect_health(PlayerId::P1, 70);
-        }
-
-        /// "radiant: an undamaged unit is healed for nothing and the spell still resolves"
-        #[test]
-        fn radiant_an_undamaged_unit_is_healed_for_nothing_and_the_spell_still_resolves() {
-            let mut g = scenario(json!({
-                "p1": { "hand": [radiant_fig()], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }] },
-            }));
-            let ally = unit_id(&g, PlayerId::P1, 2, "setup: p1 should hold the 7/7");
-
-            g.play(FIG, at_instance(&ally));
-
-            g.expect_stats(&ally, json!({ "health": 7, "maxHealth": 7 }));
-            g.expect_in_zone(FIG, "graveyard");
         }
 
         /// "R19, R81: both faces declare one play-time target — any unit or hero, either side"

@@ -358,9 +358,10 @@ mod m_plus_20_the_sequence_r1184000 {
             .collect();
         assert_eq!(shown, offered);
         assert_eq!(shown.last().map(String::as_str), Some("Stop"));
+        // R2739000: the other seat is shown how many answers, Stop not among them.
         assert_eq!(
             json_of(view_for(&state, P2).pending),
-            json!({ "forYou": false, "pendingFor": "p1" })
+            json!({ "forYou": false, "pendingFor": "p1", "optionCount": shown.len() - 1 })
         );
         // Two states differing only in the key show both seats the same view.
         let mut twin = round_trip(&state);

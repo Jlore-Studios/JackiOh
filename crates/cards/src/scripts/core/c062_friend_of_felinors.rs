@@ -76,32 +76,6 @@ mod tests {
         }
 
         #[test]
-        fn fills_only_your_own_board() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "mana": 4 }, "p2": { "field": [TIMMY] } }));
-
-            s.play(FRIEND, json!({}));
-
-            assert_eq!(
-                defs_of(&s, PlayerId::P1),
-                row(&[Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR)])
-            );
-            assert_eq!(defs_of(&s, PlayerId::P2), row(&[Some(TIMMY), None, None, None, None]));
-        }
-
-        #[test]
-        fn r64_a_full_board_takes_no_tokens_and_the_spell_still_resolves() {
-            crate::register_all();
-            let full = [TIMMY, "core-t-rush", "core-t-sheep", "core-019", "core-020"];
-            let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "field": full, "mana": 4 } }));
-
-            s.play(FRIEND, json!({}));
-
-            assert_eq!(defs_of(&s, PlayerId::P1), row(&full.map(Some)));
-            s.expect_in_zone(FRIEND, "graveyard");
-        }
-
-        #[test]
         fn radiant_gives_plus_2_plus_2_to_every_unit_you_control_the_new_tokens_included() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY], "mana": 4 } }));

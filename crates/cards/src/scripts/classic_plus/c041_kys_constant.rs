@@ -7,6 +7,8 @@
 //! (R81) among your other hand cards with such a number not already 3, the Spell fizzling with none. Base: one
 //! of them at random (R60; one choice draws nothing, R129). Radiant: a Discover of up to 3, shown to you only.
 //! The change is `tuning` (the cost through `cost_mod`), kept in every zone and by a copy.
+//! R2739000: the Radiant face sets `secret_option_counts`, since how many numbers its Discover offers is
+//! read off a hand card, so the other seat is never told it.
 
 use jackioh_engine::effects::{chosen_tuning_number, discover_number, set_number};
 use jackioh_engine::prelude::*;
@@ -65,6 +67,7 @@ pub fn script() -> CardScripts {
             })))]
         })),
         resume: IndexMap::from([("picked", hook(picked))]),
+        secret_option_counts: true,
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -296,7 +299,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn discover_up_to_3_different_numbers_on_the_card_shown_to_you_only_the_chosen_one_becomes_3() {
+        fn r2739000_discover_up_to_3_different_numbers_on_the_card_shown_to_you_only_the_chosen_one_becomes_3() {
             let mut s = constant(&[ARMORED], true, None);
             let targets = pick(&s, ARMORED);
             s.play(CONSTANT, targets);

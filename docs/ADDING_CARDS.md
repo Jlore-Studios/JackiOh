@@ -27,7 +27,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 10 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
 | 11 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its license row | `music-assets.test.ts` (the daily audio run) |
 | 12 | `crates/cards/card-text.yaml` (the entry's `zh`, row 8) | the card's Chinese (R1303): `name`, `base` and `radiant` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
-| 13 | `apps/web/src/fx/cards/<set>.json5` (Stinkyscape's `stinkyscape-1` to 090, `stinkyscape-2` from 091) | the card's line in catalog order, its name in a comment after it (R2784000; the file's header says how): a motif per hook (`{ cast: { motif: "bolt" } }`, `cry` for a Unit), `{ bespoke: "<recipe>" }` with its recipe in `fx/cards/<set>/`, `{ setPiece: "<key>" }` for a card that clears the board (R2800000, `fx/setPieces.ts`), or `"none: <reason>"` ([docs/polish/9-card-animations.md](polish/9-card-animations.md)) | `tables.test.ts` |
+| 13 | `apps/web/src/fx/cards/<set>.json5` (Stinkyscape's `stinkyscape-1` to 090, `stinkyscape-2` from 091) | the card's line in catalog order, its name in a comment after it (R2784000; the file's header says how): a motif per hook (`{ cast: { motif: "bolt" } }`, `cry` for a Unit), `{ bespoke: "<recipe>" }` with its recipe in `fx/cards/<set>/`, `{ setPiece: "<key>" }` for a card that clears the board (R2800000, `fx/setPieces.ts`), or `"none: <reason>"`; a Field Spell's or a lasting effect's standing look is an `aura: { look, palette?, scope }` beside its hooks or alone (R2787000) ([docs/polish/9-card-animations.md](polish/9-card-animations.md)) | `tables.test.ts` |
 
 The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch tests, the e2e component specs) count
 `catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests pin only the history shipped
@@ -118,6 +118,9 @@ pub fn script() -> CardScripts {
 
 Read a declared number with `param(ctx, "draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
 ([cards README §1](../crates/cards/README.md#1-the-card-file)). A card with no script of its own for one face reuses `base`.
+A face whose Discover or Choose one, opened as it resolves, offers choices read off a zone the other seat cannot read (the
+types its library holds, the numbers on a hand card) sets `secret_option_counts: true`, so the other seat is not told how many
+it offers (R2739000).
 
 **Tests**, at the bottom of the same file (in the shape of C+ #6's; printed cost and stats need no test, `tests/cross/catalog.rs` proves them). Build every game with the testkit's `scenario()`
 after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):

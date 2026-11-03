@@ -666,6 +666,8 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                             })))],
                         }),
                     )]),
+                    // R2739000: as C+ #41's: the numbers are read off a hand card, so is their count.
+                    secret_option_counts: true,
                     ..Script::default()
                 },
             },

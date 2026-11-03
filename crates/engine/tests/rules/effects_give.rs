@@ -286,7 +286,8 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
             view_for(&state, PlayerId::P1).pending,
             Some(PendingView::Elsewhere(PendingElsewhereView {
                 for_you: false,
-                pending_for: PlayerId::P2
+                pending_for: PlayerId::P2,
+                option_count: None,
             }))
         );
         let kept = hand[3].clone();
