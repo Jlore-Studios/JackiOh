@@ -334,11 +334,13 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * `view`: Hinder adds the next-refresh rider to the other player, Blood Ridden Glowy Jelly Bean makes the
  * viewer's first hand card Radiant at a life price, Crushing Walls takes wipe's fixture, Transmogulate
  * turns the viewer's first hand card into a Legendary, Zephrys adds its card to the hand and Craft a
- * Card adds its crafted card, then fuses it. #2796: Auspicious Rock costs its caster 2 and rolls a Jade
- * into the hand, Spiritually 中国 turns every one of the viewer's hand cards into one CN card and
- * summons a CN Unit, and Harmony Spirit sets every unit to 3/3. #2798: iKwzki Duos with the player's
- * first unit, Flash Freeze freezes every unit on both sides and Stratos Swarm fills the player's empty
- * zones with Stratos (its first unit zone, a full board having none).
+ * Card adds its crafted card, then fuses it. R2795000: Rollback rolls both sides back a turn, KY's
+ * Constant changes the cost of the viewer's first hand card, and Book of Pain discards two of the other
+ * player's cards. #2796: Auspicious Rock costs its caster 2 and rolls a Jade into the hand, Spiritually
+ * 中国 turns every one of the viewer's hand cards into one CN card and summons a CN Unit, and Harmony
+ * Spirit sets every unit to 3/3. #2798: iKwzki Duos with the player's first unit, Flash Freeze freezes
+ * every unit on both sides and Stratos Swarm fills the player's empty zones with Stratos (its first unit
+ * zone, a full board having none).
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -355,6 +357,18 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "addedToHand", player, instanceId: "fx-fused", defId: "core-055" },
     { type: "fused", instanceIds: ["fx-half-a", "fx-half-b"], resultInstanceId: "fx-fused", defId: "core-055" },
   ],
+  rollbackSweep: (view, _instanceId, player) => [{ type: "rolledBack", player, turnsAgo: 1, sides: [view.you.player, view.opponent.player] }],
+  constantStamp: (view) => {
+    const hand = Array.isArray(view.you.hand) ? view.you.hand[0] : undefined;
+    return hand === undefined ? [] : [{ type: "numberChanged", instanceId: hand.instanceId, defId: hand.defId, key: "cost", value: 3 }];
+  },
+  inkTear: (_view, _instanceId, player) => {
+    const owner = player === "p1" ? "p2" : "p1";
+    return [
+      { type: "discarded", instanceId: "fx-discarded-1", defId: "core-055", owner },
+      { type: "discarded", instanceId: "fx-discarded-2", defId: "core-002", owner },
+    ];
+  },
   jadeCrack: (_view, _instanceId, player) => [
     { type: "healthLost", player, amount: 2 },
     { type: "addedToHand", player, instanceId: "fx-jade", defId: "meditative-039-2" },
