@@ -62,6 +62,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::collections::BTreeSet;
 
     const P1: PlayerId = PlayerId::P1;
@@ -214,7 +216,6 @@ mod tests {
 
             #[test]
             fn r46_an_indestructible_permanent_with_a_token_survives_knocked_into_attack_position() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [BOMB], "library": lib(2) },
                     "p2": { "hand": [FILLER], "field": [{ "def": ROCK, "position": "DEF", "counters": { "plague": 2 } }], "library": lib(2) },
@@ -230,7 +231,6 @@ mod tests {
 
             #[test]
             fn r78_a_cards_tokens_are_gone_once_it_leaves_bounced_and_played_again_it_survives_your_next_turn_start() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FLOOD, FILLER],
@@ -256,7 +256,6 @@ mod tests {
 
             #[test]
             fn r68_on_your_own_turn_it_is_a_start_of_turn_trigger_in_queue_order_a_plagued_fed_fauci_in_lane_1_gains_its_mana_first_then_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "field": [{ "def": FAUCI, "counters": { "plague": 2 } }], "backrow": [BOMB], "library": lib(2) },
@@ -273,7 +272,6 @@ mod tests {
 
             #[test]
             fn r68_on_the_opponents_turn_it_comes_after_their_own_start_of_turn_triggers_their_plagued_fed_fauci_gains_its_mana_then_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [BOMB], "library": lib(2) },
                     "p2": { "hand": [FILLER], "field": [{ "def": FAUCI, "counters": { "plague": 2 } }], "library": lib(2) },
@@ -289,7 +287,6 @@ mod tests {
 
             #[test]
             fn s3_2_r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field_the_plagued_top_goes_the_plagued_card_beneath_resumes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [BOMB], "library": lib(2) },
                     "p2": {
@@ -310,7 +307,6 @@ mod tests {
 
             #[test]
             fn s6_1_r78_a_plagued_reborn_unit_comes_back_without_its_token_and_the_next_turn_start_leaves_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [BOMB], "library": lib(3) },
                     "p2": { "hand": [FILLER], "field": [{ "def": REBORN, "counters": { "plague": 1 } }], "library": lib(3) },
@@ -329,7 +325,6 @@ mod tests {
 
             #[test]
             fn with_no_plagued_permanent_it_destroys_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [VANILLA], "backrow": [BOMB], "library": lib(2) },
                     "p2": { "hand": [FILLER], "field": [MENACE], "library": lib(2) },
@@ -343,7 +338,6 @@ mod tests {
 
             #[test]
             fn leaving_the_field_ends_it_once_it_is_gone_no_turn_start_destroys_anything() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
@@ -403,7 +397,6 @@ mod tests {
 
             #[test]
             fn r46_an_indestructible_enemy_permanent_survives_it_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": BOMB, "radiant": true }], "library": lib(2) },
                     "p2": { "hand": [FILLER], "field": [{ "def": ROCK, "counters": { "plague": 1 } }], "library": lib(2) },

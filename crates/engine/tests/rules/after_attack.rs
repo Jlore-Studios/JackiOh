@@ -15,19 +15,7 @@ use crate::rules::fixtures::damage_combat::{
     reborn_even_veteran, reborn_veteran, recorder, replays_to, round_trip, turncoat, veteran, veteran_asker,
     wall,
 };
-use crate::rules::fixtures::harness::{put, sink_for, slot};
-
-/// An `ActionInput` from a JSON object (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{by, input, put, sink_for, slot};
 
 fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))

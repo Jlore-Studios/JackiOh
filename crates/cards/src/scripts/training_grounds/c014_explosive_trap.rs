@@ -54,6 +54,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::upgrade_number;
 
     const TRAP: &str = super::ID;
@@ -189,7 +190,6 @@ mod tests {
         #[test]
         fn r2199003_a_recruit_is_no_play_and_leaves_it_set() {
             // A Radiant Boots on the Ground attacks and Recruits Reno from the top of p1's deck (§6.3, R1).
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "explosive-trap",
                 "p1": { "hand": [HIT_JOB], "library": [RENO, HIT_JOB], "mana": 10,
@@ -217,7 +217,6 @@ mod tests {
 
         #[test]
         fn r61_its_controllers_own_unit_leaves_it_set() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [RENO, HIT_JOB], "mana": 10,
                         "backrow": [{ "def": TRAP, "faceUp": false, "lane": 1 }] },
@@ -232,7 +231,6 @@ mod tests {
         fn r174_a_played_unit_gone_before_it_resolves_leaves_it_set() {
             // S #135 Sacked, set in lane 1, answers the same `cardResolved` first (R68) and takes the Unit
             // off the field beneath its Sack, so no Unit of that play is left to hit.
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "explosive-trap",
                 "p1": { "hand": [RENO, HIT_JOB], "mana": 10 },

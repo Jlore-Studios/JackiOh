@@ -64,7 +64,6 @@ mod tests {
     ];
 
     fn added_def(seed: &str, radiant: bool) -> String {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": MOONBERRY, "radiant": radiant }, FILLER] },
@@ -75,7 +74,6 @@ mod tests {
     }
 
     fn added_card(seed: &str, radiant: bool) -> CardInstance {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": MOONBERRY, "radiant": radiant }, FILLER] },
@@ -157,7 +155,6 @@ mod tests {
 
     #[test]
     fn r1867007_played_again_from_the_graveyard_once_by_flashback_then_not_again() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [MOONBERRY, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -197,7 +194,6 @@ mod tests {
 
         #[test]
         fn the_card_is_radiant_and_costs_1_less_a_0_one_staying_0() {
-            crate::register_all();
             let probe = scenario(json!({ "p1": { "hand": [FILLER] }, "p2": { "hand": [FILLER] } }));
             let mut zeros = 0;
             for seed in 0..60 {
@@ -220,7 +216,6 @@ mod tests {
 
         #[test]
         fn discount_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "moonberry-param",
                 "p1": { "hand": [{ "def": MOONBERRY, "radiant": true }, FILLER] },

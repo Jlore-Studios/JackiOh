@@ -16,7 +16,7 @@ use jackioh_engine::state::{AnnounceRecord, CardInstance, GameState, new_instanc
 use jackioh_engine::zones::{PlaceOnFieldOptions, card_at, place_on_field};
 
 use super::fixtures::catalog::token_def;
-use super::fixtures::harness::{both, events_json, in_hand, live, live_mut, new_game, put, slot};
+use super::fixtures::harness::{both, events_json, ids, in_hand, live, live_mut, new_game, put, slot};
 
 // Fixture cards.
 
@@ -170,10 +170,6 @@ fn types(events: &[GameEvent]) -> Vec<String> {
                 .to_string()
         })
         .collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
@@ -555,7 +551,7 @@ mod r16_discard_s6_3_m3_t1 {
     #[test]
     fn r16_the_random_form_draws_its_pick_from_the_match_rng() {
         let mut state = game("effects-move");
-        let hand = ids(&in_hand(&mut state, "fx-1", PlayerId::P1, 5));
+        let hand = ids(in_hand(&mut state, "fx-1", PlayerId::P1, 5));
         let expected = hand[Rng::new(&state.seed, state.rng_cursor).int(hand.len() as i32) as usize].clone();
 
         let events = run(

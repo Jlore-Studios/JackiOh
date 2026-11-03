@@ -95,7 +95,6 @@ mod tests {
 
         #[test]
         fn r1860004_death_deals_its_attack_as_it_died_buffs_included_to_one_random_enemy() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [SPACEMINE], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
@@ -120,7 +119,6 @@ mod tests {
 
         #[test]
         fn r1860004_at_0_attack_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [SPACEMINE], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
@@ -136,7 +134,6 @@ mod tests {
 
         #[test]
         fn targets_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "spacemine-param",
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [SPACEMINE], "library": filler(4) },
@@ -169,7 +166,6 @@ mod tests {
 
         #[test]
         fn r1860004_radiant_death_hits_two_different_random_enemies() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "spacemine-radiant",
                 "p1": {
@@ -198,7 +194,6 @@ mod tests {
 
         #[test]
         fn r1860004_radiant_one_when_only_one_stands() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],

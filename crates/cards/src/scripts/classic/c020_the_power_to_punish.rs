@@ -130,6 +130,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -486,7 +488,6 @@ mod tests {
 
             #[test]
             fn r384_only_its_controller_in_their_own_turn_on_the_opponent_s_turn_it_is_not_listed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "backrow": [PUNISH] },

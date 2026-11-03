@@ -80,7 +80,6 @@ mod tests {
 
         #[test]
         fn r1860008_r2248000_fills_every_open_unit_zone_then_the_backrow_with_stratos_no_cry() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SWARM, ANCHOR], "mana": 10, "field": [VANILLA], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -105,7 +104,6 @@ mod tests {
 
         #[test]
         fn a_stratos_that_dies_fuses_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SWARM, HIT_JOB, ANCHOR], "mana": 10, "field": [VANILLA], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -158,7 +156,6 @@ mod tests {
 
         #[test]
         fn r1860008_r2248000_a_full_unit_row_fills_the_backrow_and_a_full_board_summons_none() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [SWARM, ANCHOR],
@@ -204,7 +201,6 @@ mod tests {
 
         #[test]
         fn r1860008_radiant_fills_every_open_unit_zone_with_radiant_stratos() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": SWARM, "radiant": true }, ANCHOR],

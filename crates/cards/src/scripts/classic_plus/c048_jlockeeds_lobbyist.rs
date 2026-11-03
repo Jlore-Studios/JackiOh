@@ -57,6 +57,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -181,7 +183,6 @@ mod tests {
 
         #[test]
         fn s6_2_killed_on_the_opponent_s_turn_its_death_still_adds_the_card_to_your_hand() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [LOBBYIST], "hand": [FILLER] },

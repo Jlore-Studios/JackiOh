@@ -65,7 +65,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -118,7 +119,6 @@ mod tests {
 
         #[test]
         fn destroys_every_permanent_on_both_rows_the_backrow_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": {
@@ -155,7 +155,6 @@ mod tests {
 
         #[test]
         fn r59_every_permanent_dies_together_in_one_state_check() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [NETHER, FILLER], "field": [{ "def": GARY, "lane": 1 }, { "def": RENO, "lane": 2 }] },
@@ -171,7 +170,6 @@ mod tests {
 
         #[test]
         fn r46_an_indestructible_unit_survives_switches_to_atk_and_loses_taunt() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": {
@@ -204,7 +202,6 @@ mod tests {
 
         #[test]
         fn destroys_nothing_and_still_counts_as_played_when_both_boards_are_empty() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": [NETHER, FILLER] }, "p2": { "hand": [FILLER] } }));
 
             s.play(NETHER, json!({}));
@@ -220,7 +217,6 @@ mod tests {
 
         #[test]
         fn enemy_only_the_opponent_s_permanents_are_destroyed_both_rows() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": {
@@ -250,7 +246,6 @@ mod tests {
 
         #[test]
         fn all_the_radiant_face_can_still_sweep_both_sides() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": NETHER, "radiant": true }, FILLER], "field": [{ "def": GARY, "lane": 1 }] },
@@ -266,7 +261,6 @@ mod tests {
 
         #[test]
         fn r46_indestructibles_survive_the_enemy_only_mode_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": NETHER, "radiant": true }, FILLER] },

@@ -99,7 +99,6 @@ mod tests {
 
         #[test]
         fn r1867006_every_permanent_of_both_sides_goes_into_the_opponents_deck_as_their_card() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SCREAM, FILLER], "field": [VANILLA], "backrow": [WELL] },
                 "p2": { "hand": [FILLER], "field": [MENACE], "backrow": [SHEEPISH] },
@@ -138,7 +137,6 @@ mod tests {
 
         #[test]
         fn r1867006_face_down_cards_go_too_a_dormant_one_stays() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SCREAM, FILLER] },
                 "p2": {
@@ -195,7 +193,6 @@ mod tests {
 
         #[test]
         fn r1867006_the_opponent_later_draws_the_casters_card_as_their_own() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SCREAM, FILLER, FILLER], "field": [VANILLA] },
                 "p2": { "hand": [FILLER], "library": [] },
@@ -216,7 +213,6 @@ mod tests {
 
         #[test]
         fn r1867006_each_card_costs_2_more_there_a_3_card_4_and_a_4_card_still_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": SCREAM, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE, SILAS] },
@@ -234,7 +230,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_of_the_surcharge_raises_more_still_up_to_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": SCREAM, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },

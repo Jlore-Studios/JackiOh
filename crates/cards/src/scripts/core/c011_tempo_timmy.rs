@@ -23,6 +23,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// Makes the hand copy radiant, then plays it.
     fn play_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
         let id = s.card(card).id.clone();
@@ -41,7 +43,6 @@ mod tests {
 
             #[test]
             fn attacks_a_unit_on_its_summon_turn_rush_s4_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
@@ -56,7 +57,6 @@ mod tests {
 
             #[test]
             fn kills_a_3_health_unit_unharmed_first_strike_s4_3_step_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     // Mr. Vanilla, a 4/4 at 3 health with no First Strike, falls to Timmy's 3 first and
@@ -74,7 +74,6 @@ mod tests {
 
             #[test]
             fn cannot_hit_the_hero_on_its_summon_turn_rush_not_charge_s4_2_step_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
@@ -94,7 +93,6 @@ mod tests {
 
             #[test]
             fn may_hit_the_hero_on_its_summon_turn_charge_s4_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
@@ -109,7 +107,6 @@ mod tests {
 
             #[test]
             fn still_kills_a_3_health_unit_unharmed_first_strike_is_kept_s8_conventions() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }

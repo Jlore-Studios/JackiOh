@@ -41,7 +41,6 @@ mod tests {
 
     #[test]
     fn divine_shield_takes_the_first_hit_then_ranged_takes_no_strike_back() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [ANCHOR], "field": [PARAGON], "library": filler(4) },
@@ -68,7 +67,6 @@ mod tests {
 
     #[test]
     fn its_death_fuses_nothing_it_is_no_starship_piece() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [PARAGON], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -85,7 +83,6 @@ mod tests {
 
     #[test]
     fn radiant_is_a_14_2_with_pierce() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": PARAGON, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

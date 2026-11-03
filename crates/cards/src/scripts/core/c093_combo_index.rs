@@ -105,6 +105,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -214,7 +216,6 @@ mod tests {
 
         #[test]
         fn s8_the_cry_writes_the_grade_at_e_as_the_card_arrives() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-start-grade",
                 "p1": { "hand": [COMBO_INDEX, "core-005"] },
@@ -235,7 +236,6 @@ mod tests {
 
         #[test]
         fn s10_1_an_instance_that_never_ran_the_cry_still_reads_e_so_the_threshold_is_1_play() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-default-grade",
                 "p1": { "backrow": [COMBO_INDEX], "hand": cards(&[&FODDER[..1], &HELD[..]]), "library": ["core-016"] },
@@ -250,7 +250,6 @@ mod tests {
 
         #[test]
         fn s10_8_the_grade_is_public_on_the_field_spell_to_both_players() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-view",
                 "p1": { "backrow": [COMBO_INDEX], "hand": ["core-005"] },
@@ -273,7 +272,6 @@ mod tests {
 
         #[test]
         fn r85_n93_prints_no_lifesteal_keyword_grade_a_s_heal_comes_from_the_effect_not_the_card() {
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "core-093-no-lifesteal",
                 "p1": { "backrow": [COMBO_INDEX], "hand": ["core-005"] },
@@ -421,7 +419,6 @@ mod tests {
 
         #[test]
         fn r372_in_hand_the_card_has_no_grade_yet_so_it_carries_no_preview() {
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "core-093-r372-hand",
                 "p1": { "hand": [COMBO_INDEX, "core-005"] },
@@ -464,7 +461,6 @@ mod tests {
 
         #[test]
         fn r27_at_grade_e_with_no_plays_the_grade_stays_put_and_no_step_runs() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-below-e",
                 "p1": { "backrow": [COMBO_INDEX], "hand": HELD, "library": ["core-016"] },
@@ -482,7 +478,6 @@ mod tests {
 
         #[test]
         fn r27_grade_e_needs_1_play_one_play_raises_it_to_d_and_runs_steps_e_then_d() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-e-to-d",
                 "p1": { "backrow": [COMBO_INDEX], "hand": [FODDER[1], HELD[0]], "library": ["core-016"] },
@@ -505,7 +500,6 @@ mod tests {
 
         #[test]
         fn r27_grade_d_needs_2_plays_one_play_is_below_the_threshold_and_nothing_happens() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-below-d",
                 "p1": { "backrow": [COMBO_INDEX], "hand": [FODDER[1], HELD[0]], "library": ["core-016"] },
@@ -524,7 +518,6 @@ mod tests {
 
         #[test]
         fn r27_grade_d_at_2_plays_rises_to_c_and_runs_e_d_c_in_order() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-d-to-c",
                 "p1": {
@@ -668,7 +661,6 @@ mod tests {
 
         #[test]
         fn s6_2_the_end_of_the_opponent_s_turn_does_not_advance_your_grade() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-enemy-turn",
                 "active": "p2",
@@ -692,7 +684,6 @@ mod tests {
 
         #[test]
         fn r27_the_copy_is_fresh_and_keeps_the_radiant_flag_of_the_card_it_copies() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-e-radiant",
                 "p1": {
@@ -716,7 +707,6 @@ mod tests {
 
         #[test]
         fn r86_an_instance_that_has_ceased_to_exist_drops_out_of_the_pool_instead_of_fizzling_the_step() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-r86",
                 "p1": { "backrow": [COMBO_INDEX], "hand": ["core-t-rush", FODDER[1]] },
@@ -751,7 +741,6 @@ mod tests {
 
         #[test]
         fn the_card_exiled_is_the_opponent_s_out_of_their_hand_and_yours_is_untouched() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-c",
                 "p1": {
@@ -775,7 +764,6 @@ mod tests {
 
         #[test]
         fn an_empty_enemy_hand_fizzles_the_step_and_the_rest_of_the_cascade_still_runs() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-c-empty",
                 "p1": {
@@ -817,7 +805,6 @@ mod tests {
 
         #[test]
         fn r60_with_every_hand_card_already_radiant_the_step_does_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-b-all-radiant",
                 "p1": {
@@ -870,7 +857,6 @@ mod tests {
 
         #[test]
         fn r85_armor_reduces_the_hit_and_the_heal_follows_the_reduced_amount() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-a-armor",
                 "p1": {
@@ -898,7 +884,6 @@ mod tests {
 
         #[test]
         fn r63_a_hit_reduced_to_0_by_armor_heals_nothing_at_all_and_the_cascade_still_ran() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-a-zero",
                 "p1": {
@@ -929,7 +914,6 @@ mod tests {
 
         #[test]
         fn r85_the_anti_oneshot_cap_clamps_the_hit_and_the_heal_follows_the_clamp_s4_4_step_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-step-a-cap",
                 "p1": {
@@ -964,7 +948,6 @@ mod tests {
 
         #[test]
         fn s8_start_of_turn_a_combo_fodder_is_added_to_your_hand() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-radiant-start",
                 "p1": { "backrow": [{ "def": COMBO_INDEX, "radiant": true }], "hand": [], "library": ["core-016"] },
@@ -981,7 +964,6 @@ mod tests {
 
         #[test]
         fn the_base_face_adds_nothing_at_the_start_of_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-base-start",
                 "p1": { "backrow": [COMBO_INDEX], "hand": [], "library": ["core-016"] },
@@ -995,7 +977,6 @@ mod tests {
 
         #[test]
         fn it_fires_every_turn_so_two_start_of_turns_give_two_combo_fodders() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-radiant-repeat",
                 "p1": {
@@ -1013,7 +994,6 @@ mod tests {
 
         #[test]
         fn r4_a_full_hand_burns_the_combo_fodder_to_the_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-radiant-hand-cap",
                 "p1": {
@@ -1040,7 +1020,6 @@ mod tests {
 
         #[test]
         fn same_the_radiant_face_keeps_the_whole_base_cascade() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-radiant-same",
                 "p1": {
@@ -1060,7 +1039,6 @@ mod tests {
 
         #[test]
         fn same_the_radiant_face_is_still_terminal_at_s() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-radiant-terminal",
                 "p1": {
@@ -1086,7 +1064,6 @@ mod tests {
 
         #[test]
         fn s8_costs_0_and_deals_2_damage_to_a_chosen_unit_healing_you_2_lifesteal() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-unit",
                 "p1": { "hand": [COMBO_FODDER, "core-005"], "health": 20 },
@@ -1103,7 +1080,6 @@ mod tests {
 
         #[test]
         fn r81_a_target_reaches_the_enemy_hero_picked_with_the_play_and_never_by_a_prompt() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-hero",
                 "p1": { "hand": [COMBO_FODDER, "core-005"], "health": 20 },
@@ -1120,7 +1096,6 @@ mod tests {
 
         #[test]
         fn r81_a_target_is_unnarrowed_so_your_own_unit_is_a_legal_pick_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-friendly",
                 "p1": { "field": ["core-019"], "hand": [COMBO_FODDER, "core-005"], "health": 20 },
@@ -1137,7 +1112,6 @@ mod tests {
 
         #[test]
         fn r90_it_declares_one_target_and_refuses_a_play_that_names_none() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-no-target",
                 "p1": { "hand": [COMBO_FODDER, "core-005"] },
@@ -1149,7 +1123,6 @@ mod tests {
 
         #[test]
         fn r63_armor_to_0_means_no_damage_event_and_no_heal() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-armor",
                 "p1": { "hand": [COMBO_FODDER, "core-005"], "health": 20 },
@@ -1166,7 +1139,6 @@ mod tests {
 
         #[test]
         fn r11_the_spell_token_reaches_the_graveyard_so_r50_can_discover_it_back() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-graveyard",
                 "p1": { "hand": [COMBO_FODDER, "core-005"] },
@@ -1184,7 +1156,6 @@ mod tests {
 
         #[test]
         fn r70_s8_conventions_it_counts_as_a_card_played_which_is_what_feeds_n93_s_own_threshold() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-counts",
                 "p1": { "backrow": [COMBO_INDEX], "hand": [COMBO_FODDER, "core-005"], "library": ["core-016"] },
@@ -1206,7 +1177,6 @@ mod tests {
 
         #[test]
         fn r275_the_radiant_face_deals_4_with_lifesteal_the_enemy_hero_loses_4_and_you_heal_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-radiant",
                 "p1": { "hand": [{ "def": COMBO_FODDER, "radiant": true }, "core-005"], "health": 20 },
@@ -1247,7 +1217,6 @@ mod tests {
 
         #[test]
         fn r85_armor_reduces_the_radiant_hit_and_the_heal_follows_what_landed() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-093-1-radiant-armor",
                 "p1": { "hand": [{ "def": COMBO_FODDER, "radiant": true }, "core-005"], "health": 20 },

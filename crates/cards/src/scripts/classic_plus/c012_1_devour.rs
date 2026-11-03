@@ -54,6 +54,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const DEVOUR: &str = "classicplus-012-1";
     const MENACE: &str = "core-019"; // 9/9
     const ROCK: &str = "core-066"; // 10/10 Indestructible
@@ -65,7 +67,6 @@ mod tests {
     use crate::merged;
 
     fn devour(radiant: bool, p1: Value, p2: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": DEVOUR, "radiant": radiant }, FILLER] }), p1),
             "p2": merged(json!({ "hand": [FILLER], "field": [MENACE] }), p2),

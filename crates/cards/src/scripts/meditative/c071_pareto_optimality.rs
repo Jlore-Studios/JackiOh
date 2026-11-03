@@ -121,6 +121,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -151,7 +153,6 @@ mod tests {
     /// p1 plays Pareto (Radiant when asked) on its own turn, so its Cry summons the Cane, and hands
     /// the turn over. p2 holds the good play and the bad one, with a Scarab on its field.
     fn pareto_game(radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [{ "def": ID, "radiant": radiant }, SPARE] },
             "p2": { "mana": 10, "hand": [GOOD, BAD], "field": ["core-007"] },
@@ -235,7 +236,6 @@ mod tests {
         );
 
         // Pareto's own controller is never judged: a bad play of p1's stores no verdict.
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "mana": 10, "hand": [ID, GOOD, BAD] } }));
         s.play(ID, json!({}));
         s.play(BAD, json!({}));
@@ -247,7 +247,6 @@ mod tests {
     fn no_cane_no_attack() {
         // Pareto played into the last open backrow zone has no room to summon: it holds no Cane, so
         // even a bad play sends nothing. p1's Vanilla keeps p1's turn from ending by itself (R82).
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "mana": 10,
@@ -332,7 +331,6 @@ mod tests {
 
     #[test]
     fn a_play_tied_with_the_best_does_nothing() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [ID, SPARE] },
             "p2": { "mana": 10, "hand": [GOOD, GOOD, BAD], "field": ["core-007"] },
@@ -365,7 +363,6 @@ mod tests {
 
     #[test]
     fn a_countered_play_is_not_judged() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "mana": 10, "hand": [ID, SPARE], "backrow": [{ "def": COUNTERSPELL, "faceDown": true }] },
             "p2": { "mana": 10, "hand": [GOOD, SPELL], "field": ["core-007"] },

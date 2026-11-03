@@ -37,11 +37,12 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const POSTERS: &str = super::ID;
     const FILLER: &str = "core-010";
 
     fn board(radiant: bool, seed: &str, hand: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {

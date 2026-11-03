@@ -48,6 +48,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const DOOM: &str = "classicplus-001";
     const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -61,7 +63,6 @@ mod tests {
     use crate::merged;
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "active": "p2",
             "p1": merged(
@@ -139,7 +140,6 @@ mod tests {
 
         #[test]
         fn never_fires_on_its_own_controller_s_attack_on_the_enemy_hero() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [TIMMY], "backrow": [{ "def": DOOM, "faceUp": false, "lane": 2 }] },
                 "p2": { "hand": [FILLER] },

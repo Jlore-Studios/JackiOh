@@ -50,6 +50,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const VOLATILITY: &str = "meditative-084";
     const OUTFITTER: &str = "meditative-082";
     const FILLER: &str = "core-005";
@@ -148,7 +150,6 @@ mod tests {
     /// A field Volatility with the 7/7's printed Armor 7 fused in (R102), so its X row (a
     /// printed numbered keyword) has something to move; its multipliers are its own.
     fn armored(seed: &str, radiant: bool, keywords: &[Keyword]) -> (Scenario, String) {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -225,7 +226,6 @@ mod tests {
             let mut keyword = 0;
             let mut cost = 0;
             for seed in 1..=40 {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": format!("vol-cry-{seed}"),
                     "p1": {
@@ -436,7 +436,6 @@ mod tests {
         fn r1160_kys_constant_is_not_doubled() {
             // KY's Constant sets a random number on a hand card to 3: Volatility's numbers are its
             // cost (1) and its 1/1, and the one picked goes to 3 outright, not twice as far.
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "vol-constant",
                 "p1": { "hand": [KY_CONSTANT, VOLATILITY, FILLER], "library": filler(3) },
@@ -483,7 +482,6 @@ mod tests {
         fn r1160_radiant_a_buff_is_tripled() {
             let mut tripled = 0;
             for seed in 1..=20 {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": format!("vol-radiant-{seed}"),
                     "p1": {
@@ -528,7 +526,6 @@ mod tests {
             let mut stat_totals = Vec::new();
             let mut cries = 0;
             for seed in 1..=20 {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": format!("vol-cry-{radiant}-{seed}"),
                     "p1": { "hand": [{ "def": VOLATILITY, "radiant": radiant }, FILLER], "library": filler(3) },

@@ -70,6 +70,8 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const MIND_CONTROL: &str = "traininggrounds-052";
     const SEVEN_SEVEN: &str = "core-025";
     const POINTMASTER: &str = "core-020";
@@ -114,7 +116,6 @@ mod tests {
 
         #[test]
         fn r15_base_the_stolen_unit_lands_in_the_same_lane_when_that_zone_is_free() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL] },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
@@ -135,7 +136,6 @@ mod tests {
 
         #[test]
         fn r15_base_the_first_free_zone_of_the_row_when_the_same_lane_is_taken() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL], "field": [{ "def": VANILLA, "lane": 3 }] },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
@@ -152,7 +152,6 @@ mod tests {
 
         #[test]
         fn r15_base_a_full_row_leaves_the_card_with_the_opponent_and_the_spell_still_resolves() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [MIND_CONTROL],
@@ -179,7 +178,6 @@ mod tests {
         #[test]
         fn units_only_legal_actions_offers_no_enemy_field_spell_or_trap() {
             for radiant in [false, true] {
-                crate::register_all();
                 let mut g = scenario(json!({
                     "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": radiant }] },
                     "p2": {
@@ -201,7 +199,6 @@ mod tests {
 
         #[test]
         fn r2195003_the_snapshot_keeps_no_v0_3_7b_script_a_face_down_enemy_trap_is_never_on_offer() {
-            crate::register_all();
             let g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL] },
                 "p2": { "field": [VANILLA], "backrow": [{ "def": SHEEPISH, "lane": 2 }] },
@@ -213,7 +210,6 @@ mod tests {
 
         #[test]
         fn s8_an_enemy_board_with_no_unit_offers_nothing_and_the_spell_fizzles() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL] },
                 "p2": { "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 2 }] },
@@ -229,7 +225,6 @@ mod tests {
 
         #[test]
         fn r22_r74_radiant_the_stolen_card_becomes_radiant_keeping_its_damage() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_mind_control()] },
                 "p2": { "field": [{ "def": DUELIST, "lane": 2, "damage": 2 }] },
@@ -250,7 +245,6 @@ mod tests {
 
         #[test]
         fn r22_radiant_the_flag_fires_no_cry_nothing_is_summoned_alongside_the_steal() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_mind_control()] },
                 "p2": { "field": [{ "def": TOKEN_MAKER, "lane": 1 }] },
@@ -270,7 +264,6 @@ mod tests {
 
         #[test]
         fn s6_3_radiant_a_card_that_is_already_radiant_is_stolen_and_left_alone() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_mind_control()] },
                 "p2": { "field": [{ "def": DUELIST, "lane": 4, "radiant": true }] },

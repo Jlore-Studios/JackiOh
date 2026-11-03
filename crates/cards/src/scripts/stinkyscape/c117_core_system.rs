@@ -60,7 +60,6 @@ mod tests {
     }
 
     fn full_board(radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [{ "def": CORE_SYSTEM, "radiant": radiant }, FILLER],

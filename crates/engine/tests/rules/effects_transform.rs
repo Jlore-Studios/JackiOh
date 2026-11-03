@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::combat as combat_fx;
 use super::fixtures::harness::{
-    events_of_type, in_hand, json_of, live, live_mut, new_game, put, set_library, slot,
+    by, events_of_type, in_hand, json_of, live, live_mut, new_game, put, set_library, slot,
 };
 
 /// A Cry that would be loud if a Transform ever fired one (R1).
@@ -146,13 +146,6 @@ fn run(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameE
     }
     state.rng_cursor = rng.cursor();
     events
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..HookOptions::default()
-    }
 }
 
 fn transform_into(instance_id: &str, def_id: &str) -> Effect {

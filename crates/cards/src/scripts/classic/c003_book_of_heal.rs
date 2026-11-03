@@ -46,6 +46,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -92,7 +94,6 @@ mod tests {
 
             #[test]
             fn r19_heals_your_own_damaged_unit_never_past_its_max_health() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK, FILLER], "field": [{ "def": MENACE, "damage": 5 }] },
                     "p2": { "hand": [FILLER] },
@@ -107,7 +108,6 @@ mod tests {
 
             #[test]
             fn r19_heals_an_enemy_unit_9_either_side_is_legal() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK, FILLER] },
                     "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 }, "damage": 12 }] },
@@ -122,7 +122,6 @@ mod tests {
 
             #[test]
             fn r19_heals_your_hero_9_with_no_cap_a_hero_at_30_reaches_39() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
@@ -132,7 +131,6 @@ mod tests {
 
             #[test]
             fn r19_heals_the_enemy_hero_too() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "health": 12 } }));
 
                 s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
@@ -142,7 +140,6 @@ mod tests {
 
             #[test]
             fn a_full_health_unit_gains_nothing_no_heal_happens() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "field": [MENACE] }, "p2": { "hand": [FILLER] } }));
 
                 let targets = pick::unit_at(&s, P1, 1);
@@ -155,7 +152,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_moves_heal_by_its_declared_step_of_2_it_heals_11() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 10 }, "p2": { "hand": [FILLER] } }));
                 step_param(s.card_mut(BOOK), "heal", 1);
 
@@ -166,7 +162,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_moves_it_the_other_way_by_2_it_heals_7() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 10 }, "p2": { "hand": [FILLER] } }));
                 step_param(s.card_mut(BOOK), "heal", -1);
 
@@ -181,7 +176,6 @@ mod tests {
 
             #[test]
             fn heals_a_target_18_a_hero_at_30_reaches_48() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -194,7 +188,6 @@ mod tests {
 
             #[test]
             fn r19_heals_a_unit_18_still_never_past_its_max_health() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": BOOK, "radiant": true }, FILLER],
@@ -214,7 +207,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_on_the_radiant_face_steps_from_18_it_heals_20() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
                     "p2": { "hand": [FILLER] },

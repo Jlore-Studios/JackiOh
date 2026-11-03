@@ -46,6 +46,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// Every `damage` event of the most recent step, as `(targetId, amount)`.
     fn hits(s: &Scenario) -> Vec<(String, i32)> {
         s.last_events()
@@ -125,7 +127,6 @@ mod tests {
 
             #[test]
             fn does_nothing_on_the_opponent_s_end_of_turn_s6_2_its_controller_s_turn_alone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
                     // The Shredder belongs to the player who is NOT ending a turn here.
@@ -168,7 +169,6 @@ mod tests {
         #[test]
         fn enters_as_a_6_10_and_radiant_a_12_20() {
             for (radiant, attack, health, amount) in [(false, 6, 10, 2), (true, 12, 20, 4)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": "traininggrounds-048", "radiant": radiant }, "core-005"],

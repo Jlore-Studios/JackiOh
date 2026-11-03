@@ -16,7 +16,7 @@ use jackioh_engine::testkit::{mock_animate_at_turn_start, mock_brittle_tick, moc
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_ok, in_hand, matches_object, new_game, put, round_trip, set_library, setup_catalog, slot,
+    act, act_ok, ids, in_hand, matches_object, new_game, put, round_trip, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder,
@@ -89,10 +89,6 @@ fn recording_doubles() -> StageCalls {
         );
     });
     StageCalls { brittle, returned }
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// Past both mulligans, in p1's main phase on turn 1, with the note log in p2's backrow.

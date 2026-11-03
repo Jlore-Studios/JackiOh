@@ -39,6 +39,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -168,7 +170,6 @@ mod tests {
 
         #[test]
         fn r846_cast_on_the_opponents_turn_the_extra_turn_follows_your_next() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "temporal-rift-theirs",
                 "turn": 2,

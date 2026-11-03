@@ -118,6 +118,8 @@ pub fn script_v0_3_7b() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -222,7 +224,6 @@ mod tests {
     /// R1194000: p1 holds a Menace, the opponent a Menace in hand and one on the field, and p1 a
     /// Vanilla on the field and the Tower (Radiant on `radiant`) in backrow lane 2.
     fn aura_board(radiant: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [MENACE, BIG_SPELL],
@@ -367,7 +368,6 @@ mod tests {
 
             #[test]
             fn r1194000_a_unit_in_hand_is_listed_an_occupied_zone_and_an_empty_backrow_zone_and_lands_in_each() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [MENACE, VANILLA, FILLER],
@@ -399,7 +399,6 @@ mod tests {
 
             #[test]
             fn r1194000_flying_plays_a_unit_into_an_empty_backrow_zone_and_the_aura_ends_with_the_tower() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [VANILLA, MAGIC_JAMMED, MENACE],
@@ -425,7 +424,6 @@ mod tests {
 
             #[test]
             fn a_unit_played_into_a_unit_zone_is_untouched_and_the_tower_may_still_take_a_unit_after_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MENACE, TOKENS, FILLER], "backrow": [{ "def": TOWER, "lane": 2 }], "library": DECK, "mana": 8 },
                     "p2": { "hand": [FILLER] },
@@ -477,7 +475,6 @@ mod tests {
 
             #[test]
             fn a_unit_played_into_a_unit_zone_is_not_made_radiant() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MENACE, FILLER], "backrow": [{ "def": TOWER, "radiant": true }], "mana": 8 },
                     "p2": { "hand": [FILLER] },

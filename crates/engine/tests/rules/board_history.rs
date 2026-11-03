@@ -11,7 +11,7 @@ use crate::rules::fixtures::board_history::{phoenix, register_board_history_fixt
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::field::{banner, playing, spatula, tower, watcher};
 use crate::rules::fixtures::harness::{
-    act, events_of_type, ids_of, json_of, matches_object, put, round_trip, setup_catalog, slot,
+    act, events_of_type, ids_of, input, json_of, matches_object, put, round_trip, setup_catalog, slot,
 };
 
 /// p1's main phase of turn 1 with the field fixtures and this file's registered, the history emptied.
@@ -23,10 +23,6 @@ fn board(seed: &str) -> GameState {
 }
 
 const PLAIN_UNIT: &str = "fx-1";
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
 
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))

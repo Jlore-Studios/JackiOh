@@ -29,6 +29,8 @@ mod tests {
     use jackioh_engine::layers::{face_of, unit_view};
     use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use jackioh_engine::zones::is_unit_token;
 
     const P1: PlayerId = PlayerId::P1;
@@ -196,7 +198,6 @@ mod tests {
 
             #[test]
             fn r353_is_the_x_x_its_summon_names_with_pierce_through_s10_4_layer_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let ghoul = summon_ghoul(&mut s, 3, false);
                 s.expect_stats(&ghoul, json!({ "attack": 3, "health": 3, "maxHealth": 3 }));
@@ -206,7 +207,6 @@ mod tests {
 
             #[test]
             fn r346_its_hit_on_a_unit_ignores_that_unit_s_armor_3_through_armor_7() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 3, "health": 3 } }] },
@@ -226,7 +226,6 @@ mod tests {
 
             #[test]
             fn r346_its_hit_on_a_hero_ignores_that_hero_s_armor_n84_going_long() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 3, "health": 3 } }] },
@@ -240,7 +239,6 @@ mod tests {
 
             #[test]
             fn r11_a_ghoul_token_that_dies_ceases_to_exist_and_never_reaches_a_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 1, "health": 1 } }] },
@@ -260,7 +258,6 @@ mod tests {
 
             #[test]
             fn r349_a_ghoul_summoned_radiant_as_3_3_is_a_6_6_with_pierce_the_x_doubles() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED }));
                 let ghoul = summon_ghoul(&mut s, 3, true);
                 assert!(ghoul.radiant);
@@ -270,7 +267,6 @@ mod tests {
 
             #[test]
             fn r349_a_ghoul_made_radiant_on_the_field_doubles_its_base_stat_layer_and_keeps_its_damage_s5_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 4, "health": 4 }, "damage": 1 }] },
@@ -288,7 +284,6 @@ mod tests {
 
             #[test]
             fn r349_a_radiant_ghoul_still_pierces() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": ID, "radiant": true, "statsOverride": { "attack": 2, "health": 2 } }] },
@@ -302,7 +297,6 @@ mod tests {
 
             #[test]
             fn r349_r77_a_fusion_onto_a_ghoul_sums_its_x_on_the_base_face_and_its_doubled_x_on_the_radiant_face() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": {

@@ -58,6 +58,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const JORO: &str = "classic-033";
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const SEVEN: &str = "core-025"; // (4) Unit 7/7
@@ -206,7 +208,6 @@ mod tests {
 
             #[test]
             fn r121_a_forced_attack_is_the_effects_not_a_targeting_moths_to_the_flame_draws_no_joro() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MOTHS], "library": [STOCKPILE] },
@@ -220,7 +221,6 @@ mod tests {
 
             #[test]
             fn an_all_effect_targets_nothing_big_felinors_sweep_draws_no_joro() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [VANILLA] },
@@ -234,7 +234,6 @@ mod tests {
 
             #[test]
             fn your_own_spells_never_set_it_off() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [JORO, ECLIPSE, STOCKPILE], "field": [MENACE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -260,7 +259,6 @@ mod tests {
 
             #[test]
             fn r651_a_spells_prompt_answer_pick_of_your_unit_moves_to_joro_an_echo_repeats_fresh_target() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
@@ -279,7 +277,6 @@ mod tests {
 
             #[test]
             fn a_spell_naming_several_of_your_units_moves_the_first_only() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE, SEVEN] },
@@ -312,7 +309,6 @@ mod tests {
             #[test]
             fn r651_a_units_declared_cry_pick_draws_no_joro_bigots_destroy() {
                 // C #53 Plague Crawler's pick made this case until patch v0.3.10 made it a prompt.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
@@ -327,7 +323,6 @@ mod tests {
 
             #[test]
             fn r651_a_units_prompt_pick_draws_no_joro_plague_bringers_placements() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
@@ -345,7 +340,6 @@ mod tests {
 
             #[test]
             fn r651_an_activations_pick_draws_no_joro_the_power_to_punishs_damage() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
@@ -366,7 +360,6 @@ mod tests {
 
             #[test]
             fn r651_a_traps_firing_draws_no_joro_tesla_answers_the_summon_itself() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p1",
                     "p1": { "hand": [JORO, VANILLA, STOCKPILE] },
@@ -381,7 +374,6 @@ mod tests {
 
             #[test]
             fn a_random_pick_targets_nothing_c_42s_random_plague_counters_draw_no_joro() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
@@ -423,7 +415,6 @@ mod tests {
 
             #[test]
             fn an_endless_decoy_it_answers_from_the_hand_only_and_once_on_the_field_it_answers_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [STOCKPILE], "field": [VANILLA, { "def": JORO, "radiant": true }] },

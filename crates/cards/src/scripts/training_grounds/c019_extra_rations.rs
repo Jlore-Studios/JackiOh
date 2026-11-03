@@ -38,6 +38,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::upgrade_number;
 
     const RATIONS: &str = super::ID;
@@ -84,7 +85,6 @@ mod tests {
 
         #[test]
         fn r62_nothing_on_the_turn_it_is_played() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [RATIONS, FILLER], "library": [VANILLA, BIGOT], "mana": 10 },
             }));

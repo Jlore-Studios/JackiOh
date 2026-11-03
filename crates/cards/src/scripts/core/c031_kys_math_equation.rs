@@ -179,6 +179,8 @@ mod tests {
     use super::script;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -549,7 +551,6 @@ mod tests {
 
         #[test]
         fn r429_r30_an_echo_repeat_is_the_same_play_twinspell_s_repeat_deals_the_same_fib_2_again_and_the_count_is_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "ky-math-echo",
                 "p1": { "hand": ["31"], "field": ["15"], "backrow": ["79"], "library": ["15", "15"], "mana": 10 },

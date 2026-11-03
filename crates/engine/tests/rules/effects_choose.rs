@@ -152,7 +152,7 @@ fn clear_prompt(state: &mut GameState) {
     state.pending = None;
 }
 
-fn ids(selections: &[Selection]) -> Vec<String> {
+fn selection_ids(selections: &[Selection]) -> Vec<String> {
     selections
         .iter()
         .filter_map(|selection| match selection {
@@ -273,7 +273,7 @@ mod target_scopes_s10_6_r13 {
         let self_ = Some(&mine_a);
         let offered = with_ctx(&mut state, self_, |_ctx| {}, |ctx| targets_in_scope(ctx, None));
         assert_eq!(
-            ids(&offered),
+            selection_ids(&offered),
             vec![
                 mine_a.id.clone(),
                 mine_b.id.clone(),
@@ -281,7 +281,7 @@ mod target_scopes_s10_6_r13 {
                 theirs.id.clone()
             ]
         );
-        assert!(!ids(&offered).contains(&buried.id));
+        assert!(!selection_ids(&offered).contains(&buried.id));
     }
 
     #[test]
@@ -318,11 +318,11 @@ mod target_scopes_s10_6_r13 {
             |_ctx| {},
             |ctx| {
                 assert_eq!(
-                    ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally" }))))),
+                    selection_ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally" }))))),
                     vec![mine.id.clone()]
                 );
                 assert_eq!(
-                    ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "enemy" }))))),
+                    selection_ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "enemy" }))))),
                     vec![theirs.id.clone()]
                 );
                 assert_eq!(
@@ -333,7 +333,7 @@ mod target_scopes_s10_6_r13 {
                     ]
                 );
                 assert_eq!(
-                    ids(&targets_in_scope(ctx, Some(&scope(json!({ "of": ["backrow"] }))))),
+                    selection_ids(&targets_in_scope(ctx, Some(&scope(json!({ "of": ["backrow"] }))))),
                     vec![my_backrow.id.clone(), their_backrow.id.clone()]
                 );
                 // Within one side the kinds come units, backrow, then the hero.
@@ -393,14 +393,14 @@ mod target_scopes_s10_6_r13 {
             |_ctx| {},
             |ctx| {
                 assert_eq!(
-                    ids(&targets_in_scope(
+                    selection_ids(&targets_in_scope(
                         ctx,
                         Some(&scope(json!({ "side": "ally", "excludeSelf": true })))
                     )),
                     vec![other.id.clone()]
                 );
                 assert_eq!(
-                    ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally" }))))),
+                    selection_ids(&targets_in_scope(ctx, Some(&scope(json!({ "side": "ally" }))))),
                     vec![self_card.id.clone(), other.id.clone()]
                 );
             },
@@ -413,7 +413,7 @@ mod target_scopes_s10_6_r13 {
             |_ctx| {},
             |ctx| {
                 assert_eq!(
-                    ids(&targets_in_scope(
+                    selection_ids(&targets_in_scope(
                         ctx,
                         Some(&scope(
                             json!({ "side": "ally", "of": ["backrow"], "excludeSelf": true })
@@ -430,7 +430,7 @@ mod target_scopes_s10_6_r13 {
             |_ctx| {},
             |ctx| {
                 assert_eq!(
-                    ids(&targets_in_scope(
+                    selection_ids(&targets_in_scope(
                         ctx,
                         Some(&scope(json!({ "side": "ally", "excludeSelf": true })))
                     )),
@@ -758,7 +758,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             }),
         );
         assert_eq!(
-            ids(&option_selections(&state)),
+            selection_ids(&option_selections(&state)),
             mine.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
         );
         assert_eq!(
@@ -768,7 +768,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
                 .collect::<Vec<_>>()
         );
         for theirs in &state.players[PlayerId::P2].hand {
-            assert!(!ids(&option_selections(&state)).contains(&theirs.id));
+            assert!(!selection_ids(&option_selections(&state)).contains(&theirs.id));
         }
 
         // A count above the hand size asks for the whole hand rather than for an impossible number.
@@ -1103,7 +1103,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             &state,
             json!({ "kind": "discover", "prompt": "Discover a card from your graveyard" }),
         );
-        let offered = ids(&option_selections(&state));
+        let offered = selection_ids(&option_selections(&state));
         // R50: the options are the actual instances there, so a spell token in the graveyard is
         // eligible, and the opponent's graveyard is never offered.
         assert_eq!(

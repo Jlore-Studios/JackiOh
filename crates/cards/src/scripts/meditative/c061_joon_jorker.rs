@@ -67,7 +67,6 @@ mod tests {
 
     #[test]
     fn r1060_at_your_end_of_turn_four_upgrades_on_the_unit_in_the_next_lane() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 2 }, { "def": VANILLA, "lane": 3 }, { "def": VANILLA, "lane": 1 }], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },
@@ -84,7 +83,6 @@ mod tests {
 
     #[test]
     fn r1060_in_lane_5_nothing_and_no_random_number() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 5 }, { "def": VANILLA, "lane": 4 }], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },
@@ -100,7 +98,6 @@ mod tests {
 
     #[test]
     fn r1060_an_empty_or_immutable_neighbour_takes_nothing() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 1 }], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },
@@ -111,7 +108,6 @@ mod tests {
             0
         );
 
-        crate::register_all();
         let mut t = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 1 }, { "def": IMMUTABLE, "lane": 2, "radiant": true }], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },
@@ -125,7 +121,6 @@ mod tests {
 
     #[test]
     fn r1060_nothing_at_the_opponent_s_end_of_turn() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "field": [{ "def": JOON, "lane": 2 }, { "def": VANILLA, "lane": 3 }], "hand": [FILLER] },
@@ -140,7 +135,6 @@ mod tests {
 
     #[test]
     fn r386_times_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 2 }, { "def": VANILLA, "lane": 3 }], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },
@@ -153,7 +147,6 @@ mod tests {
 
     #[test]
     fn radiant_eight_upgrades() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": JOON, "lane": 2, "radiant": true }, { "def": VANILLA, "lane": 3 }], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },
@@ -165,7 +158,6 @@ mod tests {
 
     #[test]
     fn r1081000_standing_in_the_backrow_it_buffs_the_unit_standing_to_its_right() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "field": [{ "def": JOON, "lane": 2 }, { "def": VANILLA, "lane": 3 }],

@@ -105,6 +105,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const AUCTION: &str = "classic-038";
     const COUNTER: &str = "classic-017"; // Counterspell: counters the opponent's Spell.
     const FILLER: &str = "core-039"; // (0) Spell Recycling Initiative: exiles itself; its effect waits for the turn's end.
@@ -252,7 +254,6 @@ mod tests {
             #[test]
             fn r395_your_opponents_plays_never_count_nor_answer() {
                 // Patch v0.3.10 (#831): only its controller's plays reveal it and sell.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [VANILLA], "backrow": [set_auction(false, 2)], "library": [TIMMY, TIMMY] },

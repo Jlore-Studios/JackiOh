@@ -44,6 +44,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const WRAPS: &str = "classicplus-010";
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
@@ -58,7 +60,6 @@ mod tests {
     use crate::merged;
 
     fn setup(p1: Value, p2: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(json!({ "library": [STOCKPILE, STOCKPILE], "mana": 10 }), p1),
             "p2": merged(json!({ "hand": [FILLER], "library": [STOCKPILE, STOCKPILE] }), p2),

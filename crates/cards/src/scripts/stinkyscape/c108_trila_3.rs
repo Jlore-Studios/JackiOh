@@ -30,7 +30,6 @@ mod tests {
 
     #[test]
     fn windfury_attacks_twice_a_turn() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ANCHOR], "field": [TRILA], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -43,7 +42,6 @@ mod tests {
 
     #[test]
     fn radiant_rush_may_attack_a_unit_the_turn_it_is_played() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": TRILA, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },

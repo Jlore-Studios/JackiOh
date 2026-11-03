@@ -49,6 +49,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// The controller's unit row as def ids, lane 1 to 5, with `None` for an empty zone.
     fn row(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(player, lane).map(|unit| unit.def_id)).collect()
@@ -62,7 +64,7 @@ mod tests {
     }
 
     /// `["core-008", null, …]` as the row's Rust shape.
-    fn ids(row: &[Option<&str>]) -> Vec<Option<String>> {
+    fn row_ids(row: &[Option<&str>]) -> Vec<Option<String>> {
         row.iter().map(|id| id.map(str::to_string)).collect()
     }
 
@@ -86,7 +88,6 @@ mod tests {
 
             #[test]
             fn r64_puts_the_copy_in_the_leftmost_free_unit_zone_not_the_lane_next_to_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     // Lanes 1 and 3 are taken: the Felinors takes 2 and its copy 4, "leftmost free",
                     // never "adjacent" (§3.1 lanes).
@@ -104,13 +105,12 @@ mod tests {
 
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-008"), Some("traininggrounds-044"), Some("core-020"), Some("traininggrounds-044"), None])
+                    row_ids(&[Some("core-008"), Some("traininggrounds-044"), Some("core-020"), Some("traininggrounds-044"), None])
                 );
             }
 
             #[test]
             fn r1_the_copy_s_cry_does_not_fire_so_exactly_one_copy_is_made() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["traininggrounds-044", "core-005"], "library": ["core-005"] } }));
 
                 s.play("traininggrounds-044", json!({}));
@@ -118,13 +118,12 @@ mod tests {
                 // Two bodies, not a full board: the copy is a summon, and a summon fires no Cry (§6.2).
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("traininggrounds-044"), Some("traininggrounds-044"), None, None, None])
+                    row_ids(&[Some("traininggrounds-044"), Some("traininggrounds-044"), None, None, None])
                 );
             }
 
             #[test]
             fn r57_copies_buffs_and_does_not_copy_damage_exertion_or_counters() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["traininggrounds-044", "core-005"], "library": ["core-005"] } }));
                 // HARNESS GAP (see the header).
                 let felinors = s.card("traininggrounds-044").id.clone();
@@ -145,7 +144,6 @@ mod tests {
 
             #[test]
             fn r64_makes_no_copy_when_the_board_is_full() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "field": ["core-008", "core-008", "core-008", "core-008"],
@@ -159,7 +157,7 @@ mod tests {
                 // The Felinors took the last zone itself, so the copy found none and fizzled silently.
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("traininggrounds-044")])
+                    row_ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("traininggrounds-044")])
                 );
             }
         }
@@ -173,14 +171,13 @@ mod tests {
 
             #[test]
             fn r275_r57_the_radiant_body_is_a_6_8_and_so_is_its_copy_which_keeps_the_radiant_flag() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
 
                 s.play("traininggrounds-044", json!({}));
 
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("traininggrounds-044"), Some("traininggrounds-044"), None, None, None])
+                    row_ids(&[Some("traininggrounds-044"), Some("traininggrounds-044"), None, None, None])
                 );
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
@@ -193,7 +190,6 @@ mod tests {
 
             #[test]
             fn r1_the_radiant_copy_s_cry_does_not_fire_either() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
 
                 s.play("traininggrounds-044", json!({}));
@@ -209,7 +205,6 @@ mod tests {
 
             #[test]
             fn r57_the_radiant_copy_keeps_buffs_and_not_damage_on_the_6_8_face() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
                 // HARNESS GAP (see the header): seeded on the hand instance.
                 let felinors = s.card("traininggrounds-044").id.clone();
@@ -225,7 +220,6 @@ mod tests {
 
             #[test]
             fn r64_the_radiant_face_makes_no_copy_on_a_full_board_either() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "field": ["core-008", "core-008", "core-008", "core-008"],
@@ -238,7 +232,7 @@ mod tests {
 
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("traininggrounds-044")])
+                    row_ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("traininggrounds-044")])
                 );
             }
         }

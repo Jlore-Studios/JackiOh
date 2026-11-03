@@ -40,6 +40,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const FRIEND: &str = "core-062"; // Spell, 1
     const FELINOR: &str = "core-t-felinor"; // §7's shared Felinor Token, 1/1
     const TIMMY: &str = "core-011"; // Unit, 3/3 — the unit already on the board
@@ -59,7 +61,6 @@ mod tests {
 
         #[test]
         fn r64_fills_every_empty_unit_zone_left_to_right_and_leaves_the_occupied_one_alone() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "field": [TIMMY], "mana": 4 } }));
 
             s.play(FRIEND, json!({}));
@@ -77,7 +78,6 @@ mod tests {
 
         #[test]
         fn radiant_gives_plus_2_plus_2_to_every_unit_you_control_the_new_tokens_included() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY], "mana": 4 } }));
 
             s.play(FRIEND, json!({}));
@@ -95,7 +95,6 @@ mod tests {
 
         #[test]
         fn radiant_buffs_your_units_only() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "mana": 4 },
                 "p2": { "field": [TIMMY] },
@@ -111,7 +110,6 @@ mod tests {
 
         #[test]
         fn radiant_still_buffs_your_board_when_it_is_full_and_no_token_can_enter() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY, TIMMY, TIMMY, TIMMY, TIMMY], "mana": 4 },
             }));
@@ -127,7 +125,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gives_3_3_and_a_degrade_1_1() {
             for (upgrade, buff) in [(true, 3), (false, 1)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY, TIMMY, TIMMY, TIMMY, TIMMY], "mana": 4 },
                 }));

@@ -46,6 +46,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -55,7 +57,6 @@ mod tests {
     /// p1 holds First Day (base unless `radiant_face`); both sides keep cards in hand so no turn
     /// auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {

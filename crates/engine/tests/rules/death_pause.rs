@@ -17,7 +17,7 @@ use jackioh_engine::work::owed_work;
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, json_of, new_game, put, round_trip, slot,
+    act, act_result, both, events_of_type, ids, json_of, new_game, put, round_trip, slot,
 };
 
 // Fixtures.
@@ -245,10 +245,6 @@ fn game(seed: &str) -> GameState {
     registered.extend(scripts());
     register_scripts(registered);
     state
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.

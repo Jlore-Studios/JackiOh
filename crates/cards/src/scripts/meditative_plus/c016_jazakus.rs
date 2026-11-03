@@ -78,6 +78,8 @@ mod tests {
     use jackioh_engine::subsystems::craft::whole_palette;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -94,7 +96,6 @@ mod tests {
     }
 
     fn crafting(radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }], "mana": 10, "library": [VANILLA] },
             "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
@@ -153,7 +154,6 @@ mod tests {
     }
 
     fn primes_after_death(radiant: bool) -> Vec<CardInstance> {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "mana": 8,

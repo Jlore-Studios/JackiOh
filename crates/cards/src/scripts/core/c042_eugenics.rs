@@ -123,7 +123,6 @@ mod tests {
         let Some(hook) = hook else {
             return vec![];
         };
-        crate::register_all();
         let mut state = scenario(json!({})).state().clone();
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
