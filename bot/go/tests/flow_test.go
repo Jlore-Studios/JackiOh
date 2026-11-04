@@ -409,7 +409,7 @@ func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
 func TestFlow_AChangeToAReviewPathWaitsForAPerson(t *testing.T) {
 	h := newFlowHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: flowLabels(config.LabelBuild)})
-	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n", "package.json": "{}\n"}),
+	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n", "tsconfig.json": "{}\n"}),
 		"review": workReviewer(workApprove)})
 	_, result := h.night(r)
 	assertEqual(t, result.Get("status"), "approved")
@@ -418,7 +418,7 @@ func TestFlow_AChangeToAReviewPathWaitsForAPerson(t *testing.T) {
 	assertTrue(t, h.gh.LabelNames(pull.Int("number"))["ready for merge"])
 	assertEqual(t, h.gh.ReviewRequests, []fakes.ReviewRequest{{Number: pull.Int("number"), Logins: []string{"jgoetzmann"}}})
 	said := lastOf(t, h.gh.BotComments(12))
-	assertIn(t, "package.json", said)
+	assertIn(t, "`tsconfig.json`, which a person reviews", said)
 	assertIn(t, "labelled `ready for merge`: @jgoetzmann, it waits for you to merge it", said)
 	// Back in the queue it is no longer ready: a revision takes the label off.
 	queue.QueueRevise(h.ctx, pull.Int("number"), "jgoetzmann", false, "request", false, nil, nil)

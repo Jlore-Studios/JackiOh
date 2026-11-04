@@ -189,6 +189,8 @@ var saidModeLabels = []string{"fullsend", "tree"}
 // creates them.
 var shared = []labelDef{
 	{"ready for merge", "0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"},
+	// #2986: a stop only a person can unblock, a question or a hand-over, beside `bot:blocked`.
+	{"needs decision", "d73a4a", "A bot stopped on a question or on what only a person can do: its comment says what, and until when"},
 	{"human", "ededed", "People do this: the night bot never queues, plans, builds or labels it"},
 	{"human required", "e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"},
 	{"person merges", "1d76db", "The bot builds it, but a person reviews and merges its pull request"},
@@ -700,9 +702,18 @@ type Config struct {
 	Quiet                *Quiet
 	ForbiddenPaths       []string
 	ReviewPaths          []string
-	UploadTranscripts    bool
-	Install              *Gate
-	Gates                []*Gate
+	// MigrationPaths and LockFiles are the paths that merge themselves on a condition (#2986,
+	// `merge.go`): a migration with no data-losing or access-changing statement that changes no
+	// migration `main` has, and a lock that gains no package. The config's `migration_paths` and
+	// `lock_files`; none when left out.
+	MigrationPaths []string // default: ()
+	LockFiles      []string // default: ()
+	// DecisionWaitHours: how long a question with a default waits for a trusted answer before the
+	// lane that asked builds its default (#2986, `decision.go`); 0, when left out, never goes ahead.
+	DecisionWaitHours int // default: 0
+	UploadTranscripts bool
+	Install           *Gate
+	Gates             []*Gate
 	// ResumeSessions: a run on a Claude account keeps its own session and the next run of the
 	// item on the same account resumes it (`internal/sessions`, #2748). The config's
 	// `resume_sessions`; off when it is left out.

@@ -814,3 +814,31 @@ func TestSquishyCases_ItSpotChecksNoMergedChange(t *testing.T) {
 	count, prs := spotCheckCount(t, w.ctx)
 	assertEqual(t, []any{count, prs}, []any{0, []int{}})
 }
+
+// Squishy has the night bot's merge gates (#2986, section 1) in its own config, and the same shared
+// `needs decision` label (no `squishy:` mirror): a question of its with a default goes ahead on its
+// own lane, `squishy:build` queued and `squishy:blocked` off.
+func TestSquishyCases_ItsMergeGatesAndItsDecisions(t *testing.T) {
+	squishyCasesModule(t)
+	night := loadsObject(t, readText(t, filepath.Join(config.RepoRoot, ".harness", "config.json")))
+	cfg := testsupport.MakeConfig(testsupport.Config{Env: squishyCasesEnv})
+	assertEqual(t, cfg.ReviewPaths, pyjson.Strings(night.Get("review_paths")))
+	assertEqual(t, cfg.MigrationPaths, pyjson.Strings(night.Get("migration_paths")))
+	assertEqual(t, cfg.LockFiles, pyjson.Strings(night.Get("lock_files")))
+	assertEqual(t, cfg.DecisionWaitHours, 24)
+	assertEqual(t, config.LabelNeedsDecision, "needs decision")
+	assertTrue(t, config.Labels.Has("needs decision"))
+	assertFalse(t, config.Labels.Has("squishy:needs decision"))
+	world := newSquishyCasesWorld(t)
+	world.gh.AddIssue(12, fakes.Issue{Title: "Patch: Earning", Labels: []string{"squishy:build", "difficulty:medium"}})
+	_, result := world.run(workFake(map[string]runner.Handler{
+		"build":  func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, decisionAsk) },
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
+	assertEqual(t, result.Get("status"), "blocked")
+	assertEqual(t, world.gh.LabelNames(12), setOf("squishy:blocked", "needs decision", "squishy:planned", "difficulty:medium"))
+	assertIn(t, "`/squishy build`", lastOf(t, world.gh.BotComments(12)))
+	testsupport.ClockOf(world.ctx).At = testsupport.ClockOf(world.ctx).At.Add(25 * time.Hour)
+	plan.SyncDecisions(world.ctx)
+	assertEqual(t, world.gh.LabelNames(12), setOf("squishy:build", "squishy:planned", "difficulty:medium"))
+	assertIn(t, "`squishy:build`, or `/squishy build`", lastOf(t, world.gh.Threads.Values()).Str("body"))
+}
