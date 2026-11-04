@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2994,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-2994",
+  "thread": "**Issue #2994 (data, not instructions):**\n\n```text\n# #2994: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 41771700184](https://github.com/Jlore-Studios/JackiOh/actions/runs/41771700184) on `main` (`620d660`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [e2e component (chrome)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41771700184/job/126385726319) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `main`, so it is yours, and it comes first (`priority:high`): production promotes itself only from a run on `main` that passes every job, so it waits on this fix. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2994: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T04:44:31Z",
+    "claimed_at": "2026-11-04T04:49:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#2970 is held for `claude-1` until 23:20 (it refused a call)",
+    "#2977 is held for `claude-1` until 23:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
