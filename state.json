@@ -22246,9 +22246,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-04T18:20:00Z",
-          "utilization": 0.71
+          "utilization": 0.73
         },
-        "observed_at": "2026-11-04T16:21:38Z",
+        "observed_at": "2026-11-04T17:47:09Z",
         "status": "allowed"
       }
     },
@@ -29941,6 +29941,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-04T17:27:35Z,claude-4,ping,before,41877437560,73,2026-11-04T18:20:00Z,,,allowed,70,,"
+    ]
   },
   "version": 1
 }
