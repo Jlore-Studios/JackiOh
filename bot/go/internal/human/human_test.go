@@ -7,7 +7,8 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// testdata/python.json is bot/harness/human.py's answers to the same calls (the night bot's).
+// testdata/python.json is bot/harness/human.py's answers to the same calls (the night bot's), and
+// the hand-over's summary (`ask`) as #3009 changed it.
 func expected(t *testing.T) *pyjson.Object {
 	t.Helper()
 	data, err := os.ReadFile("testdata/python.json")
@@ -37,10 +38,10 @@ func TestTheHandOverAsPython(t *testing.T) {
 		t.Errorf("People: %s", People())
 	}
 	ask := data.List("ask")
-	if got := Ask("  Set it up.  ", "jgoetzmann-bot", "build this", "", ""); got != ask[0] {
+	if got := Ask("  Set it up.  ", "jgoetzmann-bot", "build this", "", "", ""); got != ask[0] {
 		t.Errorf("Ask\n%s\nwant\n%s", got, ask[0])
 	}
-	if got := Ask("", "bot", "merge this", " I kept the branch.", "ask again"); got != ask[1] {
+	if got := Ask("", "bot", "merge this", " I kept the branch.", "branch `b`, at `abc`", "ask again"); got != ask[1] {
 		t.Errorf("Ask\n%s\nwant\n%s", got, ask[1])
 	}
 	if !LetsGo["bot:needs-plan"] {
