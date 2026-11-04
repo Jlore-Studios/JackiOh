@@ -3,6 +3,7 @@
 // returned function puts the original back, so call it in an `afterEach`.
 
 import { PHONE_BAR_QUERY, PHONE_PORTRAIT_QUERY } from "../game/config.ts";
+import { PATCH_LEGEND_PHONE_QUERY } from "../patches/constants.ts";
 
 function stubQueries(answers: readonly string[], matches: boolean): () => void {
   const original = window.matchMedia;
@@ -35,4 +36,9 @@ export function stubPhoneBar(matches: boolean): () => void {
  */
 export function stubPhonePortrait(matches: boolean): () => void {
   return stubQueries([PHONE_PORTRAIT_QUERY, PHONE_BAR_QUERY], matches);
+}
+
+/** R3012000: a test's answer to whether the Patch notes legend is collapsed into a drawer (`usePatchLegendCollapsed`). */
+export function stubPatchLegendPhone(matches: boolean): () => void {
+  return stubQueries([PATCH_LEGEND_PHONE_QUERY], matches);
 }

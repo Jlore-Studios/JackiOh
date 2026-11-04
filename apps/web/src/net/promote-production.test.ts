@@ -96,10 +96,10 @@ if (a === "run" && b === "list" && f("--workflow") === "super.yml" && f("--commi
 } else if (a === "issue" && b === "list") {
   out(st.issues.filter((i) => i.state === "open" && i.labels.includes(f("--label"))).map((i) => ({ number: i.number })));
 } else if (a === "issue" && b === "view") {
-  out({ body: issue(pos[2]).body, title: issue(pos[2]).title });
+  out({ body: issue(pos[2]).body, title: issue(pos[2]).title, createdAt: issue(pos[2]).createdAt });
 } else if (a === "issue" && b === "create") {
   const number = st.next++;
-  st.issues.push({ number, title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], assignees: (f("--assignee") || "").split(","), state: "open", reason: "", comments: [] });
+  st.issues.push({ number, title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], assignees: (f("--assignee") || "").split(","), state: "open", reason: "", comments: [], createdAt: iso() });
   printed += "https://github.com/acme/game/issues/" + number + "\n";
 } else if (a === "issue" && b === "edit") {
   const i = issue(pos[2]);
@@ -151,7 +151,7 @@ process.stdout.write(printed);
 `;
 
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
-interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
+interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[]; createdAt?: string }
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean; comments: string[] }
 interface SuperRun { databaseId: number; attempt: number; status: string; conclusion: string | null; url: string }
 interface MainSuperRun { databaseId: number; headSha: string; conclusion: string; url: string }
@@ -342,7 +342,7 @@ describe("the production issue", () => {
     const r = ok(run(w, "workflow_run"));
     const [only, ...rest] = openIssues(w);
     expect(rest).toEqual([]);
-    expect(only).toMatchObject({ number: 1, title: "Production: 2 commits on main are not live yet", labels: [LABEL, "human"], assignees: PEOPLE });
+    expect(only).toMatchObject({ number: 1, title: "Production: commits on main are not live yet", labels: [LABEL, "human"], assignees: PEOPLE });
     expect(marker(only as Issue)).toBe("last=0 reported=-");
     expect(daily(only as Issue)).toBe("-");
     for (const command of ["`/promote`", "`/promote <sha>`", "`/skip-super <reason>`", "`/cancel`"]) {
@@ -381,7 +381,7 @@ describe("the production issue", () => {
       s.next = 2;
     });
     ok(run(w, "workflow_run"));
-    expect(issue(w, 1).title).toBe("Production: 2 commits on main are not live yet");
+    expect(issue(w, 1).title).toBe("Production: commits on main are not live yet");
     expect(marker(issue(w, 1))).toBe("last=1000 reported=-");
     expect(issue(w, 1).body).not.toContain("on hold");
     ok(say(w, "/promote").run);
@@ -399,18 +399,78 @@ describe("the production issue", () => {
     expect(r.text).toContain("has lost its state line");
     expect(marker(issue(w, 1))).toBe("last=0 reported=-");
   });
+
+  it("hands over to a fresh issue once it is a week old: the new one carries the state line, the old one is retitled and closed with a link", () => {
+    const w = started();
+    const { id, run: asked } = say(w, "/cancel");
+    ok(asked);
+    const aged = (createdAt: string): void =>
+      edit(w, (s) => {
+        const first = s.issues.find((i) => i.number === 1);
+        if (first !== undefined) first.createdAt = createdAt;
+      });
+    // A second short of seven days: it stays.
+    aged("2026-10-26T18:00:01Z");
+    ok(run(w, "workflow_run"));
+    expect(openIssues(w).map((i) => i.number)).toEqual([1]);
+
+    aged("2026-10-26T18:00:00Z");
+    commit(w, "c4", { "app.txt": "four\n" });
+    const r = ok(run(w, "workflow_run"));
+    expect(r.text).toContain("Opened #2, the production issue from now on; closed #1 (2026-10-26 to 2026-11-02).");
+    const [fresh, ...rest] = openIssues(w);
+    expect(rest).toEqual([]);
+    expect(fresh).toMatchObject({ number: 2, title: "Production: commits on main are not live yet", labels: [LABEL, "human"], assignees: PEOPLE, comments: [] });
+    expect(marker(fresh as Issue)).toBe(`last=${id} reported=-`);
+    expect(daily(fresh as Issue)).toBe("-");
+    expect(fresh?.body).toContain("Not live yet, newest first: 3.");
+    expect(fresh?.body).toContain(
+      "A fresh issue takes over from this one every 7 days, carrying its state, so the thread stays short: [the closed ones](https://github.com/acme/game/issues?q=is%3Aissue+is%3Aclosed+label%3A%22production+merge%22) are the history.",
+    );
+    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed", title: "Production, 2026-10-26 to 2026-11-02 (continued in #2)" });
+    expect(lastReply(w)).toBe(
+      "Continued in #2: a fresh production issue takes over every 7 days, with this one's state, so no thread grows long. Comment there from now on.",
+    );
+
+    // The fresh one waits its own seven days.
+    ok(run(w, "workflow_run"));
+    expect(openIssues(w).map((i) => i.number)).toEqual([2]);
+    expect(issue(w, 2).comments).toEqual([]);
+  });
+
+  it("still carries out a command left on the issue it took over from, once, and answers on the open one", () => {
+    const w = started();
+    edit(w, (s) => {
+      const first = s.issues.find((i) => i.number === 1);
+      if (first !== undefined) first.createdAt = "2026-10-20T09:00:00Z";
+    });
+    ok(run(w, "workflow_run"));
+    expect(openIssues(w).map((i) => i.number)).toEqual([2]);
+    // comment() writes on #1, the closed one.
+    const id = comment(w, "/promote");
+    ok(run(w, "issue_comment", { COMMENT_ISSUE: "1" }));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(openPrs(w).map((p) => p.number)).toEqual([3]);
+    expect(issue(w, 2).comments.at(-1)?.body).toContain(`Opened #3 (@maintainer): 2 commit(s) of \`main\` up to \`${short(w.sha.c3, 12)}\``);
+    expect(marker(issue(w, 2))).toBe(`last=${id} reported=-`);
+    ok(run(w, "issue_comment", { COMMENT_ISSUE: "1" }));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(openPrs(w).map((p) => p.number)).toEqual([3]);
+  });
 });
 
 describe("a green CI run on main", () => {
-  it("only brings the queue up to date", () => {
+  it("only brings the queue up to date, in the body: the title stays, so the timeline gets no retitle a commit", () => {
     const w = started();
     const before = production(w);
+    expect(issue(w, 1).body).toContain("Not live yet, newest first: 2.");
     commit(w, "c4", { "app.txt": "four\n" });
     const r = ok(run(w, "workflow_run"));
     expect(r.output).not.toContain("promoted=true");
     expect(production(w)).toBe(before);
     expect(gh(w).prs).toEqual([]);
-    expect(issue(w, 1).title).toBe("Production: 3 commits on main are not live yet");
+    expect(issue(w, 1).body).toContain("Not live yet, newest first: 3.");
+    expect(issue(w, 1).title).toBe("Production: commits on main are not live yet");
   });
 
   it("refuses a scheduled run, or any event it does not know: the daily promotion runs off super's own schedule", () => {
@@ -733,7 +793,7 @@ describe("/cancel", () => {
     expect(pr(w, 2)).toMatchObject({ state: "closed", merged: false, comments: ["Cancelled by @maintainer on #1."] });
     expect(git(w.origin, "for-each-ref", `refs/heads/${branch}`)).toBe("");
     expect(lastReply(w)).toBe("Closed #2, as @maintainer asked. Nothing merges.");
-    expect(issue(w, 1).title).toBe("Production: 2 commits on main are not live yet");
+    expect(issue(w, 1).title).toBe("Production: commits on main are not live yet");
 
     ok(say(w, "/cancel").run);
     expect(lastReply(w)).toBe("No promotion pull request is open, so there is nothing to cancel.");
