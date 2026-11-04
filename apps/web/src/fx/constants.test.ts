@@ -170,7 +170,15 @@ const S2 = {
     seal: 0.2,
     // Issue #2794: recall (R2794000).
     recall: 0,
+    hex: 0.15,
   },
+  // Issue #2797: Stinkyscape's Flourishes (R2797000).
+  FX_TERMINUS_TRAUMA: 0.5,
+  FX_MAGI_STAGGER: 0.05,
+  FX_MAGI_BOOTS: 3,
+  FX_MAGI_TRAUMA: 0.3,
+  FX_WARP_TRAUMA: 0.6,
+  FX_WARP_FROM: { x: 0.5, y: 0 },
   FX_MOTIF_TITHE_MAX: 5,
   FX_MOTIF_DEAL_MAX: 5,
   // Issue #2793: Core's flourishes, and a set pass's floor.
@@ -351,6 +359,9 @@ describe("S2 the effects constants", () => {
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
       constants.FX_FIRST_STRIKE_BREAK_AT,
+      // R2797000: Imitated Instrumentality's stagger, and where Drone Core X's Battleship warps in from.
+      constants.FX_MAGI_STAGGER,
+      constants.FX_WARP_FROM.x,
       // R2801000: a fuse's landing, the launch's ignition, contrail flight and landing.
       constants.FX_STARSHIP_FUSE_LAND_AT,
       constants.FX_STARSHIP_IGNITE_AT,
@@ -407,6 +418,10 @@ describe("S2 the effects constants", () => {
       constants.FX_JADE_CRACK_TRAUMA,
       constants.FX_HARMONY_TRAUMA,
       constants.FX_CN_SWEEP_TRAUMA,
+      // R2797000: Stinkyscape's Flourishes.
+      constants.FX_TERMINUS_TRAUMA,
+      constants.FX_MAGI_TRAUMA,
+      constants.FX_WARP_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);

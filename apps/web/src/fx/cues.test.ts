@@ -1239,7 +1239,9 @@ describe("B16 the recipe table, row by row", () => {
   });
 
   it("R2657001 a Field Trap firing again plans an activation's flare on its card: no reveal burst and no shake", () => {
-    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true };
+    // R2797000: a firing plays its card's own `cast` first, so this names the card the view shows there,
+    // whose entry has none, and the row plays alone.
+    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-061", controller: "p1", row: "backrow", lane: 1, again: true };
     for (const D of [ANIMATIONS.activated.durationMs, ODD_D]) {
       const cues = plan([again], D);
       expectCues(cues, [ring("arcane", cardT(MY_FIELD_TRAP), 0, D), burst("arcane", cardT(MY_FIELD_TRAP), "point", 0, FLAVOR_LOOKS.Dark.colors)]);

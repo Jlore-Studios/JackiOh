@@ -90,7 +90,8 @@ const DELEGATED: readonly Delegated[] = [
   },
   {
     recipe: "trap",
-    events: () => [{ type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true }],
+    // R2797000: a firing plays its card's own `cast` first, so this names the card the view shows there, whose entry has none.
+    events: () => [{ type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-061", controller: "p1", row: "backrow", lane: 1, again: true }],
     motif: "snap",
     flavor: "Dark",
   },

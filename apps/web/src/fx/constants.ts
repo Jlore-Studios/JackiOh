@@ -191,7 +191,18 @@ export const FX_MOTIF_TRAUMA = {
   deal: 0,
   seal: 0.2,
   recall: 0,
+  hex: 0.15,
 } as const;
+// R2797000: Stinkyscape's three Flourishes (fx/cards/stinkyscape/). Olivian Expanse's rift shakes as it
+// gives up its card; Imitated Instrumentality's three boots leave FX_MAGI_STAGGER of D apart, at most
+// FX_MAGI_BOOTS of them staggered, the first shaking the board; Drone Core X's Battleship warps in from
+// FX_WARP_FROM of the board (its top edge) and shakes as it lands.
+export const FX_TERMINUS_TRAUMA = 0.5;
+export const FX_MAGI_STAGGER = 0.05;
+export const FX_MAGI_BOOTS = 3;
+export const FX_MAGI_TRAUMA = 0.3;
+export const FX_WARP_TRAUMA = 0.6;
+export const FX_WARP_FROM = { x: 0.5, y: 0 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
 export const FX_MOTIF_DEAL_MAX = 5; // deal: the cards one entry deals

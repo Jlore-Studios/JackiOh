@@ -1,4 +1,4 @@
-// The Chrome the e2e run launches as `chrome`, when the one Cypress found is a major known to break under it.
+// The Chrome the Cypress run (e2e and component) launches as `chrome`, when the one Cypress found is a major known to break under it.
 // Node-side only: cypress.config.ts's setupNodeEvents calls `pinChrome`.
 //
 // Cypress 16 answers every request the page makes over the DevTools protocol (`Fetch.enable`; `forceHttp1: true` never
