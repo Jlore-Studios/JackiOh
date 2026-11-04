@@ -18009,6 +18009,13 @@
     "3013": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41803304222",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-04T09:25:00Z",
+        "until": "2026-11-04T09:55:00Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
