@@ -1348,17 +1348,7 @@
   }
 }
 
-/* R2944002: while the face's depth holds a motion slot (`data-immersive-motion="animated"`, CardFace), the near layer
-   shifts IMMERSIVE_SHIFT_PCT of the window each way at the pointer's or the tilt's far edge (immersive.ts's
-   `--cf-immersive-x` and `--cf-immersive-y`, -1 to 1) and breathes over IMMERSIVE_BREATH_S each way; by transform
-   alone, inside the motion gate. Under reduced motion, with Animated foil off and on a lazy face it rests. */
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-reduce-motion="true"]) .cf[data-immersive-motion="animated"] .cf-immersive > .cf-art {
-    translate: calc(var(--cf-immersive-x, 0) * 6%) calc(var(--cf-immersive-y, 0) * 6%);
-    transition: translate 160ms ease-out;
-    animation: cf-immersive-breathe 7s ease-in-out infinite alternate;
-  }
-}
+/* R2944002: the near layer's shift and breath are in the sheet's one motion gate (the foil sweep's, below). */
 
 /* --------------------------------------------------------------------------- prismatic --- */
 
@@ -2193,6 +2183,17 @@
   :root:not([data-reduce-motion="true"]) .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
   :root:not([data-reduce-motion="true"]) .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
     bottom: 45%;
+  }
+
+  /* R2944002: while the face's depth holds a motion slot (`data-immersive-motion="animated"`, CardFace), the near
+     layer shifts IMMERSIVE_SHIFT_PCT of the window each way at the pointer's or the tilt's far edge (immersive.ts's
+     `--cf-immersive-x` and `--cf-immersive-y`, -1 to 1) and breathes over IMMERSIVE_BREATH_S each way; by transform
+     alone, inside this gate, the sheet's one (cards/foil.test.ts). Under reduced motion, with Animated foil off and on
+     a lazy face it rests. */
+  :root:not([data-reduce-motion="true"]) .cf[data-immersive-motion="animated"] .cf-immersive > .cf-art {
+    translate: calc(var(--cf-immersive-x, 0) * 6%) calc(var(--cf-immersive-y, 0) * 6%);
+    transition: translate 160ms ease-out;
+    animation: cf-immersive-breathe 7s ease-in-out infinite alternate;
   }
 }
 
