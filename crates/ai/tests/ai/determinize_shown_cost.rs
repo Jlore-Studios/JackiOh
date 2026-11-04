@@ -22,6 +22,7 @@ fn one_of_each_cost() -> GameState {
             "backrow": [
                 { "def": "core-041", "faceUp": false },
                 { "def": "classic-017", "faceUp": false },
+                { "def": GROOM_SHROOM, "faceUp": false },
                 { "def": DOOM_SHROOM, "faceUp": false },
             ],
             "library": ["core-005"],
@@ -31,12 +32,10 @@ fn one_of_each_cost() -> GameState {
     .clone()
 }
 
-/// Vanilla 4 + Timmy 3 is exactly 7, so the two swings are lethal. Doom Shroom exiles both attackers on the
-/// first swing. Groom Shroom lets the first swing hit (R405) and walls the second behind Taunts. So no world
-/// at (3) has a lethal. Do not cut this to one attacker: a Groom world would then still be lethal. C #9
-/// Income Tax (a Trap at (3), #831, stopping no swing) and C #88 Siphon Squad (a Field Trap at (3), #1149,
-/// asleep while set and unrevealed, R1149000) lie in p2's graveyard: seen, neither is any world's face-down
-/// card (a deck holds no card twice).
+/// Vanilla 4 + Timmy 3 is exactly 7, so the two swings are lethal. Doom Shroom, the one unseen Trap at (4),
+/// exiles both attackers on the first swing, so no world at (4) has a lethal. Stinkyscape #22 Gatinsir and
+/// #174 Aerelret (the other Traps at (4), each letting the attack go on) lie in p2's graveyard: seen, neither
+/// is any world's face-down card (a deck holds no card twice).
 fn shroomed(trap: bool) -> GameState {
     register_cards();
     let backrow = if trap {
@@ -52,7 +51,7 @@ fn shroomed(trap: bool) -> GameState {
         "p2": {
             "health": 7,
             "backrow": backrow,
-            "graveyard": ["classic-009", "classic-088"],
+            "graveyard": ["stinkyscape-022", "stinkyscape-174"],
             "library": ["core-005", "core-016"],
         },
     }))
@@ -75,7 +74,7 @@ mod determinize_at_the_shown_cost_r762 {
             .iter()
             .map(|card| effective_cost(&state, card, CostOptions::default()))
             .collect();
-        assert_eq!(shown, vec![1, 2, 3]);
+        assert_eq!(shown, vec![1, 2, 3, 4]);
         let mut picked: IndexSet<String> = IndexSet::new();
         for k in 0..100 {
             let world = determinize(
@@ -135,7 +134,7 @@ mod determinize_at_the_shown_cost_r762 {
     }
 
     #[test]
-    fn r762_never_returns_the_swing_into_a_face_down_doom_shroom_showing_3_as_lethal_on_ai_seeds_1_20() {
+    fn r762_never_returns_the_swing_into_a_face_down_doom_shroom_showing_4_as_lethal_on_ai_seeds_1_20() {
         let state = shroomed(true);
         for seed in 1..=20 {
             let decision = decide(

@@ -2481,8 +2481,8 @@ classicplus-051: # Jlockeed's J15 Fighter
     death: Mayday, mayday!
   zh:
     name: Jlockeed的歼15战斗机
-    base: "远程，飞行，突袭\n无法被攻击。"
-    radiant: "远程，飞行，突袭，圣盾\n无法被攻击。"
+    base: "远程，飞行，突袭，无法守备\n无法被攻击。"
+    radiant: "远程，飞行，突袭，圣盾，无法守备\n无法被攻击。"
 classicplus-052: # Jlockeed's Permanent Defense Contract
   flavour: A contract for life, with free shipping every morning.
   voice:
@@ -6582,7 +6582,7 @@ traininggrounds-014: # Explosive Trap
     base: "践踏\n当你的对手打出一个单位时揭示：在其结算后，对其造成{damage}点伤害。"
     radiant: "践踏，穿透\n当你的对手打出一个单位时揭示：在其结算后，对其造成{damage}点伤害。"
 traininggrounds-015: # In a hurry
-  flavour: Three volunteers, one turn, no return tickets.
+  flavour: Four volunteers, one turn, no return tickets.
   voice:
     cast: Go go go, no time!
   zh:

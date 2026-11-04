@@ -961,9 +961,9 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
     }
 
     #[test]
-    fn r195_base_4_enemy_permanents_glow_and_played_now_it_steals_one() {
+    fn r195_base_5_enemy_permanents_glow_and_played_now_it_steals_one() {
         let mut s = setup(
-            json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"], "backrow": ["core-073"] } }),
+            json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"], "backrow": ["core-073"] } }),
         );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
@@ -972,9 +972,9 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
     }
 
     #[test]
-    fn r195_base_3_enemy_permanents_do_not_glow_and_played_now_it_steals_nothing() {
+    fn r195_base_4_enemy_permanents_do_not_glow_and_played_now_it_steals_nothing() {
         let mut s = setup(
-            json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"] } }),
+            json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }),
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
@@ -986,31 +986,31 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
     fn r195_r13_a_face_down_trap_counts_a_card_dormant_under_a_stack_does_not() {
         let s = setup(json!({
             "p1": { "hand": [TECH, ANCHOR] },
-            "p2": { "hand": [ANCHOR], "field": ["core-008", { "def": "core-092", "stack": true }, "core-019"], "backrow": [{ "def": "core-096", "faceUp": false }] },
+            "p2": { "hand": [ANCHOR], "field": ["core-008", { "def": "core-092", "stack": true }, "core-019", "core-011"], "backrow": [{ "def": "core-096", "faceUp": false }] },
         }));
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
     }
 
     #[test]
-    fn r195_radiant_4_enemy_permanents_glow_and_played_now_it_asks_which_to_steal() {
+    fn r195_radiant_5_enemy_permanents_glow_and_played_now_it_asks_which_to_steal() {
         let mut s = setup(json!({
             "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
-            "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011"], "backrow": [{ "def": "core-096", "faceUp": false }] },
+            "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"], "backrow": [{ "def": "core-096", "faceUp": false }] },
         }));
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));
         s.play(TECH, json!({ "zone": 5 }));
         assert_eq!(
             s.state().pending.as_ref().map(|pending| pending.options.len()),
-            Some(4)
+            Some(5)
         );
     }
 
     #[test]
     fn r195_on_the_field_it_never_glows() {
         let s = setup(
-            json!({ "p1": { "hand": [ANCHOR], "field": [TECH] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }),
+            json!({ "p1": { "hand": [ANCHOR], "field": [TECH] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001", "core-066"] } }),
         );
 
         assert!(!glows(s.view("p1").you.units[0].as_ref()));
@@ -1019,7 +1019,7 @@ mod classic_c40_mc_tech_lights_up_in_hand_while_the_opponent_controls_enough_per
     #[test]
     fn r195_on_the_opponents_turn_it_never_glows_however_many_permanents_they_control() {
         let s = setup(
-            json!({ "active": "p2", "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001"] } }),
+            json!({ "active": "p2", "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": ["core-008", "core-019", "core-011", "core-001", "core-066"] } }),
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, TECH), 0)));

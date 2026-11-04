@@ -2265,7 +2265,7 @@ mod r1279000_opponent_held_prompt_off_turn {
         scenario(setup)
     }
 
-    /// p1's In Too Deep at its quest 5 (15 damage dealt to the enemy), `progress` of it done.
+    /// p1's In Too Deep at its quest 5 (18 damage dealt to the enemy), `progress` of it done.
     fn deep_board(active: PlayerId, progress: i32) -> Scenario {
         let mut g = scenario(json!({
             "active": active,
@@ -2390,7 +2390,7 @@ mod r1279000_opponent_held_prompt_off_turn {
             assert_one_i10(&w, INCOME_TAX);
 
             // In Too Deep's reward G asked p2 at once, in p1's turn.
-            let mut w = Watched::new(deep_board(PlayerId::P1, 15));
+            let mut w = Watched::new(deep_board(PlayerId::P1, 18));
             w.act(|g| {
                 g.play(CURSE, json!({}));
             });
@@ -2407,7 +2407,7 @@ mod r1279000_opponent_held_prompt_off_turn {
     fn r1279000_i10_a_prompt_the_asking_card_s_controller_holds_passes_on_the_opponent_s_turn() {
         // p2 attacks into p1's unit on their own turn, and the strike back is p1's cards dealing In Too
         // Deep's last point of damage, so p1's reward choice opens while p2 is active.
-        let mut w = Watched::new(deep_board(PlayerId::P2, 14));
+        let mut w = Watched::new(deep_board(PlayerId::P2, 17));
         let timmy = w.g.unit_at(PlayerId::P2, 1);
         let vanilla = w.g.unit_at(PlayerId::P1, 1);
         w.act(|g| {
@@ -2502,7 +2502,7 @@ mod r1279000_opponent_held_prompt_off_turn {
     #[test]
     fn r1279000_i10_in_too_deep_passes_with_its_quest_completed_on_either_players_turn() {
         // On p1's own turn, reward G's discard is p2's choice and waits for p2's turn.
-        let mut w = Watched::new(deep_board(PlayerId::P1, 15));
+        let mut w = Watched::new(deep_board(PlayerId::P1, 18));
         w.act(|g| {
             g.play(CURSE, json!({}));
         });

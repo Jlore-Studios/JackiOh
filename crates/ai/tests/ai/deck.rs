@@ -695,7 +695,7 @@ mod r1370_a_deck_that_leans_on_a_set {
         // and each set after it (#1187, #1884, #2204) was in any pool, so the literals gate them (R1390: a
         // gate deals what the draw dealt before). A patch that moves the builder's curve or picks re-deals
         // the pins, their seeds stopping at the same cursors (#831, #1149, #1194, #1704, #2179, #2657; #1151
-        // the themed pin only, #2521 the human and themed pins).
+        // the themed pin only, #2521 the human and themed pins, #3042 the hard, human and themed pins).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -718,11 +718,11 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-078",
                     "core-012",
                     "core-010",
-                    "core-056",
+                    "core-055",
                     "classicplus-007",
-                    "classicplus-034",
+                    "classicplus-033",
                     "core-077",
-                    "classicplus-026",
+                    "classicplus-011",
                 ],
             ),
             (
@@ -785,10 +785,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-008",
                     "classicplus-038",
                     "core-029",
-                    "classic-014",
-                    "classic-009",
-                    "classic-004",
-                    "classicplus-019",
+                    "classic-017",
+                    "classic-010",
+                    "classic-018",
+                    "classicplus-011",
                 ],
             ),
             (
@@ -814,7 +814,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-071",
                     "core-066",
                     "classicplus-063",
-                    "core-098",
+                    "core-093",
                     "classic-083",
                     "classicplus-026",
                 ],

@@ -1,6 +1,6 @@
 //! C #40 MC Tech (SPEC §8.6 row 40). (1) Unit, Rare, 3/3 → 6/6.
-//!   Base:    "Cry: If your opponent controls {threshold} or more permanents, steal a random one." — 4
-//!   Radiant: "Cry: If your opponent controls {threshold} or more permanents, steal one of your choice." — 4
+//!   Base:    "Cry: If your opponent controls {threshold} or more permanents, steal a random one." — 5
+//!   Radiant: "Cry: If your opponent controls {threshold} or more permanents, steal one of your choice." — 5
 //!
 //! Permanents your opponent controls: the top card of each of their unit piles (a card dormant under
 //! a Stack is not on the field, R13) and every backrow card, face-down ones included; the count is
@@ -109,12 +109,13 @@ mod tests {
     const BREAD: &str = "core-018";
     const STIMMY: &str = "core-071";
     const UNLICENSED: &str = "core-085";
+    const HONEYPOT: &str = "core-060";
     const ANCHOR: &str = "core-010";
 
     use crate::js;
 
     fn face_down_traps() -> Value {
-        Value::Array([PAWN, BREAD, STIMMY, UNLICENSED].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
+        Value::Array([PAWN, BREAD, STIMMY, UNLICENSED, HONEYPOT].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
     }
 
     fn stolen_ids(s: &Scenario) -> Vec<String> {
@@ -137,10 +138,10 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r60_with_4_enemy_permanents_it_steals_one_at_random_which_is_now_yours() {
+            fn r60_with_5_enemy_permanents_it_steals_one_at_random_which_is_now_yours() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [FIELD_SPELL] },
                 }));
 
                 s.play(TECH, json!({ "zone": 5 }));
@@ -156,45 +157,41 @@ mod tests {
             fn r15_a_stolen_unit_lands_in_the_same_lane_of_your_row_when_it_is_free() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
                 }));
+                let theirs: Vec<(i32, String)> =
+                    (1..=5).filter_map(|l| s.unit(PlayerId::P2, l).map(|unit| (l, unit.id.clone()))).collect();
 
                 s.play(TECH, json!({ "zone": 5 }));
 
                 let stolen = s.card(first_or_empty(&stolen_ids(&s))).id.clone();
-                let lane = [1, 2, 3, 4].into_iter().find(|&l| s.unit(PlayerId::P1, l).is_some_and(|unit| unit.id == stolen));
-                assert!(lane.is_some());
-                assert!(s.unit(PlayerId::P2, lane.unwrap_or(0)).is_none());
+                let from = theirs.iter().find(|(_, id)| *id == stolen).map(|(l, _)| *l);
+                let lane = (1..=5).find(|&l| s.unit(PlayerId::P1, l).is_some_and(|unit| unit.id == stolen));
+                // MC Tech took lane 5 of your row, so a Unit stolen from their lane 5 takes your first free zone.
+                assert_eq!(lane, from.map(|l| if l == 5 { 1 } else { l }));
+                assert!(s.unit(PlayerId::P2, from.unwrap_or(0)).is_none());
             }
 
             #[test]
             fn r15_with_no_free_zone_in_your_row_the_pick_stays_with_them_and_nothing_is_stolen() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
                 }));
 
                 s.play(TECH, json!({ "zone": 5 }));
 
                 assert!(stolen_ids(&s).is_empty());
                 let defs: Vec<Option<String>> =
-                    [1, 2, 3, 4].into_iter().map(|l| s.unit(PlayerId::P2, l).map(|unit| unit.def_id.clone())).collect();
-                assert_eq!(
-                    defs,
-                    vec![
-                        Some(VANILLA.to_string()),
-                        Some(VANILLA.to_string()),
-                        Some(VANILLA.to_string()),
-                        Some(VANILLA.to_string()),
-                    ],
-                );
+                    (1..=5).map(|l| s.unit(PlayerId::P2, l).map(|unit| unit.def_id.clone())).collect();
+                assert_eq!(defs, vec![Some(VANILLA.to_string()); 5]);
             }
 
             #[test]
-            fn c3_or_fewer_enemy_permanents_nothing() {
+            fn c4_or_fewer_enemy_permanents_nothing() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE], "backrow": [FIELD_SPELL] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
                 }));
                 let cursor = s.state().rng_cursor;
 
@@ -208,7 +205,10 @@ mod tests {
             fn r13_a_card_dormant_under_a_stack_pile_does_not_count_a_face_down_trap_does() {
                 let mut dormant = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, { "def": FIENDER, "stack": true }, MENACE, TEMPO] },
+                    "p2": {
+                        "hand": [ANCHOR],
+                        "field": [VANILLA, { "def": FIENDER, "stack": true }, MENACE, TEMPO, VANILLA],
+                    },
                 }));
                 dormant.play(TECH, json!({ "zone": 5 }));
                 assert!(stolen_ids(&dormant).is_empty());
@@ -217,7 +217,7 @@ mod tests {
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": {
                         "hand": [ANCHOR],
-                        "field": [VANILLA, { "def": FIENDER, "stack": true }, MENACE, TEMPO],
+                        "field": [VANILLA, { "def": FIENDER, "stack": true }, MENACE, TEMPO, VANILLA],
                         "backrow": [{ "def": PAWN, "faceUp": false }],
                     },
                 }));
@@ -229,7 +229,7 @@ mod tests {
             fn r171_the_steal_is_an_entry_a_stolen_unit_without_rush_or_charge_cant_attack_this_turn() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
                 }));
 
                 s.play(TECH, json!({ "zone": 5 }));
@@ -258,10 +258,10 @@ mod tests {
             }
 
             #[test]
-            fn r386_a_degrade_of_the_threshold_to_5_stops_4_permanents_an_upgrade_to_3_lets_3_be_enough() {
+            fn r386_a_degrade_of_the_threshold_to_6_stops_5_permanents_an_upgrade_to_4_lets_4_be_enough() {
                 let mut harder = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [FIELD_SPELL] },
                 }));
                 step_param(harder.card_mut(TECH), "threshold", 1);
                 harder.play(TECH, json!({ "zone": 5 }));
@@ -269,7 +269,7 @@ mod tests {
 
                 let mut easier = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
                 }));
                 step_param(easier.card_mut(TECH), "threshold", -1);
                 easier.play(TECH, json!({ "zone": 5 }));
@@ -281,10 +281,10 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_6_6_that_with_4_enemy_permanents_asks_which_one_to_steal_and_steals_that_one() {
+            fn is_a_6_6_that_with_5_enemy_permanents_asks_which_one_to_steal_and_steals_that_one() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [FIELD_SPELL] },
                 }));
 
                 s.play(TECH, json!({ "zone": 5 }));
@@ -292,7 +292,7 @@ mod tests {
                 s.expect_stats(TECH, json!({ "attack": 6, "health": 6 }));
                 let pending = js(&s.state().pending);
                 assert_eq!(pending["playerId"], "p1");
-                assert_eq!(pending["options"].as_array().map(Vec::len), Some(4));
+                assert_eq!(pending["options"].as_array().map(Vec::len), Some(5));
                 let menace = s.card(MENACE).id.clone();
                 s.answer(json!([{ "pick": "instance", "instanceId": menace }]));
 
@@ -307,7 +307,7 @@ mod tests {
                     "p2": {
                         "hand": [ANCHOR],
                         "field": [VANILLA, { "def": FIENDER, "stack": true }, MENACE, TEMPO],
-                        "backrow": [FIELD_SPELL],
+                        "backrow": [FIELD_SPELL, { "def": PAWN, "faceUp": false }],
                     },
                 }));
 
@@ -317,7 +317,7 @@ mod tests {
                     .as_array()
                     .map(|options| options.iter().map(|option| option["selection"].clone()).collect())
                     .unwrap_or_default();
-                assert_eq!(offered.len(), 4);
+                assert_eq!(offered.len(), 5);
                 let fiender = s.card(FIENDER).id.clone();
                 let vanilla = s.card(VANILLA).id.clone();
                 assert!(offered.contains(&json!({ "pick": "instance", "instanceId": fiender })));
@@ -328,7 +328,7 @@ mod tests {
             fn r15_with_your_unit_row_full_the_prompt_still_opens_and_a_unit_you_pick_stays_with_them() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] },
                 }));
                 s.play(TECH, json!({ "zone": 5 }));
                 let picked = s.unit(PlayerId::P2, 1).expect("a Vanilla in lane 1").id.clone();
@@ -341,10 +341,10 @@ mod tests {
             }
 
             #[test]
-            fn c3_or_fewer_no_prompt_opens_and_nothing_is_stolen() {
+            fn c4_or_fewer_no_prompt_opens_and_nothing_is_stolen() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
                 }));
 
                 s.play(TECH, json!({ "zone": 5 }));
@@ -364,7 +364,7 @@ mod tests {
 
                 let prompt = js(&s.view(PlayerId::P1).pending).to_string();
                 assert_ne!(prompt, "null");
-                for trap in [PAWN, BREAD, STIMMY, UNLICENSED] {
+                for trap in [PAWN, BREAD, STIMMY, UNLICENSED, HONEYPOT] {
                     assert!(!prompt.contains(trap));
                 }
             }
@@ -388,7 +388,7 @@ mod tests {
             fn r113_the_paused_pick_survives_a_json_round_trip_and_resumes_through_reduce() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [FIELD_SPELL] },
                 }));
                 s.play(TECH, json!({ "zone": 5 }));
                 let revived: GameState =
@@ -417,10 +417,10 @@ mod tests {
             }
 
             #[test]
-            fn r386_a_degrade_of_the_threshold_to_5_stops_4_permanents_asking() {
+            fn r386_a_degrade_of_the_threshold_to_6_stops_5_permanents_asking() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
-                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
+                    "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA], "backrow": [FIELD_SPELL] },
                 }));
                 step_param(s.card_mut(TECH), "threshold", 1);
 
@@ -431,13 +431,13 @@ mod tests {
         }
     }
 
-    /// R1081000: a Unit standing in the enemy backrow is one permanent, counted once: three permanents
-    /// are not the four the Cry needs.
+    /// R1081000: a Unit standing in the enemy backrow is one permanent, counted once: four permanents
+    /// are not the five the Cry needs.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_counts_once() {
         let mut s = scenario(json!({
             "p1": { "hand": [TECH, ANCHOR] },
-            "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
+            "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, FIENDER] },
         }));
         let vanilla = s.card(VANILLA).id.clone();
         crate::stand_in_backrow(&mut s, &vanilla, 1);

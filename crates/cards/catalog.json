@@ -5512,8 +5512,8 @@
     "params": [
       {
         "key": "threshold",
-        "base": 4,
-        "radiant": 4,
+        "base": 5,
+        "radiant": 5,
         "better": "down",
         "step": 1,
         "min": 1,
@@ -7378,7 +7378,7 @@
     "rarity": "Epic",
     "flavor": "Nature",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 11,
     "base": {
       "keywords": [
@@ -9902,9 +9902,12 @@
         },
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Ranged, Flying, Rush\nCan't be attacked."
+      "text": "Ranged, Flying, Rush, Can't Defend\nCan't be attacked."
     },
     "radiant": {
       "attack": 14,
@@ -9921,9 +9924,12 @@
         },
         {
           "kind": "Divine Shield"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Ranged, Flying, Rush, Divine Shield\nCan't be attacked."
+      "text": "Ranged, Flying, Rush, Divine Shield, Can't Defend\nCan't be attacked."
     }
   },
   "classicplus-052": {
@@ -27175,15 +27181,15 @@
     "rarity": "Common",
     "flavor": "Hustle",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "core-t-rush"
     ],
     "params": [
       {
         "key": "tokens",
-        "base": 3,
-        "radiant": 3,
+        "base": 4,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1

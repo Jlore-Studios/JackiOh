@@ -1456,8 +1456,8 @@
   },
   "classicplus-051": {
     "name": "Jlockeed的歼15战斗机",
-    "base": "远程，飞行，突袭\n无法被攻击。",
-    "radiant": "远程，飞行，突袭，圣盾\n无法被攻击。"
+    "base": "远程，飞行，突袭，无法守备\n无法被攻击。",
+    "radiant": "远程，飞行，突袭，圣盾，无法守备\n无法被攻击。"
   },
   "classicplus-052": {
     "name": "Jlockeed的永久国防合同",

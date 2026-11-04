@@ -1992,7 +1992,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "1",
         "Doom Shroom",
-        c(3),
+        c(4),
         T::Trap,
         &[],
         R::Epic,
@@ -7052,7 +7052,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "15",
         "In a hurry",
-        c(2),
+        c(3),
         T::Spell,
         &[],
         R::Common,

@@ -1,12 +1,14 @@
 //! C+ #51 Jlockeed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
-//!   Base:    "Ranged, Flying, Rush. Can't be attacked."
-//!   Radiant: "Ranged, Flying, Rush, Divine Shield" and the same.
+//!   Base:    "Ranged, Flying, Rush, Can't Defend. Can't be attacked."
+//!   Radiant: "Ranged, Flying, Rush, Divine Shield, Can't Defend" and the same.
+//!   Through v0.5.11o: the same without Can't Defend, so it could switch to Defense Position (catalog data).
 //!   Through v0.5.9f: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
 //!   be attacked." (`script_v0_5_9f`, kept, R767000)
 //!   Engine:  "Can't be attacked" (§6.1, §4.2 step 2): no attack may name it, a forced one included; it is
 //!            still targeted by effects and hit by "all" effects. A Taunt it gains binds nobody. Tunes: none.
 //!
-//! A static flag the engine reads everywhere (`restrictions.cannotBeAttacked`); the keywords are the catalog's.
+//! A static flag the engine reads everywhere (`restrictions.cannotBeAttacked`); the keywords, Can't Defend
+//! among them (§6.1, R2657000), are the catalog's.
 
 use jackioh_engine::prelude::*;
 
@@ -31,8 +33,8 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51. Since #2657 it may be in
-// Defense Position.
+// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51. It has Can't Defend: never
+// in Defense Position.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -78,7 +80,7 @@ mod tests {
             let mut s = defended(false, &[]);
             s.expect_stats(J15, json!({ "attack": 7, "health": 2 }));
             let found = kinds(&s, J15);
-            for kind in ["Ranged", "Flying", "Rush"] {
+            for kind in ["Ranged", "Flying", "Rush", "Can't Defend"] {
                 assert!(found.contains(&kind.to_string()), "{kind} in {found:?}");
             }
             assert!(!found.contains(&"First Strike".to_string()));
@@ -86,10 +88,10 @@ mod tests {
         }
 
         #[test]
-        fn s4_1_it_may_switch_to_defense_position_since_2657() {
+        fn s4_1_it_is_never_in_defense_position_a_switch_is_refused() {
             let mut s = scenario(json!({ "p1": { "field": [J15], "hand": [FILLER] } }));
-            s.switch_position(J15);
-            assert_eq!(s.card(J15).position, Some(Position::Def));
+            s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
+            assert_eq!(s.card(J15).position, Some(Position::Atk));
         }
 
         #[test]
@@ -189,17 +191,17 @@ mod tests {
             let mut s = defended(true, &[]);
             s.expect_stats(J15, json!({ "attack": 14, "health": 4 }));
             let found = kinds(&s, J15);
-            for kind in ["Ranged", "Flying", "Rush", "Divine Shield"] {
+            for kind in ["Ranged", "Flying", "Rush", "Divine Shield", "Can't Defend"] {
                 assert!(found.contains(&kind.to_string()), "{kind} in {found:?}");
             }
             s.expect_refused_with(|s| s.attack(VANILLA, J15), "cannot be attacked");
         }
 
         #[test]
-        fn s4_1_the_radiant_face_may_switch_to_defense_position_too() {
+        fn s4_1_the_radiant_face_is_never_in_defense_position_either() {
             let mut s = scenario(json!({ "p1": { "field": [{ "def": J15, "radiant": true }], "hand": [FILLER] } }));
-            s.switch_position(J15);
-            assert_eq!(s.card(J15).position, Some(Position::Def));
+            s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
+            assert_eq!(s.card(J15).position, Some(Position::Atk));
         }
     }
 }

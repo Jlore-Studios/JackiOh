@@ -11,7 +11,9 @@
 //! Quests (R404): 1 draws (R541); 2 kills; 3 board; 4 float; 5 damage (R542); 6 totals; 7 float;
 //! 8 exiles; 9 empty deck; 10 grave units. #1704 raised quest 3 to 4 permanents, quest 5 to 15 damage
 //! and quest 6 to totals of 13 (from 3, 12 and 10); `script_v0_4_0f` keeps the old goals for the
-//! replays of v0.4.0f and before (R767000).
+//! replays of v0.4.0f and before (R767000). Issue #3042 raised every goal about a fifth, quest 10 by
+//! half, to 3 draws, 3 kills, 5 permanents, a float of 4, 18 damage, totals of 16, a float of 6, 4
+//! exiles and 9 Units in the graveyard (R3042000); `script_v0_5_11o` keeps the goals before it.
 
 use jackioh_engine::effects::{
     bounce, buff_random_unit, choose_from_hand, choose_reward, choose_target, chosen_options, damage,
@@ -22,13 +24,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-090";
 
-// The tree's numbers (SPEC §8.6 row 90; no declared params).
-const QUEST_DRAWS: i32 = 2;
-const QUEST_KILLS: i32 = 2;
-const QUEST_FLOAT: i32 = 3;
-const QUEST_BIG_FLOAT: i32 = 5;
-const QUEST_EXILES: i32 = 3;
-const QUEST_GRAVE_UNITS: i32 = 6;
+// The tree's rewards' numbers (SPEC §8.6 row 90; no declared params).
 const REWARD_HEAL: i32 = 6;
 const REWARD_DAMAGE: i32 = 3;
 const REWARD_RETURN: i32 = 2;
@@ -38,24 +34,56 @@ const REWARD_DISCARD: i32 = 2;
 const REWARD_DRAW: i32 = 2;
 const REWARD_MANA: i32 = 100;
 
-/// The goals #1704 raised: quest 3's permanents, quest 5's damage and quest 6's totals.
+/// What each quest that counts asks for: quest 1's draws, 2's kills, 3's permanents, 4's float, 5's
+/// damage, 6's totals, 7's float, 8's exiles and 10's Units in the graveyard (quest 9 has no number).
 #[derive(Clone, Copy)]
 struct QuestNumbers {
+    draws: i32,
+    kills: i32,
     permanents: i32,
+    float: i32,
     damage: i32,
     stats: i32,
+    big_float: i32,
+    exiles: i32,
+    grave_units: i32,
 }
 
+/// R3042000: each goal about a fifth up (rounded up, at least one more), quest 10's by half.
 const QUESTS: QuestNumbers = QuestNumbers {
+    draws: 3,
+    kills: 3,
+    permanents: 5,
+    float: 4,
+    damage: 18,
+    stats: 16,
+    big_float: 6,
+    exiles: 4,
+    grave_units: 9,
+};
+/// R767000: the goals through v0.5.11o.
+const QUESTS_V0_5_11O: QuestNumbers = QuestNumbers {
+    draws: 2,
+    kills: 2,
     permanents: 4,
+    float: 3,
     damage: 15,
     stats: 13,
+    big_float: 5,
+    exiles: 3,
+    grave_units: 6,
 };
 /// R767000: the goals through v0.4.0f.
 const QUESTS_V0_4_0F: QuestNumbers = QuestNumbers {
+    draws: 2,
+    kills: 2,
     permanents: 3,
+    float: 3,
     damage: 12,
     stats: 10,
+    big_float: 5,
+    exiles: 3,
+    grave_units: 6,
 };
 
 fn quest(id: &str, text: &str, goal: QuestGoal, rewards: &[&str]) -> QuestDef {
@@ -80,11 +108,16 @@ fn in_too_deep_quests(numbers: QuestNumbers) -> QuestBook {
     QuestBook {
         first: "1".to_string(),
         quests: vec![
-            quest("1", "Draw 2 cards", QuestGoal::Draws { count: QUEST_DRAWS }, &["A", "B"]),
+            quest(
+                "1",
+                &format!("Draw {} cards", numbers.draws),
+                QuestGoal::Draws { count: numbers.draws },
+                &["A", "B"],
+            ),
             quest(
                 "2",
-                "Destroy 2 enemy permanents",
-                QuestGoal::EnemyPermanentsDestroyed { count: QUEST_KILLS },
+                &format!("Destroy {} enemy permanents", numbers.kills),
+                QuestGoal::EnemyPermanentsDestroyed { count: numbers.kills },
                 &["C", "D"],
             ),
             quest(
@@ -97,8 +130,8 @@ fn in_too_deep_quests(numbers: QuestNumbers) -> QuestBook {
             ),
             quest(
                 "4",
-                "Float 3 or more mana",
-                QuestGoal::UnspentManaAtTurnEnd { mana: QUEST_FLOAT },
+                &format!("Float {} or more mana", numbers.float),
+                QuestGoal::UnspentManaAtTurnEnd { mana: numbers.float },
                 &["F", "G"],
             ),
             quest(
@@ -120,16 +153,16 @@ fn in_too_deep_quests(numbers: QuestNumbers) -> QuestBook {
             ),
             quest(
                 "7",
-                "Float 5 or more mana",
+                &format!("Float {} or more mana", numbers.big_float),
                 QuestGoal::UnspentManaAtTurnEnd {
-                    mana: QUEST_BIG_FLOAT,
+                    mana: numbers.big_float,
                 },
                 &["J"],
             ),
             quest(
                 "8",
-                "3 cards enter either exile",
-                QuestGoal::CardsExiled { count: QUEST_EXILES },
+                &format!("{} cards enter either exile", numbers.exiles),
+                QuestGoal::CardsExiled { count: numbers.exiles },
                 &["K"],
             ),
             quest(
@@ -140,9 +173,9 @@ fn in_too_deep_quests(numbers: QuestNumbers) -> QuestBook {
             ),
             quest(
                 "10",
-                "Have 6 or more Units in your graveyard",
+                &format!("Have {} or more Units in your graveyard", numbers.grave_units),
                 QuestGoal::UnitsInGraveyard {
-                    count: QUEST_GRAVE_UNITS,
+                    count: numbers.grave_units,
                 },
                 &["M"],
             ),
@@ -392,6 +425,16 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: in_too_deep(false, true, QUESTS),
         radiant: in_too_deep(true, true, QUESTS),
+    }
+}
+
+/// R767000: the scripts v0.5.11o and the versions back to v0.4.0f's ran, kept for their replays: the
+/// goals of #1704 (4 permanents, 15 damage, totals of 13) and the others as they stood before #3042
+/// (2 draws, 2 kills, a float of 3, a float of 5, 3 exiles, 6 Units in the graveyard).
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: in_too_deep(false, true, QUESTS_V0_5_11O),
+        radiant: in_too_deep(true, true, QUESTS_V0_5_11O),
     }
 }
 
@@ -690,6 +733,43 @@ mod tests {
             }
 
             #[test]
+            fn r3042000_every_goal_is_a_fifth_up_and_quest_10_half_again_on_both_faces() {
+                crate::register_all();
+                let scripts = script();
+                for face in [&scripts.base, &scripts.radiant] {
+                    let book = must(face.quests.clone(), "the tree");
+                    let goal = |id: &str| -> QuestGoal {
+                        must(book.quests.iter().find(|quest| quest.id == id).cloned(), "the quest").goal
+                    };
+                    let text = |id: &str| -> String {
+                        must(book.quests.iter().find(|quest| quest.id == id).cloned(), "the quest").text
+                    };
+                    assert_eq!(goal("1"), QuestGoal::Draws { count: 3 });
+                    assert_eq!(goal("2"), QuestGoal::EnemyPermanentsDestroyed { count: 3 });
+                    assert_eq!(goal("3"), QuestGoal::PermanentsControlled { count: 5 });
+                    assert_eq!(goal("4"), QuestGoal::UnspentManaAtTurnEnd { mana: 4 });
+                    assert_eq!(goal("5"), QuestGoal::DamageToEnemies { amount: 18 });
+                    assert_eq!(goal("6"), QuestGoal::UnitTotals { total: 16 });
+                    assert_eq!(goal("7"), QuestGoal::UnspentManaAtTurnEnd { mana: 6 });
+                    assert_eq!(goal("8"), QuestGoal::CardsExiled { count: 4 });
+                    assert_eq!(goal("9"), QuestGoal::DeckEmptiedByDraw);
+                    assert_eq!(goal("10"), QuestGoal::UnitsInGraveyard { count: 9 });
+                    assert_eq!(text("1"), "Draw 3 cards");
+                    assert_eq!(text("2"), "Destroy 3 enemy permanents");
+                    assert_eq!(text("3"), "Control 5 or more permanents at once");
+                    assert_eq!(text("4"), "Float 4 or more mana");
+                    assert_eq!(text("5"), "Your cards deal 18 damage to enemies");
+                    assert_eq!(
+                        text("6"),
+                        "Your Units have 16 or more total Attack and 16 or more total health at once"
+                    );
+                    assert_eq!(text("7"), "Float 6 or more mana");
+                    assert_eq!(text("8"), "4 cards enter either exile");
+                    assert_eq!(text("10"), "Have 9 or more Units in your graveyard");
+                }
+            }
+
+            #[test]
             fn r46_indestructible_a_destroy_leaves_it_in_its_zone_with_its_quest_line() {
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
@@ -719,7 +799,7 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_1_opens_as_it_enters_0_of_2_and_both_views_show_it_with_rewards_a_and_b_on_offer() {
+            fn r404_quest_1_opens_as_it_enters_0_of_3_and_both_views_show_it_with_rewards_a_and_b_on_offer() {
                 let mut s = scenario(json!({
                     "p1": { "hand": itd_and_spare_hand(), "library": SPARE_LIBRARY },
                     "p2": spare(json!({})),
@@ -736,9 +816,9 @@ mod tests {
                             "open": [
                                 {
                                     "id": "1",
-                                    "text": "Draw 2 cards",
+                                    "text": "Draw 3 cards",
                                     "progress": 0,
-                                    "goal": 2,
+                                    "goal": 3,
                                     "rewards": [
                                         { "id": "A", "text": "Heal your hero 6" },
                                         { "id": "B", "text": "Deal 3 damage to a target" },
@@ -762,18 +842,22 @@ mod tests {
             }
 
             #[test]
-            fn r404_counted_from_the_moment_it_opens_draws_before_it_entered_do_not_count_two_after_it_complete_quest_1() {
+            fn r404_counted_from_the_moment_it_opens_draws_before_it_entered_do_not_count_three_after_it_complete_quest_1() {
                 let mut s = scenario(json!({
                     "p1": {
-                        "hand": [STOCKPILE, ITD, STOCKPILE, TIMMY],
-                        "library": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                        "hand": [STOCKPILE, ITD, STOCKPILE, CURSE, TIMMY],
+                        "library": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
                     },
                     "p2": spare(json!({})),
                 }));
                 s.play(STOCKPILE, json!({}));
                 s.play(ITD, json!({}));
                 assert_eq!(progress_of(&s), json!({ "1": 0 }));
+                // Stockpile's two draws leave the quest one short.
                 s.play(STOCKPILE, json!({}));
+                assert_eq!(progress_of(&s), json!({ "1": 2 }));
+                assert!(completed_in(s.last_events()).is_empty());
+                s.play(CURSE, json!({}));
                 assert_eq!(completed_in(s.last_events()), vec!["1"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:A", "mode:B"]);
                 let labels: Vec<String> = must(s.state().pending.clone(), "the prompt")
@@ -836,7 +920,7 @@ mod tests {
                 assert_eq!(progress_of(&burn), json!({ "1": 1 }));
 
                 let mut cast = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [CURSE, TIMMY], "library": [VIRUS, VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [CURSE, CURSE, TIMMY], "library": [VIRUS, VANILLA, VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
                 cast.play(CURSE, json!({}));
@@ -848,6 +932,8 @@ mod tests {
                         .count(),
                     2
                 );
+                assert_eq!(progress_of(&cast), json!({ "1": 2 }));
+                cast.play(CURSE, json!({}));
                 assert_eq!(completed_in(cast.last_events()), vec!["1"]);
             }
 
@@ -857,6 +943,8 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD], "health": 20 })),
                     "p2": spare(json!({})),
                 }));
+                // Stockpile draws 2: quest 1 one draw counted completes with it.
+                on_quest(&mut s, "1", QUESTS.draws - 2, json!({}));
                 s.play(STOCKPILE, json!({}));
                 s.answer(json!("A"));
                 s.expect_health(P1, 28);
@@ -866,7 +954,7 @@ mod tests {
                     .iter()
                     .map(|quest| json!([quest.id, quest.progress, quest.goal]))
                     .collect();
-                assert_eq!(open, vec![json!(["2", 0, 2])]);
+                assert_eq!(open, vec![json!(["2", 0, QUESTS.kills])]);
             }
 
             #[test]
@@ -875,6 +963,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": spare(json!({ "field": [VANILLA] })),
                 }));
+                on_quest(&mut s, "1", QUESTS.draws - 2, json!({}));
                 s.play(STOCKPILE, json!({}));
                 s.answer(json!("B"));
                 assert_eq!(pending_kind(&s), Some(PromptKind::Target));
@@ -886,7 +975,7 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_2_two_enemy_permanents_destroyed_by_anything_your_own_deaths_count_for_nothing() {
+            fn r404_quest_2_three_enemy_permanents_destroyed_by_anything_your_own_deaths_count_for_nothing() {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -895,7 +984,7 @@ mod tests {
                         "library": SPARE_LIBRARY,
                         "mana": 10,
                     },
-                    "p2": spare(json!({ "field": [VANILLA, { "def": RUSH_TOKEN }] })),
+                    "p2": spare(json!({ "field": [VANILLA, TIMMY, { "def": RUSH_TOKEN }] })),
                 }));
                 on_quest(&mut s, "2", 0, json!({}));
                 let timmy = must(s.unit(P1, 1), "Timmy");
@@ -905,6 +994,16 @@ mod tests {
                 s.expect_in_zone(ITD, "field");
                 assert_eq!(completed_in(s.last_events()), vec!["2"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:C", "mode:D"]);
+
+                // Two enemy permanents are one short.
+                let mut short = scenario(json!({
+                    "p1": { "backrow": [ITD], "hand": [NETHER, STOCKPILE], "library": SPARE_LIBRARY, "mana": 10 },
+                    "p2": spare(json!({ "field": [VANILLA, { "def": RUSH_TOKEN }] })),
+                }));
+                on_quest(&mut short, "2", 0, json!({}));
+                short.play(NETHER, json!({}));
+                assert!(completed_in(short.last_events()).is_empty());
+                assert_eq!(progress_of(&short), json!({ "2": 2 }));
             }
 
             #[test]
@@ -938,7 +1037,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD], "graveyard": [VANILLA, TIMMY, MENACE] })),
                     "p2": spare(json!({})),
                 }));
-                on_quest(&mut s, "2", 2, json!({}));
+                on_quest(&mut s, "2", QUESTS.kills, json!({}));
                 any_action(&mut s);
                 assert_eq!([s.hand(P1).len(), s.pile(P1, "graveyard").len()], [3, 4]);
                 s.answer(json!("C"));
@@ -961,7 +1060,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD], "graveyard": [MENACE] })),
                     "p2": spare(json!({})),
                 }));
-                on_quest(&mut s, "2", 2, json!({}));
+                on_quest(&mut s, "2", QUESTS.kills, json!({}));
                 any_action(&mut s);
                 s.answer(json!("C"));
                 let hand = def_ids(&s.hand(P1));
@@ -976,7 +1075,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD], "field": [VANILLA] })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
-                on_quest(&mut s, "2", 2, json!({}));
+                on_quest(&mut s, "2", QUESTS.kills, json!({}));
                 any_action(&mut s);
                 s.answer(json!("D"));
                 let foe = must(s.unit(P2, 1), "Menace");
@@ -988,16 +1087,24 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_3_4_or_more_permanents_of_yours_at_once_this_card_included_the_opponents_do_not_count() {
+            fn r404_quest_3_5_or_more_permanents_of_yours_at_once_this_card_included_the_opponents_do_not_count() {
                 let mut s = scenario(json!({
-                    "p1": { "backrow": [ITD], "field": [TIMMY, VANILLA], "hand": [VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
+                    "p1": {
+                        "backrow": [ITD],
+                        "field": [TIMMY, VANILLA, MENACE],
+                        "hand": [VANILLA, STOCKPILE],
+                        "library": SPARE_LIBRARY,
+                    },
                     "p2": spare(json!({ "field": [MENACE, VANILLA] })),
                 }));
                 on_quest(&mut s, "3", 0, json!({}));
+                // Four of yours are one short, whatever they control.
                 assert!(matches_object(
                     &first_open(&s, P1),
-                    &json!({ "id": "3", "progress": 3, "goal": 4 })
+                    &json!({ "id": "3", "progress": 4, "goal": 5 })
                 ));
+                s.play(STOCKPILE, json!({}));
+                assert!(completed_in(s.last_events()).is_empty());
                 s.play(VANILLA, json!({}));
                 assert_eq!(completed_in(s.last_events()), vec!["3"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:D", "mode:E"]);
@@ -1006,7 +1113,7 @@ mod tests {
             #[test]
             fn r60_reward_e_a_random_unit_of_yours_gets_3_3_then_quest_6_with_none_nothing_and_quest_6_still_opens() {
                 let mut s = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD, MANA_WELL], "field": [TIMMY, TOKEN_MAKER] })),
+                    "p1": spare(json!({ "backrow": [ITD, MANA_WELL, GIFTED], "field": [TIMMY, TOKEN_MAKER] })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
                 on_quest(&mut s, "3", 0, json!({}));
@@ -1029,7 +1136,9 @@ mod tests {
                 expect_line_matches(&s, json!({ "active": ["6"], "done": ["3"] }));
 
                 let mut none = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD, MANA_WELL, GIFTED, LOCKDOWN] })),
+                    "p1": spare(json!({
+                        "backrow": [ITD, MANA_WELL, GIFTED, LOCKDOWN, { "def": EXPERIMENT, "faceUp": false }],
+                    })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
                 on_quest(&mut none, "3", 0, json!({}));
@@ -1045,9 +1154,9 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_4_a_turn_of_yours_ending_with_3_or_more_unspent_mana_2_is_not_enough_and_the_opponents_turn_is_not_yours() {
+            fn r404_quest_4_a_turn_of_yours_ending_with_4_or_more_unspent_mana_3_is_not_enough_and_the_opponents_turn_is_not_yours() {
                 let mut s = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD], "mana": 3 })),
+                    "p1": spare(json!({ "backrow": [ITD], "mana": 4 })),
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "4", 0, json!({}));
@@ -1056,14 +1165,14 @@ mod tests {
                 assert_eq!(reward_keys(&s, P1), vec!["mode:F", "mode:G"]);
 
                 let mut short = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD], "mana": 2 })),
+                    "p1": spare(json!({ "backrow": [ITD], "mana": 3 })),
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut short, "4", 0, json!({}));
                 short.end_turn();
                 assert!(short.state().pending.is_none());
                 assert_eq!(short.state().active, P2);
-                short.state_mut().players.p2.mana.current = 4;
+                short.state_mut().players.p2.mana.current = 5;
                 short.end_turn();
                 assert_eq!(progress_of(&short), json!({ "4": 0 }));
             }
@@ -1288,12 +1397,12 @@ mod tests {
             }
 
             #[test]
-            fn r542_quest_5_damage_your_cards_deal_to_the_enemy_hero_and_enemy_units_15_in_all_your_own_side_and_the_opponents_hits_count_for_nothing() {
+            fn r542_quest_5_damage_your_cards_deal_to_the_enemy_hero_and_enemy_units_18_in_all_your_own_side_and_the_opponents_hits_count_for_nothing() {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
                         "field": [MENACE],
-                        "hand": [LUNAR, LUNAR, LUNAR, STOCKPILE],
+                        "hand": [LUNAR, LUNAR, LUNAR, LUNAR, STOCKPILE],
                         "library": SPARE_LIBRARY,
                         "mana": 10,
                     },
@@ -1307,6 +1416,10 @@ mod tests {
                 assert_eq!(progress_of(&s), json!({ "5": 3 }));
                 s.attack(MENACE, "hero");
                 assert_eq!(progress_of(&s), json!({ "5": 12 }));
+                s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+                // 15 is three short of 18, and the next hit of 3 is the last.
+                assert_eq!(progress_of(&s), json!({ "5": 15 }));
+                assert!(completed_in(s.last_events()).is_empty());
                 s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
                 assert_eq!(completed_in(s.last_events()), vec!["5"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:G", "mode:H"]);
@@ -1344,7 +1457,7 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_6_your_units_total_attack_and_total_health_both_13_or_more_at_once() {
+            fn r404_quest_6_your_units_total_attack_and_total_health_both_16_or_more_at_once() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": [ITD], "field": [MENACE], "hand": [TIMMY, VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -1352,13 +1465,31 @@ mod tests {
                 on_quest(&mut s, "6", 0, json!({}));
                 assert!(matches_object(
                     &first_open(&s, P1),
-                    &json!({ "id": "6", "progress": 9, "goal": 13 })
+                    &json!({ "id": "6", "progress": 9, "goal": 16 })
                 ));
                 s.play(TIMMY, json!({}));
                 assert!(completed_in(s.last_events()).is_empty());
                 s.play(VANILLA, json!({}));
                 assert_eq!(completed_in(s.last_events()), vec!["6"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:H", "mode:I"]);
+
+                // Totals of 15 are one short.
+                let mut short = scenario(json!({
+                    "p1": {
+                        "backrow": [ITD],
+                        "field": [MENACE, TIMMY, TIMMY],
+                        "hand": [CURSE, STOCKPILE],
+                        "library": SPARE_LIBRARY,
+                    },
+                    "p2": spare(json!({})),
+                }));
+                on_quest(&mut short, "6", 0, json!({}));
+                assert!(matches_object(
+                    &first_open(&short, P1),
+                    &json!({ "id": "6", "progress": 15, "goal": 16 })
+                ));
+                any_action(&mut short);
+                assert!(completed_in(short.last_events()).is_empty());
             }
 
             #[test]
@@ -1366,7 +1497,7 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
-                        "field": [MENACE, VANILLA],
+                        "field": [MENACE, VANILLA, TIMMY],
                         "hand": [CURSE, TIMMY],
                         "library": [STOCKPILE, STOCKPILE, VANILLA, MENACE],
                     },
@@ -1375,16 +1506,16 @@ mod tests {
                 on_quest(&mut s, "6", 0, json!({}));
                 s.play(CURSE, json!({}));
                 s.answer(json!("I"));
-                assert_eq!(must(s.unit(P1, 3), "the recruit").def_id, VANILLA);
+                assert_eq!(must(s.unit(P1, 4), "the recruit").def_id, VANILLA);
                 let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![STOCKPILE, MENACE]);
                 expect_line_matches(&s, json!({ "active": ["10"], "done": ["6"] }));
             }
 
             #[test]
-            fn r404_quest_7_a_turn_of_yours_ending_with_5_or_more_unspent_mana_4_is_not_enough() {
+            fn r404_quest_7_a_turn_of_yours_ending_with_6_or_more_unspent_mana_5_is_not_enough() {
                 let mut s = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD], "mana": 5 })),
+                    "p1": spare(json!({ "backrow": [ITD], "mana": 6 })),
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "7", 0, json!({}));
@@ -1393,7 +1524,7 @@ mod tests {
                 assert_eq!(reward_keys(&s, P1), vec!["mode:J"]);
 
                 let mut short = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD], "mana": 4 })),
+                    "p1": spare(json!({ "backrow": [ITD], "mana": 5 })),
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut short, "7", 0, json!({}));
@@ -1404,7 +1535,7 @@ mod tests {
             #[test]
             fn r540_reward_j_100_mana_on_your_next_turn_next_turn_mana_and_the_line_ends_there() {
                 let mut s = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD], "mana": 5 })),
+                    "p1": spare(json!({ "backrow": [ITD], "mana": 6 })),
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "7", 0, json!({}));
@@ -1420,11 +1551,11 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_8_three_cards_entering_either_exile_pile_a_unit_token_ceases_to_exist_instead_r11() {
+            fn r404_quest_8_four_cards_entering_either_exile_pile_a_unit_token_ceases_to_exist_instead_r11() {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
-                        "hand": [TRUE_STRIKE, COLLATERAL, STOCKPILE],
+                        "hand": [TRUE_STRIKE, TRUE_STRIKE, COLLATERAL, STOCKPILE],
                         "library": SPARE_LIBRARY,
                         "mana": 10,
                     },
@@ -1436,6 +1567,10 @@ mod tests {
                 assert_eq!(progress_of(&s), json!({ "8": 1 }));
                 let vanilla = must(s.unit(P2, 1), "Vanilla");
                 s.play(COLLATERAL, json!({ "targets": [instance_pick(&vanilla.id)] }));
+                // The Spell, the Vanilla and a card of their deck: three, one short of four.
+                assert_eq!(progress_of(&s), json!({ "8": 3 }));
+                assert!(completed_in(s.last_events()).is_empty());
+                s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
                 assert_eq!(completed_in(s.last_events()), vec!["8"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:K"]);
             }
@@ -1458,7 +1593,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [STOCKPILE], "library": [VANILLA, TIMMY, MENACE] },
                 }));
-                on_quest(&mut s, "8", 3, json!({}));
+                on_quest(&mut s, "8", QUESTS.exiles, json!({}));
                 any_action(&mut s);
                 s.answer(json!("K"));
                 assert!(s.pile(P2, "library").is_empty());
@@ -1626,7 +1761,7 @@ mod tests {
                         "mana": 10,
                     },
                 }));
-                on_quest(&mut s, "2", 1, json!({}));
+                on_quest(&mut s, "2", QUESTS.kills - 1, json!({}));
                 let itd = s.card(ITD).clone();
                 s.play(LOCKDOWN, json!({}));
                 assert!(
@@ -1636,7 +1771,10 @@ mod tests {
                 );
                 assert_ne!(s.card(&itd.id).def_id, ITD);
                 let memory = line_json(&must(subsystems::quest_memory_of(s.card(&itd.id)), "the quest line"));
-                assert!(matches_object(&memory, &json!({ "active": ["2"], "progress": { "2": 1 } })));
+                assert!(matches_object(
+                    &memory,
+                    &json!({ "active": ["2"], "progress": { "2": QUESTS.kills - 1 } })
+                ));
                 let vanilla = must(s.unit(P2, 1), "Vanilla");
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(completed_in(s.last_events()), vec!["2"]);
@@ -1663,12 +1801,12 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_10_six_units_in_your_graveyard_a_spell_there_is_none_then_reward_m() {
+            fn r404_quest_10_nine_units_in_your_graveyard_a_spell_there_is_none_then_reward_m() {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
                         "field": [TIMMY],
-                        "graveyard": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, STOCKPILE],
+                        "graveyard": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, STOCKPILE],
                         "hand": [HIT_JOB, STOCKPILE],
                         "library": SPARE_LIBRARY,
                     },
@@ -1677,7 +1815,7 @@ mod tests {
                 on_quest(&mut s, "10", 0, json!({}));
                 assert!(matches_object(
                     &first_open(&s, P1),
-                    &json!({ "id": "10", "progress": 5, "goal": 6 })
+                    &json!({ "id": "10", "progress": 8, "goal": 9 })
                 ));
                 let timmy = must(s.unit(P1, 1), "Timmy");
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&timmy.id)] }));
@@ -1694,7 +1832,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "field": [VANILLA], "hand": [HIT_JOB, STOCKPILE], "library": SPARE_LIBRARY },
                 }));
-                on_quest(&mut s, "2", 1, json!({}));
+                on_quest(&mut s, "2", QUESTS.kills - 1, json!({}));
                 let vanilla = must(s.unit(P2, 1), "Vanilla");
                 s.play(HIT_JOB, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(s.state().active, P2);
@@ -1719,6 +1857,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": spare(json!({ "field": [VANILLA] })),
                 }));
+                on_quest(&mut s, "1", QUESTS.draws - 2, json!({}));
                 s.play(STOCKPILE, json!({}));
                 s.answer(json!("B"));
                 let paused = s.state().clone();
@@ -1789,7 +1928,7 @@ mod tests {
                     &mut log,
                 );
                 let mut turn = 0;
-                while turn < 4 && state.pending.is_none() {
+                while turn < 6 && state.pending.is_none() {
                     let active = state.active;
                     state = act(&state, json!({ "type": "endTurn", "playerId": active }), &mut n, &mut log);
                     turn += 1;
@@ -1835,6 +1974,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [radiant_itd()], "health": 20 })),
                     "p2": spare(json!({ "field": [VANILLA] })),
                 }));
+                on_quest(&mut s, "1", QUESTS.draws - 2, json!({}));
                 s.play(STOCKPILE, json!({}));
                 assert!(!prompt_opened_for_a_reward(s.events()));
                 s.expect_health(P1, 28);
@@ -1850,13 +1990,13 @@ mod tests {
             fn r404_a_quest_reached_by_two_paths_opens_once_and_a_reward_two_completed_quests_offer_d_is_granted_by_each() {
                 let mut s = scenario(json!({
                     "p1": spare(json!({
-                        "backrow": [radiant_itd(), MANA_WELL],
+                        "backrow": [radiant_itd(), MANA_WELL, GIFTED],
                         "field": [TIMMY, TOKEN_MAKER],
                         "graveyard": [MENACE, STOCKPILE],
                     })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
-                set_line(&mut s, json!({ "active": ["2", "3"], "progress": { "2": 2 }, "done": ["1"] }));
+                set_line(&mut s, json!({ "active": ["2", "3"], "progress": { "2": QUESTS.kills }, "done": ["1"] }));
                 any_action(&mut s);
                 let foe = must(s.unit(P2, 1), "Menace");
                 let mut placements = 0;
@@ -1938,7 +2078,7 @@ mod tests {
             #[test]
             fn r404_quests_7_to_10_end_their_lines_quest_7_grants_j_and_opens_nothing() {
                 let mut s = scenario(json!({
-                    "p1": spare(json!({ "backrow": [radiant_itd()], "mana": 5 })),
+                    "p1": spare(json!({ "backrow": [radiant_itd()], "mana": 6 })),
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "7", 0, json!({}));
@@ -1947,6 +2087,57 @@ mod tests {
                 assert_eq!(s.state().players.p1.mana.next_turn_mod, 100);
                 expect_line_matches(&s, json!({ "active": [], "done": ["7"] }));
             }
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.5.11o and before, at the goals before #3042.
+    mod v0_5_11o {
+        use super::*;
+
+        #[test]
+        fn r3042000_r767000_the_kept_tree_asks_the_goals_through_v0_5_11o() {
+            crate::register_all();
+            let kept = super::super::script_v0_5_11o();
+            for face in [&kept.base, &kept.radiant] {
+                let book = must(face.quests.clone(), "the tree");
+                let goal = |id: &str| -> QuestGoal {
+                    must(book.quests.iter().find(|quest| quest.id == id).cloned(), "the quest").goal
+                };
+                assert_eq!(goal("1"), QuestGoal::Draws { count: 2 });
+                assert_eq!(goal("2"), QuestGoal::EnemyPermanentsDestroyed { count: 2 });
+                assert_eq!(goal("3"), QuestGoal::PermanentsControlled { count: 4 });
+                assert_eq!(goal("4"), QuestGoal::UnspentManaAtTurnEnd { mana: 3 });
+                assert_eq!(goal("5"), QuestGoal::DamageToEnemies { amount: 15 });
+                assert_eq!(goal("6"), QuestGoal::UnitTotals { total: 13 });
+                assert_eq!(goal("7"), QuestGoal::UnspentManaAtTurnEnd { mana: 5 });
+                assert_eq!(goal("8"), QuestGoal::CardsExiled { count: 3 });
+                assert_eq!(goal("10"), QuestGoal::UnitsInGraveyard { count: 6 });
+            }
+            crate::under_kept(ITD, kept.clone(), || {
+                // Quest 1 asks 2 draws: one Stockpile completes it.
+                let mut s = scenario(json!({
+                    "p1": spare(json!({ "backrow": [ITD] })),
+                    "p2": spare(json!({})),
+                }));
+                s.play(STOCKPILE, json!({}));
+                assert_eq!(completed_in(s.last_events()), vec!["1"]);
+
+                // Quest 10 asks 6 Units in the graveyard.
+                let mut s = scenario(json!({
+                    "p1": {
+                        "backrow": [ITD],
+                        "field": [TIMMY],
+                        "graveyard": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, STOCKPILE],
+                        "hand": [HIT_JOB, STOCKPILE],
+                        "library": SPARE_LIBRARY,
+                    },
+                    "p2": spare(json!({})),
+                }));
+                on_quest(&mut s, "10", 0, json!({}));
+                let timmy = must(s.unit(P1, 1), "Timmy");
+                s.play(HIT_JOB, json!({ "targets": [instance_pick(&timmy.id)] }));
+                assert_eq!(completed_in(s.last_events()), vec!["10"]);
+            });
         }
     }
 
