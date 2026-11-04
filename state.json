@@ -17169,6 +17169,18 @@
     "2988": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-8",
+          "tier": "medium"
+        },
+        "at": "2026-11-04T04:05:42Z",
+        "built_by": "claude-8",
+        "by": "`claude` (medium)",
+        "sha": "e6e66323e5c39dfbaa26531c18a9459a39f64557"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T02:31:47Z",
@@ -17184,6 +17196,7 @@
       "issue": 2974,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-04T03:51:16Z",
