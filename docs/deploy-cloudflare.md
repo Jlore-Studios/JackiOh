@@ -353,9 +353,11 @@ once a day and opens a `human` issue once the period's spend, or its projection,
 - **One container is one point of failure,** as Render's one instance was (`docs/architecture.md`
   §4.1), and now without Render's "keep the old instance until the new one is healthy".
 - **Cold starts.** The first request after ten idle minutes waits for the container and the
-  server's boot (step 5, item 7 measures it). A wake with nothing new reads the migration ledger
-  once and writes the catalog in one statement that rewrites no unchanged row (#2926), a handful of
-  round trips where it was about 1,100; the saving is not yet timed (step 5, item 7).
+  server's boot, up to `START_WAIT_MS` (`apps/edge/src/index.ts`). A wake with nothing new reads the
+  migration ledger once and writes the catalog in one statement that rewrites no unchanged row
+  (#2926), a handful of round trips where it was about 1,100. Timed from the logs on 2026-11-04: the
+  catalog step took 0.5 s on staging with that change and 24.5 s on production without it, which
+  outran the library's 20-second wait and answered the first visitor with a 500.
 - **A deploy whose image is new still waits for its rollout.** Since 2026-11-03 neither deploy
   compiles the server when the registry or CI has its image (`scripts/server-image.sh`), and a
   promotion of a commit staging already ran pushes nothing. The registry keeps the newest ten tags

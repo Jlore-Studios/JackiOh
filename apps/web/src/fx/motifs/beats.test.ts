@@ -272,13 +272,13 @@ describe("R2789000 the combat keyword beats", () => {
     expect(row.filter((cue) => cue.kind === "splat")).toEqual([]);
   });
 
-  it("R1361 R2789000 Armor: the absorbed amount lands as a grey splat beside the ward row's flash", () => {
+  it("R1361 R2789000 Armor: the absorbed amount lands as a grey splat beside the armor row's flash", () => {
     const events: GameEvent[] = [{ type: "damageAbsorbed", sourceId: null, targetId: FOE_2, absorbed: 2, combat: false }];
     expect(kinds(pinned(events, 0))).toEqual(["callout@0", "splat@180", "burst@180"]);
     const cues = must(stream(events)[0], "the absorption").beats.cues;
     expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Armor", at: cardOf(FOE_2), durationMs: FX_CALLOUT_MS });
     expect(cues[1]).toMatchObject({ kind: "splat", tone: "absorb", amount: 2, at: cardOf(FOE_2) });
-    // The ward row's shield flash still draws in planFx.
+    // The armor row's shield flash still draws in planFx.
     const played = must(stream(events)[0], "the absorption");
     const row = planFx(played.entry, played.entry.view, played.env);
     expect(row.filter((cue) => cue.kind === "shield")).toHaveLength(1);
@@ -303,7 +303,7 @@ describe("R2789000 the combat keyword beats", () => {
     const cues = must(stream(events, view)[0], "the absorption").beats.cues;
     expect(cues[0]).toMatchObject({ kind: "callout", keyword: "Armor", at: cardOf(MINE) });
     expect(cues[3]).toMatchObject({ kind: "callout", keyword: "Indestructible", at: cardOf(MINE) });
-    // The ward row's shield flash and the Armor beat's grey splat stay: the beat adds the flash.
+    // The armor row's shield flash and the Armor beat's grey splat stay: the beat adds the flash.
     const played = must(stream(events, view)[0], "the absorption");
     const row = planFx(played.entry, played.entry.view, played.env);
     expect(row.filter((cue) => cue.kind === "shield")).toHaveLength(1);

@@ -20986,5 +20986,60 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11n",
+    "date": "2026-11-04",
+    "title": "Patch: Extended art, Pixel and Comic card versions",
+    "source": "#2942",
+    "notes": "Part 3 of #2725's ten new card versions (tracker #2729): three Epic versions that restyle the card's own art, each per card, granted to no account, and offered on a seeded share of cards of its own (R2942000). Extended art (156 cards: Spells and Field Spells and Legendary and Mythic cards) runs the card's own picture past its window across the face, behind a translucent frame and rules box; Pixel (95 cards: Rare and Epic Units and Traps and Legendary and Mythic cards) draws the picture as 8-bit pixel art in a retro slate frame, its name in a pixel face; Comic (138 cards: Rare and Epic Units, Spells and Traps and Legendary and Mythic cards) draws it as pop art, flat colour, halftone dots and ink outlines, its name in a cyan burst (R2942001). Animated, a foil, a finish and a border layer on each; Signature on none, by R2949000's rule (R2942002). A Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Extended art, Pixel and Comic",
+      "new": [
+        "Extended art: the card's own art spills past its window across the whole card, behind a see-through frame and rules box, offered on many Spells and Legendary and Mythic cards.",
+        "Pixel: the card's art as 8-bit pixel art in a retro frame, its name in pixel letters, offered on some Rare and Epic Units and Traps and Legendary and Mythic cards.",
+        "Comic: the card's art as pop art, with flat bright colour, halftone dots and heavy ink outlines, its name in a burst, offered on some Rare and Epic cards and Legendary and Mythic cards."
+      ],
+      "balance": [],
+      "changes": [
+        "Each new version goes to its own mix of cards, so cards differ in what they can wear. Animated, foils, finishes and borders work on all three; Signature stays on Full art with Animated."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e0c952a4b57dad312246b21852116382c3a38e70"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11o",
+    "date": "2026-11-04",
+    "title": "Patch: Set showcase and Out of frame card versions",
+    "source": "#2943",
+    "notes": "Part 4 of #2725's ten new card versions (tracker #2729): two Legendary versions that restyle the whole card, each per card, a chase, granted to no account, and offered on a seeded share of cards of its own (R2943000). Set showcase (68 cards: Legendary and Mythic cards) draws the card in its set's own look: its picture in its set's treatment, Core's glass orb, Classic's temple stone, Meditative's ink wash, Stinkyscape's deep space and Training Grounds' carved wood (Classic+ and Meditative+ in their parents'), and on a base face its set's edge, bezel and name banner; Out of frame (73 cards: Rare to Mythic Units but the Legacy cards and the Starship) cuts the picture's subject out of a smaller window and over the frame, inside the card's rim and under its cost gem, crest, name, stats and rules text (R2943001). Animated, a foil, a finish and a border layer on each; Signature on neither, by R2949000's rule (R2943002). A Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Set showcase and Out of frame",
+      "new": [
+        "Set showcase: the card in its set's own style, from Core's glass orbs and Classic's stone to Meditative's ink, Stinkyscape's space and Training Grounds' wood, on some Legendary and Mythic cards.",
+        "Out of frame: the card's subject steps out of its picture and over the frame, its cost, name, stats and text still on top and easy to read, offered on some Rare to Mythic Units."
+      ],
+      "balance": [],
+      "changes": [
+        "Each new version goes to its own mix of cards, so cards differ in what they can wear. Animated, foils, finishes and borders work on both; Signature stays on Full art with Animated."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8a5acf820216ebb7918fb5e50a066ecbf17507f5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

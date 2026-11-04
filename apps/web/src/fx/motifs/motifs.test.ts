@@ -67,8 +67,6 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   volley: ["burst@0", ...repeat(3, "shot@80", "burst@240", "splat@240"), "shake@240"],
   // Six hits, FX_MOTIF_BARRAGE_STEP (8 ms at D 400) apart, each bolt flying the same 160 ms.
   barrage: ["burst@0", ...[0, 8, 16, 24, 32, 40].flatMap((k) => [`shot@${String(80 + k)}`, `burst@${String(240 + k)}`, `splat@${String(240 + k)}`]), "shake@240"],
-  // Four hops of floor((300 − 80) / 4) = 55 ms.
-  chain: ["burst@0", ...[0, 1, 2, 3].flatMap((k) => [`shot@${String(80 + k * 55)}`, `burst@${String(135 + k * 55)}`, `splat@${String(135 + k * 55)}`]), "shake@300"],
   lance: ["burst@0", "shot@80", ...repeat(4, "burst@240"), "ring@240", "ring@240", "burst@240", "splat@240", "burst@300", "shake@240"],
   nova: ["burst@0", "ring@80", "burst@240", "ring@240", "ring@300", ...repeat(5, "burst@240", "splat@240"), "shake@240"],
   scorch: ["burst@0", "burst@240", "splat@240", "burst@240", "burst@300", "shake@240"],
@@ -80,8 +78,6 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   drain: ["burst@0", "projectile@80", "burst@240", "splat@240", "burst@300", "shake@240"],
   bless: ["arrows@0", "sheen@80", "burst@240", "shake@240"],
   curse: ["arrows@0", "burst@240", "shake@240"],
-  // Armor's full shield blooms on the hit, then the shake.
-  ward: ["shield@240", "ring@240", "burst@240", "shake@240"],
   conjure: ["burst@0", "burst@240", "ring@240", "burst@300", "shake@240"],
   rise: ["ghost@80", "burst@240", "ring@240", "shake@240"],
   // The glyph rings the lane while the unit sinks where it stood.
@@ -90,11 +86,8 @@ const PINNED: { readonly [M in DrawnMotif]: readonly string[] } = {
   shift: [...repeat(20, "ghost@80", "burst@240"), "shake@240"],
   bind: ["ring@0", "burst@240", "shake@240"],
   tether: ["shot@80", "burst@240", "shake@240"],
-  // The double peels off unseen (its copy is not on the board yet): a sheen and a landing flare.
-  mirror: ["sheen@80", "burst@240", "shake@240"],
   transmute: ["burst@0", "sheen@80", "burst@240", "burst@300", "shake@240"],
   flight: ["ghost@80", "burst@240"],
-  glimpse: ["sheen@80", "burst@240", "shake@240"],
   // A gather where the mana sits, one sparkle per crystal gained across Travel to Land, and the fill landing.
   mana: ["burst@0", "burst@80", "burst@160", "burst@240"],
   tithe: ["burst@240", "shake@240"],
@@ -157,8 +150,8 @@ describe("R2784000 the damage and removal motifs", () => {
         cues.forEach((cue, k) => {
           expect(Math.abs(cue.delayMs - (base[k]?.delayMs ?? 0) / speed), `${motif} ${cue.kind} at speed ${String(speed)}`).toBeLessThanOrEqual(4);
         });
-        // Every motif but chain (whose last hop lands at linger) lands on FX_MOTIF_PHASES.land of D.
-        if (motif !== "chain") expect(cues.some((cue) => cue.delayMs === timesOf(D).L)).toBe(true);
+        // Every motif lands on FX_MOTIF_PHASES.land of D.
+        expect(cues.some((cue) => cue.delayMs === timesOf(D).L)).toBe(true);
       }
     });
   }
@@ -255,7 +248,7 @@ const EXAMPLES: readonly (readonly [string, DrawnMotif])[] = [
   ["classicplus-021", "nova"],
   ["classicplus-025", "bolt"],
   ["meditative-078", "vanish"],
-  ["meditativeplus-005", "chain"],
+  ["meditativeplus-005", "nova"],
   ["stinkyscape-003", "nova"],
   ["stinkyscape-097", "barrage"],
   ["traininggrounds-010", "volley"],
@@ -340,21 +333,17 @@ describe("R2784000 a card's table entry plays by the play resolving now", () => 
     expect(techBursts.some((burst) => burst.preset === "circuit"), "Tech").toBe(true);
   });
 
-  it("R2784000 a run the runner splits into an entry per hit still chains: each hop leaves from the play's last hit, and it gathers once", () => {
+  it("R2803000 Spirit Lash's nova blasts every enemy unit at once: one gather, then a burst and splat per foe", () => {
     const view = fullBoardView();
-    const foes = view.opponent.units.map((unit) => unit?.instanceId ?? "");
-    const stream = [played("p1", "ex", "meditativeplus-005"), ...motifFixture("chain", view, "ex", "p1"), resolved("p1", "ex", "meditativeplus-005")];
-    const hits = planAll(stream, view).filter(({ entry }) => entry.events.every((event) => event.type === "damage"));
-    expect(hits).toHaveLength(4);
-    const from = hits.map(({ cues }) => cues.find((cue) => cue.kind === "shot")).map((shot) => (shot?.kind === "shot" ? shot.from : null));
-    expect(from).toEqual([
-      { kind: "testid", testid: testid.hero("you") },
-      { kind: "testid", testid: testid.card(foes[0] ?? "") },
-      { kind: "testid", testid: testid.card(foes[1] ?? "") },
-      { kind: "testid", testid: testid.card(foes[2] ?? "") },
-    ]);
-    const gathers = hits.map(({ cues }) => cues.filter((cue) => cue.kind === "burst" && cue.power === MOTIF_TUNING.gather.power).length);
-    expect(gathers).toEqual([1, 0, 0, 0]);
+    const foes = view.opponent.units.filter((unit) => unit !== null);
+    const stream = [played("p1", "ex", "meditativeplus-005"), ...motifFixture("nova", view, "ex", "p1"), resolved("p1", "ex", "meditativeplus-005")];
+    const cues = planAll(stream, view)
+      .filter(({ entry }) => entry.events.every((event) => event.type === "damage"))
+      .flatMap(({ cues }) => cues);
+    const gathers = cues.filter((cue) => cue.kind === "burst" && cue.power === MOTIF_TUNING.gather.power);
+    expect(gathers).toHaveLength(1);
+    expect(cues.filter((cue) => cue.kind === "splat")).toHaveLength(foes.length);
+    expect(cues.some((cue) => cue.kind === "shake")).toBe(true);
   });
 
   it("R2784000 Lane Eater's cry lances its lane once: the later card it destroys in that lane only flares it", () => {
@@ -497,22 +486,17 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
     }
   });
 
-  it("R2784000 ward shows an absorbed hit's Armor flash once: in place of the armor row under replace, left to it under keep", () => {
+  it("R2803000 the folded ward's Armor flash draws once in the rows: the armor row's full shield in Holy", () => {
     const view = fullBoardView();
-    const env = envOf();
-    const events = [played("p1", "ex", "core-035"), ...motifFixture("ward", view, "ex", "p1")];
-    env.memory.remember(events);
+    const foe = view.opponent.units[0];
+    if (foe === null || foe === undefined) throw new Error("the fixture board has no enemy unit");
+    const events: GameEvent[] = [played("p1", "ex", "core-035"), { type: "damageAbsorbed", sourceId: null, targetId: foe.instanceId, absorbed: 5, combat: false }];
     const entry = { ...galleryEntry(events.slice(1), view), durationMs: 400 };
-    const flashes = (cues: readonly FxCue[]): number => cues.filter((cue) => cue.kind === "shield").length;
-    // With no play resolving, the rows alone draw the entry: the armor row's flash.
-    expect(flashes(planFx(entry, view, envOf()))).toBe(1);
-    for (const row of ["replace", "keep"] as const) {
-      const table: ReadonlyMap<string, FxCardEntry> = new Map([["core-035", { kind: "hooks", hooks: { cast: { motif: "ward", row } } }]]);
-      const motif = planCardMotif(entry, view, env, table);
-      expect(motif, row).not.toBeNull();
-      const rows = planFx({ ...entry, events: entry.events.filter((event) => motif?.replaces.has(event) !== true) }, view, envOf());
-      expect(flashes(motif?.cues ?? []) + flashes(rows), row).toBe(1);
-    }
+    const cues = planFx(entry, view, envOf());
+    // The armor row's flash, recolored into Holy where `ward` drew it, and the one shake.
+    expect(cues.filter((cue) => cue.kind === "shield")).toHaveLength(1);
+    expect(cues.filter((cue) => cue.kind === "burst" && cue.colors !== undefined && JSON.stringify(cue.colors) === JSON.stringify(FLAVOR_LOOKS.Holy.colors)).length).toBeGreaterThan(0);
+    expect(cues.filter((cue) => cue.kind === "shake")).toHaveLength(1);
   });
 
   it("R2794000 recall flies a card back from its owner's graveyard pile into the hand on either seat", () => {

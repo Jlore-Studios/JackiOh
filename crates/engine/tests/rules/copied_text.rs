@@ -330,6 +330,52 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         );
     }
 
+    #[test]
+    fn r2975000_a_copier_with_no_mana_left_for_its_x_says_so_as_the_reducer_does() {
+        let mut state = game("ct-x-none", 2);
+        let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
+        state = act_as(
+            &state,
+            P1,
+            json!({ "type": "play", "instanceId": x_bolt.id, "x": 1 }),
+        )
+        .state;
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
+        let said = "X is above your mana after paying";
+        assert_eq!(json_of(plays_of(&state, P1, &echo.id)), json!([]));
+        let view = json_of(view_for(&state, P1));
+        assert_eq!(held_in(&view["you"]["hand"], &echo.id)["playReason"], json!(said));
+        assert!(
+            error_of(&attempt(
+                &state,
+                P1,
+                json!({ "type": "play", "instanceId": echo.id, "x": 1 })
+            ))
+            .contains(said)
+        );
+    }
+
+    #[test]
+    fn r2975000_a_copier_with_no_mana_at_all_keeps_the_reason_it_gave() {
+        // The mana alone refuses its X first, in the words the view gave before R2975000.
+        let mut state = game("ct-x-zero", 2);
+        let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
+        state = act_as(
+            &state,
+            P1,
+            json!({ "type": "play", "instanceId": x_bolt.id, "x": 1 }),
+        )
+        .state;
+        state.players.p1.mana.current = 0;
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
+        assert_eq!(json_of(plays_of(&state, P1, &echo.id)), json!([]));
+        let view = json_of(view_for(&state, P1));
+        assert_eq!(
+            held_in(&view["you"]["hand"], &echo.id)["playReason"],
+            json!("X is above your current mana")
+        );
+    }
+
     /// The last Spell can be a fused card (Classic+ #73, keeping its cost, R470) since sent where no
     /// player sees it: its definition stays in `transient_defs`, so the copier still reads its X; a
     /// state without it panics `def_of` (`crates/ai/tests/ai/redact_play_records.rs`).

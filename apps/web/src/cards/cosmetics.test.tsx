@@ -58,9 +58,19 @@ import {
   type CosmeticKind,
 } from "./cosmetics.ts";
 import { FullArtOwned, OwnCopy } from "./fullArt.ts";
-import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ALT_FULL_ART_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
+import {
+  AUGMENT_ANIMATED_ID,
+  AUGMENT_SIGNATURE_ID,
+  VERSION_ALT_FULL_ART_ID,
+  VERSION_FULL_ART_ID,
+  VERSION_OUT_OF_FRAME_ID,
+  VERSION_SET_SHOWCASE_ID,
+  offeredOn,
+} from "./versions.ts";
 import { FULL_ART_MOTION, SIGNATURE_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
-import { SKETCH_INK, SKETCH_PAPER, artSeedOf, sketchSvg } from "./art/pictures.ts";
+import * as pictures from "./art/pictures.ts";
+import { COMIC_DOT_OPACITY, COMIC_INK, COMIC_LEVELS, PIXEL_LEVELS, SKETCH_INK, SKETCH_PAPER, artSeedOf, comicSvg, pixelSvg, sketchSvg, type ShowcaseFamily } from "./art/pictures.ts";
+import { PIXEL_NAME_INK, PIXEL_NAME_SHADOW } from "./pixelName.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
@@ -1325,8 +1335,8 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
           break;
         case "version":
           // R2725000: the Full art version is still, as the Epic full art was; Animated moves it (R2725003). R2940002:
-          // so is Alt full art, which Animated moves as it does Full art.
-          expect([VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID]).toContain(id);
+          // so is Alt full art, which Animated moves as it does Full art; R2943002: and Set showcase and Out of frame.
+          expect([VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID]).toContain(id);
           break;
         case "augment":
           // R2725000: the Signature signs itself wherever it is worn, by its class on the face.
@@ -1468,5 +1478,71 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     }
     // Its frame's colours are the palette's slates.
     for (const rule of sketchRules) for (const hex of colorsOf(rule.body)) expect(inRadiantGold(hex), `${rule.selector}: #${hex}`).toBe(false);
+  });
+
+  it("R2942001 Pixel's and Comic's colours keep out of the Radiant gold window", () => {
+    const hex = (level: number): string => Math.round(level * 255).toString(16).padStart(2, "0");
+    /** Every colour channels cut to `levels` make: 27 for three levels. */
+    const cut = (levels: readonly number[]): string[] => levels.flatMap((r) => levels.flatMap((g) => levels.map((b) => `${hex(r)}${hex(g)}${hex(b)}`)));
+    const mix = (top: string, under: string, alpha: number): string =>
+      [0, 2, 4].map((at) => hex((alpha * parseInt(top.slice(at, at + 2), 16) + (1 - alpha) * parseInt(under.slice(at, at + 2), 16)) / 255)).join("");
+    // A base face's Pixel picture is its palette's 27 colours; Comic's flat colour is its own 27, under its ink at any
+    // opacity up to a dot's and to an outline's whole.
+    const pixel = cut(PIXEL_LEVELS);
+    const comic = cut(COMIC_LEVELS);
+    expect([pixel.length, comic.length]).toEqual([27, 27]);
+    const ink = COMIC_INK.slice(1);
+    const inked = comic.flatMap((flat) => [0.1, 0.2, 0.3, COMIC_DOT_OPACITY, 0.6, 0.8, 1].map((alpha) => mix(ink, flat, alpha)));
+    for (const color of [...pixel, ...comic, ...inked]) expect(inRadiantGold(color), `#${color}`).toBe(false);
+    // The filters' own colours, base and Radiant, and the pixel name face's.
+    for (const radiant of [false, true]) {
+      const colors = [...hexes(pixelSvg("<svg></svg>", radiant)), ...hexes(comicSvg("<svg></svg>", radiant))];
+      expect(colors.length).toBeGreaterThan(0);
+      for (const color of colors) expect(inRadiantGold(color), `#${color}`).toBe(false);
+    }
+    for (const color of [COMIC_INK, PIXEL_NAME_INK, PIXEL_NAME_SHADOW]) expect(inRadiantGold(color.slice(1)), color).toBe(false);
+    // Their frames' and banners' colours in cards.css, and Extended art's frame: the palette's, no gold.
+    const partThree = rules(cardsCss).filter((rule) => /\[data-version="version-(extended-art|pixel|comic)"\]/.test(rule.selector));
+    const box = partThree.filter((rule) => rule.selector.endsWith(".card-text"));
+    const drawn = partThree.filter((rule) => !rule.selector.endsWith(".card-text"));
+    expect(drawn.length).toBeGreaterThan(8);
+    for (const rule of drawn) for (const color of colorsOf(rule.body)) expect(inRadiantGold(color), `${rule.selector}: #${color}`).toBe(false);
+    // Extended art's rules box is the parchment every face's box is made of, no colour of its own.
+    expect(box).toHaveLength(1);
+    expect(colorsOf(box[0]?.body ?? "")).toEqual([PALETTE.get("--pal-parchment")?.slice(1)]);
+  });
+
+  it("R2943001 Set showcase's and Out of frame's colours keep out of the Radiant gold window", () => {
+    const hex = (level: number): string => Math.round(level * 255).toString(16).padStart(2, "0");
+    /** The colour `level` of the way from `dark` to `light`, as a tone map draws it. */
+    const along = (dark: string, light: string, level: number): string =>
+      [1, 3, 5].map((at) => hex(((1 - level) * parseInt(dark.slice(at, at + 2), 16) + level * parseInt(light.slice(at, at + 2), 16)) / 255)).join("");
+    // Their frames, rings and banners in cards.css: the palette's, no gold.
+    const partFour = rules(cardsCss).filter((rule) => /\[data-showcase=|\[data-version="version-out-of-frame"\]/.test(rule.selector));
+    expect(partFour.length).toBeGreaterThan(15);
+    for (const rule of partFour) for (const color of colorsOf(rule.body)) expect(inRadiantGold(color), `${rule.selector}: #${color}`).toBe(false);
+    // The filters' own colours, every family on both faces (Stinkyscape's and Training Grounds' tone maps name none
+    // as a `#…`: their numbers are those of the colours checked below).
+    const families: ShowcaseFamily[] = ["core", "classic", "meditative", "stinkyscape", "training-grounds"];
+    let named = 0;
+    for (const family of families) {
+      for (const radiant of [false, true]) {
+        const colors = hexes(pictures.showcaseSvg("<svg></svg>", family, radiant));
+        named += colors.length;
+        for (const color of colors) expect(inRadiantGold(color), `${family}: #${color}`).toBe(false);
+      }
+    }
+    expect(named).toBeGreaterThan(families.length);
+    // Every SHOWCASE_* colour, and every colour the tone maps draw a base face's picture in: Meditative's ink wash and
+    // Training Grounds' wood at each of their tones, and Stinkyscape's deep space all along it.
+    const constants = Object.entries(pictures).filter(([name, value]) => name.startsWith("SHOWCASE_") && typeof value === "string" && value.startsWith("#"));
+    expect(constants.length).toBeGreaterThan(8);
+    for (const [name, value] of constants) expect(inRadiantGold(String(value).slice(1)), name).toBe(false);
+    const toned = [
+      ...pictures.SHOWCASE_INK_LEVELS.map((level) => along(pictures.SHOWCASE_INK, pictures.SHOWCASE_INK_PAPER, level)),
+      ...pictures.SHOWCASE_WOOD_LEVELS.map((level) => along(pictures.SHOWCASE_WOOD, pictures.SHOWCASE_WOOD_LIGHT, level)),
+      ...Array.from({ length: 11 }, (_, at) => along(pictures.SHOWCASE_SPACE, pictures.SHOWCASE_SPACE_LIGHT, at / 10)),
+    ];
+    for (const color of toned) expect(inRadiantGold(color), `#${color}`).toBe(false);
   });
 });

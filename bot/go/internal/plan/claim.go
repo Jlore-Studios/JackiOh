@@ -102,6 +102,14 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		queue.SetStateLabel(ctx, number, names, "")
 		return nil
 	}
+	if queue.ArchivedOf(recordOf(ctx.Store.Load(), strconv.Itoa(number))) != nil {
+		// Handed to a person, and queued again by one (#3009): the bot has it back, and starts from
+		// its issue and its branch's history.
+		ctx.Store.Update(func(s *pyjson.Object) any {
+			queue.Unarchive(s, number)
+			return nil
+		}, fmt.Sprintf("#%d unarchived", number))
+	}
 	record := recordOf(ctx.Store.Load(), strconv.Itoa(number))
 	if kind == "build" && candidate.Mode == "" && !candidate.Part {
 		// A queued parent with open sub-issues is a fullsend tree's (#2748, section 2), however it
@@ -131,7 +139,13 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			"previous_findings", py.Or(record.Get("last_findings"), []any{}),
 			"previous_question", py.Or(record.Get("question"), ""),
 		)
-		if decision := queue.DecisionOf(record); queue.WentAhead(decision) != "" {
+		switch decision := queue.DecisionOf(record); queue.Resumes(decision) {
+		case "answer":
+			// A trusted person answered its question (#3009): this build carries the answer out.
+			planned.Set("on_answer", decision)
+			planned.Set("previous_question", "")
+			planned.Set("answer_note", AnswerNote(decision))
+		case "default":
 			// Nobody answered its question in time (#2986): this build goes ahead on its default.
 			planned.Set("on_default", decision)
 			planned.Set("previous_question", "")
@@ -297,11 +311,15 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 				}
 			}
 			decision := queue.DecisionOf(record)
-			if queue.WentAhead(decision) == "" {
-				decision = nil
-			} else {
+			switch queue.Resumes(decision) {
+			case "answer":
+				// A trusted person answered its question (#3009): this revision carries the answer out.
+				feedback += "\n\n" + AnswerNote(decision)
+			case "default":
 				// Nobody answered its question in time (#2986): this revision goes ahead on its default.
 				feedback += "\n\n" + DefaultNote(decision)
+			default:
+				decision = nil
 			}
 			if source == "cross-review" && record.Truthy("last_findings") {
 				var lines []string
@@ -329,7 +347,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			message = fmt.Sprintf("Starting a revision now%s, because of: %s. %s",
 				RunLink(cfg), source, startMessage(assignment, cfg, chains))
 			if decision != nil {
-				planned.Set("on_default", decision)
+				planned.Set("on_"+queue.Resumes(decision), decision) // `on_answer` or `on_default`
 			}
 			if rerunsLeft >= 0 {
 				// The fix run runs the failing check first (#2948): a pass re-runs CI with no
@@ -374,11 +392,13 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
-	if record.Truthy("session") && !candidate.OwnReview && !candidate.TurnNext && !planned.Has("on_default") {
+	if record.Truthy("session") && !candidate.OwnReview && !candidate.TurnNext && !planned.Has("on_default") &&
+		!planned.Has("on_answer") {
 		// The Claude session the item's last run kept, which a run on its subscription resumes
 		// (#2748): the record only; the work job fetches the sealed file itself. Not an own review
 		// run's: it reviews and fixes in fresh sessions, never its build's (#2903); nor a turn's
-		// resolution, a fresh session too (#2948); nor a go-ahead on a question's default (#2986).
+		// resolution, a fresh session too (#2948); nor a go-ahead on a question's default (#2986), nor
+		// a run that carries a person's answer out (#3009).
 		planned.Set("session", record.Get("session"))
 	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).

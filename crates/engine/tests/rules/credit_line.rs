@@ -5,8 +5,8 @@
 use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::credit::{body, in_hand, lender, lender_open, playing, put, slot, tapper};
-use crate::rules::fixtures::harness::{act, act_result, live, sink_for};
+use crate::rules::fixtures::credit::{body, lender, lender_open, playing, tapper};
+use crate::rules::fixtures::harness::{act, act_result, in_hand, live, put, sink_for, slot};
 
 mod r1223_borrowing {
     use super::*;

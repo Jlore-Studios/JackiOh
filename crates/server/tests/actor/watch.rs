@@ -791,7 +791,14 @@ mod r1107000_a_watch_ends_with_the_match {
         let late = create_fake_socket();
         w.app
             .matches
-            .attach_watcher(&w.app, &w.match_id, &w.friend.id, &w.watcher.id, late.socket())
+            .attach_watcher(
+                &w.app,
+                &w.match_id,
+                &w.friend.id,
+                &w.watcher.id,
+                &w.watcher.name,
+                late.socket(),
+            )
             .await
             .expect("the actor takes the watcher");
         settle().await;
@@ -1158,5 +1165,356 @@ mod r1834003_a_watcher_wears_the_seats_loadouts {
                 "{card} is shown and its picks were not sent"
             );
         }
+    }
+}
+
+// R2990000-R2990003 — a watcher's emotes from the sidelines
+
+mod r2990000_a_watchers_emotes {
+    //! A watcher throws emotes from its own hand of emoji (R2990001) under its own limit (R2990002); each
+    //! is relayed live to both players' match sockets and every other watcher, never to its sender, and
+    //! never to one either way of a block (R2990003); none reaches the reducer, the log or the hash.
+    use jackioh_engine::{EMOJI_EMOTE_IDS, VOICE_EMOTE_IDS};
+    use jackioh_server::actor::engine::hash_state;
+    use jackioh_server::config::{
+        SPECTATOR_EMOTE_COOLDOWN_MS, SPECTATOR_EMOTE_HAND_SIZE, SPECTATOR_EMOTE_WINDOW_MAX,
+        SPECTATOR_EMOTE_WINDOW_MS,
+    };
+
+    use super::*;
+
+    /// The hand the watcher was dealt, from its `spectatorHand` frame (R2990001).
+    fn hand_of(client: &WsClient) -> Vec<Value> {
+        client
+            .of_type("spectatorHand")
+            .last()
+            .and_then(|frame| frame["emotes"].as_array().cloned())
+            .unwrap_or_else(|| panic!("no spectatorHand frame: {:?}", client.frames()))
+    }
+
+    fn emote(id: &Value) -> Value {
+        json!({ "type": "emote", "emote": id })
+    }
+
+    fn relayed(who: &Account, id: &Value) -> Value {
+        json!({ "type": "spectatorEmote", "watcher": who.name, "emote": id })
+    }
+
+    /// The match's log, as the store holds it.
+    async fn logged(w: &World) -> usize {
+        let mut tx = w.app.db.begin(None).await.expect("a store transaction");
+        let rows = tx.matches_actions(&w.match_id).await.expect("matches.actions");
+        tx.commit().await.expect("commit");
+        rows.len()
+    }
+
+    fn state_hash(w: &World) -> String {
+        let actor = w.app.matches.get(&w.match_id).expect("the live actor");
+        hash_state(&actor.engine_state())
+    }
+
+    /// The world with a second friend of the friend's (Vic) watching beside the first.
+    async fn two_watching() -> (World, Account, WsClient, WsClient) {
+        let w = world(false).await;
+        let vic = account(&w.app, 14, "Vic").await;
+        befriend(&w.app, &vic, &w.friend).await;
+        let sender = w.watch(&w.watcher).await;
+        let other = w.watch(&vic).await;
+        settle().await;
+        for client in [&sender, &other] {
+            assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+            assert!(client.close_code().is_none(), "admitted");
+        }
+        (w, vic, sender, other)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990001_a_watcher_is_sent_its_own_hand_of_emoji_after_the_loadouts_and_before_any_view() {
+        let (_w, _vic, sender, other) = two_watching().await;
+        for client in [&sender, &other] {
+            let frames = client.frames();
+            assert_eq!(
+                frames.first().map(|frame| &frame["type"]),
+                Some(&json!("loadouts"))
+            );
+            assert_eq!(
+                frames.get(1).map(|frame| &frame["type"]),
+                Some(&json!("spectatorHand"))
+            );
+            assert_eq!(client.of_type("spectatorHand").len(), 1, "{frames:?}");
+            let hand = hand_of(client);
+            assert_eq!(hand.len(), SPECTATOR_EMOTE_HAND_SIZE, "{hand:?}");
+            for id in &hand {
+                assert!(
+                    EMOJI_EMOTE_IDS.iter().any(|emoji| json!(emoji.as_str()) == *id),
+                    "{id} is not an emoji"
+                );
+            }
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990000_a_watchers_emote_reaches_both_players_and_every_other_watcher_live_and_never_its_sender()
+     {
+        let (w, _vic, sender, other) = two_watching().await;
+        w.keep_both().await;
+        let hand = hand_of(&sender);
+        let (actions, hash) = (logged(&w).await, state_hash(&w));
+        w.p1.clear();
+        w.p2.clear();
+        let (sender_from, other_from) = (sender.received(), other.received());
+        let thrown = Instant::now();
+
+        sender.send_json(emote(&hand[0])).await;
+        settle().await;
+
+        let expected = relayed(&w.watcher, &hand[0]);
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(socket.of_type("spectatorEmote"), vec![expected.clone()]);
+            assert!(socket.of_type("emote").is_empty(), "{:?}", socket.messages());
+            assert!(socket.of_type("view").is_empty(), "{:?}", socket.messages());
+            assert!(socket.of_type("ack").is_empty(), "{:?}", socket.messages());
+        }
+        let (_, at, frame) = other
+            .wait_for(other_from, PROMPTLY, |frame| frame["type"] == "spectatorEmote")
+            .await
+            .unwrap_or_else(|| panic!("the other watcher never heard it: {:?}", other.frames()));
+        assert_eq!(frame, expected);
+        assert!(
+            at < thrown + ms(SPECTATE_DELAY_MS),
+            "relayed {:?} late",
+            at - thrown
+        );
+        assert_eq!(other.of_type_since(other_from, "spectatorEmote").len(), 1);
+        // No echo: the sender shows its own locally.
+        assert!(
+            sender.of_type_since(sender_from, "spectatorEmote").is_empty(),
+            "{:?}",
+            sender.frames()
+        );
+        assert!(sender.of_type("error").is_empty(), "{:?}", sender.frames());
+        // Never the game's: no action logged, the state untouched.
+        assert_eq!(logged(&w).await, actions);
+        assert_eq!(state_hash(&w), hash);
+        let actor = w.app.matches.get(&w.match_id).expect("the live actor");
+        assert!(actor.telemetry().emote_events.is_empty(), "no emote telemetry");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990001_an_emote_outside_the_hand_or_a_voice_line_is_dropped_silently_and_spends_none_of_the_limit()
+     {
+        let (w, _vic, sender, other) = two_watching().await;
+        let hand = hand_of(&sender);
+        let outside = EMOJI_EMOTE_IDS
+            .iter()
+            .map(|id| json!(id.as_str()))
+            .find(|id| !hand.contains(id))
+            .expect("an emoji the hand does not hold");
+        w.p1.clear();
+        w.p2.clear();
+        let other_from = other.received();
+
+        sender.send_json(emote(&outside)).await;
+        for voice in VOICE_EMOTE_IDS {
+            sender.send_json(emote(&json!(voice.as_str()))).await;
+        }
+        settle().await;
+
+        for socket in [&w.p1, &w.p2] {
+            assert!(
+                socket.of_type("spectatorEmote").is_empty(),
+                "{:?}",
+                socket.messages()
+            );
+        }
+        assert!(other.of_type_since(other_from, "spectatorEmote").is_empty());
+        assert!(
+            sender.of_type("error").is_empty(),
+            "dropped silently: {:?}",
+            sender.frames()
+        );
+        assert!(sender.close_code().is_none());
+
+        // None of the limit was spent: an emote of the hand goes at once, inside any cooldown.
+        sender.send_json(emote(&hand[0])).await;
+        settle().await;
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(
+                socket.of_type("spectatorEmote"),
+                vec![relayed(&w.watcher, &hand[0])]
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990000_an_emote_outside_the_pool_is_answered_malformed_and_closes_the_socket_past_the_budget()
+    {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        settle().await;
+        w.p1.clear();
+        w.p2.clear();
+        let from = watcher.received();
+
+        for _ in 0..MALFORMED_FRAMES_PER_WINDOW {
+            watcher
+                .send_json(json!({ "type": "emote", "emote": "sobbing" }))
+                .await;
+        }
+        settle().await;
+        let answers = watcher.of_type_since(from, "error");
+        assert_eq!(
+            answers.len(),
+            MALFORMED_FRAMES_PER_WINDOW,
+            "{:?}",
+            watcher.frames()
+        );
+        for answer in &answers {
+            assert_eq!(answer["code"], "malformed", "{answer}");
+            assert_eq!(
+                answer["message"], r#""emote" must be a known emote id"#,
+                "{answer}"
+            );
+        }
+        assert_eq!(watcher.close_code(), None, "the budget itself is allowed");
+
+        watcher.send_json(json!({ "type": "emote", "emote": 7 })).await;
+        assert_eq!(watcher.wait_closed(PROMPTLY).await, Some(CLOSE_POLICY_VIOLATED));
+        // Answered before the close, as a seat's is (R835002).
+        assert_eq!(
+            watcher.of_type_since(from, "error").len(),
+            MALFORMED_FRAMES_PER_WINDOW + 1
+        );
+        for socket in [&w.p1, &w.p2] {
+            assert!(
+                socket.of_type("spectatorEmote").is_empty(),
+                "{:?}",
+                socket.messages()
+            );
+            assert_eq!(socket.close_code(), None);
+        }
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990002_emotes_past_the_watchers_limits_are_dropped_silently_until_the_window_passes() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        let hand = hand_of(&watcher);
+        let heard = || w.p1.of_type("spectatorEmote").len();
+        let cooldown = ms(SPECTATOR_EMOTE_COOLDOWN_MS);
+        let one_ms = Duration::from_millis(1);
+        w.p1.clear();
+        let first = Instant::now();
+
+        watcher.send_json(emote(&hand[0])).await;
+        settle().await;
+        assert_eq!(heard(), 1);
+
+        // Inside the cooldown: dropped, unanswered.
+        tokio::time::sleep(cooldown - one_ms).await;
+        watcher.send_json(emote(&hand[1])).await;
+        settle().await;
+        assert_eq!(heard(), 1, "inside the cooldown");
+
+        // At the cooldown, and so on up to the window's cap.
+        tokio::time::sleep(one_ms).await;
+        for sent in 2..=SPECTATOR_EMOTE_WINDOW_MAX {
+            watcher.send_json(emote(&hand[1])).await;
+            settle().await;
+            assert_eq!(heard(), sent, "emote {sent} of the window");
+            tokio::time::sleep(cooldown).await;
+        }
+
+        // Past the cooldown, but the window holds its cap.
+        watcher.send_json(emote(&hand[2])).await;
+        settle().await;
+        assert_eq!(heard(), SPECTATOR_EMOTE_WINDOW_MAX, "past the window's cap");
+
+        // Once the first ages out of the window, one more goes.
+        let window_ends = first + ms(SPECTATOR_EMOTE_WINDOW_MS);
+        tokio::time::sleep_until(window_ends - one_ms).await;
+        watcher.send_json(emote(&hand[2])).await;
+        settle().await;
+        assert_eq!(heard(), SPECTATOR_EMOTE_WINDOW_MAX, "the window has not passed");
+        tokio::time::sleep(one_ms).await;
+        watcher.send_json(emote(&hand[2])).await;
+        settle().await;
+        assert_eq!(heard(), SPECTATOR_EMOTE_WINDOW_MAX + 1, "the window passed");
+
+        assert!(
+            watcher.of_type("error").is_empty(),
+            "dropped silently: {:?}",
+            watcher.frames()
+        );
+        assert!(watcher.close_code().is_none());
+        assert_eq!(
+            w.p2.of_type("spectatorEmote").len(),
+            SPECTATOR_EMOTE_WINDOW_MAX + 1
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990002_a_new_socket_of_the_watcher_keeps_its_limit() {
+        let w = world(false).await;
+        let first = w.watch(&w.watcher).await;
+        let hand = hand_of(&first);
+        w.p1.clear();
+        first.send_json(emote(&hand[0])).await;
+        settle().await;
+        assert_eq!(w.p1.of_type("spectatorEmote").len(), 1);
+
+        // The same account on a new socket, inside the cooldown: the same hand, the same limit.
+        let second = w.watch(&w.watcher).await;
+        assert_eq!(first.wait_closed(PROMPTLY).await, Some(1000), "replaced");
+        assert_eq!(hand_of(&second), hand);
+        second.send_json(emote(&hand[1])).await;
+        settle().await;
+        assert_eq!(w.p1.of_type("spectatorEmote").len(), 1, "inside the cooldown");
+
+        tokio::time::sleep(ms(SPECTATOR_EMOTE_COOLDOWN_MS)).await;
+        second.send_json(emote(&hand[1])).await;
+        settle().await;
+        assert_eq!(
+            w.p1.of_type("spectatorEmote").last(),
+            Some(&relayed(&w.watcher, &hand[1]))
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2990003_a_block_between_the_watcher_and_the_rival_keeps_its_emotes_from_the_rival_alone() {
+        let (w, vic, sender, other) = two_watching().await;
+        let hand = hand_of(&sender);
+        // The watcher blocks the rival (uuid 12), and the other watcher blocks the watcher; neither
+        // ends a watch (B46 ends one only between the watcher and the friend it watches).
+        let (status, body) = api(
+            &w.app,
+            "POST",
+            "/api/blocks",
+            &w.watcher.token,
+            json!({ "profileId": uuid(12) }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        block(&w.app, &vic, &w.watcher).await;
+        settle().await;
+        w.p1.clear();
+        w.p2.clear();
+        let other_from = other.received();
+
+        sender.send_json(emote(&hand[0])).await;
+        settle().await;
+
+        assert_eq!(
+            w.p1.of_type("spectatorEmote"),
+            vec![relayed(&w.watcher, &hand[0])]
+        );
+        assert!(w.p2.of_type("spectatorEmote").is_empty(), "{:?}", w.p2.messages());
+        assert!(other.of_type_since(other_from, "spectatorEmote").is_empty());
+        for client in [&sender, &other] {
+            assert!(client.close_code().is_none(), "the watch goes on");
+            assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+        }
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 2);
     }
 }

@@ -32,7 +32,12 @@ import {
   AUGMENT_SIGNATURE_ID,
   VERSION_ALT_ART_ID,
   VERSION_ALT_FULL_ART_ID,
+  VERSION_COMIC_ID,
+  VERSION_EXTENDED_ART_ID,
   VERSION_FULL_ART_ID,
+  VERSION_OUT_OF_FRAME_ID,
+  VERSION_PIXEL_ID,
+  VERSION_SET_SHOWCASE_ID,
   VERSION_SKETCH_ID,
   offeredOn,
 } from "../cards/versions.ts";
@@ -784,8 +789,9 @@ describe("R1655000 a card in context", () => {
       cardStrip(defId, () => true)
         .find((group) => group.kind === "version")
         ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // Transmogulate is offered all four versions; Carnivorous Cube Alt art alone of the three, Big D-fender the Sketch
-    // alone; Call to Chaos (Classic+ Edition) the three and not Full art; Speciesist none.
+    // Transmogulate is offered all four versions (and R2942000 Comic, R2943000 Set showcase); Carnivorous Cube Alt art
+    // alone of the three, Big D-fender the Sketch alone; Call to Chaos (Classic+ Edition) the three and not Full art (and
+    // R2942000 Pixel and Comic, R2943000 Set showcase); Speciesist none.
     const ALL = "core-083";
     const NOT_FULL = "classicplus-073";
     expect(versions(ALL)).toEqual([
@@ -794,10 +800,20 @@ describe("R1655000 a card in context", () => {
       [VERSION_ALT_ART_ID, "Rare"],
       [VERSION_SKETCH_ID, "Rare"],
       [VERSION_ALT_FULL_ART_ID, "Legendary"],
+      [VERSION_COMIC_ID, "Epic"],
+      [VERSION_SET_SHOWCASE_ID, "Legendary"],
     ]);
     expect(versions(CUBE).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID]);
     expect(versions(BIG_D).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_SKETCH_ID]);
-    expect(versions(NOT_FULL).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID]);
+    expect(versions(NOT_FULL).map(([id]) => id)).toEqual([
+      NO_FULL_ART_ID,
+      VERSION_ALT_ART_ID,
+      VERSION_SKETCH_ID,
+      VERSION_ALT_FULL_ART_ID,
+      VERSION_PIXEL_ID,
+      VERSION_COMIC_ID,
+      VERSION_SET_SHOWCASE_ID,
+    ]);
     expect(versions(PLAIN)).toEqual([]);
     // Whatever the strip lists is offered there, and nothing offered is left out.
     for (const defId of [ALL, CUBE, BIG_D, NOT_FULL, PLAIN]) {
@@ -828,6 +844,121 @@ describe("R1655000 a card in context", () => {
     expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
     fireEvent.click(item(AUGMENT_SIGNATURE_ID));
     expect(readCardPicks(ALL)).toEqual({ fullArt: VERSION_ALT_FULL_ART_ID, augments: [AUGMENT_ANIMATED_ID] });
+    expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R2942000 the strip lists each part 3 version only where it is offered, each drawing its own look", () => {
+    const versions = (defId: string) =>
+      cardStrip(defId, () => true)
+        .find((group) => group.kind === "version")
+        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
+    // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art; Scratch Pad, a Mythic Spell,
+    // Full art, Alt full art and all three; Carnivorous Cube and Big D-fender none of the three; Speciesist nothing.
+    const TYRANT = "classic-056";
+    const PAD = "meditativeplus-026";
+    expect(versions(TYRANT)).toEqual([
+      [NO_FULL_ART_ID, "Common"],
+      [VERSION_SKETCH_ID, "Rare"],
+      [VERSION_EXTENDED_ART_ID, "Epic"],
+      [VERSION_PIXEL_ID, "Epic"],
+      [VERSION_COMIC_ID, "Epic"],
+    ]);
+    expect(versions(PAD).map(([id]) => id)).toEqual([
+      NO_FULL_ART_ID,
+      VERSION_FULL_ART_ID,
+      VERSION_ALT_FULL_ART_ID,
+      VERSION_EXTENDED_ART_ID,
+      VERSION_PIXEL_ID,
+      VERSION_COMIC_ID,
+    ]);
+    expect(versions(PLAIN)).toEqual([]);
+    // Whatever the strip lists is offered there, and nothing offered is left out.
+    for (const defId of [TYRANT, PAD, CUBE, BIG_D, "core-083", "classicplus-073", PLAIN]) {
+      for (const id of [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID]) {
+        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      }
+    }
+
+    // Each tile draws its look: Extended art the normal picture past its window, Pixel and Comic restyled.
+    const pad = defOf(PAD);
+    render(<OwnedCards collection={collectionOwning([PAD])} defs={[pad]} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Meditative+")));
+    fireEvent.click(screen.getByTestId(T.card(PAD)));
+    const art = (id: string): Element | null => item(id).querySelector(".cf-art");
+    expect(art(VERSION_EXTENDED_ART_ID)?.getAttribute("data-art-picture")).toBeNull();
+    expect(art(VERSION_EXTENDED_ART_ID)?.classList.contains("cf-art--full")).toBe(true);
+    expect(art(VERSION_PIXEL_ID)?.getAttribute("data-art-picture")).toBe("pixel");
+    expect(art(VERSION_COMIC_ID)?.getAttribute("data-art-picture")).toBe("comic");
+    // Choosing Pixel wears it, its words kept, with Pixel's picture.
+    fireEvent.click(item(VERSION_PIXEL_ID));
+    expect(readCardPicks(PAD)).toEqual({ fullArt: VERSION_PIXEL_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_PIXEL_ID);
+    expect(large().getAttribute("data-full-art")).toBeNull();
+    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("pixel");
+    // R2942002, R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
+    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    expect(readCardPicks(PAD)).toEqual({ fullArt: VERSION_PIXEL_ID, augments: [AUGMENT_ANIMATED_ID] });
+    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
+    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
+    expect(readCardPicks(PAD)).toEqual({ fullArt: VERSION_PIXEL_ID, augments: [AUGMENT_ANIMATED_ID] });
+    expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R2943000 the strip lists each part 4 version only where it is offered, each drawing its own look", () => {
+    const versions = (defId: string) =>
+      cardStrip(defId, () => true)
+        .find((group) => group.kind === "version")
+        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
+    // BOOM! Big Max, a Legendary Unit, is offered both, beside Full art, Alt art, Alt full art and Pixel; Transmogulate,
+    // a Legendary Spell, Set showcase alone of the two; Carnivorous Cube, Big D-fender and Speciesist neither.
+    const MAX = "classic-080";
+    expect(versions(MAX)).toEqual([
+      [NO_FULL_ART_ID, "Common"],
+      [VERSION_FULL_ART_ID, "Legendary"],
+      [VERSION_ALT_ART_ID, "Rare"],
+      [VERSION_ALT_FULL_ART_ID, "Legendary"],
+      [VERSION_PIXEL_ID, "Epic"],
+      [VERSION_SET_SHOWCASE_ID, "Legendary"],
+      [VERSION_OUT_OF_FRAME_ID, "Legendary"],
+    ]);
+    expect(versions(PLAIN)).toEqual([]);
+    // Whatever the strip lists is offered there, and nothing offered is left out.
+    for (const defId of [MAX, "core-083", "classicplus-073", "classic-056", CUBE, BIG_D, PLAIN]) {
+      for (const id of [VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID]) {
+        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      }
+    }
+
+    // Each tile draws its look: Set showcase the picture in Classic's stone, Out of frame its subject alone.
+    const max = defOf(MAX);
+    render(<OwnedCards collection={collectionOwning([MAX])} defs={[max]} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Classic")));
+    fireEvent.click(screen.getByTestId(T.card(MAX)));
+    const art = (id: string): Element | null => item(id).querySelector(".cf-art");
+    expect(art(VERSION_SET_SHOWCASE_ID)?.getAttribute("data-art-picture")).toBe("showcase-classic");
+    expect(art(VERSION_SET_SHOWCASE_ID)?.getAttribute("data-art-part")).toBeNull();
+    expect(art(VERSION_OUT_OF_FRAME_ID)?.getAttribute("data-art-picture")).toBeNull();
+    expect(art(VERSION_OUT_OF_FRAME_ID)?.getAttribute("data-art-part")).toBe("subject");
+    // Choosing Set showcase wears Classic's look, its words kept.
+    fireEvent.click(item(VERSION_SET_SHOWCASE_ID));
+    expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_SET_SHOWCASE_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_SET_SHOWCASE_ID);
+    expect(large().getAttribute("data-showcase")).toBe("classic");
+    expect(large().querySelector(".card-text")).not.toBeNull();
+    // Choosing Out of frame cuts its subject out over the frame, its words kept.
+    fireEvent.click(item(VERSION_OUT_OF_FRAME_ID));
+    expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_OUT_OF_FRAME_ID);
+    expect(large().getAttribute("data-full-art")).toBeNull();
+    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().querySelector(".cf-art-frame > .cf-art--cutout")?.getAttribute("data-art-part")).toBe("subject");
+    // R2943002, R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
+    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] });
+    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
+    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
+    expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] });
     expect(large().querySelector(".cf-signature")).toBeNull();
   });
 });

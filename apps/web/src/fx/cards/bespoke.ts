@@ -15,6 +15,7 @@ import { crushingWalls } from "./classicplus/crushingWalls.ts";
 import { constantStamp } from "./classicplus/kysConstant.ts";
 import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
+import { mindJudge } from "./meditative/mindJudge.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
@@ -41,6 +42,7 @@ export const CARD_RECIPES = {
   constantStamp,
   inkTear,
   jadeCrack,
+  mindJudge,
   cnSweep,
   harmonyWave,
   terminusRift,

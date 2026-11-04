@@ -83,6 +83,42 @@ export const COSMETIC_FOIL_ANIMATED_MAX = 6;
 export const FULL_ART_FINISH_OPACITY = 0.6;
 
 /**
+ * R2942001: the most the Extended art version's translucent frame covers the art it runs over: the panel lies over the
+ * picture at this opacity at the rim and fades to nothing toward the middle, as R2720000's band. Mirrored in cards.css.
+ */
+export const EXTENDED_ART_FRAME_OPACITY = 0.55;
+
+/**
+ * R2942001: the share, in percent, of a base Extended art face's rules box that is its parchment, the rest the art
+ * under it: enough that over the darkest art, the watermark on it, every ink reads as well as over the normal box's
+ * edge (R2718000). Mirrored in cards.css.
+ */
+export const EXTENDED_ART_BOX_PCT = 90;
+
+/**
+ * R2942001: the side of the Extended art version's square picture, in percent of the face's height. Standing on the
+ * face's foot, its middle sits a quarter of the way down, where the normal window's does. Mirrored in cards.css.
+ */
+export const EXTENDED_ART_PICTURE_PCT = 150;
+
+/**
+ * R2943001: the Out of frame version's window, inset inside the art frame's box this far from its top and from each
+ * side, in percent of the box, its foot kept: the frame's own colour shows round it, where the subject steps out.
+ * Mirrored in cards.css.
+ */
+export const OUT_OF_FRAME_WINDOW_TOP_PCT = 30;
+export const OUT_OF_FRAME_WINDOW_SIDE_PCT = 18;
+
+/**
+ * R2943001: the side of the Out of frame version's cut-out subject, a square, in percent of the art frame's height, and
+ * how far its foot sinks below the frame's, under the name banner: it rises above the window and is wider than it, and
+ * stays inside the card's face (a Unit's frame sits 3.5cqh down its face, 40cqh tall, so the square's 46cqh rises to
+ * 1.5cqh). Mirrored in cards.css.
+ */
+export const OUT_OF_FRAME_SUBJECT_PCT = 115;
+export const OUT_OF_FRAME_SUBJECT_SINK_PCT = 10;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim.

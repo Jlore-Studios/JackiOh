@@ -5,8 +5,12 @@
 // R2715001: given a full-art card's motion (motion.ts), the same picture moves: its layers are tagged
 // by role and a `<style>` after the `<defs>` animates them, with particles over it. Given none, it is
 // the still picture, byte for byte. R2949000: given a seed other than the card's id (pictures.ts), a
-// painter draws the card's picture of that look instead, cached under that seed. R2940001: given `sketch`,
-// the picture is drawn as the Sketch version's pencil sketch of it (pictures.ts `sketchSvg`), cached apart.
+// painter draws the card's picture of that look instead, cached under that seed. R2940001: given `restyle`
+// "sketch", the picture is drawn as the Sketch version's pencil sketch of it (pictures.ts `sketchSvg`), cached
+// apart; R2942001: given "pixel" or "comic", as Pixel's or Comic's (`restyledSvg`), cached apart too; R2943001: given
+// a Set showcase restyle, in its set's treatment. R2943001: given a `part` other than "whole" (Out of frame's), the
+// procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop with no subject, or its subject on
+// nothing, cached apart; "whole" is the picture, byte for byte.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -14,7 +18,7 @@ import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
-import { sketchSvg } from "./pictures.ts";
+import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
@@ -75,8 +79,11 @@ function rayPath(cx: number, cy: number, angle: number, width: number): string {
   );
 }
 
-/** The SVG document, unencoded; R2715001: moving as `motion` says, its particles placed by `defId`. */
-function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string): string {
+/**
+ * The SVG document, unencoded; R2715001: moving as `motion` says, its particles placed by `defId`. R2943001: `part`
+ * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone.
+ */
+function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: ArtPart = "whole"): string {
   const { sky, glow, emblem } = spec;
   const half = ART_BOX / 2;
   const angle = sky.angle * DEGREES;
@@ -107,11 +114,13 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string): string 
   );
   parts.push("</defs>");
   parts.push(motionStyle(motion, spec.composition === "figure" ? FIGURE_SUBJECT_ORIGIN : CENTER_ORIGIN));
+  const subject = part !== "backdrop";
+  const backdrop = part !== "subject";
 
-  parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
-  parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
+  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
+  if (backdrop) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
 
-  if (spec.rays.length > 0) {
+  if (backdrop && spec.rays.length > 0) {
     parts.push(`<g fill="${RADIANT_PALETTE.ray}">`);
     for (const ray of spec.rays) {
       parts.push(`<path d="${rayPath(glow.cx, glow.cy, ray.angle, ray.width)}" opacity="${fmt(ray.opacity)}"/>`);
@@ -119,29 +128,30 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string): string 
     parts.push("</g>");
   }
 
-  // R2715001: each run of ridges of one role moves as one layer.
+  // R2715001: each run of ridges of one role moves as one layer. R2943001: a part draws the runs that are its own.
+  const drawn = (role: ArtRole): boolean => (role === "subject" ? subject : backdrop);
   let run: string[] = [];
   let runRole: ArtRole | null = null;
   for (const ridge of spec.ridges) {
     if (ridge.role !== runRole && runRole !== null) {
-      parts.push(moving(runRole, run.join(""), motion));
+      if (drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
       run = [];
     }
     runRole = ridge.role;
     run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
   }
-  if (runRole !== null) parts.push(moving(runRole, run.join(""), motion));
+  if (runRole !== null && drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
 
   // R503: the motif's glyphs sit over the composition and under the emblem.
-  spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
+  if (backdrop) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
 
-  parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
-  if (spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
+  if (subject) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
+  if (backdrop && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
 
-  spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
+  if (backdrop) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
 
-  parts.push(particleMarkup(motion, defId));
-  parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
+  if (backdrop) parts.push(particleMarkup(motion, defId));
+  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
   parts.push("</svg>");
   return parts.join("");
 }
@@ -168,17 +178,22 @@ function movingKey(motion: ArtMotion | null): string {
   return motion === null ? "" : "|moving";
 }
 
-/** R2940001: what a sketched picture's memo key ends with, so the plain one keeps its key. */
-function sketchKey(sketch: boolean): string {
-  return sketch ? "|sketch" : "";
+/** R2940001, R2942001: what a restyled picture's memo key ends with, so the plain one and the Sketch keep theirs. */
+function restyleKey(restyle: ArtRestyle | null): string {
+  return restyle === null ? "" : `|${restyle}`;
+}
+
+/** R2943001: what a part's memo key ends with: nothing for the whole picture, so it keeps its key. */
+function partKey(part: ArtPart): string {
+  return part === "whole" ? "" : `|${part}`;
 }
 
 /** R2940001: the Starships' one seed for a Sketch's strokes: their picture is drawn from no card's id. */
 const STARSHIP_SKETCH_SEED = "starship";
 
-/** R2940001: `svg` as the face prints it: the Sketch version's pencil sketch of it when `sketch`, else itself. */
-function sketched(svg: string, sketch: boolean, radiant: boolean, seedId: string): string {
-  return sketch ? sketchSvg(svg, radiant, seedId) : svg;
+/** R2940001, R2942001: `svg` as the face prints it: restyled by `restyle` (the Sketch, Pixel or Comic), else itself. */
+function restyled(svg: string, restyle: ArtRestyle | null, radiant: boolean, seedId: string): string {
+  return restyle === null ? svg : restyledSvg(svg, restyle, radiant, seedId);
 }
 
 export function proceduralArtUri(
@@ -188,25 +203,26 @@ export function proceduralArtUri(
   radiant: boolean,
   motif: MotifId | null = null,
   motion: ArtMotion | null = null,
-  sketch = false,
+  restyle: ArtRestyle | null = null,
+  part: ArtPart = "whole",
 ): string {
-  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}${movingKey(motion)}${sketchKey(sketch)}`;
+  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = artSvg(artSpec(defId, theme, composition, radiant, motif), motion, defId);
-  const uri = `${DATA_PREFIX}${encodeSvg(sketched(svg, sketch, radiant, defId))}`;
+  const svg = artSvg(artSpec(defId, theme, composition, radiant, motif), motion, defId, part);
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, defId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
 /** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
-export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean, sketch = false): string {
-  const key = `starship|${pieces}|${launched}|${radiant}${sketchKey(sketch)}`;
+export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean, restyle: ArtRestyle | null = null): string {
+  const key = `starship|${pieces}|${launched}|${radiant}${restyleKey(restyle)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(sketched(starshipSvg(pieces, launched, radiant), sketch, radiant, STARSHIP_SKETCH_SEED))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(starshipSvg(pieces, launched, radiant), restyle, radiant, STARSHIP_SKETCH_SEED))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
@@ -223,14 +239,15 @@ export function stinkyscapeArtUri(
   radiant: boolean,
   motion: ArtMotion | null = null,
   seedId = defId,
-  sketch = false,
+  restyle: ArtRestyle | null = null,
+  part: ArtPart = "whole",
 ): string {
-  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${sketchKey(sketch)}`;
+  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId);
-  const uri = `${DATA_PREFIX}${encodeSvg(sketched(svg, sketch, radiant, seedId))}`;
+  const svg = stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
@@ -244,25 +261,26 @@ export function trainingGroundsArtUri(
   radiant: boolean,
   motion: ArtMotion | null = null,
   seedId = defId,
-  sketch = false,
+  restyle: ArtRestyle | null = null,
+  part: ArtPart = "whole",
 ): string {
-  const key = `${seedId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${sketchKey(sketch)}`;
+  const key = `${seedId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId);
-  const uri = `${DATA_PREFIX}${encodeSvg(sketched(svg, sketch, radiant, seedId))}`;
+  const svg = trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
 /** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. */
-export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean, sketch = false): string {
-  const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}${sketchKey(sketch)}`;
+export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean, restyle: ArtRestyle | null = null): string {
+  const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}${restyleKey(restyle)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(sketched(legacySvg(defId, coreId, name, tags, type, radiant), sketch, radiant, defId))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(legacySvg(defId, coreId, name, tags, type, radiant), restyle, radiant, defId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }

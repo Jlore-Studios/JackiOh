@@ -1,0 +1,145 @@
+/* The sideline strip (R2990004, SidelineStrip.tsx): the watchers' emotes in a column at the screen's
+   inline end, over the board and under its prompts and result (`--z-strip`). Only its controls take
+   a press, so a show never covers a card. On a phone layout (`data-phone`, game/phoneBar.ts's query)
+   it is a wrapping row along the top edge, under the rail when the rail rides that edge (#2932), and
+   the menu drops below its button instead of above. */
+
+.sideline-strip {
+  position: fixed;
+  inset-inline-end: max(8px, env(safe-area-inset-right));
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  z-index: var(--z-strip);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.sideline-strip__shows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sideline-emote {
+  display: grid;
+  justify-items: center;
+  inline-size: 64px;
+  padding: 4px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-raised) 90%, transparent);
+  box-shadow: var(--shadow-2);
+  animation: sideline-pop calc(var(--motion-base) * var(--anim-scale)) var(--ease-overshoot) both;
+}
+
+.sideline-emote .emote-emoji-svg {
+  display: block;
+  inline-size: 40px;
+  block-size: 40px;
+}
+
+.sideline-emote__name {
+  max-inline-size: 100%;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: var(--type-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sideline-strip__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* The menu hangs off this box (emotes.css's `.emote-menu-you`, above it). */
+.sideline-strip__send {
+  position: relative;
+  display: flex;
+}
+
+/* Two classes, to outrank index.css's `.app-shell button` padding. */
+.sideline-strip .sideline-strip__button {
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--type-xs);
+  pointer-events: auto;
+}
+
+.sideline-strip .emote-menu {
+  pointer-events: auto;
+}
+
+.sideline-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sideline-strip[data-phone] {
+  inset-block-start: max(4px, env(safe-area-inset-top));
+  inset-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right));
+  translate: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.sideline-strip[data-phone] .sideline-strip__shows {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sideline-strip[data-phone] .sideline-emote {
+  inline-size: 52px;
+}
+
+.sideline-strip[data-phone] .sideline-emote .emote-emoji-svg {
+  inline-size: 32px;
+  block-size: 32px;
+}
+
+.sideline-strip[data-phone] .emote-menu-you {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+/* #2932: on a phone held upright a match's or a watch's rail rides the top row (board.css,
+   `data-rail-top`), Back, the ranks and the watcher count across it. There the strip leaves that row
+   and takes the board's, at its top end corner, as a grid item over the board rather than a fixed box
+   over the rail. */
+@media (max-width: 600px) {
+  .app-shell--wide > .game[data-rail-top="true"] > .sideline-strip[data-phone] {
+    position: relative;
+    inset: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: start;
+    justify-self: end;
+  }
+}
+
+@keyframes sideline-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

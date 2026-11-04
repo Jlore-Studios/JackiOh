@@ -58,6 +58,7 @@ type Patches struct {
 	Dequeue                func(nodeID string)
 	PinIssue               func(nodeID string)
 	MarkReady              func(nodeID string)
+	MarkDraft              func(nodeID string)
 	MergePull              func(number int, method string, title string) *pyjson.Object
 	GetFile                func(path string, ref string) (string, string)
 	PutFile                func(path string, text string, branch string, sha string, message string)
@@ -442,6 +443,14 @@ func (c *FakeGitHub) MarkReady(nodeID string) {
 		return
 	}
 	c.Own().MarkReady(nodeID)
+}
+
+func (c *FakeGitHub) MarkDraft(nodeID string) {
+	if c.Patch.MarkDraft != nil {
+		c.Patch.MarkDraft(nodeID)
+		return
+	}
+	c.Own().MarkDraft(nodeID)
 }
 
 func (c *FakeGitHub) MergePull(number int, method string, title string) *pyjson.Object {

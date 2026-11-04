@@ -17,6 +17,7 @@ import {
   FX_JADE_CRACK_TRAUMA,
   FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
+  FX_MIND_JUDGE_TRAUMA,
 } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { createFxMemory } from "../../memory.ts";
@@ -225,5 +226,54 @@ describe("R2784000 #2796 Meditative's Flourishes", () => {
       // Reduced motion gives every entry a duration of 0.
       expect(flourishCues(stream, view, envOf(), 0)).toEqual([]);
     }
+  });
+});
+
+const MIND = "meditative-022-1";
+
+/** Fortify Mind played by `player`: its guess judged against its linked secret. */
+function mindStream(player: PlayerId, view: PlayerView): GameEvent[] {
+  return [played(player, "mind", MIND), ...RECIPE_FIXTURES.mindJudge(view, "mind", player), resolved(player, "mind", MIND)];
+}
+
+describe("R2803000 Fortify Mind's mindJudge", () => {
+  it("R2803000 mindJudge is Fortify Mind's bespoke entry, a sheen and flare on the judging hero's badge", () => {
+    expect(FX_CARD_TABLE.get(MIND)).toEqual({ kind: "bespoke", key: "mindJudge" });
+    expect(typeof CARD_RECIPES.mindJudge).toBe("function");
+    const view = fullBoardView();
+    const D = 400;
+    const t = timesOf(D);
+    const cues = flourishCues(mindStream("p1", view), view, envOf(), D);
+    const hero = testid.hero("you");
+    expect(cues.filter((cue) => cue.kind === "sheen" && at(cue) === hero).length).toBeGreaterThan(0);
+    expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "arcane" && at(cue) === hero && cue.delayMs === t.L)).toBe(true);
+    const shake = cues.filter((cue) => cue.kind === "shake");
+    expect(shake.length).toBeGreaterThan(0);
+    expect(shake[0]?.kind === "shake" && shake[0].trauma).toBeCloseTo(FX_MIND_JUDGE_TRAUMA * motifScale(MIND, view, FX_INTENSITY_SCALE.normal));
+    expect(JSON.stringify(cues)).not.toMatch(/meditative/);
+    // The other seat's judgment lands on its own hero's badge.
+    const theirs = flourishCues(mindStream("p2", view), view, envOf(), D);
+    expect(theirs.some((cue) => cue.kind === "sheen" && at(cue) === testid.hero("opponent"))).toBe(true);
+  });
+
+  it("R200 R2803000 every mindJudge cue starts inside its entry and ends within FX_MAX_TAIL_MS", () => {
+    for (const D of [120, 200, 400, 732, 1400]) {
+      const view = fullBoardView();
+      const cues = flourishCues(mindStream("p1", view), view, envOf(), D);
+      expect(cues.length).toBeGreaterThan(0);
+      for (const cue of cues) {
+        const label = `mindJudge ${cue.kind} at D=${String(D)}`;
+        expect(cue.delayMs, label).toBeGreaterThanOrEqual(0);
+        expect(cue.delayMs, label).toBeLessThanOrEqual(D);
+        expect(endOf(cue), label).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
+        if (cue.kind === "shake") expect(cue.trauma, label).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("R200 R2803000 intensity 0 draws no mindJudge", () => {
+    const view = fullBoardView();
+    expect(flourishCues(mindStream("p1", view), view, envOf({ intensity: 0 }))).toEqual([]);
+    expect(flourishCues(mindStream("p1", view), view, envOf(), 0)).toEqual([]);
   });
 });

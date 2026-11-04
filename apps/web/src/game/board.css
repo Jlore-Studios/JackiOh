@@ -1797,6 +1797,8 @@ button.modifier-badge[data-open="true"] {
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
+/* R2803000: every other card recoils from the landing in two steps, with the two-wave landing:
+   a dip as the ring lands, an overshoot past rest as the echo follows, then flat. */
 .game:not([data-reduced-motion="true"])[data-takeover="mythic"] .board .card:not([data-animating]) {
   animation: takeover-recoil var(--motion-slow) var(--ease-out) both;
   animation-delay: var(--takeover-land-ms, 0ms);
@@ -1804,12 +1806,15 @@ button.modifier-badge[data-open="true"] {
 
 @keyframes takeover-recoil {
   0%, 100% { translate: 0 0; scale: 1; }
-  20% { translate: 0 7px; scale: 0.93; }
-  55% { translate: 0 -2px; scale: 1.02; }
+  16% { translate: 0 8px; scale: 0.92; }
+  42% { translate: 0 -3px; scale: 1.03; }
+  68% { translate: 0 1px; scale: 0.99; }
 }
 
 /* R2722001: under Reduce motion a Mythic's entrance is this still card over the board, with no shake,
-   flash or sweep: shown, then gone (TakeoverStill.tsx). It takes no pointer event. */
+   flash or sweep: shown, then gone (TakeoverStill.tsx). It takes no pointer event.
+   R2803000: the still echoes the takeover at rest: a motionless rays disc behind the card and the
+   landing ring around it. Neither animates, so the still stays still. */
 .takeover-still {
   position: fixed;
   inset: 0;
@@ -1820,8 +1825,34 @@ button.modifier-badge[data-open="true"] {
   background: color-mix(in srgb, var(--pal-black) 45%, transparent);
 }
 
+.takeover-still-rays {
+  position: absolute;
+  width: 140vmin;
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--pal-gold-300) 22%, transparent) 0deg 4deg,
+    transparent 7deg 15deg
+  );
+  -webkit-mask-image: radial-gradient(circle, var(--pal-black) 0, var(--pal-black) 18%, transparent 55%);
+  mask-image: radial-gradient(circle, var(--pal-black) 0, var(--pal-black) 18%, transparent 55%);
+  opacity: 0.5;
+}
+
 .takeover-still-card {
   width: min(46vmin, 300px);
+}
+
+.takeover-still-ring {
+  position: absolute;
+  width: min(52vmin, 340px);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--pal-gold-300) 80%, transparent),
+    0 0 30px 10px color-mix(in srgb, var(--pal-gold-300) 35%, transparent);
+  opacity: 0.8;
 }
 
 /* R2785000: the first skip control there is. "Tap to skip" fades in `--set-piece-skip-delay` into a set

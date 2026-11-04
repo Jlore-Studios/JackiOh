@@ -1,9 +1,11 @@
 package dashboard
 
-// The status issue's "Needs a decision" section (#2986, section 3; the owner's decision of
-// 2026-11-04): every open item labelled `needs decision`, how long it has waited and when it goes
-// ahead on its default (or why it never does). The night bot draws it at the top of the issue, and
-// Squishy at the top of its own section; another bot's item is named, and its own section says when.
+// The status issue's "Needs a decision" section (#2986, section 3; #3009; the owner's decisions of
+// 2026-11-04): every open item labelled `needs decision` (a question, never a hand-over), how long it
+// has waited and when it goes ahead on its default (or why it never does); and below it, "Handed to a
+// person": every open item labelled `human required`, and since when the bot handed it over (its
+// `archived` entry). The night bot draws both at the top of the issue, and Squishy its own at the
+// top of its section; another bot's item is named, and its own section says when.
 
 import (
 	"fmt"
@@ -33,8 +35,8 @@ var NeverPerson = "never: only a person can do this"
 func DecisionRows(ctx *hctx.Context, state *pyjson.Object, issues []*pyjson.Object, others bool) []string {
 	rows := []string{"| Item | Waiting | Goes ahead |", "|---|---|---|"}
 	for _, issue := range issues {
-		if !queue.LabelNames(issue)[config.LabelNeedsDecision] {
-			continue
+		if names := queue.LabelNames(issue); !names[config.LabelNeedsDecision] || names[config.LabelHumanRequired] {
+			continue // a hand-over is no question (#3009): it is in the list below
 		}
 		number := py.MustInt(py.Or(issue.Get("number"), 0))
 		decision := queue.DecisionOf(state.Obj("items").Obj(strconv.Itoa(number)))
@@ -74,7 +76,9 @@ func goesAhead(ctx *hctx.Context, decision *pyjson.Object) string {
 	case decision.Truthy("human_required"):
 		return NeverPerson
 	case decision.Truthy("replied"):
-		return fmt.Sprintf("never: @%s answered; it resumes once queued again", py.Str(decision.Get("replied")))
+		// #2986 kept a trusted comment here and waited; #3009 takes it as the answer.
+		return fmt.Sprintf("now: @%s answered, so it is queued again with the answer (at the next sweep)",
+			py.Str(decision.Get("replied")))
 	case !queue.HasDefault(decision):
 		return "never: it names no default, so it waits for a person's answer"
 	case ends.IsZero():
@@ -86,11 +90,58 @@ func goesAhead(ctx *hctx.Context, decision *pyjson.Object) string {
 		clock.HumanDelta(ends.Sub(ctx.Now())), py.MustInt(decision.Get("default")))
 }
 
-// DecisionsSection is the section: its heading, and its table or a line saying nothing waits.
+// DecisionsSection is the section: its heading, and its table or a line saying nothing waits; then
+// the items handed to a person (`HandedSection`).
 func DecisionsSection(ctx *hctx.Context, state *pyjson.Object, issues []*pyjson.Object) []string {
 	lines := []string{DecisionsHeading, ""}
 	if rows := DecisionRows(ctx, state, issues, true); len(rows) > 0 {
+		lines = append(append(lines, rows...), "")
+	} else {
+		lines = append(lines, NoDecisions, "")
+	}
+	return append(lines, HandedSection(ctx, state, issues)...)
+}
+
+// HandedHeading is the list of the items handed to a person (#3009), and NoneHanded what it says
+// with nothing in it.
+var (
+	HandedHeading = "## 🙋 Handed to a person"
+	NoneHanded    = "_Nothing is handed to a person._"
+)
+
+// HandedRows is the list's table: each open item in `issues` labelled `human required`, and since
+// when this bot handed it over (its `archived` entry); with `others`, one this bot did not hand over
+// too (another bot's, or a person's label), with no date. Empty when there is none.
+func HandedRows(ctx *hctx.Context, state *pyjson.Object, issues []*pyjson.Object, others bool) []string {
+	rows := []string{"| Item | Since | For |", "|---|---|---|"}
+	for _, issue := range issues {
+		if !queue.LabelNames(issue)[config.LabelHumanRequired] {
+			continue
+		}
+		number := py.MustInt(py.Or(issue.Get("number"), 0))
+		item := fmt.Sprintf("#%d %s", number, Cell(issue.Get("title"), 60))
+		archived := queue.ArchivedOf(state.Obj("items").Obj(strconv.Itoa(number)))
+		if archived == nil {
+			if others {
+				rows = append(rows, fmt.Sprintf("| %s | — | — |", item))
+			}
+			continue
+		}
+		at := clock.ParseISOValue(archived.Get("at"))
+		rows = append(rows, fmt.Sprintf("| %s | %s | %s |", item, plan.DecisionClock(ctx, at),
+			clock.HumanDelta(ctx.Now().Sub(at))))
+	}
+	if len(rows) == 2 {
+		return nil
+	}
+	return rows
+}
+
+// HandedSection is the list: its heading, and its table or a line saying nothing is handed over.
+func HandedSection(ctx *hctx.Context, state *pyjson.Object, issues []*pyjson.Object) []string {
+	lines := []string{HandedHeading, ""}
+	if rows := HandedRows(ctx, state, issues, true); len(rows) > 0 {
 		return append(append(lines, rows...), "")
 	}
-	return append(lines, NoDecisions, "")
+	return append(lines, NoneHanded, "")
 }

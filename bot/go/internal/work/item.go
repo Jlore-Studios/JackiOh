@@ -660,6 +660,9 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 	if note := py.OrStr(plan.Get("default_note"), ""); note != "" {
 		previous += "\n\n" + note // nobody answered it in time: it goes ahead on its default (#2986)
 	}
+	if note := py.OrStr(plan.Get("answer_note"), ""); note != "" {
+		previous += "\n\n" + note // a trusted person answered it: the answer is the decision (#3009)
+	}
 	if len(conflicts) > 0 {
 		previous += "\n\n`main` moved since then; merging it left conflict markers in: " +
 			backticked(conflicts) + ". Resolve them, keeping both sides' meaning. Do not commit."
@@ -1263,11 +1266,20 @@ func (x *Worker) buildPass(cycle int, role string, prompt string, why string /* 
 		x.Result.Set("report", report.Body)
 		x.Result.Set("reason", reason)
 		x.Result.Set("human_required", report.HumanRequired)
-		if len(report.Options) > 0 {
-			// Its options, and its default, which the lane that asked builds if no trusted answer comes
-			// in time (#2986).
-			x.Result.Set("decision", pyjson.New("options", pyjson.ListOf(report.Options), "default", report.Default,
-				"gives_up", report.GivesUp, "model", x.BuildSeat.Model))
+		if !report.HumanRequired {
+			// Its problem, its options with their trade-offs, and its suggestion, which the lane that
+			// asked builds if no trusted answer comes in time (#2986, #3009); and the model that asked,
+			// which takes it up again either way.
+			options := []any{}
+			for _, option := range report.Options {
+				options = append(options, pyjson.New("change", option.Change, "tradeoff", option.Tradeoff))
+			}
+			model := ""
+			if x.BuildSeat != nil {
+				model = x.BuildSeat.Model
+			}
+			x.Result.Set("decision", pyjson.New("problem", report.Problem, "options", options,
+				"default", report.Default, "why", report.Why, "model", model))
 		}
 		x.finish()
 		return nil, entry

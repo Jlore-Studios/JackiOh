@@ -331,8 +331,9 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
       // R508: the human brings their last practice board (the worker ignores it for a lesson).
       // R1303003: a game on a server seed brings the one the server kept, already in its config.
       // R2706000: a run fight brings none.
+      // R2882000: today's deal brings none, so every device deals it alike.
       const board = readLastBoard();
-      const keep = config.earning === true || config.run !== undefined || board.length === 0;
+      const keep = config.earning === true || config.run !== undefined || config.dailyDeal !== undefined || board.length === 0;
       return begin(config, { type: "start", config: keep ? config : { ...config, lastBoard: board } });
     },
 
