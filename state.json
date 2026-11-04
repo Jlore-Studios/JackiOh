@@ -13986,13 +13986,13 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "41827853401",
+      "run_id": "pending:7589d1dc-1793795187",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
       "spot_check": true,
       "spot_check_n": 50,
-      "started_at": "2026-11-04T12:16:27Z",
+      "started_at": "2026-11-04T12:26:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -15046,9 +15046,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T12:26:13Z",
+    "at": "2026-11-04T12:26:51Z",
     "url": "",
-    "what": "review #3036 on claude-1"
+    "what": "spot-check #2992 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T12:14:50Z",
@@ -29325,9 +29325,9 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:7589d1dc-1793795187",
         "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
-        "started_at": "2026-11-04T12:16:27Z",
+        "started_at": "2026-11-04T12:26:51Z",
         "status": "queued",
         "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
         "tries": 2
