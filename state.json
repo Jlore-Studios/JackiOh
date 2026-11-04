@@ -15907,13 +15907,32 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-7",
+        "carried": {
+          "by": "`claude` (medium)",
+          "conflicts": [
+            "apps/web/src/together/WatchRoute.tsx"
+          ],
+          "from": "5f5102b14d273f27e205ed10146e4d412bd45f33",
+          "main": "620d660269f03c862ae4e4cc94f49b411caf1886"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "5f5102b14d273f27e205ed10146e4d412bd45f33",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-7",
+            "run": "41775286560",
+            "tier": "strong"
+          }
+        ],
+        "sha": "5769f5e67efa5919f49b1c9c6df2230330bbc7c9",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2957": {
