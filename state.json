@@ -214,8 +214,10 @@
     "what": "build #2981 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-04T08:35:15Z",
-    "notes": [],
+    "at": "2026-11-04T08:57:48Z",
+    "notes": [
+      "#2980 closed, so it waits for no decision (`needs decision` off)"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "older_questions_labelled": "2026-11-04T06:32:46Z",
