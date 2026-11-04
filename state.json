@@ -15231,6 +15231,13 @@
     "3064": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T22:30:51Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's evaluation and adds a root probe to `decide` (crates/ai/src)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
