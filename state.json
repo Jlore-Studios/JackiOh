@@ -12723,7 +12723,7 @@
       "started_at": "2026-11-04T12:36:39Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "2946": {
       "action": "review",
