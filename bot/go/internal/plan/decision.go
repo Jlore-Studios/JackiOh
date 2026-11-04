@@ -504,11 +504,27 @@ func OlderQuestions(ctx *hctx.Context) []string {
 	return notes
 }
 
+// LabelSyncedKey is the state file's field that keeps the `needs decision` colour and description
+// the sweep last brought the label to (#3009 gave it the `suggestion` label's colour; the sweep's
+// labels part only creates a missing label).
+var LabelSyncedKey = "needs_decision_synced"
+
 // HandedOver takes `needs decision` off every open item labelled `human required` (#3009): a
 // hand-over is the bot deciding it cannot do the item itself, never a question, and #2986 put both
-// labels on some (#2980, Squishy's, among them). Returns what it did.
+// labels on some (#2980, Squishy's, among them). Once for each colour and description the label has
+// in `config.Labels`, it brings the label to them first. Returns what it did.
 func HandedOver(ctx *hctx.Context) []string {
 	notes := []string{}
+	spec := pyjson.List(py.Item(config.Labels, config.LabelNeedsDecision))
+	want := py.Str(spec[0]) + " " + py.Str(spec[1])
+	if !eqStr(ctx.Store.Load().Get(LabelSyncedKey), want) {
+		if _, failed := herr.Catch[*herr.GitHubError](func() {
+			ctx.GH.SyncLabel(config.LabelNeedsDecision, py.Str(spec[0]), py.Str(spec[1]))
+		}); !failed {
+			ctx.Store.Update(func(s *pyjson.Object) any { s.Set(LabelSyncedKey, want); return nil },
+				"needs decision label synced")
+		}
+	}
 	for _, thread := range ctx.GH.ListIssues(config.LabelHumanRequired, "open", 300, "") {
 		number := py.MustInt(py.Or(thread.Get("number"), 0))
 		if number == 0 || !queue.LabelNames(thread)[config.LabelNeedsDecision] {

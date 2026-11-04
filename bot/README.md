@@ -196,42 +196,80 @@ description, for the person, and nothing is built); when a builder or reviser st
 then on it is `human`: nothing queues, plans or builds it, and a request gets one reply. A person
 may put the label on too, which triage treats as `human`. When the rest is the bot's once a
 person has done their part, they take the label off and queue it (`/harness build`); one who
-builds it all closes it ([`go/internal/human/`](go/internal/human/)). `needs decision` goes on
-beside it ([below](#a-question-and-its-default)), and it never goes ahead by itself.
+builds it all closes it ([`go/internal/human/`](go/internal/human/)).
 
-### A question and its default
+A hand-over is the bot deciding it cannot do the item itself, never a question (#3009, the owner's
+decision of 2026-11-04): it carries `human required` alone, never `needs decision`
+([below](#a-question-and-its-answer)), and every sweep takes `needs decision` off any item that
+carries both (#2986 put both on some, #2980 among them). The bot also **archives its work** on it
+(`go/internal/queue/archive.go`): its open bot pull request goes back to a draft with auto-merge
+off and no queue label (the branch is kept); the item's record and that pull request's forget
+their queue state, holds, turns, lane reservations (`build_next`, `own_review`, `turn`), decision,
+owner and merge owner, CI fixes and kept session, and keep an `archived` entry (when, why, the
+branch, the pull request, its last head). While it is there no sweep, housekeeping, CI fix
+(early or late, the merge queue's too), conflict revision, merge-queue requeue, turn or
+after-merge spot-check takes the item up. Its one summary comment, on the item and on its pull
+request, names the people, says why it stopped, where its work is (branch, pull request, head),
+what it did, and exactly what a person must do or check. A person who wants the bot back takes the
+label off and queues it (`bot:build`, `/harness build`); that run's claim drops the `archived`
+entries, and the item starts from its issue and its branch's history. A hand-over that #2986 made
+(both labels, and a stop recorded for it) is archived the same way, in the state alone, at the
+next sweep. The status issue lists every open `human required` item, and since when, under
+**Handed to a person**, below the decisions.
 
-A builder or reviser that cannot go on without a person's decision stops with a question (#2986,
-the owner's decision of 2026-11-04). Its prompt makes it list the options (`options`) and name a
-default (`default`, the number of the one that stays inside the issue's own stated limits) with
-what it gives up (`gives_up`); one that only a person can resolve (a secret, a dashboard, an
-account, money, a path the bot may not change) is a hand-over, `"human_required": true`, which has
-no default ([above](#priority-and-human)).
+### A question and its answer
 
-- **The question** goes on `bot:blocked` with **`needs decision`** beside it. The comment lists the
-  options and marks the default, says what the default gives up and when it goes ahead
-  (`decision_wait_hours`, 24, in each bot's `config.json`; 0 never goes ahead), and @-mentions the
-  operator. The item's record keeps what was asked (`decision`: when, the options and the default,
-  the subscription and model that asked, and when it goes ahead; `queue/decision.go`).
-- **A trusted person's answer** resumes it as ever: `/harness build` (or `revise <answer>` on a pull
-  request) or `@jgoetzmann-bot <answer>` queues it again, which takes `needs decision` off, and the
-  next run reads the question and the answer, not the default. A trusted person's plain comment
-  after the question does not queue it, but it keeps it from going ahead: at its end the bot says
-  so, and it waits for that person to queue it with their answer.
-- **No answer by its end:** the sweep (or the next plan's housekeeping, `plan.SyncDecisions`) takes
-  it up again on its default. The subscription that asked owns it and builds it (an issue's build,
-  or a pull request's revision with `source: default`) on the model that asked, in a fresh session,
-  by the [ownership and hold rules](#ownership-and-the-hold): held for it while only its 5-hour
-  session keeps it, else handed off. `bot:blocked` and `needs decision` come off, each other option
-  is filed as an issue of its own (its title the item's with `(option 2 of #N)`, its type and
-  difficulty labels, nothing that queues it) for a person to approve by queuing it or to close,
-  and the run's pull request says it was built on its default because nobody answered by then.
-- **A question with no default**, an older one asked before #2986 (the first sweep labels those,
-  #2882 among them, with no deadline: `plan.OlderQuestions`), and a hand-over never go ahead.
-- `needs decision` also comes off when the item closes. The status issue lists every item that
-  carries it at its top, under **Needs a decision**: how long it has waited and when it goes ahead
-  on its default, or why it never does ("never: only a person can do this"); Squishy's are in its
-  own section. A CI-capped or failed item keeps `bot:blocked` alone.
+A builder or reviser that cannot go on without a person's decision stops with a question (#2986
+and #3009, the owner's decisions of 2026-11-04): a decision a person makes and the bot carries out.
+Its prompt (`build.md`, `fix.md`, `revise.md`, `oneshot.md`, `reconcile.md`) makes it give the
+`problem` (what it hit and why it cannot decide alone, in a few short plain paragraphs, as it
+would explain it in a chat), its `options` (each one's `change` and its `tradeoff`) and its
+`suggestion` (the number of the option it recommends, which stays inside the issue's own stated
+limits, and `why`): the suggestion is the default that goes ahead after `decision_wait_hours`. A
+report from before #3009 (options as text, a `default` and its `gives_up`) still reads, and so do
+the records it left. One that only a person can resolve (a secret, a dashboard, an account, money,
+a path the bot may not change) is a hand-over, `"human_required": true`, which is no question
+([above](#priority-and-human)).
+
+- **The question** goes on `bot:blocked` with **`needs decision`** beside it. Its comment says it
+  as a person would: the problem; the numbered options, each with its trade-off; "**My
+  suggestion:** option N, because …"; and how to answer: "Reply with a number, or tell me
+  something else in your own words, and I'll revise it that way. If nobody answers by <time>, I go
+  ahead with option N." Setting the label assigns `decision_assignees` (both people, in each bot's
+  `config.json`), and the record keeps which of them it assigned, so a person who was assigned
+  already stays when they come off. Being assigned does not make the item a person's, as `human`
+  does. The record keeps what was asked (`decision`: when, the problem, the options and the
+  suggestion, the subscription and model that asked, whom it assigned, and when it goes ahead;
+  `queue/decision.go`).
+- **A trusted person's reply revises it.** Their first comment after the question, on the item or
+  on its pull request, that is no command (a `/harness` line, a mention of the bot, a vote on a
+  suggestion) and no session's handoff (`<!-- jackioh-session:handoff -->`), takes it up again:
+  at once, from the comment's event (`events.OnComment`), or at the next sweep or plan
+  (`plan.SyncDecisions`), so no answer is lost. The subscription that asked owns it and takes it
+  up on the model that asked, in a fresh session, by the [ownership and hold
+  rules](#ownership-and-the-hold): a build when there is no pull request yet, a revision (`source:
+  decision`) when there is. The reply is quoted to the run as the decision, whether a number, an
+  option's words or something else. `needs decision`, `bot:blocked` and the people it assigned
+  come off, and a comment says so. A command is still a command: `/harness build`, `revise
+  <answer>` or `@jgoetzmann-bot <answer>` queues it as ever, and the stop and its assignees go at
+  the next sweep.
+- **No answer by its end:** the sweep (or the next plan's housekeeping) takes it up again on its
+  suggestion. The subscription that asked owns it and builds it (an issue's build, or a pull
+  request's revision with `source: default`) on the model that asked, in a fresh session, by the
+  same rules. `bot:blocked`, `needs decision` and the people it assigned come off, each other
+  option is filed as an issue of its own (its title the item's with `(option 2 of #N)`, its type
+  and difficulty labels, nothing that queues it) for a person to approve by queuing it or to
+  close, and the run's pull request says it was built on its default because nobody answered by
+  then.
+- **A question with no suggestion**, and an older one asked before #2986 (the first sweep labels
+  those, #2882 among them, with no deadline: `plan.OlderQuestions`), never go ahead; a reply still
+  revises them. One on an item a person labelled `human` waits for them.
+- `needs decision` and the assignees also come off when the item closes. The status issue lists
+  every item that carries it at its top, under **Needs a decision**: how long it has waited and
+  when it goes ahead on its default, or why it never does; below it, **Handed to a person** lists
+  each open `human required` item and since when (from its `archived` entry; "—" for one this bot
+  did not archive, another bot's or a person's own). Squishy's are in its own section. A CI-capped or
+  failed item keeps `bot:blocked` alone.
 
 **Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
 an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
@@ -410,9 +448,12 @@ Every way of asking either gets an answer at once, or is found again later:
   - an item held for its owner (#2748): `bot:waiting` and its comment go on while only the owner's
     5-hour session keeps it, and come off once the owner can start again or the hold runs out
     ([Ownership and the hold](#ownership-and-the-hold));
-  - an item stopped on a question (#2986): one past its end goes ahead on its default, and a closed
-    one loses `needs decision`; the first sweep also labels the questions asked before #2986
-    ([A question and its default](#a-question-and-its-default)).
+  - an item stopped on a question (#2986, #3009): one a trusted person replied to is queued again
+    with the reply as the decision, one past its end goes ahead on its default, and a closed one
+    loses `needs decision` and the people it assigned; `needs decision` comes off every `human
+    required` item, and the label takes its colour once (#3009: the labels part only creates a
+    missing one); the first sweep also labels the questions asked before #2986
+    ([A question and its answer](#a-question-and-its-answer)).
 
   It leaves anything younger than ten minutes to the handler that may still be running, so
   nothing is answered twice. Last, it starts a night run when one should be going and none is:
@@ -536,19 +577,19 @@ in place of the `bot:*` ones.
 | `bot:waiting` | beside `bot:build` or `bot:revise` (or `bot:reviewing`, for an own review run its subscription cannot start yet): held for its owner (#2748): only the 5-hour session of the subscription that owns it keeps that one from taking it, and it can start again within `hold_minutes` (120), so no other subscription takes it meanwhile. The bot's one comment on the thread says for whom, until when and why, and the commands that release it (`/harness handoff …`); the planner and the sweep take the label off once the owner can start (the owner takes it next) or the hold runs out (anyone may), and so does any step that takes the item out of the queue ([Ownership and the hold](#ownership-and-the-hold)) |
 | `bot:waiting-turn` | an approved draft that waits for an overlapping pull request ahead of it to merge before it goes ready (#2948): its own review run approved it, and its final check found it conflicts once a pull request approved before it, and conflict-free, lands ([The own review run](#the-own-review-run)). It stays a draft with auto-merge off, and no lane is held meanwhile; when that pull request merges, or after `hold_minutes` (120) anyway, the same subscription and model take it up again as a conflict revision (`bot:resolving`), with its lane kept for it. A state label: any other state (a revision, a stop, a block) takes it off |
 | `bot:merging` | a bot pull request whose auto-merge the bot turned on: approved, and in CI or `main`'s merge queue (#2748). It comes off when auto-merge goes off (a revision, a hold, `/harness stop`, a block after its CI fixes), when it merges or closes, and in the sweep once nothing keeps it merging (closed, or open with auto-merge off and out of the queue). A pull request a person merges (`ready for merge`) never carries it |
-| `bot:blocked` | it needs a person: a question (with `needs decision` beside it), findings the reviewer would not let go of, or repeated failures |
+| `bot:blocked` | it needs a person: a question (with `needs decision` beside it, [A question and its answer](#a-question-and-its-answer)), findings the reviewer would not let go of, or repeated failures |
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1) |
-| `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, a migration that loses data, changes access or edits one `main` has, a new package in a lock, `main`'s protection, GitHub refusing it, or `auto_merge` off; its comment names which), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
+| `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, a migration that loses data (an `UPDATE` with no `WHERE` counts), changes access or edits one `main` has, a new package in a lock, `main`'s protection, GitHub refusing it, or `auto_merge` off; its comment names which), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `tracking` | a tracker or status issue, a type label: the bot comments on it and rewrites its own, but never queues, plans, builds or splits it ([above](#priority-and-human)) |
 | `difficulty:medium`, `difficulty:hard` | the weakest tier that may plan, build and approve it: medium, strong. A person may set one; otherwise the planner rates the item, by [how hard it is](#how-hard-it-is), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts. `difficulty:easy` is retired (#2748): the sweep moves it to `difficulty:medium` on every open thread, then deletes it (`config.Relabelled`), and until then it reads as medium |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
 | `person merges` | the bot builds and reviews it, but a person merges its pull request: the pull request carries the label from its issue, and the reviews' approval labels it `ready for merge` instead of turning auto-merge on (#839; the weekly hygiene issue carries it) |
-| `human required` | the bot's hand-over: it found only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account), took its own labels off, unassigned itself and assigned both people, and its comment names them and says what. People's from then on, like `human` ([above](#priority-and-human)) |
-| `needs decision` | a stop only a person can unblock (#2986), shared by both bots like `ready for merge`: a question (beside `bot:blocked`), with a default or none, and a hand-over (beside `human required`). It comes off when a trusted person answers and queues it again, when the bot goes ahead on the question's default after `decision_wait_hours` (24), and when the item closes; the status issue lists each at its top ([A question and its default](#a-question-and-its-default)) |
+| `human required` | the bot's hand-over: it decided only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account), took its own labels off, unassigned itself and assigned both people, archived its work on it (its pull request a draft with auto-merge off, its records forgotten but for an `archived` entry, #3009), and its one summary, on the item and its pull request, names them and says why, where the work is and what a person must do. People's from then on, like `human`, and never beside `needs decision` ([above](#priority-and-human)) |
+| `needs decision` | a question a person answers and the bot carries out (#2986, #3009), shared by both bots like `ready for merge`, the `suggestion` label's colour, beside `bot:blocked`: its comment explains the problem, numbers the options with their trade-offs, names its suggestion and says how to answer. Setting it assigns `decision_assignees`. A trusted person's reply (no command) queues it again on the lane that asked, with the reply as the decision; it comes off, with the people it assigned, then, when the bot goes ahead on its suggestion after `decision_wait_hours` (24), when a person queues it with a command, and when the item closes. Never on a hand-over (`human required`). The status issue lists each at its top ([A question and its answer](#a-question-and-its-answer)) |
 
 ## Triage
 
@@ -1947,7 +1988,8 @@ days.
 | start a failing pull request over from `main` | `/harness rebuild` on it or its issue; three strikes do it by themselves, a step up ([below](#rating-strikes-and-the-step-up)) |
 | ask for a review only | `/harness review [strong\|medium] [notes]` on the bot's pull request |
 | keep the bot off an item altogether | label it `human` |
-| give the bot back an item it handed you (`human required`) | do the person's part its comment names, take the label off, then `/harness build` |
+| answer a question the bot asked (`needs decision`) | reply on the item or its pull request with a number, or in your own words: the lane that asked carries it out ([A question and its answer](#a-question-and-its-answer)) |
+| give the bot back an item it handed you (`human required`) | do the person's part its summary names, take the label off, then `/harness build`: the bot starts again from the issue and its branch, its archived work dropped |
 | change which subscription is spent first | reorder `priority` in `.harness/providers.json`; with `balance` on, it orders only subscriptions with the same room and runs held ([the load balancer](#difficulty-and-tiers)) |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
@@ -2216,9 +2258,10 @@ suggestions. On top of a plain build it has four modes.
 Everything else is the night bot's: the review loop and the review rule, CI fixes, handoffs, the
 rules about `human` and priorities, the paths no change may touch, the merge gates (the same
 `review_paths`, `migration_paths` and `lock_files` in `.squishy/config.json`), and a question's
-default and `needs decision`, the label shared by both bots (`decision_wait_hours: 24`; it goes
-ahead on its one account, `squishy:build` or `squishy:revise`, and its section of the status issue
-lists its own). The run's shape differs in
+answer and default and `needs decision`, the label shared by both bots (`decision_wait_hours: 24`
+and the same `decision_assignees`; a reply or its default takes the item up again on its one
+account, `squishy:build` or `squishy:revise`, and its section of the status issue lists its own
+questions and hand-overs), and the archive of a hand-over. The run's shape differs in
 one way: Squishy builds, checks and reviews a change in one run (`own_review_run: false` in
 `.squishy/config.json`), with no [own review run](#the-own-review-run) after it, and opens its pull
 request ready. An
@@ -2327,7 +2370,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/trust/`, `go/internal/commands/` | who may command it, and how a comment is read |
 | `go/internal/events/`, `go/internal/queue/` | the event workflow: commands, labels, assignment, reviews, CI |
 | `go/internal/asks/` | the reactions that follow a request from its comment to its answer |
-| `go/internal/plan/`, `go/internal/work/`, `go/internal/deliver/` | the jobs of a night run (`plan.Peek_` is the gate's first question); `plan/hold.go` is an item's owner, the hold for it and `/harness handoff` (#2748); the [own review run](#the-own-review-run) is `plan.Chains` and `plan.ownReviewer`, `work.Worker.OwnReview` with `work/ci.go` (its reading of the pull request's CI), `deliver/ownreview.go` (`handOn` and `OwnReview`) and `queue/ownreview.go` (the reservation); a question's default is `deliver/decision.go` (the question comment), `plan/decision.go` (`SyncDecisions`, the go-ahead and the options it files) and `queue/decision.go` (the record, #2986) |
+| `go/internal/plan/`, `go/internal/work/`, `go/internal/deliver/` | the jobs of a night run (`plan.Peek_` is the gate's first question); `plan/hold.go` is an item's owner, the hold for it and `/harness handoff` (#2748); the [own review run](#the-own-review-run) is `plan.Chains` and `plan.ownReviewer`, `work.Worker.OwnReview` with `work/ci.go` (its reading of the pull request's CI), `deliver/ownreview.go` (`handOn` and `OwnReview`) and `queue/ownreview.go` (the reservation); a question is `deliver/decision.go` (the question comment and its assignees), `plan/decision.go` (`SyncDecisions`: a trusted reply, the go-ahead and the options it files; `HandedOver`) and `queue/decision.go` (the record, #2986, #3009); a hand-over's archive is `deliver.Deliverer.NeedsPerson` and `queue/archive.go` (#3009) |
 | `go/internal/quiet/` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
 | `go/internal/wake/` | the wake (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago and every four hours around it |
 | `go/internal/providers/` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
@@ -2339,8 +2382,8 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |
 | `go/internal/stepup/` | strikes, the step up and the rebuild (#317); `go/internal/easy/`, the easy rule's checks on a plan and a change, went with `difficulty:easy` in #2748 |
 | `go/internal/spotcheck/` | the after-merge spot-check (#2748): the count of medium and hard merges, every 5th queued for Opus's review of the merged change, and the record of each check's verdict, findings and follow-up issue |
-| `go/internal/mergegate/` | what a migration or a lock must not hold to merge itself (#2986): a data-losing or access-changing statement, a package `main`'s lock lacks, a Cargo dependency its lock does not hold; `deliver/mergegate.go` reads the branch's files with it |
-| `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
+| `go/internal/mergegate/` | what a migration or a lock must not hold to merge itself (#2986): a data-losing (an `UPDATE` with no `WHERE` among them, #3009) or access-changing statement, a package `main`'s lock lacks, a Cargo dependency its lock does not hold; `deliver/mergegate.go` reads the branch's files with it |
+| `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` summary that names the people, says why and where the work is (#3009) |
 | `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `go/internal/threads/`, `go/internal/prompts/`, `go/internal/verdicts/` | what the model is told, and reading what it answers |

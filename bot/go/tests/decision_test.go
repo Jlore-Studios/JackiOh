@@ -379,9 +379,16 @@ func TestDecision_AHandOverIsNoQuestion(t *testing.T) {
 	// Another bot's, with no record here (#2980): every sweep takes the label off a hand-over.
 	h.gh.AddIssue(2980, fakes.Issue{Title: "Architecture: weekly hygiene",
 		Labels: []string{"squishy:planned", config.LabelHumanRequired, config.LabelNeedsDecision}})
+	h.gh.Labels.Set(config.LabelNeedsDecision, pyjson.New("name", config.LabelNeedsDecision, "color", "d73a4a",
+		"description", "#2986's"))
 	assertEqual(t, plan.HandedOver(h.ctx), []string{"#2980 is handed to a person, so it carries no `needs decision`"})
 	assertNotIn(t, config.LabelNeedsDecision, h.gh.LabelNames(2980))
 	assertEqual(t, plan.HandedOver(h.ctx), []string{})
+	// The label itself takes its new colour once, though no question has asked since (#3009).
+	assertEqual(t, h.gh.Labels.Obj(config.LabelNeedsDecision).Get("color"), "d4c5f9")
+	h.gh.Labels.Obj(config.LabelNeedsDecision).Set("color", "000000") // a person's own, kept
+	plan.HandedOver(h.ctx)
+	assertEqual(t, h.gh.Labels.Obj(config.LabelNeedsDecision).Get("color"), "000000")
 }
 
 func TestDecision_AQuestionWithNoSuggestionWaitsForAPerson(t *testing.T) {
