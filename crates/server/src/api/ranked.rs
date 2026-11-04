@@ -2,6 +2,8 @@
 //! for a ranked match's result (R604), a ranked series' end (R262) and the build's season at boot (R609).
 //!
 //! Never exposes raw ratings to clients (R612); returns `VisibleRank`, usernames, and badges (R1436).
+//! The one exception is the dev dashboard's read of the whole ladder (`dev_leaderboard`, R3074002),
+//! which only a dev account reaches, through `api::admin`.
 
 use std::sync::Arc;
 
@@ -258,12 +260,20 @@ fn row_of(standing: &SeasonStanding) -> SeasonRank {
     standing.rank.clone()
 }
 
-/// The season as the ladder's percentiles and Jlorious read it. R640000: people only, so a ladder
-/// bot never takes a Jlorious place from a person.
-fn standings_of(standings: &[SeasonStanding]) -> Vec<Standing> {
+/// Whether a season row counts toward the percentiles, Jlorious and the public leaderboard. R640000:
+/// a person's, never a ladder bot's. R3074001: on a strict server (`DEV_STRICT`), not a hand-set
+/// rating's either, until it is reset to the one its games earned.
+pub fn counts(standing: &SeasonStanding, strict: bool) -> bool {
+    !standing.bot && !(strict && standing.hand_set)
+}
+
+/// The season as the ladder's percentiles and Jlorious read it: the rows that [`counts`] keeps.
+/// R640000: people only, so a ladder bot never takes a Jlorious place from a person; R3074001: nor,
+/// on a strict server, a hand-set rating.
+fn standings_of(standings: &[SeasonStanding], strict: bool) -> Vec<Standing> {
     standings
         .iter()
-        .filter(|standing| !standing.bot)
+        .filter(|standing| counts(standing, strict))
         .map(|standing| Standing {
             profile_id: standing.rank.profile_id.clone(),
             ladder: standing.rank.ladder,
@@ -348,12 +358,14 @@ async fn before_of(
     }
 }
 
-/// A season row's move: as it stood, and after this game. `bot` marks a ladder bot's (R640000).
+/// A season row's move: as it stood, and after this game. `bot` marks a ladder bot's (R640000),
+/// `hand_set` a hand-set rating's (R3074001).
 #[derive(Clone, Debug)]
 struct RankChange {
     before: Option<SeasonRank>,
     after: SeasonRank,
     bot: bool,
+    hand_set: bool,
 }
 
 /// Plans one ranked game (R603–R608): both sides rated against each other's rating from before it,
@@ -455,7 +467,9 @@ pub async fn plan_ranked_game(
             standing
         })
         .collect();
-    let jlorious_before = jlorious_order(&standings_of(&standings));
+    // R3074001: a strict server leaves a hand-set rating out of the percentiles and Jlorious.
+    let strict = app.env.dev_strict;
+    let jlorious_before = jlorious_order(&standings_of(&standings, strict));
 
     let mut ranks: IndexMap<String, RankChange> = IndexMap::new();
     for (index, side) in sides.iter().enumerate() {
@@ -466,11 +480,14 @@ pub async fn plan_ranked_game(
             .iter()
             .find(|candidate| candidate.rank.profile_id == profile_id);
         let row_before = standing.map(row_of);
-        // R640000: percentiles are people's, so a bot's row moves no person's target.
+        // R640000: percentiles are people's, so a bot's row moves no person's target; R3074001: on a
+        // strict server, nor does a hand-set rating's.
         let others: Vec<f64> = re_rated
             .iter()
             .filter(|candidate| {
-                candidate.rank.profile_id != profile_id && candidate.rank.ladder.is_some() && !candidate.bot
+                candidate.rank.profile_id != profile_id
+                    && candidate.rank.ladder.is_some()
+                    && counts(candidate, strict)
             })
             .map(|candidate| candidate.rating)
             .collect();
@@ -493,6 +510,7 @@ pub async fn plan_ranked_game(
                 before: row_before,
                 after: row_after,
                 bot,
+                hand_set: standing.is_some_and(|standing| standing.hand_set),
             },
         );
     }
@@ -507,9 +525,10 @@ pub async fn plan_ranked_game(
             rank: change.after.clone(),
             rating: new_rating.get(profile_id).copied().unwrap_or(0.0),
             bot: change.bot,
+            hand_set: change.hand_set,
         });
     }
-    let jlorious_after = jlorious_order(&standings_of(&standings_after));
+    let jlorious_after = jlorious_order(&standings_of(&standings_after, strict));
     let mut peaks: Vec<PeakWrite> = Vec::new();
     let mut jlorious: Vec<String> = Vec::new();
     for (index, profile_id) in jlorious_after.iter().enumerate() {
@@ -761,7 +780,7 @@ pub async fn own_rank(app: &App, profile_id: &str, ladder: Ladder) -> Result<Own
     let history = tx.ranked_ranks_of(profile_id).await?;
     let usernames = usernames_of(&mut tx, [profile_id]).await?;
     tx.commit().await?;
-    let jlorious = jlorious_order(&standings_of(&standings));
+    let jlorious = jlorious_order(&standings_of(&standings, app.env.dev_strict));
     let mine = standings
         .iter()
         .find(|standing| standing.rank.profile_id == profile_id)
@@ -855,13 +874,17 @@ pub async fn leaderboard(app: &App, viewer_id: &str, ladder: Ladder) -> Result<L
     )
     .await?;
     tx.commit().await?;
-    let jlorious = jlorious_order(&standings_of(&standings));
+    let jlorious = jlorious_order(&standings_of(&standings, app.env.dev_strict));
     let in_jlorious: IndexSet<&str> = jlorious.iter().map(String::as_str).collect();
 
     let tier_count = GRAPE_TIERS.len();
     let mut groups: Vec<Vec<TierEntry>> = vec![Vec::new(); tier_count];
     let mut raisins = 0;
     for standing in &standings {
+        // R3074001: a strict server leaves a hand-set rating off the public ladder, placed or not.
+        if app.env.dev_strict && standing.hand_set {
+            continue;
+        }
         let Some(ladder) = standing.rank.ladder else {
             raisins += 1;
             continue;
@@ -925,6 +948,103 @@ pub async fn leaderboard(app: &App, viewer_id: &str, ladder: Ladder) -> Result<L
         tiers,
         raisins,
         you: rank_in(&standings, &jlorious, viewer_id),
+    })
+}
+
+/// R3074002: one row of the dev dashboard's whole ladder: every season row on it, a ladder bot's
+/// as a person's, each marked which it is, with its rating, record and visible rank, and a bot's
+/// strength and persona beside it.
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DevLeaderboardRow {
+    pub profile_id: String,
+    pub username: String,
+    /// `person` or `bot`: the one place a client is told (R1452's exception, R3074002).
+    pub kind: &'static str,
+    pub rating: f64,
+    pub games: i64,
+    pub wins: i64,
+    pub losses: i64,
+    pub draws: i64,
+    pub rank: VisibleRank,
+    /// R3074001: the row's player holds a hand-set rating on this ladder.
+    pub hand_set: bool,
+    pub you: bool,
+    /// A ladder bot's `bots` row, read-only: its strength (an index of `BOT_STRENGTHS`), its persona
+    /// and whether it is retired. Null for a person.
+    pub bot: Option<Value>,
+}
+
+/// R3074002: `GET /api/admin/leaderboard`'s body: the season, the ladder and every row on it.
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DevLeaderboardBody {
+    pub season: String,
+    pub ladder: Ladder,
+    /// Highest rating first; a tie by profile id.
+    pub rows: Vec<DevLeaderboardRow>,
+}
+
+/// R3074002: the whole ladder as the dev dashboard shows it: every season row on `ladder`, people
+/// and bots alike, each row's visible rank read as the public leaderboard and the match screen read
+/// it (Jlorious people's alone, and on a strict server not a hand-set rating's, R3074001). Only
+/// `api::admin`, behind its dev check, calls this; `GET /api/leaderboard` is unchanged.
+pub async fn dev_leaderboard(
+    app: &App,
+    viewer_id: &str,
+    ladder: Ladder,
+) -> Result<DevLeaderboardBody, ApiError> {
+    let season_id = build_season_id(&SeasonDeps::current());
+    let mut tx = app.db.begin(Some(viewer_id)).await?;
+    let standings = tx.ranked_standings(&season_id, ladder).await?;
+    let usernames = usernames_of(
+        &mut tx,
+        standings.iter().map(|standing| standing.rank.profile_id.as_str()),
+    )
+    .await?;
+    let bots = tx.bots_list().await?;
+    tx.commit().await?;
+    let jlorious = jlorious_order(&standings_of(&standings, app.env.dev_strict));
+    let mut rows: Vec<DevLeaderboardRow> = standings
+        .iter()
+        .map(|standing| {
+            let profile_id = standing.rank.profile_id.as_str();
+            let bot = standing
+                .bot
+                .then(|| bots.iter().find(|bot| bot.profile_id == profile_id))
+                .flatten()
+                .map(|bot| {
+                    json!({
+                        "strength": bot.strength,
+                        "persona": bot.persona.as_str(),
+                        "retired": bot.retired_at.is_some(),
+                    })
+                });
+            DevLeaderboardRow {
+                profile_id: profile_id.to_string(),
+                username: username_in(&usernames, profile_id),
+                kind: if standing.bot { "bot" } else { "person" },
+                rating: standing.rating,
+                games: standing.rank.games as i64,
+                wins: standing.rank.wins as i64,
+                losses: standing.rank.losses as i64,
+                draws: standing.rank.draws as i64,
+                rank: rank_in(&standings, &jlorious, profile_id),
+                hand_set: standing.hand_set,
+                you: profile_id == viewer_id,
+                bot,
+            }
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        b.rating
+            .total_cmp(&a.rating)
+            .then_with(|| a.profile_id.cmp(&b.profile_id))
+    });
+    Ok(DevLeaderboardBody {
+        season: season_id,
+        ladder,
+        rows,
     })
 }
 
@@ -1014,7 +1134,7 @@ pub async fn match_ranks(
     tx.commit().await?;
     // R640000: a ladder bot's seat shows its own season row, read as a player's is, as the
     // leaderboard shows it: nothing on the screen tells the two apart.
-    let jlorious = jlorious_order(&standings_of(&standings));
+    let jlorious = jlorious_order(&standings_of(&standings, app.env.dev_strict));
     let seat = |profile_id: &str| {
         // R2388000: the seat's side of the record, a ladder bot's named by its bot id (R640000).
         let side = rated.as_ref().and_then(|game| {
@@ -1069,7 +1189,7 @@ pub async fn ladder_tiers(
         )
         .await?;
     tx.commit().await?;
-    let jlorious = jlorious_order(&standings_of(&standings));
+    let jlorious = jlorious_order(&standings_of(&standings, app.env.dev_strict));
     let tier = |profile_id: &str| VisibleRankWire::from(rank_in(&standings, &jlorious, profile_id)).tier;
     Ok((tier(&players.0), tier(&players.1)))
 }

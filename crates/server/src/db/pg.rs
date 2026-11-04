@@ -5710,24 +5710,29 @@ macro_rules! standings_from {
                 r.floor, r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
                 coalesce(b.rating, case when r.format = 'random' then p.random_rating else p.rating end)
                   as rating,
-                p.kind
+                p.kind,
+                h.profile_id is not null as hand_set
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
            left join public.bot_ratings b
-             on p.kind = 'bot' and b.bot_id = p.id::text and b.format = r.format"
+             on p.kind = 'bot' and b.bot_id = p.id::text and b.format = r.format
+           left join public.hand_set_ratings h
+             on h.profile_id = r.profile_id and h.format = r.format"
     };
 }
 
 /// One `standings_from!` row: the rank's own fields plus the rating, through their serde form,
-/// marked `bot` for a ladder bot's row (R640000).
+/// marked `bot` for a ladder bot's row (R640000) and `handSet` for a hand-set rating's (R3074001).
 fn standing_of(row: &PgRow) -> Result<SeasonStanding, StoreError> {
     let rank = to_season_rank(SeasonRankDbRow::read(row)?);
     let rating: f64 = get(row, "rating")?;
     let kind: String = get(row, "kind")?;
+    let hand_set: bool = get(row, "hand_set")?;
     let mut standing = serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
     if let Value::Object(fields) = &mut standing {
         fields.insert(String::from("rating"), json!(rating));
         fields.insert(String::from("bot"), json!(kind == "bot"));
+        fields.insert(String::from("handSet"), json!(hand_set));
     }
     from_json(standing)
 }

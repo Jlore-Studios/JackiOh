@@ -3301,6 +3301,8 @@
   "News, {count} to claim": "新闻，{count} 条待领取",
   "Claim": "领取",
   "Claimed": "已领取",
+  "Mark read": "标为已读",
+  "Read": "已读",
   "Claim {reward}": "领取：{reward}",
   "Card pack": "卡包",
   "Rare cosmetic token": "稀有外观代币",
