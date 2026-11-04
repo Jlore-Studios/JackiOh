@@ -947,21 +947,22 @@ describe("R377 public statistics match type", () => {
       .filter((url) => url.pathname === "/api/stats/cards");
   }
 
-  it("R377 R2777001 mode picker opens on Constructed, offers no mix of modes, asks the server for each match type and keeps any other in the URL", async () => {
+  it("R377 R2777001 R2777004 mode picker opens on All modes, offers Constructed and each match type, asks the server for each match type and keeps any other in the URL", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
     const select = screen.getByTestId(statsTestid.modeSelect) as HTMLSelectElement;
-    expect(select).toHaveValue("constructed");
+    expect(select).toHaveValue("all");
     expect([...select.options].map((option) => option.textContent)).toEqual([
+      "All modes",
       "Constructed",
       "All Random",
       "Best of 1",
       "Conquest",
     ]);
     expect(cardsCalls().length).toBeGreaterThan(0);
-    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "all")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
 
     await user.selectOptions(select, "bo1");
@@ -978,19 +979,26 @@ describe("R377 public statistics match type", () => {
     await user.selectOptions(select, "constructed");
     await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
     expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(window.location.search).toContain("mode=constructed");
+
+    vi.mocked(fetch).mockClear();
+    await user.selectOptions(select, "all");
+    await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "all")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
   });
 
-  it("R2777001 an old address's mode=all, which the page no longer offers, opens on Constructed", async () => {
-    at("/stats?mode=all");
-    render(<StatsRoute />);
+  it("R2777004 an address's mode=all, or a mode the page does not offer, reads every mode", async () => {
+    for (const address of ["/stats?mode=all", "/stats?mode=nonsense"]) {
+      at(address);
+      const { unmount } = render(<StatsRoute />);
 
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-    expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("constructed");
-    await waitFor(() =>
-      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(true),
-    );
-    expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(false);
+      expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+      expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("all");
+      await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(true));
+      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(false);
+      unmount();
+    }
   });
 
   it("R2777000 lists the cards by their adjusted win rate, shown to a tenth of a point, a card below the floor last with none shown", async () => {
@@ -2157,7 +2165,7 @@ describe("R2370000 the Tokens toggle", () => {
 
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
-    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 
@@ -2176,7 +2184,7 @@ describe("R2125000 the Cards tab opens on its last table", () => {
   });
 
   it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
-    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
     await waitFor(() => expect(held).toHaveLength(1), SLOW);

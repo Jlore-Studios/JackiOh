@@ -20,6 +20,13 @@ import {
 /** How long the server runs with no request before it is stopped; the next request starts it again. */
 const SLEEP_AFTER = "10m";
 
+/**
+ * How long a request waits for a sleeping server to listen. The library's own wait is 20 s, which a
+ * wake with work to do outran, and its first caller got a 500 while the boot went on. It stays under
+ * the client's `API_REQUEST_TIMEOUT_SECONDS`, so the client hears this answer, not its own timeout.
+ */
+export const START_WAIT_MS = 60_000;
+
 /** The one instance every request reaches: the server holds every live match in memory. */
 const INSTANCE = "main";
 
@@ -42,7 +49,24 @@ export class Server extends Container<Env> {
   override async fetch(request: Request): Promise<Response> {
     this.imageChecked ??= this.retireOlderImage();
     await this.imageChecked;
+    await this.awaitStart(request.signal);
     return super.fetch(request);
+  }
+
+  /**
+   * Starts a sleeping server and waits up to `START_WAIT_MS` for it to listen. A server that never
+   * does is left to `super.fetch`, which tries once more and turns the failure into its own answer.
+   */
+  private async awaitStart(signal: AbortSignal): Promise<void> {
+    if (this.ctx.container?.running && (await this.getState()).status === "healthy") return;
+    try {
+      await this.startAndWaitForPorts({
+        ports: SERVER_PORT,
+        cancellationOptions: { abort: signal, portReadyTimeoutMS: START_WAIT_MS },
+      });
+    } catch (error) {
+      console.warn("server.start_failed", error);
+    }
   }
 
   /**
