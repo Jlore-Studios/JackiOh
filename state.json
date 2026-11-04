@@ -19557,7 +19557,10 @@
     }
   ],
   "older_questions_labelled": "2026-11-04T06:29:37Z",
-  "planning": null,
+  "planning": {
+    "at": "2026-11-04T06:46:51Z",
+    "owner": "loop 41785453048"
+  },
   "providers": {
     "agy": {
       "refused_until": "2026-11-06T22:06:08Z",
