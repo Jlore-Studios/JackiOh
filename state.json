@@ -15225,10 +15225,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-4",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "c452452eb22609287bc9d6e62ceee7defa9ff987",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
