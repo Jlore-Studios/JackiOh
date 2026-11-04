@@ -81,6 +81,14 @@ func (x *Deliverer) publish(approved bool) (bool, string) {
 		return false, "the bundle does not descend from the commit the work started at"
 	}
 	remote := x.Repo.Rev("origin/" + branch)
+	if remote == head {
+		// An earlier delivery of this same run pushed it and then lost its record (GitHub
+		// answered the state write with a 500 on 2026-11-04, so the loop delivered the run
+		// again): the branch is already what this delivery would push.
+		x.log(fmt.Sprintf("`%s` is at `%s` already, this run's own head: an earlier delivery pushed it", branch,
+			py.SliceTo(head, 12)))
+		return true, ""
+	}
 	if remote != "" && remote != start {
 		return false, fmt.Sprintf("`%s` moved on GitHub while I worked, so I did not overwrite it", branch)
 	}
