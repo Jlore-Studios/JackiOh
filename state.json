@@ -15126,7 +15126,7 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-6",
-      "run_id": "pending:7c9b4874-1793827666",
+      "run_id": "41916374334",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T21:28:09Z",
       "stop_requested": false,
