@@ -28,7 +28,7 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
 /** Felinor Flagbearer, a Legendary Unit that prints full art: a gem, a crest, a set mark and stats. */
 const UNIT = "classicplus-046";
-/** Bigot, a card that prints none. */
+/** Speciesist, a card that prints none. */
 const PLAIN = "core-002";
 /** Big D-fender, whose full art the Collection draws. */
 const COLLECTED = "core-001";
@@ -96,7 +96,7 @@ describe("R2723000: a full-art card in the viewer's own hand", () => {
 
     const plain = handFace(PLAIN);
     expect(plain.hasAttribute("data-full-art-hand")).toBe(false);
-    expect(plain.querySelector(".card-name")?.textContent).toBe("Bigot");
+    expect(plain.querySelector(".card-name")?.textContent).toBe("Speciesist");
   });
 
   it("R2723000 with hover previews off, your hand's full-art card's tooltip names it", () => {

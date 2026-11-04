@@ -1,18 +1,18 @@
 //! S #88 Siva 2 (SPEC §8.10 row 88): (3) Unit, Human, Acclaimed, Legendary, 4/4 → 8/8, of the
 //! Stinkyscape set.
 //!   Base:    "Aura: Your Humans have Poisonous."
-//!   Radiant: "Aura: Your Humans have Poisonous. / Cry: Fill your hand with Bigots."
+//!   Radiant: "Aura: Your Humans have Poisonous. / Cry: Fill your hand with Speciesists."
 //! Engine: Aura (§10.4): every Human Unit its controller has on the field (granted tags read, R923; one
 //! standing in the backrow too, R1081000), this one included, has Poisonous. Radiant: Cry (R1): Core #2
-//! Bigots added while the hand has room (§2.4, M+ #24's fill, R1185004), none burned: the room is read as
+//! Speciesists added while the hand has room (§2.4, M+ #24's fill, R1185004), none burned: the room is read as
 //! the Cry resolves.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-088";
 
-/// Core #2 Bigot.
-const BIGOT: &str = "core-002";
+/// Core #2 Speciesist.
+const SPECIESIST: &str = "core-002";
 
 fn poisonous_humans() -> AuraHook {
     aura_hook(|ctx| {
@@ -38,7 +38,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         cry: Some(hook(|ctx| {
             (0..room_in(ctx.state, ctx.controller, OffFieldZone::Hand))
-                .map(|_| add_to_hand(json_as(json!({ "defId": BIGOT }))))
+                .map(|_| add_to_hand(json_as(json!({ "defId": SPECIESIST }))))
                 .collect()
         })),
         ..base.clone()
@@ -52,7 +52,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{BIGOT, ID};
+    use super::{SPECIESIST, ID};
     use crate::{filler, scenario};
 
     const VANILLA: &str = "core-008"; // (1) 4/4, a Human.
@@ -105,12 +105,12 @@ mod tests {
     }
 
     #[test]
-    fn r275_radiant_8_8_fills_your_hand_with_bigots_none_burned() {
+    fn r275_radiant_8_8_fills_your_hand_with_speciesists_none_burned() {
         let mut s = board(true);
         s.play(ID, json!({ "zone": 3 }));
         let hand = s.hand(P1);
         assert_eq!(hand.len() as i32, HAND_CAP);
-        assert_eq!(hand.iter().filter(|card| card.def_id == BIGOT).count() as i32, HAND_CAP - 1);
+        assert_eq!(hand.iter().filter(|card| card.def_id == SPECIESIST).count() as i32, HAND_CAP - 1);
         assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Burned { .. })));
         assert!(poisonous(&s, &s.unit_at(P1, 1)));
         s.expect_stats(ID, json!({ "attack": 8, "health": 8 }));

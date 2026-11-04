@@ -109,7 +109,7 @@ mod tests {
     const ARMOR: &str = "core-073"; // (2) Field Spell
     const MENACE: &str = "core-019"; // (3) Unit
     const DIVIDEND: &str = "core-024"; // (X) Spell
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
     const VANILLA: &str = "core-008"; // (1) Unit
 
@@ -184,13 +184,13 @@ mod tests {
         /// R58 a card cast on draw never reaches your hand: it is not one of them, and the draw repeats
         #[test]
         fn r58_a_card_cast_on_draw_never_reaches_your_hand_it_is_not_one_of_them_and_the_draw_repeats() {
-            let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [CN_VIRUS, MENACE, STOCKPILE, FILLER] } }));
+            let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [SUPER_VIRUS, MENACE, STOCKPILE, FILLER] } }));
             s.play(RISKY, json!({}));
-            s.expect_in_zone(CN_VIRUS, "graveyard");
+            s.expect_in_zone(SUPER_VIRUS, "graveyard");
             s.expect_in_zone(MENACE, "exile")
                 .expect_in_zone(STOCKPILE, "hand")
                 .expect_in_zone(FILLER, "hand");
-            assert_eq!(s.card(CN_VIRUS).cost_mod, 0);
+            assert_eq!(s.card(SUPER_VIRUS).cost_mod, 0);
         }
 
         /// §2.4 a burned card is not one of them: it stays in your graveyard at its own cost
@@ -336,9 +336,9 @@ mod tests {
 
         #[test]
         fn draws_3_and_a_card_cast_on_draw_is_still_none_of_them() {
-            let mut s = scenario(json!({ "p1": { "hand": [{ "def": RISKY, "radiant": true }, VANILLA], "library": [CN_VIRUS, ARMOR, FILLER, FILLER] } }));
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": RISKY, "radiant": true }, VANILLA], "library": [SUPER_VIRUS, ARMOR, FILLER, FILLER] } }));
             s.play(RISKY, json!({}));
-            s.expect_in_zone(CN_VIRUS, "graveyard").expect_in_zone(ARMOR, "hand");
+            s.expect_in_zone(SUPER_VIRUS, "graveyard").expect_in_zone(ARMOR, "hand");
         }
     }
 }

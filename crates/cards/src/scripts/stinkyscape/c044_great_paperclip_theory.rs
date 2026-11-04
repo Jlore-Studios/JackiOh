@@ -1,4 +1,4 @@
-//! S #44 Great Replacement Theory (SPEC §8.10 row 44): (1) Spell, Quickdraw, Mythic, a card of the
+//! S #44 Great Paperclip Theory (SPEC §8.10 row 44): (1) Spell, Quickdraw, Mythic, a card of the
 //! Stinkyscape set. Its name is the designer's satire, kept.
 //!   Base:    "Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier
 //!            of Drone Core, add the next tier to your hand."
@@ -77,7 +77,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #44 Great Replacement Theory — SPEC §8.10 row 44, BUILD M12 row S 44 (R1863000, R640).
+// S #44 Great Paperclip Theory — SPEC §8.10 row 44, BUILD M12 row S 44 (R1863000, R640).
 #[cfg(test)]
 mod tests {
     use super::{ID, TIERS, script};
@@ -103,7 +103,7 @@ mod tests {
         }
         p2["library"] = filler(6);
         scenario(json!({
-            "seed": "great-replacement",
+            "seed": "great-paperclip",
             "p1": { "hand": cards, "library": filler(6), "mana": 40 },
             "p2": p2,
         }))
@@ -140,7 +140,7 @@ mod tests {
         let scripts = script();
         assert_eq!(scripts.base.flags().quickdraw, Some(true));
         assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
-        // Plain Core cards, then Great Replacement Theory: one copy of each (§2.6 L3).
+        // Plain Core cards, then Great Paperclip Theory: one copy of each (§2.6 L3).
         let others = [
             "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
             "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
@@ -149,7 +149,7 @@ mod tests {
         let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();
         deck.push(ID.to_string());
         let created = create_game(&CreateGameOptions {
-            seed: "great-replacement-quickdraw".to_string(),
+            seed: "great-paperclip-quickdraw".to_string(),
             decks: (deck.clone(), deck),
             ..CreateGameOptions::default()
         });

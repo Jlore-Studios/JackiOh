@@ -495,7 +495,7 @@ async fn r2715000_a_pick_of_an_animated_art_needs_it_owned_on_its_card() {
 /// R2725001: a card the version and the augments are offered on that has no retired full art of its own:
 /// Carnivorous Cube, an Epic Unit.
 const OFFERED: &str = "core-022";
-/// A card neither is offered on: Bigot, a Common Unit (R2725001).
+/// A card neither is offered on: Speciesist, a Common Unit (R2725001).
 const BARE: &str = "core-002";
 
 #[tokio::test]
@@ -503,7 +503,7 @@ async fn r2725001_a_pick_not_offered_is_400_and_writes_nothing() {
     let app = test_app().await;
     let profile = profile_id_of(&app, USER).await;
     let nothing = json!({ "cards": [] });
-    // Owned on Bigot by a grant no shop makes, the version and both augments are still not offered there.
+    // Owned on Speciesist by a grant no shop makes, the version and both augments are still not offered there.
     for id in ["version-full-art", "augment-animated", "augment-signature"] {
         own(&app, &profile, BARE, id).await;
     }
@@ -729,7 +729,7 @@ async fn r2940000_a_version_not_offered_is_400_and_writes_nothing() {
     let app = test_app().await;
     let profile = profile_id_of(&app, USER).await;
     let nothing = json!({ "cards": [] });
-    // Owned on Bigot by a grant no shop makes, none of #2940's versions is offered there.
+    // Owned on Speciesist by a grant no shop makes, none of #2940's versions is offered there.
     for id in ["version-alt-art", "version-sketch", "version-alt-full-art"] {
         own(&app, &profile, BARE, id).await;
     }

@@ -94,7 +94,7 @@ describe("R2202000: the Training Grounds set draws its own families", () => {
       ["Spikey Steven", "recruit", "spiky"],
       ["Tutorial Master", "recruit", "master"],
       ["Trigor", "recruit", "three"],
-      ["Oriental", "recruit", "east"],
+      ["Easterner", "recruit", "east"],
       ["Occidental", "recruit", "west"],
     ];
     for (const [name, family, kind] of expected) expect(subjectOf(byName(name)), name).toEqual({ family, kind });

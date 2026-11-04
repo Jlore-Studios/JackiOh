@@ -147,7 +147,7 @@ describe("R2725000 a card's version and augments", () => {
         expect(CATALOG[card]?.token, `${id} on ${card}`).toBe(false);
         expect(offeredOn(id, card)).toBe(true);
       }
-      expect(offeredOn(id, "core-002"), `${id} on Bigot`).toBe(false);
+      expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(false);
     }
     // Part 1's three on each of the 21 full-art cards, whose retired full arts imply them (R2725002).
     for (const id of partOne) for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(true);

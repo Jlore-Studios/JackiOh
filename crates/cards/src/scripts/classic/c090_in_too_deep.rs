@@ -438,7 +438,7 @@ mod tests {
     const TRUE_STRIKE: &str = "core-044";
     const COLLATERAL: &str = "core-034";
     const MAGIC_JAMMED: &str = "core-036";
-    const EUGENICS: &str = "core-042";
+    const SELECTIVE_BREEDING: &str = "core-042";
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
     const MENACE: &str = "core-019";
@@ -1484,11 +1484,11 @@ mod tests {
                 assert_eq!(reward_keys(&s, P1), vec!["mode:L"]);
 
                 let mut milled = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [EUGENICS, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [SELECTIVE_BREEDING, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut milled, "9", 0, json!({}));
-                milled.play(EUGENICS, json!({}));
+                milled.play(SELECTIVE_BREEDING, json!({}));
                 assert!(milled.pile(P1, "library").is_empty());
                 assert_eq!(progress_of(&milled), json!({ "9": 0 }));
                 milled.play(CURSE, json!({}));

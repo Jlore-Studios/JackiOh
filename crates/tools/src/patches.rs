@@ -1104,8 +1104,8 @@ pub mod patches_io {
     pub const SLUG_MAX: usize = 60;
 
     /// R1366000: a fragment's file name, `<slug>.json`, the slug its title's words lower-cased and
-    /// joined by dashes, without the `Patch …:` prefix a title opens with: "Patch v0.3.X: Bigot costs
-    /// (3)" is `bigot-costs-3.json`. Writing the same title again writes the same fragment.
+    /// joined by dashes, without the `Patch …:` prefix a title opens with: "Patch v0.3.X: Speciesist costs
+    /// (3)" is `speciesist-costs-3.json`. Writing the same title again writes the same fragment.
     pub fn fragment_name(title: &str) -> String {
         let after_prefix = match title.split_once(':') {
             Some((prefix, rest)) if prefix.trim_start().starts_with("Patch") && !rest.trim().is_empty() => {
@@ -2808,7 +2808,7 @@ mod tests {
                 assert_eq!(check(&legacy, &catalog, &newest), Vec::<String>::new());
                 assert_eq!(
                     check(
-                        &[named("bigot-costs-3.json", "t", "s", "n", &["aaa"])],
+                        &[named("speciesist-costs-3.json", "t", "s", "n", &["aaa"])],
                         &catalog,
                         &newest
                     ),
@@ -2899,12 +2899,12 @@ mod tests {
             #[test]
             fn r1366000_names_a_fragment_after_its_titles_slug() {
                 assert_eq!(
-                    fragment_name("Patch v0.3.X: Bigot costs (3)"),
-                    "bigot-costs-3.json"
+                    fragment_name("Patch v0.3.X: Speciesist costs (3)"),
+                    "speciesist-costs-3.json"
                 );
                 assert_eq!(
-                    fragment_name("Patch: Bigot's text, again"),
-                    "bigot-s-text-again.json"
+                    fragment_name("Patch: Speciesist's text, again"),
+                    "speciesist-s-text-again.json"
                 );
                 assert_eq!(fragment_name("Patch v0.3.12"), "patch-v0-3-12.json");
                 assert_eq!(fragment_name("A balance pass"), "a-balance-pass.json");

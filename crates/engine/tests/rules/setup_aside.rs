@@ -505,7 +505,7 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             decks: (deck_of(0, DECK_SIZE, None), other()),
             ..Default::default()
         });
-        // More, as a Unstable Clone Machine's or a CN-Virus's copies would add, until the library past the
+        // More, as a Unstable Clone Machine's or a Super-Virus's copies would add, until the library past the
         // hand holds R58's cap and two: all of them cast on draw.
         let more = OPENING_DRAW[0] + CAST_ON_DRAW_CHAIN_CAP + 2 - DECK_SIZE;
         for def_id in (1..=more).map(cod) {

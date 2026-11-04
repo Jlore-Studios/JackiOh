@@ -157,7 +157,7 @@
       attack: { voice: "guard" },
       death: { voice: "guard" },
     },
-    "core-002": { // Bigot
+    "core-002": { // Speciesist
       play: { voice: "snob" },
       attack: { voice: "snob" },
       death: { voice: "snob" },
@@ -311,7 +311,7 @@
     "core-041": { // Sheepish
       cast: { voice: "sheep" },
     },
-    "core-042": { // Eugenics
+    "core-042": { // Selective Breeding
       cast: { voice: "prof" },
     },
     "core-043": { // Big Felinor
@@ -495,10 +495,10 @@
       attack: { voice: "alien", effect: "squelch" },
       death: { voice: "alien" },
     },
-    "core-090": { // CN-Viral Injection
+    "core-090": { // Super-Virus Injection
       cast: { voice: "diva" },
     },
-    "core-090-1": { // CN-Virus
+    "core-090-1": { // Super-Virus
       cast: { voice: "goof" },
     },
     "core-091": { // Fed Fauci
@@ -1603,7 +1603,7 @@
     "meditative-060": { // Eschews
       cast: { voice: "snob" },
     },
-    "meditative-061": { // Joon Jorker
+    "meditative-061": { // Joon Juicer
       play: { voice: "hustler" },
       attack: { voice: "hustler" },
       death: { voice: "hustler" },
@@ -2188,7 +2188,7 @@
       attack: { voice: "sapi-heroine" },
       death: { voice: "sapi-heroine" },
     },
-    "stinkyscape-044": { // Great Replacement Theory
+    "stinkyscape-044": { // Great Paperclip Theory
       cast: { voice: "sapi-bureaucrat" },
     },
     "stinkyscape-045": { // Drone Commander
@@ -3004,7 +3004,7 @@
       attack: { voice: "hero" },
       death: { voice: "hero" },
     },
-    "traininggrounds-029": { // Oriental
+    "traininggrounds-029": { // Easterner
       play: { voice: "elder" },
       attack: { voice: "elder" },
       death: { voice: "elder" },
@@ -3057,7 +3057,7 @@
     "traininggrounds-040": { // Goetzmann Game Design
       cast: { voice: "prof" },
     },
-    "traininggrounds-041": { // Legacy: Bigot
+    "traininggrounds-041": { // Legacy: Speciesist
       play: { voice: "snob" },
       attack: { voice: "snob" },
       death: { voice: "snob" },
