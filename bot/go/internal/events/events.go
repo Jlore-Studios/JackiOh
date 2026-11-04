@@ -281,6 +281,13 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 		nudged = false
 	}
 	if len(found) == 0 && !nudged {
+		if !reviewComment {
+			// A trusted person's reply to a question the bot asked here (#3009) takes it up again at
+			// once, with the reply as the decision (`plan.SyncDecisionsOn` reads who wrote it).
+			if notes := plan.SyncDecisionsOn(ctx, py.MustInt(py.Or(thread.Get("number"), 0))); len(notes) > 0 {
+				return notes
+			}
+		}
 		return []string{"no command"}
 	}
 	user := comment.Obj("user")
@@ -866,6 +873,9 @@ func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
 	number := py.MustInt(py.Item(pull, "number"))
 	state := ctx.Store.Load()
 	record := state.Obj("items").Obj(strconv.Itoa(number)).Copy()
+	if queue.ArchivedOf(record) != nil {
+		return "" // a person merged what the bot handed them (#3009): no run of the bot's looks at it
+	}
 	issue := 0
 	if linked := threads.LinkedIssue(pull); linked != nil {
 		issue = *linked
@@ -989,6 +999,10 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 			out = append(out, fmt.Sprintf("#%d: blocked, stopped or already queued; left alone", number))
 			continue
 		}
+		if queue.ArchivedOf(record) != nil {
+			out = append(out, fmt.Sprintf("#%d: handed to a person, its work archived; left alone", number))
+			continue
+		}
 		sha := py.Str(run.Get("head_sha"))
 		out = append(out, fixCI(ctx, number, pull, names, record, run, sha, "CI failed", false, true))
 	}
@@ -1092,7 +1106,8 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	names := queue.LabelNames(pull)
 	record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
 	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelReady, config.LabelPersonMerges) ||
-		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") {
+		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") ||
+		queue.ArchivedOf(record) != nil {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
 	}
 	sha := py.OrStr(pull.Obj("head").Get("sha"), "")

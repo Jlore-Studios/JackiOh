@@ -3,7 +3,8 @@
 // themselves only on a condition, read from the files themselves, with no model.
 //
 //   - A migration (`migration_paths`): it merges itself unless it loses data (an added line that
-//     drops a table, schema or column, or runs `TRUNCATE` or `DELETE FROM`) or changes who may read
+//     drops a table, schema or column, runs `TRUNCATE` or `DELETE FROM`, or rewrites every row of a
+//     table, an `UPDATE … SET` with no `WHERE`, #3009) or changes who may read
 //     or write what (a policy created, altered or dropped, row-level security turned on, off or
 //     forced, a grant or a revoke, a `SECURITY DEFINER` function, the `auth` or `storage` schemas),
 //     or edits or deletes a migration `main` already has (`Migration`; the caller reads the status).
@@ -72,6 +73,7 @@ func Migration(sql string) *Finding {
 
 var (
 	truncateRe    = regexp.MustCompile(`\bTRUNCATE\b`)
+	updateSetRe   = regexp.MustCompile(`\bUPDATE\s+(?:ONLY\s+)?([^\s(]+)(?:\s+(?:AS\s+)?([^\s(]+))?\s+SET\b`)
 	deleteFromRe  = regexp.MustCompile(`\bDELETE\s+FROM\b`)
 	dropColumnRe  = regexp.MustCompile(`\bDROP\s+COLUMN\b`)
 	dropRe        = regexp.MustCompile(`\bDROP\s+(\S+)(?:\s+(\S+))?`)
@@ -94,10 +96,11 @@ var SafeDrops = []string{"FUNCTION", "TRIGGER", "INDEX", "VIEW", "POLICY"}
 // column (`DROP [COLUMN] [IF EXISTS] <name>`).
 var SafeAlterDrops = []string{"CONSTRAINT", "DEFAULT", "NOT"}
 
-// losesData is: the upper-cased statement drops a table, schema or column, or deletes or truncates
-// rows (`Migration`'s rules).
+// losesData is: the upper-cased statement drops a table, schema or column, deletes or truncates
+// rows, or rewrites every row of a table (`Migration`'s rules).
 func losesData(upper string) bool {
-	if truncateRe.MatchString(upper) || deleteFromRe.MatchString(upper) || dropColumnRe.MatchString(upper) {
+	if truncateRe.MatchString(upper) || deleteFromRe.MatchString(upper) || dropColumnRe.MatchString(upper) ||
+		updatesEveryRow(upper) {
 		return true
 	}
 	alter := alterTableRe.MatchString(upper)
@@ -117,6 +120,71 @@ func losesData(upper string) bool {
 		}
 	}
 	return false
+}
+
+// updatesEveryRow is: the upper-cased statement holds an `UPDATE … SET` with no `WHERE` of its own
+// (#3009), `UPDATE … FROM` among them, which rewrites every row of its table. Its `WHERE` is the
+// first one after its `SET` at its own depth of parentheses and outside a string or a quoted name: a
+// subquery's (`SET x = (SELECT … WHERE …)`) is not, and one inside a `WITH` ends at the parenthesis
+// that closes it. An `INSERT … ON CONFLICT DO UPDATE SET` names no table, and changes only the rows
+// that conflict. An `UPDATE` written inside a string is read too: it errs toward a person.
+func updatesEveryRow(upper string) bool {
+	runes := []rune(upper)
+	for _, at := range updateSetRe.FindAllStringSubmatchIndex(upper, -1) {
+		if upper[at[2]:at[3]] == "SET" {
+			continue // `DO UPDATE SET …`: no table of its own
+		}
+		start := len([]rune(upper[:at[0]]))
+		depth, quote := 0, rune(0)
+		for _, c := range runes[:start] {
+			depth, quote = sqlStep(c, depth, quote)
+		}
+		if !hasWhere(runes[len([]rune(upper[:at[1]])):], depth, quote) {
+			return true
+		}
+	}
+	return false
+}
+
+// sqlStep is the parenthesis depth and the open quote (`'` or `"`, 0 for none) after `c`: a doubled
+// quote closes and opens again, which leaves it open.
+func sqlStep(c rune, depth int, quote rune) (int, rune) {
+	switch {
+	case quote != 0:
+		if c == quote {
+			quote = 0
+		}
+	case c == '\'' || c == '"':
+		quote = c
+	case c == '(':
+		depth++
+	case c == ')':
+		depth--
+	}
+	return depth, quote
+}
+
+// hasWhere is: `rest`, what follows an `UPDATE`'s `SET` at parenthesis depth `depth` (in a quote
+// when `quote` is not 0), holds a `WHERE` word at that depth outside a quote before it ends (the
+// statement's end, or a parenthesis that closes below `depth`).
+func hasWhere(rest []rune, depth int, quote rune) bool {
+	level := depth
+	for i, c := range rest {
+		if quote == 0 && level == depth && c == 'W' && (i == 0 || !sqlWord(rest[i-1])) && i+5 <= len(rest) &&
+			string(rest[i:i+5]) == "WHERE" && (i+5 == len(rest) || !sqlWord(rest[i+5])) {
+			return true
+		}
+		level, quote = sqlStep(c, level, quote)
+		if level < depth {
+			return false
+		}
+	}
+	return false
+}
+
+// sqlWord is: `c` may be part of a name (a letter, a digit, `_` or `$`).
+func sqlWord(c rune) bool {
+	return c == '_' || c == '$' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
 }
 
 // changesAccess is: the upper-cased statement changes who may read or write what.

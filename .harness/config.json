@@ -104,6 +104,7 @@
   "migration_paths": ["crates/server/migrations/"],
   "lock_files": ["Cargo.lock", "pnpm-lock.yaml"],
   "decision_wait_hours": 24,
+  "decision_assignees": ["jgoetzmann", "MaxGoetzmann"],
   "upload_transcripts": false,
   "resume_sessions": true,
   "hold_minutes": 120,
