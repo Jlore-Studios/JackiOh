@@ -15528,6 +15528,13 @@
     "2943": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41803049110",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-04T09:25:54Z",
+        "until": "2026-11-04T09:55:54Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
