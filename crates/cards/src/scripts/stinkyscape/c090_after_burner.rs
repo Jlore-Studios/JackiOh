@@ -54,9 +54,11 @@ mod tests {
         let before = kinds(&s, &ship);
         launch_starship(&mut s, &ship);
         let pool: Vec<KeywordKind> = random_pool_keywords().iter().map(Keyword::kind).collect();
+        // R3038001: the launch itself gives nothing; the Starship's Flying and Ranged are its tag's,
+        // there before it launched (R3038000).
         let gained: Vec<KeywordKind> = kinds(&s, &ship)
             .into_iter()
-            .filter(|kind| !before.contains(kind) && *kind != KeywordKind::Starship)
+            .filter(|kind| !before.contains(kind))
             .collect();
         assert!(gained.iter().all(|kind| pool.contains(kind)), "{gained:?}");
         gained
@@ -85,11 +87,8 @@ mod tests {
         let ship_before = kinds(&s, &ship);
         launch_starship(&mut s, &ship);
         assert_eq!(kinds(&s, &burner), before);
-        let ship_after: Vec<KeywordKind> = kinds(&s, &ship)
-            .into_iter()
-            .filter(|kind| *kind != KeywordKind::Starship)
-            .collect();
-        assert_eq!(ship_after, ship_before, "the AP Rounds' Starship gains nothing");
+        // R3038001: the launch adds no keyword of its own, so the Starship's list is as it was.
+        assert_eq!(kinds(&s, &ship), ship_before, "the AP Rounds' Starship gains nothing");
         assert!(dormant_starship_of(s.state(), PlayerId::P1).is_none());
     }
 }

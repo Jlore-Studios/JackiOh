@@ -1901,7 +1901,7 @@ mod stinkyscape {
         use super::*;
 
         /// R1852003: a Starship Piece's death summons the Dormant Starship, whose launch is an Activate
-        /// the engine gives it (no script declares it), at (3).
+        /// the engine gives it (no script declares it), at `STARSHIP_LAUNCH_COST`.
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";
@@ -1918,7 +1918,10 @@ mod stinkyscape {
                 .clone();
             let mana = s.state().players.p1.mana.current;
             activate_listed(&mut s, &ship, any);
-            assert_eq!(s.state().players.p1.mana.current, mana - 3);
+            assert_eq!(
+                s.state().players.p1.mana.current,
+                mana - jackioh_engine::prelude::STARSHIP_LAUNCH_COST
+            );
         }
     }
 

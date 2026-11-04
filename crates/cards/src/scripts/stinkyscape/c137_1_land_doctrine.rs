@@ -176,6 +176,11 @@ mod tests {
             ]),
         );
         s.card_mut(ship.as_str()).damage = 4;
+        // R3038000: a Starship has Ranged, so only a Ranged defender strikes back (§6.1 Ranged).
+        for lane in 1..=3 {
+            let enemy = s.unit_at(P2, lane).id;
+            s.card_mut(enemy.as_str()).granted_keywords.push(Keyword::Ranged);
+        }
         s.play(ID, json!({}));
         let attacks = forced_attacks(&s);
         assert_eq!(attacks.len(), 1, "it died in the first combat: {attacks:?}");

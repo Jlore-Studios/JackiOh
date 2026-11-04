@@ -9,8 +9,8 @@ use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, ModifierKind, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{
-    AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag,
-    Zone, armor_of, has_keyword,
+    AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
+    armor_of, has_keyword,
 };
 
 /// §10.4: a unit's layered stats and keywords (`unit_view`). Not the view's `wire::UnitView`, which

@@ -1,10 +1,12 @@
 //! S T-dormant-starship Dormant Starship (SPEC §8.10 row T-dormant-starship; R349, R1839000, R1852000,
-//! R1852003–R1852007, R1857001, R1859013, R2521000): (3) Unit, Legendary, 0/0, the set's one entry that
-//! is neither a numbered card nor a token, of the Stinkyscape set.
+//! R1852003–R1852007, R1857001, R1859013, R2521000, R3038000): (3) Unit, Starship, Legendary, 0/0, the
+//! set's one entry that is neither a numbered card nor a token, of the Stinkyscape set.
 //!
-//! Base and Radiant: "Dormant until it launches. Your Starship Pieces that die fuse into this.
-//! \nActivate: Pay (3) to launch this." (R2249000: the rest is the Starship and Launch terms'.)
-//! Engine: its text is the engine's rules written out (R1859013), so its script is the hull alone:
+//! Base and Radiant: "Flying, Ranged\nDormant until it launches. Your Starship Pieces that die fuse into
+//! this.\nActivate: Pay (4) to launch this." (R2249000: the rest is the Starship and Launch terms'.)
+//! Engine: it carries the Starship tag on both faces, which the layers read as Flying and Ranged, Dormant
+//! or launched (R3038000); the catalog prints the two as well, so every view of the card shows them.
+//! Its text is the engine's rules written out (R1859013), so its script is the hull alone:
 //! `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown (R1839000), its
 //! stats only what fuses into it (R77). The engine summons it when a piece dies (R1852000) and fuses
 //! into it the dead piece's base version (R2521000): the piece it was printed as, never a card fused
@@ -43,7 +45,7 @@ mod tests {
     use crate::{built_starship, card_def, launch_starship};
     use jackioh_engine::prelude::{
         STARSHIP_FULL_ROW_LANE, STARSHIP_LANE_ORDER, STARSHIP_LAUNCH_ABILITY, STARSHIP_LAUNCH_COST,
-        STARSHIP_NAMES, is_launched_starship,
+        STARSHIP_NAMES, is_launched_starship, tags_of,
     };
     use jackioh_engine::testkit::*;
 
@@ -51,7 +53,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     // Issue #2521: Stratos (S #68) is no Starship Piece (B9), so a keywords-only piece stands in.
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
-    const FLAK_V3: &str = "stinkyscape-053"; // (2) 0/4 Starship Piece, Equip; Radiant 0/8, Lucky 1.
+    const FLAK_V3: &str = "stinkyscape-053"; // (2) Weapon, Starship Piece, Equip; Radiant Lucky 1.
     const OVERDRIVE: &str = "stinkyscape-101"; // (2) 5/5 Starship Piece, Equip, Brittle 2, Reborn.
     const CAPSULE: &str = "stinkyscape-040"; // (3) 2/2 Starship Piece, "Cry: Place 2 Plague Counters."
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
@@ -92,6 +94,14 @@ mod tests {
             .starship
             .as_ref()
             .and_then(|memory| memory.name.clone())
+    }
+
+    /// A piece's printed attack and health on one face, read off its definition (Flak v3's Health is a
+    /// Weapon's, which patches move).
+    fn printed(def_id: &str, radiant: bool) -> (i32, i32) {
+        let def = card_def(def_id);
+        let face = if radiant { &def.radiant } else { &def.base };
+        (face.attack.unwrap_or(0), face.health.unwrap_or(0))
     }
 
     /// R1852005: one piece as a Starship's memory holds it.
@@ -147,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn r1859013_a_dying_piece_summons_it_holding_the_copy_and_its_launch_is_offered_at_3() {
+    fn r1859013_a_dying_piece_summons_it_holding_the_copy_and_its_launch_is_offered_at_4() {
         let (mut s, ship) = built_starship(
             "r1859013-hull",
             json!([{ "def": AP_ROUNDS, "lane": 2 }]),
@@ -174,12 +184,40 @@ mod tests {
         launch_starship(&mut s, &ship);
         assert_eq!(s.state().players.p1.mana.current, mana - STARSHIP_LAUNCH_COST);
         assert!(is_launched_starship(s.card(ship.as_str())));
-        assert!(
-            s.stats(ship.as_str())
-                .keywords
-                .iter()
-                .any(|keyword| keyword.kind() == KeywordKind::Starship)
-        );
+        // R3038000, R3038001: launched it still carries the Starship tag, and so Flying and Ranged,
+        // and takes no Starship keyword.
+        assert!(tags_of(s.state(), s.card(ship.as_str())).contains(&Tag::Starship));
+        let kinds: Vec<KeywordKind> = s
+            .stats(ship.as_str())
+            .keywords
+            .iter()
+            .map(Keyword::kind)
+            .collect();
+        assert!(kinds.contains(&KeywordKind::Flying) && kinds.contains(&KeywordKind::Ranged));
+        assert!(!kinds.contains(&KeywordKind::Starship));
+    }
+
+    #[test]
+    fn r3038000_it_prints_the_starship_tag_and_flying_and_ranged_on_both_faces() {
+        let def = card_def(ID);
+        assert_eq!(def.tags, vec![Tag::Starship]);
+        for face in [&def.base, &def.radiant] {
+            let kinds: Vec<KeywordKind> = face.keywords.iter().map(Keyword::kind).collect();
+            assert_eq!(kinds, vec![KeywordKind::Flying, KeywordKind::Ranged]);
+            assert!(face.text.starts_with("Flying, Ranged\n"), "{}", face.text);
+            assert!(
+                face.text
+                    .ends_with(&format!("Pay ({STARSHIP_LAUNCH_COST}) to launch this.")),
+                "{}",
+                face.text
+            );
+        }
+        // Dormant, before any launch, it has the two already.
+        let (s, ship) = one_piece("r3038000-dormant", json!({}), json!({}));
+        assert!(is_dormant_starship(s.card(ship.as_str())));
+        let unit = ship_on_view(&s);
+        let kinds: Vec<KeywordKind> = unit.keywords.iter().map(Keyword::kind).collect();
+        assert!(kinds.contains(&KeywordKind::Flying) && kinds.contains(&KeywordKind::Ranged));
     }
 
     #[test]
@@ -352,6 +390,14 @@ mod tests {
             json!({ "cost": 3 }),
             json!({ "withTokens": true }),
             json!({ "everySet": true }),
+            // R3038000: it prints Flying and Ranged and carries the Starship tag, and still no pool
+            // that names either keyword, or the tag, reaches it.
+            json!({ "keywords": ["Flying"] }),
+            json!({ "keywords": ["Ranged"] }),
+            json!({ "keywords": ["Flying", "Ranged"], "withTokens": true }),
+            json!({ "keywords": ["Flying"], "everySet": true, "withTokens": true }),
+            json!({ "tags": ["Starship"], "withTokens": true }),
+            json!({ "anyTags": ["Starship"], "everySet": true }),
         ] {
             let pool: Vec<String> = query(&json_as(args.clone()))
                 .iter()
@@ -387,9 +433,9 @@ mod tests {
             event,
             GameEvent::StarshipFused { piece_id, def_id, .. } if *piece_id == host && def_id == FLAK_V3
         )));
-        // The Starship gains only Flak v3's text: its 0/4, none of the AP Rounds' 3/1 or Pierce.
+        // The Starship gains only Flak v3's text: its printed stats, none of the AP Rounds' 3/1 or Pierce.
         let stats = s.stats(ship.id.as_str());
-        assert_eq!((stats.attack, stats.health), (0, 4));
+        assert_eq!((stats.attack, stats.health), printed(FLAK_V3, false));
         assert!(
             !stats
                 .keywords
@@ -453,9 +499,11 @@ mod tests {
                 vec![record(AP_ROUNDS, radiant), record(FLAK_V3, radiant)],
                 "radiant {radiant}"
             );
-            // Base 3/1 and 0/4; Radiant 6/2 and 0/8, with the Radiant Flak v3's Lucky 1.
+            // Each piece's printed stats on the face it fused on, summed, with the Radiant Flak v3's
+            // Lucky 1.
             let stats = s.stats(ship.as_str());
-            let expected = if radiant { (6, 10) } else { (3, 5) };
+            let (rounds, flak) = (printed(AP_ROUNDS, radiant), printed(FLAK_V3, radiant));
+            let expected = (rounds.0 + flak.0, rounds.1 + flak.1);
             assert_eq!((stats.attack, stats.health), expected, "radiant {radiant}");
             let lucky = stats
                 .keywords

@@ -189,12 +189,17 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Tradable",
     "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
   ),
-  // #1852 (R1852000–R1852007): Stinkyscape's two keywords, and When launched and Launch below.
+  // #1852 (R1852000–R1852007): Stinkyscape's two keywords, and When launched and Launch below. R3038000:
+  // Starship is a tag since #3038, which the Starship term names; the keyword kind stays for the shipped
+  // snapshots (R3038001), so the term keeps its §6.1 row.
   "Starship Piece": keyword(
     "Starship Piece",
     "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
   ),
-  Starship: keyword("Starship", "A launched Starship, built from the Starship Pieces fused into it"),
+  Starship: keyword(
+    "Starship",
+    "A tag: your Starship, Dormant or launched, built from the Starship Pieces fused into it. Every Starship has Flying and Ranged",
+  ),
   // Issue #2657 (R2657000): the successor to the status "Cannot be in Defense Position".
   "Can't Defend": keyword("Can't Defend", "Never in Defense Position"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).

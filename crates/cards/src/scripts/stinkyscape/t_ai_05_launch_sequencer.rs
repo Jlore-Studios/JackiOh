@@ -3,7 +3,7 @@
 //!   Base:    "Your Starship launch costs (1). Draw 1."
 //!   Radiant: "Your Starship launch costs (0). Draw 2."
 //! Engine: `starship_launch_costs` (R1852006): its caster's next launch by the Activate costs (1) in place
-//!   of (3), a public badge the launch spends; with no Starship yet, the price waits for the next launch
+//!   of `STARSHIP_LAUNCH_COST` (4), a public badge the launch spends; with no Starship yet, the price waits for the next launch
 //!   (R1881003). Then a draw (§2.4). Radiant: (0), and draw 2. Declares no numbers (R482).
 
 use jackioh_engine::prelude::*;

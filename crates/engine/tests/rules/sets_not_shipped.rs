@@ -680,6 +680,7 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
             Tag::Legacy,
             Tag::Resource,
             Tag::Faction,
+            Tag::Starship,
             Tag::Token,
         ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
@@ -968,7 +969,8 @@ mod issue_2521_resource_and_faction_follow_legacy {
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        assert_eq!(at(Tag::Token), Some(legacy + 1 + TAGS.len()));
+        // Issue #3038's Starship follows them (R3038000), and Token stays last.
+        assert_eq!(at(Tag::Starship), Some(legacy + 1 + TAGS.len()));
         assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 

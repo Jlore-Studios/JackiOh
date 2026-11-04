@@ -195,8 +195,9 @@ string_union! {
     /// tag no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources:
     /// Reknite, Korrelite, Gellium, Axnit, Narcor and Red Narcor, tokens all) and Faction (the five
     /// Faction cards, #95 and #159 to #162), which the server admits from migration 0070.
-    /// Issue #3038 adds Starship (the Dormant Starship, which every Starship card carries): a family
-    /// tag with a rule — a card holding it has Flying and Ranged through the layers (R3038000).
+    /// Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
+    /// Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
+    /// Ranged through the layers (R3038000), which the server admits from migration 0080.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",

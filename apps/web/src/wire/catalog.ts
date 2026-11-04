@@ -24,8 +24,8 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * (R1857000). Legacy marks Training Grounds #41 to #60, the frozen copies of Core cards, a family tag
  * no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources, Reknite to Red
  * Narcor, every one a token) and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162).
- * Issue #3038 adds Starship (the Dormant Starship, which every Starship card carries): a card holding
- * it has Flying and Ranged (R3038000).
+ * Issue #3038 adds Starship (the Dormant Starship, on both faces, so every Starship, Dormant or
+ * launched): a card holding it has Flying and Ranged through the engine's layers (R3038000).
  */
 export type Tag =
   | "Human"
@@ -195,7 +195,9 @@ export type Keyword =
   | { kind: "Tradable" }
   /** #1852, R1852000: when it dies, a copy of it fuses into its owner's Dormant Starship. */
   | { kind: "Starship Piece" }
-  /** #1852, R1852003: a launched Starship. */
+  /** R3038001: kept for the shipped catalog snapshots, which print it on the Drone Battleships, and the
+   * replays that fold under them (R767000). No current card prints or gains it: a Starship carries the
+   * Starship tag (R3038000) instead. */
   | { kind: "Starship" }
   /** #2657, R2657000: never in Defense Position; the successor to the status "Cannot be in Defense Position". */
   | { kind: "Can't Defend" };

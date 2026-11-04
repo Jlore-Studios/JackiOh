@@ -40,7 +40,7 @@ designer's answers of the same day (ST9)
   three drones and the Battleship's three layers, six Resources, Anomaly Found!), and 10 AI cards the
   Marketplace offers.
 - **The mechanics** the set is built around: **Dormant**, the **Starship** (Starship Pieces fused into a
-  Dormant Starship as they die, launched for (3)), **Tradable**, an in-match economy of **Resources**,
+  Dormant Starship as they die, launched for (4)), **Tradable**, an in-match economy of **Resources**,
   **Credits** and the **Marketplace**, and **Anomalies** that swap your board for a preset one.
 - **Patches to shipped cards** (ST4): ten gain a tag (four of them the new Jelly Bean tag), four lose one,
   Showdown and Prestige gain Tradable, and Prestige needs a target.
@@ -115,8 +115,8 @@ Units".
 - The Dormant Starship starts **0/0**: its stats are only what is fused into it. It is Dormant, a card
   played onto it by Stack is exiled before it resolves, and it is not a token, so it reaches a graveyard.
   One per player at a time; after a launch, the next piece to die starts a new one.
-- **Activate: (3)** awakens it, which **launches** it (the same thing): every fused Cry fires, then every
-  fused "When launched"; it takes the **Starship** keyword and a random name from the list, a tagged name
+- **Activate: (4)** awakens it, which **launches** it (the same thing): every fused Cry fires, then every
+  fused "When launched"; it takes no keyword (R3038001) and a random name from the list, a tagged name
   only when the Starship holds that tag (The Ninth Life ~ Felinor, Frontier's Promise ~ Human, The
   Celestial Archive ~ KY, The Lantern Ferry ~ CN, a Jlockeed name, Ember of Departure and The Silent Choir
   for any). The names are names only.
@@ -281,7 +281,7 @@ fragment), never held behind the set's gate:
 - **D4 Purity** (CLAUDE.md rule 4). Price moves, rolls and the map draw from the match's `Rng`; the card
   metrics are computed at build time; nothing in the engine sends an email (ST9 Q11).
 - **D5 Numbers** (CLAUDE.md rule 9). The tray's 8, the rarity table, the 6-turn cycle, every stock range,
-  the price rule, its spread, the 20% Radiant chance and its 2× premium, the (3) launch, BUSTED's 100 and
+  the price rule, its spread, the 20% Radiant chance and its 2× premium, the (4) launch, BUSTED's 100 and
   complicated's 60, Wild System's 20 attacks, Masochism Unmasked's 20 and 40, Alteran Reach's 20 travels:
   named constants in `crates/engine/src/config.rs` (the metrics' in `crates/cards`).
 - **D6 Words.** "Stinkyscape" everywhere ("Sinkyscape", "Stinkscape" are typos); "Starpiece" is Starship
@@ -2461,7 +2461,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Tribute 3 / Aura: Every Unit that is neither Human, a Starship Piece nor a Starship is exiled.
 - **Radiant:** Tribute 3 / Aura: Every enemy Unit that is neither Human, a Starship Piece nor a Starship is exiled.
-- **Engine:** Tribute 3, its play's cost ([[R101]]). An exile aura ([[R1850002]]): the Units on both sides, `notTags` Human and `notKeywords` Starship Piece and Starship, read through the layers ([[§10.4]]), so a granted tag or keyword spares a Unit; exiled at each state check, never this card, a face-down or a Dormant one. Radiant: the enemy side only.
+- **Engine:** Tribute 3, its play's cost ([[R101]]). An exile aura ([[R1850002]]): the Units on both sides, `notTags` Human and Starship and `notKeywords` Starship Piece, read through the layers ([[§10.4]]), so a granted tag or keyword spares a Unit; exiled at each state check, never this card, a face-down or a Dormant one; a Drone Battleship, no Starship, is exiled ([[R3038002]]). Radiant: the enemy side only.
 - **Rulings:** ST-S17-13: Scornboi exiles Units only (ST9); a Dormant Starship is no Unit until it launches and is passed by (R1839000). These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): [[R1850002]]'s.
 - **Numbers:** none.
 - **Check:** ST9: Units. R275: stats doubled and your own side spared.
@@ -3365,14 +3365,14 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** A
 
 #### Stinkyscape #T-dormant-starship · Dormant Starship
-`stinkyscape-t-dormant-starship` · (3) Unit · Legendary · 0/0 → 0/0 · built by S02 (#1859)
+`stinkyscape-t-dormant-starship` · (3) Unit, Starship · Legendary · 0/0 → 0/0 · built by S02 (#1859)
 
 > **Designer:** (3) Dormant Starship, Unit, Legendary, Dormant Starship, Stinkyscape · Dormant · While Dormant cards cannot be stacked on top of this, if they do the stacked card is exiled before its effect resolves · Activate: Pay (3) to Awaken and trigger all Cries · When awoken gain one of these randomly (names with a tag gain preference ...) · NOT a token so it can be shuffled into your GY
 
-- **Text:** Dormant until it launches. / Each of your Starship Pieces that dies fuses a copy into this. / A card played onto this by Stack while it is Dormant is exiled before it resolves. / Activate: Pay (3) to launch this. It takes a random name, then every Cry fused into it fires, then every When launched.
-- **Radiant:** Dormant until it launches. / Each of your Starship Pieces that dies fuses a copy into this. / A card played onto this by Stack while it is Dormant is exiled before it resolves. / Activate: Pay (3) to launch this. It takes a random name, then every Cry fused into it fires, then every When launched.
-- **Engine:** The engine's hull, `DORMANT_STARSHIP_DEF_ID` ([[R1852000]]): summoned by a piece's death into its owner's leftmost open unit zone, else on top of their lane-3 unit zone, never played, in no pool and no deck ([[R1857001]]). Its script is the hull: `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown ([[R1839000]]), its stats only what fuses into it ([[R77]]); the Stack exile ([[R1852007]]); the launch is the engine's Activate, `STARSHIP_LAUNCH_COST` (3), moved by "Your Starship launch costs (N)" ([[R1852006]]), which awakens it ([[R1839002]]): the Starship keyword, a name from `STARSHIP_NAMES`, a tagged one only for a ship holding the tag ([[R1852004]]), its memory ([[R1852005]]), its fused Cries, then its fused When launched ([[R1852003]]). No token, so it reaches a graveyard; its Radiant face is [[R349]]'s fallback (`radiantFallback`, [[R1857001]]).
-- **Rulings:** ST-S02-13: its text is the engine's rules written out, so the script adds nothing; it is no token, Legendary, at `T-dormant-starship`, its Radiant face R349's fallback. The designer's "trigger all Cries" is its fused Cries, then its fused When launched (R1852003); the names list is `STARSHIP_NAMES` (R1852004). These are proposals for the S02 part, which takes R-numbers from its own block.
+- **Text:** Flying, Ranged / Dormant until it launches. Your Starship Pieces that die fuse into this. / Activate: Pay (4) to launch this.
+- **Radiant:** Flying, Ranged / Dormant until it launches. Your Starship Pieces that die fuse into this. / Activate: Pay (4) to launch this.
+- **Engine:** The engine's hull, `DORMANT_STARSHIP_DEF_ID` ([[R1852000]]): summoned by a piece's death into its owner's leftmost open unit zone, else on top of their lane-3 unit zone, never played, in no pool and no deck ([[R1857001]]), a Flying, Ranged or Starship-tag pool included. It carries the Starship tag on both faces, which the layers read as Flying and Ranged, Dormant or launched ([[R3038000]]), the catalog printing the two as well. Its script is the hull: `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown ([[R1839000]]), its stats only what fuses into it ([[R77]]); the Stack exile ([[R1852007]]); the launch is the engine's Activate, `STARSHIP_LAUNCH_COST` (4), moved by "Your Starship launch costs (N)" ([[R1852006]]), which awakens it ([[R1839002]]): no keyword ([[R3038001]]), a name from `STARSHIP_NAMES`, a tagged one only for a ship holding the tag ([[R1852004]]), its memory ([[R1852005]]), its fused Cries, then its fused When launched ([[R1852003]]). No token, so it reaches a graveyard; its Radiant face is [[R349]]'s fallback (`radiantFallback`, [[R1857001]]).
+- **Rulings:** ST-S02-13: its text is the engine's rules written out, so the script adds nothing; it is no token, Legendary, at `T-dormant-starship`, its Radiant face R349's fallback. The designer's "trigger all Cries" is its fused Cries, then its fused When launched (R1852003); the names list is `STARSHIP_NAMES` (R1852004). These are proposals for the S02 part, which takes R-numbers from its own block. Since #3038 it carries the Starship tag, so it has Flying and Ranged, Dormant or launched (R3038000), and the launch costs (4), not the list's (3), and grants no keyword (R3038001).
 - **Numbers:** none (the launch price is `STARSHIP_LAUNCH_COST`, an engine constant, CLAUDE.md rule 9).
 - **Check:** Not a token (the list's "NOT a token", R1852000); no Radiant face in the list (R349). ⚠ designer: R1857001 gives it R349's fallback, no rule making a Dormant hull Radiant.
 - **Class:** C
@@ -3408,10 +3408,10 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (5) Drone Battleship - Shield Layer, Unit, Mythic, Starship, Token, Stinkyscape · [12/12] · Starship · Can't attack · Taunt, Armor 4 · Fatal damage a friendly ally would take is redirected to this ~~~ [24/24] ... Armor 8
 
-- **Text:** Starship, Can't attack, Taunt, Armor 4 / Lethal damage your hero or your other Units would take is redirected to this.
-- **Radiant:** Starship, Can't attack, Taunt, Armor 8 / Lethal damage your hero or your other Units would take is redirected to this.
-- **Engine:** The top of the Drone Battleship's pile ([[R1842000]]). Starship ([[§6.1]], a keyword with no rule of its own), Can't attack, Taunt, Armor 4. Unan's lethal guard ([[R1204]], [[R1842001]]): a lethal hit on its controller's hero or another of their Units is redirected to it, through its own Armor, while it tops its pile; a lethal hit on itself it never catches ([[R460]]); when it dies the Propagation Layer resumes ([[R13]]). A unit token ([[R11]]).
-- **Rulings:** ST-S07-7: "Fatal damage a friendly ally would take is redirected to this" is Unan's lethal guard ([[R1204]]), answering only while the layer tops its pile ([[R1842001]]).
+- **Text:** Flying, Ranged, Can't attack, Taunt, Armor 4 / Lethal damage your hero or your other Units would take is redirected to this.
+- **Radiant:** Flying, Ranged, Can't attack, Taunt, Armor 8 / Lethal damage your hero or your other Units would take is redirected to this.
+- **Engine:** The top of the Drone Battleship's pile ([[R1842000]]). Flying, Ranged ([[§6.1]]), Can't attack, Taunt, Armor 4. No Starship ([[R3038002]]): no Starship tag, so it is never launched and no piece fuses into it, a dying piece summoning its controller a Dormant Starship instead. Unan's lethal guard ([[R1204]], [[R1842001]]): a lethal hit on its controller's hero or another of their Units is redirected to it, through its own Armor, while it tops its pile; a lethal hit on itself it never catches ([[R460]]); when it dies the Propagation Layer resumes ([[R13]]). A unit token ([[R11]]).
+- **Rulings:** ST-S07-7: "Fatal damage a friendly ally would take is redirected to this" is Unan's lethal guard ([[R1204]]), answering only while the layer tops its pile ([[R1842001]]). Since #3038 the list's Starship is Flying and Ranged: a Drone Battleship is no Starship ([[R3038002]]).
 - **Numbers:** none (Armor 4 is a numbered keyword's ([[R482]])).
 - **Check:** The list's "Drone Battleship - Shield Layer" is "Drone Battleship (Shield Layer)" (the plan's discrepancy 10); "Fatal" is Unan's "Lethal". R275: 24/24 and Armor 8.
 - **Class:** C.
@@ -3421,10 +3421,10 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (5) Drone Battleship - Propagation Layer, Unit, Mythic, Starship, Token, Stinkyscape · [12/12] · Starship · Can't attack · Activate 2: summon a Drone Interceptor, Activate 1: summon a Drone Corvette ~~~ [24/24] ... Radiant
 
-- **Text:** Starship, Can't attack / Activate 2: Summon a Drone Interceptor. / Activate: Summon a Drone Corvette.
-- **Radiant:** Starship, Can't attack / Activate 2: Summon a Radiant Drone Interceptor. / Activate: Summon a Radiant Drone Corvette.
-- **Engine:** The middle of the pile ([[R1842000]]): beneath the Shield Layer it acts for nothing ([[R13]]); on top, two Activate abilities, counted apart ([[R1751000]], [[R384]]): Activate 2 summons a Drone Interceptor, Activate a Drone Corvette, each into the leftmost open unit zone ([[R64]]). Starship, Can't attack. A unit token ([[R11]]). Radiant: Radiant drones.
-- **Rulings:** ST-S07-8: the list's "Activate 2" and "Activate 1" are two abilities, counted apart ([[R1751000]]): two Interceptors and one Corvette a turn at most, offered only while the layer tops its pile.
+- **Text:** Flying, Ranged, Can't attack / Activate 2: Summon a Drone Interceptor. / Activate: Summon a Drone Corvette.
+- **Radiant:** Flying, Ranged, Can't attack / Activate 2: Summon a Radiant Drone Interceptor. / Activate: Summon a Radiant Drone Corvette.
+- **Engine:** The middle of the pile ([[R1842000]]): beneath the Shield Layer it acts for nothing ([[R13]]); on top, two Activate abilities, counted apart ([[R1751000]], [[R384]]): Activate 2 summons a Drone Interceptor, Activate a Drone Corvette, each into the leftmost open unit zone ([[R64]]). Flying, Ranged, Can't attack. No Starship ([[R3038002]]): no Starship tag, so it is never launched and no piece fuses into it, a dying piece summoning its controller a Dormant Starship instead. A unit token ([[R11]]). Radiant: Radiant drones.
+- **Rulings:** ST-S07-8: the list's "Activate 2" and "Activate 1" are two abilities, counted apart ([[R1751000]]): two Interceptors and one Corvette a turn at most, offered only while the layer tops its pile. Since #3038 the list's Starship is Flying and Ranged: a Drone Battleship is no Starship ([[R3038002]]).
 - **Numbers:** none (the Activate counts are no params ([[R482]])).
 - **Check:** The list's "Activate 1" is Activate ([[R366]]). R275: 24/24 and Radiant drones.
 - **Class:** C.
@@ -3434,10 +3434,10 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (5) Drone Battleship - Meltdown Layer, Unit, Mythic, Starship, Token, Stinkyscape · [12/12] · Starship · Charge, Windfury, Firststrike, Brittle 3 · End of turn: Take 6 damage ~~~ [24/24] ... Brittle 6 · End of turn: Take 6 damage
 
-- **Text:** Starship, Charge, Windfury, First Strike, Brittle 3 / End of turn: This takes {selfDamage} damage.
-- **Radiant:** Starship, Charge, Windfury, First Strike, Brittle 6 / End of turn: This takes {selfDamage} damage.
-- **Engine:** The bottom of the pile ([[R1842000]]): it acts once both layers above are gone, and with Charge may attack at once, twice (Windfury, [[§6.1]]), First Strike. Brittle 3 ([[R385]]): its count starts as it is summoned and waits while it is buried, ticking once it tops the pile (ST-S07-9). End of turn ([[R62]]): one hit of 6 on itself ([[§4.4]]), its own hook, which a buried card does not run ([[R13]]). A unit token ([[R11]]). Radiant: 24/24, Brittle 6.
-- **Rulings:** ST-S07-9: "End of turn: Take 6 damage" is the layer hitting itself, never its hero; beneath a Stack it runs no hook ([[R13]]), and its Brittle waits while buried as a Dormant countdown does ([[R1839003]]'s shape), ticking once it tops the pile.
+- **Text:** Flying, Ranged, Charge, Windfury, First Strike, Brittle 3 / End of turn: This takes {selfDamage} damage.
+- **Radiant:** Flying, Ranged, Charge, Windfury, First Strike, Brittle 6 / End of turn: This takes {selfDamage} damage.
+- **Engine:** The bottom of the pile ([[R1842000]]): it acts once both layers above are gone, and with Charge may attack at once, twice (Windfury, [[§6.1]]), First Strike; Flying, Ranged. No Starship ([[R3038002]]): no Starship tag, so it is never launched and no piece fuses into it, a dying piece summoning its controller a Dormant Starship instead. Brittle 3 ([[R385]]): its count starts as it is summoned and waits while it is buried, ticking once it tops the pile (ST-S07-9). End of turn ([[R62]]): one hit of 6 on itself ([[§4.4]]), its own hook, which a buried card does not run ([[R13]]). A unit token ([[R11]]). Radiant: 24/24, Brittle 6.
+- **Rulings:** ST-S07-9: "End of turn: Take 6 damage" is the layer hitting itself, never its hero; beneath a Stack it runs no hook ([[R13]]), and its Brittle waits while buried as a Dormant countdown does ([[R1839003]]'s shape), ticking once it tops the pile. Since #3038 the list's Starship is Flying and Ranged: a Drone Battleship is no Starship ([[R3038002]]).
 - **Numbers:** selfDamage 6 ↓ (step 2).
 - **Check:** "Firststrike" is First Strike. R275: 24/24 and Brittle 6, the self-hit unchanged.
 - **Class:** B.
@@ -3592,7 +3592,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 - **Text:** Your Starship launch costs (1). Draw 1.
 - **Radiant:** Your Starship launch costs (0). Draw 2.
-- **Engine:** `starship_launch_costs { cost: 1 }` ([[R1852006]]): its player's next launch by the Activate costs (1) instead of (3), a public badge, spent by that launch; then a draw ([[§2.4]]). Radiant: (0), and draw 2. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
+- **Engine:** `starship_launch_costs { cost: 1 }` ([[R1852006]]): its player's next launch by the Activate costs (1) instead of (4), a public badge, spent by that launch; then a draw ([[§2.4]]). Radiant: (0), and draw 2. An AI generated card (no printed rarity, [[R482]]'s ten), offered by #1853's Marketplace's AI lot (S21) and, once the set ships, by every AI pool ([[R1421]]).
 - **Rulings:** ST-S21-5: with no Starship yet, the price waits for the next launch. Built by S21 (#1881) as [[R1881003]].
 - **Numbers:** none ([[R482]]).
 - **Check:** Designed by the build (ST15). R275: (0) and two cards against (1) and one (2×).
@@ -3816,7 +3816,7 @@ build uses, and the entry in ST13 says the rest.
 | D36 | #111 Shockwave447 | "Replace both player's hands with complicated cards"; "Make yours Radiant" | Each hand moved to its graveyard and refilled with as many random complicated cards as it held ([[R1846000]]); your new cards arrive Radiant |
 | D37 | #113 A Very Dandy Lad | "all Permanents that cost (2) or less" | Both sides' face-up Units and backrow cards at their current cost ([[R1850002]]); never itself |
 | D38 | #114 Arctic Citadel | "Fuse all cards from your Exile into this" | Every card of your exile pile fused into it in one Fuse, oldest first ([[R77]]); they cease to exist, the exile counter unchanged |
-| D39 | #115 Scornboi | "all non-human, non-starship piece, non-starship" | Units only (ST9): every Unit with neither the Human tag nor the Starship Piece or Starship keyword ([[R1850002]]) |
+| D39 | #115 Scornboi | "all non-human, non-starship piece, non-starship" | Units only (ST9): every Unit with neither the Human or Starship tag nor the Starship Piece keyword ([[R1850002]]), so a Drone Battleship, no Starship, is exiled ([[R3038002]]) |
 | D40 | #123 Gokugains | "nerfed 3 times secretly"; "nerfs avoid cost" | Hidden Nerfs on a random Unit of their hand ([[R1845000]]), landing as it is played and never on its cost ([[R1845001]]); you do not see them either |
 | D41 | #147 IN33DH3 | "For the rest of your turn" | Your own turn only, until its cleanup ([[R1844001]]) |
 | D42 | #147.2 Wardrum Blob | "Do something REALLY helpful" | `helpful_cast` with `radiant: true`, one cast ([[R1844002]]) |

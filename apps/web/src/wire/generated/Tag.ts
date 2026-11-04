@@ -21,5 +21,8 @@
  * tag no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources:
  * Reknite, Korrelite, Gellium, Axnit, Narcor and Red Narcor, tokens all) and Faction (the five
  * Faction cards, #95 and #159 to #162), which the server admits from migration 0070.
+ * Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
+ * Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
+ * Ranged through the layers (R3038000), which the server admits from migration 0080.
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Token";

@@ -232,11 +232,25 @@ fn r2566000_a_starship_piece_with_no_death_is_priced_by_the_copy_it_fuses() {
     );
     assert!(is_starship_piece(&state, piece));
     let body = unit_worth(&state, piece, &AI_EVAL, Prices::NONE);
+    // R3038000: the Starship its copy fuses into has the Starship tag's Flying and Ranged besides the
+    // copy's 4/8, so it wakes as the piece with those two.
+    let mut flier = state.clone();
+    find_instance_mut(&mut flier, &piece.id)
+        .expect("the piece")
+        .granted_keywords
+        .extend([Keyword::Flying, Keyword::Ranged]);
+    let ship = unit_worth(
+        &flier,
+        find_instance(&flier, &piece.id).expect("the piece"),
+        &AI_EVAL,
+        Prices::NONE,
+    );
+    assert!(ship > body, "{ship} against {body}");
     let (prices, used) = priced(&state);
     let price = price_of(&prices, AFTER_BURNER);
     assert!(
-        (price - AI_EVAL.slumber_waiting_share * body).abs() < 1e-9,
-        "its death leaves a Dormant Starship holding its copy, at the slumber share: {price} against {body}"
+        (price - AI_EVAL.slumber_waiting_share * ship).abs() < 1e-9,
+        "its death leaves a Dormant Starship holding its copy, at the slumber share: {price} against {ship}"
     );
     assert!(price > 0.0, "{price}");
     assert!(

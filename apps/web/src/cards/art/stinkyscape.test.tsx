@@ -96,9 +96,16 @@ describe("R2170000: the Stinkyscape set draws its own families", () => {
   });
 
   it("R2170000 every Starship Piece and Starship draws as part of the fleet", () => {
-    const ships = SET.filter((card) => keywordsOf(card).some((kind) => kind === "Starship Piece" || kind === "Starship"));
+    // R3038000: a Starship is the card that carries the Starship tag since #3038, the Dormant Starship.
+    const ships = SET.filter((card) => keywordsOf(card).includes("Starship Piece") || card.tags.includes("Starship"));
     for (const card of ships) expect(FLEET_FAMILIES, card.name).toContain(subjectOf(card).family);
+    expect(ships.map((card) => card.name)).toContain("Dormant Starship");
     expect(subjectOf(byName("Dormant Starship"))).toMatchObject({ family: "fleet", kind: "dormant" });
+    // R3038002: the Drone Battleship's layers, no Starships since #3038, still draw as the fleet's.
+    for (const name of ["Drone Battleship (Shield Layer)", "Drone Battleship (Propagation Layer)", "Drone Battleship (Meltdown Layer)"]) {
+      expect(ships.map((card) => card.name), name).not.toContain(name);
+      expect(FLEET_FAMILIES, name).toContain(subjectOf(byName(name)).family);
+    }
     for (const name of ["Paragon-X", "Falcon", "Shield Amplifier", "Poison Capsule", "After Burner", "Magic Module"]) {
       expect(subjectOf(byName(name)).family, name).toBe("fleet");
     }

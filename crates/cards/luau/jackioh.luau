@@ -2535,7 +2535,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,

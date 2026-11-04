@@ -25733,7 +25733,9 @@
     "name": "Dormant Starship",
     "set": "Stinkyscape",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Starship"
+    ],
     "rarity": "Legendary",
     "flavor": "Tech",
     "token": false,
@@ -25743,14 +25745,28 @@
     "base": {
       "attack": 0,
       "health": 0,
-      "keywords": [],
-      "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
+      "keywords": [
+        {
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
+        }
+      ],
+      "text": "Flying, Ranged\nDormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (4) to launch this."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
-      "keywords": [],
-      "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
+      "keywords": [
+        {
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
+        }
+      ],
+      "text": "Flying, Ranged\nDormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (4) to launch this."
     }
   },
   "stinkyscape-t-drone-interceptor": {
@@ -25877,7 +25893,10 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
@@ -25890,14 +25909,17 @@
           "n": 4
         }
       ],
-      "text": "Starship, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Flying, Ranged, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 24,
       "health": 24,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
@@ -25910,7 +25932,7 @@
           "n": 8
         }
       ],
-      "text": "Starship, Can't attack, Taunt, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Flying, Ranged, Can't attack, Taunt, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "stinkyscape-t-propagation-layer": {
@@ -25937,26 +25959,32 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
         }
       ],
-      "text": "Starship, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone Corvette."
+      "text": "Flying, Ranged, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone Corvette."
     },
     "radiant": {
       "attack": 24,
       "health": 24,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Can't attack"
         }
       ],
-      "text": "Starship, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a Radiant Drone Corvette."
+      "text": "Flying, Ranged, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a Radiant Drone Corvette."
     }
   },
   "stinkyscape-t-meltdown-layer": {
@@ -25989,7 +26017,10 @@
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Charge"
@@ -26005,14 +26036,17 @@
           "n": 3
         }
       ],
-      "text": "Starship, Charge, Windfury, First Strike, Brittle 3\nEnd of turn: This takes {selfDamage} damage."
+      "text": "Flying, Ranged, Charge, Windfury, First Strike, Brittle 3\nEnd of turn: This takes {selfDamage} damage."
     },
     "radiant": {
       "attack": 24,
       "health": 24,
       "keywords": [
         {
-          "kind": "Starship"
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
         },
         {
           "kind": "Charge"
@@ -26028,7 +26062,7 @@
           "n": 6
         }
       ],
-      "text": "Starship, Charge, Windfury, First Strike, Brittle 6\nEnd of turn: This takes {selfDamage} damage."
+      "text": "Flying, Ranged, Charge, Windfury, First Strike, Brittle 6\nEnd of turn: This takes {selfDamage} damage."
     }
   },
   "stinkyscape-t-reknite": {

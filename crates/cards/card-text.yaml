@@ -6257,8 +6257,8 @@ stinkyscape-t-dormant-starship: # Dormant Starship
     death: The ship is lost.
   zh:
     name: 休眠星舰
-    base: "休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(3)发射此单位。"
-    radiant: "休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(3)发射此单位。"
+    base: "飞行，远程\n休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(4)发射此单位。"
+    radiant: "飞行，远程\n休眠，直到其被发射。你死亡的星舰部件会融合进此单位。\n激活：支付(4)发射此单位。"
 stinkyscape-t-drone-interceptor: # Drone Interceptor
   flavour: Small, fast, and programmed to find out what it's good at.
   voice:
@@ -6287,8 +6287,8 @@ stinkyscape-t-shield-layer: # Drone Battleship (Shield Layer)
     death: Shields down. Next layer exposed.
   zh:
     name: 无人战列舰（护盾层）
-    base: "星舰，无法攻击，嘲讽，护甲4\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
-    radiant: "星舰，无法攻击，嘲讽，护甲8\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
+    base: "飞行，远程，无法攻击，嘲讽，护甲4\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
+    radiant: "飞行，远程，无法攻击，嘲讽，护甲8\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
 stinkyscape-t-propagation-layer: # Drone Battleship (Propagation Layer)
   flavour: A shipyard inside a warship, printing escorts on demand.
   voice:
@@ -6297,8 +6297,8 @@ stinkyscape-t-propagation-layer: # Drone Battleship (Propagation Layer)
     death: Bay destroyed. Core exposed.
   zh:
     name: 无人战列舰（繁衍层）
-    base: "星舰，无法攻击\n激活2：召唤一个无人截击机。\n激活：召唤一个无人护卫舰。"
-    radiant: "星舰，无法攻击\n激活2：召唤一个光辉无人截击机。\n激活：召唤一个光辉无人护卫舰。"
+    base: "飞行，远程，无法攻击\n激活2：召唤一个无人截击机。\n激活：召唤一个无人护卫舰。"
+    radiant: "飞行，远程，无法攻击\n激活2：召唤一个光辉无人截击机。\n激活：召唤一个光辉无人护卫舰。"
 stinkyscape-t-meltdown-layer: # Drone Battleship (Meltdown Layer)
   flavour: The reactor at the heart of the battleship is not stable. It was never meant to be.
   voice:
@@ -6307,8 +6307,8 @@ stinkyscape-t-meltdown-layer: # Drone Battleship (Meltdown Layer)
     death: Meltdown complete.
   zh:
     name: 无人战列舰（熔毁层）
-    base: "星舰，冲锋，风怒，先攻，易碎3\n回合结束时：此单位受到{selfDamage}点伤害。"
-    radiant: "星舰，冲锋，风怒，先攻，易碎6\n回合结束时：此单位受到{selfDamage}点伤害。"
+    base: "飞行，远程，冲锋，风怒，先攻，易碎3\n回合结束时：此单位受到{selfDamage}点伤害。"
+    radiant: "飞行，远程，冲锋，风怒，先攻，易碎6\n回合结束时：此单位受到{selfDamage}点伤害。"
 stinkyscape-t-reknite: # Reknite
   flavour: A dull gray ore that hardens into plating at the first sign of trouble.
   voice:

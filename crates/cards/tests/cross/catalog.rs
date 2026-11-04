@@ -6686,7 +6686,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Dormant Starship",
         c(3),
         T::Unit,
-        &[],
+        &[G::Starship],
         R::Legendary,
         st(0, 0),
         st(0, 0),
@@ -7564,6 +7564,7 @@ const ALLOWED_TAGS: &[&str] = &[
     "Legacy",
     "Resource",
     "Faction",
+    "Starship",
     "Token",
 ];
 
@@ -8225,6 +8226,8 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         for index in carrying(Tag::Faction) {
             assert!(row_at(index).name.starts_with("Faction: "), "{index}");
         }
+        // And #3038's Starship (R3038000): the Dormant Starship alone, never a Drone Battleship.
+        assert_eq!(carrying(Tag::Starship), ["T-dormant-starship"]);
     }
 
     #[test]

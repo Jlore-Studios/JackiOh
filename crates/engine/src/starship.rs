@@ -36,9 +36,7 @@ use crate::state::{
     find_instance_mut, new_instance,
 };
 use crate::subsystems::fuse::{FuseArgs, fuse};
-use crate::wire::{
-    GameEvent, GameEventType, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName, has_keyword,
-};
+use crate::wire::{GameEvent, GameEventType, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName, has_keyword};
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, is_open, place_on_field, place_standing_on_field, takes_move,
 };

@@ -1,9 +1,11 @@
 //! S T-shield-layer Drone Battleship (Shield Layer) (SPEC §8.10 row T-shield-layer): (5) Unit, Token
 //! (printed Mythic), 12/12 with Armor 4 → 24/24 with Armor 8, a token of the Stinkyscape set.
-//!   Both faces: "Starship, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units would
-//!   take is redirected to this." (Armor 8 on the Radiant face)
-//! Engine: the top of the Drone Battleship's pile (S #36, R1842000). Starship, Can't attack, Taunt and Armor
-//!   are catalog keywords. Unan's lethal guard (R1204): `ReplacementDef { on: LethalHit, instead: redirect
+//!   Both faces: "Flying, Ranged, Can't attack, Taunt, Armor 4\nLethal damage your hero or your other Units
+//!   would take is redirected to this." (Armor 8 on the Radiant face)
+//! Engine: the top of the Drone Battleship's pile (S #36, R1842000). Flying, Ranged, Can't attack, Taunt and
+//!   Armor are catalog keywords; flying, in Attack Position its Taunt binds only Flying and Ranged attackers
+//!   (§6.1 Flying). It is no Starship (R3038002): no Starship tag, so it is never launched and no piece
+//!   fuses into it. Unan's lethal guard (R1204): `ReplacementDef { on: LethalHit, instead: redirect
 //!   SelfCard }`, so a lethal hit on its controller's hero or another of their Units is dealt to it
 //!   instead, through its own Armor, while it tops its pile (R1842001); a buried card acts for nothing
 //!   (R13), and when it dies the Propagation Layer beneath resumes. A unit token: it ceases to exist off the
@@ -42,6 +44,7 @@ mod tests {
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const SHIELD: &str = "stinkyscape-t-shield-layer";
     const PROPAGATION: &str = "stinkyscape-t-propagation-layer";
@@ -139,14 +142,22 @@ mod tests {
     }
 
     #[test]
-    fn taunt_enemies_must_attack_it_first() {
-        let mut s = guarded(false, json!({}), json!({ "field": [STRIKER] }));
-        s.expect_refused(|s| s.attack(STRIKER, "hero"));
+    fn taunt_flying_and_ranged_enemies_must_attack_it_first() {
+        // R3038002: it has Flying, so in Attack Position its Taunt binds only Flying and Ranged
+        // attackers (§6.1 Flying); one with neither attacks around it and never at it.
+        let mut s = guarded(false, json!({}), json!({ "field": [STRIKER, STRIKER] }));
+        let (flier, walker) = (s.unit_at(P2, 1).id, s.unit_at(P2, 2).id);
+        crate::give_flying(&mut s, &flier);
+        s.expect_refused(|s| s.attack(flier.as_str(), "hero"));
         let ally = s.card(ALLY).id.clone();
-        s.expect_refused(|s| s.attack(STRIKER, ally.as_str()));
+        s.expect_refused(|s| s.attack(flier.as_str(), ally.as_str()));
         let shield = top(&s).id;
-        s.attack(STRIKER, shield.as_str());
+        s.expect_refused(|s| s.attack(walker.as_str(), shield.as_str()));
+        s.attack(flier.as_str(), shield.as_str());
         assert_eq!(s.stats(shield.as_str()).health, 12 - (9 - 4), "9 through Armor 4");
+        let health = s.state().players.p1.hero.health;
+        s.attack(walker.as_str(), "hero");
+        s.expect_health(P1, health - 9);
     }
 
     #[test]
@@ -170,5 +181,54 @@ mod tests {
         burn(&mut s, at(&ally));
         assert_eq!(s.card(ally.as_str()).damage, 0);
         assert_eq!(s.stats(shield.as_str()).health, 24 - (HIT - 8), "9 through Armor 8");
+    }
+
+    /// R3038002: no Starship. It prints Flying and Ranged where it printed the Starship keyword and
+    /// carries no Starship tag, so it offers no launch and takes no piece: a dying piece summons its
+    /// controller a Dormant Starship instead.
+    #[test]
+    fn r3038002_it_has_flying_and_ranged_is_never_launched_and_takes_no_piece() {
+        use jackioh_engine::prelude::{STARSHIP_LAUNCH_ABILITY, is_launched_starship, tags_of};
+        const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
+        for radiant in [false, true] {
+            let (mut s, ship) = crate::built_starship(
+                "r3038002-shield",
+                json!([{ "def": AP_ROUNDS, "lane": 2 }]),
+                json!({ "field": [{ "def": SHIELD, "lane": 1, "radiant": radiant }] }),
+                json!({}),
+            );
+            let layer = s.unit_at(P1, 1);
+            assert_eq!(layer.def_id, SHIELD);
+            let stats = s.stats(layer.id.as_str());
+            let kinds: Vec<KeywordKind> = stats.keywords.iter().map(Keyword::kind).collect();
+            assert!(kinds.contains(&KeywordKind::Flying), "{kinds:?}");
+            assert!(kinds.contains(&KeywordKind::Ranged), "{kinds:?}");
+            assert!(!kinds.contains(&KeywordKind::Starship), "{kinds:?}");
+            assert!(!tags_of(s.state(), &layer).contains(&Tag::Starship));
+            // The dead piece went into a Dormant Starship of its own, not into this.
+            assert_ne!(ship, layer.id);
+            assert!(is_dormant_starship(s.card(ship.as_str())));
+            let after = s.card(layer.id.as_str()).clone();
+            assert_eq!(after.starship, None, "no piece is fused into it");
+            assert_eq!(after.def_id, SHIELD);
+            let printed = if radiant { (24, 24) } else { (12, 12) };
+            assert_eq!((stats.attack, stats.health), printed, "radiant {radiant}");
+            // And no launch: neither offered nor taken.
+            assert!(!is_dormant_starship(&after) && !is_launched_starship(&after));
+            let launch = ActionBody::Activate {
+                instance_id: layer.id.clone(),
+                ability: Some(STARSHIP_LAUNCH_ABILITY.to_string()),
+                targets: None,
+                modes: None,
+                tributes: None,
+            };
+            assert!(!legal_actions(s.state(), P1).contains(&launch));
+            s.expect_refused(|s| {
+                s.activate(
+                    layer.id.as_str(),
+                    json!({ "ability": STARSHIP_LAUNCH_ABILITY }),
+                )
+            });
+        }
     }
 }

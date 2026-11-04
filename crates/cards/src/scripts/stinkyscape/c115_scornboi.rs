@@ -5,12 +5,14 @@
 //!   Radiant: "Tribute 3 / Aura: Every enemy Unit that is neither Human, a Starship Piece nor a
 //!            Starship is exiled."
 //! Engine: Tribute 3 is its play's cost, §6.3's `staticFlags.tribute` (R101), on both faces. The aura is
-//! an exile aura (R1850002): the Units on both sides, `notTags` Human and `notKeywords` Starship Piece
-//! and Starship, read through the layers (§10.4), so a granted tag or keyword spares a Unit; exiled at
+//! an exile aura (R1850002): the Units on both sides, `notTags` Human and Starship and `notKeywords`
+//! Starship Piece, read through the layers (§10.4), so a granted tag or keyword spares a Unit; exiled at
 //! each state check, never this card, a face-down or a Dormant one (a Dormant Starship is no Unit until
 //! it launches, R1839000). Units only (ST9). The Radiant face reaches the enemy side only. Since #2521
 //! fifteen Units are no Starship Pieces (S #68 Stratos, the Paragons, the Badgers, the Weapon hosts …),
-//! so the aura exiles them as any other Unit with neither.
+//! so the aura exiles them as any other Unit with neither. Since #3038 a Starship is the one that
+//! carries the Starship tag (R3038000), so the Drone Battleships, which printed the Starship keyword and
+//! are no Starships, are exiled too (R3038002).
 
 use jackioh_engine::prelude::*;
 
@@ -26,9 +28,9 @@ fn scornboi(side: &str) -> Script {
             ..StaticFlags::default()
         }),
         exile_auras: vec![ExileAura {
-            scope: json_as(json!({ "side": side, "notTags": ["Human"] })),
+            scope: json_as(json!({ "side": side, "notTags": ["Human", "Starship"] })),
             cost: None,
-            not_keywords: vec![KeywordKind::StarshipPiece, KeywordKind::Starship],
+            not_keywords: vec![KeywordKind::StarshipPiece],
         }],
         ..Script::default()
     }
@@ -38,6 +40,31 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: scornboi("any"),
         radiant: scornboi("enemy"),
+    }
+}
+
+/// R767000: through v0.5.11o "a Starship" was the Starship keyword (R3038001), which the Drone
+/// Battleships printed, so the aura spared them; `KEPT_SCRIPTS` folds those replays under it.
+fn scornboi_v0_5_11o(side: &str) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        exile_auras: vec![ExileAura {
+            scope: json_as(json!({ "side": side, "notTags": ["Human"] })),
+            cost: None,
+            not_keywords: vec![KeywordKind::StarshipPiece, KeywordKind::Starship],
+        }],
+        ..Script::default()
+    }
+}
+
+/// R767000: the script through v0.5.11o (`scornboi_v0_5_11o`).
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: scornboi_v0_5_11o("any"),
+        radiant: scornboi_v0_5_11o("enemy"),
     }
 }
 
@@ -56,6 +83,7 @@ mod tests {
     const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged: no piece since #2521.
     const PARAGON_MK1: &str = "stinkyscape-072"; // (3) 6/1 Charge, Flying, Ranged: no piece since #2521.
     const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit.
+    const MELTDOWN: &str = "stinkyscape-t-meltdown-layer"; // A Drone Battleship's layer: no Starship.
     const FILLER: &str = "core-005";
 
     fn board(radiant: bool) -> Scenario {
@@ -144,6 +172,49 @@ mod tests {
             "only the untagged Menace"
         );
         assert_eq!(s.unit_at(P2, 2).id, spared, "the Menace given Human stays");
+    }
+
+    #[test]
+    fn r3038000_the_starship_tag_spares_a_unit() {
+        let mut s = board(false);
+        let spared = s.unit_at(P2, 2).id;
+        s.card_mut(spared.as_str()).granted_tags = Some(vec![Tag::Starship]);
+        play_scornboi(&mut s);
+        assert_eq!(
+            exiled(&s),
+            vec![(P1, MENACE.to_string())],
+            "only the untagged Menace"
+        );
+        assert_eq!(s.unit_at(P2, 2).id, spared, "the Menace given Starship stays");
+    }
+
+    #[test]
+    fn r3038002_a_drone_battleship_no_starship_is_exiled() {
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [ID, FILLER],
+                "field": [VANILLA, VANILLA, VANILLA],
+                "library": filler(4),
+                "mana": 10,
+            },
+            "p2": { "hand": [FILLER], "field": [MELTDOWN, CHASSIS], "library": filler(4) },
+        }));
+        let layer = s.unit_at(P2, 1).id;
+        play_scornboi(&mut s);
+        assert!(s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::Exiled { instance_id, .. } if *instance_id == layer
+        )));
+        assert!(s.unit(P2, 1).is_none(), "the Meltdown Layer is gone");
+        assert_eq!(s.unit_at(P2, 2).def_id, CHASSIS, "a Starship Piece stays");
+        // R767000: the script through v0.5.11o spared it by the Starship keyword it printed then.
+        let old = super::script_v0_5_11o();
+        for face in [&old.base, &old.radiant] {
+            assert_eq!(
+                face.exile_auras[0].not_keywords,
+                vec![KeywordKind::StarshipPiece, KeywordKind::Starship]
+            );
+        }
     }
 
     #[test]

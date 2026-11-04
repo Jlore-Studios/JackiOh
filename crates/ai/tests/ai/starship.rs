@@ -23,12 +23,22 @@ fn dormant_starship_def() -> CardDef {
         "name": "Dormant Starship (AI test)",
         "set": "Core",
         "type": "Unit",
-        "tags": [],
+        "tags": ["Starship"],
         "rarity": "Legendary",
         "token": false,
         "cost": 3,
-        "base": { "attack": 0, "health": 0, "keywords": [], "text": "Dormant. Activate: pay (3) to launch." },
-        "radiant": { "attack": 0, "health": 0, "keywords": [], "text": "Dormant. Activate: pay (3) to launch." },
+        "base": {
+            "attack": 0,
+            "health": 0,
+            "keywords": [{ "kind": "Flying" }, { "kind": "Ranged" }],
+            "text": "Flying, Ranged\nDormant. Activate: pay (4) to launch.",
+        },
+        "radiant": {
+            "attack": 0,
+            "health": 0,
+            "keywords": [{ "kind": "Flying" }, { "kind": "Ranged" }],
+            "text": "Flying, Ranged\nDormant. Activate: pay (4) to launch.",
+        },
     }))
 }
 
@@ -174,16 +184,21 @@ fn launch(ship: &str) -> ActionBody {
 fn r1852000_the_dense_features_keep_their_layout_with_a_starship_on_the_board() {
     let (state, ship) = built();
     // The Dormant Starship is no Unit (`active_units_of`), and the launched one carries the Starship
-    // keyword, which no dense feature counts: the layout is the compiled network's either way.
+    // tag (R3038000), which no dense feature counts, and so Flying and Ranged, which the keyword
+    // features count as any Unit's: the layout is the compiled network's either way. No card takes
+    // the Starship keyword any more (R3038001).
     assert!(active_units_of(&state, AI).iter().all(|unit| unit.id != ship));
     assert_eq!(features_of(&state, AI).dense.len(), dense_len());
     let paused = apply(&state, launch(&ship), AI, "launch");
-    assert!(
-        unit_view(&paused, find_instance(&paused, &ship).expect("the Starship"))
-            .keywords
-            .iter()
-            .any(|keyword| keyword.kind() == KeywordKind::Starship)
-    );
+    let launched = find_instance(&paused, &ship).expect("the Starship");
+    assert!(tags_of(&paused, launched).contains(&Tag::Starship));
+    let kinds: Vec<KeywordKind> = unit_view(&paused, launched)
+        .keywords
+        .iter()
+        .map(Keyword::kind)
+        .collect();
+    assert!(kinds.contains(&KeywordKind::Flying) && kinds.contains(&KeywordKind::Ranged));
+    assert!(!kinds.contains(&KeywordKind::Starship));
     assert_eq!(features_of(&paused, AI).dense.len(), dense_len());
     assert!(
         !dense_names().iter().any(|name| name.contains("Starship")),

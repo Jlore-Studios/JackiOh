@@ -1135,6 +1135,9 @@ most 40 characters, none NULL; `card_cosmetic_picks_full_art_id_check` widens ag
 owns the version and augments it combines where the server reads it (R2725002), never as a row.
 `tests/sql/45_card_versions.sql` checks the column, the ids kept, the shapes refused and the re-apply.
 
+Migration 0080 widens the `cards` tag check once more, as 0070 did, with #3038's Starship tag (R3038000),
+so `seed-catalog` can write the Dormant Starship as the catalog now tags it.
+
 ## Tests
 
 ```
