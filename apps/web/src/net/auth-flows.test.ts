@@ -19,6 +19,7 @@ import {
   emailLinkUrl,
   exchangeAuthCode,
   isEmailLinkToken,
+  listIdentities,
   listTotpFactors,
   refreshSession,
   requestEmailSignIn,
@@ -172,6 +173,8 @@ const CALL: Record<AuthEndpoint, () => Promise<unknown>> = {
   verifyOtp: () => verifyEmailCode(EMAIL, "123456"),
   mfaVerify: () => verifySecondFactor({ accessToken: ACCESS }, "factor-1", "123456"),
   mfa: () => listTotpFactors(ACCESS),
+  // R3025000: the account's ways in.
+  identities: () => listIdentities(ACCESS),
 };
 
 beforeEach(() => {
