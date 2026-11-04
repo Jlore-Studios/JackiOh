@@ -30595,6 +30595,12 @@
         "number": 2971,
         "title": "Patch: a rematch offer can't seat two players once one has blocked the other",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-04T23:00:02Z",
+        "number": 3066,
+        "title": "Patch: Embers buy a starting level for an unlocked dungeon artifact",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-04T22:42:40Z",
