@@ -14598,6 +14598,8 @@
     "3032": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "4678ff9f5304ddbf257be99a7a92e30056790363",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T10:29:49Z",
