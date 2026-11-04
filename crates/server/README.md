@@ -462,7 +462,6 @@ target/release/jackioh-server stats-export --claims --out=claims.jsonl      # ho
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
 target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
 target/release/jackioh-server stats-cards --window > window.json            # every card over its own window, off the totals (R1367000)
-cargo jackioh winrates --refresh window.json                                # CN Tech's and NA Tech's table, once per patch (R1368000)
 ```
 
 Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder bots' decks, reads the
@@ -1134,6 +1133,14 @@ most 40 characters, none NULL; `card_cosmetic_picks_full_art_id_check` widens ag
 `card_cosmetic_picks_some_check` counts an augments list as a pick. Nothing is granted: a retired full art
 owns the version and augments it combines where the server reads it (R2725002), never as a row.
 `tests/sql/45_card_versions.sql` checks the column, the ids kept, the shapes refused and the re-apply.
+
+Migration 0080 adds `win_rates` to `matches` (R3049000) and rewrites no row: the win-rate snapshot a match
+started with, as the game kept it (`{ patch, source, cards: [{ id, wins, games }] }`), which `registry::start`
+takes off the cached card stats (`api::stats::win_rate_snapshot`) and every fold of the match is handed (a
+rebuild, the reaper, a replay, telemetry, a game record's summary). NULL on a match handed none and on every
+match from before it, which folds against its version's frozen table (R1266000). `matches_win_rates_check`
+holds it to a jsonb object. `tests/sql/46_match_win_rates.sql` checks the column, the shapes refused and the
+re-apply.
 
 ## Tests
 

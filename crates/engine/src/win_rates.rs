@@ -79,10 +79,7 @@ pub fn wilson_bounds(wins: i32, games: i32) -> Option<(u128, u128)> {
     if games <= 0 || wins < 0 || wins > games {
         return None;
     }
-    let (w, n) = (
-        u128::from(wins.unsigned_abs()),
-        u128::from(games.unsigned_abs()),
-    );
+    let (w, n) = (u128::from(wins.unsigned_abs()), u128::from(games.unsigned_abs()));
     let zn = WIN_RATE_BOUND_Z_NUM * WIN_RATE_BOUND_Z_NUM;
     let zd = WIN_RATE_BOUND_Z_DEN * WIN_RATE_BOUND_Z_DEN;
     let s = WIN_RATE_BOUND_SCALE;
@@ -139,11 +136,7 @@ pub fn win_rate_trailer(state: &GameState, exclude_def_ids: &[&str]) -> Option<S
 pub fn kept_for_game(table: &WinRateTable) -> WinRateTable {
     let mut cards: Vec<WinRateRow> = Vec::new();
     for end in [RateEnd::Highest, RateEnd::Lowest] {
-        let mut rows: Vec<Ranked<'_>> = table
-            .cards
-            .iter()
-            .filter_map(|row| eligible(row, &[]))
-            .collect();
+        let mut rows: Vec<Ranked<'_>> = table.cards.iter().filter_map(|row| eligible(row, &[])).collect();
         rows.sort_by(|a, b| rank(a, b, end));
         cards.extend(
             rows.into_iter()

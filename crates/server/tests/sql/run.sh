@@ -156,7 +156,7 @@ for f in 01_schema_invariants 02_rls_as_client 03_match_lifecycle 04_decks_and_s
          29_going_live 30_seat_epoch 31_deck_size 32_portrait_cosmetics 33_game_record_batches \
          34_cosmetic_loadouts 35_game_totals 36_deck_versions 37_idempotency_keys 38_v0_5_retcon \
          39_practice_settles 40_full_art_tiers 41_jlorious_card_back 42_animated_art 43_news_claims \
-         44_practice_claim_counts 45_card_versions; do
+         44_practice_claim_counts 45_card_versions 46_match_win_rates; do
   echo "--- $f ---"
   status=0
   out=$(docker exec "$CONTAINER" psql -U postgres -q -v ON_ERROR_STOP=1 \

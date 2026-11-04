@@ -221,7 +221,10 @@ mod r3049000_the_games_snapshot {
         let kept = kept_for_game(&full);
         assert!(kept.cards.len() > WIN_RATE_SNAPSHOT_ENDS);
         assert!(kept.cards.len() <= 2 * WIN_RATE_SNAPSHOT_ENDS);
-        assert!(kept.cards.windows(2).all(|pair| pair[0].id < pair[1].id), "sorted by id");
+        assert!(
+            kept.cards.windows(2).all(|pair| pair[0].id < pair[1].id),
+            "sorted by id"
+        );
         assert!(kept.cards.iter().all(|row| full.cards.contains(row)));
         assert_eq!((&kept.patch, kept.source), (&full.patch, full.source));
         assert_eq!(kept_for_game(&kept), kept, "keeping it again keeps it all");
@@ -238,8 +241,16 @@ mod r3049000_the_games_snapshot {
             }
         }
         for skipped in &excludes {
-            assert_eq!(leader_of(&kept, skipped), leader_of(&full, skipped), "{skipped:?}");
-            assert_eq!(trailer_of(&kept, skipped), trailer_of(&full, skipped), "{skipped:?}");
+            assert_eq!(
+                leader_of(&kept, skipped),
+                leader_of(&full, skipped),
+                "{skipped:?}"
+            );
+            assert_eq!(
+                trailer_of(&kept, skipped),
+                trailer_of(&full, skipped),
+                "{skipped:?}"
+            );
         }
         assert!(leader_of(&full, &[]).is_some() && trailer_of(&full, &[]).is_some());
         // The game holds the kept rows alone.
@@ -284,7 +295,11 @@ mod r3049000_the_games_snapshot {
         let bare = fold(&input(None)).state;
         assert_eq!(bare.win_rates, None);
         assert_ne!(hash_state(&bare), hash_state(&folded));
-        assert!(!serde_json::to_string(&bare).expect("serializes").contains("winRates"));
+        assert!(
+            !serde_json::to_string(&bare)
+                .expect("serializes")
+                .contains("winRates")
+        );
         clear_overrides();
     }
 }
@@ -298,8 +313,14 @@ mod r3049001_the_bounds {
         for (wins, games) in [(25, 32), (78, 120), (0, 20), (20, 20), (7, 43)] {
             let (lower, upper) = wilson_bounds(wins, games).expect("bounds");
             let (low, high) = wilson_interval(i64::from(wins), i64::from(games));
-            assert!((lower as f64 - low * scale).abs() <= 1.0, "{wins}/{games}: {lower} {low}");
-            assert!((upper as f64 - high * scale).abs() <= 1.0, "{wins}/{games}: {upper} {high}");
+            assert!(
+                (lower as f64 - low * scale).abs() <= 1.0,
+                "{wins}/{games}: {lower} {low}"
+            );
+            assert!(
+                (upper as f64 - high * scale).abs() <= 1.0,
+                "{wins}/{games}: {upper} {high}"
+            );
         }
         assert_eq!(wilson_bounds(0, 20).map(|(lower, _)| lower), Some(0));
         assert_eq!(

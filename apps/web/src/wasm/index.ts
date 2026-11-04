@@ -23,6 +23,7 @@ import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { CustomCard } from "../wire/generated/CustomCard.ts";
 import type { CustomIssue } from "../wire/generated/CustomIssue.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
+import type { WinRateTable } from "../wire/generated/WinRateTable.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type {
   RunAction,
@@ -212,6 +213,8 @@ export type CreateGameArgs = {
   customCards?: readonly CustomCard[];
   /** R2702000: each seat's deck marks, cards of its list dealt Radiant or Buffed at setup. Omitted, nothing is marked or stored. */
   deckMarks?: Partial<Record<PlayerId, readonly DeckMark[]>>;
+  /** R3049000: the win-rate snapshot CN Tech and NA Tech read (the public `/api/stats/cards` figures); omitted, the game reads none and the cards fall back. */
+  winRates?: WinRateTable;
 };
 
 /** `error` is the engine's refusal, and then `state` is the input. */

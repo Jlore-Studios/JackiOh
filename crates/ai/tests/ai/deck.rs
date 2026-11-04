@@ -1503,7 +1503,11 @@ mod win_rate_strength {
         register_win_rates(table(GAMES));
         for n in 1..=50 {
             let seed = format!("r3049002:none:{n}");
-            assert_eq!(deal(&seed, Some(1.0), None), deal(&seed, Some(0.0), None), "{seed}");
+            assert_eq!(
+                deal(&seed, Some(1.0), None),
+                deal(&seed, Some(0.0), None),
+                "{seed}"
+            );
         }
         clear_overrides();
         let rates = table(GAMES);

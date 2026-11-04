@@ -22,7 +22,7 @@ crates/cards
 ├── chinese.json        Simplified Chinese names and faces (R1303), generated from card-text.yaml
 ├── chinese-terms.json  the frame's Chinese words: types, tags, rarities, keywords, labels (R1303)
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
-│                       win_rates/ (each patch's win-rate table, R1329000), shipped.json, index.json,
+│                       win_rates/ (the frozen win-rate tables, R1329000), shipped.json, index.json,
 │                       and pending/ (one fragment per patch being built)
 ├── build.rs            generates the registry from src/scripts/**, compiles the catalog version in,
 │                       cuts every card's code block from its script (R1183004), and counts every
@@ -317,7 +317,8 @@ Every change to card data is a patch, and every patch is kept.
   `tier` and `plays`, the families that play differently, recorded from R1366000 on);
   `patches/<version>.json` is the whole catalog as that patch left it; `patches/win_rates/<version>.json`
   the win-rate table it shipped with (R1329000; none for a patch before v0.3.15, which shipped with
-  the empty one); `shipped.json` records each patch's commit, snapshot blob and
+  the empty one, and none since #3049, whose games read the server's snapshot of its card stats,
+  R3049000); `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
   snapshots and tables are never amended. `aliases.json` is the version retcon's map (#1371,
   R1371000), each old name to its new one: only a reader of a file without the `versions` marker
@@ -338,21 +339,18 @@ Every change to card data is a patch, and every patch is kept.
   game meets, both as `cargo jackioh classify` finds them, which CI's `rust (classify)` holds them to,
   R1370000). Its `player` note is written into the fragment by hand, since no flag
   sets it, and kept when the command runs again (`docs/issues-and-patches.md`, Patch notes players
-  read). A patch that refreshes `data/win_rates.json` claims it too: the command writes
-  `"winRates": true` when the table's rows differ from the newest shipped version's and no other
-  fragment claims them, and a fragment may claim the table and no card (R1329000).
+  read). No fragment claims a win-rate table: none is compiled in, and M #50 CN Tech and M+ #2 NA
+  Tech read the snapshot of the server's cached card stats each game is handed (R3049000).
   `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
   the card when a change is unclaimed or claimed twice, a claimed card did not change, a `plays` id
   is no shipped card, a fragment claims nothing, or a fragment's title, sources or notes is empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
-  an issue or a § (R724001), and when the win-rate table's rows changed unclaimed, are claimed twice,
-  or are claimed unchanged (R1329000).
+  an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
   appends each fragment in first-parent order with its player note, named from its tier (a major
   `v0.(Z+1).0`, a patch `v0.Z.(X+1)`, a micro the next letter, R1366000) with the tier and `plays`
   recorded, snapshots the patch before it
-  with the cards the fragment claims as the catalog holds them (R1280000), writes its win-rate table
-  (`data/win_rates.json` from the fragment that claims it on, the patch before it's until then,
-  R1329000), records `shipped.json`, deletes
+  with the cards the fragment claims as the catalog holds them (R1280000), writes no win-rate table
+  (R3049000), records `shipped.json`, deletes
   the fragment and bumps the catalog version at every site that carries it
   (`crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.

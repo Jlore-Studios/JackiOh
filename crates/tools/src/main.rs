@@ -32,7 +32,6 @@ mod sweep;
 mod technical;
 mod think;
 mod trace;
-mod winrates;
 
 use std::process::ExitCode;
 
@@ -73,8 +72,6 @@ enum Command {
     Sweep(sweep::Args),
     /// R378's development run for the card statistics (part 22).
     Stats(stats::Args),
-    /// The compiled card win-rate table for M #50 CN Tech (part 17, ME-STATS).
-    Winrates(winrates::Args),
     /// Golden traces: `golden check`, `golden record` (part 23; `bless` retired in #2578).
     Golden(golden::Args),
     /// Two builds compared: `luau diff`, `luau bench`.
@@ -109,7 +106,6 @@ fn main() -> ExitCode {
         Command::Gate(args) => gate::run(args),
         Command::Sweep(args) => sweep::run(args),
         Command::Stats(args) => stats::run(args),
-        Command::Winrates(args) => winrates::run(args),
         Command::Golden(args) => golden::run(args),
         Command::Luau(args) => luau::run(args),
         Command::Spec(args) => spec::run(args),

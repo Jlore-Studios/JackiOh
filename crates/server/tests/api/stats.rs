@@ -2329,7 +2329,10 @@ mod r3049000_the_win_rate_snapshot {
             .find(|row| row.id == "core-001")
             .expect("core-001's row");
         assert_eq!((row.wins, row.games), (15, 30));
-        assert!(snapshot.cards.windows(2).all(|pair| pair[0].id < pair[1].id), "sorted by id");
+        assert!(
+            snapshot.cards.windows(2).all(|pair| pair[0].id < pair[1].id),
+            "sorted by id"
+        );
         assert!(snapshot.cards.iter().all(|row| row.games > 0));
         let (status, _, data) = get_public(&app, "/api/stats/cards").await;
         assert_eq!(status, 200);
@@ -2354,7 +2357,10 @@ mod r3049000_the_win_rate_snapshot {
             .iter()
             .find(|row| row.id == "core-001")
             .expect("core-001's row");
-        assert_eq!(row.games, 50, "the live games and the development games that pad them");
+        assert_eq!(
+            row.games, 50,
+            "the live games and the development games that pad them"
+        );
         assert_eq!(snapshot.source, WinRateSource::Provisional);
         let (_, _, data) = get_public(&app, "/api/stats/cards").await;
         assert_eq!(data["source"], "provisional");

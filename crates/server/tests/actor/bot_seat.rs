@@ -647,7 +647,15 @@ async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
         .collect();
     let folded = fold(
         Pinned::default(),
-        &fold_args(&m.seed, &row.decks, actions, None, None, None, row.win_rates.clone()),
+        &fold_args(
+            &m.seed,
+            &row.decks,
+            actions,
+            None,
+            None,
+            None,
+            row.win_rates.clone(),
+        ),
     );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&revived.engine_state()));

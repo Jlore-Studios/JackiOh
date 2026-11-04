@@ -418,7 +418,9 @@ mod r2386001_a_held_game_ranks_no_legendary_or_mythic_card {
             row("ph-unit-mythic", 0, 40),
         ]));
         let ends = |state: &GameState| {
-            with_pool_hold(state, || (win_rate_leader(state, "none"), win_rate_trailer(state, &["none"])))
+            with_pool_hold(state, || {
+                (win_rate_leader(state, "none"), win_rate_trailer(state, &["none"]))
+            })
         };
         assert_eq!(
             ends(&held),

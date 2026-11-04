@@ -1,0 +1,27 @@
+{
+  "title": "Patch: CN Tech and NA Tech read live win rates from the server's cached card stats, and the compiled table retires",
+  "sources": "#3049",
+  "notes": "M #50 CN Tech and M+ #2 NA Tech read the win rates /stats shows instead of a table compiled into the build: the server takes a snapshot of its cached card stats as a match starts and hands it to the game, which keeps the rows each end can name, and the match row keeps the same, so every fold picks the same cards (R3049000). The leader is the card with the highest lower 95% Wilson bound and the trailer the lowest upper bound, in integers, so a few lucky games no longer lead (R3049001). A game handed none (practice, the hotseat, the Sandbox, the run, Duos) reads its version's frozen table, else none, and the cards fall back to Lunar Eclipse and Infinite Reserves; older games fold against the table their version shipped with. The ladder bots' decks lean on the same snapshot (R3049002). The compiled table, cargo jackioh winrates and the fragment's table claim retire. Plays: CN Tech and NA Tech, and the cards they add or fuse in place of the old table's ends (Lunar Eclipse, Infinite Reserves and the Rush Token in place of Palantir and Bear Honeypot), as classify finds them (R1370000).",
+  "player": {
+    "title": "CN Tech and NA Tech read live win rates",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "CN Tech and NA Tech now read the win rates the Statistics page shows, taken as each online match starts, not a fixed table that never changed.",
+      "The highest win rate card is the one whose rate is surest to be high, so a card that won a few lucky games no longer leads; the lowest is read the same way.",
+      "Offline games (practice, hotseat, the Sandbox and the dungeon run) have no live figures, so CN Tech adds Lunar Eclipse and NA Tech fuses Infinite Reserves and Lunar Eclipse there."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classic-004",
+    "core-035",
+    "core-060",
+    "core-075",
+    "core-t-rush",
+    "meditative-050",
+    "meditativeplus-002"
+  ]
+}

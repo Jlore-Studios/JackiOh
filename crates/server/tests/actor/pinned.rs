@@ -313,7 +313,11 @@ async fn r1266000_r3049000_a_rebuilt_match_folds_against_the_snapshot_on_its_row
     let live = hash_state(&actor.engine_state());
     let (row, log) = match_log(&app).await;
     assert!(row.win_rates.is_some(), "the row keeps the snapshot");
-    assert_eq!(row.win_rates, actor.engine_state().win_rates, "as the game kept it");
+    assert_eq!(
+        row.win_rates,
+        actor.engine_state().win_rates,
+        "as the game kept it"
+    );
 
     app.matches.stop(MATCH_ID).await;
     let rebuilt = app

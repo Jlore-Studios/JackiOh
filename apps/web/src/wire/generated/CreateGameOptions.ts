@@ -6,6 +6,7 @@ import type { Handicap } from "./Handicap";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { PerPlayerOpt } from "./PerPlayerOpt";
 import type { PlayerId } from "./PlayerId";
+import type { WinRateTable } from "./WinRateTable";
 
 /**
  * `createGame`'s options.
@@ -56,4 +57,12 @@ customCards?: Array<CustomCard>,
  * not an action: a replay passes the same marks (`replay::ReplayInput.deckMarks`). Omitted,
  * nothing is marked or stored.
  */
-deckMarks?: PerPlayerOpt<Array<DeckMark>>, };
+deckMarks?: PerPlayerOpt<Array<DeckMark>>, 
+/**
+ * R3049000: the win-rate snapshot M #50 CN Tech and M+ #2 NA Tech read, the server's cached card
+ * stats as a match starts (`win_rates::win_rates_from_report`). Setup, not an action: the game
+ * keeps what a pick can name (`GameState.winRates`) and a replay passes the same snapshot
+ * (`replay::ReplayInput.winRates`). Omitted (practice, hotseat, the Sandbox, the run, the tools),
+ * the game reads its shipped catalog's frozen table, else none.
+ */
+winRates?: WinRateTable, };

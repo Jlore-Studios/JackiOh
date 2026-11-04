@@ -2800,9 +2800,10 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
 
     // R3049000: the rows of the snapshot a pick can name, under the catalog and the hold the game
     // plays under, frozen with the game.
-    let kept = options.win_rates.as_ref().map(|table| {
-        crate::catalog::with_pool_hold(&state, || crate::win_rates::kept_for_game(table))
-    });
+    let kept = options
+        .win_rates
+        .as_ref()
+        .map(|table| crate::catalog::with_pool_hold(&state, || crate::win_rates::kept_for_game(table)));
     state.win_rates = kept;
 
     // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
