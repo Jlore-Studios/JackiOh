@@ -349,6 +349,23 @@
   color: var(--tavern-text-dim, #b8a98a);
 }
 
+/* R2882000: Play today's deal, beside Start, with its note under it. */
+.practice-setup__daily {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.practice .practice-daily {
+  min-height: 56px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--bg-raised);
+  font-size: var(--type-lg);
+  font-weight: 650;
+}
+
 .practice-setup__deck {
   display: flex;
   flex: 1 1 300px;

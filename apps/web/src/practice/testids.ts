@@ -30,6 +30,8 @@ export const practiceTestid = {
   /** #921: on the setup, after `?try=` named no custom card of the account's; role="status". */
   tryMissing: "practice-try-missing",
   start: "practice-start",
+  /** R2882000: on the setup, beside Start: Play today's deal, the UTC day's random deal. */
+  dailyDeal: "practice-daily-deal",
   loading: "practice-loading",
   error: "practice-error",
   /** Carries data-difficulty, data-human-seat, data-ai-seat and data-thinking="true|false". */
