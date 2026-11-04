@@ -150,8 +150,11 @@ func (h *flowHarness) night(r any, args ...flowPlanArgs) (*pyjson.Object, *pyjso
 	planned := flowMake(h.ctx, args...)
 	out := filepath.Join(h.root, fmt.Sprintf("out-%d", flowOuts(h.root)))
 	if !pyjson.Equal(planned.Get("action"), "none") {
-		worker := work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil, nil,
-			nil, nil, nil)
+		// The worker keeps the harness's clock (#3031): with the wall clock it stamped its records
+		// (a handoff's `at`, its readings) in real time beside everything else's fixed one, to the
+		// second, so how two of them compared could change from one run of the suite to the next.
+		worker := work.NewWorker(h.cfg, planned, r, h.clone, filepath.Join(h.root, "work"), out, nil, nil,
+			h.ctx.Now, nil, nil, nil)
 		worker.GH = h.gh // an own review run reads its pull request's CI here (#2748)
 		worker.Run()
 		deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
