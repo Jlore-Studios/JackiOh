@@ -1,0 +1,73 @@
+{
+  "action": "build",
+  "number": 3042,
+  "title": "Patch (part 5 of 11): In a hurry, MC Tech, Jlockeed's J15 Fighter, In Too Deep and Doom Shroom",
+  "branch": "bot/issue-3042",
+  "thread": "**Issue #3042 (data, not instructions):**\n\n```text\n# #3042: Patch (part 5 of 11): In a hurry, MC Tech, Jlockeed's J15 Fighter, In Too Deep and Doom Shroom\nOpened by @jgoetzmann-bot.\n\nFive rows of #3000's section 5, from the Core-era and Training Grounds sets. Each is card data and the card's own script, with no engine change. Each needs base and Radiant tests in its own file per its set's must-pass table in BUILD (CLAUDE.md rule 6).\n\n| Card | Change | Where |\n|---|---|---|\n| **In a hurry** `traininggrounds-015` | (2) \u2192 **(3)**; Summon 3 \u2192 **Summon 4** (`tokens` base and Radiant 3 \u2192 4) | its tests at lines 114\u2013136 (the lanes `[1, 3, 4]` and the full-row count); text and zh; `tests/cross/catalog.rs` line 7054; spec row 817; BUILD row TG 15 |\n| **MC Tech** `classic-040` | 4 \u2192 **5** permanents (`threshold` 4 \u2192 5 on both faces) | its own tests, and `crates/cards/tests/cross/condition_active.rs` lines 964\u20131005 (four-permanent boards); text and zh; spec row 206; BUILD row C 40. Its case in `crates/cards/tests/cross/turn_clock_and_legality.rs` (about line 372) is part 7's file: name it for the reconcile. |\n| **Jlockeed's J15 Fighter** `classicplus-051` | gains **Can't Defend** on both faces | catalog keywords and text only, so no script change and no kept script. Its tests at lines 89 and 199 (\"may switch to Defense Position\") flip. zh must name \u65e0\u6cd5\u5b88\u5907. Spec row 334, BUILD row C+ 51. |\n| **In Too Deep** `classic-090` | every quest path about **20% harder**; the final quest before reward M (\"Your Units have Indestructible\") gets a clearly larger bump | the goals are script constants in `classic/c090_in_too_deep.rs`: quest 1 `QUEST_DRAWS` 2, quest 2 `QUEST_KILLS` 2, quests 3, 5 and 6 in `QUESTS` (4 permanents, 15 damage, totals of 13), quest 4 `QUEST_FLOAT` 3, quest 7 `QUEST_BIG_FLOAT` 5, quest 8 `QUEST_EXILES` 3, quest 9 an empty deck (no number), and quest 10 `QUEST_GRAVE_UNITS` 6, the one right before reward M (reached from quest 6 by reward I). Suggested: each goal \u00d7 1.2 rounded up, at least +1 (2 \u2192 3, 4 \u2192 5, 3 \u2192 4, 15 \u2192 18, 13 \u2192 16, 5 \u2192 6), and quest 10 6 \u2192 9. Pick and rule it, with a table of old and new goals in the note. The quest texts for 1, 2, 4, 7, 8 and 10 are literal strings and change with their constants; update its quest lines in `apps/web/src/i18n/zh-CN.json` (lines 2778\u20132787). Keep the current goals as a script for replays, as `QUESTS_V0_4_0F` / `script_v0_4_0f` were kept. The catalog text has no numbers. BUILD row C 90. |\n| **Doom Shroom** `classicplus-001` | (3) \u2192 **(4)** | `crates/ai/tests/ai/determinize_shown_cost.rs` asserts shown costs `[1, 2, 3]` and Doom and Groom Shroom both at cost 3 (Groom stays at 3); `tests/cross/catalog.rs` line 1994; spec row 264 |\n\n## Files\n- **Owned:** `crates/cards/src/scripts/training_grounds/c015_in_a_hurry.rs`, `classic/c040_mc_tech.rs`, `classic_plus/c051_jlockeeds_j15_fighter.rs`, `classic/c090_in_too_deep.rs`, `classic_plus/c001_doom_shroom.rs`, `crates/cards/tests/cross/condition_active.rs`, `crates/ai/tests/ai/determinize_shown_cost.rs`, and In Too Deep's ruling notes.\n- **By entry:** these cards' entries in `catalog.json`, `card-text.yaml`, `tests/cross/catalog.rs`, `spec/08-catalog.md`, `docs/radiant-audit.md` and `BUILD.md`; In Too Deep's quest lines in `apps/web/src/i18n/zh-CN.json`.\n\n## Check\n- `cargo test -p jackioh-cards in_a_hurry`, and the same with `mc_tech`, `j15`, `in_too_deep`, `doom_shroom` and `condition_active`\n- `cargo test -p jackioh-ai determinize_shown_cost`\n- `cargo test -p jackioh-tools --test export_card_text`\n- `cargo jackioh catalog check`, `cargo jackioh spec check`, `cargo fmt --check`, and `cargo clippy -p jackioh-cards --all-targets -- -D warnings`\n\n### Working in the fullsend tree\nThis part of #3000 lands on `bot/issue-3000` beside the other parts, with no pull request of its own. One reconcile run makes the branch green, so this part need not pass every check alone, but it tests its own code.\n- Read `docs/ADDING_CARDS.md` before any card change (CLAUDE.md rule 10). Every number is a named constant or a card `param` (rule 9).\n- **Rulings** take this sub-issue's own block: R(N\u00d71000) up, for its number N (`docs/issues-and-patches.md`, Ruling numbers). Each has a test named after it and its \u00a711 paragraph in `spec/pending/N.md`. Never run `cargo jackioh spec index`.\n- **Shared by entry.** Other parts edit other entries of `crates/cards/catalog.json`, `crates/cards/card-text.yaml` (and the `chinese.json` its export writes), `crates/cards/tests/cross/catalog.rs`, `crates/cards/src/census.rs`, `crates/engine/src/config.rs`, `apps/web/src/i18n/zh-CN.json`, `spec/06-keywords.md`, `spec/07-tokens.md`, `spec/08-catalog.md`, `docs/radiant-audit.md`, `docs/stinkyscape-set.md` and `BUILD.md`. Change only the entries, rows and constants named here.\n- **Left to the reconcile:**\n  - `KEPT_SCRIPTS` in `crates/cards/src/history.rs`: keep In Too Deep's replaced script in its own file as `docs/ADDING_CARDS.md` \u00a73 says, and name it in your summary;\n  - the pending patch fragment;\n  - any test in another part's file that your change breaks, such as MC Tech's case in `turn_clock_and_legality.rs`: name it in your summary.\n\nIts build lands on `bot/issue-3000`, not `main` (fullsend).\n\nPart of #3000, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read docs/ADDING_CARDS.md, the five cards' spec/08-catalog.md and BUILD.md rows, R404 and In Too Deep's header and notes, and how script_v0_4_0f kept the goals before.\n2. In a hurry: set the cost to 3 and tokens to 4 on both faces, update the text and zh, rewrite the tests at lines 114\u2013136, and update the rows.\n3. MC Tech: set threshold to 5 on both faces, update the text and zh, its own tests, condition_active.rs lines 964\u20131005 and the rows. Note the turn_clock_and_legality.rs case for the reconcile.\n4. J15 Fighter: add Can't Defend to both faces' keywords and text, add \u65e0\u6cd5\u5b88\u5907 to the zh, flip the tests at lines 89 and 199, and update the rows.\n5. In Too Deep: copy the current goals into a kept script (QUESTS_V\u2026 / script_v\u2026), raise every goal about 20% with quest 10 clearly more, and update the literal quest texts and the zh-CN.json quest lines. Write the ruling with the table of old and new goals. Add tests that each new goal completes at its number and not one below, on both faces.\n6. Doom Shroom: set the cost to 4 and update determinize_shown_cost.rs and the rows.\n7. Run the export test and the checks. List the kept scripts and the cross-part breakage in your summary.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read docs/ADDING_CARDS.md, the five cards' spec/08-catalog.md and BUILD.md rows, R404 and In Too Deep's header and notes, and how script_v0_4_0f kept the goals before.\n2. In a hurry: set the cost to 3 and tokens to 4 on both faces, update the text and zh, rewrite the tests at lines 114\u2013136, and update the rows.\n3. MC Tech: set threshold to 5 on both faces, update the text and zh, its own tests, condition_active.rs lines 964\u20131005 and the rows. Note the turn_clock_and_legality.rs case for the reconcile.\n4. J15 Fighter: add Can't Defend to both faces' keywords and text, add \u65e0\u6cd5\u5b88\u5907 to the zh, flip the tests at lines 89 and 199, and update the rows.\n5. In Too Deep: copy the current goals into a kept script (QUESTS_V\u2026 / script_v\u2026), raise every goal about 20% with quest 10 clearly more, and update the literal quest texts and the zh-CN.json quest lines. Write the ruling with the table of old and new goals. Add tests that each new goal completes at its number and not one below, on both faces.\n6. Doom Shroom: set the cost to 4 and update determinize_shown_cost.rs and the rows.\n7. Run the export test and the checks. List the kept scripts and the cross-part breakage in your summary.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3000",
+  "part_of": 3000,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-8` (claude, `sonnet`, medium); review on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read docs/ADDING_CARDS.md, the five cards' spec/08-catalog.md and BUILD.md rows, R404 and In Too Deep's header and notes, and how script_v0_4_0f kept the goals before.\n2. In a hurry: set the cost to 3 and tokens to 4 on both faces, update the text and zh, rewrite the tests at lines 114\u2013136, and update the rows.\n3. MC Tech: set threshold to 5 on both faces, update the text and zh, its own tests, condition_active.rs lines 964\u20131005 and the rows. Note the turn_clock_and_legality.rs case for the reconcile.\n4. J15 Fighter: add Can't Defend to both faces' keywords and text, add \u65e0\u6cd5\u5b88\u5907 to the zh, flip the tests at lines 89 and 199, and update the rows.\n5. In Too Deep: copy the current goals into a kept script (QUESTS_V\u2026 / script_v\u2026), raise every goal about 20% with quest 10 clearly more, and update the literal quest texts and the zh-CN.json quest lines. Write the ruling with the table of old and new goals. Add tests that each new goal completes at its number and not one below, on both faces.\n6. Doom Shroom: set the cost to 4 and update determinize_shown_cost.rs and the rows.\n7. Run the export test and the checks. List the kept scripts and the cross-part breakage in your summary."
+  },
+  "usage_facts": {
+    "queued_at": "2026-11-04T13:51:05Z",
+    "claimed_at": "2026-11-04T22:05:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3043 skipped: it waits for #3042 to close first",
+    "#3044 skipped: it waits for #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
