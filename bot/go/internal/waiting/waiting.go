@@ -173,7 +173,7 @@ func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lan
 	pool := ctx.Cfg.Pool
 	planning := map[int]bool{}
 	for _, key := range live.Keys() {
-		if n := liveNumber(key); n != 0 && recordOf(s, n).Get("action") == "plan" {
+		if n := liveNumber(key); n != 0 && queue.PlanningPool(recordOf(s, n)) {
 			planning[n] = true
 		}
 	}
@@ -394,7 +394,7 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 			candidate := pairs[0].Candidate
 			assignment := pairs[0].Assignment
 			starts.Set(strconv.Itoa(candidate.Number), assignment)
-			after = after.WithRun(candidate.Number, assignment.Provider.ID, assignment.Action,
+			after = after.WithRun(candidate.Number, assignment.Provider.ID, assignment.LaneAction(),
 				assignment.FillsIn())
 			rest = slices.DeleteFunc(rest, func(c *queue.Candidate) bool { return c.Number == candidate.Number })
 		}

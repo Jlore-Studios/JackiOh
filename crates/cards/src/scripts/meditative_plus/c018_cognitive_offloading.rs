@@ -46,6 +46,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -56,7 +58,6 @@ mod tests {
     const FILLER: &str = "core-005";
 
     fn on_top(seed: &str, radiant: bool, hand: Value, field: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "active": "p2",
@@ -168,7 +169,6 @@ mod tests {
 
         #[test]
         fn r1183002_drawn_on_the_opponents_turn_it_gains_and_draws_only() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [TIMMY], "library": [ID, VOID, VOID, VOID] },

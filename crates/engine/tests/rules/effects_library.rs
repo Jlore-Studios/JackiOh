@@ -7,7 +7,7 @@ use jackioh_engine::effects::choose::{discover_from_catalog, discover_from_libra
 use jackioh_engine::effects::library::{exile_bottom_of_library, exile_random_from_library};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, live, new_game, set_library};
+use crate::rules::fixtures::harness::{events_of_type, ids, in_hand, live, new_game, set_library};
 
 // Fixture cards.
 
@@ -196,10 +196,6 @@ fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
         .iter()
         .map(|card| card.def_id.clone())
         .collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn defs_of(defs: &[CardDef]) -> Vec<String> {
@@ -570,7 +566,7 @@ mod exile_random_from_library_34_42 {
     fn r60_exiles_exactly_count_distinct_library_cards() {
         let mut state = game("exile-random");
         // `setLibrary` hands back the live pile, so the original ids are snapshotted before the move.
-        let before = ids(&set_library(
+        let before = ids(set_library(
             &mut state,
             PlayerId::P1,
             &[alpha().id, alpha().id, beta().id, beta().id, gamma().id],

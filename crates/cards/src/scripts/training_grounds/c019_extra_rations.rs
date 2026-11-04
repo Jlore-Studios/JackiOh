@@ -38,11 +38,12 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::upgrade_number;
 
     const RATIONS: &str = super::ID;
     const VANILLA: &str = "core-008"; // (1)
-    const BIGOT: &str = "core-002"; // (2)
+    const SPECIESIST: &str = "core-002"; // (2)
     const RENO: &str = "core-053"; // (3)
     const FILLER: &str = "core-010";
 
@@ -66,7 +67,7 @@ mod tests {
 
         #[test]
         fn r62_at_your_start_of_turn_you_draw_1_beside_the_turns_draw() {
-            let mut s = board(false, json!({ "hand": [FILLER], "library": [VANILLA, BIGOT, RENO] }));
+            let mut s = board(false, json!({ "hand": [FILLER], "library": [VANILLA, SPECIESIST, RENO] }));
             s.start_turn();
 
             assert_eq!(drawn(&s), 2);
@@ -75,7 +76,7 @@ mod tests {
 
         #[test]
         fn r68_nothing_at_the_opponents_start_of_turn() {
-            let mut s = board(false, json!({ "hand": [FILLER], "library": [VANILLA, BIGOT] }));
+            let mut s = board(false, json!({ "hand": [FILLER], "library": [VANILLA, SPECIESIST] }));
             s.state_mut().active = P2;
             s.start_turn();
 
@@ -84,9 +85,8 @@ mod tests {
 
         #[test]
         fn r62_nothing_on_the_turn_it_is_played() {
-            crate::register_all();
             let mut s = scenario(json!({
-                "p1": { "hand": [RATIONS, FILLER], "library": [VANILLA, BIGOT], "mana": 10 },
+                "p1": { "hand": [RATIONS, FILLER], "library": [VANILLA, SPECIESIST], "mana": 10 },
             }));
             s.play(RATIONS, json!({}));
 
@@ -97,7 +97,7 @@ mod tests {
         #[test]
         fn r4_a_full_hand_burns_the_card_it_draws() {
             let hand = vec![json!(FILLER); HAND_CAP as usize];
-            let mut s = board(false, json!({ "hand": hand, "library": [VANILLA, BIGOT] }));
+            let mut s = board(false, json!({ "hand": hand, "library": [VANILLA, SPECIESIST] }));
             s.start_turn();
 
             assert!(s.events().iter().any(|event| matches!(event, GameEvent::Burned { .. })));
@@ -114,7 +114,7 @@ mod tests {
 
         #[test]
         fn r386_draw_reads_through_param() {
-            let mut s = board(false, json!({ "hand": [FILLER], "library": [VANILLA, BIGOT, RENO, FILLER] }));
+            let mut s = board(false, json!({ "hand": [FILLER], "library": [VANILLA, SPECIESIST, RENO, FILLER] }));
             assert_eq!(upgrade_number(&mut s, RATIONS, "draw"), 2);
             s.start_turn();
 
@@ -132,19 +132,19 @@ mod tests {
 
         #[test]
         fn r62_it_draws_2_before_the_turns_draw() {
-            let mut s = board(true, json!({ "hand": [], "library": [BIGOT, RENO, VANILLA] }));
+            let mut s = board(true, json!({ "hand": [], "library": [SPECIESIST, RENO, VANILLA] }));
             s.start_turn();
 
             assert_eq!(drawn(&s), 3);
             // The first two in the deck were its draws, discounted; the third is the turn's own.
-            assert_eq!(cost_in_hand(&s, BIGOT), 1);
+            assert_eq!(cost_in_hand(&s, SPECIESIST), 1);
             assert_eq!(cost_in_hand(&s, RENO), 2);
             assert_eq!(cost_in_hand(&s, VANILLA), 1);
         }
 
         #[test]
         fn r65_each_drawn_card_costs_1_less() {
-            let mut s = board(true, json!({ "hand": [], "library": [BIGOT, RENO, FILLER] }));
+            let mut s = board(true, json!({ "hand": [], "library": [SPECIESIST, RENO, FILLER] }));
             s.start_turn();
 
             let discounted: Vec<i32> = s
@@ -158,7 +158,7 @@ mod tests {
 
         #[test]
         fn r65_a_0_card_stays_0_and_the_rest_of_the_hand_is_unchanged() {
-            let mut s = board(true, json!({ "hand": [RENO], "library": [{ "def": VANILLA, "costOverride": 0 }, BIGOT, FILLER] }));
+            let mut s = board(true, json!({ "hand": [RENO], "library": [{ "def": VANILLA, "costOverride": 0 }, SPECIESIST, FILLER] }));
             s.start_turn();
 
             assert_eq!(cost_in_hand(&s, VANILLA), 0);
@@ -167,7 +167,7 @@ mod tests {
 
         #[test]
         fn r386_discount_reads_through_param() {
-            let mut s = board(true, json!({ "hand": [], "library": [RENO, BIGOT, FILLER] }));
+            let mut s = board(true, json!({ "hand": [], "library": [RENO, SPECIESIST, FILLER] }));
             assert_eq!(upgrade_number(&mut s, RATIONS, "discount"), 2);
             s.start_turn();
 

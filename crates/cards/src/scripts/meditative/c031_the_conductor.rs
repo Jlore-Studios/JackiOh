@@ -61,6 +61,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -78,7 +80,6 @@ mod tests {
 
     /// p1 holds the Conductor (Radiant on `radiant`) over `library`; p2 holds fillers.
     fn conducting(seed: &str, radiant: bool, library: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -171,7 +172,6 @@ mod tests {
     #[test]
     fn r943_a_drawn_card_shuffled_back_keeps_its_mark() {
         // Conductor draws a Created Vanilla; Hit Job destroys it; Recycle shuffles it back.
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "conductor-keep",
             "p1": {
@@ -320,7 +320,6 @@ mod tests {
 
     #[test]
     fn r943_the_flag_survives_a_json_round_trip_and_every_zone() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "conductor-zones",
             "p1": {

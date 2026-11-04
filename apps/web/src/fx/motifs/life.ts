@@ -1,25 +1,25 @@
-// R2784000: the life and stats motifs (docs/polish/9-card-animations.md): drain, bless, curse and
-// ward. Like the damage motifs (damage.ts) each plays in the entry's phases (build.ts) and plans
-// nothing without an event it reads.
+// R2784000: the life and stats motifs (docs/polish/9-card-animations.md): drain, bless, curse,
+// and radiance and mend (#2793; R2803000 folds `ward` into the rows). Like the damage motifs
+// (damage.ts) each plays in the entry's phases (build.ts) and plans nothing without an event it reads.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { sideOf, testid } from "../../game/contract.ts";
-import { ringCue, tid } from "../build.ts";
+import { raysCue, tid } from "../build.ts";
 import { projectile } from "../cards/recipe.ts";
 import { FX_ARROWS_TAIL_MS, FX_SPLAT_HOLD_MS } from "../constants.ts";
-import { shieldCues } from "../shield.ts";
 import type { FxAnchor, FxCue } from "../types.ts";
 import {
   flies,
   hitAnchor,
+  isFirstEntry,
   MOTIF_TUNING,
   motifBurst,
+  motifRing,
   motifShake,
   readEvents,
   timesOf,
   type MotifPlanner,
-  type MotifSpec,
 } from "./build.ts";
 import type { AnimationEntry } from "../../game/animations.ts";
 import type { FxPlanEnv } from "../types.ts";
@@ -143,30 +143,52 @@ export const curse: MotifPlanner = {
   },
 };
 
-const WARD_READS = ["damageAbsorbed", "divineShieldLost"] as const;
+const RADIANCE_READS = ["radiantSet"] as const;
 
-/** ward: Armor's full shield over a hit it took whole (under `keep`, a burst over the row's flash), gold and shards where a Divine Shield broke. */
-export const ward: MotifPlanner = {
-  reads: WARD_READS,
-  replaces: [...WARD_READS],
-  plan(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv) {
-    const hits = readEvents(entry, view, env, WARD_READS);
+/**
+ * radiance (#2793): a card made Radiant, in a hand or on the board: a sheen over it and a burst as
+ * it lands, and once a play the rays of the Radiant tone. A hand card the viewer may not read is its
+ * hand pile (`targetFor`), never a definition (R202). The Radiant row still plays.
+ */
+export const radiance: MotifPlanner = {
+  reads: RADIANCE_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, RADIANCE_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    // The rays once a play: on its first entry of Radiant cards, at the first of them.
+    const rays = isFirstEntry(env, entry, RADIANCE_READS);
+    const cues: FxCue[] = [];
+    hits.forEach((h, k) => {
+      cues.push({ kind: "sheen", at: h.at, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, h.at, "area", t.L, MOTIF_TUNING.land));
+      if (rays && k === 0) cues.push(raysCue(t.D, "radiant", h.at, t.L));
+    });
+    cues.push(...motifShake(spec, t.L));
+    return cues;
+  },
+};
+
+const MEND_READS = ["healed"] as const;
+
+/**
+ * mend (#2793): a heal: a sheen over the healed hero or unit, a ring of the look closing as it
+ * lands and a soft afterglow. The heal's number stays on its row. No shake, like `flight`.
+ */
+export const mend: MotifPlanner = {
+  reads: MEND_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, MEND_READS);
     if (hits.length === 0) return [];
     const t = timesOf(entry.durationMs);
     const cues: FxCue[] = [];
     for (const h of hits) {
-      if (h.event.type === "damageAbsorbed" && spec.row === "keep") {
-        // Armor's flash is a number of the row's (R2784000): under keep the armor row draws it, so the motif only lands.
-        cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.land, "spark"));
-      } else if (h.event.type === "damageAbsorbed") {
-        // shieldCues throws colorless bursts; the motif recolors them into its look.
-        for (const cue of shieldCues("full", h.at, t.D, t.L, spec.scale)) {
-          cues.push(cue.kind === "burst" ? { ...cue, colors: spec.look.colors } : cue);
-        }
-      } else {
-        cues.push(ringCue(t.D, "gold", h.at, t.G));
-        cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.small, "shard"));
-      }
+      cues.push({ kind: "sheen", at: h.at, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.land));
+      cues.push(motifRing(spec, t.D, h.at, t.L));
+      cues.push(motifBurst(spec, h.at, "area", t.Li, MOTIF_TUNING.linger));
     }
     cues.push(...motifShake(spec, t.L));
     return cues;

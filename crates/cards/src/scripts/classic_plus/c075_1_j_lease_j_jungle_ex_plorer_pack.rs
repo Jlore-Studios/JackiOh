@@ -49,6 +49,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const PACK: &str = "classicplus-075-1";
     const STOCKPILE: &str = "core-005"; // (1) "Draw 2. Heal your hero 2."
     const FILLER: &str = "core-011"; // Tempo Timmy, deck filler
@@ -120,7 +122,6 @@ mod tests {
 
             #[test]
             fn r58_drawn_it_casts_itself_5_random_radiant_classic_or_classic_plus_cards_reach_your_hand_then_you_draw_again() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, MENACE], "library": [PACK, FILLER, FILLER] },
                     "p2": { "hand": [MENACE] },
@@ -146,7 +147,6 @@ mod tests {
 
             #[test]
             fn r70_played_from_a_hand_it_does_the_same() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PACK, MENACE] }, "p2": { "hand": [MENACE] } }));
                 s.play(PACK, json!({}));
                 assert_eq!(of_type(generated(&s), GameEventType::AddedToHand).len(), 5);
@@ -191,7 +191,6 @@ mod tests {
 
             #[test]
             fn r97_the_five_reach_the_opponent_under_the_sentinel() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PACK, MENACE] }, "p2": { "hand": [MENACE] } }));
                 s.play(PACK, json!({}));
                 let theirs: Vec<Value> =
@@ -206,7 +205,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_adds_6_a_degrade_4() {
-                crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [PACK, MENACE] }, "p2": { "hand": [MENACE] } }));
                 step_param(up.card_mut(PACK), "cards", 1);
                 up.play(PACK, json!({}));
@@ -224,7 +222,6 @@ mod tests {
 
             #[test]
             fn the_five_are_radiant_and_cost_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PACK, "radiant": true }, MENACE] },
                     "p2": { "hand": [MENACE] },
@@ -243,7 +240,6 @@ mod tests {
 
             #[test]
             fn r58_a_drawn_radiant_pack_casts_itself_the_same_way() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, MENACE], "library": [{ "def": PACK, "radiant": true }, FILLER] },
                     "p2": { "hand": [MENACE] },
@@ -277,7 +273,6 @@ mod tests {
 
         #[test]
         fn r386_a_degrade_makes_the_radiant_cards_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PACK, "radiant": true }, STOCKPILE] }, "p2": { "hand": [MENACE] } }));
             assert!(!crate::can_upgrade_number(&s, PACK, "setCost"));
             assert_eq!(crate::degrade_number(&mut s, PACK, "setCost"), 1);

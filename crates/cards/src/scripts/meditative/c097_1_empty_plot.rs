@@ -89,7 +89,6 @@ mod tests {
 
         #[test]
         fn r1281_cant_attack() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
@@ -99,7 +98,6 @@ mod tests {
 
         #[test]
         fn r1281_a_played_unit_stacks_onto_empty_plot_plot_dormant_beneath() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -123,7 +121,6 @@ mod tests {
 
         #[test]
         fn r1281_a_locked_zone_refuses_stacking() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -141,7 +138,6 @@ mod tests {
 
         #[test]
         fn r1281_duplicating_felinors_summon_does_not_stack_onto_empty_plot() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -166,7 +162,6 @@ mod tests {
 
         #[test]
         fn r1281_opponent_cannot_stack_onto_your_empty_plot() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
                 "p2": {
@@ -186,7 +181,6 @@ mod tests {
 
         #[test]
         fn r1281_empty_plot_resumes_after_hit_job() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "lane": 1 }],
@@ -215,7 +209,6 @@ mod tests {
 
         #[test]
         fn r1281_radiant_buffs_unit_once_before_its_cry() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": {
                     "field": [{ "def": ID, "radiant": true, "lane": 1 }],

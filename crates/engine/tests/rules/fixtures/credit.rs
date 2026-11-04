@@ -5,8 +5,6 @@ use jackioh_engine::testkit::*;
 
 use super::harness::{both, new_game, spread};
 
-pub use super::harness::{in_hand, put, slot};
-
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     json_as(spread(
         json!({

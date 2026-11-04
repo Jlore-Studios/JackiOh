@@ -43,10 +43,11 @@ function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
  * where nothing held covers it or the held tokens are unread.
  */
 export function offerTier(
-  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter">,
+  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "kind">,
   held: HeldTokens | null,
 ): CosmeticTokenTier | null {
-  if (held === null || cosmetic.default || cosmetic.starter) return null;
+  // R2725000: a retired full art is sold no more (the server's 400).
+  if (held === null || cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt") return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
 }
 

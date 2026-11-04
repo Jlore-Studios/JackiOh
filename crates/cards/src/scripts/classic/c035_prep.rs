@@ -125,13 +125,15 @@ pub fn script_v0_5_2() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const PREP: &str = "classic-035";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const ARMOR: &str = "core-073"; // (2) Field Spell; Cry: Draw 1.
     const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const VIRUS: &str = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
+    const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
     const ANCHOR: &str = "core-010"; // (0) Spell, Combo 3 — a free play that keeps a turn open.
     const MENACE: &str = "core-019";
 
@@ -162,7 +164,6 @@ mod tests {
 
             #[test]
             fn r65_the_next_spell_costs_2_less_floored_at_0_a_1_spell_is_free_and_gives_no_mana_back() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, STOCKPILE, ANCHOR], "library": [MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -177,7 +178,6 @@ mod tests {
 
             #[test]
             fn the_next_spell_is_the_next_one_whatever_it_costs_a_0_spell_played_next_consumes_it_and_the_spell_after_pays_in_full() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, ANCHOR, STOCKPILE, FLOOD], "library": [MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -194,7 +194,6 @@ mod tests {
 
             #[test]
             fn only_the_next_spell_the_first_spell_consumes_it_and_the_second_pays_in_full() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, STOCKPILE, STOCKPILE, ANCHOR], "library": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -217,7 +216,6 @@ mod tests {
 
             #[test]
             fn a_unit_play_pays_in_full_and_does_not_consume_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, VANILLA, STOCKPILE, ANCHOR], "library": [MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -234,7 +232,6 @@ mod tests {
 
             #[test]
             fn a_trap_play_pays_in_full_and_does_not_consume_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, SHEEPISH, STOCKPILE, ANCHOR], "library": [MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -250,7 +247,6 @@ mod tests {
 
             #[test]
             fn r70_a_field_spell_play_does_not_consume_it_nor_does_the_spell_its_draw_casts_the_next_spell_played_is_still_cheaper() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, ARMOR, STOCKPILE, ANCHOR], "library": [VIRUS, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -260,7 +256,7 @@ mod tests {
                 s.play(ARMOR, json!({}));
 
                 assert_eq!(paid_for(&s, ARMOR), vec![2]);
-                // The Field Spell's Cry drew the CN-Virus, which cast itself for free (R70) and drew again.
+                // The Field Spell's Cry drew the Super-Virus, which cast itself for free (R70) and drew again.
                 assert_eq!(paid_for(&s, VIRUS), vec![0]);
                 s.expect_health(PlayerId::P1, 29);
 
@@ -272,7 +268,6 @@ mod tests {
 
             #[test]
             fn s2_2_it_expires_at_cleanup_a_spell_on_your_next_turn_pays_in_full() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, STOCKPILE, ANCHOR], "library": [MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR], "library": [MENACE, MENACE] },
@@ -289,7 +284,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_makes_it_3_less_a_degrade_1_less_a_4_flood_costs_1_then_3() {
-                crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [PREP, FLOOD, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(up.card_mut(PREP), "discount", 1);
                 up.play(PREP, json!({}));
@@ -309,7 +303,6 @@ mod tests {
 
             #[test]
             fn the_next_spell_costs_4_less_a_4_flood_is_free() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PREP, "radiant": true }, FLOOD, ANCHOR] },
                     "p2": { "hand": [ANCHOR] },
@@ -324,7 +317,6 @@ mod tests {
 
             #[test]
             fn still_only_the_next_spell_and_still_not_a_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": PREP, "radiant": true }, VANILLA, FLOOD, STOCKPILE, ANCHOR],
@@ -346,7 +338,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_on_the_radiant_face_steps_4_to_3_a_4_flood_costs_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": PREP, "radiant": true }, FLOOD, ANCHOR] },
                     "p2": { "hand": [ANCHOR] },
@@ -403,7 +394,6 @@ mod tests {
 
         #[test]
         fn r81_r24_embiggened_the_radiant_face_draws_the_highest_cost_spell() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": PREP, "radiant": true }, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
                 "p2": { "hand": [ANCHOR] },
@@ -415,7 +405,6 @@ mod tests {
 
         #[test]
         fn r24_a_tie_goes_to_the_spell_nearest_the_top() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": PREP, "radiant": true }, ANCHOR], "library": [STOCKPILE, FLOOD, FLOOD], "mana": 6 },
                 "p2": { "hand": [ANCHOR] },
@@ -427,7 +416,6 @@ mod tests {
 
         #[test]
         fn a_deck_with_no_spell_draws_nothing_and_the_plain_version_never_draws() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, MENACE, ARMOR], "mana": 6 },
                 "p2": { "hand": [ANCHOR] },
@@ -445,7 +433,6 @@ mod tests {
 
         #[test]
         fn r81_radiant_embiggened_it_draws_the_spell_which_costs_4_less() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": PREP, "radiant": true }, ANCHOR], "library": [STOCKPILE, FLOOD], "mana": 6 },
                 "p2": { "hand": [ANCHOR] },

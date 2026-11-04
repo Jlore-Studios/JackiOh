@@ -3,7 +3,8 @@ package providers
 // Replays testdata/python.json: what bot/harness/providers.py answered for a snapshot of
 // `.harness/providers.json` (parse errors, each pool's seats and texts, availability and its
 // texts over randomized usage readings, the writes to the state file, the secrets records).
-// The file is written by running the Python; regenerate it whenever providers.py changes.
+// The file was recorded from the Python before #2473 removed it, and is now a fixed record: a change
+// to providers' behaviour edits it by hand.
 
 import (
 	"fmt"

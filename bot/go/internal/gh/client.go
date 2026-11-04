@@ -55,6 +55,7 @@ type Client interface {
 	Dequeue(nodeID string)
 	PinIssue(nodeID string)
 	MarkReady(nodeID string)
+	MarkDraft(nodeID string)
 	MergePull(number int, method string, title string) *pyjson.Object
 	GetFile(path string, ref string) (string, string)
 	PutFile(path string, text string, branch string, sha string, message string)
@@ -72,6 +73,8 @@ type Client interface {
 	ListCommits(author string, limit int) []*pyjson.Object
 	RunsForSHA(sha string, limit int) []*pyjson.Object
 	RerunFailedJobs(runID any)
+	CancelRun(runID any)
+	RerunRun(runID any)
 	ListJobs(runID any, cached bool) []*pyjson.Object
 	JobLog(jobID any, tailChars int) string
 	ListArtifacts(runID any) []*pyjson.Object

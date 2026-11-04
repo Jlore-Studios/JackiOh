@@ -41,6 +41,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::merged;
+    use crate::ids;
     use jackioh_engine::testkit::*;
 
     const HALLUCINATION: &str = "classicplus-t-ai-03";
@@ -52,10 +53,6 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     use crate::js;
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
-    }
 
     fn cast(p2: Value, radiant: bool, seed: Option<&str>) -> Scenario {
         crate::register_all();

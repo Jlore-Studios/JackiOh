@@ -10,9 +10,9 @@ import { ANIMATIONS, BURST_BUDGET_MS, SET_PIECE_HOLD_MS, createAnimationQueue, t
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
-import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { baseView, dormantStarship, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { FX_CALLOUT_MS, FX_TEXT } from "./constants.ts";
+import { FX_CALLOUT_MS, FX_STACK_LAND, FX_STARSHIP_STILL_MS, FX_TEXT } from "./constants.ts";
 import FxLayer, { type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
 import type { FxSurface } from "./surface.ts";
@@ -567,6 +567,28 @@ describe("B37 — when the layer draws, and what it never renders", () => {
     expect(m.layer()?.childElementCount).toBe(0);
   });
 
+  it("R2801000 a still launch entry mounts the still cue", () => {
+    setReducedMotion(true);
+    const view = baseView({ you: emptySide("p1", { units: [null, null, dormantStarship("p1", ["stinkyscape-140"], { instanceId: "ship" }), null, null] }) });
+    const launch: GameEvent = { type: "starshipLaunched", player: "p1", instanceId: "ship", defId: "stinkyscape-t-dormant-starship", name: "Ember of Departure", pieces: ["stinkyscape-140"] };
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true });
+    const m = mountLayer(queue, view, fx);
+
+    act(() => queue.enqueue([launch], view));
+    fx.pump(50);
+    // The queue held nothing: it drained at once, and the still frame stands on its own.
+    expect(queue.idle()).toBe(true);
+    expect(m.count("launch")).toBe(1);
+    const still = m.game.querySelector<HTMLElement>('[data-fx="launch"]');
+    expect(still?.getAttribute("data-still")).toBe("true");
+    expect(still?.querySelectorAll(".fx-launch-count")).toHaveLength(0);
+    expect(m.canvas()).toBeNull();
+    expect(fx.shakes).not.toContain("apply");
+    fx.pump(FX_STARSHIP_STILL_MS + 100);
+    expect(m.count("launch")).toBe(0);
+  });
+
   it("B37 intensity \"off\" switches the layer off and plans no cue, while the runner still animates", () => {
     setFxSettings({ intensity: "off" });
     const sched = fakeSchedule();
@@ -1005,15 +1027,21 @@ describe("S9 — the default catalog and the surface seam", () => {
     // core-019 is Brute in the bundled catalog, so its entrance shakes the board (#1445).
     expect(fx.shakes).toContain("apply");
     // Every measure is the landing zone: at its foot for the dust (the base burst plus the Brute's
-    // two), and bare for the stand-in that follows it.
+    // two), and bare for the stand-in that follows it. R2791000: lane 3 stands occupied (u3, the
+    // file's id scheme above), so the Stack beat measures first: its burst over the occupant, its
+    // callout and count over it bare.
     const zone = { kind: "testid", testid: "zone-you-units-3" };
+    const occupant = { kind: "testid", testid: "card-u3" };
     expect(fx.measured.filter((anchor) => anchor.kind === "testid" && anchor.at !== undefined)).toEqual([
+      { ...occupant, at: { ...FX_STACK_LAND } },
       { ...zone, at: { x: 0.5, y: 1 } },
       { ...zone, at: { x: 0.5, y: 1 } },
       { ...zone, at: { x: 0.5, y: 1 } },
     ]);
     expect(fx.measured.filter((anchor) => !(anchor.kind === "testid" && anchor.at !== undefined)).length).toBeGreaterThan(0);
-    for (const anchor of fx.measured) expect(anchor).toMatchObject(zone);
+    for (const anchor of fx.measured) {
+      expect(anchor.kind === "testid" ? [zone.testid, occupant.testid].includes(anchor.testid) : true).toBe(true);
+    }
   });
 
   it("S9 a catalog seam overrides CatalogContext", () => {

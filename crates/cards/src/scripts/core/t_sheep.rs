@@ -37,6 +37,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -114,7 +116,6 @@ mod tests {
 
             #[test]
             fn s3_2_and_s6_3_a_sheep_token_on_the_field_is_worth_2_tributes_every_other_unit_1() {
-                crate::register_all();
                 let s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": ["core-t-sheep", "core-t-felinor", "core-025"] },
@@ -129,7 +130,6 @@ mod tests {
             #[test]
             fn r386_an_upgrade_makes_it_worth_3_tributes_and_a_degrade_1() {
                 for (upgrade, worth) in [(true, 3), (false, 1)] {
-                    crate::register_all();
                     let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-sheep"] } }));
                     let sheep = s.unit(P1, 1).expect("the Sheep Token").id;
                     let moved = if upgrade {
@@ -144,7 +144,6 @@ mod tests {
 
             #[test]
             fn s3_2_while_on_the_field_a_sheep_token_card_in_hand_is_no_tribute_candidate_at_all() {
-                crate::register_all();
                 let s = scenario(json!({
                     "seed": SEED,
                     "p1": { "hand": ["core-022", "core-t-sheep"], "field": ["core-t-sheep"] },
@@ -161,7 +160,6 @@ mod tests {
 
             #[test]
             fn s6_3_one_sheep_token_alone_pays_n66_the_rock_s_tribute_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-066"], "field": ["core-t-sheep"] } }));
                 let sheep = s.unit(P1, 1).expect("a Sheep Token in p1's lane 1");
 
@@ -175,7 +173,6 @@ mod tests {
 
             #[test]
             fn r11_a_sheep_token_that_dies_in_combat_ceases_to_exist_and_never_reaches_a_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-sheep"] }, "p2": { "field": ["core-025"] } }));
                 let sheep = s.unit(P1, 1).expect("a Sheep Token in p1's lane 1");
                 assert!(is_unit_token(s.state(), &sheep));
@@ -229,7 +226,6 @@ mod tests {
 
             #[test]
             fn r74_a_radiant_sheep_token_is_a_2_2_with_no_keywords() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "field": [{ "def": "core-t-sheep", "radiant": true }] } }));
                 let sheep = s.unit(P1, 1).expect("a radiant Sheep Token in p1's lane 1");
 
@@ -240,7 +236,6 @@ mod tests {
 
             #[test]
             fn s3_2_s7_a_radiant_sheep_token_is_worth_3_tributes_where_the_base_one_is_worth_2() {
-                crate::register_all();
                 let s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": "core-t-sheep", "radiant": true }, { "def": "core-t-felinor", "radiant": true }] },
@@ -259,7 +254,6 @@ mod tests {
 
             #[test]
             fn r11_a_radiant_sheep_token_that_leaves_the_field_ceases_to_exist_just_as_the_base_face_does() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "field": [{ "def": "core-t-sheep", "radiant": true }] } }));
                 let mut sheep = s.unit(P1, 1).expect("a radiant Sheep Token in p1's lane 1");
 

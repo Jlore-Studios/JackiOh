@@ -297,3 +297,62 @@ mod r1571000_an_unplayable_graveyard_card_says_why {
         );
     }
 }
+
+mod r2975000_i13_holds_the_graveyard_to_its_reason {
+    use super::*;
+
+    fn set_reason(view: &mut PlayerView, instance_id: &str, reason: Option<&str>) {
+        for card in view
+            .you
+            .graveyard
+            .iter_mut()
+            .filter(|card| card.instance_id == instance_id)
+        {
+            card.play_reason = reason.map(str::to_string);
+        }
+    }
+
+    #[test]
+    fn r2975000_i13_asks_a_reason_of_an_admitted_card_and_none_of_an_unadmitted_one() {
+        // R1571000: a permission admits the Spell and its price is out of reach, so it says why.
+        let mut state = pb_playing("r2975000-grave");
+        put(
+            &mut state,
+            &second_wind().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let spell = in_graveyard(&mut state, &three_spell().id, PlayerId::P1);
+        state.players.p1.mana.current = 2;
+        let view = view_for(&state, PlayerId::P1);
+        let legal = legal_actions(&state, PlayerId::P1);
+        assert_eq!(
+            play_reason_violations(&state, PlayerId::P1, &view, &legal),
+            Vec::<String>::new()
+        );
+
+        let mut silent = view.clone();
+        set_reason(&mut silent, &spell.id, None);
+        let found = play_reason_violations(&state, PlayerId::P1, &silent, &legal);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("I13 silent card")
+                && found[0].contains(&spell.id)
+                && found[0].contains("R1571000"),
+            "{found:?}"
+        );
+
+        // No permission admits this one, so a reason on it is stray.
+        let mut state = pb_playing("r2975000-grave-bare");
+        let bare = in_graveyard(&mut state, &grave_spell().id, PlayerId::P1);
+        let mut stray = view_for(&state, PlayerId::P1);
+        set_reason(&mut stray, &bare.id, Some("stray"));
+        let found =
+            play_reason_violations(&state, PlayerId::P1, &stray, &legal_actions(&state, PlayerId::P1));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("I13 stray reason") && found[0].contains(&bare.id),
+            "{found:?}"
+        );
+    }
+}

@@ -36,9 +36,21 @@ type Assignment struct {
 	// claim records it as the new owner's `owner_why` (#2748).
 	OwnerWhy string // default: ""
 	// A review run that is the change's own review (#2748, 2026-11-02): on the subscription whose
-	// run built it, its reviewer (`Review`, its strongest seat at or above the item's tier) reviews
-	// and its builder (`Build`) fixes what it finds, in the same run.
+	// run built it, the model that built it reviews it (`Review`) and fixes what it finds (`Build`),
+	// in the same run (#2903).
 	OwnReview bool // default: False
+	// A planning run in a lane of its own subscription, not the planning lane (#2903, `InLanePlanners`):
+	// its delivery keeps the lane for the item's build on the same model (`queue.BuildNextKey`).
+	InLane bool // default: False
+}
+
+// LaneAction is what the run counts as in the lanes (`Lanes.WithRun`): a planning run in a lane of
+// its own subscription (`InLane`) holds that lane as a build does; any other run is its action.
+func (x *Assignment) LaneAction() string {
+	if x.Action == "plan" && x.InLane {
+		return "build"
+	}
+	return x.Action
 }
 
 // SelfCheck is plan.Assignment.self_check.
@@ -342,6 +354,112 @@ func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced 
 	})
 }
 
+// InLanePlanners is the planners that may plan an item in a lane of their own subscription (#2903,
+// the owner's decision of 2026-11-03), so that its build, and then its own review run, follow in
+// that lane on the same model: every seat of at least medium of each subscription that plans and
+// builds, may start a build now (`Usable`: its usage under each cap less `start_headroom`, its
+// hours, its quiet check, a runner where it runs) and has a lane of its own free (`Lanes.Full`; not
+// a fill-in lane), in the load balancer's and the usage order. Not a `build_last` subscription
+// (claude-2), which builds only after every other: it plans on the planning lane, as before. None
+// unless the night bot chains its runs (`own_review_run`) and keeps a planning lane (`plan_lanes`):
+// with that off a builder plans in its own run, as before.
+func InLanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced bool, quietOK string) []*providers.Seat {
+	cfg := ctx.Cfg
+	if !cfg.OwnReviewRun || lanes.PlanLimit <= 0 {
+		return nil
+	}
+	var seats []*providers.Seat
+	for _, provider := range cfg.Pool.Ordered() {
+		if provider.BuildLast || !slices.Contains(provider.Roles, "plan") || lanes.Full(provider) ||
+			!Usable(ctx, state, provider, lanes, "build", forced, quietOK) {
+			continue
+		}
+		seats = append(seats, filter(cfg.Pool.Seats(provider), func(seat *providers.Seat) bool {
+			return providers.TierAtLeast(seat.Tier, "medium")
+		})...)
+	}
+	return Ranked(cfg.Pool, seats, Balance_(ctx, state, lanes))
+}
+
+// PlanChains is: an item planned now may be planned in its planner's own lane and built there next
+// on the same model (#2903): a plain build of the night bot's (`own_review_run`). Not a fullsend
+// part (Muse builds those from a strong plan, `PartFloor`), nor a split or a fullsend tree, whose
+// mode plans for itself, nor an item planned in its description (`plan_in_issue`), which needs no
+// planning run: those keep their routing.
+func PlanChains(cfg *config.Config, c *queue.Candidate) bool {
+	return cfg.OwnReviewRun && c.Kind == "build" && c.Mode == "" && !c.Part
+}
+
+// inLanePlan is the planning run `c` gets in a lane of its own subscription (#2903), or nil: the
+// weakest of `seats` (`InLanePlanners`) that meets both its plan floor and the tier that builds it,
+// since that model builds it next, in the tier's own order (Muse before agy before Codex before
+// Sonnet); its owner's first when it has one (a plan it was cut off in goes on there).
+func inLanePlan(c *queue.Candidate, seats []*providers.Seat, owner string) *Assignment {
+	build := config.MinTier[config.AsDifficulty(c.Difficulty)]
+	fitting := py.SortedBy(filter(seats, func(s *providers.Seat) bool {
+		return providers.TierAtLeast(s.Tier, queue.PlanFloor(c)) && providers.TierAtLeast(s.Tier, build)
+	}), func(s *providers.Seat) []any { return []any{tierRank[s.Tier], s.Rank} })
+	if len(fitting) == 0 {
+		return nil
+	}
+	seat := fitting[0]
+	if own := filter(fitting, func(s *providers.Seat) bool { return s.Provider.ID == owner }); owner != "" && len(own) > 0 {
+		seat = own[0]
+	}
+	what := "writes it"
+	if !c.Rated {
+		what = "rates and plans it"
+	}
+	return &Assignment{Provider: seat.Provider, Action: "plan", Difficulty: c.Difficulty, Plan: seat, InLane: true,
+		Notes: []string{fmt.Sprintf("#%d: needs a plan; %s %s in a lane of `%s`, which its build then takes "+
+			"on the same model", c.Number, seat.Describe(), what, seat.Provider.ID)}}
+}
+
+// plannersSeat is the seat a build of `c` runs on when its planner's subscription builds it (#2903):
+// the model whose planning run wrote its plan (`queue.PlanModelKey`), on `builder`'s subscription,
+// when that is the subscription that planned it and owns it and the model may build it; nil
+// otherwise (a handed-off item, a plan from before, a model it no longer runs), and the build keeps
+// `builder`. Only where `PlanChains` holds.
+func plannersSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Seat) *providers.Seat {
+	if !PlanChains(cfg, c) || c.PlanModel == "" || c.PlannedBy == "" || builder.Provider.ID != c.PlannedBy ||
+		c.Owner != c.PlannedBy || !queue.PlanMeets(c) {
+		return nil
+	}
+	seat := cfg.Pool.Seat(c.PlannedBy, c.PlanModel)
+	if seat == nil || !providers.TierAtLeast(seat.Tier, config.MinTier[config.AsDifficulty(c.Difficulty)]) {
+		return nil
+	}
+	return seat
+}
+
+// turnSeat is the seat a pull request whose turn came is resolved on (#2948): the model that approved
+// it (`queue.TurnOf`'s `model`), on `builder`'s subscription when that is its owner, and only at the
+// item's tier; nil otherwise.
+func turnSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Seat) *providers.Seat {
+	if c.Kind != "revise" || !c.TurnNext || c.TurnModel == "" || builder.Provider.ID != c.Owner {
+		return nil
+	}
+	seat := cfg.Pool.Seat(c.Owner, c.TurnModel)
+	if seat == nil || !providers.TierAtLeast(seat.Tier, config.MinTier[config.AsDifficulty(c.Difficulty)]) {
+		return nil
+	}
+	return seat
+}
+
+// askedSeat is the seat a question's item runs on once it is taken up again (#2986, #3009): the
+// model that asked (`queue.Candidate.AskedModel`), on `builder`'s subscription when that is its
+// owner, and only at the item's tier; nil otherwise (handed off, or a model it no longer runs).
+func askedSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Seat) *providers.Seat {
+	if c.Resumes == "" || c.AskedModel == "" || builder.Provider.ID != c.Owner {
+		return nil
+	}
+	seat := cfg.Pool.Seat(c.Owner, c.AskedModel)
+	if seat == nil || !providers.TierAtLeast(seat.Tier, config.MinTier[config.AsDifficulty(c.Difficulty)]) {
+		return nil
+	}
+	return seat
+}
+
 // RunReviewer is a build or revise run's own adversarial reviewer: its strongest seat of at
 // least medium, or None, and the change goes to a review run. (`difficulty` does not change it:
 // a hard item's builder is strong, so its own reviewer is too.)
@@ -407,6 +525,10 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 		return FreeProviders(ctx, state, lanes, role, forced, quietOK)
 	}
 
+	if Reserves(candidate) && !candidate.OwnReview {
+		// The lane its planning run kept for it (#2903), or the lane kept for its turn (#2948).
+		lanes = lanes.Without(candidate.Number)
+	}
 	spread := Balance_(ctx, state, lanes)
 	if candidate.Kind == "review" && candidate.OwnReview {
 		return ownReviewer(ctx, state, candidate, lanes.Without(candidate.Number), forced, quietOK)
@@ -469,6 +591,28 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 	if builder == nil {
 		return nil
 	}
+	if seat := plannersSeat(ctx.Cfg, candidate, builder); seat != nil {
+		// One model from plan to own review (#2903): the model that planned it builds it.
+		note = py.Strip(fmt.Sprintf("%s its planner builds it on %s, the model that planned it: one lane, one "+
+			"model.", note, seat.Describe()))
+		builder = seat
+	} else if seat := turnSeat(ctx.Cfg, candidate, builder); seat != nil {
+		// Its turn came (#2948): the model that approved it merges `main` and resolves it.
+		note = py.Strip(fmt.Sprintf("%s its turn came: %s, the model that approved it, merges `main` and "+
+			"resolves it.", note, seat.Describe()))
+		builder = seat
+	} else if seat := askedSeat(ctx.Cfg, candidate, builder); seat != nil {
+		if candidate.Resumes == "answer" {
+			// A trusted person answered its question (#3009): the model that asked carries it out.
+			note = py.Strip(fmt.Sprintf("%s a person answered its question: %s, the model that asked, "+
+				"carries the answer out.", note, seat.Describe()))
+		} else {
+			// Nobody answered its question in time (#2986): the model that asked goes ahead on its default.
+			note = py.Strip(fmt.Sprintf("%s nobody answered its question in time: %s, the model that asked, "+
+				"goes ahead on its default.", note, seat.Describe()))
+		}
+		builder = seat
+	}
 	var notes []string
 	if note != "" {
 		notes = []string{fmt.Sprintf("#%d: %s", candidate.Number, note)}
@@ -502,10 +646,12 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 
 // ownReviewer is who takes `candidate`'s own review run (#2748, 2026-11-02): the subscription whose
 // run built the change (`candidate.Owner`), when it may start a run as long as a revision now
-// (`RoleFor`), in the lane its build reserved for it (`lanes` has let that go): its strongest seat at
-// or above the item's tier reviews (Opus for a hard item), and its weakest seat at that tier fixes
-// what the review finds, as its builds do. nil when it cannot (`Owning` then holds it for it or
-// hands it off to a final audit).
+// (`RoleFor`), in the lane its build reserved for it (`lanes` has let that go). The model that built
+// the head (`candidate.BuiltOn`, its reservation's) reviews it in fresh sessions and fixes what the
+// review finds (#2903, the owner's decision of 2026-11-03: one model, not the subscription's
+// strongest seat): Sonnet what Sonnet built, Opus a hard item. A reservation from before names no
+// model, and its weakest seat at the item's tier does both, as its builds go. nil when it cannot
+// (`Owning` then holds it for it or hands it off to a final audit).
 func ownReviewer(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate, lanes *Lanes, forced bool, quietOK string) *Assignment {
 	pool := ctx.Cfg.Pool
 	provider := pool.Get(candidate.Owner)
@@ -514,13 +660,16 @@ func ownReviewer(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candi
 		return nil
 	}
 	floor := config.MinTier[config.AsDifficulty(candidate.Difficulty)]
-	reviewer := pool.BestSeat(provider, floor)
-	builder, _ := BuilderSeat(pool, []*providers.Provider{provider}, candidate.Difficulty, false, "", "", nil)
-	if reviewer == nil || builder == nil {
+	seat := pool.Seat(provider.ID, candidate.BuiltOn)
+	if candidate.BuiltOn == "" || seat == nil || !providers.TierAtLeast(seat.Tier, floor) {
+		seat, _ = BuilderSeat(pool, []*providers.Provider{provider}, candidate.Difficulty, false, "", "", nil)
+	}
+	if seat == nil {
 		return nil
 	}
-	notes := []string{fmt.Sprintf("#%d: its own review run: `%s`, whose run built it, reviews it on %s "+
-		"and fixes what it finds on %s", candidate.Number, provider.ID, reviewer.Describe(), builder.Describe())}
+	reviewer, builder := seat, seat
+	notes := []string{fmt.Sprintf("#%d: its own review run: `%s`, whose run built it, reviews it and fixes "+
+		"what it finds on %s, the model that built it", candidate.Number, provider.ID, seat.Describe())}
 	return &Assignment{Provider: provider, Action: "review", Difficulty: candidate.Difficulty,
 		Build: builder, Review: reviewer, Notes: notes, OwnReview: true,
 		RunsOn: RunnerFor(ctx, state, provider, lanes, RoleFor(candidate))}
@@ -562,6 +711,21 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	elsewhere := func(c *queue.Candidate, a *Assignment) bool {
 		return c.Waiting && a.Provider.ID != owning[c.Number].Owner
 	}
+	// An item that will be built is planned in a lane of its planner's own subscription when one
+	// has room (#2903), so its build and its own review run follow there on the same model: those
+	// plans take a lane as builds do, and go in the builds' order below. The rest go to the planning
+	// lane.
+	inLane := map[int]*Assignment{}
+	if seats := InLanePlanners(ctx, state, lanes, force, quietOK); len(seats) > 0 {
+		for _, candidate := range order {
+			if !queue.NeedsPlan(candidate) || !PlanChains(ctx.Cfg, candidate) {
+				continue
+			}
+			if a := inLanePlan(candidate, seats, owning[candidate.Number].Owner); a != nil && !elsewhere(candidate, a) {
+				inLane[candidate.Number] = a
+			}
+		}
+	}
 	// The Needs plan stage first: a planner on the planning lane, which takes no build lane,
 	// plans the fullsend parts a medium subscription (Muse) builds from their plans before the
 	// rest, each by a model that meets its plan floor (medium for a medium or unrated item,
@@ -569,7 +733,9 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	var planning []Pair
 	planners := LanePlanners(ctx, state, lanes, force, quietOK)
 	if len(planners) > 0 {
-		needing := py.SortedBy(filter(order, queue.NeedsPlan), func(c *queue.Candidate) []any {
+		needing := py.SortedBy(filter(order, func(c *queue.Candidate) bool {
+			return queue.NeedsPlan(c) && inLane[c.Number] == nil
+		}), func(c *queue.Candidate) []any {
 			return []any{!(force || c.Forced), !c.Part}
 		})
 		for _, candidate := range needing {
@@ -608,9 +774,15 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	}
 	var found []Pair
 	for _, candidate := range order {
+		if assignment := inLane[candidate.Number]; assignment != nil {
+			handedOff(candidate, assignment, owning[candidate.Number])
+			found = append(found, Pair{candidate, assignment})
+			continue
+		}
 		room := lanes
-		if candidate.OwnReview {
-			room = lanes.Without(candidate.Number) // the lane its build reserved for it (#2748)
+		if Reserves(candidate) {
+			// The lane its build reserved for it (#2748), its planning run (#2903), or its turn (#2948).
+			room = lanes.Without(candidate.Number)
 		}
 		if room.Free() <= 0 && room.MachineFree() <= 0 {
 			continue
@@ -623,7 +795,8 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	}
 	planning = py.SortedBy(planning, func(pair Pair) []any { return []any{!(force || pair.Candidate.Forced)} })
 	// Own lane first (#2748): a subscription's own work, a continuation of an item paused or cut
-	// off, a revision of its pull request or an item held for it, goes before new work on it:
+	// off, a revision of its pull request, an item held for it, or the build its planning run kept
+	// its lane for (#2903), goes before new work on it:
 	// after the forced plans, ahead of the other plans, of review runs (#317 part 9 put those
 	// before every build and revision) and of every other build or revision, so a lane that a run
 	// just freed takes its own next, while its session can still be resumed, and its item does not
@@ -631,7 +804,7 @@ func Pairs(ctx *hctx.Context, state *pyjson.Object, q []*queue.Candidate, lanes 
 	ownWork := func(pair Pair) bool {
 		c, own := pair.Candidate, owning[pair.Candidate.Number]
 		return own.Owner != "" && pair.Assignment.Provider.ID == own.Owner &&
-			(c.Kind == "revise" || c.Continues || c.WasHeld || c.SentBack || c.OwnReview)
+			(c.Kind == "revise" || c.Continues || c.WasHeld || c.SentBack || c.OwnReview || c.BuildNext)
 	}
 	var out, own, plans, rest []Pair
 	for _, pair := range planning {

@@ -1,10 +1,11 @@
 // `/login`'s further ways in (issue #267): the email sign-in link and code (R664), the second step
 // for an account with an authenticator app (R665), a username in place of the email (R1443, issue
-// #645) and the OAuth providers (R666), against a stubbed `fetch`.
+// #645), the OAuth providers (R666) and Google's own button (R2983000), against a stubbed `fetch`.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GIS_BUTTON, GIS_SCRIPT_URL, type GisButtonConfiguration, type GisIdConfiguration } from "../auth/googleIdentity.ts";
 import { challengeForRequest, storedVerifiers } from "../auth/pkce.ts";
 import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession } from "../auth/redirect.ts";
 import { loginTestid } from "../auth/testids.ts";
@@ -429,7 +430,9 @@ describe("R666 OAuth providers, behind configuration", () => {
     render(<LoginRoute />);
     const buttons = screen.getAllByTestId(loginTestid.oauth);
     expect(buttons.map((button) => button.getAttribute("data-provider"))).toEqual(["github", "google"]);
-    expect(buttons.map((button) => button.textContent)).toEqual(["GitHub", "Google"]);
+    expect(buttons.map((button) => button.textContent)).toEqual(["Continue with GitHub", "Continue with Google"]);
+    // #1890: Google's button carries its own mark, as its branding asks; no other provider's does.
+    expect(buttons.map((button) => button.querySelector("svg") !== null)).toEqual([false, true]);
 
     fireEvent.click(buttons[1] as HTMLElement);
     await waitFor(() => {
@@ -455,5 +458,229 @@ describe("R666 OAuth providers, behind configuration", () => {
     expect(screen.getByTestId(loginTestid.oauthError).textContent).toBe(AUTH_MESSAGES.oauthFailed);
     expect(screen.queryByTestId(loginTestid.linkError)).toBeNull();
     expect(document.body.textContent).not.toContain("PROVIDER-TEXT");
+  });
+});
+
+describe("R2983000 Google's own button", () => {
+  const CLIENT_ID = "1234567890-abcdefghijklmnop.apps.googleusercontent.com";
+
+  type StubGis = {
+    initialize: ReturnType<typeof vi.fn<(config: GisIdConfiguration) => void>>;
+    renderButton: ReturnType<typeof vi.fn<(parent: HTMLElement, options: GisButtonConfiguration) => void>>;
+  };
+
+  function gisScripts(): HTMLScriptElement[] {
+    return [...document.querySelectorAll<HTMLScriptElement>(`script[src="${GIS_SCRIPT_URL}"]`)];
+  }
+
+  /** `google.accounts.id` as GIS defines it once loaded; its button is one element in the slot. */
+  function stubGis(): StubGis {
+    const id: StubGis = {
+      initialize: vi.fn<(config: GisIdConfiguration) => void>(),
+      renderButton: vi.fn<(parent: HTMLElement, options: GisButtonConfiguration) => void>((parent) => {
+        parent.append(document.createElement("iframe"));
+      }),
+    };
+    vi.stubGlobal("google", { accounts: { id } });
+    return id;
+  }
+
+  /** The configuration GIS was armed with the `nth` time (from 0). */
+  function armed(id: StubGis, nth: number): GisIdConfiguration {
+    const config = id.initialize.mock.calls[nth]?.[0];
+    if (config === undefined) throw new Error(`GIS was not armed ${String(nth + 1)} times`);
+    return config;
+  }
+
+  async function hex(raw: string): Promise<string> {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function googleOauthButton(): HTMLElement | undefined {
+    return screen.queryAllByTestId(loginTestid.oauth).find((button) => button.getAttribute("data-provider") === "google");
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "github,google");
+  });
+
+  afterEach(() => {
+    cleanup();
+    // A load left in flight settles, so the next test starts with none.
+    for (const script of gisScripts()) {
+      script.dispatchEvent(new Event("error"));
+      script.remove();
+    }
+  });
+
+  it("R2983000 without a client ID keeps R666's button and loads no GIS script", async () => {
+    serve({});
+    render(<LoginRoute />);
+    await settle();
+    expect(googleOauthButton()).toBeDefined();
+    expect(screen.queryByTestId(loginTestid.googleButton)).toBeNull();
+    expect(gisScripts()).toHaveLength(0);
+  });
+
+  it("R2983000 a client ID that is not one, or a build without Google, loads no GIS script either", async () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "GOCSPX-not-a-client-id");
+    serve({});
+    render(<LoginRoute />);
+    await settle();
+    expect(googleOauthButton()).toBeDefined();
+    expect(gisScripts()).toHaveLength(0);
+    cleanup();
+
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", CLIENT_ID);
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "github");
+    render(<LoginRoute />);
+    await settle();
+    expect(screen.queryByTestId(loginTestid.googleButton)).toBeNull();
+    expect(gisScripts()).toHaveLength(0);
+  });
+
+  it("R2983000 with a client ID loads GIS and draws Google's button in place of R666's", async () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", CLIENT_ID);
+    serve({});
+    render(<LoginRoute />);
+    await settle();
+    // Loading: one script, and R666's Google button meanwhile.
+    expect(gisScripts()).toHaveLength(1);
+    expect(googleOauthButton()).toBeDefined();
+    const slot = screen.getByTestId(loginTestid.googleButton);
+    expect(slot.childElementCount).toBe(0);
+
+    const id = stubGis();
+    act(() => {
+      gisScripts()[0]?.dispatchEvent(new Event("load"));
+    });
+    await waitFor(() => {
+      expect(id.renderButton).toHaveBeenCalledTimes(1);
+    });
+    expect(id.renderButton).toHaveBeenCalledWith(slot, GIS_BUTTON);
+    const config = armed(id, 0);
+    expect(config).toMatchObject({ client_id: CLIENT_ID, context: "signin", ux_mode: "popup", use_fedcm_for_button: true });
+    expect(config.nonce).toMatch(/^[0-9a-f]{64}$/u);
+    await waitFor(() => {
+      expect(googleOauthButton()).toBeUndefined();
+    });
+    // Only GitHub's R666 button is left beside Google's own.
+    expect(screen.getAllByTestId(loginTestid.oauth).map((button) => button.getAttribute("data-provider"))).toEqual(["github"]);
+    expect(slot.childElementCount).toBe(1);
+    expect(gisScripts()).toHaveLength(1);
+  });
+
+  it("R2983000 the credential is exchanged with the raw nonce GIS was given the hash of, and signs in as R666's code does", async () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", CLIENT_ID);
+    const id = stubGis();
+    const calls = serve({ "/auth/v1/token": tokens(AAL1) });
+    render(<LoginRoute />);
+    await waitFor(() => {
+      expect(id.renderButton).toHaveBeenCalled();
+    });
+    // Already loaded: no script is added.
+    expect(gisScripts()).toHaveLength(0);
+    const config = armed(id, 0);
+    const idToken = jwt({ iss: "https://accounts.google.com", sub: "google-1", nonce: config.nonce });
+
+    await act(async () => {
+      config.callback({ credential: idToken });
+      await Promise.resolve();
+    });
+    await settle();
+
+    const exchange = calls.find((call) => call.url.pathname === "/auth/v1/token");
+    expect(exchange?.method).toBe("POST");
+    expect(exchange?.url.searchParams.get("grant_type")).toBe("id_token");
+    const body = exchange?.body as { provider: string; id_token: string; nonce: string };
+    expect(body.provider).toBe("google");
+    expect(body.id_token).toBe(idToken);
+    expect(await hex(body.nonce)).toBe(config.nonce);
+    expect(body.nonce).not.toBe(config.nonce);
+
+    expect(readSession()?.accessToken).toBe(AAL1);
+    expect(window.location.pathname).toBe(paths.landing);
+    // The token and the raw nonce went in the body only: no URL holds either.
+    for (const url of [...calls.map((call) => call.url.href), window.location.href]) {
+      expect(url).not.toContain(body.nonce);
+      expect(url).not.toContain(idToken);
+    }
+    // §9.4: the server's gate decides the account (pending until its invite), not this screen.
+    expect(paths_(calls).filter((path) => path.includes(" /api/"))).toEqual([]);
+    // The raw nonce is kept in memory only.
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      for (let at = 0; at < storage.length; at += 1) {
+        const key = storage.key(at) ?? "";
+        expect(storage.getItem(key) ?? "", key).not.toContain(body.nonce);
+      }
+    }
+  });
+
+  it("R2983000 a refused exchange says oauthFailed, keeps nothing, and the next attempt gets a new nonce", async () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", CLIENT_ID);
+    const id = stubGis();
+    const calls = serve({ "/auth/v1/token": { status: 400, body: { error_code: "bad_oauth_callback", msg: "PROVIDER-TEXT" } } });
+    render(<LoginRoute />);
+    await waitFor(() => {
+      expect(id.renderButton).toHaveBeenCalled();
+    });
+    const first = armed(id, 0);
+
+    await act(async () => {
+      first.callback({ credential: jwt({ sub: "google-1", nonce: first.nonce }) });
+      await Promise.resolve();
+    });
+    await settle();
+
+    expect(screen.getByTestId(loginTestid.error).textContent).toBe(AUTH_MESSAGES.oauthFailed);
+    expect(document.body.textContent).not.toContain("PROVIDER-TEXT");
+    expect(readSession()).toBeNull();
+    expect(window.location.pathname).toBe(paths.login);
+    expect(paths_(calls)).toEqual(["POST /auth/v1/token"]);
+    await waitFor(() => {
+      expect(id.initialize).toHaveBeenCalledTimes(2);
+    });
+    const second = armed(id, 1);
+    expect(second.nonce).toMatch(/^[0-9a-f]{64}$/u);
+    expect(second.nonce).not.toBe(first.nonce);
+    expect(id.renderButton).toHaveBeenCalledTimes(2);
+    // Drawn again in the same slot, which holds one button.
+    expect(screen.getByTestId(loginTestid.googleButton).childElementCount).toBe(1);
+  });
+
+  it("R2983000 a GIS script that fails to load leaves R666's PKCE redirect", async () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", CLIENT_ID);
+    serve({});
+    render(<LoginRoute />);
+    await settle();
+    expect(gisScripts()).toHaveLength(1);
+    act(() => {
+      gisScripts()[0]?.dispatchEvent(new Event("error"));
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId(loginTestid.googleButton)).toBeNull();
+    });
+    const button = googleOauthButton();
+    expect(button).toBeDefined();
+    fireEvent.click(button as HTMLElement);
+    await waitFor(() => {
+      expect(storedVerifiers().map((entry) => entry.flow)).toContain("oauth");
+    });
+  });
+
+  it("R2983000 GIS that cannot draw its button leaves R666's button", async () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", CLIENT_ID);
+    const id = stubGis();
+    id.renderButton.mockImplementation(() => {
+      throw new Error("GIS cannot draw here");
+    });
+    serve({});
+    render(<LoginRoute />);
+    await waitFor(() => {
+      expect(screen.queryByTestId(loginTestid.googleButton)).toBeNull();
+    });
+    expect(id.renderButton).toHaveBeenCalledTimes(1);
+    expect(googleOauthButton()).toBeDefined();
   });
 });

@@ -50,6 +50,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -99,7 +101,6 @@ mod tests {
 
             #[test]
             fn cry_your_next_trap_costs_2_less() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 assert_eq!(cost_of(&s, EXPERIMENT), 2);
                 s.play(TRICKSTER, json!({}));
@@ -110,7 +111,6 @@ mod tests {
 
             #[test]
             fn a_field_trap_counts_as_a_trap_and_a_field_spell_is_reached_too() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, TESLA, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, TESLA), 0);
@@ -119,7 +119,6 @@ mod tests {
 
             #[test]
             fn the_first_such_play_consumes_it_the_next_one_pays_full_price() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, SHEEPISH, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 s.play(MANA_WELL, json!({ "zone": 1 }));
@@ -130,7 +129,6 @@ mod tests {
 
             #[test]
             fn the_first_such_play_consumes_it_even_when_that_card_already_costs_0_under_cloaked_toe_cracker() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TRICKSTER, EXPERIMENT, MANA_WELL, STOCKPILE], "field": ["classic-006"] },
                     "p2": { "hand": [STOCKPILE] },
@@ -144,7 +142,6 @@ mod tests {
 
             #[test]
             fn r65_the_price_floors_at_0_a_1_cost_trap_costs_0_not_less() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, SHEEPISH, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, SHEEPISH), 0);
@@ -154,7 +151,6 @@ mod tests {
 
             #[test]
             fn spells_and_units_neither_use_nor_consume_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TRICKSTER, STOCKPILE, VANILLA, EXPERIMENT], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -170,7 +166,6 @@ mod tests {
 
             #[test]
             fn no_this_turn_it_waits_across_turns_until_used() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
@@ -187,7 +182,6 @@ mod tests {
 
             #[test]
             fn it_is_yours_the_opponent_s_traps_are_untouched() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, STOCKPILE] }, "p2": { "hand": [EXPERIMENT, STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, EXPERIMENT), 2);
@@ -195,7 +189,6 @@ mod tests {
 
             #[test]
             fn r177_the_opponent_reads_your_hand_as_a_count_and_no_cost_of_it_only_the_public_badge() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 let theirs = js(&s.view(P2));
@@ -217,7 +210,6 @@ mod tests {
 
             #[test]
             fn r70_a_cast_never_uses_it_a_trap_wardrum_casts_leaves_the_discount_waiting() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [SHEEPISH, TRICKSTER, MANA_WELL, STOCKPILE], "field": [WARDRUM], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
@@ -237,7 +229,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_discount_makes_it_3_less() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 step_param(s.card_mut(TRICKSTER), "discount", 1);
                 s.play(TRICKSTER, json!({}));
@@ -247,7 +238,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_discount_makes_it_1_less() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 step_param(s.card_mut(TRICKSTER), "discount", -1);
                 s.play(TRICKSTER, json!({}));
@@ -260,7 +250,6 @@ mod tests {
 
             #[test]
             fn cry_your_next_trap_field_trap_or_field_spell_costs_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, TESLA, EXPERIMENT, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -277,7 +266,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_makes_the_next_one_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -290,7 +278,6 @@ mod tests {
 
             #[test]
             fn spells_and_units_neither_use_nor_consume_it_and_it_waits_across_turns() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, STOCKPILE, MANA_WELL], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },

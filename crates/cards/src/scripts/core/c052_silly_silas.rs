@@ -74,6 +74,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -108,7 +110,6 @@ mod tests {
 
         #[test]
         fn r14_turns_both_rings_one_step_and_silas_rotates_with_them() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": ["core-052"],
@@ -138,7 +139,6 @@ mod tests {
 
         #[test]
         fn r12_a_card_that_crosses_the_center_line_changes_controller_and_never_owner() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5 }] },
                 "p2": { "field": [{ "def": "core-t-felinor", "lane": 1 }] },
@@ -157,7 +157,6 @@ mod tests {
 
         #[test]
         fn r14_r78_damage_and_every_other_part_of_the_instance_travel_with_the_card() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5, "damage": 2, "position": "DEF" }] },
             }));
@@ -174,7 +173,6 @@ mod tests {
 
         #[test]
         fn r33_a_face_down_trap_that_crosses_is_read_by_its_new_controller_alone() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"] },
                 "p2": { "backrow": [{ "def": "core-071", "lane": 1, "faceUp": false }] },
@@ -197,7 +195,6 @@ mod tests {
 
         #[test]
         fn r81_the_declared_direction_turns_the_ring_the_other_way() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 1 }] },
                 "p2": { "field": [{ "def": "core-t-felinor", "lane": 5 }] },
@@ -216,7 +213,6 @@ mod tests {
 
         #[test]
         fn r11_a_unit_token_that_crosses_stays_on_the_field_it_changed_control_it_did_not_leave() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"] },
                 "p2": { "field": [{ "def": "core-t-felinor", "lane": 5 }] },
@@ -235,7 +231,6 @@ mod tests {
 
         #[test]
         fn r14_r831000_the_card_rotates_into_the_locked_zone_its_damage_and_position_kept() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5, "damage": 2, "position": "DEF" }] },
             }));
@@ -255,7 +250,6 @@ mod tests {
 
         #[test]
         fn r831000_a_unit_token_rotates_into_a_locked_zone_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
@@ -275,7 +269,6 @@ mod tests {
         #[test]
         fn r14_every_card_that_would_move_to_the_opponent_is_bounced_to_its_controller_s_hand_costing_0_instead_and_a_card_crossing_to_its_side_still_crosses()
          {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5, "damage": 2 }] },
                 "p2": { "field": [{ "def": "core-019", "lane": 1 }] },
@@ -312,7 +305,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_keep_the_rest_the_rotation_still_happens_and_silas_still_moves() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 3 }] },
             }));
@@ -328,7 +320,6 @@ mod tests {
 
         #[test]
         fn r11_a_crossing_unit_token_is_bounced_so_it_ceases_to_exist_s3_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
@@ -342,7 +333,6 @@ mod tests {
 
         #[test]
         fn r14_the_direction_is_still_declared_leftward_crossings_bounce_the_same_way() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 1 }] },
             }));

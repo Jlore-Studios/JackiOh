@@ -95,7 +95,6 @@
 .tavern.app-shell .account-quests__quest {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .tavern.app-shell .account-quests__quest progress {

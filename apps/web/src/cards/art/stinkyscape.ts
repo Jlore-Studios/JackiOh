@@ -9,6 +9,7 @@ import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
+import type { ArtPart } from "./pictures.ts";
 import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
 export const STINKYSCAPE_PREFIX = "stinkyscape-";
@@ -1399,7 +1400,11 @@ function rays(seed: number): string {
   return out.join("");
 }
 
-/** The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. */
+/**
+ * The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. R2949000: its subject is
+ * `defId`'s, and the rest of the picture grows from `seedId` (pictures.ts `artSeedOf`), the card's id by default.
+ * R2943001: `part` "backdrop" leaves its subject out, and "subject" draws the subject alone (pictures.ts `ArtPart`).
+ */
 export function stinkyscapeSvg(
   defId: string,
   name: string | undefined,
@@ -1407,10 +1412,12 @@ export function stinkyscapeSvg(
   type: CardType,
   radiant: boolean,
   motion: ArtMotion | null = null,
+  seedId: string = defId,
+  part: ArtPart = "whole",
 ): string {
   const subject = stinkySubject(defId, name, tags, type);
   const lower = (name ?? "").toLowerCase();
-  const seed = hashId(defId);
+  const seed = hashId(seedId);
   const based = drift(seed, subject.family, kindPaint(FAMILY_PAINTS[subject.family], subject, lower));
   const p = radiant ? gild(based) : based;
   const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
@@ -1422,15 +1429,16 @@ export function stinkyscapeSvg(
   const planet = subject.family !== "terminus" && !(subject.family === "space" && subject.kind !== "reticle");
   const sky = backdrop(behind, p, subject.family, planet, defs);
   const drawn = subjectMarkup(ahead, p, subject, lower, name);
+  // R2943001: a part other than "whole" draws the backdrop with no subject, or the subject on nothing.
+  const behindSubject = part !== "subject";
+  const figure = part !== "backdrop";
   return (
     `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
     `<defs>${defs.join("")}</defs>` +
     motionStyle(motion, CENTER_ORIGIN) +
-    moving("back", sky, motion) +
-    (radiant ? rays(seed) : "") +
-    moving("subject", group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn), motion) +
-    particleMarkup(motion, defId) +
-    rect(0, 0, BOX, BOX, "url(#v)") +
+    (behindSubject ? moving("back", sky, motion) + (radiant ? rays(seed) : "") : "") +
+    (figure ? moving("subject", group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn), motion) : "") +
+    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
     "</svg>"
   );
 }

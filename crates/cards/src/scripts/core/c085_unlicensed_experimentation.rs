@@ -172,6 +172,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -243,7 +245,6 @@ mod tests {
 
         #[test]
         fn r99_the_opponent_plays_its_own_controller_s_play_never_sets_it_off() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [armed(false)], "field": [TIMMY], "hand": [BIG_UNIT, STOCKPILE] },
                 "p2": { "hand": [STOCKPILE, MENACE] },
@@ -257,7 +258,6 @@ mod tests {
 
         #[test]
         fn r99_a_spell_is_not_a_permanent_so_the_opponent_casting_one_leaves_it_armed() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -271,7 +271,6 @@ mod tests {
 
         #[test]
         fn r99_a_permanent_whose_type_matches_nothing_you_control_leaves_it_armed() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] }, // no Unit of p1's anywhere
@@ -286,7 +285,6 @@ mod tests {
 
         #[test]
         fn r61_the_firing_trap_is_never_its_own_match_a_trap_play_with_no_other_trap_of_yours_leaves_it_armed() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] }, // the only Trap p1 controls is #85 itself
@@ -301,7 +299,6 @@ mod tests {
 
         #[test]
         fn r61_a_token_card_the_opponent_plays_never_sets_it_off() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -317,7 +314,6 @@ mod tests {
         /// token) without the Token tag, so the opponent's play of one sets the trap off.
         #[test]
         fn r1177000_r61_a_token_fused_with_a_real_card_is_a_real_card_whose_play_sets_it_off() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -356,7 +352,6 @@ mod tests {
 
         #[test]
         fn r61_recruit_never_sets_it_off_the_units_arrive_by_summoned_and_the_spell_is_no_permanent() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -375,7 +370,6 @@ mod tests {
 
         #[test]
         fn s8_4_fires_on_the_opponent_s_matching_permanent_and_fuses_it_onto_yours_r77() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [{ "def": TIMMY, "damage": 1, "position": "DEF" }] },
@@ -408,7 +402,6 @@ mod tests {
 
         #[test]
         fn r77_the_fused_keywords_are_the_union_of_the_ingredients() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -427,7 +420,6 @@ mod tests {
 
         #[test]
         fn s5_1_a_trap_is_consumed_when_it_fires_and_goes_to_its_owner_s_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -444,7 +436,6 @@ mod tests {
 
         #[test]
         fn s8_4_a_random_permanent_of_yours_the_base_face_fuses_onto_exactly_one_of_two_matches() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-085-random-one",
                 "active": "p2",
@@ -464,7 +455,6 @@ mod tests {
 
         #[test]
         fn r61_field_trap_counts_as_trap_and_the_result_is_promoted_to_field_trap_r77() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 // My Pawn watches `attackDeclared`, so it is a Trap of p1's that this play cannot wake.
@@ -487,7 +477,6 @@ mod tests {
 
         #[test]
         fn r23_r61_an_immutable_permanent_of_yours_fires_the_trap_and_receives_nothing_and_the_played_card_stays() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [immutable()] },
@@ -509,7 +498,6 @@ mod tests {
 
         #[test]
         fn r17_it_fires_after_the_played_permanent_s_cry_so_the_cry_has_already_resolved() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
@@ -535,7 +523,6 @@ mod tests {
 
         #[test]
         fn r77_onto_every_such_permanent_one_fusion_at_a_time_each_target_keeping_its_own_instance() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": [TIMMY, MR_TOKEN] },
@@ -558,7 +545,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_the_radiant_cell_restates_only_the_targets_so_a_single_match_still_works() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": [TIMMY] },
@@ -574,7 +560,6 @@ mod tests {
 
         #[test]
         fn r99_the_radiant_face_declines_the_same_events_its_controller_s_own_play_leaves_it_armed() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [armed(true)], "field": [TIMMY], "hand": [BIG_UNIT, STOCKPILE] },
                 "p2": { "hand": [STOCKPILE, MENACE] },
@@ -587,7 +572,6 @@ mod tests {
 
         #[test]
         fn r23_the_radiant_face_skips_an_immutable_permanent_and_fuses_onto_the_rest() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": [immutable(), TIMMY] },

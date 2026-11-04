@@ -253,11 +253,10 @@ pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), Api
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.profiles_remove(&profile.id).await?;
     tx.commit().await?;
-    // The friendships went with the profile by cascade, so a watch of a friend by this account
-    // ends at once, as an unfriend or a block ends one (`social::watch::revoke_between`).
-    let watchers = app
-        .matches
-        .revoke_watchers(|watcher, _| watcher == profile.id.as_str());
+    // The friendships went with the profile by cascade, so a watch of a friend by this account, of a
+    // 1v1 match or a co-op game (R2881000), ends at once, as an unfriend or a block ends one
+    // (`social::watch::revoke_between`).
+    let watchers = crate::social::watch::revoke_watcher(app, &profile.id);
     log_info("account.watchers_revoked", json!({ "watchersRevoked": watchers }));
     match app.auth.delete_user(&caller.user.user_id).await {
         Ok(()) => Ok(()),

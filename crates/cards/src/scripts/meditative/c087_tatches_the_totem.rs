@@ -92,6 +92,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -106,7 +108,6 @@ mod tests {
 
     /// p1's deck holds Tatches between fillers; both sides hold fillers and p1 has mana to play.
     fn decked(seed: &str, hand: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "mana": 10, "hand": hand, "library": [FILLER, TATCHES, FILLER] },
@@ -146,7 +147,6 @@ mod tests {
             #[test]
             fn r1162_a_tribal_unit_played_summons_it_into_the_leftmost_open_zone_with_no_cry() {
                 // Lane 1 is taken, so the Vanilla takes lane 2 and Tatches the leftmost open one.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tatches-summon",
                     "p1": {
@@ -194,7 +194,6 @@ mod tests {
 
             #[test]
             fn r1162_the_opponents_tribal_play_does_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tatches-foe",
                     "p1": { "mana": 10, "hand": [FILLER], "library": [FILLER, TATCHES, FILLER] },
@@ -260,7 +259,6 @@ mod tests {
                 let mut hand_hit = false;
                 let mut deck_hit = false;
                 for seed in 1..=20 {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "seed": format!("tatches-eot-{seed}"),
                         "p1": {
@@ -299,7 +297,6 @@ mod tests {
 
             #[test]
             fn r386_cards_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tatches-param",
                     "p1": {
@@ -321,7 +318,6 @@ mod tests {
 
             #[test]
             fn radiant_then_one_buff_on_each_adjacent_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tatches-adjacent",
                     "p1": {
@@ -354,7 +350,6 @@ mod tests {
                     ("rtatches-bean", BEAN, false),
                     ("rtatches-human", VANILLA, true),
                 ] {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "seed": seed,
                         "p1": {

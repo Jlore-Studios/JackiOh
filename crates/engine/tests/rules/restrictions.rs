@@ -13,7 +13,7 @@ use crate::rules::fixtures::damage_combat::{
     answer, ask_controller, bolt, charger, fighter, grunt, note, notes, playing, recorder, replays_to,
     round_trip, statue, storm, top_loser, wall, warded,
 };
-use crate::rules::fixtures::harness::{Bench, events_json, in_hand, live, live_mut, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_json, in_hand, input, live, live_mut, put, slot};
 
 fn unit_of(instance: &CardInstance) -> AttackTarget {
     AttackTarget::Unit {
@@ -91,10 +91,6 @@ fn apply(
     let mut sink = bench.sink(state);
     let mut ctx = make_context(&mut sink, me.as_ref(), options);
     apply_effects(&effects, &mut ctx);
-}
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 fn refusal(result: Result<(), EngineError>) -> Option<String> {

@@ -27,6 +27,7 @@ import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import { useEmotes } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
+import { useSideline } from "../sideline/useSideline.ts";
 import { CatalogContext } from "../game/catalog.ts";
 import { currentCatalogLookup } from "../game/currentCatalog.ts";
 import {
@@ -267,6 +268,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     lastRelaySeq.current = relayed.seq;
     emotes.receive(relayed.from, relayed.emote);
   }, [relayed, emotes]);
+  // R2990000, R2990004: the watchers' emotes land in the sideline strip the same way, by `seq`.
+  const sideline = useSideline({ engine: getAudioEngine(), globalMute: useSetting("muteSpectatorEmotes") });
+  const watcherEmote = match.spectatorEmote;
+  const lastWatcherSeq = useRef(0);
+  useEffect(() => {
+    if (watcherEmote === null || watcherEmote.seq === lastWatcherSeq.current) return;
+    lastWatcherSeq.current = watcherEmote.seq;
+    sideline.receive(watcherEmote.watcher, watcherEmote.emote);
+  }, [watcherEmote, sideline]);
 
   // R738: aims both ways. This seat's go out through the socket; the opponent's relay is drawn,
   // and only ever the opponent's — a relay is never about the viewer's own seat.
@@ -450,6 +460,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       legal={match.legal}
       onAction={match.send}
       emotes={emotes}
+      sideline={sideline}
       aim={aim}
       choiceHover={choiceHover}
       trackStats
@@ -532,6 +543,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           ) : null}
         </>
       }
+      phoneRailTop
       boardRail={
         <>
           <BackLink showSettings={false} />
@@ -557,12 +569,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
                 {rankCaption(ranks.seats.p2.rank)}
               </span>
               <span className="match-ranks__short">
-                {ranks.ranked ? t("Ranked") : t("Unranked")} · <Username name={ranks.seats.p1.username} />
+                <span className="match-ranks__label">{ranks.ranked ? t("Ranked") : t("Unranked")} · </span>
+                <Username name={ranks.seats.p1.username} />
                 {ranks.seats.p1.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p1.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
-                {rankShortWords(ranks.seats.p1.rank)} {t("vs")}{" "}
+                <span className="match-ranks__tier">{rankShortWords(ranks.seats.p1.rank)}</span> {t("vs")}{" "}
                 <Username name={ranks.seats.p2.username} />
                 {ranks.seats.p2.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p2.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
-                {rankShortWords(ranks.seats.p2.rank)}
+                <span className="match-ranks__tier">{rankShortWords(ranks.seats.p2.rank)}</span>
               </span>
             </p>
           ) : null}

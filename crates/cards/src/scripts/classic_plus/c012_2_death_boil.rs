@@ -50,6 +50,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const BOIL: &str = "classicplus-012-2";
     const MENACE: &str = "core-019"; // 9/9
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
@@ -58,7 +60,6 @@ mod tests {
     use crate::merged;
 
     fn boil(radiant: bool, p1: Value, p2: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(json!({ "hand": [{ "def": BOIL, "radiant": radiant }, FILLER] }), p1),
             "p2": merged(json!({ "hand": [FILLER], "field": [MENACE] }), p2),

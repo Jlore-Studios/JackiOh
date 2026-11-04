@@ -52,7 +52,7 @@ deployment decision that can be made later without touching the code.
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
 | `jackioh-server` HTTP routes | One process (a Docker image in a Cloudflare container behind the site's Worker) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
-| `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays (§5.4) |
+| `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays, and the watchers of a person's seat (§5.4, R2881000) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
 ---
@@ -69,7 +69,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
 | Browser → server WebSocket | the user's JWT, offered as the `jackioh.bearer.` subprotocol (R1379000) | intent: one `Action` at a time; receives `viewFor` and nothing else |
 | Browser → server WebSocket `/ws/duos` | the user's JWT, as `/ws/match` | intent: one `DuosActionBody` at a time, and team pings; receives its seat's Duos view with its legal actions, and its teammate's pings (SPEC §13.6, §13.10) |
-| Browser → server WebSocket `/ws/watch` | the user's JWT, as `/ws/match` | a `hello` naming a friend's match; receives the friend's seat's `viewFor`, `SPECTATE_DELAY_MS` late, and nothing it sends after `hello` is read (SPEC §9.5) |
+| Browser → server WebSocket `/ws/watch` | the user's JWT, as `/ws/match` | a `hello` naming a friend's match or co-op game; receives the friend's seat's `viewFor` (a co-op seat's Duos view, R2881000), `SPECTATE_DELAY_MS` late, and nothing it sends after `hello` is read (SPEC §9.5) |
 
 One rule, from SPEC §9.1: **the client sends intent, never state.** "Play instance 7 in zone 3 with
 target 12", never "my deck contains these 25 cards", never "I own a Mythic".
@@ -238,7 +238,8 @@ things in it are not obvious:
   from `apps/web/dist`, served without running any Worker code (`assets.run_worker_first`). Those two
   prefixes reach `apps/edge`'s Worker, which hands them to one container running
   `crates/server/Dockerfile`'s image, so `VITE_SERVER_HTTP_URL` is the site's own origin and the
-  CSP's `connect-src` names only the site, its socket and Supabase.
+  CSP's `connect-src` names only the site, its socket, Supabase and Google's own sign-in button
+  (`https://accounts.google.com/gsi/`, R2983000).
 - **One container, which sleeps.** The server holds every live match in memory (§4.1), so every
   request reaches the same instance (`max_instances: 1`), placed in eastern North America beside
   Supabase. After ten minutes with no request and no open socket it stops, and the next request
@@ -404,9 +405,10 @@ through `jackioh_ai::duos_decide`. Its loop is §5.1's with four seats:
 - a crashed actor folds its match back with `duos_fold`, and the end writes `duos_matches.result` and
   `ended_at` once and records the result for both humans, unranked.
 
-A watcher (SPEC §9.5) attaches to a friend's live match, ranked or unranked, at `/ws/watch`. It never sends an
-action: the server pushes it the friend's seat's `viewFor`, each `SPECTATE_DELAY_MS` after the state it
-shows, ignores whatever it sends after `hello`, and tells both players' own sockets how many watch.
+A watcher (SPEC §9.5) attaches to a friend's live match, ranked or unranked, or co-op game, at `/ws/watch`. It
+never sends an action: the server pushes it the friend's seat's `viewFor` (a co-op seat's `duos_view_for`,
+held by the co-op actor, R2881000), each `SPECTATE_DELAY_MS` after the state it shows, ignores whatever it
+sends after `hello`, and tells both players' own sockets how many watch.
 
 ---
 
@@ -512,6 +514,7 @@ public by construction; anything without that prefix must never appear in a clie
 | `VITE_SERVER_WS_URL` | `wss://jackioh.com/ws/match` | same host, WebSocket path |
 | `VITE_SITE_ORIGIN` | `https://jackioh.com` | #696: the host the bundle is served from, named by its canonical links, sitemap and robots.txt; `apps/web/.env.production` for production, `apps/web/.env.staging` for staging; unset, `SITE_ORIGIN` |
 | `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
+| `VITE_GOOGLE_CLIENT_ID` | optional, `<digits>-<id>.apps.googleusercontent.com` | R2983000: the Google web client ID listed under Client IDs in the Supabase project's Google provider. Set, with `google` in `VITE_AUTH_OAUTH_PROVIDERS`, `/login` draws Google's own button, which signs in on the site's origin by ID token; unset (or when Google's script is blocked), Google signs in through R666's redirect. Public; its `GOCSPX-…` secret stays in Supabase (§10, step 2) |
 
 The client's catalog version is not a variable: the bundle reads it from
 `crates/cards/patches/patches.json` when it is built, as the server compiles it in.
@@ -670,6 +673,14 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
+   - **Google's own button (R2983000).** So that Google's sign-in screen names the site
+     (`jackioh.com`, `staging.jackioh.com`) rather than `<ref>.supabase.co`: on the Google Cloud OAuth
+     client each project already uses for Google, add the site's address (`https://jackioh.com`,
+     `https://staging.jackioh.com`) to **Authorized JavaScript origins**; in the project's Auth →
+     Sign In / Providers → Google, keep that web client ID in **Client IDs** and **Skip nonce check**
+     off; then put the client ID (public) in `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env.production`
+     (and `apps/web/.env.staging` for staging) and let the web app rebuild. Until it is set, Google
+     signs in through R666's redirect.
 3. **Fill the server environment.** `cp crates/server/.env.example crates/server/.env` and set
    `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER` (`openssl rand -base64 48`),
    `PUBLIC_ORIGINS` and `CATALOG_VERSION` (`cargo jackioh catalog-version`). The binary reads only its

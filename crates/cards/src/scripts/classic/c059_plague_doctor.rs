@@ -104,6 +104,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::{script, ID};
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::collections::BTreeSet;
 
     const DOCTOR: &str = "classic-059";
@@ -162,7 +164,6 @@ mod tests {
             #[test]
             fn is_a_2_3_its_cry_places_1_on_itself_then_deals_one_hit_of_n_every_plague_counter_on_both_sides_face_down_cards_included()
             {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [DOCTOR, ANCHOR],
@@ -197,7 +198,6 @@ mod tests {
 
             #[test]
             fn r81_a_hero_is_a_target_too_the_enemy_hero_or_your_own() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DOCTOR, DOCTOR, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 3 } }], "health": 20 },
                     "p2": { "hand": [ANCHOR], "health": 20 },
@@ -216,7 +216,6 @@ mod tests {
 
             #[test]
             fn r81_legalactions_offers_every_unit_and_both_heroes_and_nothing_in_a_backrow() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DOCTOR, ANCHOR], "field": [VANILLA] },
                     "p2": { "hand": [ANCHOR], "field": [MENACE], "backrow": [MANA_WELL] },
@@ -260,7 +259,6 @@ mod tests {
 
             #[test]
             fn with_no_other_token_on_the_field_it_still_deals_1_its_own() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [MENACE], "health": 20 } }));
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
@@ -272,7 +270,6 @@ mod tests {
 
             #[test]
             fn s3_2_r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field_its_tokens_are_not_counted() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DOCTOR, ANCHOR] },
                     "p2": {
@@ -289,7 +286,6 @@ mod tests {
 
             #[test]
             fn counted_as_it_resolves_the_tokens_a_c_53_plague_crawler_placed_earlier_this_turn_count() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["classic-053", DOCTOR, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [MENACE], "health": 20 } }));
                 assert_eq!(s.state().players.p2.hero.health, 20);
                 let menace = s.card(MENACE).id.clone();
@@ -303,7 +299,6 @@ mod tests {
 
             #[test]
             fn r177_the_tokens_on_a_face_down_enemy_trap_count_and_the_hit_never_names_the_trap_to_you() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DOCTOR, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": PAWN, "faceUp": false, "counters": { "plague": 2 } }], "health": 20 },
@@ -317,7 +312,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_its_tokens_places_2_on_itself_and_deals_2_more_than_the_field_held() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
                 step_param(s.card_mut(DOCTOR), "tokens", 1);
 
@@ -333,7 +327,6 @@ mod tests {
 
             #[test]
             fn is_a_4_6_its_cry_first_places_2_plague_counters_on_itself_then_deals_n_counting_them() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": DOCTOR, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "counters": { "plague": 1 } }] },
@@ -357,7 +350,6 @@ mod tests {
 
             #[test]
             fn with_no_other_token_on_the_field_it_still_deals_2_its_own() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": DOCTOR, "radiant": true }, ANCHOR] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
@@ -367,7 +359,6 @@ mod tests {
 
             #[test]
             fn its_placement_on_itself_is_one_placement_a_placement_trigger_on_it_answers_once() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": DOCTOR, "radiant": true }, ANCHOR] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
@@ -385,7 +376,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_places_3_on_itself_and_deals_3_more_than_the_field_held_a_degrade_places_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": DOCTOR, "radiant": true }, { "def": DOCTOR, "radiant": true }, ANCHOR],

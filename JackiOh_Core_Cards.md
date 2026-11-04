@@ -12,7 +12,7 @@ Aura: your units gain an additional **4 armor** in defense position
 
 &nbsp;
 
-**(2) Bigot Unit, Human, Common, \#2**
+**(2) Speciesist Unit, Human, Common, \#2**
 
 **6/1**&nbsp;
 
@@ -548,7 +548,7 @@ Activates when your opponent plays a **Unit**. Transform it into a **Sheep** **T
 
 &nbsp;
 
-**(2) Eugenics Core, Spell, Rare, \#42**
+**(2) Selective Breeding Core, Spell, Rare, \#42**
 
 Exile 7 random cards in your deck, the remaining cards in your deck have a 30% chance of becoming **radiant**&nbsp;
 
@@ -1228,17 +1228,17 @@ While this in your hand, when a unit enters the GY gain twice its stats
 
 &nbsp;
 
-**(2) CN-Viral Injection Spell, Core, CN, Legendary, \#90**
+**(2) Super-Virus Injection Spell, Core, CN, Legendary, \#90**
 
-Shuffle a **CN-Virus** into your opponent’s deck
+Shuffle a **Super-Virus** into your opponent’s deck
 
 \~\~\~
 
-Shuffle a **Radiant** **CN-Virus** into your opponent’s deck
+Shuffle a **Radiant** **Super-Virus** into your opponent’s deck
 
 &nbsp;
 
-**(1) CN-Viral Injection Spell, Core, Token, CN, Legendary, \#90.1**
+**(1) Super-Virus Injection Spell, Core, Token, CN, Legendary, \#90.1**
 
 **Cast on Draw:** Take 1 damage. At end of turn, shuffle two copies of this into your deck
 

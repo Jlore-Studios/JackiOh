@@ -131,7 +131,6 @@ mod tests {
 
         #[test]
         fn r1848003_a_bounced_copy_keeps_its_x() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [BOOK, CORE_SYSTEM, FILLER],

@@ -59,6 +59,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const GAME: &str = "meditative-020";
@@ -180,7 +182,6 @@ mod tests {
         use super::*;
 
         fn board_of(field: Value) -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "seed": "aestheticize-board",
                 "p1": { "hand": [GAME, FILLER], "field": field, "library": [FILLER, FILLER], "mana": 10 },
@@ -263,7 +264,6 @@ mod tests {
 
         #[test]
         fn r850_two_winners_draw() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "aestheticize-draw",
                 "active": "p2",

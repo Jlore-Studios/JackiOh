@@ -4,6 +4,7 @@
 package tests
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -66,6 +67,10 @@ func ownershipCutOff(t *testing.T, resets time.Duration) *flowHarness {
 	return h
 }
 
+// ownershipHold is how long an item waits for its owner on the night bot: the committed
+// `hold_minutes` (120 since #2903), which every hold below is measured against.
+func ownershipHold() int { return testsupport.MakeConfig().HoldMinutes }
+
 // ownershipWorld is a fake GitHub on the night bot's config with `env` and `machine`, at NIGHT.
 func ownershipWorld(env map[string]string, machine []string, overrides ...*pyjson.Object) (*fakes.FakeGitHub, *hctx.Context) {
 	gh := fakes.NewFakeGitHub()
@@ -95,10 +100,12 @@ func ownershipReading(ctx *hctx.Context, provider string, session float64, reset
 	})
 }
 
-// The night bot holds items for an hour, never for Muse; Squishy holds none (its cases).
-func TestOwnership_TheHoldIsTheNightBotsHour(t *testing.T) {
+// The night bot holds items for two hours (#2903; an hour before it), `hold_minutes` in its
+// `.harness/config.json`, never for Muse; Squishy holds none (its cases).
+func TestOwnership_TheHoldIsTheNightBotsTwoHoursFromItsConfig(t *testing.T) {
 	cfg := testsupport.MakeConfig()
-	assertEqual(t, []any{cfg.HoldMinutes, cfg.HoldExempt}, []any{60, []string{"muse"}})
+	committed, _ := pyjson.AsInt(testsupport.RawConfig().Get("hold_minutes"))
+	assertEqual(t, []any{cfg.HoldMinutes, committed, cfg.HoldExempt}, []any{120, 120, []string{"muse"}})
 	assertTrue(t, cfg.HoldsFor("claude-1"))
 	assertFalse(t, cfg.HoldsFor("muse"))
 	off := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("hold_minutes", 0)})
@@ -116,13 +123,14 @@ func TestOwnership_ACutOffItemWaitsForItsOwnerWhoseResetIsNear(t *testing.T) {
 	assertIn(t, config.LabelWaiting, h.gh.LabelNames(12))
 	assertIn(t, config.LabelBuild, h.gh.LabelNames(12))
 	hold := crossObj(t, ownershipRecord(h.ctx, 12), "hold")
+	held := ownershipHold()
 	assertEqual(t, []any{hold.Get("owner"), hold.Get("since"), hold.Get("until"), hold.Get("ends")},
-		[]any{"claude-1", clock.ISO(ownershipAt(0)), clock.ISO(ownershipAt(40)), clock.ISO(ownershipAt(60))})
+		[]any{"claude-1", clock.ISO(ownershipAt(0)), clock.ISO(ownershipAt(40)), clock.ISO(ownershipAt(held))})
 	// One comment says for whom, until when and why, and how to release it.
 	said := ownershipHoldComments(h.gh, 12)
 	assertEqual(t, len(said), 1)
 	for _, part := range []string{"**Held for `claude-1`**", "until about 22:40 (in 40m)", "it refused a call",
-		"by 23:00 (`hold_minutes`: 60)", "`/harness handoff`:", "`/harness handoff medium` or `/harness handoff hard`",
+		fmt.Sprintf("by %s (`hold_minutes`: %d)", plan.Clock(h.ctx, ownershipAt(held)), held), "`/harness handoff`:", "`/harness handoff medium` or `/harness handoff hard`",
 		"`/harness handoff human`"} {
 		assertIn(t, part, said[0])
 	}
@@ -146,9 +154,10 @@ func py64(v any) int {
 }
 
 func TestOwnership_ACutOffItemIsHandedOffWhenItsOwnersResetIsFar(t *testing.T) {
-	h := ownershipCutOff(t, 3*time.Hour)
+	far := time.Duration(ownershipHold()+60) * time.Minute
+	h := ownershipCutOff(t, far)
 	planned := flowMake(h.ctx)
-	// Three hours is more than the hour an item waits: Muse takes it at once, and owns it.
+	// An hour more than an item waits for its owner: Muse takes it at once, and owns it.
 	assertEqual(t, []any{planned.Get("action"), planned.Get("number"), planned.Get("provider")},
 		[]any{"build", 12, "muse"})
 	assertNotIn(t, config.LabelWaiting, h.gh.LabelNames(12))
@@ -156,8 +165,8 @@ func TestOwnership_ACutOffItemIsHandedOffWhenItsOwnersResetIsFar(t *testing.T) {
 	record := ownershipRecord(h.ctx, 12)
 	assertEqual(t, record.Get("owner"), "muse")
 	assertIn(t, "handed off from `claude-1`: `claude-1` it refused a call", record.Str("owner_why"))
-	assertIn(t, "it can start again only in 3h 00m, more than the 60 minutes an item waits for its owner",
-		record.Str("owner_why"))
+	assertIn(t, fmt.Sprintf("it can start again only in %s, more than the %d minutes an item waits for its owner",
+		clock.HumanDelta(far), ownershipHold()), record.Str("owner_why"))
 	assertIn(t, "#12: handed off from its owner `claude-1`", strings.Join(stringsOf(planned.List("routing")), "\n"))
 	assertFalse(t, record.Has("hold"))
 }
@@ -175,21 +184,25 @@ func TestOwnership_ItsSessionsLastHourIsWhenItCanStart(t *testing.T) {
 	env := map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_4"}
 	gh, ctx := ownershipWorld(env, []string{"muse"})
 	ownershipQueued(gh, ctx, 12, "claude-4")
-	// claude-4 is at its 70% cap; its session resets in 100 minutes, and its last hour, which
-	// lifts the cap (`last_hour`), starts in 40: that is when it can start, within the hour.
-	ownershipReading(ctx, "claude-4", 0.70, 100, 0.2, 3000)
+	// claude-4 is at its 70% cap; its session resets 40 minutes after the hold would end, and its
+	// last hour, which lifts the cap (`last_hour`), starts 20 minutes before it: that is when it can
+	// start, within the hold.
+	resets := ownershipHold() + 40
+	ownershipReading(ctx, "claude-4", 0.70, resets, 0.2, 3000)
 	planned := flowMake(ctx)
 	assertEqual(t, planned.Get("action"), "none")
-	assertEqual(t, dig(t, ownershipRecord(ctx, 12), "hold", "until"), clock.ISO(ownershipAt(40)))
-	assertIn(t, "#12 held for `claude-4` until 22:40 (5-hour usage is 70%", planned.Str("reason"))
+	assertEqual(t, dig(t, ownershipRecord(ctx, 12), "hold", "until"), clock.ISO(ownershipAt(resets-60)))
+	assertIn(t, fmt.Sprintf("#12 held for `claude-4` until %s (5-hour usage is 70%%", plan.Clock(ctx, ownershipAt(resets-60))),
+		planned.Str("reason"))
 	// Read past its cap, somebody else spent the session: no last hour, so it starts only at its
-	// reset, 100 minutes off, and Muse takes the item.
+	// reset, past the hold, and Muse takes the item.
 	gh2, ctx2 := ownershipWorld(env, []string{"muse"})
 	ownershipQueued(gh2, ctx2, 12, "claude-4")
-	ownershipReading(ctx2, "claude-4", 0.75, 100, 0.2, 3000)
+	ownershipReading(ctx2, "claude-4", 0.75, resets, 0.2, 3000)
 	planned = flowMake(ctx2)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", "muse"})
-	assertIn(t, "it can start again only in 1h 40m", ownershipRecord(ctx2, 12).Str("owner_why"))
+	assertIn(t, "it can start again only in "+clock.HumanDelta(time.Duration(resets)*time.Minute),
+		ownershipRecord(ctx2, 12).Str("owner_why"))
 }
 
 func TestOwnership_AWeeklyCapNeverHolds(t *testing.T) {
@@ -271,11 +284,12 @@ func TestOwnership_TheHoldLiftsWhenItsOwnerCanStart(t *testing.T) {
 func TestOwnership_AHoldThatRunsOutGoesToAnyone(t *testing.T) {
 	h := ownershipCutOff(t, 40*time.Minute)
 	assertEqual(t, flowMake(h.ctx).Get("action"), "none")
-	// Ten minutes past its reset, claude-1 is refused again until 00:00: past the hour the item
-	// waited, so it goes to Muse, which owns it from then on.
+	// Ten minutes past its reset, claude-1 is refused again until an hour after the hold ends:
+	// past the time the item waits, so it goes to Muse, which owns it from then on.
+	held := ownershipHold()
 	testsupport.ClockOf(h.ctx).At = ownershipAt(50)
 	flowUpdate(h.ctx, func(s *pyjson.Object) {
-		providers.Record(s, "claude-1").Set("refused_until", clock.ISO(ownershipAt(120)))
+		providers.Record(s, "claude-1").Set("refused_until", clock.ISO(ownershipAt(held+60)))
 	})
 	planned := flowMake(h.ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider")}, []any{"build", "muse"})
@@ -283,7 +297,8 @@ func TestOwnership_AHoldThatRunsOutGoesToAnyone(t *testing.T) {
 	said := ownershipHoldComments(h.gh, 12)
 	assertEqual(t, len(said), 1)
 	assertIn(t, "**Released to anyone**: `claude-1` it refused a call", said[0])
-	assertIn(t, "the 60 minutes this waited for it end at 23:00, before it can start again (in 1h 10m)", said[0])
+	assertIn(t, fmt.Sprintf("the %d minutes this waited for it end at %s, before it can start again (in %s)",
+		held, plan.Clock(h.ctx, ownershipAt(held)), clock.HumanDelta(time.Duration(held+10)*time.Minute)), said[0])
 	record := ownershipRecord(h.ctx, 12)
 	assertEqual(t, record.Get("owner"), "muse")
 	assertIn(t, "it took it up; released from its hold: `claude-1` it refused a call", record.Str("owner_why"))

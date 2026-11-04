@@ -67,6 +67,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::{degrade_number, upgrade_number};
 
     const GOLIATH: &str = super::ID;
@@ -78,7 +79,7 @@ mod tests {
     
     // p2's plays.
     const VANILLA: &str = "core-008"; // (1) Unit
-    const BIGOT: &str = "core-002"; // (2) Unit
+    const SPECIESIST: &str = "core-002"; // (2) Unit
     const BIG_FELINOR: &str = "core-043"; // (4) Unit
     const TRUE_STRIKE: &str = "core-044"; // a Spell
     const TOKEN_MAKER: &str = "core-015"; // (1) Unit, Cry: summon a Rush Token
@@ -139,7 +140,6 @@ mod tests {
 
         #[test]
         fn r2199005_a_later_dearer_unit_fires_it_again() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "goliath",
                 "active": "p2",
@@ -147,9 +147,9 @@ mod tests {
                     "hand": [ONE, FOUR, { "def": TWO, "costOverride": 5 }, { "def": THREE, "costOverride": 5 }],
                     "backrow": [{ "def": GOLIATH, "faceUp": false, "lane": 1 }],
                 },
-                "p2": { "hand": [BIGOT, { "def": BIG_FELINOR, "costMod": 1 }, HIT_JOB], "mana": 20 },
+                "p2": { "hand": [SPECIESIST, { "def": BIG_FELINOR, "costMod": 1 }, HIT_JOB], "mana": 20 },
             }));
-            s.play(BIGOT, json!({ "zone": 1 }));
+            s.play(SPECIESIST, json!({ "zone": 1 }));
             assert_eq!(costs(&s), vec![0, 4, 5, 5]);
 
             // A (5) Unit fires it a second time: the (4) costs (0) now, the (5)s do not.
@@ -171,7 +171,6 @@ mod tests {
 
         #[test]
         fn r61_its_controllers_own_unit_fires_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [BIG_FELINOR, ONE, TWO, HIT_JOB], "mana": 20,
@@ -186,7 +185,6 @@ mod tests {
 
         #[test]
         fn r56_a_discounted_unit_is_read_at_the_price_paid() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "goliath",
                 "active": "p2",
@@ -232,12 +230,12 @@ mod tests {
 
         #[test]
         fn r2199005_a_1_unit_leaves_it_set_a_2_unit_fires_it() {
-            let mut s = setup(true, json!([VANILLA, BIGOT]));
+            let mut s = setup(true, json!([VANILLA, SPECIESIST]));
             s.play(VANILLA, json!({ "zone": 1 }));
             assert_eq!(fired(&s), 0);
             assert_eq!(s.backrow(P1, 1).unwrap().face_up, Some(false));
 
-            s.play(BIGOT, json!({ "zone": 2 }));
+            s.play(SPECIESIST, json!({ "zone": 2 }));
             assert_eq!(fired(&s), 1);
         }
 

@@ -4,11 +4,9 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, temporary_body};
-use crate::rules::fixtures::harness::{act, act_ok, events_of_type, in_hand, live, new_game, set_library};
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
+use crate::rules::fixtures::harness::{
+    act, act_ok, events_of_type, ids, in_hand, live, new_game, set_library,
+};
 
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Value {
     Value::Array(

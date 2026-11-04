@@ -43,12 +43,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const INJECTION: &str = "core-090";
-    /// A CN-Viral Injection at (2), the price these cases are written at: it costs (1) since #2657, and
+    /// A Super-Virus Injection at (2), the price these cases are written at: it costs (1) since #2657, and
     /// a `costMod` of 1 puts it back.
     fn injection() -> Value {
         json!({ "def": INJECTION, "costMod": 1 })
     }
-    const CN_VIRUS: &str = "core-090-1";
+    const SUPER_VIRUS: &str = "core-090-1";
     const FULLSEND: &str = "core-078";
     const TWINSPELL: &str = "core-079";
     const MY_PAWN: &str = "core-096";
@@ -88,7 +88,7 @@ mod tests {
     fn viruses(s: &Scenario) -> usize {
         s.pile(P2, "library")
             .into_iter()
-            .filter(|card| card.def_id == CN_VIRUS)
+            .filter(|card| card.def_id == SUPER_VIRUS)
             .count()
     }
 

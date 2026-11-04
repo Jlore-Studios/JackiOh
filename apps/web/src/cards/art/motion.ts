@@ -43,7 +43,7 @@ export type ArtMove =
   | "glint";
 
 /** What a card's particles are (`particleMarkup`). */
-export type ParticleKind = "coin" | "bubble" | "ember" | "spark" | "star" | "leaf" | "crumb" | "drop" | "heart" | "note" | "confetti";
+export type ParticleKind = "coin" | "bubble" | "ember" | "spark" | "star" | "leaf" | "crumb" | "drop" | "heart" | "note" | "confetti" | "ink";
 
 /** A layer's move and how long one loop of it takes. */
 export type ArtBeat = { readonly move: ArtMove; readonly seconds: number };
@@ -183,6 +183,37 @@ export const FULL_ART_MOTION: Readonly<Record<string, ArtMotion>> = {
   "classicplus-075": { subject: beat("bob", 4.2), back: beat("drift", 11), props: beat("flutter", 3), particles: particles("leaf", "fall", 3.8) },
 };
 
+/**
+ * R2725004: the particle kinds drawn in a gold or a cream near it (`particleShape`), which a card's borrowed
+ * motion never takes: the Animated augment tints no base face's art Radiant's gold.
+ */
+export const GOLD_PARTICLES: ReadonlySet<ParticleKind> = new Set(["coin", "spark", "star", "crumb", "confetti"]);
+
+/** R2725000: the motions a card with none of its own may borrow, in `FULL_ART_MOTION`'s order: those with no gold particle. */
+const BORROWED_MOTIONS: readonly ArtMotion[] = Object.values(FULL_ART_MOTION).filter((motion) => !GOLD_PARTICLES.has(motion.particles.kind));
+
+/**
+ * R2725000: the moving art `defId` draws under the Animated augment: its own (`FULL_ART_MOTION`), else one of
+ * `BORROWED_MOTIONS` picked by its id, its particles placed by its id too (`particleMarkup`).
+ */
+export function artMotionFor(defId: string): ArtMotion | null {
+  return FULL_ART_MOTION[defId] ?? BORROWED_MOTIONS[hashId(defId) % BORROWED_MOTIONS.length] ?? null;
+}
+
+/**
+ * R2949000: the Signature look's motion, which no Animated motion is: its subject breathes and its back drifts
+ * while its light flares and its motes twinkle, and strokes of the signature's ink rise over it (no other motion
+ * draws ink, and ink is no gold, R2725004). It moves every card's Signature look, its particles placed by the
+ * look's own seed (pictures.ts `artSeedOf`).
+ */
+export const SIGNATURE_MOTION: ArtMotion = {
+  subject: beat("breathe", 5.5),
+  back: beat("drift", 13),
+  light: beat("flare", 4.5),
+  motes: beat("twinkle", 2.8),
+  particles: particles("ink", "rise", 4.2),
+};
+
 /** A beat's loop as the style writes it: `art-<move> <seconds>s <timing> infinite`. */
 function animation(step: ArtBeat): string {
   return `art-${step.move} ${fmt(step.seconds)}s ${ART_MOVES[step.move].timing} infinite`;
@@ -248,6 +279,8 @@ const DROP_FILL = "#7cc8ff";
 const HEART_FILL = "#ff6f91";
 const NOTE_FILL = "#f2f2ff";
 const CONFETTI_FILLS = ["#ff6f91", "#ffd166", "#06d6a0", "#4cc9f0", "#c77dff"] as const;
+/** R2949000: the signature's ink, palette.css's `--pal-slate-100`, a cool silver (R2725004). */
+const INK_FILL = "#e8eaf2";
 
 /** A particle of `kind`, drawn about the origin; the `index`th of its picture (which picks a confetti's color). */
 function particleShape(kind: ParticleKind, index: number): string {
@@ -274,6 +307,8 @@ function particleShape(kind: ParticleKind, index: number): string {
       return `<path d="M0.4 -2.2V0.9A0.9 0.7 0 1 1 -0.1 0.2V-2.2Z" fill="${NOTE_FILL}"/>`;
     case "confetti":
       return `<rect x="-0.8" y="-0.4" width="1.6" height="0.8" fill="${CONFETTI_FILLS[index % CONFETTI_FILLS.length] ?? COIN_FILL}"/>`;
+    case "ink":
+      return `<path d="M-1.4 0.8Q-0.2 -1.6 1.4 -0.6" fill="none" stroke="${INK_FILL}" stroke-width="0.7" stroke-linecap="round"/>`;
   }
 }
 

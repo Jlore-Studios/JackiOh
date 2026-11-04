@@ -993,6 +993,16 @@ export function oauthProviders(raw: unknown = import.meta.env.VITE_AUTH_OAUTH_PR
   return [...new Set(named)];
 }
 
+/** R2983000: a Google web client ID, which is public; its `GOCSPX-…` secret stays in Supabase. */
+export const GOOGLE_CLIENT_ID_PATTERN = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/u;
+
+/** R2983000: the public client ID Google's own button signs in with, only when the build offers Google (R666). */
+export function googleClientId(raw: unknown = import.meta.env.VITE_GOOGLE_CLIENT_ID): string | null {
+  if (typeof raw !== "string" || !oauthProviders().includes("google")) return null;
+  const id = raw.trim();
+  return GOOGLE_CLIENT_ID_PATTERN.test(id) ? id : null;
+}
+
 /** R666, R323: OAuth requires a locally retained PKCE verifier, never the implicit flow. */
 export async function oauthAuthorizeUrl(provider: OAuthProvider): Promise<string> {
   const config = requireConfig();
@@ -1015,4 +1025,32 @@ export async function oauthAuthorizeUrl(provider: OAuthProvider): Promise<string
 export async function startOAuthSignIn(provider: OAuthProvider): Promise<void> {
   const url = await oauthAuthorizeUrl(provider);
   window.location.assign(url);
+}
+
+/** A JWT's three base64url parts; anything else from GIS is not an ID token, and is never sent. */
+const ID_TOKEN_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u;
+
+/**
+ * R2983000: GIS's ID token with the raw nonce whose SHA-256 GIS was given; no token in a URL. Every
+ * refusal is `oauthFailed`, but for a rate limit and a fault (R192), as an OAuth code's is.
+ */
+export async function signInWithGoogleIdToken(
+  idToken: string,
+  nonce: string,
+): Promise<{ session: Session; secondFactor: string | null }> {
+  if (!ID_TOKEN_PATTERN.test(idToken) || nonce.length === 0) throw new AuthError("oauthFailed");
+  const { status, json } = await send(requireConfig(), {
+    method: "POST",
+    path: "/auth/v1/token?grant_type=id_token",
+    body: { provider: "google", id_token: idToken, nonce },
+  });
+  if (!isSuccess(status)) {
+    if (status >= 500) throw new AuthError("service");
+    if (status === 429) throw new AuthError("rateLimited");
+    throw new AuthError("oauthFailed");
+  }
+  const body = (json ?? {}) as TokenResponse;
+  const session = sessionFromTokens(body, null);
+  if (session === null) throw new AuthError("oauthFailed");
+  return { session, secondFactor: secondFactorIn(body, session.accessToken) };
 }

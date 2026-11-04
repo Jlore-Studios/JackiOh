@@ -13,11 +13,15 @@ import { readSession } from "./session.ts";
 /** Another player as the social routes name one: the id for requests and keys, the username to show (R1436). */
 export type PlayerRef = { profileId: string; username: string };
 
-/** B47: `inMatch` while a live 1v1 match, series or Duos match holds the friend. `watchable`: B50. */
+/**
+ * B47: `inMatch` while a live 1v1 match, series or Duos match holds the friend. `watchable`: B50. `duos`: the
+ * match is a co-op game, watched on the co-op board (R2881000); absent for any other.
+ */
 export type Friend = PlayerRef & {
   status: "offline" | "online" | "inMatch";
   matchId: string | null;
   watchable: boolean;
+  duos?: boolean;
   since: string;
 };
 

@@ -43,6 +43,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const ANIME: &str = "classicplus-011";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -77,7 +79,6 @@ mod tests {
 
     /// p2 active, attacking or casting into p1, who holds Anime Armor.
     fn under_fire(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "active": "p2",
             "p1": merged(
@@ -121,7 +122,6 @@ mod tests {
 
         #[test]
         fn s2_4_r125_each_fatigue_hit_is_its_own_capped_instance() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [STOCKPILE, FILLER], "library": [], "field": [ANIME], "health": 20 },
                 "p2": { "hand": [FILLER] },
@@ -192,7 +192,6 @@ mod tests {
 
         #[test]
         fn r18_lose_health_is_not_damage_and_is_not_capped() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [STOCKPILE, FILLER],
@@ -221,7 +220,6 @@ mod tests {
 
         #[test]
         fn the_opponent_s_hero_is_unaffected() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [ANIME, MENACE] },
                 "p2": { "hand": [FILLER] },

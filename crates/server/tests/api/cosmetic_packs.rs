@@ -14,7 +14,12 @@ use jackioh_server::config::{
     CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_FLOORED_SLOT,
     SPEND_BUSY_RETRY_AFTER_MS,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, shipped};
+use jackioh_server::cosmetics::{
+    AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OfferClause,
+    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID,
+    VERSION_FULL_ART_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_SET_SHOWCASE_ID,
+    VERSION_SKETCH_ID, shipped,
+};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase, buy_chase_once,
@@ -242,6 +247,7 @@ fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
         chase: rarity.is_chase(),
         jlorious: false,
         card: None,
+        offer: Vec::new(),
     }
 }
 
@@ -249,10 +255,15 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
     cosmetic(id, CosmeticKind::Foil, rarity)
 }
 
-fn full_art(id: &str, rarity: CosmeticRarity, card_id: &str) -> Cosmetic {
+/// A version offered on `card_id` alone (R2725001): a per-card cosmetic of one card, as the retired full
+/// arts were.
+fn version(id: &str, rarity: CosmeticRarity, card_id: &str) -> Cosmetic {
     Cosmetic {
-        card: Some(card_id.to_string()),
-        ..cosmetic(id, CosmeticKind::FullArt, rarity)
+        offer: vec![OfferClause {
+            cards: vec![card_id.to_string()],
+            ..OfferClause::default()
+        }],
+        ..cosmetic(id, CosmeticKind::Version, rarity)
     }
 }
 
@@ -277,7 +288,7 @@ fn registry(card_id: &str) -> Vec<Cosmetic> {
             CosmeticKind::Table,
             CosmeticRarity::Mythic,
         ),
-        full_art("full-art-fixture-legendary", CosmeticRarity::Legendary, card_id),
+        version("version-fixture-legendary", CosmeticRarity::Legendary, card_id),
     ]
 }
 
@@ -426,8 +437,8 @@ async fn r1306000_an_unowned_card_s_cosmetic_also_grants_the_card() {
     // `cards[1]` is owned already, `cards[0]` is not.
     own(&app, &cards[1..2]).await;
     let registry = vec![
-        full_art("full-art-fixture-unowned", CosmeticRarity::Epic, &cards[0]),
-        full_art("full-art-fixture-owned", CosmeticRarity::Epic, &cards[1]),
+        version("version-fixture-unowned", CosmeticRarity::Epic, &cards[0]),
+        version("version-fixture-owned", CosmeticRarity::Epic, &cards[1]),
     ];
     grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
     let pack = open_cosmetic_pack(&app, PROFILE, &registry, "r1306000-card")
@@ -446,14 +457,14 @@ async fn r1306000_an_unowned_card_s_cosmetic_also_grants_the_card() {
             seen.push(card_id.clone());
         }
     }
-    // Each full art drops once, on its own card, so both are granted when the pack has slots.
+    // Each version drops once, on the card it is offered, so both are granted when the pack has slots.
     assert_eq!(seen.len(), COSMETIC_PACK_SLOTS.min(2));
     assert!(seen.contains(&cards[0]), "{seen:?}");
     // The card is owned, and the collection's ledger says it came from a pack, once.
     let owned = owned_map(&app, PROFILE).await.expect("the collection");
     assert_eq!(owned[&cards[0]], 1);
     assert_eq!(owned[&cards[1]], 1);
-    assert!(owns_cosmetic(&app, Some(&cards[0]), "full-art-fixture-unowned").await);
+    assert!(owns_cosmetic(&app, Some(&cards[0]), "version-fixture-unowned").await);
     let grants = fake(&app).lock().await.tables.grants.clone();
     let rows: Vec<_> = grants.iter().filter(|grant| grant.card_id == cards[0]).collect();
     assert_eq!(rows.len(), 1);
@@ -964,15 +975,29 @@ async fn r1306002_a_chase_cosmetic_is_allowed_and_the_route_buys_the_shipped_reg
     assert!(owns_cosmetic(&app, Some(&cards[0]), "foil-fixture-chase").await);
 
     // The shipped registry: its first two Legendaries are starters, owned by everyone, so the route
-    // refuses them, and so it does a full art the account has no card for.
+    // refuses them, and so it does the Full art version on a card the account has none of; a retired
+    // full art is no chase it sells at all, a 400 (R2725000).
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     let before = everything(&app).await;
-    for body in [
-        json!({ "cosmeticId": "foil-cracked-ice", "cardId": cards[0] }),
-        json!({ "cosmeticId": "finish-gilded-edge", "cardId": cards[0] }),
-        json!({ "cosmeticId": "full-art-gary-the-gambler", "cardId": "core-004" }),
+    for (body, status) in [
+        (
+            json!({ "cosmeticId": "foil-cracked-ice", "cardId": cards[0] }),
+            409,
+        ),
+        (
+            json!({ "cosmeticId": "finish-gilded-edge", "cardId": cards[0] }),
+            409,
+        ),
+        (
+            json!({ "cosmeticId": VERSION_FULL_ART_ID, "cardId": "core-004" }),
+            409,
+        ),
+        (
+            json!({ "cosmeticId": "full-art-gary-the-gambler-signed", "cardId": "core-004" }),
+            400,
+        ),
     ] {
-        let (status, _, answer) = call(
+        let (got, _, answer) = call(
             &app,
             "POST",
             "/api/cosmetic-packs/chase",
@@ -980,7 +1005,7 @@ async fn r1306002_a_chase_cosmetic_is_allowed_and_the_route_buys_the_shipped_reg
             body.clone(),
         )
         .await;
-        assert_eq!(status, 409, "{body}: {answer}");
+        assert_eq!(got, status, "{body}: {answer}");
     }
     assert_eq!(everything(&app).await, before);
     // #1833's chases are no starters (R1833000): the route buys one on a card the account owns.
@@ -1011,7 +1036,7 @@ async fn r1306002_buying_refuses_an_owned_cosmetic_and_anything_below_legendary(
         .expect("the opening");
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
 
-    let refusals: [(&str, Option<&str>); 9] = [
+    let refusals: [(&str, Option<&str>); 8] = [
         // Below Legendary.
         ("foil-fixture-common", Some(&cards[0])),
         ("foil-fixture-rare", Some(&cards[0])),
@@ -1022,8 +1047,7 @@ async fn r1306002_buying_refuses_an_owned_cosmetic_and_anything_below_legendary(
         // A card the account does not own, and no card at all.
         ("foil-fixture-legendary", Some(&cards[2])),
         ("foil-fixture-legendary", None),
-        // A full art on another card than its own, and an account cosmetic given one.
-        ("full-art-fixture-legendary", Some(&cards[1])),
+        // An account cosmetic given one.
         ("table-fixture-mythic", Some(&cards[0])),
     ];
     let before = everything(&app).await;
@@ -1031,6 +1055,16 @@ async fn r1306002_buying_refuses_an_owned_cosmetic_and_anything_below_legendary(
         let refused = buy_chase(&app, PROFILE, &registry, cosmetic_id, card_id).await;
         assert_eq!(refused.expect_err(cosmetic_id).status(), 409, "{cosmetic_id}");
     }
+    // A version on a card it is not offered is a 400 (R2725001).
+    let refused = buy_chase(
+        &app,
+        PROFILE,
+        &registry,
+        "version-fixture-legendary",
+        Some(&cards[1]),
+    )
+    .await;
+    assert_eq!(refused.expect_err("not offered").status(), 400);
     assert_eq!(everything(&app).await, before);
     // An unknown cosmetic is 400.
     let refused = buy_chase(&app, PROFILE, &registry, "no-such-cosmetic", Some(&cards[0])).await;
@@ -1051,18 +1085,18 @@ async fn r1306002_buying_refuses_an_owned_cosmetic_and_anything_below_legendary(
     assert_eq!(refused.expect_err("a bar not full").status(), 409);
     assert_eq!(everything(&app).await, before);
 
-    // The same choice buys once the bar is full, and a full art on its own card too.
+    // The same choice buys once the bar is full, and a version on the card it is offered too.
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     buy_chase(
         &app,
         PROFILE,
         &registry,
-        "full-art-fixture-legendary",
+        "version-fixture-legendary",
         Some(&cards[0]),
     )
     .await
-    .expect("a full art on its own card");
-    assert!(owns_cosmetic(&app, Some(&cards[0]), "full-art-fixture-legendary").await);
+    .expect("a version on the card it is offered");
+    assert!(owns_cosmetic(&app, Some(&cards[0]), "version-fixture-legendary").await);
 }
 
 #[tokio::test]
@@ -1218,7 +1252,7 @@ async fn r1306003_an_opening_replays_from_its_stored_seed() {
         foil("foil-fixture-common", CosmeticRarity::Common),
         foil("foil-fixture-epic", CosmeticRarity::Epic),
         cosmetic("table-fixture-rare", CosmeticKind::Table, CosmeticRarity::Rare),
-        full_art("full-art-fixture", CosmeticRarity::Epic, &cards[1]),
+        version("version-fixture", CosmeticRarity::Epic, &cards[1]),
     ];
     let (before_ledger, before_holdings) = (ledger(&app).await, holdings(&app).await);
     let pack = open_cosmetic_pack(&app, PROFILE, &registry, "r1306003")
@@ -1586,9 +1620,12 @@ async fn r2378000_an_opening_or_a_chase_sent_past_the_waiting_ones_is_refused_at
 }
 
 #[tokio::test]
-async fn r2655000_a_full_shard_bar_buys_a_full_art_chase_on_an_owned_card() {
+async fn r2655000_r2725001_the_chase_refuses_an_unoffered_card_and_a_retired_full_art() {
     let (app, token) = setup().await;
+    // Gary the Gambler, one of the 21 full-art cards, is offered the Full art version; Speciesist, a Common
+    // Unit, is not.
     let card = "core-004".to_string();
+    let bare = "core-002".to_string();
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     let chase = |body: Value| {
         let (app, token) = (app.clone(), token.clone());
@@ -1598,36 +1635,181 @@ async fn r2655000_a_full_shard_bar_buys_a_full_art_chase_on_an_owned_card() {
             (status, answer)
         }
     };
-    // With no Gary the Gambler of its own, the account has nowhere to wear its signed full art.
-    let signed = json!({ "cosmeticId": "full-art-gary-the-gambler-signed", "cardId": card });
+    // With no Gary the Gambler of its own, the account has nowhere to wear the Full art version.
+    let version = json!({ "cosmeticId": VERSION_FULL_ART_ID, "cardId": card });
     let before = everything(&app).await;
-    let (status, answer) = chase(signed.clone()).await;
+    let (status, answer) = chase(version.clone()).await;
     assert_eq!(status, 409, "{answer}");
     assert_eq!(everything(&app).await, before);
 
-    // Owning the card, its Epic full art is no chase and is refused, and the signed one, a chase
-    // no account is granted (R2655000), is bought on it, and the bar empties.
-    own(&app, std::slice::from_ref(&card)).await;
+    // Owning both cards: its retired signed full art is sold no more, and the version on Speciesist is not
+    // offered, each a 400; the Animated augment is no chase, a 409. Nothing is written.
+    own(&app, &[card.clone(), bare.clone()]).await;
     let before = everything(&app).await;
-    let (status, answer) = chase(json!({ "cosmeticId": "full-art-gary-the-gambler", "cardId": card })).await;
-    assert_eq!(status, 409, "{answer}");
+    for (body, status, message) in [
+        (
+            json!({ "cosmeticId": "full-art-gary-the-gambler-signed", "cardId": card }),
+            400,
+            Some("that cosmetic is retired"),
+        ),
+        (
+            json!({ "cosmeticId": VERSION_FULL_ART_ID, "cardId": bare }),
+            400,
+            Some("that cosmetic is not offered on that card"),
+        ),
+        (
+            json!({ "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": card }),
+            409,
+            None,
+        ),
+    ] {
+        let (got, answer) = chase(body.clone()).await;
+        assert_eq!(got, status, "{body}: {answer}");
+        if let Some(message) = message {
+            assert_eq!(answer["error"]["message"], json!(message), "{body}");
+        }
+    }
     assert_eq!(everything(&app).await, before);
-    assert!(!owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler-signed").await);
-    let (status, answer) = chase(signed).await;
+    // The version, a chase no account is granted (R2725000), is bought on the card it is offered, and the bar
+    // empties.
+    let (status, answer) = chase(version).await;
     assert_eq!(status, 200, "{answer}");
-    assert!(owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler-signed").await);
+    assert!(owns_cosmetic(&app, Some(&card), VERSION_FULL_ART_ID).await);
     assert!(!owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler").await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
 }
 
 #[tokio::test]
-async fn r2715000_the_chase_shard_bar_refuses_an_animated_art() {
+async fn r2940000_the_chase_refuses_alt_full_art_where_it_is_not_offered() {
+    let (app, token) = setup().await;
+    // Transmogulate, a Legendary Spell, is offered Alt full art; Speciesist, a Common Unit, none of #2940's versions.
+    let card = "core-083".to_string();
+    let bare = "core-002".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, &[card.clone(), bare.clone()]).await;
+    let chase = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // Alt full art, a Legendary chase, on the card it is not offered: a 400. Alt art and the Sketch, Rares and no
+    // chase, are refused there for not being offered before their tier is read. Nothing is written, the bar full.
+    let before = everything(&app).await;
+    for cosmetic in [VERSION_ALT_FULL_ART_ID, VERSION_ALT_ART_ID, VERSION_SKETCH_ID] {
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    // On the card it is offered, the bar buys it and empties; no account was granted it before (R2940000).
+    assert!(!owns_cosmetic(&app, Some(&card), VERSION_ALT_FULL_ART_ID).await);
+    let (status, answer) = chase(json!({ "cosmeticId": VERSION_ALT_FULL_ART_ID, "cardId": card })).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owns_cosmetic(&app, Some(&card), VERSION_ALT_FULL_ART_ID).await);
+    assert!(!owns_cosmetic(&app, Some(&bare), VERSION_ALT_FULL_ART_ID).await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
+}
+
+#[tokio::test]
+async fn r2942000_the_chase_refuses_part_three_versions() {
+    let (app, token) = setup().await;
+    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Speciesist, a Common Unit, none.
+    let card = "classic-056".to_string();
+    let bare = "core-002".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, &[card.clone(), bare.clone()]).await;
+    let chase = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // Each on the card it is not offered: a 400 before its tier is read. Where it is offered, an Epic and no
+    // chase: a 409. Nothing is written, and the bar stays full.
+    let before = everything(&app).await;
+    for cosmetic in [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID] {
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (
+                409,
+                json!(
+                    "the Chase Shard bar buys only a chase: a Legendary or Mythic cosmetic, but the Jlorious one"
+                )
+            ),
+            "{cosmetic}: {answer}"
+        );
+        assert!(!owns_cosmetic(&app, Some(&card), cosmetic).await, "{cosmetic}");
+    }
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+}
+
+#[tokio::test]
+async fn r2943000_the_chase_buys_part_four_versions_only_where_offered() {
+    let (app, token) = setup().await;
+    // BOOM! Big Max, a Legendary Unit, is offered both of #2943's versions; Speciesist, a Common Unit, neither.
+    let card = "classic-080".to_string();
+    let bare = "core-002".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, &[card.clone(), bare.clone()]).await;
+    let chase = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let part_four = [VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID];
+    // Each, a Legendary chase, on the card it is not offered: a 400. Nothing is written, and the bar stays full.
+    let before = everything(&app).await;
+    for cosmetic in part_four {
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    // On the card it is offered, a full bar buys each and empties; no account was granted either before
+    // (R2943000).
+    for cosmetic in part_four {
+        set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+        assert!(!owns_cosmetic(&app, Some(&card), cosmetic).await, "{cosmetic}");
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 200, "{cosmetic}: {answer}");
+        assert!(owns_cosmetic(&app, Some(&card), cosmetic).await, "{cosmetic}");
+        assert!(!owns_cosmetic(&app, Some(&bare), cosmetic).await, "{cosmetic}");
+        assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0, "{cosmetic}");
+    }
+}
+
+#[tokio::test]
+async fn r2715000_r2725000_the_chase_shard_bar_refuses_an_animated_art() {
     let (app, token) = setup().await;
     let card = "core-004".to_string();
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     own(&app, std::slice::from_ref(&card)).await;
-    // Owning the card and a full bar, its Animated art, an Epic and no chase, is refused, nothing
-    // is written and the bar stays full.
+    // Owning the card and a full bar, its Animated art is retired, a 400 (R2725000); nothing is written
+    // and the bar stays full.
     let before = everything(&app).await;
     let (status, _, answer) = call(
         &app,
@@ -1637,7 +1819,7 @@ async fn r2715000_the_chase_shard_bar_refuses_an_animated_art() {
         json!({ "cosmeticId": "animated-gary-the-gambler", "cardId": card }),
     )
     .await;
-    assert_eq!(status, 409, "{answer}");
+    assert_eq!(status, 400, "{answer}");
     assert_eq!(everything(&app).await, before);
     assert!(!owns_cosmetic(&app, Some(&card), "animated-gary-the-gambler").await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);

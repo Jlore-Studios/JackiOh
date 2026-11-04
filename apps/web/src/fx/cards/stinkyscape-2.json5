@@ -11,124 +11,124 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "stinkyscape-091": "none: pending", // The Propagation's Wasp
-  "stinkyscape-092": "none: pending", // The Propagation's Hornet
-  "stinkyscape-093": "none: pending", // Patcher Nanobots
-  "stinkyscape-094": "none: pending", // Tmack Trav
-  "stinkyscape-095": "none: pending", // Faction: Vanguard Coalition
-  "stinkyscape-096": "none: pending", // Ocean Tsunami
+  "stinkyscape-091": { trigger: { motif: "conjure", palette: "Beast/swarm" } }, // The Propagation's Wasp
+  "stinkyscape-092": { trigger: { motif: "conjure", palette: "Beast/swarm" } }, // The Propagation's Hornet
+  "stinkyscape-093": { death: { motif: "mend" } }, // Patcher Nanobots
+  "stinkyscape-094": "none: its second attack is combat, which the attack rows and keyword beats draw", // Tmack Trav
+  "stinkyscape-095": { cast: { motif: "send" } }, // Faction: Vanguard Coalition
+  "stinkyscape-096": { cry: { motif: "send", palette: "Hustle/ore" } }, // Ocean Tsunami
   "stinkyscape-097": { cast: { motif: "barrage" } }, // Asteroid Field
-  "stinkyscape-098": "none: pending", // Hull Booster
-  "stinkyscape-099": "none: pending", // No-No Words
-  "stinkyscape-100": "none: pending", // AP Rounds
-  "stinkyscape-101": "none: pending", // Overdrive Module
-  "stinkyscape-102": "none: pending", // Book of Nono-Words
-  "stinkyscape-103": "none: pending", // Vxyl
-  "stinkyscape-104": "none: pending", // Reflective Plating
-  "stinkyscape-105": "none: pending", // Disintegrex
-  "stinkyscape-106": "none: pending", // Warpfield Amplifier
-  "stinkyscape-107": "none: pending", // RR-5000
-  "stinkyscape-108": "none: pending", // Trila 3
-  "stinkyscape-109": "none: pending", // xxFreshJack
-  "stinkyscape-110": "none: pending", // iKwzki
-  "stinkyscape-111": "none: pending", // Shockwave447
-  "stinkyscape-112": "none: pending", // Job Application
-  "stinkyscape-112-1": "none: pending", // Paycheck
-  "stinkyscape-113": "none: pending", // A Very Dandy Lad
-  "stinkyscape-114": "none: pending", // Arctic Citadel
-  "stinkyscape-115": "none: pending", // Scornboi
-  "stinkyscape-116": "none: pending", // Megabase
+  "stinkyscape-098": "none: vanilla", // Hull Booster
+  "stinkyscape-099": { cast: { motif: "bolt", palette: "Dark/curse" } }, // No-No Words
+  "stinkyscape-100": "none: vanilla", // AP Rounds
+  "stinkyscape-101": "none: vanilla", // Overdrive Module
+  "stinkyscape-102": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Nono-Words
+  "stinkyscape-103": { cry: { motif: "send" } }, // Vxyl
+  "stinkyscape-104": "none: its reflection is standing, with no moment of its own; the damage rows draw the hits", // Reflective Plating
+  "stinkyscape-105": "none: its Aura is standing, with no moment to draw; each exile it causes is its own row", // Disintegrex
+  "stinkyscape-106": "none: Starship part", // Warpfield Amplifier
+  "stinkyscape-107": { trigger: { motif: "bless", palette: "Tech/laser" } }, // RR-5000
+  "stinkyscape-108": "none: vanilla", // Trila 3
+  "stinkyscape-109": "none: the card it casts plays its own entry", // xxFreshJack
+  "stinkyscape-110": { bespoke: "duoBond" }, // iKwzki
+  "stinkyscape-111": { cry: { motif: "send" } }, // Shockwave447
+  "stinkyscape-112": { cast: { motif: "conjure", palette: "Hustle/cash" }, trigger: { motif: "bless", palette: "Hustle/cash" }, activate: { motif: "tether", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Job Application
+  "stinkyscape-112-1": { cast: { motif: "mana", palette: "Hustle/cash" } }, // Paycheck
+  "stinkyscape-113": { cry: { motif: "wipe" } }, // A Very Dandy Lad
+  "stinkyscape-114": "none: no motif reads fused", // Arctic Citadel
+  "stinkyscape-115": { cry: { motif: "wipe" } }, // Scornboi
+  "stinkyscape-116": "none: no motif reads marketCreditsChanged", // Megabase
   "stinkyscape-117": { setPiece: "vortex" }, // Core System
-  "stinkyscape-118": "none: pending", // Secure System
-  "stinkyscape-119": "none: pending", // Unsecure System
-  "stinkyscape-120": "none: pending", // Wild System
-  "stinkyscape-121": "none: pending", // System Schematic
-  "stinkyscape-122": "none: pending", // Vamp Rounds
-  "stinkyscape-123": "none: pending", // Gokugains
-  "stinkyscape-124": "none: pending", // Jlockeed's Shipbuilding Grant
-  "stinkyscape-125": "none: pending", // Jlockeed's Spacerace Propaganda
-  "stinkyscape-126": "none: pending", // Jlockeed's Permanent Procurement Lobbying
-  "stinkyscape-127": "none: pending", // Jlockeed's Siege Tank
-  "stinkyscape-128": "none: pending", // Jlockeed's Yamato Cannon
-  "stinkyscape-129": "none: pending", // Jlockeed's Missile Pod
-  "stinkyscape-130": "none: pending", // Jlockeed's Starship Retrofitting Program
-  "stinkyscape-131": "none: pending", // Spacerace Stimulus
-  "stinkyscape-132": "none: pending", // Defensive Crystal
-  "stinkyscape-133": "none: pending", // Ultra Capacitor
-  "stinkyscape-134": "none: pending", // Felinor Containment Chamber
-  "stinkyscape-135": "none: pending", // Sacked
-  "stinkyscape-135-1": "none: pending", // Sack
-  "stinkyscape-136": "none: pending", // Magic Module
-  "stinkyscape-137": "none: pending", // Starfleet Commander
-  "stinkyscape-137-1": "none: pending", // Land Doctrine
-  "stinkyscape-137-2": "none: pending", // Sea Doctrine
-  "stinkyscape-137-3": "none: pending", // Air Doctrine
-  "stinkyscape-137-4": "none: pending", // Space Doctrine
-  "stinkyscape-138": "none: pending", // Pocket Peptides
-  "stinkyscape-139": "none: pending", // Wormhole
-  "stinkyscape-140": "none: pending", // Rush Token Launcher
-  "stinkyscape-141": "none: pending", // Fruit Launcher
-  "stinkyscape-142": "none: pending", // Jade Launcher
-  "stinkyscape-143": "none: pending", // Book Launcher
-  "stinkyscape-144": "none: pending", // Prepare For Liftoff
-  "stinkyscape-145": "none: pending", // Fortify Flesh
-  "stinkyscape-146": "none: pending", // Flash Freeze
-  "stinkyscape-147": "none: pending", // IN33DH3
-  "stinkyscape-147-1": "none: pending", // IN33DH3 Prime
-  "stinkyscape-147-2": "none: pending", // Wardrum Blob
-  "stinkyscape-148": "none: pending", // Alteran Reach
-  "stinkyscape-148-1": "none: pending", // Edge of the Universe
-  "stinkyscape-149": "none: pending", // Wildar
-  "stinkyscape-150": "none: pending", // Call to Chaos (Stinky Edition)
-  "stinkyscape-150-1": "none: pending", // Stinkyscape Golem
+  "stinkyscape-118": { cast: { motif: "curse", palette: "Tech/hologram" } }, // Secure System
+  "stinkyscape-119": { cast: { motif: "bless", palette: "Tech/glitch" } }, // Unsecure System
+  "stinkyscape-120": { cast: { motif: "nova", palette: "Tech/glitch" } }, // Wild System
+  "stinkyscape-121": { cast: { motif: "send", palette: "Tech/hologram" } }, // System Schematic
+  "stinkyscape-122": "none: vanilla", // Vamp Rounds
+  "stinkyscape-123": "none: its Nerf is secret (R202)", // Gokugains
+  "stinkyscape-124": { cast: { motif: "send", palette: "Tech/rocket" } }, // Jlockeed's Shipbuilding Grant
+  "stinkyscape-125": { cast: { motif: "conjure", palette: "Tech/rocket" }, activate: { motif: "send", palette: "Tech/rocket" }, aura: { look: "ember", palette: "Tech/rocket", scope: "zone" } }, // Jlockeed's Spacerace Propaganda
+  "stinkyscape-126": { cast: { motif: "send", palette: "Tech/rocket" }, trigger: { motif: "send", palette: "Tech/rocket" }, aura: { look: "arcane", palette: "Tech/rocket", scope: "side" } }, // Jlockeed's Permanent Procurement Lobbying
+  "stinkyscape-127": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Jlockeed's Siege Tank
+  "stinkyscape-128": "none: vanilla", // Jlockeed's Yamato Cannon
+  "stinkyscape-129": { trigger: { motif: "volley", palette: "Tech/rocket" } }, // Jlockeed's Missile Pod
+  "stinkyscape-130": { cast: { motif: "send", palette: "Tech/rocket" } }, // Jlockeed's Starship Retrofitting Program
+  "stinkyscape-131": { cast: { motif: "snap", palette: "Hustle/cash" } }, // Spacerace Stimulus
+  "stinkyscape-132": "none: its Death's Armor shows no event; its fuse is the Starship part's", // Defensive Crystal
+  "stinkyscape-133": "none: Starship part", // Ultra Capacitor
+  "stinkyscape-134": { death: { motif: "conjure", palette: "Beast/felinor" } }, // Felinor Containment Chamber
+  "stinkyscape-135": { cast: { motif: "tether" } }, // Sacked
+  "stinkyscape-135-1": "none: token", // Sack
+  "stinkyscape-136": "none: Starship part", // Magic Module
+  "stinkyscape-137": "none: Starship part", // Starfleet Commander
+  "stinkyscape-137-1": { cast: { motif: "nova", palette: "Tech/rocket" } }, // Land Doctrine
+  "stinkyscape-137-2": { cast: { motif: "mend", palette: "Tech/rocket" } }, // Sea Doctrine
+  "stinkyscape-137-3": { cast: { motif: "barrage", palette: "Tech/rocket" } }, // Air Doctrine
+  "stinkyscape-137-4": { cast: { motif: "send", palette: "Tech/rocket" } }, // Space Doctrine
+  "stinkyscape-138": { cast: { motif: "snap" } }, // Pocket Peptides
+  "stinkyscape-139": { cast: { motif: "negate", palette: "Tech/starfield" } }, // Wormhole
+  "stinkyscape-140": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Rush Token Launcher
+  "stinkyscape-141": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Fruit Launcher
+  "stinkyscape-142": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Jade Launcher
+  "stinkyscape-143": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Book Launcher
+  "stinkyscape-144": { cast: { motif: "snap" } }, // Prepare For Liftoff
+  "stinkyscape-145": { cast: { motif: "bless" } }, // Fortify Flesh
+  "stinkyscape-146": { bespoke: "flashFreeze" }, // Flash Freeze
+  "stinkyscape-147": { death: { motif: "send" } }, // IN33DH3
+  "stinkyscape-147-1": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // IN33DH3 Prime
+  "stinkyscape-147-2": { trigger: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // Wardrum Blob
+  "stinkyscape-148": { cast: { motif: "conjure", palette: "Tech/starfield" }, activate: { motif: "bolt", palette: "Tech/starfield" }, aura: { look: "void", palette: "Tech/starfield", scope: "side" } }, // Alteran Reach
+  "stinkyscape-148-1": "none: token", // Edge of the Universe
+  "stinkyscape-149": { cast: { motif: "send" } }, // Wildar
+  "stinkyscape-150": { cast: { motif: "send" } }, // Call to Chaos (Stinky Edition)
+  "stinkyscape-150-1": "none: vanilla", // Stinkyscape Golem
   "stinkyscape-151": { cast: { motif: "wipe" } }, // Call to Chaos (Scape Edition)
-  "stinkyscape-152": "none: pending", // Sanctum
-  "stinkyscape-153": "none: pending", // Stimmycheck
-  "stinkyscape-154": "none: pending", // Dice of Doom
-  "stinkyscape-155": { aura: { look: "ember", scope: "zone" } }, // Comet Crash
-  "stinkyscape-156": "none: pending", // Catalyst Comet
-  "stinkyscape-157": "none: pending", // The Gauntlet
-  "stinkyscape-158": "none: pending", // Stratos Swarm
-  "stinkyscape-159": "none: pending", // Faction: ETHICS
-  "stinkyscape-160": "none: pending", // Faction: Golden Accord
-  "stinkyscape-161": "none: pending", // Faction: Pegasus
-  "stinkyscape-162": "none: pending", // Faction: Star-Jumper Core
-  "stinkyscape-163": "none: pending", // Swear Loyalities
-  "stinkyscape-164": "none: pending", // The Syndicate
-  "stinkyscape-165": "none: pending", // The Trade Union
-  "stinkyscape-166": "none: pending", // Scanning Probe Mk1
-  "stinkyscape-167": "none: pending", // Scanning Probe Mk2
-  "stinkyscape-168": "none: pending", // Drone Hanger
-  "stinkyscape-169": "none: pending", // Tiny Asteroid
-  "stinkyscape-170": "none: pending", // Medium Asteroid
-  "stinkyscape-171": "none: pending", // Large Asteroid
-  "stinkyscape-172": "none: pending", // Huge Asteroid
-  "stinkyscape-173": "none: pending", // Abandoned Spice Tower
-  "stinkyscape-174": "none: pending", // Aerelret
-  "stinkyscape-175": "none: pending", // Frost Module
-  "stinkyscape-176": "none: pending", // Preemptive Strike
-  "stinkyscape-177": "none: pending", // Cloaking Module
-  "stinkyscape-t-dormant-starship": "none: pending", // Dormant Starship
-  "stinkyscape-t-drone-interceptor": "none: pending", // Drone Interceptor
-  "stinkyscape-t-drone-corvette": "none: pending", // Drone Corvette
-  "stinkyscape-t-shield-layer": "none: pending", // Drone Battleship (Shield Layer)
-  "stinkyscape-t-propagation-layer": "none: pending", // Drone Battleship (Propagation Layer)
-  "stinkyscape-t-meltdown-layer": "none: pending", // Drone Battleship (Meltdown Layer)
-  "stinkyscape-t-reknite": "none: pending", // Reknite
-  "stinkyscape-t-korrelite": "none: pending", // Korrelite
-  "stinkyscape-t-gellium": "none: pending", // Gellium
-  "stinkyscape-t-axnit": "none: pending", // Axnit
-  "stinkyscape-t-narcor": "none: pending", // Narcor
-  "stinkyscape-t-red-narcor": "none: pending", // Red Narcor
+  "stinkyscape-152": { cast: { motif: "conjure" }, aura: { look: "holy", scope: "side" } }, // Sanctum
+  "stinkyscape-153": { cast: { motif: "mana", palette: "Hustle/cash" } }, // Stimmycheck
+  "stinkyscape-154": { cast: { motif: "send" }, trigger: { motif: "send" } }, // Dice of Doom
+  "stinkyscape-155": { cast: { motif: "bind" }, death: { motif: "send", palette: "Hustle/ore" }, aura: { look: "ember", scope: "zone" } }, // Comet Crash
+  "stinkyscape-156": { cast: { motif: "send" } }, // Catalyst Comet
+  "stinkyscape-157": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "board" } }, // The Gauntlet
+  "stinkyscape-158": { bespoke: "stratosSwarm" }, // Stratos Swarm
+  "stinkyscape-159": { cast: { motif: "send" } }, // Faction: ETHICS
+  "stinkyscape-160": { cast: { motif: "send" } }, // Faction: Golden Accord
+  "stinkyscape-161": { cast: { motif: "send" } }, // Faction: Pegasus
+  "stinkyscape-162": { cast: { motif: "send" } }, // Faction: Star-Jumper Core
+  "stinkyscape-163": { cast: { motif: "vanish" } }, // Swear Loyalities
+  "stinkyscape-164": { cast: { motif: "conjure", palette: "Hustle/cash" }, trigger: { motif: "vanish", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "side" } }, // The Syndicate
+  "stinkyscape-165": { cast: { motif: "conjure", palette: "Hustle/cash" }, aura: { look: "bloom", palette: "Hustle/cash", scope: "side" } }, // The Trade Union
+  "stinkyscape-166": { cast: { motif: "send", palette: "Tech/starfield" } }, // Scanning Probe Mk1
+  "stinkyscape-167": { cast: { motif: "send", palette: "Tech/starfield" } }, // Scanning Probe Mk2
+  "stinkyscape-168": { cast: { motif: "conjure", palette: "Tech/rocket" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", palette: "Tech/rocket", scope: "zone" } }, // Drone Hanger
+  "stinkyscape-169": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Tiny Asteroid
+  "stinkyscape-170": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Medium Asteroid
+  "stinkyscape-171": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Large Asteroid
+  "stinkyscape-172": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Huge Asteroid
+  "stinkyscape-173": { death: { motif: "send", palette: "Snack" }, activate: { motif: "bolt" } }, // Abandoned Spice Tower
+  "stinkyscape-174": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Aerelret
+  "stinkyscape-175": "none: no motif reads marked", // Frost Module
+  "stinkyscape-176": "none: Starship part", // Preemptive Strike
+  "stinkyscape-177": "none: vanilla", // Cloaking Module
+  "stinkyscape-t-dormant-starship": "none: Starship part", // Dormant Starship
+  "stinkyscape-t-drone-interceptor": "none: token", // Drone Interceptor
+  "stinkyscape-t-drone-corvette": "none: token", // Drone Corvette
+  "stinkyscape-t-shield-layer": "none: token", // Drone Battleship (Shield Layer)
+  "stinkyscape-t-propagation-layer": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Battleship (Propagation Layer)
+  "stinkyscape-t-meltdown-layer": "none: token", // Drone Battleship (Meltdown Layer)
+  "stinkyscape-t-reknite": "none: token", // Reknite
+  "stinkyscape-t-korrelite": { cast: { motif: "bolt", palette: "Hustle/ore" } }, // Korrelite
+  "stinkyscape-t-gellium": { cast: { motif: "mend", palette: "Hustle/ore" } }, // Gellium
+  "stinkyscape-t-axnit": { cast: { motif: "nova", palette: "Hustle/ore" } }, // Axnit
+  "stinkyscape-t-narcor": { cast: { motif: "send", palette: "Hustle/ore" } }, // Narcor
+  "stinkyscape-t-red-narcor": { cast: { motif: "mana", palette: "Hustle/ore" } }, // Red Narcor
   "stinkyscape-t-anomaly-found": { cast: { motif: "wipe" } }, // Anomaly Found!
-  "stinkyscape-t-ai-01": "none: pending", // Escort Protocol
-  "stinkyscape-t-ai-02": "none: pending", // Mining Subroutine
-  "stinkyscape-t-ai-03": "none: pending", // Route Optimizer
-  "stinkyscape-t-ai-04": "none: pending", // Predictive Shield
-  "stinkyscape-t-ai-05": "none: pending", // Launch Sequencer
-  "stinkyscape-t-ai-06": "none: pending", // Probe Relay
-  "stinkyscape-t-ai-07": "none: pending", // Combat Subroutine
-  "stinkyscape-t-ai-08": "none: pending", // Drone Uplink
-  "stinkyscape-t-ai-09": "none: pending", // Honeypot
-  "stinkyscape-t-ai-10": "none: pending", // Salvage Protocol
+  "stinkyscape-t-ai-01": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // Escort Protocol
+  "stinkyscape-t-ai-02": { cast: { motif: "send", palette: "Hustle/ore" } }, // Mining Subroutine
+  "stinkyscape-t-ai-03": { cast: { motif: "send", palette: "Tech/hologram" } }, // Route Optimizer
+  "stinkyscape-t-ai-04": "none: token", // Predictive Shield
+  "stinkyscape-t-ai-05": { cast: { motif: "tithe", palette: "Tech/rocket" } }, // Launch Sequencer
+  "stinkyscape-t-ai-06": { cast: { motif: "send", palette: "Tech/hologram" } }, // Probe Relay
+  "stinkyscape-t-ai-07": { cry: { motif: "bless", palette: "Tech/hologram" } }, // Combat Subroutine
+  "stinkyscape-t-ai-08": { cast: { motif: "conjure", palette: "Tech/hologram" }, trigger: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "storm", palette: "Tech/hologram", scope: "zone" } }, // Drone Uplink
+  "stinkyscape-t-ai-09": { cast: { motif: "conjure", palette: "Tech/hologram" } }, // Honeypot
+  "stinkyscape-t-ai-10": { death: { motif: "send", palette: "Tech/hologram" } }, // Salvage Protocol
 }

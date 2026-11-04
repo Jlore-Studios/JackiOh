@@ -16,20 +16,9 @@ use crate::rules::fixtures::field::{
     wisp,
 };
 use crate::rules::fixtures::harness::{
-    act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
+    act, act_result, by, events_of_type, ids, in_hand, input, json_of, live, matches_object, put, sink_for,
+    slot,
 };
-
-/// An `ActionInput` from a JSON object (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
 
 fn expect_match(actual: impl Serialize, expected: Value) {
     let actual = json_of(actual);
@@ -48,10 +37,6 @@ fn instance_ids(events: impl Serialize) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
@@ -335,9 +320,9 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
         {
             let mut sink = sink_for(&mut state);
             let ctx = make_context(&mut sink, None, by(P1));
-            assert!(ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&trap.id));
+            assert!(ids(cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&trap.id));
             assert!(
-                !ids(&cards_in_scope(
+                !ids(cards_in_scope(
                     &ctx,
                     &json_as(json!({ "side": "enemy", "rows": ["backrow"] }))
                 ))
@@ -517,9 +502,9 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         assert!(!unit_ids(sink.state, P1).contains(&card.id));
         {
             let ctx = make_context(&mut sink, None, by(P2));
-            assert!(!ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&card.id));
+            assert!(!ids(cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&card.id));
             assert!(
-                ids(&cards_in_scope(
+                ids(cards_in_scope(
                     &ctx,
                     &json_as(json!({ "side": "enemy", "rows": ["backrow"] }))
                 ))

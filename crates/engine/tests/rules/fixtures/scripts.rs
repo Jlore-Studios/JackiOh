@@ -84,12 +84,12 @@ fn hinder_scripts() -> CardScripts {
     }
 }
 
-/// #90.1 CN-Virus: cast on draw, 1 damage to your hero, 2 copies shuffled in (3 radiant).
-pub fn cn_virus() -> CardDef {
+/// #90.1 Super-Virus: cast on draw, 1 damage to your hero, 2 copies shuffled in (3 radiant).
+pub fn super_virus() -> CardDef {
     def(json!({
-        "id": "fx-cn-virus",
+        "id": "fx-super-virus",
         "index": "90.1",
-        "name": "CN-Virus (fixture)",
+        "name": "Super-Virus (fixture)",
         "type": "Spell",
         "tags": ["Token", "CN"],
         "rarity": "Token",
@@ -97,7 +97,7 @@ pub fn cn_virus() -> CardDef {
     }))
 }
 
-fn cn_virus_scripts() -> CardScripts {
+fn super_virus_scripts() -> CardScripts {
     CardScripts {
         base: Script {
             static_flags: flags(json!({ "castOnDraw": true })),
@@ -381,7 +381,7 @@ fn double_edge_scripts() -> CardScripts {
 pub static FIXTURE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         hinder(),
-        cn_virus(),
+        super_virus(),
         gravedigger(),
         stockpile(),
         infinite_reserves(),
@@ -398,7 +398,7 @@ pub static FIXTURE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
 pub static FIXTURE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     let mut table = IndexMap::new();
     table.insert(hinder().id, hinder_scripts());
-    table.insert(cn_virus().id, cn_virus_scripts());
+    table.insert(super_virus().id, super_virus_scripts());
     table.insert(gravedigger().id, gravedigger_scripts());
     table.insert(stockpile().id, stockpile_scripts());
     table.insert(infinite_reserves().id, infinite_reserves_scripts());

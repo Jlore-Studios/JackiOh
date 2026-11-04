@@ -44,6 +44,8 @@ mod tests {
     use super::ID;
     use crate::def_ids;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::collections::BTreeSet;
 
     const P1: PlayerId = PlayerId::P1;
@@ -149,7 +151,6 @@ mod tests {
 
             #[test]
             fn deals_4_damage_to_a_target_enemy_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "field": [MENACE] } }));
                 let target = at(&s, MENACE);
                 s.play(WILDFIRE, json!({ "targets": [target] }));
@@ -159,7 +160,6 @@ mod tests {
 
             #[test]
             fn deals_4_damage_to_the_enemy_hero_or_to_your_own_hero_any_target_either_side() {
-                crate::register_all();
                 let mut enemy = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
                 enemy.play(WILDFIRE, json!({ "targets": [hero("p2")] })).expect_health(P2, 26);
                 let mut own = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
@@ -168,7 +168,6 @@ mod tests {
 
             #[test]
             fn may_hit_one_of_your_own_units_and_kills_a_4_health_one() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER], "field": [VANILLA] } }));
                 let target = at(&s, VANILLA);
                 s.play(WILDFIRE, json!({ "targets": [target] }));
@@ -177,7 +176,6 @@ mod tests {
 
             #[test]
             fn legalactions_offers_every_unit_and_both_heroes_one_target_each_and_a_play_with_none_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER], "field": [VANILLA] }, "p2": { "field": [MENACE] } }));
                 let offered = wildfire_plays(&s, P1);
                 assert_eq!(offered.len(), 4);
@@ -190,7 +188,6 @@ mod tests {
 
             #[test]
             fn e35_a_unit_immune_to_spells_is_never_offered_and_a_play_naming_it_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, FILLER] },
                     "p2": { "field": [{ "def": TOP_LOSER, "radiant": true }] },
@@ -205,7 +202,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_1_divine_shield_takes_the_whole_hit_and_the_unit_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "field": [DEFENDER] } }));
                 let target = at(&s, DEFENDER);
                 s.play(WILDFIRE, json!({ "targets": [target] }));
@@ -215,7 +211,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_2_armor_reduces_it_a_unit_in_defense_position_takes_3() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "field": [{ "def": MENACE, "position": "DEF" }] } }));
                 let target = at(&s, MENACE);
                 s.play(WILDFIRE, json!({ "targets": [target] }));
@@ -224,7 +219,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_0_spell_damage_on_your_side_raises_the_hit_solariuss_2_makes_it_6() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER], "field": [SOLARIUS] } }));
                 s.play(WILDFIRE, json!({ "targets": [hero("p2")] }));
                 assert_eq!(hits_on(&s, "hero-p2"), vec![json!(6)]);
@@ -232,7 +226,6 @@ mod tests {
 
             #[test]
             fn is_a_book_play_the_game_counts_its_book_tag_for_its_player_what_c_4_palantir_answers() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
                 s.play(WILDFIRE, json!({ "targets": [hero("p2")] }));
                 assert_eq!(played_this_game_with_tag(s.state(), P1, Tag::Book), 1);
@@ -240,7 +233,6 @@ mod tests {
 
             #[test]
             fn r831001_c_4_palantirs_base_face_steals_this_with_no_prompt_and_casts_it_at_your_hero() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "backrow": [PALANTIR], "hand": [FILLER] } }));
                 let wildfire = s.card(WILDFIRE).clone();
                 s.play(&wildfire, json!({ "targets": [hero("p2")] }));
@@ -256,7 +248,6 @@ mod tests {
 
             #[test]
             fn r386_its_damage_is_the_declared_number_an_upgrades_step_makes_it_5_a_degrades_3() {
-                crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
                 step_param(up.card_mut(WILDFIRE), "damage", 1);
                 up.play(WILDFIRE, json!({ "targets": [hero("p2")] })).expect_health(P2, 25);
@@ -273,7 +264,6 @@ mod tests {
 
             #[test]
             fn r97_in_its_owners_hand_the_opponents_view_never_names_it() {
-                crate::register_all();
                 let s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
                 let theirs = js(&s.view(P2));
                 assert_eq!(theirs["opponent"]["hand"], json!({ "count": 2 }));
@@ -284,7 +274,6 @@ mod tests {
 
             #[test]
             fn its_play_replays_exactly_from_the_log_a_json_round_trip_of_the_state_plays_the_same() {
-                crate::register_all();
                 let s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "field": [MENACE] } }));
                 let round = round_trip(s.state());
                 let action: Action = json_as(json!({
@@ -340,7 +329,6 @@ mod tests {
 
             #[test]
             fn r671_not_at_the_end_of_the_opponents_turn_in_the_other_players_hand_it_stays_wildfire() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FILLER] }, "p2": { "hand": [WILDFIRE, FILLER] } }));
                 s.end_turn();
                 assert!(s.hand(P2).iter().any(|card| card.def_id == WILDFIRE));
@@ -350,7 +338,6 @@ mod tests {
 
             #[test]
             fn r671_only_in_hand_in_the_library_or_the_graveyard_it_stays_wildfire() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "library": [FILLER, WILDFIRE], "graveyard": [WILDFIRE] },
                     "p2": { "hand": [FILLER] },
@@ -449,7 +436,6 @@ mod tests {
 
             #[test]
             fn deals_8_damage_to_a_target() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, FILLER] }, "p2": { "field": [MENACE] } }));
                 let target = at(&s, MENACE);
                 s.play(WILDFIRE, json!({ "targets": [target] }));
@@ -458,14 +444,12 @@ mod tests {
 
             #[test]
             fn deals_8_to_a_hero_either_side() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, FILLER] } }));
                 s.play(WILDFIRE, json!({ "targets": [hero("p1")] })).expect_health(P1, 22);
             }
 
             #[test]
             fn r386_its_declared_damage_steps_from_8_an_upgrade_makes_it_9_enough_to_kill_the_9_9() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, FILLER] }, "p2": { "field": [MENACE] } }));
                 step_param(s.card_mut(WILDFIRE), "damage", 1);
                 let target = at(&s, MENACE);
@@ -475,7 +459,6 @@ mod tests {
 
             #[test]
             fn s4_4_the_spell_damage_of_your_side_raises_the_radiant_hit_too_8_2() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, FILLER], "field": [SOLARIUS] } }));
                 s.play(WILDFIRE, json!({ "targets": [hero("p2")] }));
                 assert_eq!(hits_on(&s, "hero-p2"), vec![json!(10)]);
@@ -509,7 +492,6 @@ mod tests {
 
             #[test]
             fn r671_not_at_the_opponents_end_of_turn_nor_outside_the_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "library": [FILLER, { "def": WILDFIRE, "radiant": true }] },
                     "p2": { "hand": [{ "def": WILDFIRE, "radiant": true }, FILLER] },

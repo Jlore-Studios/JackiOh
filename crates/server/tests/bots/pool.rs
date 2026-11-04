@@ -30,7 +30,7 @@ use jackioh_server::config::{
     BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS, BOT_VS_BOT_MAX_LIVE, BOT_VS_BOT_MIN_GAP_SECONDS,
     MATCHMAKER_SWEEP_INTERVAL_SECONDS, MAX_FAIR_GAP, PersonaName,
 };
-use jackioh_server::db::store::{BotDeck, BotRow, FrozenTrio, NewBot, RatedGameRow, Ticket};
+use jackioh_server::db::store::{BotDeck, BotRow, BotState, FrozenTrio, NewBot, RatedGameRow, Ticket};
 use jackioh_server::ranked::ladder::{Ladder, fresh_rank};
 use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::username::normalize_username;
@@ -1130,6 +1130,7 @@ fn r1555000_the_bot_pair_is_the_lowest_grinder_and_its_closest_ready_bot() {
     held[0].in_match_id = Some("between-bots".to_string());
     held[1].in_match_id = Some("with-a-person".to_string());
     held[2].in_match_id = Some("between-bots".to_string());
+    let held: Vec<BotState> = held.iter().map(BotState::from).collect();
     assert_eq!(bot_matches(&held), vec!["between-bots".to_string()]);
 
     // The gap runs from the last game between two bots; a game against a person does not count.

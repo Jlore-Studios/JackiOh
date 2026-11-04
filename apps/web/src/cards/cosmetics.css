@@ -32,6 +32,15 @@
  * set in its set's face or its card's (`data-signature-face`, fonts.css); in the gate it signs fast
  * under a pen tip, through a slanted, feathered mask, then bursts, slashes a flourish under itself and
  * shines now and then, its timings the custom properties FullArtSignature.tsx sets.
+ *
+ * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2949000: Signature signs
+ * only on Full art beside Animated, never on the normal face. R2725004: no part of it is Radiant's gold: the ink is
+ * a cool silver and the pen's glow and the landing's burst white.
+ *
+ * R2940001: the Sketch version, after the full-art tiers, rings a base face's art window with a pencil line and a
+ * smudge, in the palette's slates, no gold; its edge, hatched in graphite on paper, and its graphite bezel are
+ * cards.css's. A Radiant face keeps its gold-foil frame, and R2940002 a worn border its edge and bezel, the ring
+ * only taking its colour.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -805,7 +814,7 @@
 .cf-signature-text {
   font-family: var(--font-signature);
   font-weight: 700;
-  fill: var(--pal-parchment);
+  fill: var(--pal-slate-100);
   filter: drop-shadow(0 0 1px var(--pal-black)) drop-shadow(0 1px 1px var(--pal-black));
 }
 
@@ -843,7 +852,7 @@
 /* The flourish under the name, in the ink's color. */
 .cf-signature-flourish {
   fill: none;
-  stroke: var(--pal-parchment);
+  stroke: var(--pal-slate-100);
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -858,7 +867,7 @@
 }
 
 .cf-signature-pen-glow {
-  fill: var(--pal-gold-200);
+  fill: var(--pal-white);
   opacity: 0.6;
 }
 
@@ -868,7 +877,18 @@
 }
 
 .cf-signature-burst {
-  fill: var(--pal-gold-200);
+  fill: var(--pal-white);
+}
+
+/* ---------------------------------------------------------------------------- sketch --- */
+
+/* R2940001: the window's ring drawn as a pencil line, a smudge offset under it, in the bezel's colour: graphite
+   (cards.css, beside the face's other edges, since this sheet sets an edge only per border) or a worn border's. */
+.cf[data-version="version-sketch"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.45cqw var(--cf-bezel),
+    0.35cqw 0.25cqw 0 0.55cqw color-mix(in srgb, var(--pal-slate-700) 40%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent);
 }
 
 /* ----------------------------------------------------------------------------- motion --- */

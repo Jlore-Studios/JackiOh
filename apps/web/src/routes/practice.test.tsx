@@ -39,6 +39,7 @@ import {
   type PracticeSavedDeck,
 } from "../practice/decks.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
+import { writeLastBoard } from "../practice/lastBoard.ts";
 import type {
   PracticeDebug,
   PracticeRequestBody,
@@ -50,6 +51,7 @@ import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume, readPracticeResumeStat
 import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
+import { stubPhoneBar } from "../test/phoneBar.ts";
 import { settle } from "../test/settle.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import type { TutorialAccountApi } from "../tutorial/accountSync.ts";
@@ -583,7 +585,7 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(within(hint).getByRole("link", { name: "Decks" })).toHaveAttribute("href", "/decks");
 
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.deck).toEqual({ kind: "random" });
   });
 
@@ -909,7 +911,7 @@ describe("the setup previews the chosen deck", () => {
     expect(previewedIds()).toEqual([]);
 
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.deck).toEqual({ kind: "preset", id: "blitz" });
   });
 
@@ -938,7 +940,7 @@ describe("the setup previews the chosen deck", () => {
     visit("?seed=cat1&difficulty=easy&deck=random&seat=p1");
     const autostarted = routeHost();
     renderRoute(autostarted);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(autostarted.requests.filter((body) => body.type === "catalog")).toEqual([]);
   });
 });
@@ -1022,7 +1024,7 @@ describe("B32 URL parameters", () => {
   });
 });
 
-describe("B33 starting renders the game under the practice HUD", () => {
+describe("B33 starting renders the game with no HUD above the board", () => {
   it("B33 practice-start sends the chosen setup and renders <Game> for the human seat", async () => {
     const host = routeHost();
     renderRoute(host);
@@ -1032,7 +1034,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
     fireEvent.click(screen.getByTestId(T.start));
 
-    const hud = await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     const [config] = host.starts();
     expect(host.starts()).toHaveLength(1);
     if (config === undefined) return;
@@ -1042,9 +1044,11 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(["p1", "p2"]).toContain(config.humanSeat);
 
     expect(screen.getByTestId("game")).toHaveAttribute("data-viewer", config.humanSeat);
-    expect(hud).toHaveAttribute("data-difficulty", "medium");
-    expect(hud).toHaveAttribute("data-human-seat", config.humanSeat);
-    expect(hud).toHaveAttribute("data-ai-seat", opponentOf(config.humanSeat));
+    // Nothing but gameplay is drawn above the board: no practice-hud, and the enemy hero's
+    // seat names the AI and the difficulty in place of OPPONENT.
+    expect(screen.queryByTestId("practice-hud")).toBeNull();
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Medium");
+    expect(screen.getByTestId("hero-you")).toHaveTextContent("You");
     expect(screen.queryByTestId(T.setup)).toBeNull();
   });
 
@@ -1064,7 +1068,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
     expect((screen.getByTestId(practiceTestid.leanNewest) as HTMLSelectElement).value).toBe("Classic+");
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     expect(host.starts()[0]?.deck).toEqual({ kind: "random", leanSet: "Classic+" });
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
@@ -1083,7 +1087,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
 
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.deck).toEqual({ kind: "preset", id: "humans" });
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toMatchObject({ leanSet: "newest" });
   });
@@ -1095,10 +1099,10 @@ describe("B33 starting renders the game under the practice HUD", () => {
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
     fireEvent.click(screen.getByTestId(T.start));
-    const hud = await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     const [config] = host.starts();
     expect(config?.sandbox).toBe(true);
-    expect(hud).toHaveTextContent("Sandbox");
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Sandbox");
     expect(screen.getByTestId(practiceTestid.sandboxPanel)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxDraw));
@@ -1115,9 +1119,10 @@ describe("B33 starting renders the game under the practice HUD", () => {
     renderRoute(host);
     await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(T.start));
-    const hud = await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.sandbox).toBeUndefined();
-    expect(hud).not.toHaveTextContent("Sandbox");
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Easy");
+    expect(screen.getByTestId("hero-opponent")).not.toHaveTextContent("Sandbox");
     expect(screen.queryByTestId(practiceTestid.sandboxPanel)).toBeNull();
     expect(screen.queryByTestId(practiceTestid.sandboxToggle)).toBeNull();
   });
@@ -1131,7 +1136,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
     fireEvent.click(screen.getByTestId(T.start));
     await settle({ ticks: 10 });
-    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
     expect(screen.getByTestId(practiceTestid.sandboxHold)).toBeChecked();
@@ -1156,7 +1161,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
 
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "saved:2" } });
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     expect(host.starts()[0]?.deck).toMatchObject({ kind: "saved", cards: SAVED_DECKS[1] });
   });
@@ -1166,14 +1171,12 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const host = routeHost();
     renderRoute(host);
 
-    const hud = await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()).toEqual([
       { seed: "abc123", difficulty: "hard", humanSeat: "p2", deck: { kind: "preset", id: "humans" } },
     ]);
     expect(screen.getByTestId("game")).toHaveAttribute("data-viewer", "p2");
-    expect(hud).toHaveAttribute("data-difficulty", "hard");
-    expect(hud).toHaveAttribute("data-human-seat", "p2");
-    expect(hud).toHaveAttribute("data-ai-seat", "p1");
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Hard");
     expect(screen.queryByTestId(T.setup)).toBeNull();
   });
 
@@ -1182,7 +1185,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const host = routeHost();
     renderRoute(host);
 
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()).toEqual([
       {
         seed: "pool1",
@@ -1198,7 +1201,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const live = routeHost();
     renderRoute(live);
 
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(live.starts()).toEqual([
       { seed: "pool2", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } },
     ]);
@@ -1227,13 +1230,12 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const host = routeHost();
     renderRoute(host);
 
-    const hud = await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     const [config] = host.starts();
     expect(host.starts()).toHaveLength(1);
     if (config === undefined) return;
     expect(config.seed).toBe("seat1");
     expect(["p1", "p2"]).toContain(config.humanSeat);
-    expect(hud).toHaveAttribute("data-human-seat", config.humanSeat);
     expect(screen.getByTestId("game")).toHaveAttribute("data-viewer", config.humanSeat);
   });
 
@@ -1249,7 +1251,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
       host.releaseStart();
       await Promise.resolve();
     });
-    expect(await screen.findByTestId(T.hud)).toBeInTheDocument();
+    expect(await screen.findByTestId("game")).toBeInTheDocument();
     expect(screen.queryByTestId(T.loading)).toBeNull();
   });
 
@@ -1268,7 +1270,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=act1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     fireEvent.click(screen.getByTestId("end-turn"));
     await waitFor(() => {
@@ -1280,7 +1282,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=hand1&difficulty=easy&deck=random&seat=p2");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     fireEvent.click(screen.getByTestId("hero-you"));
     const menu = await screen.findByTestId("emote-menu");
@@ -1292,7 +1294,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=concede1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     const concedes = (): PracticeRequestBody[] =>
       host.requests.filter((body) => body.type === "act" && body.action.type === "concede");
 
@@ -1309,7 +1311,26 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(concedes()).toEqual([{ type: "act", action: { type: "concede" } }]);
   });
 
-  it("B33 the HUD shows the think indicator while the AI owes an action, and drops it once it does not", async () => {
+  it("#2883 a practice game draws no Offer draw on the desktop bar, and Concede stays", async () => {
+    visit("?seed=nodraw1&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId("game");
+
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+    expect(screen.getByTestId("concede")).toBeInTheDocument();
+  });
+
+  it("#2883 on a phone, a practice game's ⋯ menu holds Concede and no Offer draw", async () => {
+    onTestFinished(stubPhoneBar(true));
+    visit("?seed=nodraw2&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId("game");
+
+    expect(screen.getByTestId("match-menu-panel").contains(screen.getByTestId("concede"))).toBe(true);
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+  });
+
+  it("B33 the control bar shows the think indicator while the AI owes an action, and drops it once it does not", async () => {
     visit("?seed=think1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true, holdAiSteps: true });
     renderRoute(host);
@@ -1317,12 +1338,15 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const indicator = await screen.findByTestId(T.thinking);
     expect(indicator).toHaveAttribute("role", "status");
     expect(indicator).toHaveTextContent("AI is thinking…");
-    expect(screen.getByTestId(T.hud)).toHaveAttribute("data-thinking", "true");
-    // The practice table carries the flag that lights the AI hero.
+    // The indicator rides the control bar's status row, not a HUD above the board.
+    expect(indicator.closest(".control-bar")).not.toBeNull();
+    expect(indicator.closest(".board-status")).not.toBeNull();
+    // The practice table carries the flag that lights the AI hero's ring.
     const table = screen.getByTestId("game").closest(".practice-table");
     expect(table).not.toBeNull();
     expect(table).toHaveAttribute("data-thinking", "true");
     expect(table).toHaveAttribute("data-difficulty", "easy");
+    expect(screen.queryByTestId("practice-hud")).toBeNull();
 
     await waitFor(() => {
       expect(host.requests).toContainEqual({ type: "aiStep" });
@@ -1334,7 +1358,6 @@ describe("B33 starting renders the game under the practice HUD", () => {
     await waitFor(() => {
       expect(screen.queryByTestId(T.thinking)).toBeNull();
     });
-    expect(screen.getByTestId(T.hud)).toHaveAttribute("data-thinking", "false");
     expect(screen.getByTestId("game").closest(".practice-table")).toHaveAttribute("data-thinking", "false");
   });
 
@@ -1346,7 +1369,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const gap = 400;
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await settle({ ticks: 10 });
-    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
 
     // Runner in-flight marker (game/animations.ts).
     const board = screen.getByTestId("game");
@@ -1374,7 +1397,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     document.body.setAttribute("data-speaking", "core-011-play");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await settle({ ticks: 10 });
-    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
 
     // Any element marks an active voice line.
     try {
@@ -1427,7 +1450,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     document.body.setAttribute("data-showcase", "played");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await settle({ ticks: 10 });
-    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
 
     try {
       await act(async () => {
@@ -1475,7 +1498,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     const host = routeHost({ aiToAct: true });
     document.body.setAttribute("data-showcase", "played");
     renderRoute(host, { pacing: undefined });
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     await waitFor(() => {
       expect(host.requests).toContainEqual({ type: "aiStep" });
     });
@@ -1485,8 +1508,11 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=again1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
+    // New game rides the control bar beside Concede on desktop (and the ⋯ menu on phones).
+    expect(screen.getByTestId(T.newGame).closest(".control-bar")).not.toBeNull();
+    expect(screen.getByTestId(T.menu).closest(".control-bar")).not.toBeNull();
     fireEvent.click(screen.getByTestId(T.newGame));
     const leave = await screen.findByTestId(T.leave);
     expect(leave).toHaveAttribute("role", "alertdialog");
@@ -1504,7 +1530,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=stay1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     fireEvent.click(screen.getByTestId(T.newGame));
     fireEvent.click(await screen.findByTestId(T.leaveStay));
@@ -1532,7 +1558,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=over9&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     concedeOnBoard();
     await screen.findByTestId(T.result);
 
@@ -1544,7 +1570,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("practice-menu asks first mid-game, and confirming leaves for the main menu", async () => {
     visit("?seed=menu1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     fireEvent.click(screen.getByTestId(T.menu));
     const leave = await screen.findByTestId(T.leave);
@@ -1559,7 +1585,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("once the game is over, practice-menu goes straight to the main menu", async () => {
     visit("?seed=menu2&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     concedeOnBoard();
     await screen.findByTestId(T.result);
 
@@ -1583,7 +1609,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
 
     visit("?seed=unload1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(unloadIsCanceled(), "a free game in progress comes back after a reload").toBe(false);
     cleanup();
 
@@ -1612,9 +1638,8 @@ describe("R668 resuming a practice game after a reload", () => {
     keep(LEFT);
     const host = routeHost();
     renderRoute(host);
-    const hud = await screen.findByTestId(T.hud);
-    expect(hud).toHaveAttribute("data-difficulty", "hard");
-    expect(hud).toHaveAttribute("data-human-seat", "p2");
+    await screen.findByTestId("game");
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Hard");
     expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: LEFT }]);
     expect(host.starts()).toEqual([]);
     expect(readPracticeResume(), "still the game to come back to").toEqual(LEFT);
@@ -1625,7 +1650,7 @@ describe("R668 resuming a practice game after a reload", () => {
     visit("?seed=url1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.requests.some((body) => body.type === "resume")).toBe(false);
     expect(host.starts()).toHaveLength(1);
     expect(readPracticeResume()).toEqual({ seed: "url1", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } });
@@ -1642,7 +1667,7 @@ describe("R668 resuming a practice game after a reload", () => {
   it("R668 leaving the game through New game gives it up", async () => {
     keep(LEFT);
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     fireEvent.click(screen.getByTestId(T.newGame));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
@@ -1652,7 +1677,7 @@ describe("R668 resuming a practice game after a reload", () => {
   it("R668 leaving through Menu gives it up too, and a finished game is not kept", async () => {
     keep(LEFT);
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     fireEvent.click(screen.getByTestId(T.menu));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     expect(window.location.pathname).toBe("/");
@@ -1661,7 +1686,7 @@ describe("R668 resuming a practice game after a reload", () => {
 
     visit("?seed=over658&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(readPracticeResume()).not.toBeNull();
     concedeOnBoard();
     await screen.findByTestId(T.result);
@@ -1690,7 +1715,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
   it("R765 a free game's question offers Keep playing, Save and leave and Leave without saving; a lesson's keeps Leave game", async () => {
     visit("?seed=save1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     const leave = await askToLeave("newGame");
     expect(leave).toHaveAttribute("data-can-save", "true");
     expect(leave).toHaveTextContent("practice menu");
@@ -1712,7 +1737,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
   it("R765 Save and leave from New game keeps the game: the setup shows its banner, and so does the next visit, with no resume", async () => {
     visit("?seed=save2&difficulty=hard&deck=random&seat=p2");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     await askToLeave("newGame");
     fireEvent.click(screen.getByTestId(T.leaveSave));
 
@@ -1743,9 +1768,8 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     await screen.findByTestId(T.setup);
     fireEvent.click(screen.getByTestId(T.resume));
 
-    const hud = await screen.findByTestId(T.hud);
-    expect(hud).toHaveAttribute("data-difficulty", "medium");
-    expect(hud).toHaveAttribute("data-human-seat", "p1");
+    await screen.findByTestId("game");
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Medium");
     expect(resumes(host)).toEqual([KEPT]);
     expect(host.starts()).toEqual([]);
     expect(readPracticeResumeState()).toEqual({ config: KEPT, saved: false });
@@ -1753,7 +1777,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
 
     const reload = routeHost();
     renderRoute(reload);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(resumes(reload)).toEqual([KEPT]);
     expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
   });
@@ -1761,7 +1785,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
   it("R765 Leave without saving gives the game up: no banner now, and none on the next visit", async () => {
     visit("?seed=drop1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     await askToLeave("newGame");
     fireEvent.click(screen.getByTestId(T.leaveConfirm));
 
@@ -1781,7 +1805,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
   it("R765 Save and leave from Menu goes to the main menu, and /practice then shows the banner", async () => {
     visit("?seed=save3&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     const leave = await askToLeave("menu");
     expect(leave).toHaveTextContent("main menu");
     fireEvent.click(screen.getByTestId(T.leaveSave));
@@ -1802,7 +1826,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     await screen.findByTestId(T.resumeBanner);
     fireEvent.click(screen.getByTestId(T.start));
 
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(resumes(host)).toEqual([]);
     expect(host.starts()).toHaveLength(1);
     const started = host.starts()[0];
@@ -1872,7 +1896,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     keep(KEPT, false);
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(resumes(host)).toEqual([KEPT]);
     expect(screen.queryByTestId(T.setup)).toBeNull();
   });
@@ -1936,7 +1960,7 @@ describe("the result dialog", () => {
     visit(search);
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(screen.queryByTestId(T.result)).toBeNull();
     expect(screen.queryByTestId(T.outcome)).toBeNull();
     concedeOnBoard();
@@ -1944,7 +1968,7 @@ describe("the result dialog", () => {
     return host;
   }
 
-  it("a finished game opens the dialog with the viewer's outcome and why, and the HUD shows it too", async () => {
+  it("a finished game opens the dialog with the viewer's outcome and why, and the chip shows it too", async () => {
     await concede("?seed=over1&difficulty=medium&deck=random&seat=p2");
 
     const dialog = screen.getByTestId(T.result);
@@ -1954,7 +1978,9 @@ describe("the result dialog", () => {
     expect(dialog).toHaveTextContent("You conceded.");
     expect(dialog).toHaveTextContent("Medium");
     expect(screen.getByTestId(T.playAgain)).toHaveFocus();
-    expect(screen.getByTestId(T.outcome)).toHaveAttribute("data-outcome", "loss");
+    // The board's own result chip carries the one outcome control: the Result button that
+    // reopens the dialog. The chip's word stays the board's ("Loss", not "Defeat").
+    expect(screen.getByTestId(T.outcome)).toHaveTextContent("Result");
     // Game's overlay remains for its other consumers.
     expect(screen.getByTestId("result-overlay")).toHaveTextContent("Loss");
   });
@@ -1972,10 +1998,10 @@ describe("the result dialog", () => {
     await waitFor(() => {
       expect(screen.queryByTestId(T.result)).toBeNull();
     });
-    expect(screen.getByTestId(T.hud)).toHaveAttribute("data-difficulty", "hard");
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Hard");
   });
 
-  it("View the board closes the dialog, Escape does too, and the HUD's outcome reopens it", async () => {
+  it("View the board closes the dialog, Escape does too, and the chip's outcome reopens it", async () => {
     await concede("?seed=over3&difficulty=easy&deck=random&seat=p1");
 
     fireEvent.click(screen.getByTestId(T.viewBoard));
@@ -2042,7 +2068,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     await settle({ ticks: 10 });
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
   }
 
   it("R1303000 Start asks for a seed, the game plays on it with the server's last board, and its end is claimed and shown", async () => {
@@ -2172,7 +2198,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     const host = routeHost();
     const earning = fakeEarning();
     renderEarning(host, earning);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: left }]);
     expect(earning.requestSeed, "a resumed game keeps its seed").not.toHaveBeenCalled();
 
@@ -2234,6 +2260,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     await screen.findByTestId(T.result);
     expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "unearned");
     expect(screen.getByTestId(practiceTestid.unearned)).toHaveTextContent("This game won't earn anything.");
+    expect(screen.getByTestId(practiceTestid.unearned).closest(".board-notices")).not.toBeNull();
     cleanup();
 
     const waiting = routeHost();
@@ -2346,6 +2373,79 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(host.starts()[0]?.earning).toBeUndefined();
   });
 
+  it("practice-unearned renders as a dismissible board notice, and Dismiss leaves the game going", async () => {
+    const host = routeHost();
+    renderEarning(
+      host,
+      fakeEarning({
+        seed: () =>
+          Promise.reject(
+            new ApiRequestError(409, { code: "conflict", message: "Claim one of your open practice games before starting another." }),
+          ),
+      }),
+    );
+    await startFromSetup();
+
+    const toast = screen.getByTestId(practiceTestid.unearned);
+    expect(toast).toHaveAttribute("role", "status");
+    expect(toast).toHaveTextContent(
+      "This game won't earn anything: Claim one of your open practice games before starting another.",
+    );
+    expect(toast.closest(".board-notices")).not.toBeNull();
+    expect(toast.closest(".control-bar")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByTestId(practiceTestid.unearned)).toBeNull();
+    // The game carries on: the board is still there and End turn still acts.
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("end-turn"));
+    await waitFor(() => {
+      expect(host.requests).toContainEqual({ type: "act", action: { type: "endTurn" } });
+    });
+  });
+
+  it("the modifier-list chip renders in the control bar and opens its panel", async () => {
+    visit("?seed=mods1&difficulty=easy&deck=random&seat=p1");
+    const view = baseView({
+      viewer: "p1",
+      you: emptySide("p1", { modifiers: [{ id: "m1", label: "Costs (1) less" }] }),
+      opponent: emptySide("p2", { hand: { count: 4 }, modifiers: [{ id: "m2", label: "Next Spell gains Echo +1" }] }),
+    });
+    const snapshot: PracticeSnapshot = {
+      view,
+      legal: [{ type: "endTurn" }, { type: "concede" }],
+      aiToAct: false,
+      error: null,
+    };
+    const host: PracticeHost = {
+      request: (body) =>
+        body.type === "start" || body.type === "resume"
+          ? Promise.resolve({ id: 1, type: "started", snapshot, defs: {}, aiSeat: "p2" })
+          : Promise.resolve({ id: 2, type: "snapshot", snapshot }),
+      dispose: () => undefined,
+    };
+    render(
+      <PracticeRoute
+        hostFactory={() => host}
+        pacing={PRACTICE_PACING_FAST}
+        account={ANONYMOUS}
+        loadDecks={vi.fn(() => Promise.reject(new Error("no saved decks")))}
+        practiceEarning={null}
+      />,
+    );
+    await screen.findByTestId("game");
+
+    const chip = screen.getByTestId("modifier-list");
+    expect(chip).toHaveAttribute("data-count", "2");
+    expect(chip.closest(".control-bar")).not.toBeNull();
+    expect(chip.closest(".board-status")).not.toBeNull();
+
+    fireEvent.click(chip);
+    const panel = await screen.findByTestId("modifier-list-panel");
+    expect(panel).toHaveTextContent("Costs (1) less");
+    expect(panel).toHaveTextContent("Next Spell gains Echo +1");
+  });
+
   it("R1303000 an anonymous player, a URL seed and a lesson ask for nothing", async () => {
     const anonymous = routeHost();
     const unasked = fakeEarning();
@@ -2374,6 +2474,66 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
 
     expect(unasked.requestSeed).not.toHaveBeenCalled();
     expect(unasked.claim).not.toHaveBeenCalled();
+  });
+
+  /** R2882000: the setup at medium, a random deck leaning on Classic+, then the deck picker on a preset and Sandbox ticked. */
+  async function startTodaysDeal(): Promise<void> {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.parse("2026-11-03T12:00:00.000Z"));
+    await settle({ ticks: 10 });
+    fireEvent.click(screen.getByTestId(T.medium));
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
+    fireEvent.change(screen.getByTestId(practiceTestid.leanNewest), { target: { value: "Classic+" } });
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(practiceTestid.dailyDeal));
+    await screen.findByTestId("game");
+  }
+
+  it("R2882000 Play today's deal starts the UTC day's deal at the setup's difficulty and pick: no server seed, no sandbox, no last board", async () => {
+    writeLastBoard([{ defId: "core-008", radiant: false }]);
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await startTodaysDeal();
+
+    expect(host.starts()[0]).toEqual({
+      seed: "daily-2026-11-03",
+      difficulty: "medium",
+      humanSeat: "p1",
+      deck: { kind: "random", leanSet: "Classic+" },
+      dailyDeal: "2026-11-03",
+    });
+    expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
+      difficulty: "medium",
+      deck: "preset:humans",
+      leanSet: "Classic+",
+    });
+    expect(earning.requestSeed).not.toHaveBeenCalled();
+  });
+
+  it("R2882000 Play again on today's deal deals the day's deal at the click, the new day's after UTC midnight", async () => {
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await startTodaysDeal();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+
+    vi.setSystemTime(Date.parse("2026-11-04T00:00:01.000Z"));
+    fireEvent.click(screen.getByTestId(T.playAgain));
+    await waitFor(() => {
+      expect(host.starts()).toHaveLength(2);
+    });
+    const [first, second] = host.starts();
+    expect(second).toMatchObject({
+      seed: "daily-2026-11-04",
+      humanSeat: "p2",
+      difficulty: first?.difficulty,
+      deck: first?.deck,
+      dailyDeal: "2026-11-04",
+    });
+    expect(earning.requestSeed).not.toHaveBeenCalled();
   });
 
   it("R1310000 with the economy live an active account's game asks for a seed", async () => {
@@ -2461,7 +2621,7 @@ describe("R768000 a kept game's replay from the result dialog", () => {
     visit("?seed=replay1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ kept });
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     concedeOnBoard();
     await screen.findByTestId(T.result);
     return host;
@@ -2503,7 +2663,7 @@ describe("B40 the dev handle", () => {
     visit("?seed=handle1&difficulty=easy&deck=random&seat=p2");
     const host = routeHost();
     renderRoute(host);
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     await waitFor(() => {
       expect(window.__jackiohPractice?.aiSeat).toBe("p1");
@@ -2529,7 +2689,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
     fireEvent.click(screen.getByTestId(T.hard));
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
       difficulty: "hard",
@@ -2555,7 +2715,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
     await settle({ ticks: 10 });
     fireEvent.click(screen.getByTestId(T.start));
 
-    expect(await screen.findByTestId(T.hud)).toBeInTheDocument();
+    expect(await screen.findByTestId("game")).toBeInTheDocument();
     expect(host.starts()).toHaveLength(1);
   });
 
@@ -2657,7 +2817,7 @@ describe("practice plays on the full board, with sound and settings", () => {
     voice.say(true);
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await settle({ ticks: 10 });
-    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
     expect(screen.getByTestId("game")).toHaveAttribute("data-speaking", "true");
 
     await act(async () => {
@@ -2682,7 +2842,7 @@ describe("practice plays on the full board, with sound and settings", () => {
     const host = routeHost({ aiToAct: true });
     voice.say(true);
     renderRoute(host, { pacing: undefined });
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(screen.getByTestId("game")).toHaveAttribute("data-speaking", "true");
     await waitFor(() => {
       expect(host.requests).toContainEqual({ type: "aiStep" });
@@ -2717,12 +2877,12 @@ describe("practice plays on the full board, with sound and settings", () => {
   async function concedeWith(pacing: PracticePacing, options: HostOptions = {}): Promise<void> {
     visit("?seed=over9&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost(options), { pacing });
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     concedeOnBoard();
     await screen.findByTestId(T.outcome);
   }
 
-  it("the result dialog waits for the board's game-over sequence, and the HUD's outcome opens it at once", async () => {
+  it("the result dialog waits for the board's game-over sequence, and the chip's outcome opens it at once", async () => {
     const pacing: PracticePacing = { ...PRACTICE_PACING_FAST, resultDelayMs: 150 };
     await concedeWith(pacing);
     expect(screen.queryByTestId(T.result), "Victory or Defeat plays on the board first").toBeNull();
@@ -2815,7 +2975,7 @@ describe("practice plays on the full board, with sound and settings", () => {
         loadDecks={vi.fn(() => Promise.reject(new Error("no saved decks")))}
       />,
     );
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
 
     const handCard = screen.getByTestId("hand-card-h1");
     expect(handCard.querySelector(".cf"), "task 6's card face").not.toBeNull();
@@ -2935,9 +3095,8 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
     cleanup();
     visit("");
     route();
-    const hud = await screen.findByTestId(T.hud, {}, BOOT);
-    expect(hud).toHaveAttribute("data-difficulty", "medium");
-    expect(hud).toHaveAttribute("data-human-seat", "p1");
+    await screen.findByTestId("game", {}, BOOT);
+    expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Medium");
     await gameBegun();
     const after = await window.__jackiohPractice?.snapshot();
     expect(after?.hash).toBe(before?.hash);
@@ -3044,7 +3203,7 @@ describe("R2102000 the lethal hint", () => {
   it("R2102000 an Easy game whose snapshot says lethal shows the line and marks the board", async () => {
     visit("?seed=lethal1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost({ lethalHint: true }));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(shown()).toBe(true);
     expect(screen.getByTestId("lethal-hint")).toHaveTextContent("You have lethal");
   });
@@ -3052,7 +3211,7 @@ describe("R2102000 the lethal hint", () => {
   it("R2102000 an Easy game whose snapshot says nothing shows nothing", async () => {
     visit("?seed=lethal2&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(dark()).toBe(true);
   });
 
@@ -3060,12 +3219,12 @@ describe("R2102000 the lethal hint", () => {
     for (const difficulty of ["medium", "hard"] as const) {
       visit(`?seed=lethal3&difficulty=${difficulty}&deck=random&seat=p1`);
       renderRoute(routeHost({ lethalHint: true }));
-      await screen.findByTestId(T.hud);
+      await screen.findByTestId("game");
       expect(shown(), difficulty).toBe(true);
       cleanup();
 
       renderRoute(routeHost());
-      await screen.findByTestId(T.hud);
+      await screen.findByTestId("game");
       expect(dark(), difficulty).toBe(true);
       cleanup();
     }
@@ -3078,7 +3237,7 @@ describe("R2102000 the lethal hint", () => {
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(host.starts()[0]?.sandbox).toBe(true);
     expect(shown()).toBe(true);
   });
@@ -3102,7 +3261,7 @@ describe("R2102000 the lethal hint", () => {
     writeSettings({ lethalHint: false });
     visit("?seed=lethal4&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost({ lethalHint: true }));
-    await screen.findByTestId(T.hud);
+    await screen.findByTestId("game");
     expect(dark()).toBe(true);
 
     act(() => {

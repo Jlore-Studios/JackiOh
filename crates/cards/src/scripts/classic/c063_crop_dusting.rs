@@ -50,6 +50,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -208,7 +210,6 @@ mod tests {
 
             #[test]
             fn r97_nor_the_placement_on_your_own_face_down_trap_to_the_opponent() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DUSTING, FILLER], "backrow": [{ "def": PAWN, "faceUp": false, "lane": 2 }], "library": lib(4, X) },
                     "p2": { "hand": [FILLER], "library": lib(4, X) },
@@ -224,7 +225,6 @@ mod tests {
 
             #[test]
             fn s3_2_r13_a_card_dormant_under_a_stack_pile_takes_none_the_top_of_the_pile_does() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DUSTING, FILLER], "library": lib(4, X) },
                     "p2": { "hand": [FILLER], "field": [VANILLA, { "def": FIENDER, "stack": true }], "library": lib(4, X) },
@@ -239,7 +239,6 @@ mod tests {
 
             #[test]
             fn with_no_other_permanent_on_the_field_it_still_fires_and_draws_placing_only_on_itself() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DUSTING, FILLER], "library": lib(4, X) }, "p2": { "hand": [FILLER], "library": lib(4, X) } }));
                 s.play(DUSTING, json!({}));
                 s.end_turn();
@@ -252,7 +251,6 @@ mod tests {
 
             #[test]
             fn each_placement_is_its_own_a_c_53_plague_crawler_on_either_side_draws_its_controller_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DUSTING, FILLER], "field": [CRAWLER], "library": lib(5, X) },
                     "p2": { "hand": [FILLER], "field": [CRAWLER], "library": lib(5, X) },
@@ -269,7 +267,6 @@ mod tests {
 
             #[test]
             fn c_27_a_pestilent_slime_doubles_its_own_placement_it_takes_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DUSTING, FILLER], "library": lib(4, X) },
                     "p2": { "hand": [FILLER], "field": [SLIME, { "def": VANILLA, "lane": 2 }], "library": lib(4, X) },
@@ -304,7 +301,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_places_2_on_each_permanent_and_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DUSTING, FILLER], "field": [VANILLA], "library": lib(5, X) },
                     "p2": { "hand": [FILLER], "field": [MENACE], "library": lib(4, X) },
@@ -353,7 +349,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_places_1_on_each_and_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": DUSTING, "radiant": true }, FILLER], "field": [VANILLA], "library": lib(5, X) },
                     "p2": { "hand": [FILLER], "library": lib(4, X) },

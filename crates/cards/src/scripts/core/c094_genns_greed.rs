@@ -68,6 +68,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -133,7 +135,6 @@ mod tests {
 
         #[test]
         fn s2_3_base_gains_2_temporary_mana_after_paying_its_own_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-mana-base",
                 "p1": { "hand": [GREED, "core-005"], "library": [FILLER_SPELL] },
@@ -151,7 +152,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gains_3_and_a_radiant_degrade_5() {
             for (radiant, upgrade, mana) in [(false, true, 3), (true, false, 5)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "core-094-mana-tuned",
                     "p1": { "hand": [{ "def": GREED, "radiant": radiant }, "core-005"], "library": [FILLER_SPELL] },
@@ -170,7 +170,6 @@ mod tests {
 
         #[test]
         fn s2_3_the_gain_may_take_current_mana_above_max() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-mana-above-max",
                 "p1": { "hand": [GREED, "core-005"], "library": [FILLER_SPELL], "mana": 4 },
@@ -186,7 +185,6 @@ mod tests {
 
         #[test]
         fn s3_2_the_spell_reaches_the_graveyard_and_counts_as_a_card_played() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-graveyard",
                 "p1": { "hand": [GREED, "core-005"], "library": [FILLER_SPELL] },
@@ -202,7 +200,6 @@ mod tests {
 
         #[test]
         fn the_mana_goes_to_the_caster_not_the_opponent() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-mana-side",
                 "p1": { "hand": [GREED, "core-005"], "library": [FILLER_SPELL] },
@@ -221,7 +218,6 @@ mod tests {
 
         #[test]
         fn s8_gain_6_only_the_number_changes_and_6_takes_current_mana_past_max_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-mana-radiant",
                 "p1": { "hand": [{ "def": GREED, "radiant": true }, "core-005"], "library": [FILLER_SPELL] },
@@ -237,7 +233,6 @@ mod tests {
 
         #[test]
         fn radiant_keeps_the_same_cost_of_4_s8_conventions_only_the_gain_moved() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-radiant-cost",
                 "p1": { "hand": [{ "def": GREED, "radiant": true }, "core-005"], "library": [FILLER_SPELL], "mana": 3 },
@@ -269,7 +264,6 @@ mod tests {
 
         #[test]
         fn it_is_a_draw_so_each_card_emits_drawn_and_counts_on_the_draw_counter_s2_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-draw-events",
                 "p1": {
@@ -333,7 +327,6 @@ mod tests {
 
         #[test]
         fn r66_an_x_cost_card_is_exempt_it_is_never_drawn_by_the_2_cost_clause() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-x-draw",
                 "p1": { "field": [KEEP_TURN], "hand": [GREED], "library": [X_COST, "core-024"] },
@@ -474,7 +467,6 @@ mod tests {
 
         #[test]
         fn the_exile_reaches_your_three_zones_only_the_opponent_s_cards_are_untouched() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-094-own-zones",
                 // §2.5: a unit that could still switch keeps the turn from auto-ending and handing p2 a

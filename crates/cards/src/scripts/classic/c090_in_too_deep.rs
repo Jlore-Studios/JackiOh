@@ -420,6 +420,8 @@ mod tests {
     use super::{QUESTS, script};
     use crate::def_ids;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::collections::BTreeMap;
 
     const P1: PlayerId = PlayerId::P1;
@@ -436,7 +438,7 @@ mod tests {
     const TRUE_STRIKE: &str = "core-044";
     const COLLATERAL: &str = "core-034";
     const MAGIC_JAMMED: &str = "core-036";
-    const EUGENICS: &str = "core-042";
+    const SELECTIVE_BREEDING: &str = "core-042";
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
     const MENACE: &str = "core-019";
@@ -562,7 +564,7 @@ mod tests {
         json!(shown(s, viewer).quest.and_then(|quest| quest.open.first().cloned()))
     }
 
-    fn ids(list: &[&str]) -> Vec<String> {
+    fn strings(list: &[&str]) -> Vec<String> {
         list.iter().map(|id| id.to_string()).collect()
     }
 
@@ -624,7 +626,6 @@ mod tests {
 
             #[test]
             fn s2_1_quickdraw_both_faces_carry_the_flag_that_starts_it_in_the_opening_hand() {
-                crate::register_all();
                 let s = scenario(json!({ "p1": { "library": [ITD, { "def": ITD, "radiant": true }] } }));
                 let library = s.pile(P1, "library");
                 let plain = must(library.first().cloned(), "base");
@@ -690,7 +691,6 @@ mod tests {
 
             #[test]
             fn r46_indestructible_a_destroy_leaves_it_in_its_zone_with_its_quest_line() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [MAGIC_JAMMED, STOCKPILE] },
@@ -714,13 +714,12 @@ mod tests {
                     "p2": spare(json!({})),
                 }));
                 s.play(ITD, json!({}));
-                assert_eq!(open_ids(&s, P1), Some(ids(&["1"])));
-                assert_eq!(open_ids(&s, P2), Some(ids(&["1"])));
+                assert_eq!(open_ids(&s, P1), Some(strings(&["1"])));
+                assert_eq!(open_ids(&s, P2), Some(strings(&["1"])));
             }
 
             #[test]
             fn r404_quest_1_opens_as_it_enters_0_of_2_and_both_views_show_it_with_rewards_a_and_b_on_offer() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": itd_and_spare_hand(), "library": SPARE_LIBRARY },
                     "p2": spare(json!({})),
@@ -764,7 +763,6 @@ mod tests {
 
             #[test]
             fn r404_counted_from_the_moment_it_opens_draws_before_it_entered_do_not_count_two_after_it_complete_quest_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, ITD, STOCKPILE, TIMMY],
@@ -808,7 +806,6 @@ mod tests {
 
             #[test]
             fn r404_the_opponents_draws_count_for_nothing_of_yours() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": spare(json!({ "backrow": [ITD] })), "p2": spare(json!({})) }));
                 s.end_turn();
                 assert_eq!(s.state().active, P2);
@@ -856,7 +853,6 @@ mod tests {
 
             #[test]
             fn r404_reward_a_heal_your_hero_6_then_quest_2_opens() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "health": 20 })),
                     "p2": spare(json!({})),
@@ -875,7 +871,6 @@ mod tests {
 
             #[test]
             fn r404_reward_b_deal_3_damage_to_a_target_asked_as_it_resolves_then_quest_3_opens() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": spare(json!({ "field": [VANILLA] })),
@@ -892,7 +887,6 @@ mod tests {
 
             #[test]
             fn r404_quest_2_two_enemy_permanents_destroyed_by_anything_your_own_deaths_count_for_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -915,7 +909,6 @@ mod tests {
 
             #[test]
             fn r542_r2618000_quest_2_counts_the_side_a_permanent_died_on_an_enemy_unit_you_have_stolen_is_yours_as_it_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -941,7 +934,6 @@ mod tests {
 
             #[test]
             fn r404_reward_c_2_different_random_cards_from_your_graveyard_to_your_hand_then_quest_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "graveyard": [VANILLA, TIMMY, MENACE] })),
                     "p2": spare(json!({})),
@@ -965,7 +957,6 @@ mod tests {
 
             #[test]
             fn r60_reward_c_with_one_card_in_the_graveyard_returns_that_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "graveyard": [MENACE] })),
                     "p2": spare(json!({})),
@@ -981,7 +972,6 @@ mod tests {
 
             #[test]
             fn r471_r689_reward_d_three_plague_counter_placements_on_the_one_permanent_a_single_prompt_of_yours_names_then_quest_5() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "field": [VANILLA] })),
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -999,7 +989,6 @@ mod tests {
 
             #[test]
             fn r404_quest_3_4_or_more_permanents_of_yours_at_once_this_card_included_the_opponents_do_not_count() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": [ITD], "field": [TIMMY, VANILLA], "hand": [VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
                     "p2": spare(json!({ "field": [MENACE, VANILLA] })),
@@ -1016,7 +1005,6 @@ mod tests {
 
             #[test]
             fn r60_reward_e_a_random_unit_of_yours_gets_3_3_then_quest_6_with_none_nothing_and_quest_6_still_opens() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD, MANA_WELL], "field": [TIMMY, TOKEN_MAKER] })),
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -1058,7 +1046,6 @@ mod tests {
 
             #[test]
             fn r404_quest_4_a_turn_of_yours_ending_with_3_or_more_unspent_mana_2_is_not_enough_and_the_opponents_turn_is_not_yours() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "mana": 3 })),
                     "p2": spare(json!({})),
@@ -1083,7 +1070,6 @@ mod tests {
 
             #[test]
             fn r404_reward_f_bounce_a_target_permanent_then_quest_7() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -1100,7 +1086,6 @@ mod tests {
 
             #[test]
             fn r78_reward_f_on_in_too_deep_itself_it_goes_to_your_hand_its_quest_line_ends_and_played_again_it_starts_at_quest_1() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": spare(json!({ "backrow": [ITD] })), "p2": spare(json!({})) }));
                 on_quest(&mut s, "4", 1, json!({}));
                 any_action(&mut s);
@@ -1118,7 +1103,6 @@ mod tests {
 
             #[test]
             fn r16_reward_g_your_opponent_discards_2_cards_of_their_choice_their_own_prompt_then_quest_8() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
@@ -1147,7 +1131,6 @@ mod tests {
 
             #[test]
             fn r16_reward_g_with_one_card_in_the_opponents_hand_discards_that_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [MENACE], "library": [] },
@@ -1172,7 +1155,6 @@ mod tests {
 
             #[test]
             fn r1279000_r16_reward_g_deferred_to_an_empty_hand_asks_nothing_and_still_opens_quest_8() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [], "library": SPARE_LIBRARY },
@@ -1216,7 +1198,6 @@ mod tests {
 
             #[test]
             fn r1279000_reward_g_waits_for_the_opponent_s_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
@@ -1242,7 +1223,6 @@ mod tests {
 
             #[test]
             fn r1279000_reward_g_asks_at_once_when_the_quest_completes_on_the_opponent_s_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -1276,7 +1256,6 @@ mod tests {
 
             #[test]
             fn r1279000_r174_reward_g_s_waiting_quest_ends_with_the_stay_a_replayed_in_too_deep_does_not_open_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "mana": 10 })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
@@ -1293,7 +1272,7 @@ mod tests {
                 s.answer(json!(itd));
                 s.expect_in_zone(ITD, "hand");
                 s.play(ITD, json!({}));
-                assert_eq!(active_of(&s), ids(&["1"]));
+                assert_eq!(active_of(&s), strings(&["1"]));
                 s.end_turn();
                 // The discard is the reward earned, so it still comes (R76).
                 let pending = must(s.state().pending.clone(), "the discard prompt");
@@ -1305,12 +1284,11 @@ mod tests {
                 let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // Quest 8 was the old stay's path: the card that came back is not on it (R174).
-                assert_eq!(active_of(&s), ids(&["1"]));
+                assert_eq!(active_of(&s), strings(&["1"]));
             }
 
             #[test]
             fn r542_quest_5_damage_your_cards_deal_to_the_enemy_hero_and_enemy_units_15_in_all_your_own_side_and_the_opponents_hits_count_for_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -1337,7 +1315,6 @@ mod tests {
 
             #[test]
             fn r404_reward_h_draw_2_then_quest_9_whose_count_starts_after_those_draws() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": spare(json!({ "backrow": [ITD] })), "p2": spare(json!({})) }));
                 on_quest(&mut s, "5", QUESTS.damage, json!({}));
                 any_action(&mut s);
@@ -1354,7 +1331,6 @@ mod tests {
 
             #[test]
             fn r404_reward_h_that_empties_your_deck_opens_quest_9_on_an_empty_deck_which_completes_it_at_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": [ITD], "hand": [CURSE, TIMMY], "library": [VANILLA, VANILLA, VANILLA] },
                     "p2": spare(json!({})),
@@ -1369,7 +1345,6 @@ mod tests {
 
             #[test]
             fn r404_quest_6_your_units_total_attack_and_total_health_both_13_or_more_at_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": [ITD], "field": [MENACE], "hand": [TIMMY, VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
                     "p2": spare(json!({ "field": [MENACE] })),
@@ -1388,7 +1363,6 @@ mod tests {
 
             #[test]
             fn r404_reward_i_recruit_the_first_permanent_from_the_top_of_your_deck_then_quest_10() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -1409,7 +1383,6 @@ mod tests {
 
             #[test]
             fn r404_quest_7_a_turn_of_yours_ending_with_5_or_more_unspent_mana_4_is_not_enough() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "mana": 5 })),
                     "p2": spare(json!({})),
@@ -1430,7 +1403,6 @@ mod tests {
 
             #[test]
             fn r540_reward_j_100_mana_on_your_next_turn_next_turn_mana_and_the_line_ends_there() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "mana": 5 })),
                     "p2": spare(json!({})),
@@ -1449,7 +1421,6 @@ mod tests {
 
             #[test]
             fn r404_quest_8_three_cards_entering_either_exile_pile_a_unit_token_ceases_to_exist_instead_r11() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -1471,7 +1442,6 @@ mod tests {
 
             #[test]
             fn r404_quest_8_does_not_count_a_unit_token_exiled_from_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": [ITD], "hand": [COLLATERAL, STOCKPILE], "library": SPARE_LIBRARY, "mana": 10 },
                     "p2": spare(json!({ "field": [RUSH_TOKEN] })),
@@ -1484,7 +1454,6 @@ mod tests {
 
             #[test]
             fn r404_reward_k_your_opponents_deck_every_card_of_it_to_their_exile() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [STOCKPILE], "library": [VANILLA, TIMMY, MENACE] },
@@ -1503,7 +1472,6 @@ mod tests {
 
             #[test]
             fn r404_quest_9_only_the_draw_of_yours_that_takes_your_decks_last_card_a_deck_emptied_any_other_way_does_not() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": [ITD], "hand": [CURSE, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
                     "p2": spare(json!({})),
@@ -1516,11 +1484,11 @@ mod tests {
                 assert_eq!(reward_keys(&s, P1), vec!["mode:L"]);
 
                 let mut milled = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [EUGENICS, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [SELECTIVE_BREEDING, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut milled, "9", 0, json!({}));
-                milled.play(EUGENICS, json!({}));
+                milled.play(SELECTIVE_BREEDING, json!({}));
                 assert!(milled.pile(P1, "library").is_empty());
                 assert_eq!(progress_of(&milled), json!({ "9": 0 }));
                 milled.play(CURSE, json!({}));
@@ -1529,7 +1497,6 @@ mod tests {
 
             #[test]
             fn r454_reward_l_you_may_play_cards_from_your_graveyard_while_it_stands_an_exile_ends_the_aura_and_the_line_r78() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "graveyard": [TIMMY] })),
                     "p2": { "hand": [COLLATERAL, STOCKPILE], "library": SPARE_LIBRARY, "mana": 10 },
@@ -1631,7 +1598,6 @@ mod tests {
 
             #[test]
             fn r347_reward_m_your_units_have_indestructible_and_so_no_taunt_while_it_stands_an_exile_ends_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD], "field": [MENACE] })),
                     "p2": { "hand": [COLLATERAL, STOCKPILE], "library": SPARE_LIBRARY, "mana": 10 },
@@ -1650,7 +1616,6 @@ mod tests {
 
             #[test]
             fn r102_a_lockdown_fused_onto_it_unlicensed_experimentation_leaves_its_quest_line_and_its_tree_quest_2_counts_on_and_asks() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": spare(json!({ "backrow": [ITD, { "def": EXPERIMENT, "faceUp": false }] })),
@@ -1680,7 +1645,6 @@ mod tests {
 
             #[test]
             fn r78_a_tribute_ends_aura_m_fused_with_a_lockdown_its_activate_tributes_the_card_and_your_units_lose_indestructible() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": spare(json!({ "backrow": [ITD, { "def": EXPERIMENT, "faceUp": false }], "field": [MENACE] })),
@@ -1700,7 +1664,6 @@ mod tests {
 
             #[test]
             fn r404_quest_10_six_units_in_your_graveyard_a_spell_there_is_none_then_reward_m() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
@@ -1726,7 +1689,6 @@ mod tests {
 
             #[test]
             fn r79_a_quest_completed_on_the_opponents_turn_is_noticed_then_and_the_reward_prompt_is_yours() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": spare(json!({ "backrow": [ITD] })),
@@ -1753,7 +1715,6 @@ mod tests {
 
             #[test]
             fn r113_a_reward_paused_on_its_own_question_survives_a_json_round_trip_and_finishes_the_same() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": spare(json!({ "field": [VANILLA] })),
@@ -1870,7 +1831,6 @@ mod tests {
 
             #[test]
             fn r543_quest_1_grants_a_and_b_with_no_reward_prompt_b_still_asks_its_target_and_only_then_opens_quests_2_and_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [radiant_itd()], "health": 20 })),
                     "p2": spare(json!({ "field": [VANILLA] })),
@@ -1883,12 +1843,11 @@ mod tests {
                 let vanilla = must(s.unit(P2, 1), "Vanilla");
                 s.answer(json!(vanilla.id));
                 expect_line_matches(&s, json!({ "active": ["2", "3"], "done": ["1"] }));
-                assert_eq!(open_ids(&s, P2), Some(ids(&["2", "3"])));
+                assert_eq!(open_ids(&s, P2), Some(strings(&["2", "3"])));
             }
 
             #[test]
             fn r404_a_quest_reached_by_two_paths_opens_once_and_a_reward_two_completed_quests_offer_d_is_granted_by_each() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({
                         "backrow": [radiant_itd(), MANA_WELL],
@@ -1923,7 +1882,6 @@ mod tests {
 
             #[test]
             fn r404_quest_5_grants_g_the_opponents_own_discard_and_h_then_opens_quests_8_and_9() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [radiant_itd()] })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
@@ -1952,7 +1910,6 @@ mod tests {
 
             #[test]
             fn r1279000_r174_quest_4_s_f_bouncing_in_too_deep_itself_leaves_g_s_discard_waiting_and_its_quest_to_no_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [radiant_itd()], "mana": 10 })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
@@ -1966,7 +1923,7 @@ mod tests {
                 s.answer(json!(itd));
                 s.expect_in_zone(ITD, "hand");
                 s.play(ITD, json!({}));
-                assert_eq!(active_of(&s), ids(&["1"]));
+                assert_eq!(active_of(&s), strings(&["1"]));
                 s.end_turn();
                 let pending = must(s.state().pending.clone(), "G's discard");
                 assert_eq!((pending.kind, pending.player_id), (PromptKind::Hand, P2));
@@ -1975,12 +1932,11 @@ mod tests {
                 let b = must(hand.get(1).cloned(), "b");
                 s.answer(json!([a.id, b.id]));
                 assert_eq!(s.hand(P2).len(), 2);
-                assert_eq!(active_of(&s), ids(&["1"]));
+                assert_eq!(active_of(&s), strings(&["1"]));
             }
 
             #[test]
             fn r404_quests_7_to_10_end_their_lines_quest_7_grants_j_and_opens_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": spare(json!({ "backrow": [radiant_itd()], "mana": 5 })),
                     "p2": spare(json!({})),

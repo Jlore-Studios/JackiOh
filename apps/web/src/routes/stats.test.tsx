@@ -10,7 +10,6 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readCardPicks } from "../cards/cosmetics.ts";
-import { FULL_ART_TIERS } from "../cards/fullArt.ts";
 import { writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
@@ -947,21 +946,22 @@ describe("R377 public statistics match type", () => {
       .filter((url) => url.pathname === "/api/stats/cards");
   }
 
-  it("R377 R2777001 mode picker opens on Constructed, offers no mix of modes, asks the server for each match type and keeps any other in the URL", async () => {
+  it("R377 R2777001 R2777004 mode picker opens on All modes, offers Constructed and each match type, asks the server for each match type and keeps any other in the URL", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
     const select = screen.getByTestId(statsTestid.modeSelect) as HTMLSelectElement;
-    expect(select).toHaveValue("constructed");
+    expect(select).toHaveValue("all");
     expect([...select.options].map((option) => option.textContent)).toEqual([
+      "All modes",
       "Constructed",
       "All Random",
       "Best of 1",
       "Conquest",
     ]);
     expect(cardsCalls().length).toBeGreaterThan(0);
-    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "all")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
 
     await user.selectOptions(select, "bo1");
@@ -978,19 +978,26 @@ describe("R377 public statistics match type", () => {
     await user.selectOptions(select, "constructed");
     await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
     expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(window.location.search).toContain("mode=constructed");
+
+    vi.mocked(fetch).mockClear();
+    await user.selectOptions(select, "all");
+    await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "all")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
   });
 
-  it("R2777001 an old address's mode=all, which the page no longer offers, opens on Constructed", async () => {
-    at("/stats?mode=all");
-    render(<StatsRoute />);
+  it("R2777004 an address's mode=all, or a mode the page does not offer, reads every mode", async () => {
+    for (const address of ["/stats?mode=all", "/stats?mode=nonsense"]) {
+      at(address);
+      const { unmount } = render(<StatsRoute />);
 
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-    expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("constructed");
-    await waitFor(() =>
-      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(true),
-    );
-    expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(false);
+      expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+      expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("all");
+      await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(true));
+      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(false);
+      unmount();
+    }
   });
 
   it("R2777000 lists the cards by their adjusted win rate, shown to a tenth of a point, a card below the floor last with none shown", async () => {
@@ -1017,6 +1024,60 @@ describe("R377 public statistics match type", () => {
     // The raw win rate is still a column, and sorting by it puts Spark Pup back on top.
     await user.click(within(table).getByRole("columnheader", { name: /^Win rate/ }));
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R2895000 Show 95% ranges puts each enough-games card's Win rate and Adjusted ranges under them, in the table and the grid", async () => {
+    const user = userEvent.setup();
+    const ranges: Record<string, object> = {
+      "core-001": { winRateLow: 0.462, winRateHigh: 0.722, adjustedLow: 0.4452, adjustedHigh: 0.6228 },
+      // Below the floor: the server's ranges are not shown, as its rates are not.
+      "core-002": { winRateLow: 0.6, winRateHigh: 0.98, adjustedLow: 0.4, adjustedHigh: 0.59 },
+      // No adjusted range from the server: none shown beside its win rate's.
+      "core-003": { winRateLow: 0.33, winRateHigh: 0.67, adjustedLow: null, adjustedHigh: null },
+    };
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, ...ranges[card.id] }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const toggle = screen.getByTestId(statsTestid.rangesToggle);
+    // Off by default: no range and no note.
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
+    expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
+    expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(window.location.search).toContain("ranges=1");
+    const row = (id: string): HTMLElement => table.querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!;
+    const shown = (scope: HTMLElement, testid: string): (string | null)[] =>
+      within(scope).queryAllByTestId(testid).map((range) => range.textContent);
+    // Adjusted to a tenth of a point, Win rate to a whole point.
+    expect(shown(row("core-001"), statsTestid.adjustedRange)).toEqual(["44.5–62.3%"]);
+    expect(shown(row("core-001"), statsTestid.winRateRange)).toEqual(["46–72%"]);
+    expect(shown(row("core-002"), statsTestid.adjustedRange)).toEqual([]);
+    expect(shown(row("core-002"), statsTestid.winRateRange)).toEqual([]);
+    expect(shown(row("core-003"), statsTestid.adjustedRange)).toEqual([]);
+    expect(shown(row("core-003"), statsTestid.winRateRange)).toEqual(["33–67%"]);
+    expect(screen.getByTestId(statsTestid.rangesNote)).toBeInTheDocument();
+
+    // The grid shows them too.
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const item = (id: string): HTMLElement => grid.querySelector<HTMLElement>(`[data-card-id="${id}"]`)!;
+    expect(shown(item("core-001"), statsTestid.adjustedRange)).toEqual(["44.5–62.3%"]);
+    expect(shown(item("core-001"), statsTestid.winRateRange)).toEqual(["46–72%"]);
+    expect(shown(item("core-002"), statsTestid.winRateRange)).toEqual([]);
+
+    // Off again: gone.
+    await user.click(screen.getByTestId(statsTestid.rangesToggle));
+    expect(screen.queryAllByTestId(statsTestid.adjustedRange)).toHaveLength(0);
+    expect(screen.queryAllByTestId(statsTestid.winRateRange)).toHaveLength(0);
+    expect(screen.queryByTestId(statsTestid.rangesNote)).not.toBeInTheDocument();
   });
 
   it("R377 stats page starts with the mode the URL names", async () => {
@@ -1240,16 +1301,15 @@ describe("the card drill-down dialog", () => {
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
-    // R2756000: core-001 is a full-art card, so its art buttons come first, before Show Radiant.
-    const arts = within(screen.getByTestId(statsTestid.drillDownArt)).getAllByRole("button");
-    expect(arts).toHaveLength(FULL_ART_TIERS.length + 1);
+    // R3011000: no art buttons come before Show Radiant: the drill-down offers no art choice.
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(close).toHaveFocus();
 
-    for (const next of [...arts, radiant, almanac, retry, close]) {
+    for (const next of [radiant, almanac, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, almanac, radiant, ...[...arts].reverse(), close]) {
+    for (const previous of [retry, almanac, radiant, close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -1357,96 +1417,68 @@ describe("the drill-down's card preview", () => {
     expect(dialog.querySelectorAll(".cf")).toHaveLength(1);
   });
 
-  it("R2756000 a full-art card's breakdown offers No full art and each tier, opens on the setting's Epic, and prints the art picked on both faces, writing no pick", async () => {
+  it("R3011000 a full-art card's breakdown prints the setting's still Epic, base and Radiant, and offers no art choice", async () => {
     holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
     at("/stats?card=core-004");
     render(<StatsRoute />);
     const dialog = await screen.findByRole("dialog", undefined, SLOW);
-    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
-    const art = (name: string): HTMLElement => within(picker).getByRole("button", { name });
-    const face = (): Element | null => dialog.querySelector(".stats-drilldown-faces .cf");
-    expect(within(picker).getAllByRole("button").map((button) => button.textContent)).toEqual([
-      "No full art",
-      "Animated",
-      "Epic",
-      "Legendary",
-      "Mythic",
-    ]);
-    expect(art("Epic")).toHaveAttribute("aria-pressed", "true");
-    expect(art("No full art")).toHaveAttribute("aria-pressed", "false");
-    expect(face()?.getAttribute("data-full-art-tier")).toBe("Epic");
-
-    fireEvent.click(art("Legendary"));
-    expect(art("Legendary")).toHaveAttribute("aria-pressed", "true");
-    expect(art("Epic")).toHaveAttribute("aria-pressed", "false");
-    expect(face()?.getAttribute("data-full-art-tier")).toBe("Legendary");
+    // The testid is gone with the picker, so the literal string stands in for the deleted constant.
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
 
     fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
-    fireEvent.click(art("Mythic"));
     const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
     expect(faces).toHaveLength(2);
-    for (const each of faces) expect(each.getAttribute("data-full-art-tier")).toBe("Mythic");
-
-    fireEvent.click(art("No full art"));
-    for (const each of dialog.querySelectorAll(".stats-drilldown-faces .cf")) expect(each.hasAttribute("data-full-art")).toBe(false);
+    for (const each of faces) expect(each.getAttribute("data-full-art-tier")).toBe("Epic");
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
 
     // A preview: no pick is written, since every write of one is sent to the account (R1834000).
     expect(readCardPicks("core-004").fullArt).toBeUndefined();
   });
 
-  it("R2756000 with the Full-art cards setting off the breakdown opens on No full art and still prints a tier picked, and a card without full art offers no choice", async () => {
+  it("R3011000 with the Full-art cards setting off the breakdown prints the normal face, base and Radiant, and a token listed under a full-art card prints its parent's Epic", async () => {
     writeCardSettings({ fullArt: false });
     holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
     at("/stats?card=core-004");
     render(<StatsRoute />);
     const dialog = await screen.findByRole("dialog", undefined, SLOW);
-    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
-    expect(within(picker).getByRole("button", { name: "No full art" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(dialog.querySelector(".stats-drilldown-faces .cf")?.hasAttribute("data-full-art")).toBe(false);
 
-    fireEvent.click(within(picker).getByRole("button", { name: "Epic" }));
-    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
+    expect(faces).toHaveLength(2);
+    for (const each of faces) expect(each.hasAttribute("data-full-art")).toBe(false);
 
-    // core-003 has no full art: its breakdown offers no choice.
+    // core-t-bread is listed under core-018, so it prints its parent's still Epic (R2655002) while the setting is on.
     cleanup();
-    at("/stats?card=core-003");
+    writeCardSettings({ fullArt: true });
+    at("/stats?card=core-t-bread");
     render(<StatsRoute />);
-    await screen.findByRole("dialog", undefined, SLOW);
-    expect(screen.queryByTestId(statsTestid.drillDownArt)).toBeNull();
+    const tokenDialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+    expect(tokenDialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
   });
 
-  it("R2756000 the art picked stays picked when the breakdown is closed and opened again", async () => {
+  it("R3011000 a card without full art draws its breakdown as before", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-003");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    expect(dialog.querySelectorAll(".stats-drilldown-faces .cf")).toHaveLength(2);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+  });
+
+  it("R2756000 the art choice stays retired: no breakdown offers art buttons", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     fireEvent.click(screen.getByText("Spark Pup"));
-    fireEvent.click(within(screen.getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" }));
-    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
-    expect(screen.queryByRole("dialog")).toBeNull();
-
-    fireEvent.click(screen.getByText("Spark Pup"));
-    const dialog = screen.getByRole("dialog");
-    expect(within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" })).toHaveAttribute("aria-pressed", "true");
-    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Mythic");
-  });
-
-  it("R2715000 the breakdown's Animated prints the card's normal face with its art moving, on both faces, writing no pick", async () => {
-    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
-    at("/stats?card=core-004");
-    render(<StatsRoute />);
-    const dialog = await screen.findByRole("dialog", undefined, SLOW);
-    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
-    const animated = within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Animated" });
-    fireEvent.click(animated);
-    expect(animated).toHaveAttribute("aria-pressed", "true");
-    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
-    expect(faces).toHaveLength(2);
-    for (const each of faces) {
-      expect(each.getAttribute("data-full-art-tier")).toBe("Animated");
-      expect(each.hasAttribute("data-full-art")).toBe(false);
-      expect(each.getAttribute("data-art-motion")).toBe("animated");
-      expect(each.querySelector('.cf-art[data-art-moving="true"]')).not.toBeNull();
-    }
-    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+    await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
   });
 
   it("links the card to its detail in the Almanac, and follows the link in place", async () => {
@@ -2029,7 +2061,7 @@ describe("R2370000 the Tokens toggle", () => {
 
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
-    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 
@@ -2048,7 +2080,7 @@ describe("R2125000 the Cards tab opens on its last table", () => {
   });
 
   it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
-    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
     await waitFor(() => expect(held).toHaveLength(1), SLOW);

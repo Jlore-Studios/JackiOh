@@ -57,8 +57,9 @@ the same rng. The caller reads `options.rng.cursor()` back afterwards.
 
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188). It
 answers its mulligan as soon as the mulligans open (R265, R266): `mulligan_keep_curved` sends back
-every card costing more than `AI_MULLIGAN.keep_max_cost` except the one proven four-drop the shaped
-keep holds, and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
+every card costing more than `mulligan_keep_bound`, `AI_MULLIGAN.keep_max_cost` plus the seat's mana
+bonus within its mana cap (R2977000), except the one proven card one dearer the shaped keep holds,
+and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
 the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
 going second, The Coin). Nothing here reads a difficulty, and a handicap only as the seat's mana (the
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
@@ -68,7 +69,10 @@ A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answere
 any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
 never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
 and spend a decision's budget on a guess up to thirty times a turn, and worked out each answer costs
-one redaction (R1184002).
+one redaction (R1184002); and so is C+ #42 KY's Test's Easy problem (#2929). Ahead, a simulated step
+answers such a question of the AI's own the same way, judged right on its world, a sequence until
+`AI_KY_COMPETITION_EXPECTED_STREAK` (6, Radiant 12) and then Stop (`simulate::worked_step`,
+R1563005); the greedy baseline's simulation does not.
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
@@ -117,6 +121,11 @@ target `legal_actions` lists, beside the same attack by the unit's hookless twin
 keywords granted, its text given back before scoring), and prices the controller's evaluation after the
 one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
+A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
+Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
+counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
+spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
+`GREEDY_EVAL` keeps 0 (#2928).
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -146,7 +155,11 @@ neighbours; a lane the reply scores the same as a better one of that play is not
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
-kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
+kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the
+opponent's board threatens lethal (`face_threat` reaching the seat's `effective_life`, where the evaluation's
+`lethal_threat` applies), up to `AI_SEARCH.position_switches` more switches to Defense Position that lower that
+threat are kept after them, stand-downs or not (`wall_switches`: each tried on a copy of the state with the unit's
+position set, the least threat left first; #2976, R2976000). An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
 only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
@@ -215,7 +228,8 @@ card holding either, and a play the other side's Pareto Optimality judges, per c
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
 A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
-reply's, and the beam's look past the seat's own; #891, #1112) tries at most
+reply's, and the beam's look past the seat's own; #891, #1112), but the seat's own question it works
+out (`worked_step`, #2929), tries at most
 `AI_SEARCH.max_auto_answer_options` answers, one node each: all of them, in `action_key` order, when
 there are no more, and otherwise that many drawn from the whole set on a stream of the world's seed
 and the prompt's id (`AI_SEARCH.auto_answer_seed`; #1382), so neither a late place in the list nor

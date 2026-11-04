@@ -1863,9 +1863,9 @@ reported as unswept instead of passing as clean. `pnpm ai:sweep --json` runs sli
 and `--report` joins them. R186 says so.
 
 The sweep of record (both tiers, 8 seeds per card and tier, the AI as it ships) flagged twelve
-`neverPlayed` cards and nothing else: Eugenics at both tiers; Transmogulate and Craft a Card at
+`neverPlayed` cards and nothing else: Selective Breeding at both tiers; Transmogulate and Craft a Card at
 Easy; Jewelosco Scarab, Twinspell, Glowy Jelly Bean, Blood Ridden Glowy Jelly Bean, Unstable Clone
-Machine, KY's Trial, Unbiased Immigration, /fullsend and CN-Viral Injection at Hard only. The Hard
+Machine, KY's Trial, Unbiased Immigration, /fullsend and Super-Virus Injection at Hard only. The Hard
 flags are cards a seven-crystal AI with two draws a turn always had something better to do than
 play. Field of Dreams and Ceaseless Void, banned before, were played at both tiers this time and
 leave the table. GIGA Glowy Jelly Bean, never affordable at Easy, was played at Hard. Hinder is the

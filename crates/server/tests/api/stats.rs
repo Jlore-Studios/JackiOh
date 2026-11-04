@@ -1872,6 +1872,57 @@ mod r2777000_adjusted_and_split_card_stats {
         assert_eq!(status, 200);
         assert_eq!(drill["card"]["id"], json!("core-001"));
     }
+
+    #[tokio::test]
+    async fn r2895000_each_card_answers_the_95_percent_ranges_of_its_win_rate_and_adjusted_rate() {
+        use jackioh_engine::wire::stats::wilson_interval;
+
+        let app = test_app().await;
+        let mut records = Vec::new();
+        // Constructed: core-001 seen in 60 games (48 won) and never drawn in 60 (30 won); core-002 seen in all.
+        let all = vec!["core-001", "core-002", "core-003", "core-004"];
+        let without = vec!["core-002", "core-003", "core-004"];
+        records.extend(games("seen-won", "bo1", all.clone(), true, 48));
+        records.extend(games("seen-lost", "bo1", all.clone(), false, 12));
+        records.extend(games("unseen-won", "bo1", without.clone(), true, 30));
+        records.extend(games("unseen-lost", "bo1", without.clone(), false, 30));
+        // All Random: core-001 seen in 10 games (all won), never drawn in 30.
+        records.extend(games("random-seen", "random", all.clone(), true, 10));
+        records.extend(games("random-unseen", "random", without.clone(), false, 30));
+        insert_records(&app, records).await;
+        let range = |card: &Value, low: &str, high: &str| (card[low].as_f64(), card[high].as_f64());
+
+        let (status, _, constructed) =
+            get_public(&app, "/api/stats/cards?source=live&mode=constructed").await;
+        assert_eq!(status, 200);
+        let a = card(&constructed, "core-001");
+        // The win rate's is Wilson's, over every deck that held it: 78 wins in 120 games.
+        let (low, high) = wilson_interval(78, 120);
+        assert_eq!(range(a, "winRateLow", "winRateHigh"), (Some(low), Some(high)));
+        // The adjusted rate's is its posterior: ± z · √(weight · SE²) about it, for 60 games a side.
+        let adjusted = a["adjustedWinRate"].as_f64().expect("both sides have games");
+        let prior = 0.05_f64 * 0.05;
+        let noise = 0.25 * (1.0 / 60.0 + 1.0 / 60.0);
+        let half = 1.96 * (prior / (prior + noise) * noise).sqrt();
+        let (from, to) = range(a, "adjustedLow", "adjustedHigh");
+        assert!((adjusted - from.unwrap() - half).abs() < 1e-9, "{from:?}");
+        assert!((to.unwrap() - adjusted - half).abs() < 1e-9, "{to:?}");
+        // No adjusted rate (always seen), no range; no game at all, neither range.
+        let b = card(&constructed, "core-002");
+        assert!(b["winRateLow"].as_f64().is_some());
+        assert_eq!(range(b, "adjustedLow", "adjustedHigh"), (None, None));
+        let unheld = card(&constructed, "core-006");
+        assert_eq!(unheld["winRate"], Value::Null);
+        assert_eq!(range(unheld, "winRateLow", "winRateHigh"), (None, None));
+
+        // R2777002: under All Random the win rate's range counts only the seen games, as the rate does.
+        let (_, _, random) = get_public(&app, "/api/stats/cards?source=live&mode=random").await;
+        let (low, high) = wilson_interval(10, 10);
+        assert_eq!(
+            range(card(&random, "core-001"), "winRateLow", "winRateHigh"),
+            (Some(low), Some(high))
+        );
+    }
 }
 
 mod r1583000_play_rates {

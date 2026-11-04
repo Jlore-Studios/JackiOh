@@ -65,12 +65,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
     fn setup(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

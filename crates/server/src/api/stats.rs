@@ -34,9 +34,10 @@ use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, GameFigures, GameMode,
     GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals,
     Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
-    WindowedReport, add_created, add_stats, adjusted_win_rate, card_drills_of, card_family, card_stats_of,
-    card_window, collapse_gameless, created_played_delta, drawn_delta, not_drawn, patch_windows,
-    played_delta, seen, sources_of, win_rate, windowed_card_stats, windowed_game_figures,
+    WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate, card_drills_of,
+    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, drawn_delta, not_drawn,
+    patch_windows, played_delta, seen, sources_of, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -83,6 +84,12 @@ pub struct PublicCardStat {
     /// R2777000: the drawn delta kept as far as its games back it, read from an even game
     /// (`adjusted_win_rate`): the page's headline rate and its default order.
     pub adjusted_win_rate: Option<f64>,
+    /// R2895000: the 95% Wilson interval of `win_rate`, over the games it counts; null where it is.
+    pub win_rate_low: Option<f64>,
+    pub win_rate_high: Option<f64>,
+    /// R2895000: the 95% interval of `adjusted_win_rate` (`adjusted_interval`); null where it is.
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
     pub play_rate: f64,
     pub has_enough_games: bool,
     /// R1367000: the card's window and the records its figures count.
@@ -1005,8 +1012,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let window = kept.window_of(id, request);
         // R2777002: the games the card's own figures count: under All Random, the decks that saw it.
         let counted = stat.map(|stat| mode.counted(stat)).unwrap_or_default();
-        let (counted_games, _) = tally_of(&counted);
+        let (counted_games, counted_wins) = tally_of(&counted);
         let rate = win_rate(&counted);
+        // R2895000: the rate's 95% range, over the same games.
+        let rate_range = rate.map(|_| wilson_interval(counted_wins, counted_games));
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
         let (played_radiant_games, _) = stat.map(|stat| tally_of(&stat.played_radiant)).unwrap_or((0, 0));
         let played_radiant_rate = stat.and_then(|stat| win_rate(&stat.played_radiant));
@@ -1043,6 +1052,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
         // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
         let adjusted = stat.and_then(adjusted_win_rate);
+        let adjusted_range = stat.and_then(adjusted_interval);
 
         cards.push(PublicCardStat {
             id: id.clone(),
@@ -1067,6 +1077,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             not_drawn_win_rate: not_drawn_rate,
             drawn_delta: drawn_gap,
             adjusted_win_rate: adjusted,
+            win_rate_low: rate_range.map(|(low, _)| low),
+            win_rate_high: rate_range.map(|(_, high)| high),
+            adjusted_low: adjusted_range.map(|(low, _)| low),
+            adjusted_high: adjusted_range.map(|(_, high)| high),
             play_rate,
             has_enough_games,
             window: PublicCardWindow::of(&window),

@@ -69,6 +69,7 @@ const anchor = { kind: "testid", testid: "card-u1" } as const;
 const SPLAT_DAMAGE: FxDomCue = { kind: "splat", tone: "damage", amount: 5, at: anchor, delayMs: 0, durationMs: 950 };
 const SPLAT_HEAL: FxDomCue = { kind: "splat", tone: "heal", amount: 3, at: anchor, delayMs: 60, durationMs: 890 };
 const SPLAT_LOSS: FxDomCue = { kind: "splat", tone: "loss", amount: 2, at: anchor, delayMs: 0, durationMs: 950 };
+const SPLAT_ABSORB: FxDomCue = { kind: "splat", tone: "absorb", amount: 4, at: anchor, delayMs: 0, durationMs: 950 };
 const RAYS: FxDomCue = { kind: "rays", tone: "mythic", at: anchor, delayMs: 0, durationMs: 850 };
 const SHEEN: FxDomCue = { kind: "sheen", at: anchor, delayMs: 0, durationMs: 400 };
 const GHOST: FxDomCue = { kind: "ghost", from: anchor, to: { kind: "testid", testid: "hand-you" }, delayMs: 0, durationMs: 250 };
@@ -114,6 +115,15 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const el = expectMounted(mountDomEffect(root, SPLAT_LOSS, { at: AT }), SPLAT_LOSS);
     expect(el.getAttribute("data-tone")).toBe("loss");
     expect(el.getAttribute("data-amount")).toBe("-2");
+  });
+
+  it("Issue #2790 an absorb splat carries its tone and a hyphen-minus amount", () => {
+    const el = expectMounted(mountDomEffect(root, SPLAT_ABSORB, { at: AT }), SPLAT_ABSORB);
+    expect(el.getAttribute("data-tone")).toBe("absorb");
+    const amount = el.getAttribute("data-amount") ?? "";
+    expect(amount).toBe("-4");
+    expect(amount.charCodeAt(0)).toBe(0x2d);
+    expectCenteredOn(el, AT);
   });
 
   it("B39 rays carry their tone and are centered on their box", () => {
@@ -209,6 +219,29 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(folded.getAttribute("data-side")).toBe("both");
     expect([...folded.children].map((child) => child.className)).toEqual(["fx-setPiece-edges", "fx-setPiece-light"]);
     expect(mountDomEffect(root, fold, {})).toBeNull();
+  });
+
+  it("R2801000 launch mounts its counts, flame and trail; still when asked", () => {
+    const launch: FxDomCue = { kind: "launch", at: anchor, tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 1800, delayMs: 0, durationMs: 3400 };
+    const el = expectMounted(mountDomEffect(root, launch, { at: AT }), launch);
+    expect(el.getAttribute("data-size")).toBe("large");
+    expect(el.hasAttribute("data-still")).toBe(false);
+    expect(cssVar(el, "--fx-ignite")).toBe("1800ms");
+    expect(cssVar(el, "--fx-tint-glow")).toBe(TINT.glow);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-launch-count", "fx-launch-count", "fx-launch-count", "fx-launch-flame", "fx-launch-trail"]);
+    // The countdown, 3-2-1, each count at its time; the digits are CSS's (`attr(data-text)`), never a text node.
+    const counts = [...el.querySelectorAll<HTMLElement>(".fx-launch-count")];
+    expect(counts.map((count) => count.getAttribute("data-text"))).toEqual(["3", "2", "1"]);
+    expect(counts.map((count) => cssVar(count, "--fx-count-at"))).toEqual(["0ms", "600ms", "1200ms"]);
+    // It names no card (R202).
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+
+    const still: FxDomCue = { ...launch, countsMs: [], igniteMs: 0, still: true };
+    const frame = expectMounted(mountDomEffect(root, still, { at: AT }), still);
+    expect(frame.getAttribute("data-still")).toBe("true");
+    expect([...frame.children].map((child) => child.className)).toEqual(["fx-launch-flame", "fx-launch-trail"]);
+    expect(mountDomEffect(root, still, {})).toBeNull();
   });
 });
 
@@ -393,7 +426,9 @@ describe("R2789000 — a keyword's callout", () => {
   it("R2789000 a callout with no box, or no icon for its keyword, mounts nothing", () => {
     expect(mountDomEffect(root, callout("Cleave"), {})).toBeNull();
     expect(mountDomEffect(root, callout("Cleave"), { at: null })).toBeNull();
-    expect(mountDomEffect(root, callout("Taunt"), { at: AT })).toBeNull();
+    // Rush had no icon when this probed it; R2791000 gave it one, and Issue #2790 gave
+    // Taunt one, so the iconless probe moves to Cloaked, which neither lane iconified.
+    expect(mountDomEffect(root, callout("Cloaked"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
   });
 });

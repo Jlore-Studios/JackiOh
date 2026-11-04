@@ -34,6 +34,17 @@ import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor, type FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
 import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
+import {
+  ANIMATED_ART_ID_PREFIX,
+  AUGMENT_ID_PREFIX,
+  AUGMENT_SIGNATURE_ID,
+  VERSION_ID_PREFIX,
+  isOfferedId,
+  offeredOn,
+  signatureFits,
+} from "./versions.ts";
+
+export { ANIMATED_ART_ID_PREFIX };
 
 export type CosmeticKind = (typeof COSMETIC_KINDS)[number];
 /** R1297000: the kinds a card wears, and the kinds a deck carries (the registry's order). */
@@ -144,18 +155,37 @@ export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 /**
  * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default (R1953001;
  * the Full-art cards setting, for `fullArt`); an unknown id reads as the default. R2655000: `fullArt` is
- * `false`, `true` (the Epic full art) or a full art's id, kept as written.
+ * `false`, `true` (the Epic full art) or a full art's id, kept as written; R2725000: or a version's id, and
+ * `augments` the augment ids layered on it, as written.
  */
-export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean | string };
+export type CardPicks = {
+  foil?: CosmeticId;
+  finish?: CosmeticId;
+  border?: CosmeticId;
+  fullArt?: boolean | string;
+  augments?: readonly string[];
+};
 
 /** One card's picks as stored: a short text is kept for each kind, known or not (as `normalizeCosmetics` keeps one). */
-export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean | string };
+export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean | string; augments?: readonly string[] };
 
 /** R1834000: what one write changed of a card's picks, field by field: the new pick, or null where it was cleared. */
-export type CardPickChange = { foil?: string | null; finish?: string | null; border?: string | null; fullArt?: boolean | string | null };
+export type CardPickChange = {
+  foil?: string | null;
+  finish?: string | null;
+  border?: string | null;
+  fullArt?: boolean | string | null;
+  augments?: readonly string[] | null;
+};
 
-const CARD_PICK_FIELDS = [...CARD_SLOT_KINDS, "fullArt"] as const;
+const CARD_PICK_FIELDS = [...CARD_SLOT_KINDS, "fullArt", "augments"] as const;
 const NO_PICKS: CardPicks = Object.freeze({});
+
+/** Whether two stored values of one pick field are the same pick: equal, or two lists of the same ids in order. */
+function samePick(a: StoredCardPicks[keyof StoredCardPicks], b: StoredCardPicks[keyof StoredCardPicks]): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((id, at) => id === b[at]);
+  return a === b;
+}
 
 function isPickText(value: unknown): value is string {
   return typeof value === "string" && value !== "" && value.length <= COSMETIC_ID_MAX_LENGTH;
@@ -164,12 +194,23 @@ function isPickText(value: unknown): value is string {
 /** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
 const FULL_ART_ID_PREFIX = "full-art-";
 
-/** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
-export const ANIMATED_ART_ID_PREFIX = "animated-";
-
-/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id (R2715000: an Animated art's among them), known or not. */
+/**
+ * R2655000: a card's full-art pick as stored: a boolean, or a full art's id (R2715000: an Animated art's among them;
+ * R2725000: a version's), known or not.
+ */
 function isFullArtPick(value: unknown): value is boolean | string {
-  return typeof value === "boolean" || (isPickText(value) && (value.startsWith(FULL_ART_ID_PREFIX) || value.startsWith(ANIMATED_ART_ID_PREFIX)));
+  return (
+    typeof value === "boolean" ||
+    (isPickText(value) && [FULL_ART_ID_PREFIX, ANIMATED_ART_ID_PREFIX, VERSION_ID_PREFIX].some((prefix) => value.startsWith(prefix)))
+  );
+}
+
+/** R2725000: a card's augments as stored: each an augment's id, known or not, once; none is no pick. */
+function augmentPicks(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ids: string[] = [];
+  for (const id of value) if (isPickText(id) && id.startsWith(AUGMENT_ID_PREFIX) && !ids.includes(id)) ids.push(id);
+  return ids.length === 0 ? undefined : ids;
 }
 
 function normalizeStoredPicks(raw: unknown): StoredCardPicks {
@@ -181,6 +222,8 @@ function normalizeStoredPicks(raw: unknown): StoredCardPicks {
   }
   const fullArt = record["fullArt"];
   if (isFullArtPick(fullArt)) out.fullArt = fullArt;
+  const augments = augmentPicks(record["augments"]);
+  if (augments !== undefined) out.augments = augments;
   return out;
 }
 
@@ -192,6 +235,7 @@ function resolveCardPicks(stored: StoredCardPicks): CardPicks {
     if (id !== undefined) out[kind] = resolveCosmetic(kind, id);
   }
   if (stored.fullArt !== undefined) out.fullArt = stored.fullArt;
+  if (stored.augments !== undefined) out.augments = stored.augments;
   return out;
 }
 
@@ -296,7 +340,8 @@ function currentCardPicks(): { written: Record<string, unknown>; state: CardPick
 
 /**
  * Changes `defId`'s stored picks by `change`, from what storage holds now. It rewrites only the
- * fields this client knows of `defId`'s entry, so a newer client's kinds are kept.
+ * fields this client knows of `defId`'s entry, so a newer client's kinds are kept. R2949000: a change
+ * that leaves Signature without the Full art version and Animated drops it, as the server does.
  */
 function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void): void {
   const { written, state } = currentCardPicks();
@@ -304,7 +349,12 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
   const before = state.stored.get(defId) ?? {};
   const picks: StoredCardPicks = { ...before };
   change(picks);
-  const changed = CARD_PICK_FIELDS.filter((field) => before[field] !== picks[field]);
+  if (picks.augments?.includes(AUGMENT_SIGNATURE_ID) === true && !signatureFits(picks.fullArt, picks.augments)) {
+    const kept = picks.augments.filter((id) => id !== AUGMENT_SIGNATURE_ID);
+    if (kept.length === 0) delete picks.augments;
+    else picks.augments = kept;
+  }
+  const changed = CARD_PICK_FIELDS.filter((field) => !samePick(before[field], picks[field]));
   if (changed.length === 0) return;
   if (Object.keys(picks).length === 0) {
     state.stored.delete(defId);
@@ -324,7 +374,7 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
   // Quota, private mode or blocked storage: the picks still hold in memory for this page.
   cardPicksUnsaved = !setStored(CARD_PICKS_SETTINGS_KEY, JSON.stringify(written));
   for (const listener of [...cardPicksListeners]) listener();
-  const sent: Record<string, string | boolean | null> = {};
+  const sent: Record<string, string | boolean | readonly string[] | null> = {};
   for (const field of changed) sent[field] = picks[field] ?? null;
   for (const listener of [...cardPickWriteListeners]) listener(defId, sent as CardPickChange);
 }
@@ -348,6 +398,21 @@ export function writeCardFullArt(defId: string, pick: boolean | string | null): 
   });
 }
 
+/**
+ * R2725000: sets `defId`'s version and augments in one write: `fullArt` as `writeCardFullArt` takes it, and
+ * `augments` the augment ids layered on it (none clears them), so a pick made before #2725 becomes one of the
+ * version and its augments on its first edit.
+ */
+export function writeCardVersion(defId: string, fullArt: boolean | string | null, augments: readonly string[]): void {
+  updateCardPicks(defId, (picks) => {
+    if (isFullArtPick(fullArt)) picks.fullArt = fullArt;
+    else delete picks.fullArt;
+    const ids = augmentPicks(augments);
+    if (ids === undefined) delete picks.augments;
+    else picks.augments = ids;
+  });
+}
+
 /** R1834000: every card's stored picks by card id, as the device holds them now, an id this client does not know kept. */
 export function readAllCardPicks(): Record<string, StoredCardPicks> {
   return Object.fromEntries(currentCardPicks().state.stored);
@@ -363,7 +428,7 @@ export function replaceAllCardPicks(picks: Readonly<Record<string, unknown>>): v
   for (const [defId, stored] of next.stored) {
     const held = before.stored.get(defId);
     const kept = before.resolved.get(defId);
-    if (held !== undefined && kept !== undefined && CARD_PICK_FIELDS.every((field) => held[field] === stored[field])) {
+    if (held !== undefined && kept !== undefined && CARD_PICK_FIELDS.every((field) => samePick(held[field], stored[field]))) {
       next.resolved.set(defId, kept);
     }
   }
@@ -398,9 +463,12 @@ export const TheirCopyContext = createContext<SeatLoadout | null>(null);
 
 /**
  * Whether `cosmeticId` is the viewer's on the card `defId`: a default or a starter always is (every
- * account owns them on every card, §14.2), and so is one the ledger lists on that card.
+ * account owns them on every card, §14.2), and so is one the ledger lists on that card (R2725002: a retired
+ * full art's row lists what it implies, `ownedCardCosmetics`). R2725001: a version or an augment only where it is
+ * offered, even where every cosmetic counts as owned.
  */
 export function ownsCosmetic(owned: CardOwnership, defId: string, cosmeticId: string): boolean {
+  if (isOfferedId(cosmeticId) && !offeredOn(cosmeticId, defId)) return false;
   if (owned === "every") return true;
   const found = COSMETICS.find((cosmetic) => cosmetic.id === cosmeticId);
   if (found === undefined || ("card" in found && found.card !== defId)) return false;

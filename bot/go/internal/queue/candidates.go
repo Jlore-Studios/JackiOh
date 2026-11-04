@@ -126,6 +126,26 @@ type Candidate struct {
 	// to that subscription alone, as its own work (`plan.Pairs`), held for it a while or handed off
 	// as a final audit (`plan.Owning`).
 	OwnReview bool // default: False
+	// For a build: its plan's delivery reserved its planner's lane for it (#2903, `BuildNextOf`), so
+	// it is its owner's own work, which takes that lane first (`plan.Pairs`), on its planner's model.
+	BuildNext bool // default: False
+	// For a build: the model whose planning run wrote its plan (`PlanModelKey`, #2903), which builds
+	// it when its planner's subscription does ("" when none is on record, as in a record from before).
+	PlanModel string // default: ""
+	// For an own review: the model that built the head (its reservation's `model`, #2903), which
+	// reviews it and fixes what it finds ("" in a reservation from before).
+	BuiltOn string // default: ""
+	// For a revision: its turn came after it waited behind a pull request ahead of it (#2948,
+	// `TurnOf`): its lane is kept for it, and it is its owner's own work, which takes that lane first
+	// (`plan.Pairs`), on the model that approved it (`TurnModel`).
+	TurnNext  bool   // default: False
+	TurnModel string // default: ""
+	// For a build or a revision taken up again from its question (`Resumes`): "answer", a trusted
+	// person replied and the reply is the decision (#3009), or "default", nobody answered in time and
+	// it goes ahead on its default (#2986); owned by the subscription that asked and on the model that
+	// asked (`AskedModel`), in a fresh session.
+	Resumes    string // default: ""
+	AskedModel string // default: ""
 }
 
 // NewCandidate is Candidate(number, kind, title, forced, queued_at) with its defaults.
@@ -671,6 +691,16 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				}
 				c.Continues = Continues(record)
 			}
+			if kind == "build" {
+				c.BuildNext = BuildNextOf(record) != nil
+				c.PlanModel = py.OrStr(record.Get(PlanModelKey), "")
+			}
+			if turn := TurnOf(record); kind == "revise" && turn != nil {
+				c.TurnNext, c.TurnModel = true, turn.Str("model")
+			}
+			if decision := DecisionOf(record); (kind == "build" || kind == "revise") && Resumes(decision) != "" {
+				c.Resumes, c.AskedModel = Resumes(decision), decision.Str("model")
+			}
 			found[number] = c
 			order = append(order, number)
 			if kind == "build" && !c.Forced {
@@ -790,6 +820,7 @@ func ownReviewCandidate(ctx *hctx.Context, s *pyjson.Object, number int, human, 
 	votes := record.Obj("votes")
 	c.Builder = py.OrStr(votes.Get("builder"), "")
 	c.BuiltBy = reserved.Str("provider")
+	c.BuiltOn = reserved.Str("model")
 	c.Owner = reserved.Str("provider")
 	c.Priority = PriorityTier(names)
 	c.ReviewTiers = reviewrule.Shipping(c.Difficulty)

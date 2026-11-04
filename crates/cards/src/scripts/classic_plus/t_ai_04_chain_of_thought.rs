@@ -45,6 +45,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const CHAIN: &str = "classicplus-t-ai-04";
@@ -173,7 +175,6 @@ mod tests {
 
             #[test]
             fn r457_a_draw_the_draw_limit_stops_ends_the_chain_it_is_tried_once_and_not_again() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     // At (2), so Palantir (which steals a (1) Cost Spell) lets it resolve.
                     "p1": { "hand": [{ "def": CHAIN, "costMod": 1 }, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },

@@ -10,7 +10,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::unit_def;
 use crate::rules::fixtures::field::{flush, playing};
-use crate::rules::fixtures::harness::{act, both, in_hand, put, sink_for, slot};
+use crate::rules::fixtures::harness::{act, both, by, ids, in_hand, put, sink_for, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -198,17 +198,6 @@ fn carrying(seed: &str, def_id: &str) -> (GameState, CardInstance, CardInstance)
     );
     assert!(zones::is_carried(&state, &unit), "the Unit is not carried");
     (state, carrier, unit)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
-
-fn ids<'a>(cards: impl IntoIterator<Item = &'a CardInstance>) -> Vec<String> {
-    cards.into_iter().map(|card| card.id.clone()).collect()
 }
 
 fn apply(state: &mut GameState, effect: Effect) {

@@ -56,10 +56,17 @@
 #
 # Past `full`, each piece runs only when the pull request touches what that piece reads (#751):
 # scripts/ci-scope.sh prints one line per piece (its header says what turns each on) and the
-# `changes` job exports them all. fmt and clippy run on `clippy`; each `rust (test …)` group on its
-# own `rust_<scope>` line, which follows the crate graph (a server-only change runs `rust (test
-# server)` alone); the WASM modules and the client build on `web` or `e2e`; the web's typecheck,
-# lint and unit tests on `web`; e2e smoke on `e2e`; each db suite on its own `db_<suite>` line;
+# `changes` job exports them all. It runs the base's copy of the script (`main`'s, for a pull
+# request and a merge group alike, #2986), never the pull request's, so no pull request can shrink
+# its own CI: the base's copy runs every job when the script itself changes, and a line only the
+# pull request's copy declares (its `LINES=`, read and never run, so no code of the pull
+# request's runs in the step that writes the scope), the scope of a job it adds, is emitted
+# `true`, so that job runs on the pull request that adds it. ci-scope.test.ts and acceptance.rs
+# test the pull request's copy.
+# fmt and clippy run on `clippy`; each `rust (test …)` group on its own `rust_<scope>` line, which
+# follows the crate graph (a server-only change runs `rust (test server)` alone); the WASM modules
+# and the client build on `web` or `e2e`; the web's typecheck, lint and unit tests on `web`; e2e
+# smoke on `e2e`; each db suite on its own `db_<suite>` line;
 # infra/'s terraform steps, inside `rust (checks, fuzz 200)`, on `infra`. The release build, the
 # checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary accepts a skip only
 # where the skipped piece's own line is exactly `false`, and the lines are held by
@@ -163,6 +170,11 @@ jobs:
         with:
           fetch-depth: 0
       # A merge group's diff is that of the pull requests in it: the queue's base to the group's head.
+      # The base's copy of ci-scope.sh scopes it (#2986), `main`'s for a pull request and for a merge
+      # group alike, so a pull request can never shrink its own CI: the base's copy runs every job when
+      # the script itself changes, and a line only the pull request's copy declares (the scope of a job
+      # it adds, read from its `LINES=` and never run) is emitted `true`, so that job runs on the pull
+      # request that adds it. A base without the script runs every line that copy declares, each `true`.
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
@@ -170,9 +182,25 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
           if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
-            sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
-            # No name may expand as a glob in the loop below.
+            # No name may expand as a glob in the loops below.
             set -f
+            based=$(mktemp)
+            : > "$based.lines"
+            if git show "$BASE:scripts/ci-scope.sh" > "$based" 2>/dev/null; then
+              sh "$based" "$BASE" "$HEAD" > "$based.lines"
+              tee -a "$GITHUB_OUTPUT" < "$based.lines"
+            else
+              echo "ci-scope: $BASE has no scripts/ci-scope.sh, running everything" >&2
+            fi
+            # The lines the pull request's copy declares (its `LINES=`), read and never run: no
+            # code of the pull request's runs in this step, so none can write $GITHUB_OUTPUT.
+            names=$(sed -n 's/^LINES="\([a-z0-9_ ]*\)"$/\1/p' scripts/ci-scope.sh | head -n 1)
+            for name in $names; do
+              if ! grep -q "^$name=" "$based.lines"; then
+                echo "ci-scope: only the pull request's copy declares $name, so it runs" >&2
+                echo "$name=true" | tee -a "$GITHUB_OUTPUT"
+              fi
+            done
             files=$(git diff --no-renames --name-only "$BASE...$HEAD") || files=
             bot=false
             if [ -z "$files" ]; then bot=true; fi
@@ -258,14 +286,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The engine's rule tests in two binaries side by side (#2090): `rules`, the modules of
-          # tests/rules/ from `a` to `o`, and `rules_2`, the rest, whose replays take the longest to
-          # run. As one binary at Cargo.toml's opt-level 2 they took the job past seven minutes, five
-          # of them compiling the engine, the cards and then that binary, one after another. Here the
+          # The engine's rule tests in three binaries side by side (#2090, #2957): `rules`, the
+          # modules of tests/rules/ from `a` to `o`, `rules_2` those from `p` to `r`, and `rules_3`
+          # the rest. As one binary at Cargo.toml's opt-level 2 they took the job past seven minutes,
+          # five of them compiling the engine, the cards and then that binary, one after another, and
+          # `rules_2` alone, then holding `p` to `z`, took it to 7m 17s again (#2957). Here the
           # engine is at opt-level 1 and the cards at 0 (of the rule tests only rule_benders runs a
-          # real card): on four cores `rules` compiles in about 175 s and runs in 20, `rules_2` in
-          # about 145 and 65. Without ts, which nothing in them reads: ts-rs's derives only add to the
-          # compile. Each `--config` stays one unquoted word, as in `engine` below.
+          # real card): on four cores `rules` compiles in about 175 s and runs in 20. Without ts,
+          # which nothing in them reads: ts-rs's derives only add to the compile. Each `--config`
+          # stays one unquoted word, as in `engine` below.
           - group: engine rules
             scope: engine_rules
             cache: engine-rules
@@ -274,6 +303,10 @@ jobs:
             scope: engine_rules
             cache: engine-rules
             test: -p jackioh-engine --features jackioh-engine/testkit --test rules_2 --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0
+          - group: engine rules 3
+            scope: engine_rules
+            cache: engine-rules
+            test: -p jackioh-engine --features jackioh-engine/testkit --test rules_3 --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0
           # The engine's unit tests (with ts, whose export_bindings tests write wire/generated/), its
           # constants export and its doc tests, with the engine and the cards at opt-level 0 (#1608).
           # The unit-test binary links the cards, a dev-dependency, so it waits for them: at
@@ -286,7 +319,7 @@ jobs:
             cache: engine
             test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test export_config --config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0
             doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0
-            binaries: jackioh-engine export_config golden rules rules_2
+            binaries: jackioh-engine export_config golden rules rules_2 rules_3
           # The golden replay (§13) at Cargo.toml's opt-level 2, where its 240 games take under 20 s
           # (over two minutes at 0), and without ts, which it never reads. Everything it reads turns
           # `rust_engine` on, so it runs on that line; it builds on the dependencies `engine rules`

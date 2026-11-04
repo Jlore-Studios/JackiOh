@@ -21,14 +21,14 @@ begin
   end if;
 
   -- The columns, as the store reads and writes them: 0061's seven, then 0072's full_art_id
-  -- (R2655000, 40_full_art_tiers.sql).
+  -- (R2655000, 40_full_art_tiers.sql) and 0079's augments (R2725000, 45_card_versions.sql).
   select string_agg(format('%s %s %s', column_name, data_type, is_nullable), ', ' order by ordinal_position)
     into v_text
     from information_schema.columns
    where table_schema = 'public' and table_name = 'card_cosmetic_picks';
   if v_text is distinct from 'profile_id uuid NO, card_id text NO, foil text YES, finish text YES, '
                              'border text YES, full_art boolean YES, updated_at timestamp with time zone NO, '
-                             'full_art_id text YES' then
+                             'full_art_id text YES, augments ARRAY YES' then
     raise exception 'FAIL (R1834000): public.card_cosmetic_picks has the columns [%]', coalesce(v_text, '(none)');
   end if;
 

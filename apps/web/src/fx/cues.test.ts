@@ -23,7 +23,6 @@ import {
   FX_DEATH_SMOKE_AT,
   FX_FATIGUE_FLIGHT_FRACTION,
   FX_FATIGUE_STREAK_AT,
-  FX_FUSE_FLIGHT_FRACTION,
   FX_HANDOVER_BANNER_MS,
   FX_HEAL_SPLAT_AT,
   FX_INTENSITY_SCALE,
@@ -49,6 +48,7 @@ import {
 import { FLAVOR_LOOKS, chaosFlavor, type FlavorLook } from "./flavors.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
+import { entranceEchoMs } from "./takeover.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
 /* Fixture ids, read off the M5-T1 board rather than guessed */
@@ -293,7 +293,7 @@ function samples(): Sample[] {
     { name: "a readable card is burned", events: [{ type: "burned", instanceId: "cB", defId: "core-041", owner: "p1" }] },
     { name: "the viewer fatigues", events: [{ type: "fatigue", player: "p1", count: 1, amount: 1 }] },
     { name: "the opponent fatigues", events: [{ type: "fatigue", player: "p2", count: 7, amount: 7 }] },
-    { name: "a full library refuses a copy", events: [{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-cn-virus", outcome: "notCreated" }] },
+    { name: "a full library refuses a copy", events: [{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-super-virus", outcome: "notCreated" }] },
     { name: "a full library sends a card to the graveyard", events: [{ type: "libraryOverflow", player: "p1", instanceId: "c81", defId: "core-017", outcome: "graveyard" }] },
     { name: "a full library ends a hidden token", events: [{ type: "libraryOverflow", player: "p2", instanceId: "hidden", defId: "hidden", outcome: "ceased" }] },
     { name: "a hand card is discarded", events: [{ type: "discarded", instanceId: HAND, defId: "core-002", owner: "p1" }] },
@@ -687,7 +687,8 @@ describe("B13 sourceAnchor and memory", () => {
         splat("damage", 5, heroT("opponent"), flight, 300),
       ],
     );
-    expectCues(plan([dmg("s42", ENEMY_2, 4, false)], 300, { prime: [played("p2", "s42", "core-070")] }), [
+    // #2793: a Spell whose table entry draws no motif on damage (Core #70 now bolts); Classic+'s pass keeps it so, or re-points this.
+    expectCues(plan([dmg("s42", ENEMY_2, 4, false)], 300, { prime: [played("p2", "s42", "classicplus-015")] }), [
       projectile("fire", heroT("opponent"), cardT(ENEMY_2), flight),
       burst("spark", cardT(ENEMY_2), "point", flight),
       splat("damage", 4, cardT(ENEMY_2), flight, 300),
@@ -756,7 +757,13 @@ describe("B14 summon", () => {
 
   function summonCues(facts: FxCardFacts | undefined, D: number, row: "units" | "backrow" = "units"): FxCue[] {
     const zoneLane = 3;
+    // R2791000: a plain summon needs an empty zone (§3.2); lane 3 stands occupied, which would
+    // draw the Stack beat over its occupant instead of the arrival alone.
+    const empty = fullBoardView();
+    if (row === "units") empty.you.units[zoneLane - 1] = null;
+    else empty.you.backrow[zoneLane - 1] = null;
     return plan([summon("p1", "n1", "core-500", row, zoneLane)], D, {
+      view: empty,
       env: envOf({ card: (defId) => (defId === "core-500" ? facts : undefined) }),
     });
   }
@@ -771,7 +778,7 @@ describe("B14 summon", () => {
     });
   });
 
-  it("B14 R2722001 a Legendary adds legendary rays from 0, a gold burst and ring at the slam and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 R2803000 a Legendary adds legendary rays from 0, a gold burst and ring with its echo at the slam and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Legendary", attack: 1, health: 1 }, D), [
@@ -780,6 +787,8 @@ describe("B14 summon", () => {
         rays("legendary", tid(ZONE), 0, D),
         burst("gold", tid(ZONE), "area", slam),
         ring("gold", tid(ZONE), slam, D),
+        // R2803000: the ring carries its echo, the same wave behind as the takeover's second shockwave.
+        ring("gold", tid(ZONE), entranceEchoMs(D, slam), D),
         shake(0.7, slam),
       ]);
     });
@@ -857,7 +866,11 @@ describe("B14 summon", () => {
   it("B14 the opponent's summon lands on the opponent's zone", () => {
     const slam = r(FX_SLAM_AT * 250);
     const zone = testid.zone("opponent", "units", 2);
-    expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { env: envOf({ card: catalog(FACTS) }) }), [
+    // R2791000: lane 2 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+    // beat lands on the occupant too.
+    const empty = fullBoardView();
+    empty.opponent.units[1] = null;
+    expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { view: empty, env: envOf({ card: catalog(FACTS) }) }), [
       ring("dust", tid(zone), slam, 250),
       burst("dust", tid(zone, FOOT), "ring", slam),
       // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
@@ -871,7 +884,12 @@ describe("B15 cast", () => {
     for (const D of [ANIMATIONS.cardPlayed.durationMs, ODD_D]) {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("you", "units", 3);
+      // R2791000: lane 3 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+      // beat lands on the occupant too.
+      const empty = fullBoardView();
+      empty.you.units[2] = null;
       const cues = plan([played("p1", HAND), summon("p1", HAND, "core-002", "units", 3)], D, {
+        view: empty,
         env: envOf({ card: catalog(FACTS) }),
       });
       expectCues(cues, [
@@ -1005,13 +1023,14 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as ward", () => {
+  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as the folded ward, plus the Divine Shield callout", () => {
     forDs("divineShieldLost", (D) => {
       const land = r(FX_MOTIF_PHASES.land * D);
       expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [
         ring("gold", cardT(ENEMY), 0, D),
         burst("shard", cardT(ENEMY), "ring", land, FLAVOR_LOOKS.Holy.colors),
         shake(0.2, land),
+        { kind: "callout", keyword: "Divine Shield", at: cardT(ENEMY), delayMs: 0, durationMs: FX_CALLOUT_MS },
       ]);
     });
   });
@@ -1095,7 +1114,7 @@ describe("B16 the recipe table, row by row", () => {
     forDs("libraryOverflow", (D) => {
       const fizzle = r(FX_OVERFLOW_FIZZLE_AT * D);
       for (const outcome of ["notCreated", "ceased"] as const) {
-        expectCues(plan([{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-cn-virus", outcome }], D), [
+        expectCues(plan([{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-super-virus", outcome }], D), [
           ring("fire", tid("library-opponent"), 0, D),
           burst("smoke", tid("library-opponent"), "point", fizzle),
         ]);
@@ -1148,13 +1167,19 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 transformed: a smoke point burst and an arcane point burst at the card", () => {
+  it("B16 transformed: smoke and sparks as one transmute, phased", () => {
     forDs("transformed", (D) => {
-      expectCues(
-        plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D),
-        // Centered on the unit (integration QA: an area of puffs drifted over the next lanes).
-        [burst("smoke", cardT(MINE_3), "point", 0), burst("arcane", cardT(MINE_3), "point", 0)],
-      );
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
+      expectCues(plan([{ type: "transformed", instanceId: MINE_3, fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" }], D), [
+        burst("smoke", cardT(MINE_3), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE_3), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE_3), "point", linger, nerd.colors),
+        shake(0.3, land),
+      ]);
     });
   });
 
@@ -1164,30 +1189,41 @@ describe("B16 the recipe table, row by row", () => {
     ).toEqual([]);
   });
 
-  it("B16 fused: smoke at every located ingredient, arcane projectiles into the survivor and an arcane burst on arrival", () => {
+  it("B16 fused: one transmute where it lands, no projectiles", () => {
     forDs("fused", (D) => {
-      const f = r(FX_FUSE_FLIGHT_FRACTION * D);
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
       expectCues(plan([{ type: "fused", instanceIds: [MINE, POISONER], resultInstanceId: "c91", defId: "core-088" }], D), [
-        burst("smoke", cardT(MINE), "area", 0),
-        burst("smoke", cardT(POISONER), "area", 0),
-        projectile("arcane", cardT(POISONER), cardT(MINE), f),
-        burst("arcane", cardT(MINE), "area", f),
+        burst("smoke", cardT(MINE), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
     });
   });
 
-  it("B16 fused skips ingredients the view does not render", () => {
+  it("B16 fused lands where its first rendered ingredient stands", () => {
     forDs("fused", (D) => {
-      const f = r(FX_FUSE_FLIGHT_FRACTION * D);
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const linger = r(FX_MOTIF_PHASES.linger * D);
+      const nerd = FLAVOR_LOOKS.Nerd;
       expectCues(plan([{ type: "fused", instanceIds: ["gone", POISONER, MINE_3], resultInstanceId: "c91", defId: "core-088" }], D), [
-        burst("smoke", cardT(POISONER), "area", 0),
-        burst("smoke", cardT(MINE_3), "area", 0),
-        projectile("arcane", cardT(MINE_3), cardT(POISONER), f),
-        burst("arcane", cardT(POISONER), "area", f),
+        burst("smoke", cardT(POISONER), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(POISONER), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(POISONER), "area", land, nerd.colors),
+        burst("smoke", cardT(POISONER), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
       expectCues(plan([{ type: "fused", instanceIds: [MINE, "gone"], resultInstanceId: "c91", defId: "core-088" }], D), [
-        burst("smoke", cardT(MINE), "area", 0),
-        burst("arcane", cardT(MINE), "area", f),
+        burst("smoke", cardT(MINE), "point", 0, nerd.colors),
+        { kind: "sheen", at: cardT(MINE), delayMs: travel, durationMs: land - travel },
+        burst("arcane", cardT(MINE), "area", land, nerd.colors),
+        burst("smoke", cardT(MINE), "point", linger, nerd.colors),
+        shake(0.3, land),
       ]);
     });
   });
@@ -1206,7 +1242,9 @@ describe("B16 the recipe table, row by row", () => {
   });
 
   it("R2657001 a Field Trap firing again plans an activation's flare on its card: no reveal burst and no shake", () => {
-    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true };
+    // R2797000: a firing plays its card's own `cast` first, so this names the card the view shows there,
+    // whose entry has none, and the row plays alone.
+    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-061", controller: "p1", row: "backrow", lane: 1, again: true };
     for (const D of [ANIMATIONS.activated.durationMs, ODD_D]) {
       const cues = plan([again], D);
       expectCues(cues, [ring("arcane", cardT(MY_FIELD_TRAP), 0, D), burst("arcane", cardT(MY_FIELD_TRAP), "point", 0, FLAVOR_LOOKS.Dark.colors)]);
@@ -1336,7 +1374,6 @@ describe("B16 the recipe table, row by row", () => {
       for (const keyword of [
         { kind: "Divine Shield" },
         { kind: "Poisonous" },
-        { kind: "Taunt" },
         { kind: "Rush" },
         { kind: "Charge" },
         { kind: "Armor", n: 2 },
@@ -1349,6 +1386,22 @@ describe("B16 the recipe table, row by row", () => {
           shake(0.2, land),
         ]);
       }
+    });
+  });
+
+  it("B16 keywordGranted Taunt: the bless, a dust-ring shield wall and the Taunt callout", () => {
+    forDs("keywordGranted", (D) => {
+      const travel = r(FX_MOTIF_PHASES.travel * D);
+      const land = r(FX_MOTIF_PHASES.land * D);
+      const holy = FLAVOR_LOOKS.Holy;
+      expectCues(plan([{ type: "keywordGranted", instanceId: MINE_3, keyword: { kind: "Taunt" } }], D), [
+        arrows("up", cardT(MINE_3), D),
+        { kind: "sheen", at: cardT(MINE_3), delayMs: travel, durationMs: land - travel },
+        burst("holy", cardT(MINE_3), "area", land, holy.colors),
+        shake(0.2, land),
+        ring("dust", cardT(MINE_3), travel, D),
+        { kind: "callout", keyword: "Taunt", at: cardT(MINE_3), delayMs: 0, durationMs: FX_CALLOUT_MS },
+      ]);
     });
   });
 
@@ -1689,10 +1742,11 @@ describe("B20 turn banners", () => {
 
 /* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's `still` (R2789000). */
+/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's or a launch's `still` (R2789000, R2801000). */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
   callout: ["still"],
+  launch: ["still"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1723,6 +1777,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
   takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
   setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
+  launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
 };
 
@@ -1782,7 +1837,11 @@ describe("B21 the redacted stream only", () => {
     for (const D of [ANIMATIONS.summoned.durationMs, ODD_D]) {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("opponent", "units", 2);
-      const cues = plan([summon("p2", "hidden", "hidden", "units", 2)], D, { env: envOf({ card: lookup }) });
+      // R2791000: lane 2 stands occupied; a plain summon needs it empty (§3.2), else the Stack
+      // beat lands on the occupant too.
+      const empty = fullBoardView();
+      empty.opponent.units[1] = null;
+      const cues = plan([summon("p2", "hidden", "hidden", "units", 2)], D, { view: empty, env: envOf({ card: lookup }) });
       expect(cues.some((c) => c.kind === "rays")).toBe(false);
       expectCues(cues, [burst("dust", tid(zone, FOOT), "ring", slam)]);
     }
@@ -1798,7 +1857,8 @@ describe("B21 the redacted stream only", () => {
     const primes: GameEvent[][] = [
       [],
       [played("p2", "hidden", "hidden"), { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 1 }],
-      [played("p1", "s1", "core-070"), played("p2", "s2", "core-071")],
+      // #2793: plays whose table entries are `none` (Core #71 now snaps on its cast).
+      [played("p1", "s1", "core-070"), played("p2", "s2", "core-020")],
     ];
     for (const event of HIDDEN_EVENTS) {
       const D = ANIMATIONS[event.type].durationMs;
@@ -2030,7 +2090,8 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
   });
 
   it("R200 a spell's lethal bolt flies again from the caster the drained entries remember", () => {
-    const entries = entriesOf([played("p2", "s9", "core-070"), dmg("s9", "hero-p1", 6, false)], 300);
+    // #2793: a Spell whose table entry draws no motif on damage (Core #70 now bolts); Classic+'s pass keeps it so, or re-points this.
+    const entries = entriesOf([played("p2", "s9", "classicplus-015"), dmg("s9", "hero-p1", 6, false)], 300);
     const env = envOf();
     for (const entry of entries) env.memory.remember(entry.events);
     const lethal = planLethal(entries, finished("p2"), env);

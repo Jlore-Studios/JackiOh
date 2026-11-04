@@ -11,65 +11,65 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "traininggrounds-001": "none: pending", // Spikey Steven
-  "traininggrounds-002": "none: pending", // Personal Trainer
-  "traininggrounds-003": "none: pending", // Group leader
-  "traininggrounds-004": "none: pending", // Boulder Fist Ogre
-  "traininggrounds-005": "none: pending", // Midlane Menace
-  "traininggrounds-006": "none: pending", // Chosen by the Sun
-  "traininggrounds-007": "none: pending", // Chosen by the Moon
-  "traininggrounds-008": "none: pending", // Clobberer
-  "traininggrounds-009": "none: pending", // Ravager
+  "traininggrounds-001": "none: vanilla", // Spikey Steven
+  "traininggrounds-002": { cry: { motif: "bless", palette: "Physical/sport" } }, // Personal Trainer
+  "traininggrounds-003": "none: its Aura is a standing Attack bonus, with no moment to draw", // Group leader
+  "traininggrounds-004": "none: vanilla", // Boulder Fist Ogre
+  "traininggrounds-005": { cry: { motif: "bless" } }, // Midlane Menace
+  "traininggrounds-006": "none: vanilla", // Chosen by the Sun
+  "traininggrounds-007": "none: vanilla", // Chosen by the Moon
+  "traininggrounds-008": "none: vanilla", // Clobberer
+  "traininggrounds-009": { trigger: { motif: "bless" } }, // Ravager
   "traininggrounds-010": { cast: { motif: "volley" } }, // Fan of Knives
-  "traininggrounds-011": "none: pending", // Thwomp
-  "traininggrounds-012": "none: pending", // Fortify
-  "traininggrounds-013": "none: pending", // Explosive Runes
-  "traininggrounds-014": "none: pending", // Explosive Trap
-  "traininggrounds-015": "none: pending", // In a hurry
-  "traininggrounds-016": "none: pending", // Celestial Caller
-  "traininggrounds-017": "none: pending", // Flaming Felinor
-  "traininggrounds-018": "none: pending", // Knife Juggler
-  "traininggrounds-019": { aura: { look: "bloom", scope: "zone" } }, // Extra Rations
-  "traininggrounds-020": "none: pending", // Recruitment Posters
-  "traininggrounds-021": "none: pending", // Flame Tongue Totem
-  "traininggrounds-022": "none: pending", // Right-Hand Felinor
-  "traininggrounds-023": "none: pending", // Quadrupling Felinors
-  "traininggrounds-024": "none: pending", // Goliath Situation
-  "traininggrounds-025": "none: pending", // Trigor
+  "traininggrounds-011": { cast: { motif: "bolt" } }, // Thwomp
+  "traininggrounds-012": { cast: { motif: "bless", palette: "Physical/steel" } }, // Fortify
+  "traininggrounds-013": { cast: { motif: "volley" } }, // Explosive Runes
+  "traininggrounds-014": { cast: { motif: "bolt" } }, // Explosive Trap
+  "traininggrounds-015": { cast: { motif: "conjure", palette: "Physical/wind" } }, // In a hurry
+  "traininggrounds-016": { bespoke: "celestialCall" }, // Celestial Caller
+  "traininggrounds-017": { cry: { motif: "nova" } }, // Flaming Felinor
+  "traininggrounds-018": { trigger: { motif: "bolt", palette: "Physical/blade" } }, // Knife Juggler
+  "traininggrounds-019": { cast: { motif: "conjure" }, trigger: { motif: "flight" }, aura: { look: "bloom", scope: "zone" } }, // Extra Rations
+  "traininggrounds-020": { cast: { motif: "conjure" }, trigger: { motif: "send" }, aura: { look: "holy", scope: "zone" } }, // Recruitment Posters
+  "traininggrounds-021": "none: its Aura is a standing Attack bonus, with no moment to draw", // Flame Tongue Totem
+  "traininggrounds-022": { cry: { motif: "bless", palette: "Beast/felinor" } }, // Right-Hand Felinor
+  "traininggrounds-023": { cry: { motif: "conjure", palette: "Beast/felinor" } }, // Quadrupling Felinors
+  "traininggrounds-024": { cast: { motif: "tithe" } }, // Goliath Situation
+  "traininggrounds-025": { cry: { motif: "offering" }, death: { motif: "conjure" } }, // Trigor
   "traininggrounds-026": { cast: { motif: "vanish" } }, // Path of Exile
-  "traininggrounds-027": "none: pending", // Hopeful Jelly Bean
-  "traininggrounds-028": "none: pending", // Occidental
-  "traininggrounds-029": "none: pending", // Oriental
-  "traininggrounds-030": { death: { motif: "wipe" } }, // Floodgates
-  "traininggrounds-031": "none: pending", // Level Up!
-  "traininggrounds-032": "none: pending", // Selfless Protector
-  "traininggrounds-033": "none: pending", // Guerilla Felinor
-  "traininggrounds-034": "none: pending", // Dino-size
-  "traininggrounds-035": "none: pending", // Corpse Recycler
-  "traininggrounds-036": "none: pending", // Training Dummy
-  "traininggrounds-037": "none: pending", // Seance
-  "traininggrounds-038": "none: pending", // Tutorial Master
-  "traininggrounds-039": "none: pending", // Call to Chaos (Training-Grounds Edition)
-  "traininggrounds-039-1": "none: pending", // Training-Grounds Golem
-  "traininggrounds-040": "none: pending", // Goetzmann Game Design
-  "traininggrounds-041": "none: pending", // Legacy: Bigot
-  "traininggrounds-042": "none: pending", // Legacy: Stockpile
-  "traininggrounds-043": "none: pending", // Legacy: Mr. Vanilla
-  "traininggrounds-044": "none: pending", // Legacy: Duplicating Felinors
-  "traininggrounds-045": "none: pending", // Legacy: Jlockeed's Weapons
-  "traininggrounds-046": "none: pending", // Legacy: Hit Job
-  "traininggrounds-047": "none: pending", // Legacy: Midrange Menace
-  "traininggrounds-048": "none: pending", // Legacy: Jlockeed Shredder-10
-  "traininggrounds-049": "none: pending", // Legacy: Reoccurring Dream
-  "traininggrounds-050": "none: pending", // Legacy: Glowy Jelly Bean
-  "traininggrounds-051": "none: pending", // Legacy: Big Felinor
-  "traininggrounds-052": "none: pending", // Legacy: Snom Bunny Mind Control
-  "traininggrounds-053": "none: pending", // Legacy: Prejudiced Postdoc
-  "traininggrounds-054": "none: pending", // Legacy: The Rock
-  "traininggrounds-055": "none: pending", // Legacy: Reminisce
-  "traininggrounds-056": "none: pending", // Legacy: Corpse Eater
-  "traininggrounds-057": "none: pending", // Legacy: Recycling Initiative
-  "traininggrounds-058": "none: pending", // Legacy: True Strike
-  "traininggrounds-059": "none: pending", // Legacy: Fig of Life
-  "traininggrounds-060": "none: pending", // Legacy: Rush Token Farm
+  "traininggrounds-027": { cast: { motif: "radiance" } }, // Hopeful Jelly Bean
+  "traininggrounds-028": { cry: { motif: "lance" } }, // Occidental
+  "traininggrounds-029": { cry: { motif: "lance", palette: "Hustle/jade" } }, // Easterner
+  "traininggrounds-030": { trigger: { motif: "bless" }, death: { motif: "wipe" } }, // Floodgates
+  "traininggrounds-031": { cast: { motif: "conjure" }, trigger: { motif: "radiance" }, aura: { look: "holy", scope: "side" } }, // Level Up!
+  "traininggrounds-032": { cry: { motif: "bless" }, death: { motif: "bless" } }, // Selfless Protector
+  "traininggrounds-033": { cry: { motif: "barrage", palette: "Beast/felinor" } }, // Guerilla Felinor
+  "traininggrounds-034": { bespoke: "dinoStomp" }, // Dino-size
+  "traininggrounds-035": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "board" } }, // Corpse Recycler
+  "traininggrounds-036": { death: { motif: "send" } }, // Training Dummy
+  "traininggrounds-037": { cast: { motif: "send" } }, // Seance
+  "traininggrounds-038": { cry: { motif: "send", palette: "Nerd/chalk" }, death: { motif: "send", palette: "Nerd/chalk" } }, // Tutorial Master
+  "traininggrounds-039": { cast: { motif: "conjure" } }, // Call to Chaos (Training-Grounds Edition)
+  "traininggrounds-039-1": "none: vanilla", // Training-Grounds Golem
+  "traininggrounds-040": { bespoke: "gameDesign" }, // Goetzmann Game Design
+  "traininggrounds-041": { cry: { motif: "bolt" } }, // Legacy: Speciesist
+  "traininggrounds-042": { cast: { motif: "flight" } }, // Legacy: Stockpile
+  "traininggrounds-043": "none: vanilla", // Legacy: Mr. Vanilla
+  "traininggrounds-044": { cry: { motif: "conjure", palette: "Beast/felinor" } }, // Legacy: Duplicating Felinors
+  "traininggrounds-045": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "side" } }, // Legacy: Jlockeed's Weapons
+  "traininggrounds-046": { cast: { motif: "bolt" } }, // Legacy: Hit Job
+  "traininggrounds-047": { trigger: { motif: "mend" } }, // Legacy: Midrange Menace
+  "traininggrounds-048": { trigger: { motif: "volley" } }, // Legacy: Jlockeed Shredder-10
+  "traininggrounds-049": { cast: { motif: "radiance" }, trigger: { motif: "send" } }, // Legacy: Reoccurring Dream
+  "traininggrounds-050": { cast: { motif: "radiance" } }, // Legacy: Glowy Jelly Bean
+  "traininggrounds-051": { cry: { motif: "wipe", palette: "Beast/felinor" } }, // Legacy: Big Felinor
+  "traininggrounds-052": { cast: { motif: "tether" } }, // Legacy: Snom Bunny Mind Control
+  "traininggrounds-053": { cry: { motif: "conjure" } }, // Legacy: Prejudiced Postdoc
+  "traininggrounds-054": { cry: { motif: "offering" } }, // Legacy: The Rock
+  "traininggrounds-055": { cast: { motif: "send" } }, // Legacy: Reminisce
+  "traininggrounds-056": "none: it grows in the hand, with no board change to draw", // Legacy: Corpse Eater
+  "traininggrounds-057": { cast: { motif: "vanish" }, trigger: { motif: "send" } }, // Legacy: Recycling Initiative
+  "traininggrounds-058": { cast: { motif: "bolt" } }, // Legacy: True Strike
+  "traininggrounds-059": { cast: { motif: "mend" } }, // Legacy: Fig of Life
+  "traininggrounds-060": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "ember", scope: "zone" } }, // Legacy: Rush Token Farm
 }

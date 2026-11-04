@@ -1458,3 +1458,193 @@ mod r1435_seed_accounts {
         ctx.finish().await;
     }
 }
+
+/// A wake with nothing pending (#2926): the runner reads the ledger once, and a pending or edited
+/// file still takes the locked, per-file way. The transactions are counted by Postgres itself
+/// (`pg_stat_database.xact_commit`) in a database of this case's own, so no other case's work is in
+/// the number.
+mod migrate_on_a_wake {
+    use std::time::Duration;
+
+    use super::*;
+    use jackioh_server::db::migrate::{LOCK_ID, MIGRATIONS, checksum, migrate, rewritten};
+    use sqlx::Connection;
+    use sqlx::postgres::PgConnection;
+
+    const BOOTSTRAP: &str = include_str!("../db/bootstrap.sql");
+    /// The database the case migrates, made at its start and dropped at its end. Its statements are
+    /// literals, as `raw_sql` takes only those.
+    macro_rules! probe {
+        () => {
+            "jackioh_wake_probe"
+        };
+    }
+    const PROBE: &str = probe!();
+    const DROP_STALE_PROBE: &str = concat!("drop database if exists ", probe!(), " with (force)");
+    const CREATE_PROBE: &str = concat!("create database ", probe!());
+    const DROP_PROBE: &str = concat!("drop database ", probe!(), " with (force)");
+    /// A migration whose header says it is safe to re-apply: the one the case takes out of the ledger.
+    const REAPPLIED: &str = "0077_news_claims.sql";
+    const REWRITTEN_FILE: &str = "0013_retention_purge.sql";
+    const EDITED_FILE: &str = "0001_profiles_and_invites.sql";
+
+    /// `url` with its database name (the last path segment, before any `?query`) put as `database`.
+    fn url_for(url: &str, database: &str) -> String {
+        let (base, query) = match url.split_once('?') {
+            Some((base, query)) => (base, format!("?{query}")),
+            None => (url, String::new()),
+        };
+        let (server, _) = base.rsplit_once('/').expect("a database url names its database");
+        format!("{server}/{database}{query}")
+    }
+
+    /// The probe database's committed transactions once nothing is connected to it and the count has
+    /// stopped moving (a backend's counters reach the view when it exits).
+    async fn commits(admin: &PgPool) -> i64 {
+        let mut last = None;
+        for _ in 0..100 {
+            let (backends, committed): (i32, i64) =
+                sqlx::query_as("select numbackends, xact_commit from pg_stat_database where datname = $1")
+                    .bind(PROBE)
+                    .fetch_one(admin)
+                    .await
+                    .expect("the probe database's statistics read");
+            if backends == 0 && last == Some(committed) {
+                return committed;
+            }
+            last = Some(committed);
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        panic!("the probe database's commit count never settled");
+    }
+
+    async fn set_checksum(probe: &mut PgConnection, filename: &str, checksum: &str) {
+        sqlx::query("update app.migrations set checksum = $2 where filename = $1")
+            .bind(filename)
+            .bind(checksum)
+            .execute(probe)
+            .await
+            .expect("a ledger row is edited");
+    }
+
+    #[tokio::test]
+    async fn a_second_migrate_reads_the_ledger_once_and_a_pending_or_edited_file_still_takes_the_locked_way()
+    {
+        let Some(url) = database_url() else {
+            return;
+        };
+        let probe_url = url_for(&url, PROBE);
+        let admin = PgPool::connect(&url).await.expect("the admin connection");
+        sqlx::raw_sql(DROP_STALE_PROBE)
+            .execute(&admin)
+            .await
+            .expect("an earlier run's probe database is dropped");
+        sqlx::raw_sql(CREATE_PROBE)
+            .execute(&admin)
+            .await
+            .expect("the probe database is made");
+        let mut probe = PgConnection::connect(&probe_url)
+            .await
+            .expect("the probe connection");
+        sqlx::raw_sql(BOOTSTRAP)
+            .execute(&mut probe)
+            .await
+            .expect("the Supabase-managed pieces");
+        probe.close().await.expect("the probe connection closes");
+
+        // A first run applies every file.
+        let mut every_file: Vec<String> = MIGRATIONS.iter().map(|(name, _)| name.to_string()).collect();
+        every_file.sort();
+        assert_eq!(migrate(&probe_url).await.expect("a first migrate"), every_file);
+
+        // What opening and closing a connection costs, and then a second run with nothing pending: its
+        // ledger transaction and one read, so no more than two transactions beyond the connection's.
+        let before = commits(&admin).await;
+        PgConnection::connect(&probe_url)
+            .await
+            .expect("a bare connection")
+            .close()
+            .await
+            .expect("it closes");
+        let after_connection = commits(&admin).await;
+        let opening = after_connection - before;
+        assert_eq!(
+            migrate(&probe_url).await.expect("a second migrate"),
+            Vec::<String>::new(),
+            "nothing is pending"
+        );
+        let used = commits(&admin).await - after_connection - opening;
+        assert!(
+            used <= 2,
+            "a second migrate committed {used} transactions beyond its connection's {opening}; \
+             the per-file loop took {}",
+            MIGRATIONS.len() + 1
+        );
+
+        // A file rewritten after some database applied it keeps its earlier checksum, and the fast path
+        // accepts it as the loop does.
+        let mut probe = PgConnection::connect(&probe_url)
+            .await
+            .expect("the probe connection");
+        set_checksum(&mut probe, REWRITTEN_FILE, rewritten(REWRITTEN_FILE)[0]).await;
+        assert_eq!(
+            migrate(&probe_url)
+                .await
+                .expect("a migrate over a rewritten file"),
+            Vec::<String>::new()
+        );
+
+        // A file missing from the ledger is applied under the lock: a runner holding it makes the next
+        // one wait, and it applies that file alone once the lock is free.
+        sqlx::query("delete from app.migrations where filename = $1")
+            .bind(REAPPLIED)
+            .execute(&mut probe)
+            .await
+            .expect("a ledger row is removed");
+        let mut holder = PgConnection::connect(&probe_url).await.expect("the lock holder");
+        let mut lock = holder.begin().await.expect("the holder's transaction");
+        sqlx::query("select pg_advisory_xact_lock($1)")
+            .bind(LOCK_ID)
+            .execute(&mut *lock)
+            .await
+            .expect("the holder takes the lock");
+        let mut waiting = Box::pin(migrate(&probe_url));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(500), &mut waiting)
+                .await
+                .is_err(),
+            "a runner waits for the lock a pending file needs"
+        );
+        lock.commit().await.expect("the holder lets go");
+        assert_eq!(
+            waiting.await.expect("the waiting migrate"),
+            vec![REAPPLIED.to_string()]
+        );
+        holder.close().await.expect("the holder closes");
+
+        // An applied file that was edited still fails with today's message.
+        set_checksum(&mut probe, EDITED_FILE, "deadbeef").await;
+        let sum = checksum(
+            MIGRATIONS
+                .iter()
+                .find(|(name, _)| *name == EDITED_FILE)
+                .expect("the edited file is a migration")
+                .1,
+        );
+        let refused = migrate(&probe_url).await.expect_err("an edited file is refused");
+        assert_eq!(
+            refused.to_string(),
+            format!(
+                "{EDITED_FILE} was already applied but its contents changed (deadbeef -> {sum}). \
+                 Migrations are append-only: add a new file instead of editing this one."
+            )
+        );
+
+        probe.close().await.expect("the probe connection closes");
+        sqlx::raw_sql(DROP_PROBE)
+            .execute(&admin)
+            .await
+            .expect("the probe database is dropped");
+        admin.close().await;
+    }
+}

@@ -39,7 +39,7 @@ use jackioh_server::seats::Seat;
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 use crate::support::engine::playable;
-use crate::support::store::{fake_lock, from, q};
+use crate::support::store::{fake_lock, from, q, record_calls};
 
 /// The app with the fallback switched on (or off), and no fixtures.
 async fn app_with_bots(on: bool) -> Arc<App> {
@@ -2176,6 +2176,103 @@ async fn r1555000_a_bot_match_cut_off_by_a_restart_is_resumed() {
     app.matches.stop(&started).await;
     assert!(!app.matches.has(&started), "PREMISE: the actor is gone");
 
+    assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
+    assert!(app.matches.has(&started), "the match was folded back");
+    assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
+}
+
+/// How many times the store was asked for every bot with its decks, in a `record_calls` log.
+fn bot_list_reads(calls: &std::sync::Mutex<Vec<String>>) -> usize {
+    let calls = calls.lock().expect("call log");
+    calls
+        .iter()
+        .filter(|called| called.as_str() == "bots.list")
+        .count()
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_sweep_that_stops_early_loads_no_bots() {
+    // The sweep runs every few seconds and nearly always stops: it decides on each bot's state and
+    // loads their decks only once it is about to choose a pair.
+    let app = app_with_bots(true).await;
+    let one = new_bot(&app, BotSpec::rated(1200.0)).await;
+    new_bot(&app, BotSpec::rated(1190.0)).await;
+    new_bot(&app, BotSpec::rated(1000.0)).await;
+
+    let calls = record_calls(&app).await;
+    assert_eq!(
+        kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"),
+        None,
+        "no bot grinds"
+    );
+    assert_eq!(bot_list_reads(&calls), 0, "no bot grinds");
+
+    q!(app, bots_set_grinding(&one, true));
+    let (person, _) = new_person(&app, 1000.0).await;
+    let waiting = ticket(&app, &person, 1000.0, 0, "bo1").await;
+    let calls = record_calls(&app).await;
+    assert_eq!(
+        kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"),
+        None,
+        "someone is queued"
+    );
+    assert_eq!(bot_list_reads(&calls), 0, "someone is queued");
+    q!(app, tickets_cancel(&waiting.id, now_ms()));
+
+    let calls = record_calls(&app).await;
+    let started = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    assert!(
+        bot_list_reads(&calls) > 0,
+        "PREMISE: a sweep that starts a match loads the bots"
+    );
+
+    let calls = record_calls(&app).await;
+    assert_eq!(
+        kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"),
+        None,
+        "a bot match is live"
+    );
+    assert_eq!(bot_list_reads(&calls), 0, "a bot match is live");
+
+    end_bot_match(&app, &started, PlayerId::P2).await;
+    let ended = q!(app, ranked_game(&started)).expect("the rated game").ended_at;
+    let gap = BOT_VS_BOT_MIN_GAP_SECONDS * MS_PER_SECOND;
+    let calls = record_calls(&app).await;
+    assert_eq!(
+        kick_off_bot_match(&app, ended + gap - 1)
+            .await
+            .expect("a kickoff"),
+        None,
+        "the gap has not passed"
+    );
+    assert_eq!(bot_list_reads(&calls), 0, "the gap has not passed");
+
+    let calls = record_calls(&app).await;
+    kick_off_bot_match(&app, ended + gap)
+        .await
+        .expect("a kickoff")
+        .expect("a second match once the gap has passed");
+    assert!(bot_list_reads(&calls) > 0, "the gap has passed");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_cut_off_bot_match_is_resumed_with_a_ticket_open() {
+    // The ticket stops a new bot match, not the folding back of one a restart cut off.
+    let app = app_with_bots(true).await;
+    grinder(&app, 1200.0).await;
+    new_bot(&app, BotSpec::rated(1190.0)).await;
+    let started = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    app.matches.stop(&started).await;
+    assert!(!app.matches.has(&started), "PREMISE: the actor is gone");
+
+    let (person, _) = new_person(&app, 1000.0).await;
+    ticket(&app, &person, 1000.0, 0, "bo1").await;
     assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
     assert!(app.matches.has(&started), "the match was folded back");
     assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);

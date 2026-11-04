@@ -56,7 +56,6 @@ mod tests {
     }
 
     fn gained(seed: &str, hand: Value) -> (i32, u32) {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": hand },
@@ -85,7 +84,6 @@ mod tests {
 
         #[test]
         fn armor_persists_on_later_turns_and_stacks_with_armor_already_there() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "fortify-persist",
                 "p1": { "hand": [FORTIFY, FILLER], "armor": 2 },
@@ -110,7 +108,6 @@ mod tests {
         #[test]
         fn r1867008_a_lift_of_the_low_end_past_the_high_one_rolls_between_the_two() {
             for seed in 0..40 {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": format!("fortify-inverted-{seed}"),
                     "p1": { "hand": [FORTIFY, FILLER] },
@@ -127,7 +124,6 @@ mod tests {
         fn r386_an_upgrade_of_most_to_6_rolls_up_to_6() {
             let mut seen: IndexSet<i32> = IndexSet::new();
             for seed in 0..60 {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": format!("fortify-most-{seed}"),
                     "p1": { "hand": [FORTIFY, FILLER] },

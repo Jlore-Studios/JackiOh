@@ -21,6 +21,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	statemod "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stepup"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/threads"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
 )
 
@@ -80,6 +81,7 @@ func (x *Deliverer) Item() {
 		who, tier := x.planner()
 		x.remember(number, pyjson.New("planned_at", clock.ISO(x.Ctx.Now()), "planned_by", who,
 			"planned_by_id", x.Provider.ID, "planned_tier", tier))
+		x.notePlanModel(number, false) // planned in a build's run: its builder's model builds it
 		x.planIntoIssue(number, who)
 		if x.RatingNote != "" && x.Result.Get("status") != "planned" {
 			x.try(func() { x.GH.CreateComment(number, x.RatingNote) })
@@ -171,6 +173,7 @@ func (x *Deliverer) deliverItem(number int) {
 	} else {
 		x.build(number, status)
 	}
+	x.closeDecision(number, status)
 	x.settle(number)
 }
 
@@ -192,6 +195,7 @@ func (x *Deliverer) planned(number int, status string) {
 		who, tier := x.planner()
 		x.remember(number, pyjson.New("planned_at", clock.ISO(x.Ctx.Now()), "planned_by", who,
 			"planned_by_id", x.Provider.ID, "planned_tier", tier))
+		x.notePlanModel(number, false) // a person builds it
 		placed := x.planIntoIssue(number, who)
 		rated := x.RatingNote
 		kept := fmt.Sprintf(" Planned on %s (%s)", who, x.link())
@@ -226,17 +230,21 @@ func (x *Deliverer) planned(number int, status string) {
 	who, tier := x.planner()
 	x.remember(number, pyjson.New("planned_at", clock.ISO(x.Ctx.Now()), "planned_by", who,
 		"planned_by_id", x.Provider.ID, "planned_tier", tier))
+	x.notePlanModel(number, true) // its subscription builds it on this model (#2903)
 	x.requeueLabel(number, "build")
 	rated := x.RatingNote
 	if rated != "" {
 		rated += " "
 	}
 	difficulty := x.Difficulty(number)
-	var next string
+	var next, kept string
 	if tier != "" && !providers.TierAtLeast(tier, config.PlanFloor[difficulty]) {
 		// A medium planner rated it hard: a strong model plans it next (part 6, #695).
 		next = fmt.Sprintf("A %s model plans `difficulty:%s` work, so one plans it next; it is queued for that.",
 			config.PlanFloor[difficulty], difficulty)
+	} else if kept = x.keepLane(number, difficulty); kept != "" {
+		// Planned in its own lane (#2903): that lane is kept for its build, on the same model.
+		next = "Cleared and queued to build. " + kept
 	} else {
 		next = fmt.Sprintf("Cleared and queued to build, on the cheapest model `difficulty:%s` allows.", difficulty)
 	}
@@ -248,9 +256,13 @@ func (x *Deliverer) planned(number int, status string) {
 	}
 	plan := x.resultPlan()
 	text := py.SliceTo(redact.Redact(py.OrStr(plan.Get("text"), ""), nil), issueplan.PlanChars)
+	queued := "It is queued to build from this plan, on the cheapest model its difficulty allows."
+	if kept != "" {
+		queued = "It is queued to build from this plan. " + kept
+	}
 	x.GH.CreateComment(number, fmt.Sprintf("Planned on %s (%s), but the description could not take "+
-		"the plan, so it is here. It is queued to build from this plan, on the cheapest model its "+
-		"difficulty allows.\n\n<details><summary>The plan</summary>\n\n%s\n\n</details>", who, x.link(), text))
+		"the plan, so it is here. %s\n\n<details><summary>The plan</summary>\n\n%s\n\n</details>", who,
+		x.link(), queued, text))
 }
 
 // ApplyRating is Deliverer._apply_rating.
@@ -891,16 +903,21 @@ func (x *Deliverer) Fail(number int, kind string) {
 //
 // Only a person can do it (#793, `human.py`): the bot hands the thread over, as a
 // person's `human` would (`triage.hand_to_people`). Its own labels come off
-// (`human.LETS_GO`), it unassigns itself and assigns the people, `human required` goes on,
-// and a comment names them and says what they must do. The queue leaves it alone from then
-// on (`queue.is_human`).
+// (`human.LETS_GO`, and `needs decision`: a hand-over is no question, #3009), it unassigns itself
+// and assigns the people, `human required` goes on, and the bot archives its work on the item
+// (#3009, section 2): its open bot pull request goes back to a draft with auto-merge off and its
+// queue labels off (the branch is kept), the item's record and that pull request's forget it
+// (`queue.Archive`), and one summary, on the item and on that pull request, names the people and
+// says why it stopped, where its work is and what a person must do (`human.Ask`). The queue leaves
+// it alone from then on (`queue.is_human`), and nothing of the bot's takes it up again while it is
+// archived (`queue.ArchivedOf`).
 func (x *Deliverer) NeedsPerson(number int, question string, what string /* = "build this" */, kept string /* = "" */, again string /* = "" */) {
 	thread := x.GH.GetIssue(number)
 	handover := &triage.Plan{}
 	triage.HandToPeople(handover, thread, x.Cfg.BotLogin)
 	remove := []string{}
 	for _, name := range sortedKeys(queue.LabelNames(thread)) {
-		if human.LetsGo[name] {
+		if human.LetsGo[name] || name == config.LabelNeedsDecision {
 			remove = append(remove, name)
 		}
 	}
@@ -918,11 +935,96 @@ func (x *Deliverer) NeedsPerson(number int, question string, what string /* = "b
 	if !queue.LabelNames(thread)[config.LabelHumanRequired] {
 		x.GH.AddLabels(number, []string{config.LabelHumanRequired})
 	}
-	x.GH.CreateComment(number, human.Ask(question, x.Cfg.BotLogin, what, kept, again))
-	// The next run reads it with the thread, once a person has queued the item again.
-	x.remember(number, pyjson.New("question", question))
+	entry, linked, where := x.archiveWork(number, thread, question)
+	body := human.Ask(question, x.Cfg.BotLogin, what, kept, where, again)
+	x.GH.CreateComment(number, body)
+	if pr := py.MustInt(py.Or(entry.Get("pr"), 0)); pr != 0 && pr != number {
+		x.try(func() { x.GH.CreateComment(pr, body) }) // the same summary on its pull request
+	}
+	// The next run reads the question with the thread, once a person has queued the item again.
+	x.Ctx.Store.Update(func(s *pyjson.Object) any {
+		statemod.Item(s, number).Set("question", question)
+		queue.Archive(s, number, linked, entry)
+		return nil
+	}, fmt.Sprintf("archived #%d", number))
 	x.cameToNothing(number, "the bot could not build it: "+question)
-	x.log(fmt.Sprintf("#%d needs a person: handed to people, %s", number, config.LabelHumanRequired))
+	x.log(fmt.Sprintf("#%d needs a person: handed to people, %s, its work archived", number, config.LabelHumanRequired))
+}
+
+// archiveWork is the GitHub half of archiving `number`'s work (#3009): its bot pull request (the
+// thread itself, or the issue's open one) goes back to a draft, auto-merge off, out of the merge
+// queue and with no queue label. Returns the `archived` entry (when, why, the branch, the pull
+// request, the last head; `question` is why), the thread archived with it (that pull request, or a pull request's
+// issue; 0 for none) and where the work is, for the summary.
+func (x *Deliverer) archiveWork(number int, thread *pyjson.Object, question string) (*pyjson.Object, int, string) {
+	entry := pyjson.New("at", clock.ISO(x.Ctx.Now()), "why", py.SliceTo(strings.TrimSpace(question), queue.QuestionChars))
+	var pull *pyjson.Object
+	linked := 0
+	if thread.Has("pull_request") {
+		pull = x.GH.GetPull(number)
+		linked = py.MustInt(py.Or(x.Record(number).Get("issue"), 0))
+		if issue := threads.LinkedIssue(pull); linked == 0 && issue != nil && queue.LabelNames(pull)[config.LabelPR] {
+			linked = *issue // the bot's pull request's issue, whose record owns the item (`queue.OwnerItem`)
+		}
+	} else if pull = x.openPull(); pull != nil {
+		linked = py.MustInt(py.Or(pull.Get("number"), 0))
+	}
+	branch := py.OrStr(x.Plan.Get("branch"), "")
+	head := ""
+	if pull != nil {
+		branch = py.OrStr(pull.Obj("head").Get("ref"), branch)
+		head = py.OrStr(pull.Obj("head").Get("sha"), "")
+	} else if branch != "" {
+		if ref := x.branchRef(branch); ref != "" {
+			head = x.Repo.Rev(ref)
+		} else {
+			branch = "" // never pushed: nothing of it is on GitHub
+		}
+	}
+	entry.Update(pyjson.New("branch", branch, "head", head))
+	if !thread.Has("pull_request") && linked == 0 {
+		entry.Set("pr", nil)
+	} else if thread.Has("pull_request") {
+		entry.Set("pr", number)
+		if linked != 0 {
+			entry.Set("issue", linked)
+		}
+	} else {
+		entry.Set("pr", linked)
+	}
+	var parts []string
+	if branch != "" {
+		parts = append(parts, fmt.Sprintf("branch `%s`", branch))
+	}
+	if pr := py.MustInt(py.Or(entry.Get("pr"), 0)); pr != 0 {
+		parts = append(parts, fmt.Sprintf("pull request #%d", pr))
+	}
+	if head != "" {
+		parts = append(parts, fmt.Sprintf("its head `%s`", py.SliceTo(head, 12)))
+	}
+	where := strings.Join(parts, ", ")
+	if where != "" {
+		where += "."
+	}
+	if pull != nil && pull.Get("state") == "open" && queue.LabelNames(pull)[config.LabelPR] {
+		pr := py.MustInt(py.Or(pull.Get("number"), 0))
+		queue.HoldMerge(x.Ctx, pull) // auto-merge off, and out of the merge queue
+		if pr != number {
+			queue.SetStateLabel(x.Ctx, pr, queue.LabelNames(pull), "")
+		}
+		drafted := pull.Truthy("draft")
+		if !drafted && pull.Truthy("node_id") {
+			drafted = x.try(func() { x.GH.MarkDraft(py.Str(pull.Get("node_id"))) }) == ""
+		}
+		if drafted {
+			where += " The pull request is a draft now, with auto-merge off; its branch is kept."
+		} else {
+			where += " Auto-merge is off on the pull request; its branch is kept (GitHub would not make it a draft)."
+		}
+	} else if branch != "" {
+		where += " Its branch is kept."
+	}
+	return entry, linked, where
 }
 
 // One of my suggestions, approved, that I could not finish (#797): logged, so no survey
@@ -1047,15 +1149,12 @@ func (x *Deliverer) build(number int, status string) {
 			kept = fmt.Sprintf(" What I had is on `%s`.", branch)
 		}
 		if x.Result.Truthy("human_required") {
-			x.NeedsPerson(number, question, "build this", kept, "")
+			x.NeedsPerson(number, question, "build this", "", "") // its summary says where the work is
 			x.remember(number, pyjson.New("last_findings", []any{}))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
-		x.GH.CreateComment(number, fmt.Sprintf("I need a decision before I can build this.%s\n\n"+
-			"%s\n\nAnswer here, then `%s build` (or "+
-			"`@%s <your answer>`) queues it again.", kept, question, config.Slash, x.Cfg.BotLogin))
-		x.remember(number, pyjson.New("last_findings", []any{}, "question", question))
+		x.askDecision(number, "build", "I need a decision before I can build this.", kept, question)
+		x.remember(number, pyjson.New("last_findings", []any{}))
 		return
 	}
 	if !(x.Repo.Rev("origin/"+branch) != "" || pushed) {

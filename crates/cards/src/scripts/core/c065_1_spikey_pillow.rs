@@ -56,6 +56,8 @@ pub fn script_v0_5_9f() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -72,7 +74,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_drains_1_attack_and_a_degrade_3() {
         for (upgrade, drain) in [(true, 1), (false, 3)] {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
             let pillow = s.unit_at(P1, 1);
             let moved = if upgrade {
@@ -91,7 +92,6 @@ mod tests {
 
         #[test]
         fn s10_4_your_units_have_2_attack() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
 
             let timmy = s.unit_at(P1, 2);
@@ -100,7 +100,6 @@ mod tests {
 
         #[test]
         fn s10_4_attack_floors_at_0_and_max_health_is_untouched() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, FELINOR] } }));
 
             // 1 − 2 would be −1; `layers.rs` clamps the total at 0.
@@ -113,7 +112,6 @@ mod tests {
 
         #[test]
         fn s10_4_the_aura_reaches_the_controller_s_units_only() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW] }, "p2": { "field": [TIMMY] } }));
 
             let timmy = s.unit_at(P2, 1);
@@ -122,7 +120,6 @@ mod tests {
 
         #[test]
         fn s10_4_the_aura_is_computed_on_read_so_a_unit_that_arrives_later_is_drained_too() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW], "hand": [FRIEND], "mana": 4 } }));
 
             s.play(FRIEND, json!({}));
@@ -136,7 +133,6 @@ mod tests {
 
         #[test]
         fn the_base_aura_drains_the_pillow_itself() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW], "hand": [SURGERY], "mana": 4 } }));
             let pillow = s.unit_at(P1, 1);
 
@@ -148,7 +144,6 @@ mod tests {
 
         #[test]
         fn radiant_spares_spikey_pillows_itself_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": PILLOW, "radiant": true }], "hand": [SURGERY], "mana": 4 },
             }));
@@ -162,7 +157,6 @@ mod tests {
 
         #[test]
         fn radiant_excludes_another_spikey_pillow() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "field": [{ "def": PILLOW, "radiant": true }, { "def": PILLOW, "radiant": true }],
@@ -179,7 +173,6 @@ mod tests {
 
         #[test]
         fn the_base_aura_does_not_exclude_another_spikey_pillow() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [PILLOW, { "def": PILLOW, "radiant": true }], "hand": [SURGERY], "mana": 4 },
             }));
@@ -193,7 +186,6 @@ mod tests {
 
         #[test]
         fn radiant_still_drains_your_other_units() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [{ "def": PILLOW, "radiant": true }, TIMMY] } }));
 
             let timmy = s.unit_at(P1, 2);
@@ -202,7 +194,6 @@ mod tests {
 
         #[test]
         fn s4_1_it_can_never_switch_to_defense_position() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
             let pillow = s.unit_at(P1, 1);
 
@@ -218,7 +209,6 @@ mod tests {
 
         #[test]
         fn s4_1_the_radiant_face_cannot_switch_to_defense_either() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [{ "def": PILLOW, "radiant": true }] } }));
             let pillow = s.unit_at(P1, 1);
 
@@ -230,7 +220,6 @@ mod tests {
     /// R1081000: a Unit standing in the backrow is one of "your units": the drain reaches it.
     #[test]
     fn r1081000_the_drain_reaches_a_unit_standing_in_the_backrow() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
         let timmy = s.unit_at(P1, 2);
         crate::stand_in_backrow(&mut s, &timmy.id, 2);

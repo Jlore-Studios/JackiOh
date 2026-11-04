@@ -117,7 +117,7 @@ func FillLanes(ctx *hctx.Context, lanes *Lanes, taken *queue.Candidate, assignme
 	if ctx.Cfg.ControllerLoop {
 		return // the status loop plans again at once, in the same tick (`controller.start`)
 	}
-	after := lanes.WithRun(taken.Number, assignment.Provider.ID, assignment.Action, assignment.FillsIn())
+	after := lanes.WithRun(taken.Number, assignment.Provider.ID, assignment.LaneAction(), assignment.FillsIn())
 	if !after.AnyRoom() {
 		return
 	}
@@ -219,7 +219,8 @@ var PruneEvery = 24 * time.Hour
 // ShedWhenClosed is SHED_WHEN_CLOSED: what a closed thread's record sheds at once: the bulky
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
-	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review"}
+	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review",
+	"build_next", "waiting_turn", "turn", "decision"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep
@@ -286,7 +287,14 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 	labelRevise := config.LabelRevise
 	labelBlocked := config.LabelBlocked
-	notes := Prune(ctx, state)
+	// A stop for a decision first (#2986): a closed one loses `needs decision` before Prune sheds it,
+	// and one past its end goes ahead, so the planner below finds it queued for its lane.
+	notes := SyncDecisions(ctx)
+	notes = append(notes, Prune(ctx, ctx.Store.Load())...)
+	// A pull request waiting its turn whose turn came is taken up first (#2948), so a conflict its
+	// turn brought is its lane's, below.
+	notes = append(notes, SyncTurns(ctx, 0)...)
+	state = ctx.Store.Load()
 	for _, thread := range WorkingThreads(ctx) {
 		number := py.MustInt(thread.Get("number"))
 		record := recordOf(state, strconv.Itoa(number))
@@ -364,20 +372,43 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		}
 		pull := ctx.GH.GetPull(py.MustInt(thread.Get("number")))
 		record := recordOf(state, py.Str(pull.Get("number")))
+		if queue.ArchivedOf(record) != nil {
+			continue // handed to a person, its work archived (#3009): no conflict revision, no requeue
+		}
 		if eqStr(pull.Get("mergeable_state"), "dirty") && !record.Truthy("stop_requested") {
 			number := py.MustInt(pull.Get("number"))
+			if queue.WaitingTurnOf(record) != nil {
+				// It waited its turn behind another, and `main` conflicts with it now (#2948): its turn.
+				notes = append(notes, TakeTurn(ctx, number, "it conflicts with `main` now"))
+				continue
+			}
 			queue.SetStateLabel(ctx, number, names, labelRevise)
 			if pull.Truthy("auto_merge") && pull.Truthy("node_id") {
 				// The revision may come from another model; its approval decides afresh.
 				herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(pull.Get("node_id"))) })
 			}
 			queue.NotMerging(ctx, number, names)
+			// The lane owns its pull request until it merges (#2948): the subscription whose approval
+			// shipped this head resolves its conflict, ahead of its new work (`Pairs`), held for it a
+			// while or handed off as any owner's work (`Owning`), as a CI fix goes to it
+			// (`events.fixCI`).
+			sha := py.OrStr(pull.Obj("head").Get("sha"), "")
+			owner := MergeOwner(record, sha)
+			owned := owner != ""
 			ctx.Store.Update(func(s *pyjson.Object) any {
 				hstate.Item(s, number).Update(pyjson.New("kind", "revise", "source", "conflict",
 					"queued_at", clock.ISO(ctx.Now()), "failures", 0, "stop_requested", false))
+				if owned {
+					Own(s, number, owner, fmt.Sprintf("its approval shipped `%s`, and the last approver owns "+
+						"the merge, so it resolves the conflict", py.SliceTo(sha, 12)), ctx.Now())
+				}
 				return nil
 			}, fmt.Sprintf("conflict #%d", number))
-			notes = append(notes, fmt.Sprintf("queued #%d: it conflicts with main", number))
+			note := fmt.Sprintf("queued #%d: it conflicts with main", number)
+			if owned {
+				note += fmt.Sprintf("; `%s`, its merge owner, resolves it", owner)
+			}
+			notes = append(notes, note)
 			continue
 		}
 		var requeued string

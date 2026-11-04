@@ -88,6 +88,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -127,7 +129,6 @@ mod tests {
 
             #[test]
             fn r65_aura_your_traps_and_field_traps_in_hand_cost_0_while_it_is_on_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, SHEEPISH, TESLA], "field": [CRACKER] },
                     "p2": { "hand": [STOCKPILE] },
@@ -142,7 +143,6 @@ mod tests {
 
             #[test]
             fn played_from_hand_the_trap_costs_0_at_once() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 assert_eq!(cost_of(&s, EXPERIMENT), 2);
                 s.play(CRACKER, json!({}));
@@ -151,7 +151,6 @@ mod tests {
 
             #[test]
             fn once_it_leaves_the_field_your_traps_return_to_their_own_cost() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [CRACKER] },
                     "p2": { "hand": [HIT_JOB, STOCKPILE] },
@@ -166,7 +165,6 @@ mod tests {
 
             #[test]
             fn the_opponent_s_traps_and_your_field_spells_and_spells_are_untouched() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [MANA_WELL, STOCKPILE], "field": [CRACKER] },
                     "p2": { "hand": [EXPERIMENT, STOCKPILE] },
@@ -178,7 +176,6 @@ mod tests {
 
             #[test]
             fn the_base_face_gains_no_mana_after_a_trap() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [CRACKER] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(EXPERIMENT, json!({ "zone": 1 }));
                 s.expect_mana(P1, 4);
@@ -186,7 +183,6 @@ mod tests {
 
             #[test]
             fn r177_the_opponent_reads_your_hand_as_a_count_and_no_cost_of_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(CRACKER, json!({}));
                 let theirs = js(&s.view(P2));
@@ -207,7 +203,6 @@ mod tests {
 
             #[test]
             fn r13_dormant_under_a_stack_pile_its_aura_is_off_your_traps_cost_their_own_price() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [CRACKER, { "def": "core-092", "stack": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -271,7 +266,6 @@ mod tests {
 
             #[test]
             fn r783006_set_its_aura_is_dormant_revealed_it_is_a_3_4_and_the_aura_starts() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -292,7 +286,6 @@ mod tests {
 
             #[test]
             fn r783005_a_set_toe_cracker_is_a_trap_play_another_radiant_one_gains_mana_its_own_trigger_sleeps() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRACKER, "radiant": true }, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true, "lane": 3 }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -311,7 +304,6 @@ mod tests {
 
             #[test]
             fn r783006_revealed_it_is_a_6_8_its_traps_cost_0_and_a_trap_gains_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRACKER, "radiant": true }, EXPERIMENT, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
@@ -327,7 +319,6 @@ mod tests {
 
             #[test]
             fn is_a_6_8_with_the_same_aura() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -338,7 +329,6 @@ mod tests {
 
             #[test]
             fn after_you_play_a_trap_gain_1_mana_this_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -349,7 +339,6 @@ mod tests {
 
             #[test]
             fn a_field_trap_counts_as_a_trap() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TESLA, SHEEPISH, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -361,7 +350,6 @@ mod tests {
 
             #[test]
             fn a_spell_a_field_spell_or_the_opponent_s_trap_gains_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, MANA_WELL], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [SHEEPISH, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
@@ -378,7 +366,6 @@ mod tests {
 
             #[test]
             fn the_mana_is_this_turn_s_it_is_gone_at_your_next_refresh() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
@@ -392,7 +379,6 @@ mod tests {
 
             #[test]
             fn r33_r97_the_gain_never_names_the_face_down_trap_in_the_opponent_s_view() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -415,7 +401,6 @@ mod tests {
 
             #[test]
             fn r70_a_cast_trap_counts_wardrum_s_copy_of_the_trap_you_played_gains_mana_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [SHEEPISH, STOCKPILE],
@@ -437,7 +422,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_mana_never_goes_below_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -449,7 +433,6 @@ mod tests {
 
             #[test]
             fn r13_dormant_under_a_stack_pile_it_gains_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [SHEEPISH, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }, { "def": "core-092", "stack": true }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -460,7 +443,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_mana_gains_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },

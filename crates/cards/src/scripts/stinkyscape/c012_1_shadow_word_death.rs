@@ -106,7 +106,6 @@ mod tests {
 
         #[test]
         fn r1867005_destroys_a_unit_with_5_attack_or_more() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DEATH, FILLER], "mana": 9 },
                 "p2": {
@@ -123,7 +122,6 @@ mod tests {
 
         #[test]
         fn r1867005_a_target_lowered_past_the_limit_after_the_pick_still_dies() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DEATH, FILLER], "mana": 9 },
                 "p2": {
@@ -145,7 +143,6 @@ mod tests {
 
         #[test]
         fn r1867005_a_4_attack_unit_cannot_be_chosen_the_play_is_refused() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DEATH, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -157,7 +154,6 @@ mod tests {
 
         #[test]
         fn r1867005_attack_an_aura_gives_counts() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DEATH, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "backrow": [WEAPONS] },
@@ -172,7 +168,6 @@ mod tests {
 
         #[test]
         fn r46_an_indestructible_unit_survives() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DEATH, FILLER] },
                 "p2": { "hand": [FILLER], "field": [ROCK] },
@@ -186,7 +181,6 @@ mod tests {
 
         #[test]
         fn r386_a_degrade_of_the_threshold_to_4_admits_a_4_attack_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [DEATH, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -205,7 +199,6 @@ mod tests {
 
         #[test]
         fn r1867005_the_neighbours_die_too_a_1_attack_one_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": DEATH, "radiant": true }, FILLER] },
                 "p2": {

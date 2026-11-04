@@ -33,6 +33,8 @@ mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const GHOST: &str = "classic-089";
@@ -144,7 +146,6 @@ mod tests {
 
             #[test]
             fn b5_e5_r682_a_declared_target_naming_it_lists_one_play_carrying_no_discards() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE, SPARE, SPARE] },
                     "p2": { "field": [GHOST] },
@@ -165,7 +166,6 @@ mod tests {
 
             #[test]
             fn b5_e5_r682_the_play_pays_two_random_others_two_spares_go_never_the_card_played_and_the_hit_meets_its_divine_shield() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE, SPARE, SPARE] },
                     "p2": { "field": [GHOST] },
@@ -199,7 +199,6 @@ mod tests {
 
             #[test]
             fn b5_e5_a_play_naming_it_with_too_few_other_cards_held_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE] },
                     "p2": { "field": [GHOST, VANILLA] },
@@ -210,7 +209,6 @@ mod tests {
 
             #[test]
             fn b5_e5_with_fewer_than_2_other_cards_it_is_no_legal_target_absent_from_legalactions() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE] },
                     "p2": { "field": [GHOST, VANILLA] },
@@ -223,7 +221,6 @@ mod tests {
 
             #[test]
             fn b5_e5_it_binds_both_players_its_controller_too() {
-                crate::register_all();
                 let s = scenario(json!({ "p1": { "hand": [WILDFIRE, SPARE], "field": [GHOST] } }));
                 let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
                 assert!(!targets.contains(&Some(at(s.card(GHOST)))));
@@ -239,7 +236,6 @@ mod tests {
 
             #[test]
             fn b5_e5_r682_a_prompt_answer_naming_it_pays_the_2_random_cards_at_once_with_no_follow_up_prompt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": ECHO, "radiant": true }, WILDFIRE, SPARE, SPARE] },
                     "p2": { "field": [GHOST, MENACE] },
@@ -266,7 +262,6 @@ mod tests {
 
             #[test]
             fn b5_e5_a_prompt_never_offers_it_to_a_chooser_with_fewer_than_2_other_cards() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": ECHO, "radiant": true }, WILDFIRE, SPARE] },
                     "p2": { "field": [GHOST, MENACE] },
@@ -281,7 +276,6 @@ mod tests {
 
             #[test]
             fn b5_e5_r682_an_activations_declared_target_naming_it_pays_2_random_cards_too_c_n78_mutate_spell() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [SPARE, SPARE, SPARE], "backrow": [MUTATE] },
                     "p2": { "hand": [FILLER], "field": [{ "def": GHOST, "counters": { "plague": 1 } }] },
@@ -317,7 +311,6 @@ mod tests {
 
             #[test]
             fn b5_e5_with_fewer_than_2_other_cards_an_activation_cant_name_it() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [SPARE], "backrow": [MUTATE] },
                     "p2": { "hand": [FILLER], "field": [{ "def": GHOST, "counters": { "plague": 1 } }] },
@@ -354,7 +347,6 @@ mod tests {
 
             #[test]
             fn r394_a_random_pick_targets_nothing_c_n22_mid_runners_random_bounce_returns_it_with_no_discard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MID_RUNNER, FILLER] },
                     "p2": { "field": [GHOST], "hand": [FILLER] },
@@ -367,7 +359,6 @@ mod tests {
 
             #[test]
             fn r394_an_attack_is_no_targeting_it_is_attacked_with_no_discard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MENACE] },
                     "p2": { "field": [GHOST], "hand": [FILLER] },
@@ -383,7 +374,6 @@ mod tests {
 
             #[test]
             fn r394_an_all_effect_targets_nothing_twisting_nether_destroys_it_with_no_discard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [NETHER, FILLER] }, "p2": { "field": [GHOST] } }));
                 s.play(NETHER, json!({}));
                 s.expect_in_zone(GHOST, "graveyard");
@@ -392,7 +382,6 @@ mod tests {
 
             #[test]
             fn the_discards_are_discards_c_n64_malzahars_recycler_draws_for_them() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE, SPARE], "backrow": [RECYCLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "p2": { "field": [GHOST] },
@@ -418,7 +407,6 @@ mod tests {
 
             #[test]
             fn r386_its_discard_is_the_declared_number_an_upgrades_step_makes_it_3_and_2_others_no_longer_pay() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, SPARE, SPARE] }, "p2": { "field": [GHOST] } }));
                 step_param(s.card_mut(GHOST), "discard", 1);
                 let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
@@ -443,7 +431,6 @@ mod tests {
 
             #[test]
             fn is_a_10_12_with_divine_shield_and_reborn() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": GHOST, "radiant": true }, FILLER] } }));
                 s.play(GHOST, json!({}))
                     .expect_stats(GHOST, json!({ "attack": 10, "health": 12 }));
@@ -452,7 +439,6 @@ mod tests {
 
             #[test]
             fn s4_5_reborn_destroyed_it_returns_at_1_health_and_targeting_it_still_costs_2_random_cards() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [NETHER, WILDFIRE, SPARE, SPARE], "mana": 9 },
                     "p2": { "field": [{ "def": GHOST, "radiant": true }] },
@@ -471,7 +457,6 @@ mod tests {
 
             #[test]
             fn b5_e5_the_same_cost_binds_on_the_radiant_face_too_few_other_cards_no_target() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE] },
                     "p2": { "field": [{ "def": GHOST, "radiant": true }] },

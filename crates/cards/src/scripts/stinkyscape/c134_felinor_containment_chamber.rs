@@ -88,7 +88,6 @@ mod tests {
 
         #[test]
         fn r1860007_death_summons_a_felinor_token_of_its_attack_and_max_health_buffs_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CHAMBER], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -143,7 +142,6 @@ mod tests {
 
         #[test]
         fn r1860007_radiant_death_summons_a_doubled_token_with_divine_shield() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],

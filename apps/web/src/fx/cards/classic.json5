@@ -6,100 +6,101 @@
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { entrance: "<key>", <hook>: … }        a marquee Unit's entrance (fx/entrances.ts) beside its hooks (R2794000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "classic-001": "none: pending", // Curse of the Forgotten Classic
-  "classic-002": "none: pending", // The Trickster
-  "classic-003": "none: pending", // Book of Heal
-  "classic-004": "none: pending", // Palantir
-  "classic-005": "none: pending", // Tesla
-  "classic-006": "none: pending", // Cloaked Toe Cracker
-  "classic-007": "none: pending", // InfiniScepter
-  "classic-008": "none: pending", // Pickle
-  "classic-009": "none: pending", // Income Tax
-  "classic-010": "none: pending", // Exile
-  "classic-011": "none: pending", // Mind Melt
-  "classic-012": "none: pending", // Book of Blood
-  "classic-013": "none: pending", // Boots on the Ground
-  "classic-014": "none: pending", // Shadowstep
-  "classic-015": "none: pending", // Nose Hunter
+  "classic-001": { cast: { motif: "bolt", palette: "Dark/curse" } }, // Curse of the Forgotten Classic
+  "classic-002": "none: its Cry only sets a cost modifier", // The Trickster
+  "classic-003": { bespoke: "pageMend" }, // Book of Heal
+  "classic-004": { cast: { motif: "negate", palette: "Tech/hologram" }, trigger: { motif: "negate" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "board" } }, // Palantir
+  "classic-005": { cast: { motif: "bolt" } }, // Tesla
+  "classic-006": "none: vanilla", // Cloaked Toe Cracker
+  "classic-007": { cast: { motif: "vanish" }, aura: { look: "arcane", scope: "zone" } }, // InfiniScepter
+  "classic-008": { cast: { motif: "curse", palette: "Dark/curse" } }, // Pickle
+  "classic-009": { cast: { motif: "tether", palette: "Hustle/cash" } }, // Income Tax
+  "classic-010": { cast: { motif: "negate" } }, // Exile
+  "classic-011": { cast: { motif: "vanish" } }, // Mind Melt
+  "classic-012": { cast: { motif: "bolt", palette: "Dark/blood" } }, // Book of Blood
+  "classic-013": "none: its draw comes as it attacks, which takes no hook marker", // Boots on the Ground
+  "classic-014": { cast: { motif: "recall", palette: "Dark/shadow" } }, // Shadowstep
+  "classic-015": { activate: { motif: "vanish" } }, // Nose Hunter
   "classic-016": { cast: { motif: "scorch", palette: "Fire" } }, // Book of Flame
-  "classic-017": "none: pending", // Counterspell
-  "classic-018": "none: pending", // Glitch in the System
-  "classic-019": "none: pending", // Lizard's Breath
-  "classic-020": "none: pending", // The Power to Punish
-  "classic-021": "none: pending", // Turtinator
-  "classic-022": "none: pending", // Mid Runner
-  "classic-023": "none: pending", // Devil's Pact
-  "classic-024": "none: pending", // Book of Knowledge
-  "classic-025": "none: pending", // Lag in the System
-  "classic-026": "none: pending", // Rapid Draw
-  "classic-027": "none: pending", // Pestilent Slime
-  "classic-028": "none: pending", // Second Wind
-  "classic-029": "none: pending", // Book of Vital Kill
-  "classic-030": "none: pending", // Recycle
-  "classic-031": "none: pending", // Cookie Guild
-  "classic-032": "none: pending", // Felinor Feelings
-  "classic-033": "none: pending", // Joro
-  "classic-034": "none: pending", // Ancient Acquisition
-  "classic-035": "none: pending", // Prep
-  "classic-036": "none: pending", // Burn
-  "classic-037": "none: pending", // Last Hurrah
-  "classic-038": "none: pending", // Jackiestan Auctioneer
-  "classic-039": "none: pending", // Outbreak
-  "classic-040": "none: pending", // MC Tech
-  "classic-041": "none: pending", // State of the Game
-  "classic-042": { aura: { look: "toxic", scope: "board" } }, // Transmutable Toxins
+  "classic-017": { cast: { motif: "negate" } }, // Counterspell
+  "classic-018": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Glitch in the System
+  "classic-019": { cast: { motif: "scorch" } }, // Lizard's Breath
+  "classic-020": { cast: { motif: "bolt" }, activate: { motif: "bolt" }, aura: { look: "void", scope: "side" } }, // The Power to Punish
+  "classic-021": { activate: { motif: "offering" } }, // Turtinator
+  "classic-022": { cry: { motif: "vanish", palette: "Physical/wind" } }, // Mid Runner
+  "classic-023": { cast: { motif: "offering", palette: "Dark/blood" }, aura: { look: "ember", palette: "Dark/blood", scope: "side" } }, // Devil's Pact
+  "classic-024": { cast: { motif: "flight", palette: "Nerd/ink" } }, // Book of Knowledge
+  "classic-025": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Lag in the System
+  "classic-026": { cast: { motif: "flight" } }, // Rapid Draw
+  "classic-027": { death: { motif: "tally" } }, // Pestilent Slime
+  "classic-028": { cast: { motif: "vanish", palette: "Physical/wind" }, aura: { look: "storm", palette: "Physical/wind", scope: "side" } }, // Second Wind
+  "classic-029": { cast: { motif: "drain", palette: "Dark/blood" } }, // Book of Vital Kill
+  "classic-030": { bespoke: "recycleLoop" }, // Recycle
+  "classic-031": { cry: { motif: "conjure" } }, // Cookie Guild
+  "classic-032": { cast: { motif: "tether", palette: "Beast/felinor" } }, // Felinor Feelings
+  "classic-033": { trigger: { motif: "conjure" } }, // Joro
+  "classic-034": { cast: { motif: "recall", palette: "Nerd/ink" } }, // Ancient Acquisition
+  "classic-035": { cast: { motif: "flight" } }, // Prep
+  "classic-036": { cast: { motif: "bolt" } }, // Burn
+  "classic-037": { cast: { motif: "flight" } }, // Last Hurrah
+  "classic-038": { cast: { motif: "bolt", palette: "Hustle/cash" } }, // Jackiestan Auctioneer
+  "classic-039": { cast: { motif: "tally" } }, // Outbreak
+  "classic-040": { cry: { motif: "tether" } }, // MC Tech
+  "classic-041": "none: vanilla", // State of the Game
+  "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" }, aura: { look: "toxic", scope: "board" } }, // Transmutable Toxins
   "classic-043": { setPiece: "vortex" }, // Plague Nuke
-  "classic-044": "none: pending", // Back from the GY
-  "classic-045": { bespoke: "titanBloom" }, // Nature Titan
-  "classic-046": "none: pending", // Divine Favor
-  "classic-047": "none: pending", // Recurring Felinor
-  "classic-048": "none: pending", // Hired Shrimp
-  "classic-049": "none: pending", // Anti-Greed Machine
-  "classic-050": "none: pending", // Voidwalker
-  "classic-051": "none: pending", // Back Breaker
-  "classic-052": "none: pending", // Final Gambit
-  "classic-053": "none: pending", // Plague Crawler
-  "classic-054": "none: pending", // Rewind
-  "classic-055": "none: pending", // Book of Wildfire
+  "classic-044": { cast: { motif: "rise" } }, // Back from the GY
+  "classic-045": { entrance: "titanBloom", cry: { motif: "flight" } }, // Nature Titan
+  "classic-046": { cast: { motif: "flight" } }, // Divine Favor
+  "classic-047": { trigger: { motif: "recall", palette: "Beast/felinor" } }, // Recurring Felinor
+  "classic-048": { cry: { motif: "bolt" } }, // Hired Shrimp
+  "classic-049": "none: vanilla", // Anti-Greed Machine
+  "classic-050": { cry: { motif: "vanish", palette: "Dark/shadow" } }, // Voidwalker
+  "classic-051": { death: { motif: "wipe" } }, // Back Breaker
+  "classic-052": { cast: { motif: "flight" } }, // Final Gambit
+  "classic-053": { cry: { motif: "tally" }, trigger: { motif: "flight" } }, // Plague Crawler
+  "classic-054": { cast: { motif: "transmute" } }, // Rewind
+  "classic-055": { cast: { motif: "bolt", palette: "Fire" } }, // Book of Wildfire
   "classic-056": { bespoke: "tyrantSigil" }, // Spell Tyrant
-  "classic-057": "none: pending", // Echo
-  "classic-058": "none: pending", // Common Resources
-  "classic-059": "none: pending", // Plague Doctor
-  "classic-060": "none: pending", // Pile On
-  "classic-061": "none: pending", // Plague Bringer Goliath
-  "classic-062": "none: pending", // Living Bomb
-  "classic-063": "none: pending", // Crop Dusting
-  "classic-064": "none: pending", // Malzahar's Recycler
-  "classic-065": "none: pending", // Ace in the Hole
-  "classic-066": "none: pending", // EU Striker
-  "classic-067": "none: pending", // Felinor Feeler
-  "classic-068": "none: pending", // Small Card Lobbyist
-  "classic-069": "none: pending", // Plague Charger
-  "classic-070": "none: pending", // Book of Plague
+  "classic-057": { cast: { motif: "bolt" } }, // Echo
+  "classic-058": { cast: { motif: "flight" }, trigger: { motif: "flight" }, aura: { look: "bloom", scope: "side" } }, // Common Resources
+  "classic-059": { cry: { motif: "bolt" } }, // Plague Doctor
+  "classic-060": { cast: { motif: "conjure", palette: "Physical/sport" } }, // Pile On
+  "classic-061": { cry: { motif: "tally" } }, // Plague Bringer Goliath
+  "classic-062": { cast: { motif: "nova" }, trigger: { motif: "nova" }, aura: { look: "toxic", scope: "board" } }, // Living Bomb
+  "classic-063": { cast: { motif: "tally" } }, // Crop Dusting
+  "classic-064": { cast: { motif: "flight" }, trigger: { motif: "flight" }, aura: { look: "arcane", scope: "side" } }, // Malzahar's Recycler
+  "classic-065": { cast: { motif: "conjure" } }, // Ace in the Hole
+  "classic-066": { trigger: { motif: "conjure", palette: "Physical/sport" } }, // EU Striker
+  "classic-067": { cry: { motif: "shift", palette: "Beast/felinor" } }, // Felinor Feeler
+  "classic-068": "none: vanilla", // Small Card Lobbyist
+  "classic-069": "none: vanilla", // Plague Charger
+  "classic-070": { cast: { motif: "tally", palette: "Toxic" } }, // Book of Plague
   "classic-071": { cry: { motif: "lance" } }, // Lane Eater
-  "classic-072": "none: pending", // Grand Counterspell
-  "classic-073": "none: pending", // Nurse Cleaver
-  "classic-074": "none: pending", // Corpse Plantation
-  "classic-075": { aura: { look: "holy", scope: "side" } }, // Argusland
-  "classic-076": "none: pending", // Plague Bringer
-  "classic-077": "none: pending", // Anti-Magic Monkey
-  "classic-078": "none: pending", // Mutate Spell
-  "classic-079": "none: pending", // Risky Die
+  "classic-072": { cast: { motif: "negate" } }, // Grand Counterspell
+  "classic-073": "none: vanilla", // Nurse Cleaver
+  "classic-074": { cast: { motif: "tally" }, activate: { motif: "rise" }, aura: { look: "bloom", scope: "zone" } }, // Corpse Plantation
+  "classic-075": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // Argusland
+  "classic-076": { cry: { motif: "tally" } }, // Plague Bringer
+  "classic-077": "none: vanilla", // Anti-Magic Monkey
+  "classic-078": { cast: { motif: "vanish" }, activate: { motif: "vanish" }, aura: { look: "arcane", scope: "zone" } }, // Mutate Spell
+  "classic-079": { cast: { motif: "vanish" } }, // Risky Die
   "classic-080": { bespoke: "bigBoom" }, // BOOM! Big Max
-  "classic-081": "none: pending", // The Power to Thrive
-  "classic-082": "none: pending", // Sheeople
-  "classic-083": "none: pending", // Flame Lance
-  "classic-084": "none: pending", // Lockdown
-  "classic-085": "none: pending", // King Wagtoggle
-  "classic-086": "none: pending", // Genn
-  "classic-087": "none: pending", // Plague Chalice
-  "classic-088": "none: pending", // Siphon Squad
-  "classic-089": "none: pending", // Paul Allen's Ghost
-  "classic-090": "none: pending", // In Too Deep
-  "classic-t-glitch": "none: pending", // Glitch
+  "classic-081": { cast: { motif: "flight" }, activate: { motif: "flight" }, aura: { look: "bloom", scope: "side" } }, // The Power to Thrive
+  "classic-082": { death: { motif: "flight", palette: "Beast/wool" } }, // Sheeople
+  "classic-083": { cast: { motif: "lance" } }, // Flame Lance
+  "classic-084": { cast: { motif: "bind", palette: "Dark/curse" }, trigger: { motif: "bind", palette: "Dark/curse" }, aura: { look: "frost", palette: "Dark/curse", scope: "board" } }, // Lockdown
+  "classic-085": { bespoke: "crownSwap" }, // King Wagtoggle
+  "classic-086": "none: vanilla", // Genn
+  "classic-087": { cast: { motif: "negate" }, trigger: { motif: "negate" }, aura: { look: "void", scope: "zone" } }, // Plague Chalice
+  "classic-088": { cast: { motif: "curse" } }, // Siphon Squad
+  "classic-089": "none: vanilla", // Paul Allen's Ghost
+  "classic-090": { cast: { motif: "tally" }, trigger: { motif: "tally" }, aura: { look: "void", palette: "Dark/shadow", scope: "side" } }, // In Too Deep
+  "classic-t-glitch": "none: token with no text", // Glitch
 }

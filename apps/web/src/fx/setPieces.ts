@@ -31,10 +31,10 @@ export const SET_PIECE_SWALLOW_AT = 0.6;
 /** A set piece's cue lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
 export const SET_PIECE_TAIL_MS = 600;
 
-/** Every burst a set piece throws, at intensity "normal" (rule 9). */
+/** Every burst a set piece throws, at intensity "normal" (rule 9). R2803000: eased for the phone frame budget. */
 export const SET_PIECE_TUNING = {
-  implode: { count: 64, power: 1.6 },
-  pull: { count: 10, power: 0.7 },
+  implode: { count: 40, power: 1.6 },
+  pull: { count: 6, power: 0.7 },
   light: { count: 40, power: 1.2 },
 } as const;
 
@@ -55,7 +55,8 @@ export type SetPieceSpec = {
 /** R2800000: every set piece by key; a missing one fails `typecheck`. */
 export const SET_PIECES: { readonly [K in SetPieceKey]: SetPieceSpec } = {
   // #88 Twisting Nether: the board twists into the Nether and swallows what it destroys.
-  nether: { shape: "vortex", holdMs: SET_PIECE_HOLD_MS, spin: 1, trauma: 1, palette: "Dark" },
+  // R2803000: eased for the phone frame budget (was 1).
+  nether: { shape: "vortex", holdMs: SET_PIECE_HOLD_MS, spin: 1, trauma: 0.7, palette: "Dark" },
   // #100 Ceaseless Void: the board's edges fold into black around it, and it stands alone in the light.
   voidFold: { shape: "fold", holdMs: VOID_FOLD_HOLD_MS, spin: 1, trauma: ENTRANCE_TRAUMA.voidCollapse, palette: "Dark", entrance: "voidCollapse" },
   // Every other board clear: the shared vortex, turning the other way, in the card's own colors.
@@ -123,7 +124,8 @@ export function takenOf(entry: AnimationEntry, view: PlayerView): string[] {
   return taken;
 }
 
-function tintOf(look: FlavorLook): FxTint {
+/** A look's three colors as a DOM cue's tint (the Starship's launch wears one too, starship.ts). */
+export function tintOf(look: FlavorLook): FxTint {
   const [glow, rim, core] = look.colors;
   return { glow, rim, core: core ?? glow };
 }

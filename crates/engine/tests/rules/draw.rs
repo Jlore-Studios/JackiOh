@@ -3,7 +3,7 @@ use jackioh_engine::effects::draw as draw_effect;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{Bench, events_json, new_game, put, set_library, slot};
-use crate::rules::fixtures::scripts::{anti_oneshot, cn_virus, hinder, infinite_reserves};
+use crate::rules::fixtures::scripts::{anti_oneshot, hinder, infinite_reserves, super_virus};
 
 fn strings(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
@@ -85,9 +85,9 @@ mod draw_m1_t7 {
     }
 
     #[test]
-    fn cn_virus_deals_1_through_the_pipeline_shuffles_2_copies_and_draws_again() {
+    fn super_virus_deals_1_through_the_pipeline_shuffles_2_copies_and_draws_again() {
         let mut state = new_game("engine-test", None);
-        let events = draw_from(&mut state, &[cn_virus().id, "fx-2".to_string()], 1);
+        let events = draw_from(&mut state, &[super_virus().id, "fx-2".to_string()], 1);
 
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 1);
         assert_eq!(
@@ -96,13 +96,13 @@ mod draw_m1_t7 {
                 .p1
                 .library
                 .iter()
-                .filter(|c| c.def_id == cn_virus().id)
+                .filter(|c| c.def_id == super_virus().id)
                 .count(),
             2
         );
         assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-2"]));
         assert_eq!(events_json(&events, GameEventType::ShuffledIn).len(), 2);
-        assert_eq!(def_ids(&state.players.p1.graveyard), vec![cn_virus().id]);
+        assert_eq!(def_ids(&state.players.p1.graveyard), vec![super_virus().id]);
     }
 
     #[test]
@@ -115,7 +115,7 @@ mod draw_m1_t7 {
             Default::default(),
         );
         state.players.p1.hero.armor = 2;
-        let events = draw_from(&mut state, &[cn_virus().id, "fx-2".to_string()], 1);
+        let events = draw_from(&mut state, &[super_virus().id, "fx-2".to_string()], 1);
 
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
         assert_eq!(events_json(&events, GameEventType::Damage).len(), 0);
@@ -125,7 +125,7 @@ mod draw_m1_t7 {
                 .p1
                 .library
                 .iter()
-                .filter(|c| c.def_id == cn_virus().id)
+                .filter(|c| c.def_id == super_virus().id)
                 .count(),
             2
         );
@@ -135,14 +135,14 @@ mod draw_m1_t7 {
     fn r58_stops_a_cast_on_draw_chain_at_the_cap_and_leaves_the_next_card_in_hand() {
         let mut state = new_game("engine-test", None);
         state.players.p1.hero.armor = 5; // keep the hero alive; the cap is what ends the chain
-        let library: Vec<String> = (0..40).map(|_| cn_virus().id).collect();
+        let library: Vec<String> = (0..40).map(|_| super_virus().id).collect();
         let events = draw_from(&mut state, &library, 1);
 
         assert_eq!(
             events_json(&events, GameEventType::CardPlayed).len(),
             CAST_ON_DRAW_CHAIN_CAP as usize
         );
-        assert_eq!(def_ids(&state.players.p1.hand), vec![cn_virus().id]);
+        assert_eq!(def_ids(&state.players.p1.hand), vec![super_virus().id]);
     }
 
     #[test]

@@ -54,7 +54,7 @@ const BUSY = "[data-animating], [data-speaking]";
 
 /**
  * Whether the board under `root` is animating or speaking, read off its own marks as practice's pacing
- * does (`useBoardBusy` in `routes/practice.tsx`), so Play never starts a step over the last one's.
+ * does (`useBoardBusy` in `practice/aiTable.ts`), so Play never starts a step over the last one's.
  */
 export function useBoardBusy(root: HTMLElement | null): boolean {
   const [busy, setBusy] = useState(false);
@@ -276,6 +276,7 @@ export default function ReplayPlayer({
         replayPrompt
         resultForm="chip"
         loadouts={source.loadouts?.() ?? null}
+        phoneRailTop
         boardRail={
           <>
             {back}

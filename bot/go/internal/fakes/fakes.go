@@ -91,6 +91,8 @@ type FakeGitHub struct {
 	Artifacts      map[string][]*pyjson.Object
 	ArtifactZips   map[int][]byte
 	Reruns         []any
+	Cancels        []any // the runs cancelled, by id (#2948)
+	FullReruns     []any // the runs run again in full, by id (#2948)
 	Reacted        []Reaction
 	AutoMerge      map[string]string
 	AutoMergeHeads map[string]string
@@ -161,6 +163,8 @@ func NewFakeGitHub() *FakeGitHub {
 		Artifacts:      map[string][]*pyjson.Object{},
 		ArtifactZips:   map[int][]byte{},
 		Reruns:         []any{},
+		Cancels:        []any{},
+		FullReruns:     []any{},
 		Reacted:        []Reaction{},
 		AutoMerge:      map[string]string{},
 		AutoMergeHeads: map[string]string{},
@@ -756,6 +760,8 @@ func (o *Own) Dequeue(nodeID string) {
 
 func (o *Own) MarkReady(nodeID string) { o.self().pullByNode(nodeID).Set("draft", false) }
 
+func (o *Own) MarkDraft(nodeID string) { o.self().pullByNode(nodeID).Set("draft", true) }
+
 func (o *Own) MergePull(number int, method string, title string) *pyjson.Object {
 	thread := o.Threads.Item(number)
 	thread.Set("state", "closed")
@@ -897,6 +903,27 @@ func (o *Own) ListRuns(workflow string, status string, limit int, cached bool) [
 }
 
 func (o *Own) RerunFailedJobs(runID any) { o.Reruns = append(o.Reruns, runID) }
+
+// CancelRun records the cancel, and ends the run as cancelled (its jobs still going too), as
+// GitHub does within seconds; GitHub refuses one that had ended.
+func (o *Own) CancelRun(runID any) {
+	key := py.Str(runID)
+	if run, ok := o.Runs.Get(key).(*pyjson.Object); ok {
+		if pyjson.Equal(run.Get("status"), "completed") {
+			panic(githubError("Cannot cancel a workflow run that is completed.", 409))
+		}
+		run.Set("status", "completed").Set("conclusion", "cancelled")
+		for _, job := range o.Jobs[key] {
+			if !pyjson.Equal(job.Get("status"), "completed") {
+				job.Set("status", "completed").Set("conclusion", "cancelled")
+			}
+		}
+	}
+	o.Cancels = append(o.Cancels, runID)
+}
+
+// RerunRun records the full re-run.
+func (o *Own) RerunRun(runID any) { o.FullReruns = append(o.FullReruns, runID) }
 
 func (o *Own) GetGist(gistID string, cached bool) *pyjson.Object {
 	gist, ok := o.Gists[gistID]

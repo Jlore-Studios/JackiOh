@@ -154,7 +154,7 @@ mod tests {
             .collect()
     }
 
-    const BIGOT: &str = "core-002";
+    const SPECIESIST: &str = "core-002";
     const ENEMY: &str = "core-025";
 
     fn in_hand(s: &Scenario, def_id: &str) -> CardInstance {
@@ -394,22 +394,22 @@ mod tests {
 
         #[test]
         fn r1040_r1046_a_set_unit_pays_its_own_price_takes_no_targets_and_shows_as_a_trap() {
-            // Bigot (2): its Cry targets an enemy non-Human, but set face-down it names none and its
+            // Speciesist (2): its Cry targets an enemy non-Human, but set face-down it names none and its
             // text is dormant.
             let mut s = scenario(json!({
                 "seed": "breaker-set-price",
-                "p1": { "mana": 5, "hand": [BIGOT, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
+                "p1": { "mana": 5, "hand": [SPECIESIST, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
                 "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA] },
             }));
-            let bigot = in_hand(&s, BIGOT);
-            set_face_down(&mut s, &bigot.id, 2);
+            let speciesist = in_hand(&s, SPECIESIST);
+            set_face_down(&mut s, &speciesist.id, 2);
             assert!(s.state().pending.is_none(), "no target is asked");
             s.expect_mana(P1, 3);
             assert!(s.unit(P2, 1).is_some(), "the Cry is dormant");
             let set = s.backrow(P1, 2).expect("set in the backrow");
-            assert_eq!(set.def_id, BIGOT);
+            assert_eq!(set.def_id, SPECIESIST);
             let theirs = serde_json::to_string(&s.view(P2)).expect("the view serializes");
-            assert!(!theirs.contains(BIGOT), "p2 never reads the set Unit");
+            assert!(!theirs.contains(SPECIESIST), "p2 never reads the set Unit");
         }
 
         #[test]
@@ -437,19 +437,19 @@ mod tests {
         fn r1041_it_runs_its_cry_with_prompts_as_it_reveals() {
             let mut s = scenario(json!({
                 "seed": "breaker-reveal-cry",
-                "p1": { "mana": 8, "hand": [BIGOT, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
+                "p1": { "mana": 8, "hand": [SPECIESIST, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
                 "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA, VANILLA] },
             }));
             let enemy = s.unit(P2, 1).expect("the enemy").id;
-            let bigot = in_hand(&s, BIGOT);
-            set_face_down(&mut s, &bigot.id, 2);
+            let speciesist = in_hand(&s, SPECIESIST);
+            set_face_down(&mut s, &speciesist.id, 2);
             let set = s.backrow(P1, 2).expect("set").id;
             s.end_turn().end_turn();
             reveal(&mut s, &set);
             let open = s.state().pending.clone().expect("the Cry asks for its target");
             assert_eq!(open.player_id, P1);
             s.answer(json!([format!("instance:{enemy}")]));
-            assert_eq!(s.unit(P1, 2).expect("revealed").def_id, BIGOT);
+            assert_eq!(s.unit(P1, 2).expect("revealed").def_id, SPECIESIST);
             s.expect_in_zone(&enemy, "graveyard");
         }
 

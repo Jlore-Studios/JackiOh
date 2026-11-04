@@ -10,6 +10,7 @@ import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
 import { connectSources } from "../../static-pages.ts";
+import { GOOGLE_CLIENT_ID_PATTERN } from "./auth.ts";
 import { originOf } from "./navigate.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +27,12 @@ const PUBLIC = [
   "VITE_CATALOG_VERSION",
   // R666: provider names only; set once a provider is set up in the Supabase dashboard.
   "VITE_AUTH_OAUTH_PROVIDERS",
+  // R2983000: Google's web client ID, which Google's own button ships to every page; never its secret.
+  "VITE_GOOGLE_CLIENT_ID",
 ];
+
+/** What a secret looks like: Supabase's secret key, a service role, a database URL, a key file, Google's client secret. */
+const SECRET = /sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN|GOCSPX-/u;
 
 /**
  * Each build's file, the address it is served from, its Supabase project and the wrangler.jsonc
@@ -57,7 +63,7 @@ for (const { file, site, supabase } of BUILDS) {
     it("holds only public VITE_ settings, and nothing shaped like a secret", () => {
       for (const [key, value] of entries(file)) {
         expect(PUBLIC, key).toContain(key);
-        expect(value, key).not.toMatch(/sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN/u);
+        expect(value, key).not.toMatch(SECRET);
       }
       // The server's own list (PUBLIC_ENV_VARS in the Rust env parser) says the same names are public.
       const server = readFileSync(join(ROOT, "crates/server/src/env.rs"), "utf8");
@@ -89,6 +95,29 @@ for (const { file, site, supabase } of BUILDS) {
   });
 }
 
+describe("R2983000 the builds' Google client ID", () => {
+  const CLIENT_ID = "1234567890-abcdefghijklmnop.apps.googleusercontent.com";
+
+  it("R2983000 each build names one, empty or shaped like a Google client ID", () => {
+    for (const { file } of BUILDS) {
+      const values = Object.fromEntries(entries(file));
+      expect(Object.keys(values), file).toContain("VITE_GOOGLE_CLIENT_ID");
+      const value = values["VITE_GOOGLE_CLIENT_ID"] ?? "";
+      // Empty until a person fills it in from issue #2983: R666's redirect signs in meanwhile.
+      if (value !== "") expect(value, file).toMatch(GOOGLE_CLIENT_ID_PATTERN);
+    }
+  });
+
+  it("R2983000 refuses anything shaped like a secret", () => {
+    for (const secret of ["GOCSPX-abcdefghijklmnop", "sb_secret_abc", `${CLIENT_ID} GOCSPX-abc`, `${CLIENT_ID}x=1`, " "]) {
+      expect(GOOGLE_CLIENT_ID_PATTERN.test(secret), secret).toBe(false);
+    }
+    expect("GOCSPX-abcdefghijklmnop").toMatch(SECRET);
+    expect(GOOGLE_CLIENT_ID_PATTERN.test(CLIENT_ID)).toBe(true);
+    expect(CLIENT_ID).not.toMatch(SECRET);
+  });
+});
+
 describe("the two builds' Supabase projects", () => {
   it("are two, so nothing staging writes reaches a player's account", () => {
     const [production, staging] = BUILDS.map(({ file }) => Object.fromEntries(entries(file))["VITE_SUPABASE_URL"]);
@@ -103,25 +132,30 @@ describe("the two builds' Supabase projects", () => {
   });
 });
 
-describe("R1933000 production's card statistics hold live games alone", () => {
-  const WORKFLOWS = join(ROOT, ".github/workflows");
-  const text = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
-  const workflows = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
+const WORKFLOWS = join(ROOT, ".github/workflows");
+const workflowText = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
+const workflowFiles = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
 
-  it("files development records only from the development lanes, through staging's STATS_IMPORT_DATABASE_URL", () => {
-    const importers = workflows.filter((file) => text(file).includes("jackioh-server stats-import"));
+describe("R1933001 the development lanes file into both projects' card statistics", () => {
+  it("files development records only from the development lanes, through staging's and production's import logins", () => {
+    const importers = workflowFiles.filter((file) => workflowText(file).includes("jackioh-server stats-import"));
     expect(importers.sort()).toEqual(["gather.yml", "learn.yml"]);
     for (const file of importers) {
-      const secrets = [...text(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
-      expect(secrets.length, file).toBeGreaterThan(0);
-      expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL"]));
+      const secrets = [...workflowText(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
+      expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL", "PRODUCTION_STATS_IMPORT_DATABASE_URL"]));
+      // Each import names both, staging's first: a run files into each database it has a login for.
+      const filing = workflowText(file).slice(workflowText(file).lastIndexOf("for where in"));
+      expect(filing.startsWith("for where in staging production;"), file).toBe(true);
+      expect(filing, file).toMatch(/DATABASE_URL=\$url target\/release\/jackioh-server stats-import --totals-only/u);
     }
   });
+});
 
-  it("reads production through STATS_DATABASE_URL, which no workflow imports through", () => {
-    const readers = workflows.filter((file) => /\bSTATS_DATABASE_URL\b/u.test(text(file)));
+describe("R1933000 production's figures are read through STATS_DATABASE_URL, which no workflow imports through", () => {
+  it("is read by the win-rate refresh and the size check alone, neither of which imports", () => {
+    const readers = workflowFiles.filter((file) => /\bSTATS_DATABASE_URL\b/u.test(workflowText(file)));
     expect(readers.sort()).toEqual(["db-size.yml", "winrates-refresh.yml"]);
-    for (const file of readers) expect(text(file), file).not.toContain("stats-import");
+    for (const file of readers) expect(workflowText(file), file).not.toContain("stats-import");
   });
 });
 

@@ -105,7 +105,7 @@ mod tests {
         (1..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id)).collect()
     }
 
-    fn ids(row: &[Option<&str>]) -> Vec<Option<String>> {
+    fn row_ids(row: &[Option<&str>]) -> Vec<Option<String>> {
         row.iter().map(|id| id.map(str::to_string)).collect()
     }
 
@@ -146,7 +146,7 @@ mod tests {
             fn summons_the_five_stack_into_unit_zones_1_to_5_in_order_each_on_its_base_face_summoning_sick() {
                 let mut s = league(json!({}), false, None);
                 s.play(LEAGUE, json!({}));
-                assert_eq!(row(&s), ids(&FIVE.map(Some)));
+                assert_eq!(row(&s), row_ids(&FIVE.map(Some)));
                 for lane in 1..=5 {
                     let unit = s.unit(P1, lane);
                     assert_eq!(unit.as_ref().map(|unit| unit.radiant), Some(false));
@@ -204,7 +204,7 @@ mod tests {
             fn s3_2_an_occupied_zone_is_skipped_and_its_loser_is_not_summoned_elsewhere() {
                 let mut s = league(json!({ "field": [{ "def": BODY, "lane": 2 }] }), false, None);
                 s.play(LEAGUE, json!({}));
-                assert_eq!(row(&s), ids(&[Some(FIVE[0]), Some(BODY), Some(FIVE[2]), Some(FIVE[3]), Some(FIVE[4])]));
+                assert_eq!(row(&s), row_ids(&[Some(FIVE[0]), Some(BODY), Some(FIVE[2]), Some(FIVE[3]), Some(FIVE[4])]));
             }
 
             #[test]
@@ -212,7 +212,7 @@ mod tests {
                 let mut s = league(json!({}), false, None);
                 lock_zone(s.state_mut(), ZoneRef { player: P1, row: Row::Units, lane: 4 });
                 s.play(LEAGUE, json!({}));
-                assert_eq!(row(&s), ids(&[Some(FIVE[0]), Some(FIVE[1]), Some(FIVE[2]), None, Some(FIVE[4])]));
+                assert_eq!(row(&s), row_ids(&[Some(FIVE[0]), Some(FIVE[1]), Some(FIVE[2]), None, Some(FIVE[4])]));
             }
 
             #[test]
@@ -220,7 +220,7 @@ mod tests {
                 let mut s = league(json!({}), false, None);
                 reserve_zone(s.state_mut(), ZoneRef { player: P1, row: Row::Units, lane: 5 });
                 s.play(LEAGUE, json!({}));
-                assert_eq!(row(&s), ids(&[Some(FIVE[0]), Some(FIVE[1]), Some(FIVE[2]), Some(FIVE[3]), None]));
+                assert_eq!(row(&s), row_ids(&[Some(FIVE[0]), Some(FIVE[1]), Some(FIVE[2]), Some(FIVE[3]), None]));
             }
 
             #[test]
@@ -242,7 +242,7 @@ mod tests {
             fn a_full_board_summons_nothing() {
                 let mut s = league(json!({ "field": [BODY, BODY, BODY, BODY, BODY] }), false, None);
                 s.play(LEAGUE, json!({}));
-                assert_eq!(row(&s), ids(&[Some(BODY), Some(BODY), Some(BODY), Some(BODY), Some(BODY)]));
+                assert_eq!(row(&s), row_ids(&[Some(BODY), Some(BODY), Some(BODY), Some(BODY), Some(BODY)]));
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Summoned));
             }
 
@@ -290,7 +290,7 @@ mod tests {
             fn summons_all_five_radiant() {
                 let mut s = league(json!({}), true, None);
                 s.play(LEAGUE, json!({}));
-                assert_eq!(row(&s), ids(&FIVE.map(Some)));
+                assert_eq!(row(&s), row_ids(&FIVE.map(Some)));
                 for lane in 1..=5 {
                     assert_eq!(s.unit(P1, lane).map(|unit| unit.radiant), Some(true));
                 }

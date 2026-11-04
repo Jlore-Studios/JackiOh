@@ -45,6 +45,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const GRIP: &str = "classicplus-012-3";
     const MENACE: &str = "core-019"; // (3) Unit
     const ROCK: &str = "core-066"; // (4) Unit
@@ -72,7 +74,6 @@ mod tests {
 
     #[test]
     fn r386_a_degrade_makes_the_taken_unit_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GRIP, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE] },
@@ -120,7 +121,6 @@ mod tests {
 
         #[test]
         fn r129_a_deck_with_no_unit_or_an_empty_one_gives_nothing_and_draws_nothing_from_the_rng() {
-            crate::register_all();
             let mut spells = scenario(json!({
                 "p1": { "hand": [GRIP, FILLER] },
                 "p2": { "hand": [FILLER], "library": [LUNAR, FILLER] },
@@ -150,7 +150,6 @@ mod tests {
 
         #[test]
         fn r11_r218_a_unit_token_card_leaves_a_library_only_by_a_draw_so_the_steal_passes_over_it() {
-            crate::register_all();
             let mut only = scenario(json!({
                 "p1": { "hand": [GRIP, FILLER] },
                 "p2": { "hand": [FILLER], "library": [RUSH_TOKEN] },

@@ -12,7 +12,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    act, act_logged, events_of_type, in_hand, json_of, matches_object, put, set_library, slot,
+    act, act_logged, by, events_of_type, ids, in_hand, input, json_of, matches_object, put, set_library, slot,
 };
 use crate::rules::fixtures::prompt_harness::{
     answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
@@ -21,17 +21,6 @@ use crate::rules::fixtures::prompts::{
     BACK_BUDGET, GLITCH_OPTIONS, PICKLE_OPTIONS, QUEST_REWARDS, QUIZ, acquire, back_from_gy, cross_pick,
     glitch, grunt, mill, mind_melt, numberer, papaya, pickle, prize, quest, quickdraw_of, quiz,
 };
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
 
 fn mode(option: &str) -> Selection {
     Selection::Mode {
@@ -51,10 +40,6 @@ fn keys(options: &[PromptOption]) -> Vec<String> {
 
 fn labels(options: &[PromptOption]) -> Vec<String> {
     options.iter().map(|option| option.label.clone()).collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn sorted(mut values: Vec<String>) -> Vec<String> {

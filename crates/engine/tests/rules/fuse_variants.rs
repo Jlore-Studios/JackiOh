@@ -26,7 +26,7 @@ use crate::rules::fixtures::generation::{
     plain_trap, playing, replayed, slime, slop, x_unit,
 };
 use crate::rules::fixtures::harness::{
-    Bench, json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
+    Bench, ids, input, json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
 };
 
 fn run(state: &mut GameState, sink: &mut Bench, effect: Effect, self_: Option<&CardInstance>) {
@@ -51,10 +51,6 @@ fn fuse_in(state: &mut GameState, sink: &mut Bench, args: Value) -> Option<CardI
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
     let mut sink = Bench::new(state);
     fuse_in(state, &mut sink, args)
-}
-
-fn input(literal: Value) -> ActionInput {
-    json_as(literal)
 }
 
 fn fused_events(events: &Value) -> Vec<Value> {
@@ -96,10 +92,6 @@ fn digest_shaped(id: &str) -> bool {
         .is_some_and(|(count, digest)| {
             !count.is_empty() && count.bytes().all(|byte| byte.is_ascii_digit()) && hex16(digest)
         })
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// `(attack, maxHealth)` as §10.4's layers read the card.

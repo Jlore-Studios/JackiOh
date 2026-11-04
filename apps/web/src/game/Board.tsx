@@ -390,6 +390,7 @@ function Seat({
   notices,
   emotes,
   aside,
+  heroLabel,
 }: {
   view: PlayerView;
   side: Side;
@@ -402,6 +403,8 @@ function Seat({
   emotes?: BoardProps["emotes"];
   /** The route's chrome beside this seat's hero (`HeroAside`), drawn outside the hero's own clicks. */
   aside?: ReactNode;
+  /** The opponent hero's seat label (a practice game's `AI · Easy`); drawn only on the opponent's seat. */
+  heroLabel?: string;
 }): ReactElement {
   const seat = sideView(view, side);
   // R1297000: the viewer's deck wears their card back; R1834004: the other seat's its loadout's, else
@@ -422,6 +425,7 @@ function Seat({
         onControl={onControl}
         pops={pops.get(testid.hero(side))}
         emotes={emotes?.(side)}
+        {...(side === "opponent" && heroLabel !== undefined ? { seatLabel: heroLabel } : {})}
       />
       {aside === undefined || aside === null ? null : (
         <div className="hero-aside" data-side={side}>
@@ -550,6 +554,8 @@ function ControlButton({
 export default function Board({
   view,
   highlight = NO_HIGHLIGHT,
+  enemyLabel,
+  controlExtras,
   animating,
   animated,
   turnClock,
@@ -558,6 +564,7 @@ export default function Board({
   heroAside,
   boardNotices,
   market,
+  showOfferDraw = true,
   sandDisabled = false,
   onClick,
   onControl,
@@ -632,7 +639,9 @@ export default function Board({
   const theirBackdrop = theirSlots.field === DEFAULT_CARD_COSMETICS.field ? undefined : theirSlots.field;
   const theirTable = theirSlots.table === DEFAULT_CARD_COSMETICS.table ? undefined : theirSlots.table;
 
-  const offerDraw = (
+  // §9.9, R188: a board against the practice AI, which declines every draw offer at once, draws no Offer
+  // draw (`showOfferDraw`), in the bar or ⋯'s menu. It only hides the control: the action stays legal.
+  const offerDraw = showOfferDraw ? (
     <ControlButton
       control="offer-draw"
       testId={testid.offerDraw}
@@ -642,7 +651,7 @@ export default function Board({
       animating={animating}
       onPress={() => onControl?.("offer-draw")}
     />
-  );
+  ) : null;
   const concede = (
     <ControlButton
       control="concede"
@@ -700,6 +709,7 @@ export default function Board({
           notices={notices}
           emotes={emotes}
           aside={heroAside?.enemy}
+          {...(enemyLabel === undefined ? {} : { heroLabel: enemyLabel })}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
@@ -781,6 +791,7 @@ export default function Board({
           )}
           {phoneBar ? null : offerDraw}
           {phoneBar ? null : concede}
+          {phoneBar ? null : controlExtras}
           {/* Phones only (board.css): the log's own place on the board is hidden there. */}
           <button
             type="button"
@@ -797,12 +808,13 @@ export default function Board({
             <MatchMenu
               open={menuOpen}
               onOpenChange={openMenu}
-              dot={offerDrawText.title !== undefined}
-              glow={glowAttr(highlight, testid.offerDraw) ?? glowAttr(highlight, testid.concede)}
-              animating={animating?.get(testid.offerDraw) ?? animating?.get(testid.concede)}
+              dot={offerDraw !== null && offerDrawText.title !== undefined}
+              glow={(offerDraw === null ? undefined : glowAttr(highlight, testid.offerDraw)) ?? glowAttr(highlight, testid.concede)}
+              animating={(offerDraw === null ? undefined : animating?.get(testid.offerDraw)) ?? animating?.get(testid.concede)}
             >
               {offerDraw}
               {concede}
+              {controlExtras}
               <FriendsButton placement="menu" />
             </MatchMenu>
           ) : (

@@ -70,6 +70,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const BURN: &str = "classic-036";
@@ -110,7 +112,6 @@ mod tests {
 
             #[test]
             fn deals_2_to_a_unit_then_with_4_mana_left_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BURN, ANCHOR], "library": [A, B] },
                     "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -126,7 +127,6 @@ mod tests {
 
             #[test]
             fn deals_2_to_a_hero_either_side() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BURN, BURN, ANCHOR], "library": [A, B] },
                     "p2": { "hand": [ANCHOR] },
@@ -148,7 +148,6 @@ mod tests {
 
             #[test]
             fn with_3_mana_left_it_draws_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BURN, ANCHOR], "library": [A], "mana": 3 },
                     "p2": { "hand": [ANCHOR] },
@@ -162,7 +161,6 @@ mod tests {
 
             #[test]
             fn mana_left_is_after_paying_a_burn_made_to_cost_1_leaves_3_of_4_and_draws_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BURN, "costMod": 1 }, ANCHOR], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -176,7 +174,6 @@ mod tests {
 
             #[test]
             fn s2_3_temporary_mana_above_max_counts_as_mana_left() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "turn": 3,
                     "p1": { "hand": [BURN, ANCHOR], "library": [A], "mana": 5 },
@@ -190,7 +187,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_deals_3_a_degrade_of_the_threshold_to_5_stops_4_mana_drawing_an_upgrade_of_draw_draws_2() {
-                crate::register_all();
                 let mut dmg = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(dmg.card_mut(BURN), "damage", 1);
                 dmg.play(BURN, json!({ "targets": at_hero() }));
@@ -213,7 +209,6 @@ mod tests {
 
             #[test]
             fn deals_4_and_with_max_mana_4_draws_1_even_with_no_mana_left() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": [A], "mana": 0 },
                     "p2": { "hand": [ANCHOR] },
@@ -227,7 +222,6 @@ mod tests {
 
             #[test]
             fn s2_3_with_max_mana_3_it_draws_nothing_however_much_mana_is_left() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "turn": 5,
                     "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": [A], "mana": 9 },
@@ -243,7 +237,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_the_threshold_to_5_stops_max_mana_4_drawing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": [A] },
                     "p2": { "hand": [ANCHOR] },

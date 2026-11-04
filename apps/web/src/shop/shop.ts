@@ -13,6 +13,7 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
+import { impliedBy, isOfferedId, offeredOn } from "../cards/versions.ts";
 import type { CollectionResponse, CosmeticSlot, CosmeticTokenStep, OwnedCosmeticsResponse } from "../net/api.ts";
 
 /** One registry entry, structurally: what the filters read. */
@@ -38,8 +39,8 @@ export function cosmeticTier(rarity: CosmeticRarity): number {
   return COSMETIC_TIER_ORDER.indexOf(rarity);
 }
 
-/** The kinds a player wears on a card (`CosmeticKind::is_per_card`); the rest sit on the account. */
-const PER_CARD_KINDS: readonly string[] = ["foil", "finish", "border", "fullArt"];
+/** The kinds a player wears on a card (`CosmeticKind::is_per_card`, R2725000: a version and an augment too); the rest sit on the account. */
+const PER_CARD_KINDS: readonly string[] = ["foil", "finish", "border", "fullArt", "version", "augment"];
 
 export function isPerCardKind(kind: string): boolean {
   return PER_CARD_KINDS.includes(kind);
@@ -123,30 +124,32 @@ export function ownsMax(cardId: string, quantities: Map<string, number>): boolea
 
 /**
  * The owned cards a per-card cosmetic fits on (the server's `choice_of`): a full art its own card alone
- * (R1313000), any other per-card kind every card owned at `MAX_COPIES`; null for an account cosmetic.
+ * (R1313000), a version or an augment each card it is offered (R2725001), any other per-card kind every card
+ * owned at `MAX_COPIES`; null for an account cosmetic.
  */
 export function fittingCards(cosmetic: RegistryCosmetic, quantities: Map<string, number>): string[] | null {
   if (!isPerCardKind(cosmetic.kind)) return null;
   if (cosmetic.card !== undefined) return ownsMax(cosmetic.card, quantities) ? [cosmetic.card] : [];
+  const offered = isOfferedId(cosmetic.id);
   const fits: string[] = [];
   for (const [cardId, quantity] of quantities) {
-    if (quantity >= MAX_COPIES && CATALOG[cardId] !== undefined) fits.push(cardId);
+    if (quantity >= MAX_COPIES && CATALOG[cardId] !== undefined && (!offered || offeredOn(cosmetic.id, cardId))) fits.push(cardId);
   }
   return fits;
 }
 
-/** Whether the account already owns a cosmetic there: on the card, or on the account. */
+/** Whether the account already owns a cosmetic there: on the card (R2725002: a retired full art's row owning what it implies), or on the account. */
 export function ownedThere(cosmeticId: string, cardId: string | null, owned: OwnedCosmeticsResponse): boolean {
   return cardId === null
     ? owned.account.includes(cosmeticId)
-    : owned.cards.some((held) => held.cardId === cardId && held.cosmeticId === cosmeticId);
+    : owned.cards.some((held) => held.cardId === cardId && (held.cosmeticId === cosmeticId || impliedBy(held.cosmeticId).includes(cosmeticId)));
 }
 
 /**
  * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000) but never the
- * Jlorious card back, which only reaching Jlorious grants (R2755000), the account does not own, a
- * per-card one for a card it owns (the server's `buy_chase`). `registry` defaults to the shipped
- * one; a test passes its own.
+ * Jlorious card back, which only reaching Jlorious grants (R2755000), nor a retired full art (R2725000), the
+ * account does not own, a per-card one for a card it owns (the server's `buy_chase`). `registry` defaults to the
+ * shipped one; a test passes its own.
  */
 export function chaseCandidates(
   owned: OwnedCosmeticsResponse,
@@ -154,7 +157,7 @@ export function chaseCandidates(
   registry: readonly RegistryCosmetic[] = REGISTRY,
 ): RegistryCosmetic[] {
   return registry.filter((cosmetic) => {
-    if (cosmetic.default || cosmetic.starter) return false;
+    if (cosmetic.default || cosmetic.starter || cosmetic.kind === "fullArt") return false;
     if (cosmetic.jlorious === true || cosmeticTier(cosmetic.rarity) < cosmeticTier("Legendary")) return false;
     const fits = fittingCards(cosmetic, quantities);
     if (fits === null) return !owned.account.includes(cosmetic.id);

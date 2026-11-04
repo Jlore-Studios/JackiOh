@@ -236,7 +236,7 @@ fn one_of_each_shipped_set() -> Vec<CardDef> {
         .collect()
 }
 
-fn ids(scored: &[Scored]) -> Vec<String> {
+fn scored_ids(scored: &[Scored]) -> Vec<String> {
     scored.iter().map(|entry| entry.def.id.clone()).collect()
 }
 
@@ -268,9 +268,9 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         assert_eq!(candidates, expected);
         let ranked = rank(&state, P1, &no_options());
         assert_eq!(ranked.len(), pool().len());
-        assert!(!ids(&ranked).contains(&ZEPHYRS.to_string()));
-        assert!(!ids(&ranked).contains(&TOKEN.to_string()));
-        assert!(!ids(&ranked).contains(&UNSHIPPED.to_string()));
+        assert!(!scored_ids(&ranked).contains(&ZEPHYRS.to_string()));
+        assert!(!scored_ids(&ranked).contains(&TOKEN.to_string()));
+        assert!(!scored_ids(&ranked).contains(&UNSHIPPED.to_string()));
     }
 
     #[test]
@@ -280,13 +280,13 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         state.players.p1.hero.health = 7;
         state.players.p1.mana.current = 3;
 
-        let first = ids(&rank(&state, P1, &no_options()));
-        assert_eq!(ids(&rank(&state, P1, &no_options())), first);
-        assert_eq!(ids(&rank(&state, P1, &no_options())), first);
+        let first = scored_ids(&rank(&state, P1, &no_options()));
+        assert_eq!(scored_ids(&rank(&state, P1, &no_options())), first);
+        assert_eq!(scored_ids(&rank(&state, P1, &no_options())), first);
         // §9.3: the state is JSON, so a round-tripped copy is the same state and ranks the same.
-        assert_eq!(ids(&rank(&clone_state(&state), P1, &no_options())), first);
+        assert_eq!(scored_ids(&rank(&clone_state(&state), P1, &no_options())), first);
         // A total order is a property of the pool, not of the seat that asked.
-        assert_eq!(ids(&rank(&state, P2, &no_options())).len(), pool().len());
+        assert_eq!(scored_ids(&rank(&state, P2, &no_options())).len(), pool().len());
     }
 
     #[test]
@@ -294,7 +294,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         let state = game("scorer-total-order", &[]);
         let ranked = rank(&state, P1, &no_options());
 
-        let unique: IndexSet<String> = ids(&ranked).into_iter().collect();
+        let unique: IndexSet<String> = scored_ids(&ranked).into_iter().collect();
         assert_eq!(unique.len(), ranked.len());
         for i in 1..ranked.len() {
             let before = &ranked[i - 1];
@@ -308,7 +308,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         let mut shuffled: Vec<Scored> = ranked.clone();
         shuffled.reverse();
         shuffled.sort_by(compare_scored);
-        assert_eq!(ids(&shuffled), ids(&ranked));
+        assert_eq!(scored_ids(&shuffled), scored_ids(&ranked));
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
             .find(|entry| entry.def.id == BIG_BODY)
             .expect("the big body is ranked");
         assert_eq!(big.priority, ScorePriority::Value);
-        let order = ids(&ranked);
+        let order = scored_ids(&ranked);
         assert!(index_of(&order, POISON_SNAKE) < index_of(&order, BIG_BODY));
     }
 
@@ -389,7 +389,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         assert!(poison.parts.kills > 0.0);
         assert_eq!(poison.parts.clear, 0.0);
         assert_eq!(plain.parts.kills, 0.0);
-        let order = ids(&ranked);
+        let order = scored_ids(&ranked);
         assert!(index_of(&order, POISON_SNAKE) < index_of(&order, VANILLA));
     }
 
@@ -417,7 +417,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         // A fixed, empty state: nothing is lethal, there is no enemy board and the hero is at full.
         assert!(ranked.iter().all(|entry| entry.priority == ScorePriority::Value));
         assert_eq!(
-            ids(&ranked),
+            scored_ids(&ranked),
             vec![
                 BIG_BODY,     // 18 stats for 2 mana
                 CHARGER,      // 8 stats for 1 mana
@@ -434,8 +434,8 @@ mod the_zephyrs_scorer_r29_m3_t7 {
 
         let three = top_three(&state, P1, &no_options());
         assert_eq!(three.len(), 3);
-        assert_eq!(ids(&three), vec![BIG_BODY, CHARGER, HEALER]);
-        assert_eq!(ids(&three), ids(&ranked[..3]));
+        assert_eq!(scored_ids(&three), vec![BIG_BODY, CHARGER, HEALER]);
+        assert_eq!(scored_ids(&three), scored_ids(&ranked[..3]));
     }
 
     #[test]
@@ -446,7 +446,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         // The sleeper is a 0/1 that prints a 20/20 radiant face, so radiant picks put it first (§5.2).
         assert_eq!(rank(&state, P1, &radiant_picks())[0].def.id, SLEEPER);
         assert_eq!(
-            ids(&top_three(&state, P1, &radiant_picks())),
+            scored_ids(&top_three(&state, P1, &radiant_picks())),
             vec![SLEEPER, BIG_BODY, CHARGER]
         );
     }
@@ -493,7 +493,7 @@ mod r1446_the_perfect_pool {
             assert_eq!(rank(&state, P1, &no_options())[0].def.id, UNSHIPPED);
         }
         assert!(!in_pool());
-        assert!(!ids(&rank(&state, P1, &no_options())).contains(&UNSHIPPED.to_string()));
+        assert!(!scored_ids(&rank(&state, P1, &no_options())).contains(&UNSHIPPED.to_string()));
     }
 
     #[test]
@@ -533,14 +533,14 @@ mod r1446_the_perfect_pool {
         );
         let state = game("scorer-plus-radiant", &[plus_sleeper]);
 
-        let base = ids(&rank(&state, P1, &no_options()));
+        let base = scored_ids(&rank(&state, P1, &no_options()));
         assert_eq!(base[0], BIG_BODY);
         assert!(index_of(&base, PLUS_SLEEPER) > 2);
         let radiant = rank(&state, P1, &radiant_picks());
         assert_eq!(radiant[0].def.id, PLUS_SLEEPER);
         assert_eq!(radiant[0].def.set, SetName::ClassicPlus);
         assert_eq!(
-            ids(&top_three(&state, P1, &radiant_picks())),
+            scored_ids(&top_three(&state, P1, &radiant_picks())),
             vec![PLUS_SLEEPER, SLEEPER, BIG_BODY]
         );
     }

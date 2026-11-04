@@ -42,6 +42,8 @@ mod tests {
     use jackioh_engine::setup::{deal_coins, mulligan_prompt_for};
     use jackioh_engine::state::create_game;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use jackioh_engine::view_for::view_for;
     use jackioh_engine::zones::{OffFieldZone, move_to_zone};
 
@@ -120,7 +122,7 @@ mod tests {
     }
 
     /// The ids of a query's answer.
-    fn ids<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
+    fn ids_of_defs<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
         defs.into_iter().map(|card| card.id.clone()).collect()
     }
 
@@ -182,10 +184,10 @@ mod tests {
         fn r245_is_never_in_a_random_pool_only_a_query_that_names_the_token_pool_reaches_it_s5_1() {
             crate::register_all();
             let coin = COIN_DEF_ID.to_string();
-            assert!(!ids(query(&json_as(json!({})))).contains(&coin));
-            assert!(!ids(query(&json_as(json!({ "type": "Spell", "cost": 0 })))).contains(&coin));
-            assert!(ids(query(&json_as(json!({ "tags": ["Token"] })))).contains(&coin));
-            assert_eq!(ids(query(&json_as(json!({ "defId": "core-t-coin" })))), vec![coin]);
+            assert!(!ids_of_defs(query(&json_as(json!({})))).contains(&coin));
+            assert!(!ids_of_defs(query(&json_as(json!({ "type": "Spell", "cost": 0 })))).contains(&coin));
+            assert!(ids_of_defs(query(&json_as(json!({ "tags": ["Token"] })))).contains(&coin));
+            assert_eq!(ids_of_defs(query(&json_as(json!({ "defId": "core-t-coin" })))), vec![coin]);
         }
     }
 
@@ -194,7 +196,6 @@ mod tests {
 
         #[test]
         fn r245_gains_1_temporary_mana_above_the_cap_and_max_mana_does_not_move_s2_3() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-t-coin", "core-010"] } }));
             let mana = s.state().players.p1.mana;
             assert_eq!((mana.current, mana.max), (4, 4));
@@ -209,7 +210,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gains_2_and_a_radiant_degrade_1() {
             for (radiant, upgrade, gain) in [(false, true, 2), (true, false, 1)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "hand": [{ "def": "core-t-coin", "radiant": radiant }, "core-010"] }
@@ -227,7 +227,6 @@ mod tests {
 
         #[test]
         fn r245_the_mana_lasts_this_turn_only_the_next_refresh_sets_current_back_to_max_s2_3() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-t-coin", "core-010"] } }));
             s.play("core-t-coin", json!({})).expect_mana(P1, 5);
 
@@ -238,7 +237,6 @@ mod tests {
 
         #[test]
         fn r245_is_a_play_and_a_spell_token_goes_to_the_graveyard_when_it_resolves_r11_r70() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-t-coin", "core-010"] } }));
             let played = s.state().counters.played;
 
@@ -251,7 +249,6 @@ mod tests {
 
         #[test]
         fn r245_n64_gifted_program_makes_it_radiant_as_it_is_played_so_it_gains_2_r213() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": ["core-t-coin", "core-010"], "backrow": ["core-064"] },
@@ -269,7 +266,6 @@ mod tests {
 
         #[test]
         fn r245_a_radiant_coin_gains_2_s8_conventions_only_the_number_changes() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": "core-t-coin", "radiant": true }, "core-010"] },
@@ -284,7 +280,6 @@ mod tests {
 
         #[test]
         fn r245_a_radiant_coin_s_mana_is_temporary_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": "core-t-coin", "radiant": true }, "core-010"] },

@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The twelve checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
+//! The thirteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
 //! bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -27,10 +27,10 @@
 //!      zones, never from `view_for`'s rules (R763, R764; a Glitch's reset or boards, R676, R678).
 //!   I7 no orphaned work (§9.3, §10.3, R113): a live game with no prompt open (§10.6, R265) has `work` empty;
 //!      a game over keeps its debt (I5; Classic #52 Final Gambit, #56 Spell Tyrant).
-//!   I8 every attack, switch and activation `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192), as
-//!      the server reduces without `legal_actions`. Not probed: R345, R923000, R79, `play` and a well-formed
-//!      `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694). Under a Mayor (R1200) a
-//!      target is refused.
+//!   I8 every attack, switch, activation and play `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2,
+//!      §10.5; #1192, #2978), as the server reduces without `legal_actions`. Not probed: R345, R923000,
+//!      R79 and a well-formed `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694).
+//!      Under a Mayor (R1200) a target is refused.
 //!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
 //!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
 //!      is `mana` (§2.3).
@@ -44,13 +44,19 @@
 //!      (effects spend nothing, R20; forced attacks neither, R53); Windfury's first attack spends the
 //!      switch exertion (R636); re-entry advances the stint, and a confirmed `mayAttackAgain` refresh
 //!      clears the old switch beside I2's attack-count baseline.
+//!   I13 every card a seat may play but `legal_actions` lists no play of says why (§10.8, R979000, R1571000,
+//!      R2975000): while it may act, each hand card, and each graveyard card a permission admits, carries
+//!      `playReason` exactly when no play of it is listed; read off I6's view and listing in `hidden`, so
+//!      sampled with it; a seat barred to the tutorial's cards (R2533000) is not asked.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
-use crate::config::{FATIGUE_DAMAGE, MIN_PLAGUE_PAYMENT, WINDFURY_ATTACKS};
+use crate::config::{
+    BACKROW_ZONES, FATIGUE_DAMAGE, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES, WINDFURY_ATTACKS,
+};
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
 use crate::play_choices::PlayAction;
@@ -58,10 +64,10 @@ use crate::prompts::prompt_owner_of;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
-    Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
-    Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId,
-    PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice,
-    ZoneName, has_keyword, opponent_of,
+    Action, ActionBody, CardType, CardView, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat,
+    DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind, PLAYER_IDS, PerPlayer, Phase,
+    PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team,
+    TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -958,6 +964,81 @@ pub fn hidden_information_violations(
     found
 }
 
+/// I13 for one seat on one state (§10.8, R979000, R1571000, R2975000): while it may act (R979000's
+/// window), each card in its hand, and each in its graveyard a permission admits, carries `playReason`
+/// exactly when `legal` lists no `play` of it; no other graveyard card carries one. A seat that plays
+/// only the tutorial's cards (R2533000) lists no play of any other and says nothing of it: not asked.
+pub fn play_reason_violations(
+    state: &GameState,
+    viewer: PlayerId,
+    view: &PlayerView,
+    legal: &[ActionBody],
+) -> Vec<String> {
+    if state.result.is_some()
+        || state.phase != Phase::Main
+        || state.pending.is_some()
+        || state.active != viewer
+    {
+        return Vec::new();
+    }
+    let listed: IndexSet<&str> = legal
+        .iter()
+        .filter_map(|action| match action {
+            ActionBody::Play { instance_id, .. } => Some(instance_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    let hand: &[CardView] = match &view.you.hand {
+        HandView::Cards(cards) => cards,
+        HandView::Count { .. } => &[],
+    };
+    let side = &state.players[viewer];
+    let piles = [
+        ("hand", &side.hand, hand, "R979000"),
+        (
+            "graveyard",
+            &side.graveyard,
+            view.you.graveyard.as_slice(),
+            "R1571000",
+        ),
+    ];
+    let mut found: Vec<String> = Vec::new();
+    for (pile, cards, sent, ruling) in piles {
+        for card in cards {
+            if crate::state::barred_from_play(state, viewer, card) {
+                continue;
+            }
+            let reason = sent
+                .iter()
+                .find(|shown| shown.instance_id == card.id)
+                .and_then(|shown| shown.play_reason.as_deref());
+            let admitted = pile == "hand" || crate::graveyard_play::playable_from_graveyard(state, card);
+            let is_listed = listed.contains(card.id.as_str());
+            match (admitted && !is_listed, reason) {
+                (true, None) => found.push(format!(
+                    "I13 silent card: {viewer}'s {pile} card {} ({}) has no play listed and no playReason on turn {} \
+                     (§10.8, {ruling})",
+                    card.id, card.def_id, state.turn
+                )),
+                (false, Some(reason)) => found.push(format!(
+                    "I13 stray reason: {viewer}'s {pile} card {} ({}) carries playReason \"{reason}\" though {} on turn {} \
+                     (§10.8, {ruling})",
+                    card.id,
+                    card.def_id,
+                    if is_listed {
+                        "a play of it is listed"
+                    } else {
+                        "no permission admits it"
+                    },
+                    state.turn
+                )),
+                _ => {}
+            }
+        }
+    }
+    found
+}
+
 /// I8's cards on one side: every card on that side's field, each pile's top and the cards dormant
 /// under it in both rows, and a Unit a carrier holds (§3.2, R13, R446).
 fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
@@ -1034,8 +1115,22 @@ fn forged_activations(
     out
 }
 
-/// I8 for one seat: every `switchPosition`, `attack`, `activate` and `activatePower` built from the board
-/// alone that `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2). Empty when clean.
+/// One zone group's identity in `unlisted_accepted`: a listed play's card, X, embiggen, Equip,
+/// Tributes and face-down — everything a re-sent play keeps but its zone.
+type PlayZoneGroup = (
+    String,
+    Option<i32>,
+    Option<bool>,
+    Option<bool>,
+    Option<Vec<String>>,
+    Option<RevealAt>,
+);
+
+/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower` and `play` that
+/// `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2, §10.5; #2978). Switches,
+/// attacks and activations are built from the board alone; plays are forged at the card level (a
+/// playable hand or graveyard card no listed play names) and at the zone level (a real lane no listed
+/// play of an otherwise listed card names). Empty when clean.
 pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
@@ -1097,6 +1192,115 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
                     name_of(card),
                     state.turn
                 ));
+            }
+        }
+    }
+    // I8's forged plays (§10.2, §10.5; #2978): a `play` `reduce` accepts that `legal` never lists.
+    // R90's bound drops choice combinations only, never a zone or a card, so forging at the card and
+    // the zone level is exact. No play is acceptable with a prompt or a mulligan open or the game
+    // over, so forging there would only burn reduces.
+    if state.pending.is_none() && state.mulligan.is_none() && state.result.is_none() {
+        let listed_plays: Vec<PlayAction> = legal.iter().filter_map(PlayAction::from_body).collect();
+        let listed_ids: IndexSet<&str> = listed_plays
+            .iter()
+            .map(|play| play.instance_id.as_str())
+            .collect();
+        // Card level: each hand card, and each graveyard card a permission admits, that no listed
+        // play names, sent with the default zone, the smallest X and no other choices. A card whose
+        // combinations R90's bound cut is skipped: its absence from the list proves nothing.
+        let side = &state.players[player];
+        let mut playable: Vec<&CardInstance> = side.hand.iter().collect();
+        playable.extend(
+            side.graveyard
+                .iter()
+                .filter(|card| crate::graveyard_play::playable_from_graveyard(state, card)),
+        );
+        for card in playable {
+            if listed_ids.contains(card.id.as_str()) {
+                continue;
+            }
+            if crate::play_choices::hand_play_choices_truncated(state, player, card) {
+                continue;
+            }
+            let forged = PlayAction {
+                instance_id: card.id.clone(),
+                zone: None,
+                x: crate::play_choices::chooses_x(state, card).then_some(MIN_CHOSEN_X),
+                embiggen: None,
+                equip: None,
+                tributes: None,
+                targets: None,
+                modes: None,
+                plague: None,
+                face_down: None,
+            };
+            let forged = forged.into_body();
+            if accepts(forged.clone()) {
+                found.push(format!(
+                    "I8 unlisted play accepted: {player} may play {} for {} on turn {}, though \
+                     legalActions does not list it (§10.2, §10.5)",
+                    serde_json::to_string(&forged).unwrap_or_default(),
+                    name_of(card),
+                    state.turn
+                ));
+            }
+        }
+        // Zone level: one listed play per group sharing its card, X, embiggen, Equip, Tributes and
+        // face-down, re-sent into each unit or backrow lane the group never lists. Refusals (taken,
+        // Locked, the wrong row, Equip-only, face-down-only) are silent; only an acceptance the list
+        // left out is a finding. A group that takes no zone is skipped, and zone `None` is never
+        // forged: where the card has listed plays the reducer's default-zone pick is listed behavior.
+        let mut groups: IndexMap<PlayZoneGroup, (PlayAction, Vec<ZoneChoice>)> = IndexMap::new();
+        for play in &listed_plays {
+            let entry = groups
+                .entry((
+                    play.instance_id.clone(),
+                    play.x,
+                    play.embiggen,
+                    play.equip,
+                    play.tributes.clone(),
+                    play.face_down,
+                ))
+                .or_insert_with(|| (play.clone(), Vec::new()));
+            if let Some(zone) = play.zone
+                && !entry.1.contains(&zone)
+            {
+                entry.1.push(zone);
+            }
+        }
+        for (template, zones) in groups.values() {
+            if template.zone.is_none() {
+                continue;
+            }
+            let card = find_instance(state, &template.instance_id);
+            let lanes = (1..=UNIT_ZONES)
+                .map(|lane| ZoneChoice {
+                    row: Row::Units,
+                    lane,
+                })
+                .chain((1..=BACKROW_ZONES).map(|lane| ZoneChoice {
+                    row: Row::Backrow,
+                    lane,
+                }));
+            for lane in lanes {
+                if zones.contains(&lane) {
+                    continue;
+                }
+                let forged = PlayAction {
+                    zone: Some(lane),
+                    ..template.clone()
+                };
+                let forged = forged.into_body();
+                if accepts(forged.clone()) {
+                    let name = card.map(name_of).unwrap_or_else(|| template.instance_id.clone());
+                    found.push(format!(
+                        "I8 unlisted play accepted: {player} may play {} for {} on turn {}, though \
+                         legalActions does not list it (§10.2, §10.5)",
+                        serde_json::to_string(&forged).unwrap_or_default(),
+                        name,
+                        state.turn
+                    ));
+                }
             }
         }
     }
@@ -1464,8 +1668,8 @@ fn name_of(card: &CardInstance) -> String {
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 for both seats
-/// and `unlisted` is I8.
+/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 and I13 for both
+/// seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2536,15 +2740,18 @@ impl InvariantMonitor {
         found
     }
 
-    /// I6 for both seats on a state the fuzz reached, setup's included. Empty when clean. A panic in
-    /// `view_for` or `legal_actions` is reported, not raised.
+    /// I6 and I13 for both seats on a state the fuzz reached, setup's included. Empty when clean. A panic
+    /// in `view_for` or `legal_actions` is reported, not raised.
     pub fn hidden(&self, state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         for viewer in PLAYER_IDS {
             let checked = catch_unwind(AssertUnwindSafe(|| {
                 let view = crate::view_for::view_for(state, viewer);
                 let legal = crate::reduce::legal_actions(state, viewer);
-                hidden_information_violations(state, viewer, &view, &legal)
+                // I13 reads the same view and listing (R2975000).
+                let mut violations = hidden_information_violations(state, viewer, &view, &legal);
+                violations.extend(play_reason_violations(state, viewer, &view, &legal));
+                violations
             }));
             match checked {
                 Ok(violations) => found.extend(violations),
@@ -2566,8 +2773,8 @@ impl InvariantMonitor {
         found
     }
 
-    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch and
-    /// activation `reduce` accepts. Empty when clean.
+    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch,
+    /// activation and play `reduce` accepts. Empty when clean.
     pub fn unlisted(&self, state: &GameState) -> Vec<String> {
         let Some(player) = crate::reduce::seat_to_act(state) else {
             return Vec::new();
@@ -2705,7 +2912,7 @@ impl DuosInvariantMonitor {
         found
     }
 
-    /// I6 for all seats: both duels' 1v1 hidden checks, plus `duos_view_for` redaction for each seat.
+    /// I6 and I13 for all seats: both duels' 1v1 checks, plus `duos_view_for` redaction for each seat.
     pub fn hidden(&self, state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         for (duel, monitor) in self.monitors.iter().enumerate() {

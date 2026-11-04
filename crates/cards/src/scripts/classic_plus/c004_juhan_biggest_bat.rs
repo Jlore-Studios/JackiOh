@@ -24,6 +24,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::sync::Arc;
 
     const JUHAN: &str = "classicplus-004";
@@ -40,7 +42,6 @@ mod tests {
     use crate::merged;
 
     fn setup(p1: Value, radiant_face: bool, p2: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(
                 json!({

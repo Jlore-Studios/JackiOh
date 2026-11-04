@@ -101,6 +101,8 @@ mod tests {
     };
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -137,7 +139,6 @@ mod tests {
     /// Play the card and answer the cost prompt with `cost`. p2 has a library, so a turn that ends
     /// on its own once p1's hand is spent deals p2 no fatigue.
     fn crafted_at(cost: i32) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID], "mana": 10 },
             "p2": { "hand": ["core-053"], "library": ["core-001", "core-002"] },
@@ -360,7 +361,6 @@ mod tests {
 
         #[test]
         fn r880_the_cost_is_a_number_prompt_from_0_to_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ID], "mana": 10 },
                 "p2": { "hand": ["core-053"] },
@@ -376,7 +376,6 @@ mod tests {
 
         #[test]
         fn r881_the_presets_are_rolled_from_the_match_rng_within_the_budget() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ID], "mana": 10 },
                 "p2": { "hand": ["core-053"] },
@@ -626,7 +625,6 @@ mod tests {
 
         #[test]
         fn r882_the_crafted_card_is_radiant_and_doubles_every_number_and_stat() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": ID, "radiant": true }], "mana": 10 },
                 "p2": { "hand": ["core-053"] },
@@ -657,7 +655,6 @@ mod tests {
 
         #[test]
         fn r882_it_is_exiled_after_it_resolves() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": ID, "radiant": true }], "mana": 10 },
                 "p2": { "hand": ["core-053"], "library": ["core-001", "core-002"] },
@@ -673,7 +670,6 @@ mod tests {
 
         #[test]
         fn r882_a_stats_only_unit_gains_the_cheapest_keyword() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": ID, "radiant": true }], "mana": 10 },
                 "p2": { "hand": ["core-053"] },

@@ -11,136 +11,136 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "meditative-001": "none: pending", // Disruptive Disruptor
-  "meditative-002": "none: pending", // Rampaging Rhino
-  "meditative-003": "none: pending", // Jlockwork Machine
-  "meditative-004": "none: pending", // Juicy Kumquat Melon
-  "meditative-005": "none: pending", // Death by 1000 cuts
-  "meditative-006": "none: pending", // Me no Likey
-  "meditative-007": "none: pending", // Introspection
-  "meditative-008": "none: pending", // Reach the Summit
-  "meditative-009": "none: pending", // Joint Filing
-  "meditative-010": "none: pending", // Double Counting
-  "meditative-011": "none: pending", // Double Header
-  "meditative-012": "none: pending", // Fear Mongerer
-  "meditative-013": "none: pending", // Gatling Pea
-  "meditative-014": "none: pending", // Prime Time
-  "meditative-015": "none: pending", // Smelly Steven
-  "meditative-016": "none: pending", // Trenful Trickster
-  "meditative-017": "none: pending", // True Craft a Card
-  "meditative-018": "none: pending", // Expedition12
-  "meditative-019": "none: pending", // Expedition123
-  "meditative-019-1": "none: pending", // Temporal Rift
-  "meditative-020": "none: pending", // Aestheticize the Game
-  "meditative-021": "none: pending", // API Key Fishing
-  "meditative-022": "none: pending", // Mind Games
-  "meditative-022-1": "none: pending", // Fortify Mind
-  "meditative-023": "none: pending", // Golly Bob Howdy
-  "meditative-024": "none: pending", // Polymorph
-  "meditative-025": "none: pending", // Blue-Eyes White Felinor
-  "meditative-026": "none: pending", // Alternate Fate
-  "meditative-027": "none: pending", // Clip-Farming Lawyer
-  "meditative-028": "none: pending", // Shade-iris
-  "meditative-028-1": "none: pending", // Ancient Curse
-  "meditative-029": "none: pending", // Forbiddenous Factory
-  "meditative-030": "none: pending", // Fickle E-Kitten
-  "meditative-030-1": "none: pending", // Love Bomb
-  "meditative-031": "none: pending", // The Conductor
-  "meditative-032": "none: pending", // Spiritually 中国
-  "meditative-033": "none: pending", // First Day of 学校
-  "meditative-034": "none: pending", // 高考
-  "meditative-035": "none: pending", // RCTA (CN)
-  "meditative-036": "none: pending", // CN Peptides
-  "meditative-037": "none: pending", // CN in a Bottle
-  "meditative-038": "none: pending", // H1B Printer
-  "meditative-039": "none: pending", // 赌石 Addict
-  "meditative-039-1": "none: pending", // Auspicious Rock
-  "meditative-039-2": "none: pending", // Jade
-  "meditative-039-3": "none: pending", // Dud
-  "meditative-039-4": "none: pending", // Red Jade
-  "meditative-039-5": "none: pending", // Jade Beauty
-  "meditative-040": { aura: { look: "bloom", scope: "board" } }, // Feng Shui
-  "meditative-041": "none: pending", // CN Smuggler
-  "meditative-042": "none: pending", // CN Flea Market
-  "meditative-043": "none: pending", // CN Jade Market
-  "meditative-044": "none: pending", // CN Jade Well
-  "meditative-045": "none: pending", // Knowledge Breaker
-  "meditative-045-1": "none: pending", // Knowledge Breaker Prime
-  "meditative-046": "none: pending", // Conjure Intellect
-  "meditative-047": "none: pending", // 饕餮
-  "meditative-048": "none: pending", // Tranquility
-  "meditative-049": "none: pending", // YileGPT
-  "meditative-049-1": "none: pending", // YileGPT Prime
-  "meditative-049-2": "none: pending", // Yile's Virus
-  "meditative-049-3": "none: pending", // AI Girlfriend
-  "meditative-050": "none: pending", // CN Tech
-  "meditative-051": "none: pending", // Devin Bot
-  "meditative-052": "none: pending", // Economic Anxiety
-  "meditative-053": "none: pending", // Prestige
-  "meditative-054": "none: pending", // Money Machine
-  "meditative-055": "none: pending", // Dragon Fruit
-  "meditative-056": "none: pending", // House Party
-  "meditative-057": "none: pending", // Clip-Farming Critikal
-  "meditative-058": "none: pending", // Permanent Underclassman
-  "meditative-059": "none: pending", // Permanent Upperclassman
-  "meditative-060": "none: pending", // Eschews
-  "meditative-061": "none: pending", // Joon Jorker
-  "meditative-062": "none: pending", // Small Time Recruits
-  "meditative-063": "none: pending", // Skull of J'Nari
-  "meditative-064": "none: pending", // Traitorous Blood
-  "meditative-065": "none: pending", // Keymaster Keenus
-  "meditative-066": "none: pending", // Fiery Waraxe
-  "meditative-067": "none: pending", // Sentient Cat Ears
-  "meditative-068": "none: pending", // Catnip
-  "meditative-069": "none: pending", // The Maestro
-  "meditative-070": "none: pending", // I'M WILL BE YOUR DOOM
-  "meditative-070-1": "none: pending", // Ready… I'm
-  "meditative-071": "none: pending", // Pareto Optimality
-  "meditative-071-1": "none: pending", // The Cane
-  "meditative-072": "none: pending", // The Banisher
-  "meditative-073": "none: pending", // Plate Packer
-  "meditative-074": "none: pending", // Montaña Giant
-  "meditative-075": "none: pending", // Ever Growing Tree
-  "meditative-076": "none: pending", // Do or Die
-  "meditative-077": "none: pending", // Bulk Booster
+  "meditative-001": { cast: { motif: "flight" }, aura: { look: "frost", scope: "zone" } }, // Disruptive Disruptor
+  "meditative-002": "none: no motif reads discarded (its trigger's discard row plays)", // Rampaging Rhino
+  "meditative-003": { trigger: { motif: "vanish" } }, // Jlockwork Machine
+  "meditative-004": { cast: { motif: "flight" } }, // Juicy Kumquat Melon
+  "meditative-005": { cast: { motif: "barrage", palette: "Physical/blade" } }, // Death by 1000 cuts
+  "meditative-006": { cast: { motif: "tether", palette: "Hustle/cash" } }, // Me no Likey
+  "meditative-007": { cast: { motif: "nova" }, trigger: { motif: "nova" }, aura: { look: "holy", scope: "side" } }, // Introspection
+  "meditative-008": { cast: { motif: "bolt" } }, // Reach the Summit
+  "meditative-009": { cast: { motif: "bless" }, aura: { look: "arcane", palette: "Nerd/ink", scope: "zone" } }, // Joint Filing
+  "meditative-010": { cast: { motif: "bless" }, aura: { look: "bloom", palette: "Nerd/ink", scope: "zone" } }, // Double Counting
+  "meditative-011": { cast: { motif: "deal" }, trigger: { motif: "deal" }, aura: { look: "arcane", scope: "side" } }, // Double Header
+  "meditative-012": "none: no board change of its own (its Cry runs your End of turn hooks, each under its own marker)", // Fear Mongerer
+  "meditative-013": { trigger: { motif: "bolt" } }, // Gatling Pea
+  "meditative-014": { cast: { motif: "flight", palette: "Nerd/chalk" } }, // Prime Time
+  "meditative-015": { cry: { motif: "seal" } }, // Smelly Steven
+  "meditative-016": { trigger: { motif: "conjure" } }, // Trenful Trickster
+  "meditative-017": { cast: { motif: "deal", palette: "Nerd/pixel" } }, // True Craft a Card
+  "meditative-018": { cast: { motif: "seal" } }, // Expedition12
+  "meditative-019": { cast: { motif: "deal" } }, // Expedition123
+  "meditative-019-1": { cast: { motif: "seal" } }, // Temporal Rift
+  "meditative-020": { cast: { motif: "seal" } }, // Aestheticize the Game
+  "meditative-021": { cast: { motif: "tether", palette: "Tech/glitch" }, trigger: { motif: "deal", palette: "Tech/glitch" } }, // API Key Fishing
+  "meditative-022": { cast: { motif: "deal" } }, // Mind Games
+  "meditative-022-1": { bespoke: "mindJudge" }, // Fortify Mind
+  "meditative-023": { cry: { motif: "transmute", palette: "Beast/wool" } }, // Golly Bob Howdy
+  "meditative-024": { cast: { motif: "transmute", palette: "Beast/wool" } }, // Polymorph
+  "meditative-025": { cry: { motif: "offering", palette: "Beast/felinor" } }, // Blue-Eyes White Felinor
+  "meditative-026": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "board" } }, // Alternate Fate
+  "meditative-027": { trigger: { motif: "bind" } }, // Clip-Farming Lawyer
+  "meditative-028": { cry: { motif: "deal", palette: "Dark/curse" } }, // Shade-iris
+  "meditative-028-1": { cast: { motif: "bolt", palette: "Dark/curse" } }, // Ancient Curse
+  "meditative-029": { cast: { motif: "deal" }, trigger: { motif: "deal" }, aura: { look: "toxic", scope: "zone" } }, // Forbiddenous Factory
+  "meditative-030": { trigger: { motif: "deal", palette: "Beast/felinor" } }, // Fickle E-Kitten
+  "meditative-030-1": { cast: { motif: "mend" } }, // Love Bomb
+  "meditative-031": { cry: { motif: "flight" } }, // The Conductor
+  "meditative-032": { bespoke: "cnSweep" }, // Spiritually 中国
+  "meditative-033": { cast: { motif: "deal", palette: "Nerd/chalk" } }, // First Day of 学校
+  "meditative-034": { cast: { motif: "wipe", palette: "Nerd/chalk" } }, // 高考
+  "meditative-035": { cast: { motif: "bless" } }, // RCTA (CN)
+  "meditative-036": { cast: { motif: "bless" } }, // CN Peptides
+  "meditative-037": { cast: { motif: "deal" } }, // CN in a Bottle
+  "meditative-038": { cast: { motif: "deal" }, trigger: { motif: "deal" }, aura: { look: "storm", scope: "zone" } }, // H1B Printer
+  "meditative-039": { cry: { motif: "deal", palette: "Hustle/jade" } }, // 赌石 Addict
+  "meditative-039-1": { bespoke: "jadeCrack" }, // Auspicious Rock
+  "meditative-039-2": { cast: { motif: "mana", palette: "Hustle/jade" } }, // Jade
+  "meditative-039-3": { cast: { motif: "bolt" } }, // Dud
+  "meditative-039-4": { cast: { motif: "conjure", palette: "Hustle/jade" } }, // Red Jade
+  "meditative-039-5": "none: no motif reads marked (its brand row draws the Allure)", // Jade Beauty
+  "meditative-040": { cast: { motif: "bless" }, aura: { look: "bloom", scope: "board" } }, // Feng Shui
+  "meditative-041": { trigger: { motif: "deal", palette: "Hustle/jade" } }, // CN Smuggler
+  "meditative-042": { cast: { motif: "deal", palette: "Hustle/cash" } }, // CN Flea Market
+  "meditative-043": { cast: { motif: "deal", palette: "Hustle/jade" } }, // CN Jade Market
+  "meditative-044": { cast: { motif: "deal", palette: "Hustle/jade" }, trigger: { motif: "deal", palette: "Hustle/jade" }, aura: { look: "frost", palette: "Hustle/jade", scope: "zone" } }, // CN Jade Well
+  "meditative-045": { cry: { motif: "curse", palette: "Nerd/chalk" }, death: { motif: "deal" } }, // Knowledge Breaker
+  "meditative-045-1": { cry: { motif: "wipe" } }, // Knowledge Breaker Prime
+  "meditative-046": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Conjure Intellect
+  "meditative-047": { trigger: { motif: "deal" } }, // 饕餮
+  "meditative-048": { cast: { motif: "seal" } }, // Tranquility
+  "meditative-049": { cry: { motif: "conjure", palette: "Tech/glitch" }, death: { motif: "deal", palette: "Tech/hologram" } }, // YileGPT
+  "meditative-049-1": { cry: { motif: "curse", palette: "Tech/hologram" } }, // YileGPT Prime
+  "meditative-049-2": { trigger: { motif: "bolt", palette: "Tech/glitch" } }, // Yile's Virus
+  "meditative-049-3": "none: unseen (no census game summoned it)", // AI Girlfriend
+  "meditative-050": { cast: { motif: "deal", palette: "Tech/hologram" } }, // CN Tech
+  "meditative-051": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // Devin Bot
+  "meditative-052": { cast: { motif: "bless" }, aura: { look: "storm", palette: "Hustle/cash", scope: "board" } }, // Economic Anxiety
+  "meditative-053": { cast: { motif: "seal" } }, // Prestige
+  "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, activate: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
+  "meditative-055": { cast: { motif: "deal" } }, // Dragon Fruit
+  "meditative-056": { cast: { motif: "conjure" } }, // House Party
+  "meditative-057": { cry: { motif: "deal" } }, // Clip-Farming Critikal
+  "meditative-058": { cry: { motif: "conjure", palette: "Nerd/chalk" } }, // Permanent Underclassman
+  "meditative-059": { cry: { motif: "conjure", palette: "Nerd/chalk" } }, // Permanent Upperclassman
+  "meditative-060": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "arcane", scope: "zone" } }, // Eschews
+  "meditative-061": { trigger: { motif: "bless" } }, // Joon Juicer
+  "meditative-062": { cast: { motif: "flight" } }, // Small Time Recruits
+  "meditative-063": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "zone" } }, // Skull of J'Nari
+  "meditative-064": { cast: { motif: "snap", palette: "Dark/blood" } }, // Traitorous Blood
+  "meditative-065": "none: vanilla", // Keymaster Keenus
+  "meditative-066": { cast: { motif: "rise", palette: "Fire" }, aura: { look: "ember", palette: "Fire", scope: "zone" } }, // Fiery Waraxe
+  "meditative-067": { trigger: { motif: "deal", palette: "Beast/felinor" } }, // Sentient Cat Ears
+  "meditative-068": { cast: { motif: "snap", palette: "Beast/felinor" } }, // Catnip
+  "meditative-069": { activate: { motif: "vanish" } }, // The Maestro
+  "meditative-070": { cry: { motif: "conjure", palette: "Dark/curse" } }, // I'M WILL BE YOUR DOOM
+  "meditative-070-1": "none: vanilla", // Ready… I'm
+  "meditative-071": { cast: { motif: "conjure" }, trigger: { motif: "lance" }, aura: { look: "holy", scope: "lane" } }, // Pareto Optimality
+  "meditative-071-1": { aura: { look: "storm", scope: "zone" } }, // The Cane
+  "meditative-072": { trigger: { motif: "vanish" } }, // The Banisher
+  "meditative-073": { cry: { motif: "bless", palette: "Physical/steel" } }, // Plate Packer
+  "meditative-074": "none: the census never saw its End of turn make it Radiant", // Montaña Giant
+  "meditative-075": { cast: { motif: "deal" }, activate: { motif: "deal" }, aura: { look: "bloom", scope: "lane" } }, // Ever Growing Tree
+  "meditative-076": { cast: { motif: "tether", palette: "Dark/shadow" } }, // Do or Die
+  "meditative-077": { cast: { motif: "deal", palette: "Hustle/cash" } }, // Bulk Booster
   "meditative-078": { cast: { motif: "vanish" } }, // Occidentless Mandate
-  "meditative-079": "none: pending", // Touched by KY
-  "meditative-080": "none: pending", // Aluneth
-  "meditative-081": "none: pending", // Deadman's Hand
-  "meditative-082": "none: pending", // Medina Outfitter
-  "meditative-083": "none: pending", // Medina Enforcer
-  "meditative-084": "none: pending", // Volatility
-  "meditative-085": "none: pending", // Playtester
-  "meditative-086": "none: pending", // Mayor Medinamogger
-  "meditative-087": "none: pending", // Tatches the Totem
-  "meditative-088": "none: pending", // The True Sheep
-  "meditative-089": "none: pending", // Jlarna
-  "meditative-090": "none: pending", // Spell Basket
-  "meditative-091": "none: pending", // Windfast
-  "meditative-091-1": "none: pending", // Windfurious Prime
-  "meditative-092": "none: pending", // Unan
-  "meditative-093": "none: pending", // Growing Felinor
-  "meditative-093-1": "none: pending", // Growing Felinor Sr
-  "meditative-093-2": "none: pending", // Growing Felinor Sr Sr
-  "meditative-093-3": "none: pending", // Growing Felinor Super Senior
-  "meditative-094": "none: pending", // Shrinking Felinor
-  "meditative-095": "none: pending", // Call to Chaos (Meditative Edition)
-  "meditative-095-1": "none: pending", // CN Golem
-  "meditative-096": "none: pending", // Meditative Journey
-  "meditative-096-1": "none: pending", // Journey Complete
-  "meditative-097": "none: pending", // Jlockeed's Evil Blueprints
-  "meditative-097-1": "none: pending", // Empty Plot
-  "meditative-097-2": "none: pending", // Wishing Well
-  "meditative-097-3": "none: pending", // School
-  "meditative-097-4": "none: pending", // Mega Church
-  "meditative-097-5": "none: pending", // Bunker
-  "meditative-097-6": "none: pending", // University
-  "meditative-097-7": "none: pending", // The Great Wall
-  "meditative-097-8": "none: pending", // Prison
-  "meditative-097-9": "none: pending", // Jlockeed's Headquarters
-  "meditative-098": "none: pending", // Showdown
-  "meditative-099": "none: pending", // Paranoia
-  "meditative-100": "none: pending", // Greaser
-  "meditative-101": "none: pending", // Gachaholic
-  "meditative-102": "none: pending", // Catboy Maid SSR+
+  "meditative-079": { cry: { motif: "flight" } }, // Touched by KY
+  "meditative-080": { cast: { motif: "flight" }, trigger: { motif: "flight" }, aura: { look: "frost", palette: "Nerd/ink", scope: "side" } }, // Aluneth
+  "meditative-081": { cast: { motif: "deal" } }, // Deadman's Hand
+  "meditative-082": { cry: { motif: "bless" } }, // Medina Outfitter
+  "meditative-083": { trigger: { motif: "bless" } }, // Medina Enforcer
+  "meditative-084": "none: vanilla (the census saw its Cry change nothing)", // Volatility
+  "meditative-085": { trigger: { motif: "deal" } }, // Playtester
+  "meditative-086": "none: vanilla", // Mayor Medinamogger
+  "meditative-087": { trigger: { motif: "bless" } }, // Tatches the Totem
+  "meditative-088": { cry: { motif: "deal", palette: "Beast/wool" } }, // The True Sheep
+  "meditative-089": { cast: { motif: "mana" }, aura: { look: "void", palette: "Hustle/cash", scope: "side" } }, // Jlarna
+  "meditative-090": { cast: { motif: "deal" } }, // Spell Basket
+  "meditative-091": { cry: { motif: "offering", palette: "Physical/wind" }, death: { motif: "deal", palette: "Physical/wind" } }, // Windfast
+  "meditative-091-1": "none: vanilla (the census never saw its attack summon)", // Windfurious Prime
+  "meditative-092": "none: vanilla", // Unan
+  "meditative-093": { death: { motif: "rise", palette: "Beast/felinor" } }, // Growing Felinor
+  "meditative-093-1": { death: { motif: "rise", palette: "Beast/felinor" } }, // Growing Felinor Sr
+  "meditative-093-2": { death: { motif: "rise", palette: "Beast/felinor" } }, // Growing Felinor Sr Sr
+  "meditative-093-3": "none: vanilla", // Growing Felinor Super Senior
+  "meditative-094": { death: { motif: "rise", palette: "Beast/felinor" } }, // Shrinking Felinor
+  "meditative-095": { cast: { motif: "deal" } }, // Call to Chaos (Meditative Edition)
+  "meditative-095-1": { trigger: { motif: "deal" } }, // CN Golem
+  "meditative-096": { cast: { motif: "vanish" } }, // Meditative Journey
+  "meditative-096-1": { cast: { motif: "deal" } }, // Journey Complete
+  "meditative-097": { cast: { motif: "deal", palette: "Tech/hologram" } }, // Jlockeed's Evil Blueprints
+  "meditative-097-1": "none: vanilla", // Empty Plot
+  "meditative-097-2": { activate: { motif: "deal" } }, // Wishing Well
+  "meditative-097-3": { activate: { motif: "conjure", palette: "Nerd/chalk" } }, // School
+  "meditative-097-4": { cry: { motif: "offering" }, activate: { motif: "tether" } }, // Mega Church
+  "meditative-097-5": { cry: { motif: "offering", palette: "Physical/steel" } }, // Bunker
+  "meditative-097-6": { activate: { motif: "bless", palette: "Nerd/chalk" } }, // University
+  "meditative-097-7": { cry: { motif: "offering" } }, // The Great Wall
+  "meditative-097-8": "none: unseen (no census game summoned it)", // Prison
+  "meditative-097-9": "none: unseen (no census game summoned it)", // Jlockeed's Headquarters
+  "meditative-098": { cast: { motif: "bind", palette: "Dark/curse" } }, // Showdown
+  "meditative-099": { cast: { motif: "flight" }, aura: { look: "void", palette: "Dark/shadow", scope: "side" } }, // Paranoia
+  "meditative-100": "none: vanilla", // Greaser
+  "meditative-101": { cry: { motif: "deal", palette: "Hustle/cash" } }, // Gachaholic
+  "meditative-102": { cry: { motif: "flight", palette: "Beast/felinor" } }, // Catboy Maid SSR+
 }

@@ -58,6 +58,7 @@ type Patches struct {
 	Dequeue                func(nodeID string)
 	PinIssue               func(nodeID string)
 	MarkReady              func(nodeID string)
+	MarkDraft              func(nodeID string)
 	MergePull              func(number int, method string, title string) *pyjson.Object
 	GetFile                func(path string, ref string) (string, string)
 	PutFile                func(path string, text string, branch string, sha string, message string)
@@ -75,6 +76,8 @@ type Patches struct {
 	ListCommits            func(author string, limit int) []*pyjson.Object
 	RunsForSHA             func(sha string, limit int) []*pyjson.Object
 	RerunFailedJobs        func(runID any)
+	CancelRun              func(runID any)
+	RerunRun               func(runID any)
 	ListJobs               func(runID any, cached bool) []*pyjson.Object
 	JobLog                 func(jobID any, tailChars int) string
 	ListArtifacts          func(runID any) []*pyjson.Object
@@ -442,6 +445,14 @@ func (c *FakeGitHub) MarkReady(nodeID string) {
 	c.Own().MarkReady(nodeID)
 }
 
+func (c *FakeGitHub) MarkDraft(nodeID string) {
+	if c.Patch.MarkDraft != nil {
+		c.Patch.MarkDraft(nodeID)
+		return
+	}
+	c.Own().MarkDraft(nodeID)
+}
+
 func (c *FakeGitHub) MergePull(number int, method string, title string) *pyjson.Object {
 	if c.Patch.MergePull != nil {
 		return c.Patch.MergePull(number, method, title)
@@ -566,6 +577,22 @@ func (c *FakeGitHub) RerunFailedJobs(runID any) {
 		return
 	}
 	c.Own().RerunFailedJobs(runID)
+}
+
+func (c *FakeGitHub) CancelRun(runID any) {
+	if c.Patch.CancelRun != nil {
+		c.Patch.CancelRun(runID)
+		return
+	}
+	c.Own().CancelRun(runID)
+}
+
+func (c *FakeGitHub) RerunRun(runID any) {
+	if c.Patch.RerunRun != nil {
+		c.Patch.RerunRun(runID)
+		return
+	}
+	c.Own().RerunRun(runID)
 }
 
 func (c *FakeGitHub) ListJobs(runID any, cached bool) []*pyjson.Object {

@@ -18,7 +18,8 @@
 //!  - README (#1720): `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface: every
 //!    row's words are the CLI's, and the whole CLI is in some row;
 //!  - Helpers (#1777, #1826): each family of shared test helpers is defined once, in its home, and no file
-//!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2);
+//!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2); no card script's test calls
+//!    `register_all();` on the line above a `scenario(`, as `crate::scenario` registers the cards (#2930);
 //!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
 //!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
@@ -931,7 +932,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160).
+/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160, #2930).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -968,6 +969,12 @@ const SERVER_SUPPORT_READERS: &[&str] = &[
     "crates/server/tests/support",
 ];
 
+/// The card scripts, each a card's script with its tests (CLAUDE.md rule 6).
+const CARD_SCRIPTS: &str = "crates/cards/src/scripts";
+
+/// Fewer Rust files than this under CARD_SCRIPTS means a scan lost them.
+const CARD_SCRIPT_FILES: usize = 700;
+
 const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     SharedHelpers {
         home: "crates/engine/tests/rules/fixtures/harness.rs",
@@ -994,11 +1001,22 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "apply_now",
             "run_on_sink",
             "past_the_mulligans",
+            "ids",
+            "input",
+            "by",
         ],
         statics: &["NONCE"],
         structs: &[&["events", "rng"]],
         dirs: &["crates/engine/tests/rules"],
         more_than: 200,
+    },
+    SharedHelpers {
+        home: "crates/cards/src/lib.rs",
+        names: &["ids"],
+        statics: &[],
+        structs: &[],
+        dirs: &[CARD_SCRIPTS],
+        more_than: CARD_SCRIPT_FILES,
     },
     SharedHelpers {
         home: "crates/engine/src/testkit/scenario.rs",
@@ -1016,6 +1034,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "in_hand",
             "targets_of",
             "tributes_of",
+            "ids",
         ],
         statics: &[],
         structs: &[],
@@ -1024,7 +1043,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/ai/tests/ai/support.rs",
-        names: &["det", "ai_options", "js", "unit"],
+        names: &["det", "ai_options", "js", "unit", "ids"],
         statics: &[],
         structs: &[],
         dirs: &["crates/ai/tests"],
@@ -1419,6 +1438,52 @@ fn helpers_the_check_refuses_a_copy_in_the_server_tests() {
             "crates/server/tests/bots/planted.rs:2"
         ]
     );
+}
+
+/// The 1-based lines of `text` that call `register_all();` on the line above one that calls a
+/// `scenario(`, a `//` comment aside: `crate::scenario` registers the shipped cards itself (#2930).
+fn registers_before_scenario(text: &str) -> Vec<usize> {
+    let code: Vec<&str> = text
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect();
+    code.windows(2)
+        .enumerate()
+        .filter(|(_, pair)| pair[0].contains("register_all();") && pair[1].contains("scenario("))
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+#[test]
+fn helpers_card_tests_take_the_crate_scenario_rather_than_registering_first() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join(CARD_SCRIPTS), &mut files);
+    assert!(
+        files.len() > CARD_SCRIPT_FILES,
+        "only {} files found under {CARD_SCRIPTS}",
+        files.len()
+    );
+    let mut found = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        let path = file.strip_prefix(&root).unwrap_or(file).display().to_string();
+        found.extend(
+            registers_before_scenario(&text)
+                .into_iter()
+                .map(|line| format!("{path}:{line}")),
+        );
+    }
+    assert!(
+        found.is_empty(),
+        "a card test registers the catalog on the line above a `scenario(` (#2930): `use crate::scenario;` registers it, so drop the `register_all();`: {found:?}"
+    );
+}
+
+#[test]
+fn helpers_the_scan_finds_each_register_above_a_scenario() {
+    let text = "crate::register_all();\nlet mut s = scenario(json!({}));\ncrate::register_all();\n\nlet s = scenario(json!({}));\nregister_all();\nlet s = void_scenario(json!({}));\n// crate::register_all();\nlet s = scenario(json!({}));\ncrate::register_all();\nlet n = 1; // scenario(\n";
+    assert_eq!(registers_before_scenario(text), [1, 6]);
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).

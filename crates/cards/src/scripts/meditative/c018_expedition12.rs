@@ -123,6 +123,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const EXPEDITION: &str = "meditative-018";
@@ -207,7 +209,6 @@ mod tests {
 
         #[test]
         fn the_loss_never_takes_the_refresh_below_0() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "expedition12-floor",
                 "turn": 1,

@@ -48,6 +48,14 @@ function planAll(events: readonly GameEvent[], env: FxPlanEnv = envOf(), D?: num
   });
 }
 
+/** R2791000: a plain summon needs an empty zone (§3.2); the fixture lane stands occupied. */
+function emptyLane(side: "you" | "opponent", row: "units" | "backrow", lane: number): PlayerView {
+  const view = fullBoardView();
+  if (row === "units") view[side].units[lane - 1] = null;
+  else view[side].backrow[lane - 1] = null;
+  return view;
+}
+
 function endOf(cue: FxCue): number {
   switch (cue.kind) {
     case "burst":
@@ -77,7 +85,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
 
   it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
     for (const [defId, key] of MARQUEE) {
-      const cues = planAll([summoned("p1", "m1", defId)]);
+      const cues = planAll([summoned("p1", "m1", defId)], envOf(), undefined, emptyLane("you", "units", 3));
       const D = ANIMATIONS.summoned.durationMs;
       const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal });
       expect(cues, defId).toEqual(expected);
@@ -98,9 +106,9 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     const pair = [played("p1", "m1", defId), summoned("p1", "m1", defId)];
     // The pair is one entry, with the duration the runner gives the pair.
     const D = planEntries(pair, withEvents(fullBoardView(), pair), false)[0]?.durationMs ?? 0;
-    const mine = planAll(pair);
+    const mine = planAll(pair, envOf(), undefined, emptyLane("you", "units", 3));
     expect(mine).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal }));
-    const theirs = planAll([played("p2", "m2", defId), summoned("p2", "m2", defId, "units", 2)]);
+    const theirs = planAll([played("p2", "m2", defId), summoned("p2", "m2", defId, "units", 2)], envOf(), undefined, emptyLane("opponent", "units", 2));
     expect(theirs).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("opponent", "units", 2), intensity: FX_INTENSITY_SCALE.normal }));
     // R202: no cue carries a definition or a name.
     const text = JSON.stringify(theirs);
@@ -112,7 +120,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     const hidden = planAll([summoned("p2", "hidden", "hidden")]);
     expect(hidden.some((cue) => cue.kind === "rays" || cue.kind === "crack" || cue.kind === "shake")).toBe(false);
     for (const [defId] of MARQUEE) {
-      const set = planAll([summoned("p1", "m1", defId, "backrow")]);
+      const set = planAll([summoned("p1", "m1", defId, "backrow")], envOf(), undefined, emptyLane("you", "backrow", 3));
       expect(set.map((cue) => cue.kind), defId).toEqual(["burst"]);
     }
   });

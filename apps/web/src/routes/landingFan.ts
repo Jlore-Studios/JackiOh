@@ -6,7 +6,7 @@ import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh
 import catalogJson from "@jackioh/cards/catalog.json";
 
 import { nameTier, textTier, type LengthTier } from "../cards/fit.ts";
-import { isFullArtCard, showsFullArt } from "../cards/fullArt.ts";
+import { isFullArtCard } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { overLimit, shortFormOf, type TextLimit } from "../cards/shortText.ts";
 import {
@@ -51,7 +51,8 @@ export const ROTATION_POOL: readonly CardDef[] = Object.values(CATALOG).filter(
 export function fitsTheFan(def: CardDef, fullArtOn: boolean): boolean {
   return [false, true].every((radiant) => {
     const face = faceModel({ defId: def.id, def, radiant });
-    if (showsFullArt(face, fullArtOn)) return true;
+    // R2725000: the setting prints full art on the 21 full-art cards alone; a version needs its own pick.
+    if (fullArtOn && isFullArtCard(def.id)) return true;
     return shortFormOf(def.id, radiant) === null && !overLimit(face.text.full, FAN_TEXT_LIMIT);
   });
 }

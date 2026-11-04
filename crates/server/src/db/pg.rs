@@ -36,19 +36,20 @@ use crate::bots::cosmetics::BotCosmetics;
 use crate::config::{NANOS_PER_MS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
-    ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, DeckVersion,
-    DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow,
-    MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow,
-    ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck,
-    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow,
-    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
-    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
+    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite,
+    DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery,
+    InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
+    MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide,
+    SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
+    TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome,
+    TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -5977,6 +5978,30 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     rows.iter().map(to_bot_row).collect()
 }
 
+fn to_bot_state(row: &PgRow) -> Result<BotState, StoreError> {
+    Ok(BotState {
+        profile_id: uuid_text(row, "profile_id")?,
+        in_match_id: uuid_text_or_null(row, "current_match_id")?,
+        grinding: get(row, "grinding")?,
+        retired_at: ms_or_null(get(row, "retired_at")?),
+    })
+}
+
+/// R1555000: `bots_list`'s join and order without the JSON columns or the rating rows.
+pub async fn bots_states(t: &mut PgTx<'_>) -> Result<Vec<BotState>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select b.profile_id, p.current_match_id, b.grinding, b.retired_at
+           from public.bots b
+           join public.profiles p on p.id = b.profile_id
+          order by p.created_at, b.profile_id",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(to_bot_state).collect()
+}
+
 fn small(value: i64, what: &str) -> Result<i16, StoreError> {
     i16::try_from(value).map_err(|_| StoreError::from(format!("a bot's {what} is out of range: {value}")))
 }
@@ -7294,6 +7319,37 @@ pub async fn presence_watchable(
         .map(|row| uuid_text(row, "id"))
         .collect::<Result<Vec<String>, StoreError>>()?;
     Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
+}
+
+/// One statement: of the named co-op matches, those whose a1 or a2 and `viewer` stand blocked,
+/// either way; in the order the ids were named.
+pub async fn presence_duos_blocked(
+    t: &mut PgTx<'_>,
+    viewer: &str,
+    match_ids: &[String],
+) -> Result<Vec<String>, StoreError> {
+    let ids: Vec<String> = match_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() || !is_uuid(viewer) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(viewer)).await?;
+    let rows = sqlx::query(
+        "select d.id from public.duos_matches d
+          where d.id = any($2::uuid[])
+            and exists (select 1 from public.blocks k
+                         where (k.blocker = $1::uuid and k.blocked in (d.a1, d.a2))
+                            or (k.blocked = $1::uuid and k.blocker in (d.a1, d.a2)))",
+    )
+    .bind(viewer)
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let blocked = rows
+        .iter()
+        .map(|row| uuid_text(row, "id"))
+        .collect::<Result<Vec<String>, StoreError>>()?;
+    Ok(ids.into_iter().filter(|id| blocked.contains(id)).collect())
 }
 
 // profiles (B46)

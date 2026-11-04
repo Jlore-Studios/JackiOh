@@ -33,6 +33,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// A turn anchor (§2.5, R82): #10 Rapid Replenish, a 0-cost Spell never played, keeps a legal action
     /// besides ending the turn, so `reduce` never auto-ends it under an assertion. A Spell joins no board a
     /// test counts, and a def-id reference to the attacker stays unambiguous.
@@ -55,7 +57,6 @@ mod tests {
 
         #[test]
         fn s4_1_rush_lets_it_attack_a_unit_on_its_summon_turn_but_not_the_hero() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": ["core-056", "core-005"] },
                 "p2": { "field": [{ "def": "core-008", "lane": 1, "damage": 1 }] },
@@ -87,7 +88,6 @@ mod tests {
 
         #[test]
         fn s4_2_step_3_taunt_forces_the_attacker_onto_it_while_any_other_enemy_unit_stands() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "field": [{ "def": "core-025", "lane": 1 }] },
                 "p2": {
@@ -107,7 +107,6 @@ mod tests {
 
         #[test]
         fn s4_4_step_1_divine_shield_eats_the_whole_strike_back_and_is_then_gone() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "field": [{ "def": "core-056", "lane": 1 }] },
                 "p2": { "field": [{ "def": "core-019", "lane": 1 }] },
@@ -124,7 +123,6 @@ mod tests {
 
         #[test]
         fn s4_4_step_8_lifesteal_heals_its_controller_s_hero_by_the_amount_dealt_r63() {
-            crate::register_all();
             let mut g = scenario(json!({
                 // R82/§2.5 TURN ANCHOR: the attack spends Jilliax's only exertion and kills the only enemy unit,
                 // so without a card in hand `reduce` would auto-end the turn under the assertion.
@@ -145,7 +143,6 @@ mod tests {
 
         #[test]
         fn s4_1_rush_not_charge_a_played_radiant_jilliax_may_attack_a_unit_but_not_the_hero() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [{ "def": "core-056", "radiant": true }, "core-005"] },
                 "p2": { "field": [{ "def": "core-008", "lane": 1 }] },
@@ -159,7 +156,6 @@ mod tests {
 
         #[test]
         fn s4_4_step_1_its_divine_shield_eats_the_first_strike_back_and_s4_5_step_4_reborn_catches_the_second_death() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "field": [{ "def": "core-056", "radiant": true, "lane": 1 }], "hand": [ANCHOR], "health": 20 },
                 "p2": { "field": [{ "def": "core-019", "lane": 1 }], "hand": [ANCHOR] },
@@ -208,7 +204,6 @@ mod tests {
 
         /// p1 holds Jilliax (Radiant on `radiant`) with a Vanilla of theirs on the field in lane 1.
         fn holding(radiant: bool) -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "p1": {
                     "mana": 10,

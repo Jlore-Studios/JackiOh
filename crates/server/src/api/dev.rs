@@ -28,7 +28,7 @@ use crate::api::e2e::is_e2e_dev;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, str};
 use crate::app::{App, now_ms};
 use crate::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
-use crate::cosmetics::CosmeticKind;
+use crate::cosmetics::offered;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
 use crate::economy::math::level_for_xp;
 use crate::economy::packs::{bar_before, cycle_at, cycle_step, delta_of};
@@ -89,14 +89,6 @@ fn collectable_cards(app: &App) -> Vec<&str> {
         })
         .map(String::as_str)
         .collect()
-}
-
-/// §14.2: a cosmetic owned for one card (a foil, a finish, a border), not for the whole account.
-fn per_card(kind: CosmeticKind) -> bool {
-    matches!(
-        kind,
-        CosmeticKind::Foil | CosmeticKind::Finish | CosmeticKind::Border
-    )
 }
 
 /// `POST /api/dev/xp` with `{ setId, xp }`: 200 `{ track }`, the track after the grant.
@@ -205,11 +197,15 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
     {
-        let targets: Vec<Option<&str>> = if per_card(cosmetic.kind) {
-            cards.iter().copied().map(Some).collect()
-        } else if cosmetic.kind == CosmeticKind::FullArt {
-            // R1313000: a full art is owned on the one card it names.
-            vec![cosmetic.card.as_deref()]
+        // §14.2: a per-card cosmetic on every card it is offered (R2725001): a full art on the one card it names
+        // (R1313000), a version or an augment on each card its offer takes.
+        let targets: Vec<Option<&str>> = if cosmetic.kind.is_per_card() {
+            cards
+                .iter()
+                .copied()
+                .filter(|card| offered(cosmetic, Some(card)))
+                .map(Some)
+                .collect()
         } else {
             vec![None]
         };

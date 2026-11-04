@@ -146,6 +146,71 @@ type BuildReport struct {
 	// SendBack: the parts a fullsend reconcile sends back to their builders (`"send_back"`, with
 	// the status `send_back`, #2748); empty for any other answer.
 	SendBack []SendBack // default: ()
+	// CILocal: a CI fix's builder ran the failing check locally and says how it went
+	// (`"ci_local"`: `passed`, lowercased; #2948), "" when it said nothing.
+	CILocal string // default: ""
+	// Problem, Options, Default and Why: a question's problem as the builder would explain it in a
+	// chat (`"problem"`, #3009), its options (`"options"`, each one's change and trade-off), the one
+	// it suggests (`"suggestion"`, its number in `Options` from 1, read as `"default"` too, #2986),
+	// which goes ahead if nobody answers in time, and why (`"why"`). A report from before #3009 gives
+	// each option as its text and the default's trade-off as `"gives_up"`. Default is 0, and the
+	// question has no default, when it names none of the options, and always for a `human_required`
+	// stop, which is no question.
+	Problem string   // default: ""
+	Options []Option // default: ()
+	Default int      // default: 0
+	Why     string   // default: ""
+}
+
+// Option is one of a question's options: what it changes, and what it gives up or risks.
+type Option struct {
+	Change   string
+	Tradeoff string
+}
+
+// MaxOptions is how many of a question's options are kept, OptionChars how much of each option's
+// change, trade-off and the suggestion's why, and ProblemChars how much of its problem.
+var (
+	MaxOptions   = 6
+	OptionChars  = 1000
+	ProblemChars = 4000
+)
+
+// options is a blocked report's `"options"`, its suggestion and why: each option's change and
+// trade-off stripped (an option given as text is its change), the empty ones left out, at most
+// `MaxOptions`; the suggestion's number (`"suggestion"`, else `"default"`) when it names one of them
+// (a whole number, or its text), else 0. An older report's `"gives_up"` is its default's trade-off.
+func options(found *pyjson.Object) ([]Option, int, string) {
+	out := []Option{}
+	listed, _ := found.Get("options").([]any)
+	for _, raw := range listed {
+		option := Option{}
+		switch value := raw.(type) {
+		case string:
+			option.Change = value
+		case *pyjson.Object:
+			option = Option{py.OrStr(value.Get("change"), ""), py.OrStr(value.Get("tradeoff"), "")}
+		}
+		option = Option{py.SliceTo(py.Strip(option.Change), OptionChars), py.SliceTo(py.Strip(option.Tradeoff), OptionChars)}
+		if option.Change != "" && len(out) < MaxOptions {
+			out = append(out, option)
+		}
+	}
+	said := found.Get("suggestion")
+	if said == nil {
+		said = found.Get("default")
+	}
+	chosen, err := py.Int(said)
+	if text, isText := said.(string); isText {
+		chosen, err = py.Int(py.Strip(text))
+	}
+	if err != nil || chosen < 1 || chosen > len(out) {
+		return out, 0, ""
+	}
+	if out[chosen-1].Tradeoff == "" {
+		out[chosen-1].Tradeoff = py.SliceTo(py.Strip(py.OrStr(found.Get("gives_up"), "")), OptionChars)
+	}
+	return out, chosen, py.SliceTo(py.Strip(py.OrStr(found.Get("why"), "")), OptionChars)
 }
 
 // BuildReport_ is verdicts.build_report.
@@ -153,7 +218,7 @@ func BuildReport_(text string) *BuildReport {
 	value, rest := Header(text, "bot")
 	found, ok := value.(*pyjson.Object)
 	if !ok {
-		return &BuildReport{Status: "unknown", Body: rest, SendBack: []SendBack{}}
+		return &BuildReport{Status: "unknown", Body: rest, SendBack: []SendBack{}, Options: []Option{}}
 	}
 	status := py.Lower(py.Str(found.GetOr("status", "")))
 	sent := []SendBack{}
@@ -167,7 +232,13 @@ func BuildReport_(text string) *BuildReport {
 	question := py.SliceTo(py.Strip(py.Str(found.GetOr("question", ""))), 4000)
 	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(py.OrStr(found.Get("next_model"), "")), "`")), 40)
 	human := status == "blocked" && found.Get("human_required") == true
-	return &BuildReport{status, title, question, rest, nextModel, human, sent}
+	local := py.SliceTo(py.Lower(py.Strip(py.OrStr(found.Get("ci_local"), ""))), 20)
+	report := &BuildReport{status, title, question, rest, nextModel, human, sent, local, "", []Option{}, 0, ""}
+	if status == "blocked" && !human {
+		report.Problem = py.SliceTo(py.Strip(py.OrStr(found.Get("problem"), "")), ProblemChars)
+		report.Options, report.Default, report.Why = options(found)
+	}
+	return report
 }
 
 // Finding is verdicts.Finding.

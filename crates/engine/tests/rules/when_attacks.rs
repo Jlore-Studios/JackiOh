@@ -14,18 +14,7 @@ use crate::rules::fixtures::damage_combat::{
     answer, grunt, kamikaze, notes, pawn, playing, recorder, replays_to, round_trip, shifter, striker,
     striker_asker, wall,
 };
-use crate::rules::fixtures::harness::{put, sink_for, slot};
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{by, input, put, sink_for, slot};
 
 mod script_when_attacks {
     use super::*;

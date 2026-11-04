@@ -448,6 +448,16 @@ func (x *GitHub) MarkReady(nodeID string) {
 	)
 }
 
+// MarkDraft turns a pull request back into a draft (#3009: the bot's work on an item it handed to
+// a person).
+func (x *GitHub) MarkDraft(nodeID string) {
+	x.Graphql(
+		"mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id})"+
+			" { clientMutationId } }",
+		pyjson.New("id", nodeID),
+	)
+}
+
 func (x *GitHub) MergePull(number int, method string, title string /* = "" */) *pyjson.Object {
 	body := pyjson.New("merge_method", method)
 	if title != "" {
@@ -677,6 +687,21 @@ func (x *GitHub) RunsForSHA(sha string, limit int /* = 30 */) []*pyjson.Object {
 
 func (x *GitHub) RerunFailedJobs(runID any) {
 	x.Request("POST", x.r()+"/actions/runs/"+py.Str(runID)+"/rerun-failed-jobs", nil, "", false, false)
+}
+
+// CancelRun cancels a run that is still going: the status loop stops a bot pull request's CI once a
+// required job failed on its head (#2948, `events.StopRedCI`). GitHub refuses (409) a run that has
+// ended.
+func (x *GitHub) CancelRun(runID any) {
+	x.Request("POST", x.r()+"/actions/runs/"+py.Str(runID)+"/cancel", nil, "", false, false)
+}
+
+// RerunRun runs every job of a run that has ended again, as a new attempt of the same run: its
+// failed, cancelled and skipped jobs and the ones that passed (`rerun-failed-jobs` re-runs only the
+// failed ones and what needs them). A CI fix whose failing check passes locally asks for it, with no
+// commit (#2948, `deliver.rerunHead`).
+func (x *GitHub) RerunRun(runID any) {
+	x.Request("POST", x.r()+"/actions/runs/"+py.Str(runID)+"/rerun", nil, "", false, false)
 }
 
 func (x *GitHub) ListJobs(runID any, cached bool /* = False */) []*pyjson.Object {

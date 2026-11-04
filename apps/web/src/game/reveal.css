@@ -50,10 +50,13 @@
 }
 
 .their-hand__card {
+  /* #2933: both axes come from one token, never from `aspect-ratio` alone, whose width
+     WebKit does not pass on to the face inside. */
+  --their-hand-h: 92px;
   position: relative;
   display: block;
-  height: 92px;
-  aspect-ratio: 5 / 7;
+  height: var(--their-hand-h);
+  width: calc(var(--their-hand-h) * 5 / 7);
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -73,6 +76,18 @@
   outline-offset: 2px;
 }
 
+/* #2933: the face fills the button exactly (5:7 by construction above). */
+.their-hand__card > .cf {
+  width: 100%;
+  height: 100%;
+}
+
+/* #2933: `.app-shell button` (index.css) pads every button 9px 16px, which shrank the face to
+   the content box (a ~15px sliver at phone width); outrank it so the face gets the whole button. */
+.app-shell .their-hand__card {
+  padding: 0;
+}
+
 @keyframes their-hand-deal {
   0% {
     opacity: 0;
@@ -85,8 +100,9 @@
   }
 }
 
-/* The chip's button: the same size as "Result" beside it. */
-.result-overlay__their-hand {
+/* The chip's buttons: "Their hand" and "Result", the same size beside each other. */
+.result-overlay__their-hand,
+.result-overlay__open {
   min-height: 44px;
   padding: 8px 14px;
   border-radius: var(--radius-md);
@@ -95,7 +111,7 @@
 
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .their-hand__card {
-    height: 66px;
+    --their-hand-h: 66px;
   }
 }
 

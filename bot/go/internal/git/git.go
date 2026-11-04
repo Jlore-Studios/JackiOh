@@ -181,6 +181,28 @@ func (x *Git) ChangedPaths(base string, head string /* = "HEAD" */) []string {
 	return nonBlank(x.Out(true, "diff", "--name-only", "--no-renames", base+"..."+head))
 }
 
+// ChangedStatus is ChangedPaths with each path's status letter (`A` added, `M` modified, `D`
+// deleted, …; #2986), in git's order: `[status, path]`.
+func (x *Git) ChangedStatus(base string, head string /* = "HEAD" */) [][2]string {
+	out := [][2]string{}
+	for _, line := range nonBlank(x.Out(true, "diff", "--name-status", "--no-renames", base+"..."+head)) {
+		status, p, ok := strings.Cut(line, "\t")
+		if ok && status != "" {
+			out = append(out, [2]string{status[:1], p})
+		}
+	}
+	return out
+}
+
+// Show is the text of `path` at `ref`, and whether `ref` has it.
+func (x *Git) Show(ref string, path string) (string, bool) {
+	proc := x.Run(false, 600, nil, "show", ref+":"+path)
+	if proc.Returncode != 0 {
+		return "", false
+	}
+	return proc.Stdout, true
+}
+
 // nonBlank is `[line for line in text.splitlines() if line.strip()]`.
 func nonBlank(text string) []string {
 	out := []string{}
@@ -358,6 +380,11 @@ func (x *Git) CommitAll(message string, who *Identity) bool {
 	}
 	x.Run(true, 600, who.env(), "commit", "--quiet", "--no-verify", "-m", message)
 	return true
+}
+
+// CommitEmpty commits nothing: the first commit of an orphan branch that starts empty.
+func (x *Git) CommitEmpty(message string, who *Identity) {
+	x.Run(true, 600, who.env(), "commit", "--quiet", "--no-verify", "--allow-empty", "-m", message)
 }
 
 func (who *Identity) env() map[string]string {

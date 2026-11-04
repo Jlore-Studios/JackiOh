@@ -281,6 +281,13 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 		nudged = false
 	}
 	if len(found) == 0 && !nudged {
+		if !reviewComment {
+			// A trusted person's reply to a question the bot asked here (#3009) takes it up again at
+			// once, with the reply as the decision (`plan.SyncDecisionsOn` reads who wrote it).
+			if notes := plan.SyncDecisionsOn(ctx, py.MustInt(py.Or(thread.Get("number"), 0))); len(notes) > 0 {
+				return notes
+			}
+		}
 		return []string{"no command"}
 	}
 	user := comment.Obj("user")
@@ -841,10 +848,13 @@ func DropWip(ctx *hctx.Context, number int) {
 // for the after-merge spot-check too (`SpotCheckMerge`).
 func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 	pull := payload.Obj("pull_request")
+	// A pull request that waited its turn behind this one (#2948) takes its turn now, on the lane
+	// and model that approved it, whoever's this one was.
+	turns := plan.SyncTurns(ctx, py.MustInt(py.Or(pull.Get("number"), 0)))
 	if !queue.LabelNames(pull)[config.LabelPR] {
-		return []string{"ignored: not a bot pull request"}
+		return append([]string{"ignored: not a bot pull request"}, turns...)
 	}
-	notes := onPullClosed(ctx, pull)
+	notes := append(onPullClosed(ctx, pull), turns...)
 	if said := SpotCheckMerge(ctx, pull); said != "" {
 		notes = append(notes, said)
 	}
@@ -863,6 +873,9 @@ func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
 	number := py.MustInt(py.Item(pull, "number"))
 	state := ctx.Store.Load()
 	record := state.Obj("items").Obj(strconv.Itoa(number)).Copy()
+	if queue.ArchivedOf(record) != nil {
+		return "" // a person merged what the bot handed them (#3009): no run of the bot's looks at it
+	}
 	issue := 0
 	if linked := threads.LinkedIssue(pull); linked != nil {
 		issue = *linked
@@ -937,11 +950,19 @@ func onPullClosed(ctx *hctx.Context, pull *pyjson.Object) []string {
 	return []string{fmt.Sprintf("#%d merged; #%d closes with it", number, *issue)}
 }
 
-// OnCI is on_ci.
+// OnCI is on_ci: CI ended red on a pull request. A run the bot stopped early itself (#2948,
+// `StopRedCI`, `ci_stopped`) is ignored whatever its conclusion: its fix is queued already, or the
+// run that held the pull request reads its CI. A red head of a bot pull request gets its CI fix at
+// once, with no re-run first (#2948): the fix run judges, running the failing check itself, and
+// when that passes it re-runs CI with no commit (`ci_reruns` such re-runs a head, `deliver`).
 func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 	run := payload.Obj("workflow_run")
 	if !py.In(run.Get("name"), CIWorkflows(ctx)...) {
 		return []string{"ignored: workflow " + py.Str(run.Get("name"))}
+	}
+	if Stopped(ctx.Store.Load(), run) {
+		return []string{fmt.Sprintf("ignored: the bot stopped run %s itself, once a required job had failed",
+			py.Str(run.Get("id")))}
 	}
 	if !py.In(run.Get("conclusion"), CIFailed...) {
 		return []string{"ignored: conclusion " + py.Str(run.Get("conclusion"))}
@@ -978,19 +999,12 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 			out = append(out, fmt.Sprintf("#%d: blocked, stopped or already queued; left alone", number))
 			continue
 		}
-		sha := py.Str(run.Get("head_sha"))
-		reruns := record.Obj("ci_reruns").Copy()
-		if py.MustInt(reruns.GetOr(sha, 0)) < ctx.Cfg.CIReruns {
-			ctx.Act().RerunFailedJobs(py.Item(run, "id"))
-			reruns.Set(sha, py.MustInt(reruns.GetOr(sha, 0))+1)
-			ctx.Store.Update(func(s *pyjson.Object) any {
-				state.Item(s, number).Set("ci_reruns", reruns)
-				return nil
-			}, fmt.Sprintf("ci rerun #%d", number))
-			out = append(out, fmt.Sprintf("#%d: re-ran the failed jobs of run %s", number, py.Str(py.Item(run, "id"))))
+		if queue.ArchivedOf(record) != nil {
+			out = append(out, fmt.Sprintf("#%d: handed to a person, its work archived; left alone", number))
 			continue
 		}
-		out = append(out, fixCI(ctx, number, pull, names, record, run, sha, "CI failed again"))
+		sha := py.Str(run.Get("head_sha"))
+		out = append(out, fixCI(ctx, number, pull, names, record, run, sha, "CI failed", false, true))
 	}
 	if len(out) == 0 {
 		return []string{"no open pull request for this run"}
@@ -998,10 +1012,13 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 	return out
 }
 
-// fixCI is _fix_ci: what a red head gets once its one re-run is spent: a strike, a stop once the
-// CI fixes are used up, or else a CI fix with `run`'s logs. `failed` opens the comment.
+// fixCI is _fix_ci: what a red head gets: a strike, a stop once the CI fixes are used up, or else a
+// CI fix with `run`'s logs. `failed` opens the comment. `early` marks a run the status loop stopped
+// once a required job had failed (`StopRedCI`), whose cancelled jobs say nothing; `onHead` a run of
+// the pull request's own head, not the merge queue's build of it, which the fix may re-run with no
+// commit when its failing check passes locally (`ci_reruns`, #2948).
 func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]bool,
-	record *pyjson.Object, run *pyjson.Object, sha string, failed string) string {
+	record *pyjson.Object, run *pyjson.Object, sha string, failed string, early, onHead bool) string {
 	fixes := py.MustInt(record.GetOr("ci_fixes", 0))
 	link := "no CI run found"
 	if run.Truthy("html_url") {
@@ -1032,13 +1049,13 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 		return fmt.Sprintf("#%d: blocked after %d CI fixes", number, fixes)
 	}
 	answer := queue.QueueRevise(ctx, number, ctx.Cfg.BotLogin, false, "ci", false,
-		pyjson.New("ci_run_id", run.Get("id"), "ci_sha", sha, "ci_fixes", fixes+1), nil)
+		pyjson.New("ci_run_id", run.Get("id"), "ci_sha", sha, "ci_fixes", fixes+1, "ci_early", early,
+			"ci_on_head", onHead), nil)
 	// The last approver owns the merge (#2748, section 4): the subscription whose approval shipped
 	// this head fixes it, ahead of its new work (`plan.Pairs`), held for it a while or handed off
 	// as any owner's work (`plan.Owning`). Its fix is a new head, which its own run's reviewer's
 	// approval at the item's tier ships (`reviewrule`, 2026-11-02).
-	owner := py.OrStr(record.Get("merge_owner"), "")
-	if owner != "" && pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
+	if owner := plan.MergeOwner(record, sha); owner != "" {
 		ctx.Store.Update(func(s *pyjson.Object) any {
 			plan.Own(s, number, owner, fmt.Sprintf("its approval shipped `%s`, and the last approver "+
 				"owns the merge, so it fixes what CI found", py.SliceTo(sha, 12)), ctx.Now())
@@ -1089,7 +1106,8 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	names := queue.LabelNames(pull)
 	record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
 	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelReady, config.LabelPersonMerges) ||
-		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") {
+		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") ||
+		queue.ArchivedOf(record) != nil {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
 	}
 	sha := py.OrStr(pull.Obj("head").Get("sha"), "")
@@ -1097,5 +1115,5 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and its head is not the cleared one", number)}
 	}
 	return []string{fixCI(ctx, number, pull, names, record, run, sha,
-		"The merge queue took this out: CI failed on `main` with it on top")}
+		"The merge queue took this out: CI failed on `main` with it on top", false, false)}
 }

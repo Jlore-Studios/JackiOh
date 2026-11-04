@@ -68,7 +68,7 @@ jobs:
       contents: write        # the state file on the squishy-state branch
       issues: write
       pull-requests: write
-      actions: write         # start a forced run; re-run failed CI jobs once
+      actions: write         # start a forced run; the sweep stops a Squishy pull request's red CI
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4

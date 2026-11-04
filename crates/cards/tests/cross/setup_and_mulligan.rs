@@ -17,7 +17,7 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
-use super::register_fixture_script;
+use super::{ids, register_fixture_script};
 
 fn fixture_def(id: &str, type_: CardType) -> CardDef {
     let face = if type_ == CardType::Unit {
@@ -125,10 +125,6 @@ fn game_args(seed: &str, decks: (Vec<String>, Vec<String>)) -> CreateGameArgs {
         decks,
         ..Default::default()
     }
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn mode_answer(choice_id: &str, option: &str, player: PlayerId) -> Value {

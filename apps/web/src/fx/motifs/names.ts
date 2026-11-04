@@ -8,7 +8,6 @@ export const FX_MOTIF_NAMES = [
   "bolt",
   "volley",
   "barrage",
-  "chain",
   "lance",
   "nova",
   "wipe",
@@ -18,33 +17,39 @@ export const FX_MOTIF_NAMES = [
   "drain",
   "bless",
   "curse",
-  "ward",
   "conjure",
   "rise",
   "offering",
   "shift",
   "bind",
   "tether",
-  "mirror",
   "transmute",
   "flight",
-  "glimpse",
   "mana",
   "tithe",
   "tally",
   "snap",
+  "send",
+  "radiance",
+  "mend",
+  "deal",
+  "seal",
+  "recall",
+  "hex",
   "aura",
 ] as const;
 
 /**
  * The motifs `MOTIF_PLANNERS` draws: #2784's damage and removal family, then #2786's life and
- * stats, board, cards and mana, and trap motifs.
+ * stats, board, cards and mana, and trap motifs, then #2793's send, radiance and mend, then #2796's
+ * `deal` and `seal`, then #2794's recall (R2794000), then #2797's mark (`hex`).
+ * R2803000 folds `chain` into `nova`, `mirror` into `transmute`, `ward` into the rows and
+ * `glimpse` into bespoke `mindJudge`, so 31 drawn motifs remain.
  */
 export const FX_DRAWN_MOTIFS = [
   "bolt",
   "volley",
   "barrage",
-  "chain",
   "lance",
   "nova",
   "wipe",
@@ -54,26 +59,31 @@ export const FX_DRAWN_MOTIFS = [
   "drain",
   "bless",
   "curse",
-  "ward",
   "conjure",
   "rise",
   "offering",
   "shift",
   "bind",
   "tether",
-  "mirror",
   "transmute",
   "flight",
-  "glimpse",
   "mana",
   "tithe",
   "tally",
   "snap",
+  "send",
+  "radiance",
+  "mend",
+  "deal",
+  "seal",
+  "recall",
+  "hex",
 ] as const;
 
 /**
- * Where on its card a motif plays: `cast` a non-Unit's play, `cry` a Unit's; `death`, `trigger` and
- * `activate` wait for #2783's `hookResolving` marker and plan nothing until it lands.
+ * Where on its card a motif plays: `cast` a non-Unit's play (and a Trap's firing), `cry` a Unit's;
+ * R2797000: `death`, `trigger` (a start- or end-of-turn hook or a Whenever) and `activate` from the
+ * hook's own `hookResolving` marker (R2783000) to the next.
  */
 export const FX_CARD_HOOKS = ["cast", "cry", "death", "trigger", "activate"] as const;
 

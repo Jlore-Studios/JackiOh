@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, in_hand, live, matches_object, new_game, put, sink_for, slot,
+    act, act_result, both, events_of_type, ids, in_hand, live, matches_object, new_game, put, sink_for, slot,
     spread,
 };
 
@@ -240,10 +240,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
 }
 
 // Harness.
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
 
 /// Past the mulligans, in p1's main phase, with this file's fixtures registered and 4 mana.
 fn playing(seed: &str) -> GameState {

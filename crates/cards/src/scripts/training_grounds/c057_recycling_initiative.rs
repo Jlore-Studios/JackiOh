@@ -204,6 +204,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const RECYCLING: &str = "traininggrounds-057"; // Spell, 0
     const TIMMY: &str = "core-011"; // Unit, 1 — 3/3 Rush, First Strike, no Cry
     const MR_TOKEN: &str = "core-015"; // Unit, 1 — Cry: summon a Rush Token
@@ -232,7 +234,6 @@ mod tests {
 
     /// `scenario` with the shipped cards registered first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

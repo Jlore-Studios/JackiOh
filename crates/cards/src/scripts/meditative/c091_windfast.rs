@@ -50,6 +50,8 @@ mod tests {
 
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -92,7 +94,6 @@ mod tests {
 
             #[test]
             fn r1202_one_unit_in_hand_makes_the_attack_and_is_bounced() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [UNIT, FILLER], "field": [WINDFAST] },
                     "p2": { "hand": [FILLER] },
@@ -128,7 +129,6 @@ mod tests {
 
             #[test]
             fn r1202_windfury_summons_its_own_for_each_attack() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [UNIT, FILLER], "field": [WINDFAST] },
                     "p2": { "hand": [FILLER] },
@@ -141,7 +141,6 @@ mod tests {
 
             #[test]
             fn r831006_several_units_ask_nothing_a_random_one_makes_the_attack() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [UNIT, OTHER, FILLER], "field": [WINDFAST] },
                     "p2": { "hand": [FILLER] },
@@ -165,7 +164,6 @@ mod tests {
 
             #[test]
             fn r1202_with_no_unit_in_hand_it_attacks_itself() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [WINDFAST] },
                     "p2": { "hand": [FILLER] },
@@ -176,7 +174,6 @@ mod tests {
 
             #[test]
             fn death_shuffles_a_windfurious_prime_into_the_deck() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [WINDFAST] },
                     "p2": { "hand": [FILLER], "field": [GRUNT] },
@@ -219,7 +216,6 @@ mod tests {
 
             #[test]
             fn radiant_death_shuffles_a_radiant_prime() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": WINDFAST, "radiant": true }] },
                     "p2": { "hand": [FILLER], "field": [GRUNT] },

@@ -50,6 +50,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
     use crate::{merged, upgrade_number};
 
     const RUNES: &str = super::ID;
@@ -61,7 +62,6 @@ mod tests {
     const STOCKPILE: &str = "core-005";
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "active": "p2",
             "p1": merged(

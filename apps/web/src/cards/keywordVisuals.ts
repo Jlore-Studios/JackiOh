@@ -447,7 +447,7 @@ export function keywordFxAttributes(entry: KeywordFxPlan): Record<string, string
 /** R2789000: a callout's icon (fx/motifs/callout.ts): SVG path data in a 100×100 box, filled, or only stroked when `line` is set. */
 export type KeywordIcon = { d: string; line?: true };
 
-/** R2789000: the combat keywords' callout icons; a keyword with none draws no callout. */
+/** R2789000: the combat keywords' callout icons, R2791000 the tempo ones; a keyword with none draws no callout. */
 export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, KeywordIcon>>> = {
   "First Strike": { d: "M50 3 L65 22 L65 60 L35 60 L35 22 Z M20 60 H80 V72 H20 Z M43 72 H57 V96 H43 Z" },
   Cleave: { d: "M10 82 A48 48 0 0 1 90 18 A62 62 0 0 0 10 82 Z" },
@@ -460,4 +460,26 @@ export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, Keyword
   },
   Windfury: { d: "M8 36 H62 C84 36 84 12 66 14 M8 66 H70 C94 66 94 90 74 88", line: true },
   Ranged: { d: "M30 10 C66 26 66 74 30 90 M30 10 V90 M14 50 H84 M74 42 L86 50 L74 58", line: true },
+  // Issue #2790: the defensive keywords' callout icons, in the same 100×100 box.
+  "Divine Shield": { d: "M50 8 A42 42 0 1 0 50 92 A42 42 0 1 0 50 8 Z" },
+  Armor: { d: "M28 20 H72 V58 L50 84 L28 58 Z" },
+  Indestructible: { d: "M20 30 H80 V44 H20 Z M28 44 H72 V70 H28 Z M36 70 H64 V88 H36 Z" },
+  Immutable: { d: "M32 44 H68 V84 H32 Z M40 44 V32 A10 10 0 0 1 60 32 V44" },
+  Reborn: { d: "M20 60 L50 30 L80 60 M20 78 L50 48 L80 78", line: true },
+  Brittle: { d: "M54 4 L42 34 L58 44 L40 72 L48 96", line: true },
+  "Immune to Spells": { d: "M50 6 L88 28 V72 L50 94 L12 72 V28 Z" },
+  Taunt: { d: "M30 14 H70 V52 C70 72 60 82 50 88 C40 82 30 72 30 52 Z" },
+  "Can't Defend": { d: "M46 14 H30 V52 C30 72 38 82 44 88 Z M54 14 H70 V52 C70 72 62 82 56 88 Z" },
+  "Can't attack": { d: "M50 8 A42 42 0 1 0 50 92 A42 42 0 1 0 50 8 Z M28 28 L72 72 M72 28 L28 72" },
+  // R2791000: the tempo keywords' callout icons; a keyword with none draws no callout.
+  Charge: { d: "M14 20 L38 50 L14 80 M38 20 L62 50 L38 80 M62 20 L86 50 L62 80", line: true },
+  Rush: { d: "M20 50 H70 M55 30 L75 50 L55 70", line: true },
+  Equip: { d: "M25 8 H45 V52 A5 5 0 0 0 55 52 V8 H75 V52 A25 25 0 0 1 25 52 Z" },
+  Tradable: { d: "M50 8 A42 42 0 0 1 92 50 M92 50 L84 40 M92 50 L81 50 M50 92 A42 42 0 0 1 8 50 M8 50 L16 60 M8 50 L19 50", line: true },
+  Stack: { d: "M10 70 H54 V82 H10 Z M24 52 H68 V64 H24 Z M38 34 H82 V46 H38 Z M52 16 H96 V28 H52 Z" },
+  "Spell Damage": { d: "M38 4 H62 V38 H96 V62 H62 V96 H38 V62 H4 V38 H38 Z" },
+  Lucky: { d: "M38 27 a11 11 0 1 0 0.1 0 M62 27 a11 11 0 1 0 0.1 0 M38 51 a11 11 0 1 0 0.1 0 M62 51 a11 11 0 1 0 0.1 0 M50 70 L50 94" },
+  Deft: { d: "M22 74 L46 26 M78 74 L54 26 M50 84 a4 4 0 1 0 0.1 0", line: true },
+  Flashback: { d: "M18 86 H82 M50 76 V24 M34 40 L50 24 L66 40", line: true },
+  Temporary: { d: "M30 8 H70 L52 46 L70 92 H30 L48 46 Z" },
 };

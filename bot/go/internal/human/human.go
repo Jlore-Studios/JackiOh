@@ -4,15 +4,18 @@
 //
 // The bot may not change `bot/`, `.harness/`, `.squishy/` or `.github/` (the path guard puts such a
 // change back, and deliver refuses to push one), holds no secret it was not given, and has no
-// dashboard: GitHub's settings and secrets, Vercel, Render, Supabase and Cloudflare are a person's.
+// dashboard: GitHub's settings and secrets, Supabase and Cloudflare are a person's.
 // No run can finish an item that needs one of those, and asking the same question run after run
 // spends a run each time (#760 spent two). So the bot hands it over: its own labels come off
 // (`LETS_GO`: `bot:blocked`, the queue and the stages), it unassigns itself and assigns the people
 // (`triage.HUMANS`, as `human` does), labels it `human required` and names them in a comment that
-// says what a person must do (`ask`). The item is then people's, as one labelled `human` is
-// (`queue.is_human`): an item is `human` or `human required` (people's) or carries the bot's
-// labels (the bot's), never both. A person who did only their part takes the label off and queues
-// the rest; one who builds it all closes it.
+// says what a person must do (`ask`). It archives its work on the item (#3009, `queue.Archive`):
+// it forgets the item's queue, holds, lanes, decision, merge and session, its open pull request
+// goes back to a draft with auto-merge off, and the comment, on the item and on that pull request,
+// says where the work is (its branch, pull request and head). The item is then people's, as one
+// labelled `human` is (`queue.is_human`): an item is `human` or `human required` (people's) or
+// carries the bot's labels (the bot's), never both. A person who did only their part takes the
+// label off and queues the rest; one who builds it all closes it.
 //
 // What says an item needs a person:
 //
@@ -126,10 +129,12 @@ func People() string {
 	return strings.Join(mentions, " ")
 }
 
-// Ask is the comment that hands an item to a person: it names them, says what they must do, and
-// how to give the item back. `what` is what the bot cannot do; `kept` notes work it kept;
-// `again` is how to queue it again (a build, by default).
-func Ask(question string, botLogin string, what string /* = "build this" */, kept string /* = "" */, again string /* = "" */) string {
+// Ask is the summary that hands an item to a person (#793; #3009, section 2): it names them, says
+// why the bot stopped (what it cannot do, `what`, with `kept`, a note of what it did first), exactly
+// what a person must do or check (`question`), where its work is (`where`: its branch, its pull
+// request and their head), what it did (its labels off, the people assigned, its work archived) and
+// how to give the item back (`again`: how to queue it again, a build by default).
+func Ask(question string, botLogin string, what string /* = "build this" */, kept string /* = "" */, where string /* = "" */, again string /* = "" */) string {
 	if again == "" {
 		again = fmt.Sprintf("`%s build` (or `@%s <notes>`) queues it", config.Slash, botLogin)
 	}
@@ -137,10 +142,16 @@ func Ask(question string, botLogin string, what string /* = "build this" */, kep
 	if q == "" {
 		q = "It needs something only a person can do."
 	}
-	return fmt.Sprintf("%s this needs a person: I cannot %s myself.%s\n\n", People(), what, kept) +
-		q + "\n\n" +
-		"So it is yours now: I took my labels off, unassigned myself, assigned you and " +
-		fmt.Sprintf("labelled it `%s`, and I do not touch it while that label is on. ", config.LabelHumanRequired) +
-		"If the rest is mine once a person has done their part, take the label off and " +
-		fmt.Sprintf("%s; if you build it all yourselves, close it.", again)
+	if strings.TrimSpace(where) == "" {
+		where = "nowhere: no branch or pull request of mine holds any of it."
+	}
+	return fmt.Sprintf("%s this needs a person: I cannot %s myself, so I stopped.%s\n\n", People(), what, kept) +
+		"**What a person must do or check:** " + q + "\n\n" +
+		"**Where my work is:** " + where + "\n\n" +
+		"**What I did:** it is yours now. I took my labels off, unassigned myself, assigned you and " +
+		fmt.Sprintf("labelled it `%s`, and I archived my work on it: I forgot its queue, holds, lanes, ", config.LabelHumanRequired) +
+		"session and merge, so no sweep, CI fix, conflict revision or turn of mine takes it up again, and " +
+		"I do not touch it while that label is on.\n\n" +
+		fmt.Sprintf("To give it back to me once a person has done their part, take the label off: then %s, and "+
+			"I start again from the issue and its branch's history. If you build it all yourselves, close it.", again)
 }

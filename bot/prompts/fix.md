@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 4 -->
 # Address the review of #$number
 
 You are a fresh builder for issue #$number of `$repo`, on branch `$branch` (base `$base`). An
@@ -40,11 +40,20 @@ The very first line must be a single HTML comment carrying JSON, with nothing be
 
     <!-- bot: {"status": "done", "title": "Pull request title, as docs/issues-and-patches.md (Titles) sets it"} -->
 
-or `{"status": "blocked", "question": "..."}` when a person must decide something first. When
-nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or `bot/`, a
-secret or a token, a dashboard setting such as Vercel's or Render's, an account), add
-`"human_required": true` and say in `question` exactly what a person must do: the harness hands
-the thread to the people (`human required`, the bot's labels off) and names them.
+or `{"status": "blocked", "problem": "...", "question": "...", "options": [{"change": "...", "tradeoff": "..."}, {"change": "...", "tradeoff": "..."}], "suggestion": 1, "why": "..."}`
+when a person must decide something first. Write `problem` as you would explain it to a person in a
+chat: what you hit and why you cannot decide it alone, in a few short plain paragraphs. `options`
+lists every way you see, each with its `change` and its `tradeoff`; `suggestion` is the number (from
+1) of the one you recommend, which must stay inside the issue's own stated limits, and `why` says why
+(it reads after "because"). A person answers with a number or in their own words, and the same
+subscription and model take it up again in a fresh session to carry that answer out; if no trusted
+person answers in time, they build your suggestion instead, and each other option becomes an issue
+of its own for a person to approve. Leave `suggestion` out only when no option keeps within the
+issue's limits. When nobody but a person can do it (a change under `.github/`, `.harness/`,
+`.squishy/` or `bot/`, a secret or a token, a dashboard setting such as Supabase's or Cloudflare's,
+an account, money), add `"human_required": true`, give no options, and say in `question` exactly what
+a person must do: the harness hands the thread to the people (`human required`, the bot's labels
+off, its work archived) and names them, and it never goes ahead by itself.
 
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
 the issue's own title (`Patch: …`, or an older `Patch v0.3.X: …`, `CI: …` or `Architecture: …`

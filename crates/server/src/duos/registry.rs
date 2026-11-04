@@ -4,6 +4,10 @@
 //! `REMATCH_OFFER_TTL_MS` of `ended_at` (R1398000).
 //!
 //! One registry per running `App` via `registry(app)`, keyed by app address beside a weak handle.
+//!
+//! A friend's watch of a person's seat (R2881000) is handed to the actor as a 1v1 watch is
+//! (`actor::registry::Registry::attach_watcher`), once `social::watch` has judged it may; a finished
+//! actor is reaped only once its watchers have had the result's view (R1107000).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
@@ -17,9 +21,9 @@ use jackioh_engine::duos::{DuosReplayInput, DuosState};
 use jackioh_engine::wire::{DuosAction, DuosSeat};
 
 use crate::actor::contracts::one_tx;
-use crate::actor::registry::panic_text;
+use crate::actor::registry::{AttachError, panic_text};
 use crate::actor::ws_server::Socket;
-use crate::api::http::lock;
+use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::REMATCH_OFFER_TTL_MS;
@@ -95,6 +99,15 @@ pub fn registry(app: &Arc<App>) -> Arc<DuosRegistry> {
     let made = Arc::new(DuosRegistry::default());
     held.push((Arc::downgrade(app), Arc::clone(&made)));
     made
+}
+
+/// The co-op registry of `app` if one was made, never making one: what a read that only looks
+/// (a watcher count, a revoke) takes, so an app that never held a co-op game holds no registry.
+pub fn registry_if_made(app: &App) -> Option<Arc<DuosRegistry>> {
+    lock(&REGISTRIES)
+        .iter()
+        .find(|(owner, _)| owner.strong_count() > 0 && std::ptr::eq(owner.as_ptr(), app))
+        .map(|(_, found)| Arc::clone(found))
 }
 
 /// A log row as the engine folds it.
@@ -289,14 +302,16 @@ impl DuosRegistry {
         tracing::info!(event = "duos.stopped", matchId = %match_id);
     }
 
-    /// Drops finished actors with no open socket. Sockets returning within `REMATCH_OFFER_TTL_MS`
-    /// fold it again (R1398000).
+    /// Drops finished actors with no open socket and no watcher still owed the result's view
+    /// (R2881000, R1107000). Sockets returning within `REMATCH_OFFER_TTL_MS` fold it again (R1398000).
     pub async fn reap_finished(&self) -> Vec<String> {
         let reaped: Vec<(String, DuosActor)> = {
             let mut actors = lock(&self.actors);
             let due: Vec<String> = actors
                 .iter()
-                .filter(|(_, actor)| actor.is_finished() && !actor.has_open_socket())
+                .filter(|(_, actor)| {
+                    actor.is_finished() && !actor.has_open_socket() && actor.watcher_count() == 0
+                })
                 .map(|(match_id, _)| match_id.clone())
                 .collect();
             due.into_iter()
@@ -310,5 +325,47 @@ impl DuosRegistry {
             ids.push(match_id);
         }
         ids
+    }
+}
+
+// Watchers (#2881, R2881000)
+
+impl DuosRegistry {
+    /// B50, R2881000: hands a watcher's socket to the friend's seat, rebuilding the actor if it is not
+    /// in memory; `social::watch` has judged it may watch. A seatless friend reads as a missing match,
+    /// a full game as a conflict, as a 1v1 watch's (`actor::registry::Registry::attach_watcher`).
+    /// `watcher_name` is the username the watcher's emotes are shown under (R2990000).
+    pub async fn attach_watcher(
+        &self,
+        app: &Arc<App>,
+        match_id: &str,
+        friend_id: &str,
+        watcher_id: &str,
+        watcher_name: &str,
+        socket: Socket,
+    ) -> Result<(), AttachError> {
+        let not_found = || AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match"));
+        let actor = self.actor_for(app, match_id).await.map_err(|error| match error {
+            DuosAttachError::NotFound => not_found(),
+            DuosAttachError::Internal(message) => AttachError::Internal(message),
+        })?;
+        let Some(seat) = actor.seat_of(friend_id) else {
+            return Err(not_found());
+        };
+        actor
+            .attach_watcher(seat, watcher_id, watcher_name, socket)
+            .map_err(|refused| AttachError::Api(ApiError::new(ApiErrorCode::Conflict, refused.message())))
+    }
+
+    /// B51, S7's `watchable`: how many sockets watch the game now; none for one not in memory.
+    pub fn watcher_count(&self, match_id: &str) -> usize {
+        self.get(match_id).map_or(0, |actor| actor.watcher_count())
+    }
+
+    /// B50, B46: drops revoked watchers in memory, `revoked` taking the watcher's account, its
+    /// friend's and the friend's teammate's; returns count evicted.
+    pub fn revoke_watchers(&self, revoked: impl Fn(&str, &str, &str) -> bool) -> usize {
+        let actors: Vec<DuosActor> = lock(&self.actors).values().cloned().collect();
+        actors.iter().map(|actor| actor.revoke_watchers(&revoked)).sum()
     }
 }

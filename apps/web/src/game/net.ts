@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import type { ActionBody, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
+import type { ActionBody, Aim, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
@@ -13,6 +13,7 @@ import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
+import { isSpectatorHand, spectatorEmoteOf } from "../sideline/wire.ts";
 import { isRecord } from "../wire/json.ts";
 import { messageOf } from "../net/errors.ts";
 
@@ -350,7 +351,11 @@ export type ServerFrame =
   /** R1834003: both seats' frozen picks (R1834002), on every join and hello, before the view. */
   | { type: "loadouts"; seats: Record<PlayerId, CardCosmetics> }
   /** R1834003: the picks of one seat's cards the view before it newly showed. */
-  | { type: "cardLoadouts"; cards: CardLoadouts };
+  | { type: "cardLoadouts"; cards: CardLoadouts }
+  /** R2990001: a watch socket's own emote hand, sent to that watcher alone. */
+  | { type: "spectatorHand"; emotes: readonly EmojiEmoteId[] }
+  /** R2990000: a watcher's emote, relayed live to both seats and to the match's other watchers. */
+  | { type: "spectatorEmote"; watcher: string; emote: EmojiEmoteId };
 
 /** Parse one text frame; unknown frames must not take the board down. */
 export function parseServerFrame(text: string): ServerFrame | null {
@@ -451,6 +456,12 @@ export function parseServerFrame(text: string): ServerFrame | null {
       const cards = parseCardLoadouts(parsed);
       return cards === null ? null : { type: "cardLoadouts", cards };
     }
+    case "spectatorHand":
+      return isSpectatorHand(parsed.emotes) ? { type: "spectatorHand", emotes: parsed.emotes } : null;
+    case "spectatorEmote": {
+      const relayed = spectatorEmoteOf(parsed);
+      return relayed === null ? null : { type: "spectatorEmote", ...relayed };
+    }
     default:
       return null;
   }
@@ -515,6 +526,8 @@ export type MatchSnapshot = {
   emoteHand: EmoteId[] | null;
   /** R643: the last opponent emote; `seq` makes repeats notify. */
   emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
+  /** R2990000: the last watcher's emote relayed to this seat; `seq` makes repeats notify. */
+  spectatorEmote: { watcher: string; emote: EmojiEmoteId; seq: number } | null;
   /** R738: the opponent's aim as last relayed; null when none is up or the socket has dropped. */
   aim: { from: PlayerId; aim: Aim } | null;
   /**
@@ -585,6 +598,7 @@ const INITIAL: MatchSnapshot = {
   portraits: null,
   emoteHand: null,
   emote: null,
+  spectatorEmote: null,
   aim: null,
   choiceHover: null,
   watchers: 0,
@@ -624,6 +638,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   const backoff = createBackoff(open, () => stopped, timers, random);
   /** R643: repeated emotes still notify. */
   let emoteSeq = 0;
+  /** R2990000: and so do a watcher's. */
+  let spectatorSeq = 0;
   /** Set when a socket is created; its first `view` proves the server answered (§9.5), so an error from before it is stale. */
   let awaitingFirstView = false;
   /** R1115000: the token a 4401 refused while the client stays refused for it; null otherwise. */
@@ -702,6 +718,13 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         if (next !== snapshot.loadouts) patch({ loadouts: next });
         return;
       }
+      case "spectatorEmote":
+        spectatorSeq += 1;
+        patch({ spectatorEmote: { watcher: frame.watcher, emote: frame.emote, seq: spectatorSeq } });
+        return;
+      case "spectatorHand":
+        // R2990001: a watch socket's alone (together/WatchRoute.tsx reads it); a seat is dealt none.
+        return;
     }
   }
 

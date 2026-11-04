@@ -6,9 +6,11 @@
 // hero (B23). There is no Play again: once the game is over the page asks the worker for its report,
 // the run's `FightOver` (B25), and Continue sends it to the run, which a lost fight ends (B26).
 //
-// The board is the practice route's (`routes/practice.tsx`): the same controller, pacing, emotes and
-// `Game`. The worker holds the game; the page holds snapshots (CLAUDE.md rule 7). A fight is never
-// saved (R2706000): after a reload the run, still on its fight, deals it again from its seed.
+// The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
+// (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
+// emotes and `Game`, with no Offer draw (R188). The worker holds the game; the page holds snapshots
+// (CLAUDE.md rule 7). A fight is never saved (R2706000): after a reload the run, still on its fight,
+// deals it again from its seed.
 
 import {
   useCallback,
@@ -16,7 +18,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -31,20 +32,18 @@ import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { t } from "../../i18n/i18n.ts";
 import { PRACTICE_PACING, PRACTICE_PACING_REDUCED, type PracticePacing } from "../../practice/config.ts";
-import {
-  PRACTICE_IDLE_STATE,
-  createPracticeController,
-  type PracticeController,
-  type PracticeControllerState,
-} from "../../practice/controller.ts";
+import { useBoardBusy, useControllerState, useShowcaseHold, useVoiceHold } from "../../practice/aiTable.ts";
+import { createPracticeController, type PracticeController } from "../../practice/controller.ts";
 import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
+import { guardLeaving } from "../../net/navigate.ts";
 import "../../practice/practice.css";
 import { useSetting } from "../../settings/store.ts";
 import { runFightSetup } from "../../wasm/index.ts";
 import type { Dungeon } from "../store.ts";
 import { ArtifactTray, type TrayItem } from "./ArtifactTray.tsx";
+import ConfirmLeaveFight from "./ConfirmLeaveFight.tsx";
 import { FIGHT_DIFFICULTY } from "./config.ts";
 import { RunTimer } from "./RunTimer.tsx";
 import { fightTestid } from "./testids.ts";
@@ -67,37 +66,6 @@ function defaultHostFactory(): PracticeHost {
 
 function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
-}
-
-const noSubscribe = (): (() => void) => () => {};
-const idleState = (): PracticeControllerState => PRACTICE_IDLE_STATE;
-
-/** The controller's state, as the practice route reads it. */
-function useControllerState(controller: PracticeController | null): PracticeControllerState {
-  return useSyncExternalStore(
-    controller === null ? noSubscribe : controller.subscribe,
-    controller === null ? idleState : controller.getState,
-    controller === null ? idleState : controller.getState,
-  );
-}
-
-/**
- * The AI's next step waits while the board animates, as in the practice route: an element under
- * `root` carries `data-animating` for exactly as long as the board holds a view back.
- */
-function useBoardBusy(root: HTMLElement | null, controller: PracticeController | null): void {
-  useEffect(() => {
-    if (controller === null || root === null || typeof MutationObserver !== "function") return;
-    const report = (): void => {
-      controller.setBoardBusy(root.querySelector("[data-animating]") !== null);
-    };
-    const observer = new MutationObserver(report);
-    observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-animating"] });
-    report();
-    return () => {
-      observer.disconnect();
-    };
-  }, [root, controller]);
 }
 
 /** The setup, loading and failure screens are practice's reading column; the fight is its full-width board. */
@@ -160,6 +128,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const state = useControllerState(controller);
   const [boardRoot, setBoardRoot] = useState<HTMLDivElement | null>(null);
   useBoardBusy(boardRoot, controller);
+  useVoiceHold(controller);
+  useShowcaseHold(controller);
   const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat, controller);
   const lethalOn = useSetting("lethalHint");
   const defs = state.defs;
@@ -208,6 +178,29 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     [controller],
   );
 
+  const snapshot = state.snapshot;
+
+  // R2972000: while the fight is live, every in-app move off it asks first (R1754000), as every
+  // way off a live online match does (R2479000). These hooks sit before the screens below: a
+  // live-to-failed transition re-renders this same screen, and hooks after a return would change
+  // the hook count. The stopped screen holds nothing: Try again deals the same fight again from
+  // its seed, so there is no live fight to keep. The cleanup releases the guard when the store
+  // moves screens on its own (Continue sends the report and unmounts this screen), and `!over`
+  // releases it once the fight has its result.
+  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
+  const atStake =
+    setup !== null && controller !== null && snapshot !== null && !over && state.phase !== "failed";
+  useEffect(() => {
+    if (!atStake) return;
+    const release = guardLeaving((leave) => {
+      setLeaving({ leave });
+    });
+    return () => {
+      release();
+      setLeaving(null);
+    };
+  }, [atStake]);
+
   if (setup === null) {
     return (
       <Shell variant="lobby">
@@ -236,7 +229,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     );
   }
 
-  const snapshot = state.snapshot;
   if (controller === null || snapshot === null) {
     return (
       <Shell variant="lobby">
@@ -303,6 +295,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       // A fight counts in the run's own stats (DR9), not the device's (R639).
       trackStats={false}
       wearCosmetics
+      // §9.9, R188: the AI declines every draw offer, so the board draws no Offer draw, as practice's.
+      showOfferDraw={false}
       // R2291000: the lethal hint, as in every game against the AI, which the setting turns off.
       lethalHint={lethalOn && snapshot.lethal === true}
       matchStatus={
@@ -330,6 +324,14 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       <div className="practice-board practice-table" ref={setBoardRoot} data-thinking={state.thinking ? "true" : "false"}>
         {lookup === null ? board : <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider>}
       </div>
+      {leaving === null ? null : (
+        <ConfirmLeaveFight
+          onStay={() => {
+            setLeaving(null);
+          }}
+          onLeave={leaving.leave}
+        />
+      )}
     </Shell>
   );
 }

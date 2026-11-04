@@ -384,7 +384,7 @@ describe("pick (C #44)", () => {
       pending: pendingFor(
         "pick",
         [
-          { key: "instance:g1", label: "Bigot", instanceId: "g1", defId: "core-002", cost: 2 },
+          { key: "instance:g1", label: "Speciesist", instanceId: "g1", defId: "core-002", cost: 2 },
           { key: "instance:g2", label: "Midrange Menace", instanceId: "g2", defId: "core-019", cost: 3 },
           { key: "instance:g3", label: "Big Felinor", instanceId: "g3", defId: "core-043", cost: 4, radiant: true },
         ],
@@ -465,7 +465,7 @@ describe("pick (C #44)", () => {
 
 describe("prompts the other seat holds, and the opponent's hand", () => {
   const THEIR_HAND: PendingOption[] = [
-    { key: "instance:o1", label: "Bigot", instanceId: "o1", defId: "core-002" },
+    { key: "instance:o1", label: "Speciesist", instanceId: "o1", defId: "core-002" },
     { key: "instance:o2", label: "Big Felinor", instanceId: "o2", defId: "core-043", radiant: true },
   ];
 

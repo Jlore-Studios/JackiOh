@@ -41,7 +41,6 @@ mod tests {
 
     #[test]
     fn armor_makes_each_hit_on_it_2_less() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [ANCHOR], "field": [BOOSTER], "library": filler(4) },
@@ -55,7 +54,6 @@ mod tests {
 
     #[test]
     fn r1852001_equipped_onto_a_unit_the_host_gains_1_1_and_armor_2_and_stays_no_piece() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA, BOOSTER, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -74,7 +72,6 @@ mod tests {
 
     #[test]
     fn radiant_is_a_2_2_with_armor_4() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": BOOSTER, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },

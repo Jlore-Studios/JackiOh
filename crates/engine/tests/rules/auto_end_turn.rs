@@ -6,17 +6,12 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::harness::{act_ok, events_of_type, json_of, new_game, next_action};
+use crate::rules::fixtures::harness::{act_ok, events_of_type, input, json_of, new_game, next_action};
 
 const SEED: &str = "r345";
 
 fn decks() -> (Vec<String>, Vec<String>) {
     (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21))
-}
-
-/// An `ActionInput` from a JSON object (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 fn mulligans(state: &GameState) -> Vec<Action> {

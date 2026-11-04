@@ -52,6 +52,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const MAGIC_JAMMED: &str = "core-036";
     /// A Field Spell: a public backrow card (§3.2).
     const MANA_WELL: &str = "core-006";
@@ -64,7 +66,6 @@ mod tests {
 
     /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

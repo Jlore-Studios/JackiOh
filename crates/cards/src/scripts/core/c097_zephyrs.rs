@@ -81,6 +81,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const ZEPHYRS: &str = "core-097";
@@ -178,7 +180,6 @@ mod tests {
 
         #[test]
         fn r29_never_offers_zephyrs_itself_and_never_offers_a_token_s5_1() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-self", "p1": { "hand": [ZEPHYRS] } }));
             s.play(ZEPHYRS, json!({}));
 
@@ -242,7 +243,6 @@ mod tests {
 
         #[test]
         fn s8_5_the_pick_goes_to_the_caster_s_hand_not_radiant_on_the_base_face() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-hand", "p1": { "hand": [ZEPHYRS] } }));
             s.play(ZEPHYRS, json!({}));
             let picked = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
@@ -257,7 +257,6 @@ mod tests {
 
         #[test]
         fn s8_5_exile_this_the_spell_reaches_the_exile_pile_not_the_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-exile", "p1": { "hand": [ZEPHYRS] } }));
             s.play(ZEPHYRS, json!({}));
             let first = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
@@ -272,7 +271,6 @@ mod tests {
 
         #[test]
         fn s8_5_costs_1_it_is_castable_with_1_mana_and_not_with_none() {
-            crate::register_all();
             let mut broke = scenario(json!({ "seed": "zephyrs-free", "p1": { "hand": [ZEPHYRS], "mana": 0 } }));
             broke.expect_refused(|s| s.play(ZEPHYRS, json!({})));
             let mut s = scenario(json!({ "seed": "zephyrs-free", "p1": { "hand": [ZEPHYRS], "mana": 1 } }));
@@ -286,7 +284,6 @@ mod tests {
 
         #[test]
         fn s8_5_a_perfect_radiant_card_the_pick_arrives_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-radiant", "p1": { "hand": [ZEPHYRS] } }));
             s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
@@ -321,7 +318,6 @@ mod tests {
 
         #[test]
         fn s8_5_exile_this_is_kept_the_radiant_cell_restates_only_which_card_is_discovered() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-radiant-exile", "p1": { "hand": [ZEPHYRS] } }));
             s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
@@ -498,7 +494,7 @@ mod tests {
         fn r222_the_cards_n97_offers_do_not_depend_on_which_face_down_trap_the_opponent_holds_s9_1_s10_8_r33() {
             crate::register_all();
             // Two games p1 cannot tell apart: p2's one face-down trap is a My Pawn in one, a Sheepish in
-            // the other. Played on the real state, the Sheepish turns Big Felinor and Bigot into Sheep
+            // the other. Played on the real state, the Sheepish turns Big Felinor and Speciesist into Sheep
             // before their Cries: the offers name the trap.
             let offers_with = |trap: &str| -> Vec<String> {
                 let mut g = scenario(json!({
@@ -605,7 +601,6 @@ mod tests {
 
         #[test]
         fn r360_the_dry_run_sees_the_base_lava_golem_clear_nothing_paid_with_the_enemy_s_units_it_is_summoned_for_them() {
-            crate::register_all();
             let g = scenario(json!({
                 "seed": "zephyrs-golem",
                 "p1": { "hand": [ZEPHYRS, VANILLA], "field": [D_FENDER, D_FENDER, D_FENDER], "library": LIBRARY },

@@ -68,17 +68,18 @@ const DELEGATED: readonly Delegated[] = [
   {
     recipe: "buff",
     events: () => [{ type: "upgraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: 1, health: 1 } }],
-    motif: "bless",
-    flavor: "Holy",
+    motif: "transmute",
+    flavor: "Nerd",
   },
   {
     recipe: "buff",
     events: () => [{ type: "degraded", instanceId: MINE_3, defId: "core-017", change: { kind: "stats", attack: -1, health: -1 } }],
-    motif: "curse",
-    flavor: "Dark",
+    motif: "transmute",
+    flavor: "Nerd",
   },
-  { recipe: "armor", events: () => [{ type: "damageAbsorbed", sourceId: null, targetId: ENEMY, absorbed: 5, combat: false }], motif: "ward", flavor: "Holy" },
-  { recipe: "shieldBreak", events: () => [{ type: "divineShieldLost", instanceId: ENEMY }], motif: "ward", flavor: "Holy" },
+  // Issue #2790: `armor` and `shieldBreak` draw in the rows (R2803000 folds `ward`), but their
+  // entries now carry beat callouts too, so `planFx`-equals-`planMotif` never held for them;
+  // beats.test.ts pins them instead.
   { recipe: "draw", events: () => [{ type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" }], motif: "flight", flavor: "Spirit" },
   { recipe: "mana", events: () => [{ type: "manaChanged", player: "p1", current: 4, max: 4 }], motif: "mana", flavor: "Holy" },
   {
@@ -89,7 +90,8 @@ const DELEGATED: readonly Delegated[] = [
   },
   {
     recipe: "trap",
-    events: () => [{ type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true }],
+    // R2797000: a firing plays its card's own `cast` first, so this names the card the view shows there, whose entry has none.
+    events: () => [{ type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-061", controller: "p1", row: "backrow", lane: 1, again: true }],
     motif: "snap",
     flavor: "Dark",
   },

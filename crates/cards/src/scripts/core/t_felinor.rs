@@ -30,6 +30,8 @@ mod tests {
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::state::find_instance;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use jackioh_engine::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone};
 
     const P1: PlayerId = PlayerId::P1;
@@ -95,7 +97,7 @@ mod tests {
     }
 
     /// The ids of a query's answer.
-    fn ids<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
+    fn ids_of_defs<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
         defs.into_iter().map(|entry| entry.id.clone()).collect()
     }
 
@@ -167,7 +169,6 @@ mod tests {
 
             #[test]
             fn s7_and_r64_n62_fills_every_empty_unit_zone_with_1_1_felinor_tokens() {
-                crate::register_all();
                 let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": ["core-062"] } }));
 
                 s.play("core-062", json!({}));
@@ -187,7 +188,6 @@ mod tests {
 
             #[test]
             fn s7_the_felinor_token_carries_the_felinor_tag_so_n43_s_non_felinor_sweep_spares_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "hand": ["core-043"], "field": ["core-t-felinor", "core-025"] },
@@ -210,7 +210,6 @@ mod tests {
 
             #[test]
             fn r11_a_felinor_token_that_dies_in_combat_ceases_to_exist_and_never_reaches_a_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": ["core-t-felinor"] },
@@ -253,11 +252,11 @@ mod tests {
                 crate::register_all();
                 let id = ID.to_string();
 
-                assert!(!ids(query(&json_as(json!({ "tags": ["Felinor"] })))).contains(&id));
-                assert!(!ids(query(&json_as(json!({ "type": "Unit" })))).contains(&id));
-                assert!(ids(query(&json_as(json!({ "tags": ["Felinor", "Token"] })))).contains(&id));
-                assert!(ids(query(&json_as(json!({ "token": true })))).contains(&id));
-                assert_eq!(ids(query(&json_as(json!({ "defId": "core-t-felinor" })))), vec![id]);
+                assert!(!ids_of_defs(query(&json_as(json!({ "tags": ["Felinor"] })))).contains(&id));
+                assert!(!ids_of_defs(query(&json_as(json!({ "type": "Unit" })))).contains(&id));
+                assert!(ids_of_defs(query(&json_as(json!({ "tags": ["Felinor", "Token"] })))).contains(&id));
+                assert!(ids_of_defs(query(&json_as(json!({ "token": true })))).contains(&id));
+                assert_eq!(ids_of_defs(query(&json_as(json!({ "defId": "core-t-felinor" })))), vec![id]);
             }
         }
 
@@ -267,7 +266,6 @@ mod tests {
 
             #[test]
             fn r74_r275_a_radiant_felinor_token_is_a_2_2_with_rush_and_keeps_the_felinor_tag() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": "core-t-felinor", "radiant": true }] },
@@ -297,7 +295,6 @@ mod tests {
 
             #[test]
             fn s7_a_radiant_felinor_token_is_spared_by_n43_s_non_felinor_sweep_exactly_as_the_base_face_is() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": {
@@ -316,7 +313,6 @@ mod tests {
 
             #[test]
             fn r11_a_radiant_felinor_token_that_leaves_the_field_ceases_to_exist_just_as_the_base_face_does() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "field": [{ "def": "core-t-felinor", "radiant": true }] },

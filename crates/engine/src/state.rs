@@ -690,7 +690,7 @@ pub enum ModifierKind {
         cost: i32,
     },
     // ---- Stinkyscape's drones (issue #1863) ----
-    /// R1863000 (Stinkyscape #44 Great Replacement Theory): "for the rest of the game, the first time you
+    /// R1863000 (Stinkyscape #44 Great Paperclip Theory): "for the rest of the game, the first time you
     /// play each …": after this player's first resolved play (a cast included, R70) of each of `def_ids`,
     /// `resume` re-enters the card's step with that card's `defId` in its data, and the definition comes
     /// off `def_ids`. Expiry `never`; several stack, each its own record. `label` is its badge (R169).
@@ -2207,6 +2207,7 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         && handicap.pool_hold != Some(true)
         && handicap.tutorial_cards_only != Some(true)
         && handicap.deck_copies.is_none_or(|copies| copies == MAX_COPIES)
+        && handicap.hero_armor.is_none_or(|armor| armor == 0)
 }
 
 /// R2201000: the least health `player`'s hero can fall to, when its handicap sets a floor.
@@ -2290,6 +2291,14 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
     {
         return Err(EngineError::new(format!(
             "{label}: handicap deckCopies must be a positive integer (R2433001), got {copies}"
+        )));
+    }
+    // R2922000: optional, and when given Armor the hero can hold.
+    if let Some(armor) = handicap.hero_armor
+        && armor < 0
+    {
+        return Err(EngineError::new(format!(
+            "{label}: handicap heroArmor must be a non-negative integer (R2922000), got {armor}"
         )));
     }
     // R2201000: optional, and when given a floor the hero starts at or above.
@@ -2761,8 +2770,12 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 pool_hold: handicap.pool_hold.filter(|hold| *hold),
                 tutorial_cards_only: handicap.tutorial_cards_only.filter(|only| *only),
                 deck_copies: handicap.deck_copies.filter(|copies| *copies != MAX_COPIES),
+                // R2922000: joins only above 0, so no other game stores it.
+                hero_armor: handicap.hero_armor.filter(|armor| *armor > 0),
             });
             side.hero.health = hero_health;
+            // R2922000: the hero's own Armor, as any it gains later.
+            side.hero.armor = handicap.hero_armor.unwrap_or(0);
         }
     }
     apply_deck_marks(&mut state, options);

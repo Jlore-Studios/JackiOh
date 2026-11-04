@@ -95,12 +95,19 @@ function entryFor(events: readonly GameEvent[], view: PlayerView, D: number, red
   return { ...must(entries[0], "an entry"), durationMs: D };
 }
 
-function plan(events: readonly GameEvent[], D: number, options: { env?: FxPlanEnv; reduced?: boolean } = {}): FxCue[] {
-  const view = withEvents(fullBoardView(), [...events]);
+function plan(events: readonly GameEvent[], D: number, options: { env?: FxPlanEnv; reduced?: boolean; view?: PlayerView } = {}): FxCue[] {
+  const view = withEvents(options.view ?? fullBoardView(), [...events]);
   const env = options.env ?? envOf();
   const entry = entryFor(events, view, options.reduced === true ? 0 : D, options.reduced);
   env.memory.remember(entry.events);
   return planFx(entry, view, env);
+}
+
+/** R2791000: a plain summon needs an empty zone (§3.2); the fixture lane stands occupied. */
+function emptyLane(side: "you" | "opponent", lane: number): PlayerView {
+  const view = fullBoardView();
+  view[side].units[lane - 1] = null;
+  return view;
 }
 
 const summon = (player: "p1" | "p2", instanceId: string, defId: string, row: "units" | "backrow", lane: number): GameEvent => ({
@@ -181,7 +188,7 @@ describe("#1445 a Unit's summon entrance takes its flavor", () => {
   it("#1445 a face-up summoned plans today's summon plus its flavor's entrance", () => {
     for (const D of [ANIMATIONS.summoned.durationMs, 732]) {
       const slam = r(FX_SLAM_AT * D);
-      expectCues(plan([summon("p1", "n1", "core-002", "units", 3)], D), [
+      expectCues(plan([summon("p1", "n1", "core-002", "units", 3)], D, { view: emptyLane("you", 3) }), [
         ring("dust", tid(ZONE), slam, D),
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         burst("spark", tid(ZONE, FOOT), "point", slam),
@@ -192,7 +199,7 @@ describe("#1445 a Unit's summon entrance takes its flavor", () => {
   it("#1445 a Brute summon lands heavy", () => {
     const D = 400;
     const slam = r(FX_SLAM_AT * D);
-    const cues = plan([summon("p1", "n1", "core-066", "units", 3)], D);
+    const cues = plan([summon("p1", "n1", "core-066", "units", 3)], D, { view: emptyLane("you", 3) });
     expectCues(cues, [
       ring("dust", tid(ZONE), slam, D),
       burst("dust", tid(ZONE, FOOT), "ring", slam),
@@ -211,7 +218,7 @@ describe("#1445 a Unit's summon entrance takes its flavor", () => {
       const slam = r(FX_SLAM_AT * D);
       const zone = testid.zone("opponent", "units", 2);
       for (const [instanceId, defId] of [["hidden", "hidden"], ["n99", "core-999"]] as const) {
-        const cues = plan([summon("p2", instanceId, defId, "units", 2)], D);
+        const cues = plan([summon("p2", instanceId, defId, "units", 2)], D, { view: emptyLane("opponent", 2) });
         expectCues(cues, [burst("dust", tid(zone, FOOT), "ring", slam)]);
         expect(cues.some((cue) => cue.kind === "rays" || cue.kind === "crack" || cue.kind === "shake" || cue.kind === "sheen")).toBe(false);
         expect(JSON.stringify(cues)).not.toContain("core-999");
@@ -225,11 +232,12 @@ describe("#1445 a Unit's summon entrance takes its flavor", () => {
     const slam = r(FX_SLAM_AT * D);
     const base = [ring("dust", tid(ZONE), slam, D), burst("dust", tid(ZONE, FOOT), "ring", slam)];
     for (const id of ["c1", "n7", "hello", "chaos-42"]) {
-      expect(plan([summon("p1", id, "classic-002", "units", 3)], D)).toEqual(plan([summon("p1", id, "classic-002", "units", 3)], D));
+      const open = { view: emptyLane("you", 3) };
+      expect(plan([summon("p1", id, "classic-002", "units", 3)], D, open)).toEqual(plan([summon("p1", id, "classic-002", "units", 3)], D, open));
       const pick = chaosFlavor(id);
       expect(pick).not.toBe("Chaos");
       const entrance = FLAVOR_ENTRANCES[pick]({ D, tgt: ZONE, intensity: FX_INTENSITY_SCALE.normal, landAt: slam, instanceId: id }).map(shape);
-      expectCues(plan([summon("p1", id, "classic-002", "units", 3)], D), [...base, ...entrance]);
+      expectCues(plan([summon("p1", id, "classic-002", "units", 3)], D, open), [...base, ...entrance]);
     }
     for (let k = 0; k < 200; k += 1) expect(chaosFlavor(`chaos-${String(k)}`), `chaos-${String(k)}`).not.toBe("Chaos");
   });

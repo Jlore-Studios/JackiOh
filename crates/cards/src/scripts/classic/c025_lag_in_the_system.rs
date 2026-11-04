@@ -92,8 +92,11 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ids;
     use crate::def_ids;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -117,10 +120,6 @@ mod tests {
     const SEVEN: &str = "core-025"; // (4) Unit 7/7
     const TOE_CRACKER: &str = "classic-006"; // (2) Unit: "Aura: Your Traps cost (0)."
     const RUSH_TOKEN: &str = "core-t-rush"; // (1) Unit token
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
-    }
 
     fn lag_board(radiant_face: bool) -> Scenario {
         scenario(json!({
@@ -220,7 +219,6 @@ mod tests {
 
             #[test]
             fn face_down_and_indestructible_cards_are_included() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LAG, FELINORS], "field": [STATE_OF_GAME], "backrow": [IN_TOO_DEEP] },
                     "p2": { "hand": [STOCKPILE, FELINORS], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
@@ -236,7 +234,6 @@ mod tests {
 
             #[test]
             fn r65_a_set_card_is_read_at_its_own_cost_a_2_trap_under_toe_cracker_costs_2_and_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LAG, FELINORS], "field": [TOE_CRACKER], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
                     "p2": { "hand": [STOCKPILE] },
@@ -249,7 +246,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_on_the_field_costs_the_x_it_was_played_for_played_for_3_it_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LAG, FELINORS] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": BILLY, "statsOverride": { "attack": 9, "health": 9 } }] },
@@ -262,7 +258,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_on_the_field_with_no_x_chosen_a_summon_costs_0_and_goes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LAG, FELINORS] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": BILLY, "statsOverride": { "attack": 3, "health": 3 } }] },
@@ -274,7 +269,6 @@ mod tests {
 
             #[test]
             fn r11_a_unit_token_exiled_from_the_field_ceases_to_exist() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAG, FELINORS] }, "p2": { "hand": [STOCKPILE], "field": [RUSH_TOKEN] } }));
                 let token = s.card(RUSH_TOKEN).clone();
                 s.play(LAG, json!({}));
@@ -284,7 +278,6 @@ mod tests {
 
             #[test]
             fn r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field_and_is_not_exiled_when_the_top_goes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [LAG, FELINORS] },
                     "p2": { "hand": [MENACE], "field": [VANILLA, { "def": TIMMY, "stack": true }] },
@@ -318,7 +311,6 @@ mod tests {
 
             #[test]
             fn with_nothing_that_cheap_anywhere_nothing_is_exiled() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [LAG, MENACE], "field": [SEVEN] }, "p2": { "hand": [MENACE], "library": [SEVEN] } }));
                 s.play(LAG, json!({}));
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Exiled));
@@ -407,7 +399,6 @@ mod tests {
 
             #[test]
             fn r65_their_hand_card_is_read_at_its_hand_cost_a_2_trap_under_their_toe_cracker_costs_0_and_goes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LAG, "radiant": true }, FELINORS] },
                     "p2": { "hand": [EXPERIMENT, STOCKPILE], "field": [TOE_CRACKER], "library": [FELINORS] },
@@ -420,7 +411,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_in_their_hand_or_deck_costs_0_and_goes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LAG, "radiant": true }, FELINORS] },
                     "p2": { "hand": [DIVIDEND, FELINORS], "library": [BILLY] },

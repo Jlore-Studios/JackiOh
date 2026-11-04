@@ -609,10 +609,8 @@ func (x *Deliverer) Revise(number int, status string) {
 					"rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
-		x.GH.CreateComment(number, "I need a decision before I can revise this.\n\n"+py.Str(question))
-		x.remember(number, pyjson.New("question", py.OrStr(question, "")))
+		x.askDecision(number, "revise", "I need a decision before I can revise this.", "", py.OrStr(question, ""))
 		return
 	}
 	// As the run found it: the source and the clearance `_carry` reads are reset below.
@@ -658,11 +656,16 @@ func (x *Deliverer) Revise(number int, status string) {
 	}
 	x.dropWip(number)
 	queue.SetStateLabel(x.Ctx, number, x.Labels(number), "")
+	if !pushed && botPR && x.localPassed() {
+		x.localPass(number, before) // its failing check passed locally: CI runs again (#2948)
+		return
+	}
 	if approved {
 		x.unstick(number)
 	}
 	report := py.SliceTo(py.OrStr(x.Result.Get("report"), ""), ReportChars)
 	rerun := !pushed && x.Record(number).Truthy("ci_run_id")
+	onHead := x.Record(number).Truthy("ci_on_head")
 	// The head a CI fix pushed: CI red on it is a strike (`events.on_ci`, #316).
 	fixed := pyjson.New()
 	if pushed && x.Record(number).Get("source") == "ci" {
@@ -677,7 +680,17 @@ func (x *Deliverer) Revise(number int, status string) {
 	note := ""
 	if !pushed && approved {
 		note = "\n\nI changed nothing: the reviewer agreed no change was needed."
-		if rerun {
+		switch {
+		case rerun && onHead:
+			// A CI fix of the head's own CI: run again with no commit while the head has re-runs
+			// left (`ci_reruns`, #2948), and a person's once it has none.
+			said, ok := x.rerunHead(number, py.OrStr(x.Result.Get("start"), ""), false)
+			if !ok {
+				x.ciStuck(number, said)
+				return
+			}
+			note += " " + said
+		case rerun:
 			note += " I asked CI to run the failed jobs again."
 			x.rerunCI(number)
 		}
@@ -735,6 +748,9 @@ func (x *Deliverer) Revise(number int, status string) {
 	done := "done"
 	if pushed {
 		done = "pushed"
+	}
+	if built := x.defaultMd(number); built != "" {
+		note += "\n\n" + built // nobody answered its question in time (#2986)
 	}
 	x.GH.CreateComment(number, fmt.Sprintf("Revision %s (%s) on %s; %s%s\n\n%s%s",
 		done, x.link(), x.builtOn(), said, note, report, mergeNote))

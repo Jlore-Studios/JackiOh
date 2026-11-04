@@ -104,7 +104,7 @@ Scripts in `crates/cards/src/scripts/training_grounds/cNNN_slug.rs` (`c039_1_tra
 
 | # | Core card | # | Core card |
 | --- | --- | --- | --- |
-| 41 | core-002 Bigot | 51 | core-043 Big Felinor |
+| 41 | core-002 Speciesist | 51 | core-043 Big Felinor |
 | 42 | core-005 Stockpile | 52 | core-049 Snom Bunny Mind Control |
 | 43 | core-008 Mr. Vanilla | 53 | core-061 Prejudiced Postdoc |
 | 44 | core-012 Duplicating Felinors | 54 | core-066 The Rock |
@@ -122,7 +122,7 @@ Near names, none a clash: TG #5 Midlane Menace and Core #19 Midrange Menace (als
 Fortify Mind (TG5 #12's R279 note), TG #26 Path of Exile and C #10 Exile, TG #35 Corpse Recycler and Core #89 Corpse
 Eater. The designer's casing is kept ("Group leader", "In a hurry", "Dino-size"), as Core's "Right-house defender" is.
 
-**Types.** The designer's, with #28 Occidental and #29 Oriental, whose header lines name no type, read as **Units**
+**Types.** The designer's, with #28 Occidental and #29 Easterner, whose header lines name no type, read as **Units**
 (each prints stats). #1–#40: **23 Units** (#1–#9, #16–#18, #21–#23, #25, #28–#30, #32, #33, #36, #38), **10 Spells**
 (#10–#12, #15, #26, #27, #34, #37, #39, #40), **2 Traps** (#13, #14), **4 Field Spells** (#19, #20, #31, #35), **1 Field
 Trap** (#24); the token #39.1 a Unit. The snapshots: 9 Units, 9 Spells, 2 Field Spells, as their Core cards.
@@ -205,7 +205,7 @@ or [[§10]] rows and its rulings. Read against the engine; the issue's first tab
 | An adjacency aura | `AuraEntry.applies` with `zones::slot_of`, `zones::adjacent` and `zones::is_adjacent_card`: a script, no engine change (*corrected*): `layers::aura_sources` (`layers.rs:223`) already takes only a pile's top and `layers.rs:489-494` give a dormant card no aura ([[R13]]). Its ruling and engine test are still owed (R1081000's standing Units) | #21 | P4 #2197 |
 | A terminator for a self-recursive Death | Cumulative growth, M #94 Shrinking Felinor's mirror (`base_stats_of` + `summon { statsOverride }`, [[R1181]]): each Trigor is strictly larger, so no fixed aura loops it; growth alone is no terminator, which is R2197004 (a Trigor a Trigor's Death summoned this turn summons nothing, marked as R2206000 says) | #25 | P4 |
 | After you summon a Unit | S #23 Warp Disruptor's `arrival()` ([[R1875003]]) turned to its own side or both sides | #18, #30 | P4 |
-| Die at the end of this turn | NEW: summoned tokens destroyed at the end of the turn they arrive, whoever's: `summon { rememberAs }`, then a `delay { at: { phase: end, player: THIS_TURN } }` per token watching it (CN-Virus's [[R350]], not [[R241]]), or a `summon` rider. Brittle 1 is not it (`BRITTLE_FIRST_TICK_TURNS` = 2, `brittle.rs:62`), nor Temporary ([[R637]]) | #15 | P5 #2198 |
+| Die at the end of this turn | NEW: summoned tokens destroyed at the end of the turn they arrive, whoever's: `summon { rememberAs }`, then a `delay { at: { phase: end, player: THIS_TURN } }` per token watching it (Super-Virus's [[R350]], not [[R241]]), or a `summon` rider. Brittle 1 is not it (`BRITTLE_FIRST_TICK_TURNS` = 2, `brittle.rs:62`), nor Temporary ([[R637]]) | #15 | P5 #2198 |
 | Cleave on a board pick | No verb (*corrected*): Core #34 Collateral Damage's Radiant `exile_adjacent_to` already is it, and `adjacent_to` + `set_radiant` for #27; a ruling, the board twin of [[R1563001]] | #26, #27 | P5 |
 | A single-target set-stats verb | NEW: `set_stats { target, attack, health }` over the private `set_stats_on` (`effects/health.rs:88`), with `set_stats_all`'s guards ([[R1185002]], [[R23]]) | #34 | P5 |
 | An exact copy | NEW: an `add_to_hand { copyOf }` rider carrying what `copy_riders` (`add_to_hand.rs:185`) leaves out: [[R57]]'s field riders (buffs, granted keywords, Vanilla) and the price (`costMod`, `costOverride`) | #37 | P5 |
@@ -436,7 +436,7 @@ in TG4 (D1–D11) differs from an entry, the decision wins.
 
 - **Text:** Summon {tokens|Rush Token|Rush Tokens}. At the end of this turn, destroy them.
 - **Radiant:** Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. At the end of this turn, destroy them.
-- **Engine:** The Rush Token is `core-t-rush` ([[§7]]: 3/3 Rush; Radiant 6/6 Rush, Cleave), summoned one `summon { defId }` per token as C+ #15 Conjure Rush Token does (`classic_plus/c015_conjure_rush_token.rs`), the Radiant face with `radiant: true`, into the leftmost open zones ([[R64]]), fewer on a full row ([[§3.2]]). Brittle 1 is not it: `brittle.rs:62` `brittle_due` is `turn >= since + BRITTLE_FIRST_TICK_TURNS` (2, `config.rs:440`), ticking at its controller's start of turn, so a Brittle 1 token crumbles at the start of your next turn and blocks through the opponent's. Temporary is not it either: a hand keyword, nothing on the field ([[§6.1]], [[R637]]). NEW (P5): "at the end of this turn, destroy them". It composes from shipped verbs: each `summon` with `rememberAs` (`effects/summon.rs:130`, [[R1126]]), then a `for_each_card` over the remembered ids (its `cards` closure runs as the clause begins, S #15's `beside`) making one `delay { at: { phase: "end", player: THIS_TURN }, watch: <id>, step }` each, CN-Virus's "the end of the turn it was cast on, whoever's" (`core/c090_1_cn_virus.rs`, [[R350]]) and the K-Pop Fanatic watch that forgets a card that left the field ([[R174]]), whose step runs `destroy`. P5 may add a `summon` rider instead (a `destroyAtEndOfTurn`), with its [[§6.3]] row and an engine test either way.
+- **Engine:** The Rush Token is `core-t-rush` ([[§7]]: 3/3 Rush; Radiant 6/6 Rush, Cleave), summoned one `summon { defId }` per token as C+ #15 Conjure Rush Token does (`classic_plus/c015_conjure_rush_token.rs`), the Radiant face with `radiant: true`, into the leftmost open zones ([[R64]]), fewer on a full row ([[§3.2]]). Brittle 1 is not it: `brittle.rs:62` `brittle_due` is `turn >= since + BRITTLE_FIRST_TICK_TURNS` (2, `config.rs:440`), ticking at its controller's start of turn, so a Brittle 1 token crumbles at the start of your next turn and blocks through the opponent's. Temporary is not it either: a hand keyword, nothing on the field ([[§6.1]], [[R637]]). NEW (P5): "at the end of this turn, destroy them". It composes from shipped verbs: each `summon` with `rememberAs` (`effects/summon.rs:130`, [[R1126]]), then a `for_each_card` over the remembered ids (its `cards` closure runs as the clause begins, S #15's `beside`) making one `delay { at: { phase: "end", player: THIS_TURN }, watch: <id>, step }` each, Super-Virus's "the end of the turn it was cast on, whoever's" (`core/c090_1_super_virus.rs`, [[R350]]) and the K-Pop Fanatic watch that forgets a card that left the field ([[R174]]), whose step runs `destroy`. P5 may add a `summon` rider instead (a `destroyAtEndOfTurn`), with its [[§6.3]] row and an engine test either way.
 - **Rulings:** TG-P5-1: "die at the end of this turn" is a destroy at [[§2.2]]'s end-of-turn delayed-effect point of the turn the Spell resolves, whoever's (after end-of-turn triggers and the end-of-turn trap window, before cleanup, [[R62]]; [[R350]], not [[R241]], which would arm nothing for a cast on the opponent's turn); each token still on the field is destroyed (a destroy: Indestructible refuses it, a Death would fire), and one that left is forgotten ([[R174]]; a token ceases to exist off the field, [[R11]]). The tokens print no Brittle: the designer's {brittle 1} names the end he wants, which Brittle 1 does not give (⚠ designer). Default for a token the opponent stole before the end: still destroyed (⚠ builder: [[R171]] makes a change of control an entry; the watch must not drop it).
 - **Numbers:** tokens 3 ↑ (Radiant 3), as C+ #15's `tokens`.
 - **Check:** (1) three 3/3 Rush Tokens in the leftmost open unit zones, fewer on a nearly full board, none on a full one; (2) they may attack Units this turn and not the hero (Rush, [[§4.2]] step 2); (3) at the end of this turn each still on the field is destroyed, after end-of-turn triggers and traps; (4) none stands on the opponent's turn; (5) one already dead is not counted again and nothing else is destroyed; (6) cast on the opponent's turn, they go at that turn's end; (7) `tokens` reads through `param()`; Radiant: (8) three Radiant Rush Tokens, 6/6 Rush and Cleave; (9) destroyed the same way. R275: tokens at 2× stats with Cleave (meets, as Rush Token's own Radiant face). Typos: "rush tokens" is Rush Tokens; name "In a hurry" kept as printed (⚠ designer: or "In a Hurry"; shipped names keep the designer's case, Core #3 "Right-house defender").
@@ -449,7 +449,7 @@ in TG4 (D1–D11) differs from an entry, the decision wins.
 
 - **Text:** Divine Shield, Taunt, Armor 3 / Cry: Summon a Chosen by the Sun to the left of this and a Chosen by the Moon to the right of this.
 - **Radiant:** Divine Shield, Taunt, Armor 6 / Cry: Summon a Radiant Chosen by the Sun to the left of this and a Radiant Chosen by the Moon to the right of this.
-- **Engine:** Keywords are catalog data (`Keyword::DivineShield`, `Taunt`, `Armor { n: 3 }`). The Cry is M #49 YileGPT's named-lane summon (`meditative/c049_yilegpt_tamed.rs`: `across` reads `Zone::Field { lane }` off `ctx.live_self()` as the Cry resolves, then `summon { defId, lane, radiant }`), with lane − 1 for `traininggrounds-006` and lane + 1 for `traininggrounds-007`, lanes 1-based from the controller's seat ([[§3.1]]; M #61 Joon Jorker's `at.lane + 1` and `at.lane >= zones` bound, [[R1060]], `UNIT_ZONES` 5). `SummonArgs.lane`: an aimed summon fails on an occupied or reserved zone ([[R47]], [[R64]]) and enters a Locked one ([[R688]]). No new verb.
+- **Engine:** Keywords are catalog data (`Keyword::DivineShield`, `Taunt`, `Armor { n: 3 }`). The Cry is M #49 YileGPT's named-lane summon (`meditative/c049_yilegpt_tamed.rs`: `across` reads `Zone::Field { lane }` off `ctx.live_self()` as the Cry resolves, then `summon { defId, lane, radiant }`), with lane − 1 for `traininggrounds-006` and lane + 1 for `traininggrounds-007`, lanes 1-based from the controller's seat ([[§3.1]]; M #61 Joon Juicer's `at.lane + 1` and `at.lane >= zones` bound, [[R1060]], `UNIT_ZONES` 5). `SummonArgs.lane`: an aimed summon fails on an occupied or reserved zone ([[R47]], [[R64]]) and enters a Locked one ([[R688]]). No new verb.
 - **Rulings:** TG-P3-2, [[R2196001]]: "to the left of this" is the unit zone one lane lower on this card's side, "to the right" one lane higher ([[R1060]]'s right, mirrored); lane 1 has no left and lane 5 no right, so that summon does nothing and draws nothing ([[R129]]); each summon is aimed and fails alone on an occupied or reserved zone; the Sun first, then the Moon; this card's lane is read as the Cry resolves, and if it has left the field nothing is summoned. The summoned cards are ordinary cards of the set, new and owned by the controller ([[R12]]), with no Cry (a summon is no play, [[R1]]).
 - **Numbers:** none (Armor 3 is a numbered keyword, [[R482]]; "a" is no count).
 - **Check:** (1) printed Divine Shield, Taunt, Armor 3; (2) played into lane 3 with lanes 2 and 4 open: a Chosen by the Sun (3/3 Divine Shield) in lane 2, a Chosen by the Moon (3/3 Taunt, Armor 3) in lane 4; (3) in lane 1: only the Moon, in lane 2; in lane 5: only the Sun, in lane 4; (4) an occupied lane 2: no Sun, the Moon still lands; (5) a Locked neighbour zone takes its summon; (6) summoned rather than played: no Cry; Radiant: (7) 6/6, Armor 6; (8) a Radiant Chosen by the Sun (9/9) and a Radiant Chosen by the Moon (6/6, Armor 6). R275: stats 2×, Armor 6, and Radiant summons. Typos: none.
@@ -608,20 +608,20 @@ in TG4 (D1–D11) differs from an entry, the decision wins.
 - **Engine:** C+ #24 Crushing Walls's script (crates/cards/src/scripts/classic_plus/c024_crushing_walls.rs): `cards_in_scope(ctx, { side, rows: [units, backrow] })`, skipping a carried Unit (`is_carried`, [[R446]], [[R653]]), kept when `slot_of(card).lane` is the rightmost lane, then `for_each_card` → `destroy { target: { of: instance } }` (effects/destroy.rs:55); Radiant `side: enemy`. A lane is a column ([[§3]]: "a lane is a column of four zones, two yours and two the opponent's"), and both seats' clients draw lane 1 on the left (Board.tsx, see #22), so "the rightmost lane" is the same column for both players: lane 5, both sides' unit and backrow zones. The rightmost lane is the highest lane read off the board (`state.players[p].units.len()` through a helper, as [[R685]] reads the midlane, `zones::midlane_lanes_of`), 5 today (`UNIT_ZONES`). The tops of piles only ([[R13]]): a card beneath resumes and is not destroyed; Indestructible stays; face-down cards are destroyed; a destroyed card that prints Death fires it ([[§4.5]]). The Occidental is on the field as its Cry resolves, so in lane 5 on the base face it destroys itself. Nothing NEW (Crushing Walls takes `[1, 5]` as a constant; the lane helper is a nicety).
 - **Rulings:** TG-P3-4, [[R2196003]] (shared with #29): "the rightmost lane" is lane 5 (the board's last lane, [[R685]]'s reading of the board), both sides, both rows; "the leftmost lane" is lane 1. "All permanents" includes this Unit when it stands there (Hearthstone's "destroy all minions"); the Radiant face's "enemy" never reaches it.
 - **Numbers:** none (the lane is a position, not a number).
-- **Check:** (1) played in lanes 1–4: both sides' lane-5 Units and backrow cards are destroyed, a face-down one included; (2) lanes 1–4 untouched; (3) an Indestructible one stays; (4) a card beneath a Stack in lane 5 resumes; (5) played into lane 5, it destroys itself as well; (6) a destroyed card's Death fires. Radiant: (7) 18/10; (8) only the enemy's lane-5 Unit and backrow card are destroyed, yours stay, itself included. R275: stats 2×, one side only (no self-harm), as C+ #24's Radiant: holds. Typos: "right most" → "rightmost"; the type line lacks "Unit" (it prints stats: a Unit). ⚠ designer: Occidental (the West, usually left on a map) hits the right lane and Oriental the left; kept as written.
+- **Check:** (1) played in lanes 1–4: both sides' lane-5 Units and backrow cards are destroyed, a face-down one included; (2) lanes 1–4 untouched; (3) an Indestructible one stays; (4) a card beneath a Stack in lane 5 resumes; (5) played into lane 5, it destroys itself as well; (6) a destroyed card's Death fires. Radiant: (7) 18/10; (8) only the enemy's lane-5 Unit and backrow card are destroyed, yours stay, itself included. R275: stats 2×, one side only (no self-harm), as C+ #24's Radiant: holds. Typos: "right most" → "rightmost"; the type line lacks "Unit" (it prints stats: a Unit). ⚠ designer: Occidental (the West, usually left on a map) hits the right lane and Easterner the left; kept as written.
 - **Class:** B (C+ #24's sweep).
 
-#### Training Grounds #29 · Oriental
+#### Training Grounds #29 · Easterner
 `traininggrounds-029` · (3) Unit, CN · Epic · 5/9 → 10/18 · built by P3 (#2196)
 
-> **Designer:** (3) Oriental, CN, #29 · 5/9 · **Cry:** Destroy all permanents in the left most lane ~~~ 10/18 · **Cry:** Destroy all enemy permanents in the left most lan
+> **Designer:** (3) Easterner, CN, #29 · 5/9 · **Cry:** Destroy all permanents in the left most lane ~~~ 10/18 · **Cry:** Destroy all enemy permanents in the left most lan
 
 - **Text:** Cry: Destroy all permanents in the leftmost lane.
 - **Radiant:** Cry: Destroy all enemy permanents in the leftmost lane.
 - **Engine:** #28's script with lane 1 (C+ #24 Crushing Walls's verbs: `cards_in_scope`, `is_carried`, `slot_of`, `for_each_card`, `destroy`). Lane 1 is the leftmost for both seats (see #28). CN is a tribal tag ([[R1424]], `Tag::Cn`, wire/catalog_types.rs:182). Nothing NEW.
 - **Rulings:** TG-P3-4, [[R2196003]] (as #28): leftmost is lane 1; it destroys itself when played into lane 1 on the base face.
 - **Numbers:** none.
-- **Check:** (1)–(6) as #28 with lane 1; Radiant: (7) 10/18; (8) only the enemy's lane-1 cards. R275: holds as #28. Typos: "left most lan" → "leftmost lane"; the type line lacks "Unit". Tags: CN only, as written (the designer gave #28 Human and #29 CN; ⚠ designer whether Oriental is also Human).
+- **Check:** (1)–(6) as #28 with lane 1; Radiant: (7) 10/18; (8) only the enemy's lane-1 cards. R275: holds as #28. Typos: "left most lan" → "leftmost lane"; the type line lacks "Unit". Tags: CN only, as written (the designer gave #28 Human and #29 CN; ⚠ designer whether Easterner is also Human).
 - **Class:** B (C+ #24's sweep).
 
 #### Training Grounds #30 · Floodgates
@@ -808,7 +808,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   instance, so a copy keeps working under the new id). A Core file's `script_v…` function kept for old replays
   (`KEPT_SCRIPTS`, R767000) is **not** copied: a snapshot has no shipped history (#49, #52). The header comment and the tests
   are rewritten for the snapshot (CLAUDE.md rule 6); the tests are the Core file's tests with the id swapped, plus the
-  "plays as" clauses below. Not a re-export (`pub use … core::c002_bigot::script`), so a Core refactor never moves a snapshot.
+  "plays as" clauses below. Not a re-export (`pub use … core::c002_speciesist::script`), so a Core refactor never moves a snapshot.
 - **TG-P2-3 One deck, one of the pair.** A deck holds `core-NNN` or its snapshot, never both. Today L3 counts copies by id
   only (`MAX_COPIES = 1`, `crates/engine/src/config.rs:36`; `crates/engine/src/state.rs:2213` `validate_deck_with`;
   `crates/engine/src/validator.rs:367` L3; `validator.rs:681` `check_deck_draft`), so this is NEW (P2): one pair table
@@ -826,13 +826,13 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   checks need the same pair exception: `crates/cards/tests/cross/chinese.rs:385` `r1303_names_are_unique` (the Chinese
   names in `crates/cards/chinese.json`; a snapshot copying its Core card's Chinese name fails it), and R279's `refs` proof
   (`crates/cards/tests/cross/references.rs:188` `named_by`), which finds a card by name: a text that names a Core card by
-  name names its snapshot too. Today that hits S #88 Siva 2 ("Fill your hand with Bigots", refs `core-002`) **at once**
+  name names its snapshot too. Today that hits S #88 Siva 2 ("Fill your hand with Speciesists", refs `core-002`) **at once**
   (a held card names every set's cards), and, once the set ships, C+ #61 Bauble Bubble (Stockpile) and Core #76 Field of
   Dreams (Reminisce). Default: a text naming a Core card names the Core card alone (`named_by` skips a snapshot unless the
   card's `refs` lists it), as R381's rules words do; each of those three scripts makes the Core id and stays so.
 - **TG-P2-5 `loc` and code lines.** `loc` (§5, `crates/tools/src/catalog.rs:2767` `loc_failure`) is frozen for an entry the
   newest shipped snapshot holds and must equal `cargo jackioh catalog loc` for a new one. Core's `loc` values were frozen in
-  v0.3.0 and are far below what the Rust files count now (Bigot 10 vs ≈23; estimates in each entry, by a Python
+  v0.3.0 and are far below what the Rust files count now (Speciesist 10 vs ≈23; estimates in each entry, by a Python
   re-implementation of `count_loc`: comments, blanks and `use` lines out, above `#[cfg(test)]`). A snapshot's `loc` is
   therefore its own count, so C #48 Hired Shrimp, C+ #44 Simplicity Audit and C+ #45 Complexity Audit, which compare `loc`,
   treat a snapshot unlike its Core card. Either accept that (default: "plays exactly as" excludes those three readers), or
@@ -858,14 +858,14 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   ([[R980]]) and Meditative #14 Prime Time read its own number, so "plays exactly as" holds for the card's own
   behaviour, not for what other cards read off its number.
 
-#### Training Grounds #41 · Legacy: Bigot
+#### Training Grounds #41 · Legacy: Speciesist
 `traininggrounds-041` · (2) Unit, Human · Common (Core Common) · 4/1 → 8/2 · built by P2 (#2195)
 
-> **Designer:** 1 Bigot
+> **Designer:** 1 Speciesist
 
 - **Text:** Cry: Destroy an enemy non-Human Unit.
 - **Radiant:** Cry: Destroy all enemy non-Human Units.
-- **Engine:** Copy `core/c002_bigot.rs` (`ID` "core-002") → `training_grounds/c041_bigot.rs`. Base: `TargetDecl::target(1, 1, { side: enemy, of: [unit], notTags: [Human] })`, Cry `destroy { target: chosen }`; Radiant: no target, `destroy_all { side: enemy, rows: [units], notTags: [Human] }` (`effects/destroy.rs`). Reads the dead/target's tags, not its own; no self-reference. Named by S #88 Siva 2 (`c088_siva_2.rs:15` `BIGOT = "core-002"`, refs core-002): TG-P2-4. No kept script. `loc` 10 (Core, frozen) vs ≈23 (copy).
+- **Engine:** Copy `core/c002_speciesist.rs` (`ID` "core-002") → `training_grounds/c041_speciesist.rs`. Base: `TargetDecl::target(1, 1, { side: enemy, of: [unit], notTags: [Human] })`, Cry `destroy { target: chosen }`; Radiant: no target, `destroy_all { side: enemy, rows: [units], notTags: [Human] }` (`effects/destroy.rs`). Reads the dead/target's tags, not its own; no self-reference. Named by S #88 Siva 2 (`c088_siva_2.rs:15` `SPECIESIST = "core-002"`, refs core-002): TG-P2-4. No kept script. `loc` 10 (Core, frozen) vs ≈23 (copy).
 - **Rulings:** none new (R81, R90, R59; TG-P2-1…5).
 - **Numbers:** none (Core declares none).
 - **Check:** (1) plays exactly as core-002 at the foundation's commit; (2) destroys a chosen enemy non-Human; (3) a Human is not targetable; (4) with no legal target it enters anyway; (5) radiant destroys every enemy non-Human, Humans survive, no target declared. R275: Meets (radiant-audit, stats doubled, one target → all). Typos: none. ⚠ designer: none.
@@ -1142,7 +1142,7 @@ correction to the rows, and after it ships a patch of its own.
 | 15 | #23 Quadrupling Felinors | four bodies for (3) | As printed (balance) |
 | 16 | #24 Goliath Situation | "On reveal", "its cost" | Every firing of the Field Trap ([[§5.1]]: it stays and fires again); the cost paid ([[R56]]); a thin Radiant face, as printed |
 | 17 | #25 Trigor | "a Trigor with +3/+3" | Cumulative: each new Trigor is the dying one's base stats +3/+3 (3/3, 6/6, 9/9 …) (TG-P4-3), overridden as the terminator by R2197002 and R2197004; the Radiant face's successors are base Trigors from 12/12 |
-| 18 | #28 Occidental, #29 Oriental | no type; "right most / left most lane"; the West hits the right | Units; lane 5 and lane 1, both sides, both rows, the card itself included on the base face; as written; #29 CN only |
+| 18 | #28 Occidental, #29 Easterner | no type; "right most / left most lane"; the West hits the right | Units; lane 5 and lane 1, both sides, both rows, the card itself included on the base face; as written; #29 CN only |
 | 19 | #31 Level Up! | "your units attack 3 times" | Each Unit counts its own attacks, across turns, from when this arrives; Radiant after the combat of its third |
 | 20 | #32 Selfless Protector | the Radiant Cry's "your units" | Includes itself |
 | 21 | #33 Guerilla Felinor | "repeat 7 times"; "Guerilla" | 7 hits in all; the name as printed |
@@ -1152,7 +1152,7 @@ correction to the rows, and after it ships a patch of its own.
 | 25 | #39 Call to Chaos (TG Edition) | "every other turn"; "a Call to Chaos"; the hyphen | Every second turn of yours, one at once; a random edition at (0); the names keep the hyphen, the set's name has none |
 | 26 | #12 Fortify | R279 reads M #22's "Fortify Mind" as naming it | The name stays; "Fortify Mind" joins `RULES_PHRASES` |
 | 27 | #41–#60 | the snapshots' `loc` | Each its own script's count (frozen Core counts are older and smaller), so C #48 Hired Shrimp and C+ #44, #45 read a snapshot unlike its Core card (⚠ owner) |
-| 28 | #41–#60 | a Core card's text that names a card the snapshot shares | Names the Core card alone (S #88 Siva 2's Bigots, C+ #61's Stockpile, Core #76's Reminisce keep making Core's) |
+| 28 | #41–#60 | a Core card's text that names a card the snapshot shares | Names the Core card alone (S #88 Siva 2's Speciesists, C+ #61's Stockpile, Core #76's Reminisce keep making Core's) |
 
 ## TG7. Sound, visuals, the AI and the release
 

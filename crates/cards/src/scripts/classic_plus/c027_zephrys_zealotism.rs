@@ -42,6 +42,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -273,7 +275,6 @@ mod tests {
 
             #[test]
             fn r11_a_unit_token_card_in_the_replaced_hand_ceases_to_exist() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ZEALOTISM, RUSH_TOKEN, STOCKPILE] } }));
                 let token = s.card(RUSH_TOKEN).id.clone();
                 s.play(ZEALOTISM, json!({}));
@@ -334,7 +335,6 @@ mod tests {
 
             #[test]
             fn s9_3_the_state_survives_json_and_the_play_replays_to_the_same_hash() {
-                crate::register_all();
                 let s = scenario(json!({ "p1": { "hand": [ZEALOTISM, STOCKPILE, MENACE] }, "p2": { "field": [TIMMY] } }));
                 let thawed: GameState =
                     serde_json::from_str(&serde_json::to_string(s.state()).unwrap()).unwrap();

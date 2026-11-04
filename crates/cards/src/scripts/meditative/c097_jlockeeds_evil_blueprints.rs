@@ -189,7 +189,6 @@ mod tests {
 
         #[test]
         fn r1280_a_full_hand_burns_it() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "seed": "bp-burn",
                 "p1": {

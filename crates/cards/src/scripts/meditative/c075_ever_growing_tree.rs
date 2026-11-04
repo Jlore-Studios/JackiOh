@@ -83,6 +83,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const TREE: &str = "meditative-075";
@@ -179,7 +181,6 @@ mod tests {
 
             #[test]
             fn activate_fuses_a_random_field_spell_never_itself() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tree-grow",
                     "p1": { "hand": [TREE, FILLER], "library": filler(3) },
@@ -240,7 +241,6 @@ mod tests {
 
             #[test]
             fn r1087_r468_the_fused_definition_survives_a_json_round_trip() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tree-round-trip",
                     "p1": { "hand": [TREE, FILLER], "library": filler(3) },
@@ -256,7 +256,6 @@ mod tests {
             }
             #[test]
             fn once_a_turn_in_your_main_phase_a_second_activation_or_one_on_their_turn_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tree-once",
                     "p1": { "hand": [FILLER], "backrow": [TREE], "library": filler(3) },
@@ -405,7 +404,6 @@ mod tests {
 
             #[test]
             fn r1087_r469_the_pick_goes_in_on_its_radiant_face() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "tree-radiant",
                     "p1": {
