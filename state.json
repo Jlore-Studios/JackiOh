@@ -13974,13 +13974,24 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-4",
+            "run": "41822903791",
+            "tier": "medium"
+          }
+        ],
         "sha": "a6c69931321abfecdfaef3a986cfdfe77d296666",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "2994": {
