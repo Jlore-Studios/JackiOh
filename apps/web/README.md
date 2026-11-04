@@ -172,7 +172,7 @@ present for exactly that window.
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
-**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks nothing.
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
@@ -261,6 +261,24 @@ Concede and Friends, each a full-width 44px row with its whole label; it decides
 only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot while a declined offer blocks
 it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
 Tablets and desktops keep the buttons in the bar.
+
+**The phone board's top strip and field badges** (#2932). Only on a phone held upright (`@media
+(max-width: 600px)`, `usePhonePortrait` in `game/phoneBar.ts`); wide screens and a phone held sideways
+are unchanged. A route that has a rail (a match's, a replay's, a watch's: `← Back` and the compact rank
+line) passes `phoneRailTop` to `Game`, which then draws the rail as its own first child
+(`board-rail--top`, `data-rail-top` on `.game`) beside the turn banner's pill, in the row the pill already
+took, instead of in the control bar: the rank line is one line (its words and the crests' pip rows are
+hidden visually, the crests and the names carrying it), and the control bar keeps only End turn, the log,
+⋯ and the gear. The Duos board keeps its own bar. A field card keeps a card shape (width over height
+between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by height; the seats are one
+fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
+A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
+stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
+never turns it. The zone left of it holds its own switch (⟳) at that corner, so the stack starts below
+that switch's target (`--badges-top`, the target's own height) and what does not fit its zone's height
+wraps into a column to its left: a press on a neighbour's ⟳ is never this unit's Activate, and the stack
+never reaches the row below. The Activate control's tap band (up to 44px) reaches down from the control
+only, never up over that switch; the marks let a tap through.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root

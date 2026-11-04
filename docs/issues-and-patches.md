@@ -5,9 +5,11 @@ pull requests is split up. It binds people and agents alike. The night bot's own
 in [`bot/README.md`](../bot/README.md#labels), its fullsend mode `bot:fullsend` and a fullsend
 parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and the live labels a run
 puts on the item it holds, one at a time by the kind of run (`bot:planning`, `bot:splitting`,
-`bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling`; they replaced
-the retired working label in #2748), `bot:merging` on a bot pull request whose auto-merge is on, and
-`bot:waiting` on an item held for the subscription that owns it, and Squishy's `squishy:*`
+`bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:resolving` for a merge conflict's resolution
+(#2948), `bot:reviewing`, `bot:reconciling`; they replaced the retired working label in #2748),
+`bot:merging` on a bot pull request whose auto-merge is on, `bot:waiting` on an item held for the
+subscription that owns it, and `bot:waiting-turn` on an approved draft waiting for an overlapping
+pull request ahead of it to merge (#2948), and Squishy's `squishy:*`
 ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and
 `squishy:fullsend`, and a split's parent, `squishy:tree`) in [its section](../bot/README.md#squishy).
 
@@ -50,13 +52,22 @@ every push (#1370). Nothing else sets them, and no label overrides the classifie
 The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
 title names none.
 
+The bots put these on for a person to act on; both bots share them (no `squishy:` copy):
+
+| Label | For |
+|---|---|
+| `ready for merge` | A bot pull request its reviews approved that waits for a person to merge it: a path only a person reviews (`review_paths`), a migration that loses data or changes access, a new package, `main`'s protection, or GitHub refusing auto-merge; its comment names why (#2986) |
+| `person merges` | The bot builds and reviews it, but a person merges its pull request |
+| `needs decision` | A bot stopped on what only a person can unblock (#2986): a question (beside `bot:blocked`), whose comment lists the options and the default and says when the bot goes ahead on the default (`decision_wait_hours`, 24 hours; a question with no default never does), or a hand-over (beside `human required`), which never goes ahead. It comes off when a trusted person answers and queues it again (`/harness build`, `/harness revise <answer>` or a mention), when the bot goes ahead on the default (it files each other option as an issue for a person to approve), and when the item closes. The status issue (#148) lists each at its top |
+| `human required` | The bot found it cannot do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account): people do it, and taking the label off hands it back |
+
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (the codebase pass) is `patch` and `architecture`. The
 `difficulty:*` labels (`medium`, `hard`: the weakest model tier that may plan, build and approve
 it; `hard` is Claude Opus's alone; `easy` was retired in #2748, and the sweep moved it to `medium`), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
 labels (the bot's pickup order) and the `bot:*` labels (the queue's, the live labels of a run
-that holds an item, `bot:merging`, `bot:waiting` and the rest) are separate. Never add `bot:build` while
+that holds an item, `bot:merging`, `bot:waiting`, `bot:waiting-turn` and the rest) are separate. Never add `bot:build` while
 retitling or relabeling, because it queues a build.
 
 Every label, with its color and description, is listed once, in `bot/go/internal/config`'s

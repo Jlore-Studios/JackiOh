@@ -32,7 +32,8 @@ var Doing = map[string]string{"plan": "planning", "build": "building", "revise":
 // LiveDoing is what a run is doing to an item, by its kind of run (`config.LiveRuns`), which the
 // claim keeps in the item's record (`live`) beside its live label.
 var LiveDoing = map[string]string{"planning": "planning", "splitting": "splitting", "building": "building",
-	"revising": "revising", "fixing-ci": "fixing CI on", "reviewing": "reviewing", "reconciling": "reconciling"}
+	"revising": "revising", "fixing-ci": "fixing CI on", "resolving": "resolving the conflicts of",
+	"reviewing": "reviewing", "reconciling": "reconciling"}
 
 // DoingOf is what the run holding an item does to it, from its record: its live run's verb, else
 // its kind's (a planning run's for a plan), else "working on".
@@ -543,6 +544,23 @@ func Report(ctx *hctx.Context) string {
 	if len(builds) > 0 {
 		lines = append(lines, fmt.Sprintf("- Waiting for their build on the model that planned them: %s.",
 			strings.Join(builds, "; ")))
+	}
+	var turns []string // approved drafts waiting for a pull request ahead of them (#2948)
+	for _, number := range queue.WaitingTurns(state) {
+		waiting := queue.WaitingTurnOf(state.Obj("items").Obj(strconv.Itoa(number)))
+		behind := []string{}
+		for _, ahead := range queue.Behind(waiting) {
+			behind = append(behind, fmt.Sprintf("#%d", ahead))
+		}
+		line := fmt.Sprintf("#%d behind %s, on `%s`", number, strings.Join(behind, ", "), waiting.Str("provider"))
+		if ends := clock.ParseISOValue(waiting.Get("ends")); ends.After(ctx.Now()) {
+			line += " (until " + plan.Clock(ctx, ends) + " at most)"
+		}
+		turns = append(turns, line)
+	}
+	if len(turns) > 0 {
+		lines = append(lines, fmt.Sprintf("- Waiting their turn (`%s`): %s.", config.LabelWaitingTurn,
+			strings.Join(turns, "; ")))
 	}
 	var owners []string // held for their owners (#2748), as the planner or the sweep last found them
 	for _, issue := range labelled(config.LabelWaiting, nil) {

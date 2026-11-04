@@ -172,6 +172,7 @@ func (x *Deliverer) deliverItem(number int) {
 	} else {
 		x.build(number, status)
 	}
+	x.closeDecision(number, status)
 	x.settle(number)
 }
 
@@ -928,9 +929,11 @@ func (x *Deliverer) NeedsPerson(number int, question string, what string /* = "b
 	if !queue.LabelNames(thread)[config.LabelHumanRequired] {
 		x.GH.AddLabels(number, []string{config.LabelHumanRequired})
 	}
+	x.needsDecision(number) // only a person can unblock it, and it never goes ahead (#2986)
 	x.GH.CreateComment(number, human.Ask(question, x.Cfg.BotLogin, what, kept, again))
 	// The next run reads it with the thread, once a person has queued the item again.
-	x.remember(number, pyjson.New("question", question))
+	x.remember(number, pyjson.New("question", question, queue.DecisionKey, pyjson.New("asked_at",
+		clock.ISO(x.Ctx.Now()), "human_required", true, "question", py.SliceTo(question, queue.QuestionChars))))
 	x.cameToNothing(number, "the bot could not build it: "+question)
 	x.log(fmt.Sprintf("#%d needs a person: handed to people, %s", number, config.LabelHumanRequired))
 }
@@ -1061,11 +1064,10 @@ func (x *Deliverer) build(number int, status string) {
 			x.remember(number, pyjson.New("last_findings", []any{}))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
-		x.GH.CreateComment(number, fmt.Sprintf("I need a decision before I can build this.%s\n\n"+
-			"%s\n\nAnswer here, then `%s build` (or "+
-			"`@%s <your answer>`) queues it again.", kept, question, config.Slash, x.Cfg.BotLogin))
-		x.remember(number, pyjson.New("last_findings", []any{}, "question", question))
+		x.askDecision(number, "build", "I need a decision before I can build this.", kept, question,
+			fmt.Sprintf("answer here, then `%s build` (or `@%s <your answer>`) queues it again", config.Slash,
+				x.Cfg.BotLogin))
+		x.remember(number, pyjson.New("last_findings", []any{}))
 		return
 	}
 	if !(x.Repo.Rev("origin/"+branch) != "" || pushed) {

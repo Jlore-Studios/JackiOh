@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/prompts"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -27,8 +28,8 @@ import (
 // review run treats a red check as a finding to fix.
 var CheckFixRounds = 2
 
-// CIRed is the conclusions of a CI job that make a required check red.
-var CIRed = []string{"failure", "timed_out"}
+// CIRed is the conclusions of a CI job that make a required check red (`config.CIRed`).
+var CIRed = config.CIRed
 
 // CILogJobs is how many red jobs' log tails a fix pass gets, and CILogChars how much of each.
 var (
@@ -36,15 +37,14 @@ var (
 	CILogChars = 6000
 )
 
-// requiredJob is whether a CI job named `name` is one of the required checks: the check's own job
-// (`rust`), or one of the jobs it gathers (`rust (test engine)`).
+// requiredJob is whether a CI job named `name` counts as one of the required checks
+// (`config.RequiredJob`): the check's own job (`rust`), one of the jobs it gathers
+// (`rust (test engine)`), or a job a check needs that carries no check's name (`config.CINeeded`).
+// A run the bot stopped early (#2948, `events.StopRedCI`) ended cancelled, its summary jobs
+// skipped: its failed pieces are what is red in it, and they read as red here, never as a run
+// still going or a cancellation that says nothing.
 func requiredJob(name string, required []string) bool {
-	for _, check := range required {
-		if name == check || strings.HasPrefix(name, check+" (") {
-			return true
-		}
-	}
-	return false
+	return config.RequiredJob(name, required)
 }
 
 // ciRed is the required checks red in CI on `sha` (the CI workflow's newest run for it), as
@@ -113,6 +113,9 @@ func (x *Worker) ciRed(sha string) ([]*verdicts.Finding, string) {
 		} else {
 			x.ciRead = fmt.Sprintf("%d required job(s) red in %s", len(findings), url)
 		}
+		// What the final check reads again before the draft goes ready (#2948, `ciEnd`): a run
+		// that was over said its last word, and the jobs red now are judged now.
+		x.noteCI(sha, pyjson.Equal(latest.Get("status"), "completed"), findings)
 	}); err != nil {
 		x.ciRead = "CI could not be read: " + py.SliceTo(redact.Redact(herr.Str(err), nil), 200)
 		return nil, ""
@@ -121,6 +124,41 @@ func (x *Worker) ciRed(sha string) ([]*verdicts.Finding, string) {
 		return findings, ""
 	}
 	return findings, prompts.Data(redact.Redact(strings.Join(logs, "\n\n"), nil), "CI on "+first12(sha))
+}
+
+// ciPassedLocally is a CI fix's first pass that ran the failing check locally, found it passing and
+// changed nothing (#2948: no flake re-run before the fix; the fix run judges, `plan.CILocalNote`).
+// While its head has re-runs left (the plan's `ci_reruns_left`, from `ci_reruns`), the run ends
+// there, with no commit (a merge of `main` the run made is dropped), and no checks or review, which
+// would only judge the head CI ran on: deliver runs CI again on it, and that costs none of its CI
+// fixes. With none left, a pass is no answer, and the run goes on as any CI fix.
+func (x *Worker) ciPassedLocally(built *verdicts.BuildReport, entry *pyjson.Object) bool {
+	if x.planItem("action") != "revise" || !pyjson.Equal(x.Plan.Get("source"), "ci") ||
+		py.MustInt(py.Or(x.Plan.Get("ci_reruns_left"), 0)) <= 0 || built.Status != "done" ||
+		built.CILocal != "passed" || entry.Obj("builder").Truthy("changed") || x.Wt.MergeInProgress() ||
+		len(x.Wt.Dirty()) > 0 {
+		return false
+	}
+	x.resetTo(x.StartSHA)
+	x.Step("ci", "the failing CI check, run locally by the builder", pyjson.New("outcome",
+		"passed, and nothing needed changing: CI runs again on `"+first12(x.StartSHA)+"`, with no commit"))
+	x.Result.Set("status", "built")
+	x.Result.Set("reason", "the failing CI check passed locally and nothing needed changing, so CI runs "+
+		"again on the same head, with no commit")
+	x.Result.Set("ci_local", pyjson.New("passed", true, "head", x.StartSHA))
+	return true
+}
+
+// noteCI keeps what a CI reading on `sha` judged: whether CI was over (`complete`), and the red
+// jobs, for the final check's reading of the same head (`ciEnd`).
+func (x *Worker) noteCI(sha string, complete bool, red []*verdicts.Finding) {
+	if x.final.ciComplete == nil {
+		x.final.ciComplete, x.final.ciSeen = map[string]bool{}, map[string]bool{}
+	}
+	x.final.ciComplete[sha] = x.final.ciComplete[sha] || complete
+	for _, f := range red {
+		x.final.ciSeen[strings.TrimPrefix(f.Where, "CI: ")] = true
+	}
 }
 
 // gathersRed is: the job `name` gathers others (`rust` gathers `rust (…)`), and one it gathers is

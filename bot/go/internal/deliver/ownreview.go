@@ -242,9 +242,9 @@ func (x *Deliverer) OwnReview(number int, status string) {
 				"`%s revise <notes>` (or `@%s <notes>`) queues the rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
-		x.GH.CreateComment(number, "Its own review run needs a decision before it can fix this.\n\n"+question)
-		x.remember(number, pyjson.New("question", question))
+		x.askDecision(number, "revise", "Its own review run needs a decision before it can fix this.", "", question,
+			fmt.Sprintf("answer here with `%s revise <your answer>` (or `@%s <your answer>`), which queues it again",
+				config.Slash, x.Cfg.BotLogin))
 		return
 	}
 	approved := status == "approved"
@@ -289,20 +289,44 @@ func (x *Deliverer) OwnReview(number int, status string) {
 	switch status {
 	case "approved":
 		x.unstick(number)
+		x.countCIFix(number, head, pushed) // red CI its final check fixed in the run (#2948)
+		final := x.settleSaid()
+		if final != "" {
+			final = " " + final
+		}
+		var ahead []int
+		if !waiting && x.Cfg.HoldMinutes > 0 {
+			ahead = x.ahead(number, head)
+		}
+		if len(ahead) > 0 {
+			// Its final check found a pull request ahead of it that it conflicts with (#2948): it
+			// waits its turn, approved, a draft, with its clearance on record for its resolution.
+			x.approved(number, head, false, true, pushed, nil)
+			x.holdAutoMerge(number)
+			note := x.waitTurn(number, head, ahead)
+			x.GH.CreateComment(number, fmt.Sprintf("Its own review run (%s) on `%s`: %s reviewed it "+
+				"adversarially and approved it on round %d of %d.%s%s %s", x.link(), who,
+				x.ReviewSeat.Describe(), rounds, x.CyclesCap(), fixed, final, note))
+			return
+		}
 		queue.SetStateLabel(x.Ctx, number, x.Labels(number), "")
 		x.markReady(number, waiting)
 		note := x.approved(number, head, !waiting, true, pushed, nil)
 		if waiting {
 			note = "A comment arrived during the run, so a revision answers it first, and auto-merge " +
 				"waits for it."
-		} else if !pushed && reserved.Str("source") == "ci" && record.Truthy("ci_run_id") {
-			// A CI fix that changed nothing, which its review agreed with: CI runs its failed jobs again.
+		} else if !pushed && reserved.Str("source") == "ci" && record.Truthy("ci_run_id") &&
+			!record.Truthy("ci_on_head") {
+			// A CI fix of the merge queue's build that changed nothing, which its review agreed
+			// with: CI runs its failed jobs again. One of the head's own CI read that CI itself
+			// (`ciRed`), and its build ran it again already when its failing check passed locally
+			// (#2948, `localPass`).
 			x.rerunCI(number)
 			note += " Nothing needed changing, so I asked CI to run the failed jobs again."
 		}
 		x.GH.CreateComment(number, fmt.Sprintf("Its own review run (%s) on `%s`: %s reviewed it "+
-			"adversarially and approved it on round %d of %d.%s %s", x.link(), who,
-			x.ReviewSeat.Describe(), rounds, x.CyclesCap(), fixed, note))
+			"adversarially and approved it on round %d of %d.%s%s %s", x.link(), who,
+			x.ReviewSeat.Describe(), rounds, x.CyclesCap(), fixed, final, note))
 	case "built":
 		// A medium item's verdict rounds ran out (#725): its final audit judges the kept work, on
 		// another subscription first (2026-11-02).

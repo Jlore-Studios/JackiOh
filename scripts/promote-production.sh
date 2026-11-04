@@ -338,6 +338,10 @@ daily_promotion() {
   read -r id sha url <<<"$line"
   [ "$id" -gt "${daily//-/0}" ] || return 0
   daily=$id
+  # A run on a commit production already has (the newest one that passed may be days old) is done
+  # with, quietly: vetting it could only say why it is not promoted, about a commit that is live. The
+  # first run after #2959 said so of 2026-10-29's run on 52bd29e11fb2, whose CI had aged out.
+  if has_production && git merge-base --is-ancestor "$sha" origin/production 2>/dev/null; then return 0; fi
   WHY="the daily promotion"
   if ! vet "$sha"; then
     say "The super run on \`$MAIN_BRANCH\` passed on \`${sha:0:12}\` ([run]($url)), but it is not promoted: $WHY_NOT"

@@ -142,7 +142,9 @@ pub struct AiSearch {
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
     /// endTurn: switches are the move order's last tier, so below the root a full board cut every one. A
-    /// switch back to Attack is kept only where the width holds it.
+    /// switch back to Attack is kept only where the width holds it. #2976, R2976000: while the opponent's
+    /// board threatens lethal, as many switches to Defense that lower that threat (`wall_switches`) are
+    /// kept after them.
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
