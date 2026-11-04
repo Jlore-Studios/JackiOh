@@ -31352,11 +31352,6 @@
       }
     },
     "muse": {
-      "infra": {
-        "at": "2026-11-04T10:25:03Z",
-        "reason": "the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-2882:refs/heads/bot/issue-2882 failed (1): remote: fatal error in commit_refs_rules        \nTo https://github.com/Jlore-Studios/JackiOh.git\n ! [remote rejected]     deliver/bot/issue-2882 -> bot/issue-2882 (fatal error in commit_refs_rules\n)\nerror: failed to push some refs to 'https://github.com/Jlore-Studios/JackiOh.git'",
-        "streak": 1
-      },
       "refused_until": "2026-11-02T00:00:00Z",
       "spent": [
         {
