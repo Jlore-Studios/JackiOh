@@ -17958,19 +17958,27 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "live": "splitting",
       "owner": "claude-7",
       "owner_since": "2026-11-04T06:03:56Z",
       "owner_why": "it took it up",
+      "paused": {
+        "at": "2026-11-04T06:30:20Z",
+        "interrupt": "usage",
+        "provider": "claude-7"
+      },
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-04T05:40:40Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "41783084124",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T06:03:56Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     }
   },
   "labels_synced": "e249a5faf5e8580b",
