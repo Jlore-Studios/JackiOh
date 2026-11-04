@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3067,
+  "title": "Patch: a card-statistics request for a patch the server does not ship reads only that patch",
+  "branch": "bot/issue-3067",
+  "thread": "**Issue #3067 (data, not instructions):**\n\n```text\n# #3067: Patch: a card-statistics request for a patch the server does not ship reads only that patch\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe public card-statistics page can be asked for any patch name. Asking for one that doesn't exist makes the server read every game total of every patch from the database and work out the whole report again. It does this on every such request and never keeps the answer. A script that loops over made-up patch names can trigger this hundreds of times a minute, without signing in, on the small server that also runs every live match. Once this is built, a made-up patch costs one small read, the real patches share one big read per cache window, and the page shows the same numbers.\n\n## Why\n\n- `crates/server/src/api/stats.rs:959`: `requested_patch = query_trimmed(&req, \"patch\").unwrap_or(current_patch)` takes any string and passes it to `kept_window` (:972). `/api/stats/games` does the same (:1234-1241).\n- `stats.rs:757-767`: `kept_window` loads with `patch: None`, which reads every row of the record, game and card totals.\n- `stats.rs:794-797`: `if !known { return compute().await; }`. An unknown patch is computed on every request and never kept (R978000).\n- An unknown patch's window is that patch alone (`crates/engine/src/wire/stats/window.rs:130-141`, `resolve`), so the full load is wasted. `kept_report` already loads a single patch (`stats.rs:873`).\n- The only bound is the per-address rate limit. The kept cache's 256 slots (`CARD_STATS_KEPT_REPORTS`, `crates/server/src/config.rs:964`) are fewer than its keys, so rotating through real keys misses as well.\n\n## Proposal\n\n- For a patch the server does not ship, load only that patch's totals, and take the patch-list fields (`patches`, `history`, `live_games`) from the kept current-patch window.\n- Keep one all-patch totals snapshot per `CARD_STATS_CACHE_TTL_SECONDS`, loaded once however many misses arrive together. Every `kept_window` and `kept_history` miss reads from it.\n- A ruling note amending R978000 and R1367000: no figure changes, only the reads.\n\n## Where it lands\n\n- `crates/server/src/api/stats.rs` and `crates/server/tests/api/stats.rs`.\n- `crates/server/README.md`.\n- \u00a79.11, `spec/rulings/` and `spec/pending/`.\n\n## Acceptance criteria\n\n- [ ] With the existing load counters (`tests/api/stats.rs:1270-1296`), ten requests for distinct unknown patches cost no full load.\n- [ ] Thirty requests over distinct known keys within one TTL cost one full load.\n- [ ] Every response body is byte-identical to today's for the same totals (R654).\n- [ ] `r978000_a_patch_the_server_does_not_ship_is_never_kept` stays green. The load counts pinned by R2491000's tests change only with that ruling amended.\n\n## Size and risks\n\nMedium, server only: about 3 files and 200 lines. The figures must stay byte for byte the same, so the tests compare whole bodies. One snapshot is held in memory for the length of the cache window.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:58:35Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3067: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T23:00:24Z",
+    "claimed_at": "2026-11-04T23:03:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3043 skipped: it waits for #3042 to close first",
+    "#3044 skipped: it waits for #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
