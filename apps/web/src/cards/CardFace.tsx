@@ -51,6 +51,12 @@
 // picture (`artPictureOf`), Pixel setting the name in its pixel face (pixelName.ts, `data-pixel-name`, the words
 // kept unseen) and Comic in a burst (cards.css). R2942002: Animated, a foil, a finish and a border layer on each, and
 // Signature on none.
+// R2943001: Set showcase draws the card in its set's own look (`data-showcase`, pictures.ts `showcaseFamilyOf`): the
+// picture in its set's treatment (`artPictureOf` by the face's set), and on a base face the set's edge, bezel and name
+// banner (cards.css). Out of frame draws the picture's backdrop in a smaller window and its subject cut out over the
+// frame (`.cf-art--cutout`, CardArt's `part`), inside the art frame, so under the cost gem, crest, name, stats and rules
+// box and inside the card's rim; a Starship in play and a Legacy card, whose pictures have no parts, keep the normal
+// window (CardArt `hasArtParts`). R2943002: Animated, a foil, a finish and a border layer on each, and Signature on none.
 //
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
@@ -71,6 +77,8 @@ import { useRef, type CSSProperties, type ReactElement } from "react";
 import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
+import { hasArtParts } from "./art/CardArt.tsx";
+import { showcaseFamilyOf } from "./art/pictures.ts";
 import { SIGNATURE_MOTION } from "./art/motion.ts";
 import { CardStates } from "./CardStates.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -92,7 +100,16 @@ import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts
 import { questFaceText } from "./questFace.ts";
 import { MINUS } from "./tuning.ts";
 import { pixelNameUri } from "./pixelName.ts";
-import { NORMAL_LOOK, VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, artPictureOf, augmentsOf, isFullBleed } from "./versions.ts";
+import {
+  NORMAL_LOOK,
+  VERSION_EXTENDED_ART_ID,
+  VERSION_OUT_OF_FRAME_ID,
+  VERSION_PIXEL_ID,
+  VERSION_SET_SHOWCASE_ID,
+  artPictureOf,
+  augmentsOf,
+  isFullBleed,
+} from "./versions.ts";
 
 import "./cards.css";
 import "./setmark.css";
@@ -356,6 +373,13 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // it in the normal face, cards.css).
   const extended = look.version === VERSION_EXTENDED_ART_ID;
   const pixelName = look.version === VERSION_PIXEL_ID ? pixelNameUri(face.name) : null;
+  // R2943001: Set showcase wears its set's look; Out of frame cuts its subject out over the frame where the picture has
+  // parts (a Starship in play's and a Legacy card's have none).
+  const showcase = look.version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(face.set) : null;
+  const starship = face.inPlay ? face.starship : null;
+  const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
+  const picture = signatureLook ? "signature" : artPictureOf(look.version, face.set);
+  const motion = artMotion ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null;
 
   return (
     <span
@@ -376,6 +400,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-version={look.version ?? undefined}
+      data-showcase={showcase ?? undefined}
       data-augments={augments.length > 0 ? augments.join(" ") : undefined}
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
@@ -412,9 +437,26 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               name={face.englishName ?? face.name}
               shape={fullArt || extended ? "full" : ART_SHAPE[face.type]}
               lazy={lazyArt}
-              starship={face.inPlay ? face.starship : null}
-              picture={signatureLook ? "signature" : artPictureOf(look.version)}
-              motion={artMotion ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null}
+              starship={starship}
+              picture={picture}
+              motion={motion}
+              part={outOfFrame ? "backdrop" : "whole"}
+            />
+          )}
+          {outOfFrame && (
+            <CardArt
+              defId={face.defId}
+              radiant={face.radiant}
+              tags={face.tags}
+              type={face.type}
+              name={face.englishName ?? face.name}
+              shape="full"
+              className="cf-art--cutout"
+              lazy={lazyArt}
+              starship={starship}
+              picture={picture}
+              motion={motion}
+              part="subject"
             />
           )}
           {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}

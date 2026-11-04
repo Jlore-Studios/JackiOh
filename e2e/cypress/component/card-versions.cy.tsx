@@ -12,6 +12,10 @@
 // foil under it), on a Unit and a Spell offered all three, base and Radiant: every part shows and none signs, Extended
 // art's picture runs past its window, Pixel's and Comic's are their own (a base Pixel in its palette's levels), and a
 // Radiant face keeps its gold frame.
+// R2943001, R2943002: part 4's versions, Set showcase and Out of frame, each bare and with Animated (the first Unit with
+// a foil under it), on two Units offered both and a Spell offered Set showcase, base and Radiant: every part shows and
+// none signs, Set showcase's picture is its set's own, Out of frame's subject rises out of its window inside the face
+// and leaves the cost gem and the stats as they were, and a Radiant face keeps its gold frame.
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) shown in a look by `FullArtShown`, as the Collection's preview
 // shows one, so the looks stand side by side with no pick written. No `FullArtOwned` is mounted, so every cosmetic
@@ -30,11 +34,15 @@ import {
   VERSION_COMIC_ID,
   VERSION_EXTENDED_ART_ID,
   VERSION_FULL_ART_ID,
+  VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
+  VERSION_SET_SHOWCASE_ID,
   VERSION_SKETCH_ID,
   artPictureOf,
   isFullBleed,
+  offeredOn,
 } from "../../../apps/web/src/cards/versions.ts";
+import { showcaseFamilyOf } from "../../../apps/web/src/cards/art/pictures.ts";
 import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/settings/index.ts";
 
 type CardDef = (typeof CATALOG)[string];
@@ -117,8 +125,32 @@ const BESIDE_STEP_PX = 2;
 /** How far the strip beside a window keeps from it and from the face's edge: clear of the bezel and the rim. */
 const BESIDE_CLEARANCE_PX = 4;
 
+/** R2943001: two Units offered both of part 4's versions and Animated, and a Spell offered Set showcase and Animated. */
+const PART_FOUR_CARDS = [
+  { id: "stinkyscape-080", why: "a Unit (Galaxy: Stinkyscape's painter, stats in the bottom corners, a Legendary crest)" },
+  { id: "classic-080", why: "a Unit (BOOM! Big Max: the procedural painter, stats, a Legendary crest)" },
+  { id: "core-083", why: "a Spell (Transmogulate: no stats, a Legendary crest; Out of frame is a Unit's)" },
+] as const;
+
+/** R2943002: the normal face to compare with, then each of part 4's versions bare and with Animated, Signature on none. */
+const PART_FOUR_LOOKS = [
+  { name: "normal", pick: false, augments: [] },
+  { name: "showcase", pick: VERSION_SET_SHOWCASE_ID, augments: [] },
+  { name: "showcase-stack", pick: VERSION_SET_SHOWCASE_ID, augments: [AUGMENT_ANIMATED_ID] },
+  { name: "out", pick: VERSION_OUT_OF_FRAME_ID, augments: [] },
+  { name: "out-stack", pick: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] },
+] as const;
+
+/** R2943001: the looks the screenshot compares, Out of frame with its stack too (Animated + the first Unit's foil). */
+const PART_FOUR_SHOT_LOOKS = PART_FOUR_LOOKS.filter((look) => ["normal", "showcase", "out", "out-stack"].includes(look.name));
+
 type Card = { readonly id: string; readonly why: string };
 type Look = { readonly name: string; readonly pick: false | string; readonly augments: readonly string[] };
+
+/** R2943001: the looks of `looks` card `id` is offered: the normal face, and each version where it is offered. */
+function offeredLooks(id: string, looks: readonly Look[]): Look[] {
+  return looks.filter((look) => look.pick === false || offeredOn(look.pick, id));
+}
 
 type Point = { x: number; y: number };
 type Shot = { width: number; height: number; data: Uint8ClampedArray; scale: number };
@@ -165,6 +197,17 @@ function Faces({ width, cards = CARDS, looks = LOOKS }: { width: number; cards?:
         )}
       </div>
     </OwnCopy>
+  );
+}
+
+/** R2943001: each card's faces in the looks it is offered, one row of `Faces` a card. */
+function OfferedFaces({ width, cards, looks }: { width: number; cards: readonly Card[]; looks: readonly Look[] }) {
+  return (
+    <>
+      {cards.map((card) => (
+        <Faces key={card.id} width={width} cards={[card]} looks={offeredLooks(card.id, looks)} />
+      ))}
+    </>
   );
 }
 
@@ -591,6 +634,139 @@ describe("R2725003 a card's versions and augments on real faces", () => {
       }
       expect(Object.keys(shares).length, "every card and face sampled").to.eq(PART_THREE_CARDS.length * 2 * 4 + 1);
       cy.task("layout:report", { spec: "card-versions-part-3", shares });
+    });
+  });
+
+  for (const width of WIDTHS) {
+    it(`R2725003 R2943002 each of part 4's versions keeps every part, and signs nowhere, at ${width}px`, () => {
+      writeCardPick(PART_FOUR_CARDS[0].id, "foil", FOIL);
+      cy.mount(<OfferedFaces width={width} cards={PART_FOUR_CARDS} looks={PART_FOUR_LOOKS} />);
+      cy.document().should((doc) => {
+        let cutouts = 0;
+        for (const { id, why } of PART_FOUR_CARDS) {
+          const unit = CATALOG[id]?.type === "Unit";
+          expect(offeredOn(VERSION_SET_SHOWCASE_ID, id), `${id}: Set showcase`).to.eq(true);
+          expect(offeredOn(VERSION_OUT_OF_FRAME_ID, id), `${id}: Out of frame`).to.eq(unit);
+          for (const look of offeredLooks(id, PART_FOUR_LOOKS)) {
+            for (const radiant of [false, true]) {
+              const where = `${id} (${why}) ${look.name} ${radiant ? "Radiant" : "base"}, ${width}px`;
+              const cf = faceIn(doc, id, look.name, radiant);
+              const face = cf.getBoundingClientRect();
+              const version = look.pick === false ? null : look.pick;
+              const set = CATALOG[id]?.set ?? null;
+              expect(face.width, `${where}: the face fills its box`).to.be.greaterThan(width / 2);
+              expect(cf.getAttribute("data-version"), where).to.eq(version);
+              expect(cf.getAttribute("data-full-art"), where).to.eq(null);
+              expect(cf.getAttribute("data-augments"), where).to.eq(look.augments.length > 0 ? look.augments.join(" ") : null);
+              if (id === PART_FOUR_CARDS[0].id) expect(cf.getAttribute("data-cosmetic-foil"), `${where}: the foil`).to.eq(radiant ? null : FOIL);
+              expect(cf.getAttribute("data-showcase"), `${where}: the set's look`).to.eq(version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(set) : null);
+              const picture = artPictureOf(version, set);
+              const art = cf.querySelector<HTMLElement>(".cf-art:not(.cf-art--cutout)");
+              expect(art?.getAttribute("data-art-picture"), `${where}: the picture`).to.eq(picture === "normal" ? null : picture);
+              // R2949000: Signature on neither.
+              expect(boxes(cf, ".cf-signature").length, `${where}: no signature`).to.eq(0);
+              // Every version keeps the cost gem, the crest, the name, the type line, the rules box and a Unit's stats.
+              const kept = [".cost-gem", ".cf-crest", ".card-name", ".card-type", ".card-text", ...(unit ? [".cf-atk", ".cf-hp"] : [])];
+              for (const selector of kept) expect(boxes(cf, selector).length, `${where}: ${selector}`).to.be.greaterThan(0);
+              // Out of frame's subject rises above its window and past its sides, and stays inside the face.
+              const cutout = cf.querySelector<HTMLElement>(".cf-art--cutout");
+              expect(cutout !== null, `${where}: the cutout`).to.eq(version === VERSION_OUT_OF_FRAME_ID);
+              if (cutout !== null && art !== null && art !== undefined) {
+                cutouts += 1;
+                const subject = cutout.getBoundingClientRect();
+                const opening = art.getBoundingClientRect();
+                const scale = cf.querySelector(".cf-scale")?.getBoundingClientRect();
+                expect(subject.top, `${where}: the subject above its window`).to.be.lessThan(opening.top - 1);
+                expect(subject.width, `${where}: the subject wider than its window`).to.be.greaterThan(opening.width + 1);
+                // Its foot sinks below the window's, under the name banner.
+                const banner = cf.querySelector(".card-name")?.getBoundingClientRect();
+                expect(subject.bottom, `${where}: the subject's foot below its window's`).to.be.greaterThan(opening.bottom);
+                expect(banner !== undefined && subject.bottom <= banner.bottom + 0.5 && subject.bottom > banner.top, `${where}: the foot under the banner`).to.eq(true);
+                expect(scale, `${where}: the face`).to.not.eq(undefined);
+                if (scale !== undefined) {
+                  expect(subject.top, `${where}: inside the face`).to.be.at.least(scale.top - 0.5);
+                  expect(subject.left, `${where}: inside the face`).to.be.at.least(scale.left - 0.5);
+                  expect(subject.right, `${where}: inside the face`).to.be.at.most(scale.right + 0.5);
+                }
+                expect(getComputedStyle(cutout).backgroundColor, `${where}: the cutout's ground`).to.eq("rgba(0, 0, 0, 0)");
+                expect(getComputedStyle(cutout, "::after").content, `${where}: no foil on the cutout`).to.eq("none");
+              }
+              // R2725004: the gold-foil frame and the art's Radiant paint on a Radiant face alone.
+              expect(cf.getAttribute("data-radiant-face"), where).to.eq(radiant ? "true" : null);
+              for (const each of cf.querySelectorAll(".cf-art")) expect(each.getAttribute("data-art-variant"), where).to.eq(radiant ? "radiant" : "base");
+              const bezel = getComputedStyle(cf).getPropertyValue("--cf-bezel").trim();
+              expect(bezel === "#f6d77a", `${where}: the gold bezel`).to.eq(radiant);
+            }
+          }
+        }
+        expect(cutouts, "every Out of frame face measured").to.eq(2 * 2 * 2);
+      });
+    });
+  }
+
+  it("R2943001 each part 4 version prints its look, on two Units and a Spell, base and Radiant", () => {
+    // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
+    writeCardSettings({ animatedFoil: false });
+    writeCardPick(PART_FOUR_CARDS[0].id, "foil", FOIL);
+    cy.mount(<OfferedFaces width={SHOT_WIDTH} cards={PART_FOUR_CARDS} looks={PART_FOUR_SHOT_LOOKS} />);
+    const units = PART_FOUR_CARDS.filter(({ id }) => CATALOG[id]?.type === "Unit");
+    cy.get('.cf[data-art-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", units.length * 2);
+    cy.get('[data-art-moving="true"]').should("not.exist");
+    cy.get("[data-face] .cf-art[data-art-pending]").should("not.exist");
+    cy.get(".cf[data-showcase]").should("have.length", PART_FOUR_CARDS.length * 2);
+    cy.get('.cf-art--cutout[data-art-part="subject"]').should("have.length", units.length * 2 * 2);
+    cy.document().its("fonts.status").should("eq", "loaded");
+    const taken: { boxes?: Map<string, Record<string, DOMRect | undefined>> } = {};
+    cy.document().then((doc) => {
+      const found = new Map<string, Record<string, DOMRect | undefined>>();
+      for (const { id } of PART_FOUR_CARDS) {
+        const unit = CATALOG[id]?.type === "Unit";
+        for (const radiant of [false, true]) {
+          const box = (look: string, selector: string): DOMRect => {
+            const at = faceIn(doc, id, look, radiant).querySelector(selector)?.getBoundingClientRect();
+            if (at === undefined) throw new Error(`no ${selector} for ${id} ${look}`);
+            return at;
+          };
+          found.set(`${id} ${radiant ? "Radiant" : "base"}`, {
+            normal: box("normal", ".cf-art"),
+            showcase: box("showcase", ".cf-art"),
+            normalGem: box("normal", ".cost-gem"),
+            outGem: unit ? box("out", ".cost-gem") : undefined,
+            normalAtk: unit ? box("normal", ".cf-atk") : undefined,
+            outAtk: unit ? box("out", ".cf-atk") : undefined,
+            normalHp: unit ? box("normal", ".cf-hp") : undefined,
+            outHp: unit ? box("out", ".cf-hp") : undefined,
+          });
+        }
+      }
+      taken.boxes = found;
+    });
+    screenshot("card-versions-part-4").then((shot) => {
+      const shares: Record<string, number> = {};
+      const middle = (box: DOMRect): Point => ({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+      for (const [where, found] of taken.boxes ?? new Map<string, Record<string, DOMRect | undefined>>()) {
+        const { normal, showcase } = found;
+        if (normal === undefined || showcase === undefined) throw new Error(`${where}: a window is missing`);
+        for (const box of Object.values(found)) if (box !== undefined) expect(Math.ceil(box.bottom * shot.scale), `${where}: inside the shot`).to.be.at.most(shot.height);
+        // Set showcase's picture is its set's own, apart from the normal one, in the same window.
+        expect(Math.round(normal.width), `${where}: the windows match`).to.eq(Math.round(showcase.width));
+        const offsets = windowOffsets(normal);
+        expect(offsets.length, `${where}: sampled points`).to.be.greaterThan(20);
+        const share = differingShare(shot, normal, showcase, offsets);
+        shares[`${where} showcase`] = share;
+        expect(share, `${where}: Set showcase differs`).to.be.at.least(PICTURE_SHARE_MIN);
+        // Out of frame's subject stays under the cost gem and the stats: their middles print as on the normal face.
+        for (const [part, a, b] of [["gem", found.normalGem, found.outGem], ["attack", found.normalAtk, found.outAtk], ["health", found.normalHp, found.outHp]] as const) {
+          if (a === undefined || b === undefined) continue;
+          const one = pixelAt(shot, middle(a));
+          const two = pixelAt(shot, middle(b));
+          const same = one.every((channel, i) => Math.abs(channel - (two[i] ?? -1)) < PIXEL_DELTA_MIN);
+          shares[`${where} out ${part} kept`] = same ? 1 : 0;
+          expect(same, `${where}: Out of frame keeps the ${part}'s middle (${one.join(",")} vs ${two.join(",")})`).to.eq(true);
+        }
+      }
+      expect(Object.keys(shares).length, "every card and face sampled").to.eq(PART_FOUR_CARDS.length * 2 + units.length * 2 * 3);
+      cy.task("layout:report", { spec: "card-versions-part-4", shares });
     });
   });
 });

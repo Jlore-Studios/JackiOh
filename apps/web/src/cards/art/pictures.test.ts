@@ -3,19 +3,33 @@
 // wearing it are fullArtTiers.test.tsx's; the pixels are e2e's cypress/component/card-versions.cy.tsx.
 // R2940001: Alt art's picture, seeded apart as Signature's is, and the Sketch, the normal picture in pencil; the
 // faces wearing them are versionLooks.test.tsx's. R2942001: Pixel's and Comic's, the normal picture restyled; the
-// faces wearing them are versionLooks3.test.tsx's.
+// faces wearing them are versionLooks3.test.tsx's. R2943001: Set showcase's, the normal picture in its set's treatment,
+// and Out of frame's, the picture's backdrop and subject drawn apart; the faces wearing them are versionLooks4.test.tsx's.
 
 import { createElement } from "react";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { SHIPPED_SETS } from "@jackioh/shared";
 
 import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
 import { artMotionOf } from "../fullArt.ts";
 import { AUGMENT_SIGNATURE_ID } from "../versions.ts";
-import { CardArt, type CardArtProps } from "./CardArt.tsx";
-import { artSeedOf, comicSvg, pixelSvg, restyledSvg, restyleOf, sketchSvg, type ArtPicture } from "./pictures.ts";
+import { CardArt, hasArtParts, type CardArtProps } from "./CardArt.tsx";
+import {
+  SHOWCASE_FAMILIES,
+  artSeedOf,
+  comicSvg,
+  pixelSvg,
+  restyledSvg,
+  restyleOf,
+  showcaseFamilyOf,
+  showcaseSvg,
+  sketchSvg,
+  type ArtPicture,
+  type ShowcaseFamily,
+} from "./pictures.ts";
 
 afterEach(cleanup);
 
@@ -69,6 +83,7 @@ function drawnArt(id: string, radiant: boolean, picture: ArtPicture, more: Parti
     marked: art?.getAttribute("data-art-picture") ?? null,
     motif: art?.getAttribute("data-art-motif") ?? null,
     family: art?.getAttribute("data-art-family") ?? null,
+    part: art?.getAttribute("data-art-part") ?? null,
   };
   cleanup();
   return drawn;
@@ -266,6 +281,145 @@ describe("R2942001 Pixel's and Comic's pictures", () => {
         expect(drawn).toContain('<rect width="100" height="100" fill="#123456"/>');
         expect(drawn).not.toContain('viewBox="0 0 100 100"><rect');
       }
+    }
+  });
+});
+
+describe("R2943001 Set showcase's and Out of frame's pictures", () => {
+  /** Each family's filter (pictures.ts `showcaseSvg`). */
+  const FILTERS: Readonly<Record<ShowcaseFamily, string>> = {
+    core: "sc-core",
+    classic: "sc-stone",
+    meditative: "sc-ink",
+    stinkyscape: "sc-space",
+    "training-grounds": "sc-wood",
+  };
+  const FAMILIES = Object.keys(FILTERS) as ShowcaseFamily[];
+
+  it("R2943001 every shipped set has a Set showcase family, Classic+ and Meditative+ their parents', and each restyles the normal picture seeded by the card's id", () => {
+    for (const set of SHIPPED_SETS) expect(showcaseFamilyOf(set), set).not.toBeNull();
+    expect(new Set(SHIPPED_SETS.map((set) => showcaseFamilyOf(set))).size).toBe(FAMILIES.length);
+    expect([showcaseFamilyOf("Classic+"), showcaseFamilyOf("Meditative+")]).toEqual([showcaseFamilyOf("Classic"), showcaseFamilyOf("Meditative")]);
+    expect([showcaseFamilyOf(null), showcaseFamilyOf("Boss"), showcaseFamilyOf("Custom")]).toEqual([null, null, null]);
+    expect(new Set(Object.values(SHOWCASE_FAMILIES))).toEqual(new Set(FAMILIES));
+    for (const family of FAMILIES) {
+      const picture = `showcase-${family}` as const;
+      expect(restyleOf(picture), family).toBe(picture);
+      expect(artSeedOf("core-022", picture), family).toBe("core-022");
+    }
+  });
+
+  /** One card of each shipped set: a procedural card of each of Core, Classic, Classic+, Meditative and Meditative+, a Stinkyscape one and a Training Grounds one. */
+  const SHOWCASED = ["core-083", "classic-080", "classicplus-019", "meditative-087", "meditativeplus-024", "stinkyscape-154", "traininggrounds-040"] as const;
+
+  it("R2943001 each card's Set showcase draws its normal picture under its set's filter, apart from every other picture, base and Radiant", () => {
+    for (const id of SHOWCASED) {
+      const family = showcaseFamilyOf(CATALOG[id]?.set ?? null);
+      if (family === null) throw new Error(`${id} has no family`);
+      const filter = FILTERS[family];
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        const normal = drawnArt(id, radiant, "normal");
+        const showcase = drawnArt(id, radiant, `showcase-${family}`);
+        const others = (["sketch", "pixel", "comic"] as const).map((picture) => drawnArt(id, radiant, picture).picture);
+        const drawn = showcase.picture ?? "";
+        expect(new Set([normal.picture, drawn, ...others]).size, where).toBe(5);
+        expect(showcase.marked, where).toBe(`showcase-${family}`);
+        expect([showcase.motif, showcase.family], where).toEqual([normal.motif, normal.family]);
+        expect(drawn, where).toContain(`filter id="${filter}"`);
+        expect(drawn, where).toContain(`filter="url(#${filter})"`);
+        expect(drawn, where).toContain(inner(normal.picture ?? ""));
+        expect(drawn.match(/<svg[\s>]/g) ?? [], where).toHaveLength(1);
+        for (const banned of ["href", "<text", "<title", "NaN", "undefined"]) expect(drawn, `${where} ${banned}`).not.toContain(banned);
+        // R2725004: a Radiant face's painted picture washes back over every family's but Core's, which keeps its colours.
+        expect(drawn.includes('result="sc-wash"'), where).toBe(radiant && family !== "core");
+      }
+    }
+  });
+
+  it("R2943001 the five Set showcase treatments of one picture differ from one another, base and Radiant, and showcaseSvg draws each", () => {
+    const picture = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#123456"/></svg>';
+    for (const radiant of [false, true]) {
+      const drawn = FAMILIES.map((family) => showcaseSvg(picture, family, radiant));
+      expect(new Set(drawn).size).toBe(FAMILIES.length);
+      for (const [at, family] of FAMILIES.entries()) {
+        expect(restyledSvg(picture, `showcase-${family}`, radiant, "core-008"), family).toBe(drawn[at]);
+        expect(restyledSvg(picture, `showcase-${family}`, radiant, "core-083"), family).toBe(drawn[at]);
+        expect(drawn[at], family).toContain('<rect width="100" height="100" fill="#123456"/>');
+        expect(drawn[at], family).not.toContain('viewBox="0 0 100 100"><rect');
+        for (const other of FAMILIES) if (other !== family) expect(drawn[at], `${family} holds ${other}'s filter`).not.toContain(`id="${FILTERS[other]}"`);
+      }
+      // On one card too, against its normal, Pixel and Comic pictures.
+      const card = FAMILIES.map((family) => drawnArt("core-008", radiant, `showcase-${family}`).picture);
+      const plain = (["normal", "pixel", "comic"] as const).map((other) => drawnArt("core-008", radiant, other).picture);
+      expect(new Set([...card, ...plain]).size).toBe(FAMILIES.length + plain.length);
+    }
+  });
+
+  /** One Unit Out of frame is offered on of each painter: two procedural ones, a Stinkyscape one and a Training Grounds one. */
+  const CUT_OUT = ["core-052", "classic-080", "stinkyscape-080", "traininggrounds-016"] as const;
+
+  it("R2943001 a painter draws its picture whole, its backdrop with no subject or its subject on nothing, base and Radiant", () => {
+    for (const id of CUT_OUT) {
+      expect(CATALOG[id]?.type, id).toBe("Unit");
+      expect(hasArtParts(id, null), id).toBe(true);
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        const plain = drawnArt(id, radiant, "normal");
+        const whole = drawnArt(id, radiant, "normal", { part: "whole" });
+        const backdrop = drawnArt(id, radiant, "normal", { part: "backdrop" });
+        const subject = drawnArt(id, radiant, "normal", { part: "subject" });
+        // "whole" is the picture, byte for byte, and marks no part.
+        expect(whole, where).toEqual(plain);
+        expect(plain.part, where).toBeNull();
+        expect([backdrop.part, subject.part], where).toEqual(["backdrop", "subject"]);
+        const [all, back, figure] = [plain.picture ?? "", backdrop.picture ?? "", subject.picture ?? ""];
+        expect(new Set([all, back, figure]).size, where).toBe(3);
+        for (const drawn of [back, figure]) {
+          expect(inner(drawn), where).not.toBe("");
+          expect(drawn.match(/<svg[\s>]/g) ?? [], where).toHaveLength(1);
+          for (const banned of ["href", "<text", "<title", "NaN", "undefined"]) expect(drawn, `${where} ${banned}`).not.toContain(banned);
+        }
+        // The subject stands on nothing: no sky, no vignette; the backdrop keeps both.
+        expect(figure, where).not.toContain("url(#v)");
+        expect(figure, where).not.toContain("url(#s)");
+        expect(back, where).toContain("url(#v)");
+        // Each part draws less than the whole picture.
+        for (const drawn of [back, figure]) expect(inner(drawn).length, where).toBeLessThan(inner(all).length);
+        // Its subject and family are the normal picture's.
+        expect([subject.motif, subject.family], where).toEqual([plain.motif, plain.family]);
+      }
+    }
+  });
+
+  it("R2943002 an animated part moves: the subject's own layer and the backdrop's", () => {
+    for (const id of CUT_OUT) {
+      const motion = artMotionOf(id);
+      expect(motion, id).not.toBeNull();
+      const subject = drawnArt(id, false, "normal", { part: "subject", motion }).picture ?? "";
+      const backdrop = drawnArt(id, false, "normal", { part: "backdrop", motion }).picture ?? "";
+      expect(subject, id).toContain("art-m-subject");
+      expect(backdrop, id).toContain("art-m-");
+      expect(backdrop, id).not.toContain('class="art-m-subject"');
+      expect(subject, id).not.toBe(drawnArt(id, false, "normal", { part: "subject" }).picture);
+    }
+  });
+
+  it("R2943001 a delivered file gives way to the painter's parts, and a Legacy card and a Starship in play draw their one picture whole", () => {
+    const id = "core-052";
+    const manifest = { [id]: { base: true } } as const;
+    expect(drawnArt(id, false, "normal", { manifest }).art).toBe("real");
+    for (const part of ["backdrop", "subject"] as const) {
+      const drawn = drawnArt(id, false, "normal", { manifest, part });
+      expect(drawn.art, part).toBe("procedural");
+      expect(drawn.picture, part).toBe(drawnArt(id, false, "normal", { part }).picture);
+    }
+    const LEGACY = "traininggrounds-044";
+    const ship = { starship: { pieces: 2, launched: false } };
+    expect([hasArtParts(LEGACY, null), hasArtParts("core-008", ship.starship)]).toEqual([false, false]);
+    for (const part of ["backdrop", "subject"] as const) {
+      expect(drawnArt(LEGACY, false, "normal", { part }), part).toEqual(drawnArt(LEGACY, false, "normal"));
+      expect(drawnArt("core-008", false, "normal", { ...ship, part }), part).toEqual(drawnArt("core-008", false, "normal", ship));
     }
   });
 });

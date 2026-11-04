@@ -7,11 +7,13 @@
 // art, Sketch and Alt full art versions; R2940001: the full bleed of Full art and Alt full art (`isFullBleed`) and the
 // picture each version draws (`artPictureOf`). R2942000: #2942 adds the Extended art, Pixel and Comic versions;
 // R2942001: Extended art draws the normal picture past its window (CardFace), and Pixel and Comic restyle it
-// (`artPictureOf`). Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log
-// (CLAUDE.md rule 7).
+// (`artPictureOf`). R2943000: #2943 adds the Set showcase and Out of frame versions; R2943001: Set showcase restyles
+// the picture in its set's own treatment (`artPictureOf` by the card's set), and Out of frame draws its subject apart
+// from its backdrop (`artPartOf`, CardFace). Presentation only: nothing here reaches the engine, an action,
+// `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
-import type { ArtPicture } from "./art/pictures.ts";
+import { showcaseFamilyOf, type ArtPart, type ArtPicture } from "./art/pictures.ts";
 
 /** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
 export const ANIMATED_ART_ID_PREFIX = "animated-";
@@ -52,6 +54,15 @@ export const VERSION_PIXEL_ID = "version-pixel";
 /** R2942000: the Comic version, Epic: the card's picture as pop art, halftone dots and ink outlines, its name in a burst. */
 export const VERSION_COMIC_ID = "version-comic";
 
+/** R2943000: the Set showcase version, Legendary: the whole card restyled in its set's own look, frame, art treatment and lettering. */
+export const VERSION_SET_SHOWCASE_ID = "version-set-showcase";
+
+/**
+ * R2943000: the Out of frame version, Legendary: the card's subject steps out of a smaller window over its frame, under
+ * its gem, crest, name, stats and rules text.
+ */
+export const VERSION_OUT_OF_FRAME_ID = "version-out-of-frame";
+
 /** R2940001: whether a face wearing `version` lays its art across the whole face: Full art and Alt full art. */
 export function isFullBleed(version: string | null): boolean {
   return version === VERSION_FULL_ART_ID || version === VERSION_ALT_FULL_ART_ID;
@@ -59,13 +70,26 @@ export function isFullBleed(version: string | null): boolean {
 
 /**
  * R2940001: the picture a face wearing `version` draws (pictures.ts): Alt art's for Alt art and Alt full art, the
- * Sketch for Sketch. R2942001: Pixel's and Comic's for those; Extended art draws the normal one.
+ * Sketch for Sketch. R2942001: Pixel's and Comic's for those; Extended art draws the normal one. R2943001: Set showcase
+ * its set's own treatment, a card of `set` (the normal picture for a set with none); Out of frame the normal one.
  */
-export function artPictureOf(version: string | null): ArtPicture {
+export function artPictureOf(version: string | null, set: string | null = null): ArtPicture {
   if (version === VERSION_ALT_ART_ID || version === VERSION_ALT_FULL_ART_ID) return "alt";
   if (version === VERSION_SKETCH_ID) return "sketch";
   if (version === VERSION_PIXEL_ID) return "pixel";
+  if (version === VERSION_SET_SHOWCASE_ID) {
+    const family = showcaseFamilyOf(set);
+    return family === null ? "normal" : `showcase-${family}`;
+  }
   return version === VERSION_COMIC_ID ? "comic" : "normal";
+}
+
+/**
+ * R2943001: the part of its picture a face wearing `version` draws in its window: Out of frame's subject, which a
+ * picker's tile shows alone; every other version the whole picture.
+ */
+export function artPartOf(version: string | null): ArtPart {
+  return version === VERSION_OUT_OF_FRAME_ID ? "subject" : "whole";
 }
 
 /**
