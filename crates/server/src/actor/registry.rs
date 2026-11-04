@@ -635,12 +635,14 @@ impl Registry {
 impl Registry {
     /// B50: hands a watcher's socket to friend's seat, rebuilding if not in memory; `social::watch`
     /// has judged it may watch. A seatless friend reads as a missing match, a full match a conflict.
+    /// `watcher_name` is the username the watcher's emotes are shown under (R2990000).
     pub async fn attach_watcher(
         &self,
         app: &Arc<App>,
         match_id: &str,
         friend_id: &str,
         watcher_id: &str,
+        watcher_name: &str,
         socket: Socket,
     ) -> Result<(), AttachError> {
         let actor = self.actor_for(app, match_id).await?;
@@ -651,7 +653,7 @@ impl Registry {
             )));
         };
         actor
-            .attach_watcher(home, watcher_id, socket)
+            .attach_watcher(home, watcher_id, watcher_name, socket)
             .map_err(|refused| AttachError::Api(ApiError::new(ApiErrorCode::Conflict, refused.message())))
     }
 

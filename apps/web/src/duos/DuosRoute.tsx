@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 import type { ActionBody } from "@jackioh/shared";
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
+import { getAudioEngine } from "../audio/index.ts";
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { connectionWords } from "../game/connectionWords.ts";
@@ -25,6 +26,8 @@ import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { getDuosAgain, offerDuosAgain, type DuosAgainStatus } from "../net/duos.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import { useSetting } from "../settings/index.ts";
+import { useSideline } from "../sideline/useSideline.ts";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { DUOS_CLOCK_TICK_MS } from "./config.ts";
 import { DuosChromeContext, type DuosChrome, type DuosPlayAgain } from "./context.ts";
@@ -214,6 +217,16 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
     if (refusedWith !== null) console.error(`The server refused the co-op socket for match ${matchId}: ${refusedWith}`);
   }, [refusedWith, matchId]);
 
+  // R2990000, R2990004: the watchers' emotes, each relay landing once by its `seq`, as the match route's.
+  const sideline = useSideline({ engine: getAudioEngine(), globalMute: useSetting("muteSpectatorEmotes") });
+  const watcherEmote = match.spectatorEmote;
+  const lastWatcherSeq = useRef(0);
+  useEffect(() => {
+    if (watcherEmote === null || watcherEmote.seq === lastWatcherSeq.current) return;
+    lastWatcherSeq.current = watcherEmote.seq;
+    sideline.receive(watcherEmote.watcher, watcherEmote.emote);
+  }, [watcherEmote, sideline]);
+
   const chrome: DuosChrome = useMemo(
     () => ({
       back: <BackLink to={paths.together} label="← Play together" showSettings={false} />,
@@ -317,6 +330,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
             onPing={match.sendPing}
             jloreCapped={match.jloreCapped}
             economy={match.economy}
+            sideline={sideline}
             error={
               refusedWith === null
                 ? match.error

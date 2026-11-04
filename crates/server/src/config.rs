@@ -2437,6 +2437,16 @@ pub const CHALLENGE_TTL_MS: i64 = 120_000;
 pub const SPECTATE_DELAY_MS: i64 = 5_000;
 /// B50: watchers one live match may hold at once.
 pub const SPECTATORS_PER_MATCH: usize = 8;
+/// R2990001: the emoji in a watcher's emote hand, dealt from the match seed and the watcher's own
+/// account, with no voice line in it (a voice line would sound like a player speaking).
+pub const SPECTATOR_EMOTE_HAND_SIZE: usize = 5;
+/// R2990002: the least time between two of one watcher's emotes, twice a player's
+/// (`EMOTE_COOLDOWN_MS`), so the sidelines never drown out the players.
+pub const SPECTATOR_EMOTE_COOLDOWN_MS: i64 = 3_000;
+/// R2990002: the rolling window `SPECTATOR_EMOTE_WINDOW_MAX` counts a watcher's emotes in.
+pub const SPECTATOR_EMOTE_WINDOW_MS: i64 = 30_000;
+/// R2990002: the most emotes one watcher sends in `SPECTATOR_EMOTE_WINDOW_MS`.
+pub const SPECTATOR_EMOTE_WINDOW_MAX: usize = 3;
 /// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).
 pub const CHAT_MAX_CHARS: usize = 500;
 /// B53: chat messages one account may send in a minute; the next is 429.

@@ -40,8 +40,9 @@ const DEFAULTS: Settings = {
   lethalHint: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
+  muteSpectatorEmotes: false,
 };
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "muteOpponentEmotes", "reduceMotion"];
+const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "muteOpponentEmotes", "muteSpectatorEmotes", "reduceMotion"];
 
 afterEach(() => {
   cleanup();
@@ -606,11 +607,13 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     ["lethalHint", "Lethal hint"],
     ["reduceMotion", "Reduce motion"],
     ["muteOpponentEmotes", "Mute opponent emotes"],
+    ["muteSpectatorEmotes", "Mute spectator emotes"],
   ];
 
   const TAB_FOR: Partial<Record<SettingKey, "visuals" | "audio">> = {
     reduceMotion: "visuals",
     muteOpponentEmotes: "audio",
+    muteSpectatorEmotes: "audio",
   };
 
   it("B24 shows gameplay (drag, confirm, auto end, hover, lethal hint), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
@@ -721,6 +724,26 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
 
     __resetSettingsForTests();
     expect(readSettings().muteOpponentEmotes).toBe(true);
+  });
+
+  it("R2990004 the Mute spectator emotes switch lives on the Audio tab", () => {
+    render(<SettingsPanel onClose={noop} />);
+    fireEvent.click(screen.getByTestId("settings-tab-audio"));
+
+    const toggleEl = switchFor("muteSpectatorEmotes");
+    expect(screen.getByRole("switch", { name: "Mute spectator emotes" })).toBe(toggleEl);
+    expect(screen.getByTestId("settings-section-audio").contains(toggleEl)).toBe(true);
+    // After the opponent's switch, with its own hint.
+    expect(switchFor("muteOpponentEmotes").compareDocumentPosition(toggleEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(toggleEl).toHaveAccessibleDescription("Never show or hear spectators' emotes, in every match.");
+    expect(toggleEl.checked).toBe(false);
+
+    fireEvent.click(toggleEl);
+
+    expect(readSettings().muteSpectatorEmotes).toBe(true);
+    expect(persisted()).toMatchObject({ muteSpectatorEmotes: true });
+    __resetSettingsForTests();
+    expect(readSettings().muteSpectatorEmotes).toBe(true);
   });
 
   it("R2102000 the Lethal hint switch sits in Gameplay, is on by default, and turning it off is kept", () => {

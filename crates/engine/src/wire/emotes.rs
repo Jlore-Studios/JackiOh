@@ -308,30 +308,54 @@ pub struct EmoteGate {
     pub sent_at: Vec<i64>,
 }
 
+/// A rate limit's three numbers (R643): the least time between two sends, the rolling window and
+/// the most sends inside it. A seat's are `SEAT_EMOTE_LIMITS`; a watcher's are the server's own,
+/// stricter ones (R2990002), which the client reads generated as the server's config.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EmoteLimits {
+    pub cooldown_ms: i64,
+    pub window_ms: i64,
+    pub window_max: usize,
+}
+
+/// R643: a seat's limit, the engine config's three numbers.
+pub const SEAT_EMOTE_LIMITS: EmoteLimits = EmoteLimits {
+    cooldown_ms: EMOTE_COOLDOWN_MS,
+    window_ms: EMOTE_WINDOW_MS,
+    window_max: EMOTE_WINDOW_MAX,
+};
+
 /// Whether `sent_at` (timestamps of this player's recent emotes, oldest first) admits one more at
 /// `now`. Pure and total: the same function answers the server's drop and the client's grey-out,
 /// so the two can never disagree (R643). `sent_at` is returned pruned to the window, so a caller
-/// can keep one rolling array per player.
+/// can keep one rolling array per player. A seat's limit (`SEAT_EMOTE_LIMITS`); `emote_gate_within`
+/// takes any other.
 pub fn emote_gate(sent_at: &[i64], now: i64) -> EmoteGate {
+    emote_gate_within(sent_at, now, SEAT_EMOTE_LIMITS)
+}
+
+/// `emote_gate` under `limits`: R2990002 holds a watcher's emotes to the server's own numbers with the
+/// very rule a seat's are held to, so the watcher's menu and the actor's drop agree as a seat's do.
+pub fn emote_gate_within(sent_at: &[i64], now: i64, limits: EmoteLimits) -> EmoteGate {
     let kept: Vec<i64> = sent_at
         .iter()
         .copied()
-        .filter(|at| now - at < EMOTE_WINDOW_MS)
+        .filter(|at| now - at < limits.window_ms)
         .collect();
     if let Some(&last) = kept.last()
-        && now - last < EMOTE_COOLDOWN_MS
+        && now - last < limits.cooldown_ms
     {
         return EmoteGate {
             ok: false,
-            retry_after_ms: Some(EMOTE_COOLDOWN_MS - (now - last)),
+            retry_after_ms: Some(limits.cooldown_ms - (now - last)),
             sent_at: kept,
         };
     }
-    if kept.len() >= EMOTE_WINDOW_MAX {
+    if kept.len() >= limits.window_max {
         let oldest = kept.first().copied().unwrap_or(now);
         return EmoteGate {
             ok: false,
-            retry_after_ms: Some(EMOTE_WINDOW_MS - (now - oldest)),
+            retry_after_ms: Some(limits.window_ms - (now - oldest)),
             sent_at: kept,
         };
     }
@@ -771,6 +795,60 @@ mod tests {
                     retry_after_ms: None,
                     sent_at: vec![18_000]
                 },
+            );
+        }
+
+        #[test]
+        fn r2990002_emote_gate_within_reads_the_limits_it_is_handed() {
+            // A watcher's numbers, as the server's config holds them (R2990002): stricter than a seat's.
+            let watcher = EmoteLimits {
+                cooldown_ms: 3_000,
+                window_ms: 30_000,
+                window_max: 3,
+            };
+            // 2 999 ms after the last is inside the handed cooldown, though past a seat's.
+            assert_eq!(
+                emote_gate_within(&[10_000], 12_999, watcher),
+                EmoteGate {
+                    ok: false,
+                    retry_after_ms: Some(1),
+                    sent_at: vec![10_000]
+                }
+            );
+            assert!(emote_gate(&[10_000], 12_999).ok);
+            // Three spaced sends fill the handed window; a fourth inside it is refused until the
+            // oldest ages out, though a seat's cap of five would still admit it.
+            let mut sent_at: Vec<i64> = Vec::new();
+            for now in [0, 3_000, 6_000] {
+                let gate = emote_gate_within(&sent_at, now, watcher);
+                assert!(gate.ok, "emote at {now}");
+                sent_at = gate.sent_at;
+                sent_at.push(now);
+            }
+            let fourth = emote_gate_within(&sent_at, 9_000, watcher);
+            assert!(!fourth.ok);
+            assert_eq!(fourth.retry_after_ms, Some(30_000 - 9_000));
+            assert!(emote_gate(&sent_at, 9_000).ok);
+            assert!(emote_gate_within(&sent_at, 30_000, watcher).ok);
+            // `emote_gate` is `emote_gate_within` at a seat's limits, whatever the history.
+            for (history, now) in [
+                (vec![], 0),
+                (vec![10_000], 10_500),
+                (vec![0, 2_000, 4_000, 6_000, 8_000], 10_000),
+                (vec![1_000, 16_000, 18_000, 20_000, 22_000], 24_000),
+            ] {
+                assert_eq!(
+                    emote_gate(&history, now),
+                    emote_gate_within(&history, now, SEAT_EMOTE_LIMITS)
+                );
+            }
+            assert_eq!(
+                SEAT_EMOTE_LIMITS,
+                EmoteLimits {
+                    cooldown_ms: EMOTE_COOLDOWN_MS,
+                    window_ms: EMOTE_WINDOW_MS,
+                    window_max: EMOTE_WINDOW_MAX,
+                }
             );
         }
 

@@ -20,9 +20,9 @@ use jackioh_server::bots::cosmetics::BotCosmetics;
 use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
 use jackioh_server::bots::signals::{accepts_draw, idles_turn, standing};
 use jackioh_server::config::{
-    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
-    EmoteTrigger, MULLIGAN_CLOCK_MS, PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PersonaName,
-    TURN_CLOCK_MS,
+    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS,
+    BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger, MULLIGAN_CLOCK_MS, PLAYER_SETTINGS_BYTES_MAX,
+    PLAYER_SETTINGS_GROUPS_MAX, PersonaName, TURN_CLOCK_MS,
 };
 use jackioh_server::db::store::{NewBot, PlayerSettingsLimits, PlayerSettingsMergeInput, StoreError};
 use jackioh_server::economy::store::CardPicks;
@@ -1063,6 +1063,96 @@ async fn r1351000_a_blocked_bots_emote_reaches_no_one_and_a_card_still_hears_it(
     assert_eq!(relayed, Vec::<Value>::new());
     let log = log_of(&m.app).await;
     assert_eq!(minted(&log), 1, "{log:?}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2990000_a_watchers_emote_in_a_bot_match_reaches_the_person_and_neither_a_hearing_card_nor_the_persona_hears_it()
+ {
+    // The R1127 match: the person's card that hears emotes is down, and the bot's greeting has run.
+    install_test_cards();
+    let balanced = AI_PERSONAS
+        .iter()
+        .find(|(name, _)| *name == PersonaName::Balanced)
+        .map(|(_, spec)| spec)
+        .expect("the balanced persona");
+    let greeting = balanced
+        .triggers
+        .iter()
+        .find(|(trigger, _)| *trigger == EmoteTrigger::MulliganEnd)
+        .map(|(_, row)| row)
+        .expect("a mulligan-end row");
+    let seed = (0..200)
+        .map(|k| format!("seed-bot-watched-{k}"))
+        .find(|seed| {
+            let hand = deal_emote_hand(seed, PlayerId::P2);
+            greeting.pool.iter().any(|emote| hand.contains(emote))
+        })
+        .expect("a seed whose bot holds a greeting");
+    let m = bot_match_with(
+        &seed,
+        PlayerId::P1,
+        PersonaName::Balanced,
+        false,
+        &[TEST_HEARS_EMOTES],
+    )
+    .await;
+    to_the_persons_turn(&m).await;
+    submit(
+        &m,
+        "person-stay",
+        json!({ "type": "setAutoEndTurn", "enabled": false }),
+    )
+    .await;
+    let card = to_json(&m.actor.view_for(m.person))["you"]["hand"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .find(|card| card["defId"] == TEST_HEARS_EMOTES)
+        .map(|card| card["instanceId"].clone())
+        .expect("the hearing card is in the person's hand");
+    submit(&m, "person-hear", json!({ "type": "play", "instanceId": card })).await;
+    let minted = |log: &[(String, String, String)]| log.iter().filter(|(_, _, kind)| kind == "emote").count();
+    for _ in 0..WAIT_STEPS {
+        m.actor.idle().await;
+        if minted(&log_of(&m.app).await) > 0 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    let (before, bot_emotes) = (minted(&log_of(&m.app).await), m.socket.of_type("emote").len());
+    assert_eq!(before, 1, "PREMISE: the card heard the bot's greeting");
+
+    let watcher = create_fake_socket();
+    m.actor
+        .attach_watcher(m.person, "profile-watcher", "Wes#13", watcher.socket())
+        .expect("the watcher is let in");
+    m.actor.idle().await;
+    let hand = watcher
+        .of_type("spectatorHand")
+        .first()
+        .map(|frame| frame["emotes"].clone())
+        .expect("the watcher's hand");
+    watcher.receive_json(json!({ "type": "emote", "emote": hand[0] }));
+    // Longer than any reply of the persona's waits (R645), well inside the person's long turn.
+    let reply_window = Duration::from_millis(BOT_EMOTE_REPLY_DELAY_FIT.max_ms.ceil() as u64);
+    for _ in 0..=reply_window.as_millis() / u128::from(WAIT_STEP_MS) {
+        m.actor.idle().await;
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    m.actor.idle().await;
+
+    assert_eq!(
+        m.socket.of_type("spectatorEmote"),
+        vec![json!({ "type": "spectatorEmote", "watcher": "Wes#13", "emote": hand[0] })]
+    );
+    assert_eq!(
+        m.socket.of_type("emote").len(),
+        bot_emotes,
+        "the persona never answered it"
+    );
+    assert_eq!(minted(&log_of(&m.app).await), before, "no card heard it");
+    assert!(watcher.of_type("spectatorEmote").is_empty(), "no echo");
 }
 
 #[tokio::test(start_paused = true)]

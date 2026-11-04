@@ -27,6 +27,7 @@ import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import { useEmotes } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
+import { useSideline } from "../sideline/useSideline.ts";
 import { CatalogContext } from "../game/catalog.ts";
 import { currentCatalogLookup } from "../game/currentCatalog.ts";
 import {
@@ -267,6 +268,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     lastRelaySeq.current = relayed.seq;
     emotes.receive(relayed.from, relayed.emote);
   }, [relayed, emotes]);
+  // R2990000, R2990004: the watchers' emotes land in the sideline strip the same way, by `seq`.
+  const sideline = useSideline({ engine: getAudioEngine(), globalMute: useSetting("muteSpectatorEmotes") });
+  const watcherEmote = match.spectatorEmote;
+  const lastWatcherSeq = useRef(0);
+  useEffect(() => {
+    if (watcherEmote === null || watcherEmote.seq === lastWatcherSeq.current) return;
+    lastWatcherSeq.current = watcherEmote.seq;
+    sideline.receive(watcherEmote.watcher, watcherEmote.emote);
+  }, [watcherEmote, sideline]);
 
   // R738: aims both ways. This seat's go out through the socket; the opponent's relay is drawn,
   // and only ever the opponent's — a relay is never about the viewer's own seat.
@@ -450,6 +460,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       legal={match.legal}
       onAction={match.send}
       emotes={emotes}
+      sideline={sideline}
       aim={aim}
       choiceHover={choiceHover}
       trackStats

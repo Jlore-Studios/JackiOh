@@ -80,6 +80,8 @@ import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
+import type { GameSideline } from "../sideline/useSideline.ts";
 
 /** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
 function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
@@ -136,6 +138,8 @@ export type GameProps = {
   boardNotice?: ReactNode;
   /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
   emotes?: GameEmotes;
+  /** R2990004: the watchers' emotes, a networked route's `useSideline`. Absent, no sideline strip. */
+  sideline?: GameSideline;
   /** R639: log this game in the device's statistics when it ends; not a lesson's or hotseat's. */
   trackStats?: boolean;
   /** R1295000: the viewer's own cards wear the device's card cosmetics; a replay's never do. */
@@ -215,6 +219,7 @@ export default function Game({
   heroAside,
   boardNotice,
   emotes,
+  sideline,
   trackStats = false,
   wearCosmetics = false,
   deckCosmetics = null,
@@ -833,6 +838,7 @@ export default function Game({
       )}
 
       {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {sideline === undefined ? null : <SidelineStrip sideline={sideline} />}
 
       {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}
       {shown.result !== null ? (
