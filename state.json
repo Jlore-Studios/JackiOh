@@ -15243,7 +15243,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-04T22:55:13Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:ca2c5d5f-1793833276",
+      "run_id": "41930335496",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T23:01:42Z",
       "stop_requested": false,
