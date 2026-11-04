@@ -1,0 +1,34 @@
+{
+  "name": "@jackioh/admin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "// build": "Production's bundle, with .env.production's values. headers.ts writes dist/_headers' CSP from the build's VITE_SUPABASE_URL.",
+    "build": "vite build",
+    "// build:staging": "Staging's bundle: the production build with .env.staging's values. Node's --env-file puts them in the process environment, where Vite never overwrites a variable, so each wins over .env.production's while MODE stays `production` (as apps/web's build:staging does).",
+    "build:staging": "node --env-file=.env.staging node_modules/vite/bin/vite.js build",
+    "// build:e2e": "A development-mode bundle: the one build that reads localStorage's jackioh.e2e.session (src/session.ts), so the e2e suite can sign its fixture accounts in. `vite preview` serves it on :5174 with /api proxied to the e2e server.",
+    "build:e2e": "vite build --mode development",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json && tsc -p worker/tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261026.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "jsdom": "30.1.0",
+    "json5": "2.2.3",
+    "vite": "8.3.0"
+  }
+}
