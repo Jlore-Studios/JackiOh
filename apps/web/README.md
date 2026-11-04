@@ -320,10 +320,10 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
 (`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and every entry of its set's
-effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000): a cast, a cry, a card recipe or Flourish (on
-its fixture, `RECIPE_FIXTURES`), a set piece or an aura plays as the card's play, a death, trigger or activate motif
-through the gallery's own director, a Field card's aura stands in the first backrow zone, and a marquee Unit's entrance
-plays as it lands. It calls no engine.
+effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000) other than `none` (`galleryPlayOf`): a cast,
+a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/motifs/gallery.ts`), a set piece or an aura
+plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
+card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -568,7 +568,8 @@ routes (net/navigate.ts paths, and public/_redirects):
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
                          Chat (always), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
-                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out;
+                         legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
+                         `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
                          with &coop=1 (a friend whose `duos` is true) the co-op seat's views on DuosBoard,
                          drawn as a co-op replay step is (R2881000)
   /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos

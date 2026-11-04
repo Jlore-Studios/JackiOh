@@ -202,7 +202,7 @@ Make a permanent **Radiant**
 18/10  
 **Cry:** Destroy all enemy permanents in the right most lane
 
-**(3) Oriental, CN, \#29**  
+**(3) Easterner, CN, \#29**  
 5/9  
 **Cry:** Destroy all permanents in the left most lane  
 \~\~\~  
@@ -305,7 +305,7 @@ Add a random card to your hand
 Add a random **Radiant** card to your hand
 
 **These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABELED \#41,\#42 etc** \[they should be separate entities\])  
-1 Bigot  
+1 Speciesist  
 2 Stockpile  
 3 Mr vanilla  
 4 Duplicating felinors  

@@ -428,7 +428,7 @@ function graveyardView(): PlayerView {
     pending: pendingFor(
       "pick",
       [
-        { key: "instance:g1", label: "Bigot", instanceId: "g1", defId: "core-002", cost: 2 },
+        { key: "instance:g1", label: "Speciesist", instanceId: "g1", defId: "core-002", cost: 2 },
         { key: "instance:g2", label: "Midrange Menace", instanceId: "g2", defId: "core-019", cost: 3 },
         { key: "instance:g3", label: "Big Felinor", instanceId: "g3", defId: "core-043", cost: 4, radiant: true },
       ],

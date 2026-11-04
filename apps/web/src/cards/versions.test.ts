@@ -159,7 +159,7 @@ describe("R2725000 a card's version and augments", () => {
         expect(CATALOG[card]?.token, `${id} on ${card}`).toBe(false);
         expect(offeredOn(id, card)).toBe(true);
       }
-      expect(offeredOn(id, "core-002"), `${id} on Bigot`).toBe(false);
+      expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(false);
     }
     // Part 1's three on each of the 21 full-art cards, whose retired full arts imply them (R2725002).
     for (const id of partOne) for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(true);
@@ -244,10 +244,10 @@ describe("R2725000 a card's version and augments", () => {
     expect(new Set(versions.map((id) => key(on(id)))).size).toBe(versions.length);
     for (const id of versions) expect(on(id).size, id).toBeLessThan(collectible);
     for (const id of [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID]) {
-      // Each holds a card no other version takes, and none is on Bigot, a Common Unit.
+      // Each holds a card no other version takes, and none is on Speciesist, a Common Unit.
       const others = new Set(versions.filter((version) => version !== id).flatMap((version) => [...on(version)]));
       expect([...on(id)].some((card) => !others.has(card)), id).toBe(true);
-      expect(offeredOn(id, "core-002"), `${id} on Bigot`).toBe(false);
+      expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(false);
       // Each lands on cards of every type its clauses name and on Legendary and Mythic cards of any type.
       const rarities = new Set([...on(id)].map((card) => CATALOG[card]?.rarity));
       expect(rarities.has("Legendary") && rarities.has("Mythic"), id).toBe(true);

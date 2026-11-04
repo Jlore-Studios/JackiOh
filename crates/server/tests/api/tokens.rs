@@ -1254,7 +1254,7 @@ async fn r2378000_a_redemption_sent_past_the_waiting_ones_is_refused_at_once_and
 #[tokio::test]
 async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_art() {
     let (app, token) = setup().await;
-    // League of Losers, a Legendary Spell, is offered the versions and augments; Bigot, a Common Unit, is not.
+    // League of Losers, a Legendary Spell, is offered the versions and augments; Speciesist, a Common Unit, is not.
     let card = "classicplus-019".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;
@@ -1368,7 +1368,7 @@ async fn r2715000_r2725002_an_epic_token_buys_the_animated_augment_unless_a_reti
 #[tokio::test]
 async fn r2940000_a_token_refuses_a_version_not_offered() {
     let (app, token) = setup().await;
-    // Transmogulate, a Legendary Spell, is offered all three of #2940's versions; Bigot, a Common Unit, none.
+    // Transmogulate, a Legendary Spell, is offered all three of #2940's versions; Speciesist, a Common Unit, none.
     let card = "core-083".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;
@@ -1421,7 +1421,7 @@ async fn r2940000_a_token_refuses_a_version_not_offered() {
 #[tokio::test]
 async fn r2942000_an_epic_token_refuses_a_version_not_offered() {
     let (app, token) = setup().await;
-    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Bigot, a Common Unit, none.
+    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Speciesist, a Common Unit, none.
     let card = "classic-056".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;

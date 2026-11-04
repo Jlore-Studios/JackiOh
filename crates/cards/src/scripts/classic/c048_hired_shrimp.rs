@@ -83,7 +83,7 @@ mod tests {
     const MANA_WELL: &str = "core-006"; // a Field Spell with few
     const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap with more
     const ROCK: &str = "core-066"; // The Rock: Indestructible, few lines
-    const BIGOT: &str = "core-002";
+    const SPECIESIST: &str = "core-002";
     const GARY: &str = "core-004";
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const EXPERIMENT: &str = "core-085"; // Unlicensed Experimentation: fuses an enemy's played permanent onto yours
@@ -283,17 +283,17 @@ mod tests {
             }
 
             #[test]
-            fn a_fused_cards_loc_is_its_ingredients_sum_bigot_and_gary_each_have_fewer_lines_together_more() {
+            fn a_fused_cards_loc_is_its_ingredients_sum_speciesist_and_gary_each_have_fewer_lines_together_more() {
                 crate::register_all();
-                assert!(loc(BIGOT) < shrimp_loc());
+                assert!(loc(SPECIESIST) < shrimp_loc());
                 assert!(loc(GARY) < shrimp_loc());
-                assert!(loc(BIGOT) + loc(GARY) > shrimp_loc());
-                let (mut s, fused_id) = fused(BIGOT, GARY, false);
+                assert!(loc(SPECIESIST) + loc(GARY) > shrimp_loc());
+                let (mut s, fused_id) = fused(SPECIESIST, GARY, false);
                 let fused_def = def_of(Some(s.state()), &s.card(&fused_id).def_id).clone();
-                assert_eq!(fused_def.loc, Some(loc(BIGOT) + loc(GARY)));
+                assert_eq!(fused_def.loc, Some(loc(SPECIESIST) + loc(GARY)));
                 // Public in both views: each seat's view carries the fused definition with its loc (R243).
                 for viewer in [P1, P2] {
-                    assert_eq!(js(&s.view(viewer))["defs"][fused_def.id.as_str()]["loc"], json!(loc(BIGOT) + loc(GARY)));
+                    assert_eq!(js(&s.view(viewer))["defs"][fused_def.id.as_str()]["loc"], json!(loc(SPECIESIST) + loc(GARY)));
                 }
                 s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
                 s.expect_in_zone(&fused_id, "graveyard");
@@ -422,7 +422,7 @@ mod tests {
             #[test]
             fn a_fused_card_qualifies_by_its_ingredients_sum_and_is_destroyed() {
                 crate::register_all();
-                let (mut s, fused_id) = fused(BIGOT, GARY, true);
+                let (mut s, fused_id) = fused(SPECIESIST, GARY, true);
                 assert!(offered(&s, P1).contains(&fused_id));
                 s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
                 s.expect_in_zone(&fused_id, "graveyard");

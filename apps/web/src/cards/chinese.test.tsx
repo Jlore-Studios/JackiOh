@@ -151,7 +151,7 @@ describe("R1301 a Chinese card in a match", () => {
   });
 
   it("R1301 its refs are marked by their Chinese names", () => {
-    // Core #90 CN-Viral Injection names CN-Virus; its Radiant face names the Radiant one ("光辉CN病毒").
+    // Core #90 Super-Virus Injection names Super-Virus; its Radiant face names the Radiant one ("光辉超级病毒").
     for (const radiant of [false, true]) {
       const root = render(withDefs(<CardFace face={inPlay(card({ defId: "core-090", cost: 2, radiant, chinese: true }))} layout="full" />)).container;
       const refs = [...root.querySelectorAll(".cf-ref")];
@@ -211,7 +211,7 @@ describe("R1301 a Chinese card in a match", () => {
   it("R1301 keywords read in Chinese", () => {
     expect(chineseKeyword({ kind: "Armor", n: 7 })).toBe("护甲7");
     expect(chineseKeyword({ kind: "Taunt" })).toBe("嘲讽");
-    // Core #2 Bigot, which has gained Taunt and Armor 3.
+    // Core #2 Speciesist, which has gained Taunt and Armor 3.
     const view = unit("p1", { defId: "core-002", attack: 2, maxHealth: 2, health: 2, keywords: [{ kind: "Taunt" }, { kind: "Armor", n: 3 }], chinese: true });
     const face = inPlay(view);
     const root = draw(face);

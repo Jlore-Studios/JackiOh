@@ -662,14 +662,14 @@ describe("R1655000 a card in context", () => {
   });
 
   it("R2725001 a card's strip lists only its offered versions and augments", () => {
-    // Carnivorous Cube, offered part 1's three with no full art of its own, and R2940000 Alt art; Bigot, offered none.
+    // Carnivorous Cube, offered part 1's three with no full art of its own, and R2940000 Alt art; Speciesist, offered none.
     const groups = (defId: string) => cardStrip(defId, () => true).map((group) => [group.kind, group.items.map((entry) => entry.id)]);
     expect(groups(CUBE).slice(3)).toEqual([
       ["version", [NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID]],
       ["augment", [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]],
     ]);
     expect(groups(PLAIN).map(([kind]) => kind)).toEqual(["foil", "finish", "border"]);
-    // Owned on Bigot by a grant no shop makes, none is listed, and a face there wears none.
+    // Owned on Speciesist by a grant no shop makes, none is listed, and a face there wears none.
     writeCardFullArt(PLAIN, VERSION_FULL_ART_ID);
     open(PLAIN, new Map([[PLAIN, new Set([VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID])]]));
     expect(screen.queryByTestId(T.strip("version"))).toBeNull();
@@ -789,7 +789,7 @@ describe("R1655000 a card in context", () => {
         ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
     // Transmogulate is offered all four versions (and R2942000 Comic); Carnivorous Cube Alt art alone of the three,
     // Big D-fender the Sketch alone; Call to Chaos (Classic+ Edition) the three and not Full art (and R2942000 Pixel
-    // and Comic); Bigot none.
+    // and Comic); Speciesist none.
     const ALL = "core-083";
     const NOT_FULL = "classicplus-073";
     expect(versions(ALL)).toEqual([
@@ -849,7 +849,7 @@ describe("R1655000 a card in context", () => {
         .find((group) => group.kind === "version")
         ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
     // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art; Scratch Pad, a Mythic Spell,
-    // Full art, Alt full art and all three; Carnivorous Cube and Big D-fender none of the three; Bigot nothing.
+    // Full art, Alt full art and all three; Carnivorous Cube and Big D-fender none of the three; Speciesist nothing.
     const TYRANT = "classic-056";
     const PAD = "meditativeplus-026";
     expect(versions(TYRANT)).toEqual([

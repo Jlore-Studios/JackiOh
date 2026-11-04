@@ -42,7 +42,7 @@ export const lesson: TutorialLesson = {
     "traininggrounds-003", // Group leader, Common
     "traininggrounds-021", // Flame Tongue Totem, Rare
     "traininggrounds-032", // Selfless Protector, Epic
-    "traininggrounds-041", // Legacy: Bigot, Common
+    "traininggrounds-041", // Legacy: Speciesist, Common
     "traininggrounds-048", // Legacy: Jlockeed Shredder-10, Common
     "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-002", // Personal Trainer, Common

@@ -106,9 +106,14 @@ function keysAny(events: readonly GameEvent[]): boolean {
   return keyed;
 }
 
-/** The same play as another seat sees it when R97 hides it: its `cardPlayed` and `cardResolved` name the sentinel. */
+/**
+ * The same play as another seat sees it when R97 hides it: its `cardPlayed` and `cardResolved` name the
+ * sentinel, and so does a Trap's `trapFired` (R2734000), from which its cast plays (R2797000).
+ */
 function hidden(events: readonly GameEvent[]): GameEvent[] {
-  return events.map((event) => (event.type === "cardPlayed" || event.type === "cardResolved" ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event));
+  return events.map((event) =>
+    event.type === "cardPlayed" || event.type === "cardResolved" || event.type === "trapFired" ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event,
+  );
 }
 
 describe("R2795000 Classic+'s card animation table", () => {

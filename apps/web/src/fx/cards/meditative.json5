@@ -84,7 +84,7 @@
   "meditative-058": { cry: { motif: "conjure", palette: "Nerd/chalk" } }, // Permanent Underclassman
   "meditative-059": { cry: { motif: "conjure", palette: "Nerd/chalk" } }, // Permanent Upperclassman
   "meditative-060": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "arcane", scope: "zone" } }, // Eschews
-  "meditative-061": { trigger: { motif: "bless" } }, // Joon Jorker
+  "meditative-061": { trigger: { motif: "bless" } }, // Joon Juicer
   "meditative-062": { cast: { motif: "flight" } }, // Small Time Recruits
   "meditative-063": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "zone" } }, // Skull of J'Nari
   "meditative-064": { cast: { motif: "snap", palette: "Dark/blood" } }, // Traitorous Blood

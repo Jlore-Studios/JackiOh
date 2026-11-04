@@ -73,16 +73,16 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GOING_LONG: &str = "core-084"; // Field Spell, cost 2 embiggen 4, no Quickdraw (#2521)
-    const BIGOT: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
+    const SPECIESIST: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
     const MAGIC_JAMMED: &str = "core-036"; // Spell, 1 — "Destroy target backrow card; Lock its zone"
     const STOCKPILE: &str = "core-005"; // the spare card that keeps a turn meaningful (§2.5)
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
     const SCARAB: &str = "core-007"; // 1/1, no Taunt — a body of p1's so §2.5 never auto-ends the turn
 
-    /// Bigot at the 6/1 these hits are measured with.
+    /// Speciesist at the 6/1 these hits are measured with.
     fn six_one() -> Value {
-        json!({ "def": BIGOT, "statsOverride": { "attack": 6, "health": 1 } })
+        json!({ "def": SPECIESIST, "statsOverride": { "attack": 6, "health": 1 } })
     }
 
     /// `extra` with the spare hand `[STOCKPILE, TIMMY]` and library `[MENACE, TIMMY]` set.
@@ -203,7 +203,7 @@ mod tests {
                 "p2": { "field": [six_one()], "hand": [STOCKPILE] },
             }));
 
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![4]);
             s.expect_health(P1, 26);
@@ -216,7 +216,7 @@ mod tests {
                 "p2": { "hand": [STOCKPILE] },
             }));
 
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p2"), vec![6]);
             s.expect_health(P2, 24);
@@ -233,7 +233,7 @@ mod tests {
             s.expect_mana(P1, 0); // MAX_MANA 4 − the embiggen price 4
 
             s.end_turn(); // p2's turn
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
             s.expect_health(P1, 29);
@@ -250,7 +250,7 @@ mod tests {
             s.expect_mana(P1, 2);
 
             s.end_turn();
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![4]);
             s.expect_health(P1, 26);
@@ -264,8 +264,8 @@ mod tests {
                 "p2": { "field": [six_one(), six_one()], "hand": [MAGIC_JAMMED, STOCKPILE] },
             }));
             let going_long = s.backrow(P1, 1).expect("Going Long in the backrow");
-            let first = s.unit(P2, 1).expect("the first Bigot");
-            let second = s.unit(P2, 2).expect("the second Bigot");
+            let first = s.unit(P2, 1).expect("the first Speciesist");
+            let second = s.unit(P2, 2).expect("the second Speciesist");
 
             s.attack(&first, "hero"); // 6 − 2 = 4
             s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&going_long.id) }));
@@ -291,7 +291,7 @@ mod tests {
 
             assert_eq!(shown_armor(&s, P1), 4);
 
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![2]);
             s.expect_health(P1, 28);
@@ -313,7 +313,7 @@ mod tests {
             assert_eq!(shown_armor(&s, P1), 10);
 
             s.end_turn();
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), Vec::<i32>::new());
             s.expect_health(P1, 30);

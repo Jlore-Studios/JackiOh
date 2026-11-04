@@ -292,7 +292,7 @@ function samples(): Sample[] {
     { name: "a readable card is burned", events: [{ type: "burned", instanceId: "cB", defId: "core-041", owner: "p1" }] },
     { name: "the viewer fatigues", events: [{ type: "fatigue", player: "p1", count: 1, amount: 1 }] },
     { name: "the opponent fatigues", events: [{ type: "fatigue", player: "p2", count: 7, amount: 7 }] },
-    { name: "a full library refuses a copy", events: [{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-cn-virus", outcome: "notCreated" }] },
+    { name: "a full library refuses a copy", events: [{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-super-virus", outcome: "notCreated" }] },
     { name: "a full library sends a card to the graveyard", events: [{ type: "libraryOverflow", player: "p1", instanceId: "c81", defId: "core-017", outcome: "graveyard" }] },
     { name: "a full library ends a hidden token", events: [{ type: "libraryOverflow", player: "p2", instanceId: "hidden", defId: "hidden", outcome: "ceased" }] },
     { name: "a hand card is discarded", events: [{ type: "discarded", instanceId: HAND, defId: "core-002", owner: "p1" }] },
@@ -1111,7 +1111,7 @@ describe("B16 the recipe table, row by row", () => {
     forDs("libraryOverflow", (D) => {
       const fizzle = r(FX_OVERFLOW_FIZZLE_AT * D);
       for (const outcome of ["notCreated", "ceased"] as const) {
-        expectCues(plan([{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-cn-virus", outcome }], D), [
+        expectCues(plan([{ type: "libraryOverflow", player: "p2", instanceId: "c80", defId: "token-super-virus", outcome }], D), [
           ring("fire", tid("library-opponent"), 0, D),
           burst("smoke", tid("library-opponent"), "point", fizzle),
         ]);
@@ -1239,7 +1239,9 @@ describe("B16 the recipe table, row by row", () => {
   });
 
   it("R2657001 a Field Trap firing again plans an activation's flare on its card: no reveal burst and no shake", () => {
-    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true };
+    // R2797000: a firing plays its card's own `cast` first, so this names the card the view shows there,
+    // whose entry has none, and the row plays alone.
+    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-061", controller: "p1", row: "backrow", lane: 1, again: true };
     for (const D of [ANIMATIONS.activated.durationMs, ODD_D]) {
       const cues = plan([again], D);
       expectCues(cues, [ring("arcane", cardT(MY_FIELD_TRAP), 0, D), burst("arcane", cardT(MY_FIELD_TRAP), "point", 0, FLAVOR_LOOKS.Dark.colors)]);

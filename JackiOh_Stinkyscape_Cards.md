@@ -728,7 +728,7 @@ Add 2 **Radiant** random **Drone Cores** to your hand
 **Starship Piece**  
 **End of Turn:** Heal all allies 4\.
 
-**(1)** **Great Replacement Theory, Spell, Quickdraw, Mythic, Stinkscape, \#44**  
+**(1)** **Great Paperclip Theory, Spell, Quickdraw, Mythic, Stinkscape, \#44**  
 Add a **Drone Core I** to your hand. The first time you play each **Drone Core** tier add the subsequent tier **Drone Core** to your hand.   
 \~\~\~  
 Add a **Radiant** **Drone Core I** to your hand. The first time you play each **Drone Core** tier add the **Radiant** **Drone Core** to your hand. 
@@ -1196,7 +1196,7 @@ Shuffle 8 **Metal Scraps** into your deck.
 \~\~\~  
 8/8  
 **Aura:** Your Humans have **Poisonous**.  
-**Cry:** Fill your hand with **Bigots**.
+**Cry:** Fill your hand with **Speciesists**.
 
 **(1) Spice, Spell, Rare, Stinkyscape, \#89**  
 Can be sold on the Resource marketplace. {For AI: Its price is determined like all other Resources; only appearing once a **Spice** is potentially relevant}  

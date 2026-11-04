@@ -622,7 +622,7 @@ Tribute this after 5 ally Units have died.
 End of Turn: Cast a random Radiant Human, Book, CN, or AI-Generated card.
 Tribute this after 50 ally Units have died.
 
-(3) Joon Jorker, Unit, Human, Common, Meditative, #61
+(3) Joon Juicer, Unit, Human, Common, Meditative, #61
 7/5
 End of Turn: Buff the Unit to the right 5 times.
 ~~~
@@ -967,11 +967,11 @@ Cast a random Call to Chaos
 (4) CN Golem Unit, CN, Token, Meditative, Legendary, #95.1
 10/10
 Rush, Poisonous, Cleave, Pierce
-On kill shuffle a CN-Virus into your opponents deck
+On kill shuffle a Super-Virus into your opponents deck
 ~~~ 
 20/20
 Rush, Poisonous, Cleave, Pierce, Windfury
-On kill shuffle a Radiant CN-Virus into your opponents deck
+On kill shuffle a Radiant Super-Virus into your opponents deck
 
 (2) Meditative Journey, Spell, Rare, Meditative, #96
 Select up to two cards in your hand to go on a journey {exile them and a shuffle a Journey Complete into your deck}

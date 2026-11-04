@@ -104,9 +104,9 @@ func gate(raw any, where string) *Gate {
 }
 
 // resolvers is _resolvers: `resolvers`: each names one file by its plain repository path, and
-// either `take` (`main`) or `run` (a command, with an optional whole `timeout_minutes`); a path at
-// most once, and one `run` resolver at most, since each command builds the merged tree, which
-// another's conflict markers would break.
+// either `take` (`main` or `union`) or `run` (a command, with an optional whole `timeout_minutes`);
+// a path at most once, and one `run` resolver at most, since each command builds the merged tree,
+// which another's conflict markers would break.
 func resolvers(raw any) []*Resolver {
 	list, ok := raw.([]any)
 	if !ok {

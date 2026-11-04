@@ -93,7 +93,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const BIG_FELINOR: &str = "core-043"; // (4) Unit: Cry: Destroy all non-Felinor Units.
     const STOCKPILE: &str = "core-005"; // (1) Spell
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const GRAND: &str = "classic-072"; // Trap: counters the opponent's non-Unit plays.
     const FILLER: &str = "core-010"; // (0) Spell
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
@@ -274,12 +274,12 @@ mod tests {
             #[test]
             fn r70_a_cast_is_a_play_a_spell_cast_on_draw_returns_it_to_your_hand() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, FILLER], "field": [STRIKER], "library": [CN_VIRUS, VANILLA, VANILLA] },
+                    "p1": { "hand": [STOCKPILE, FILLER], "field": [STRIKER], "library": [SUPER_VIRUS, VANILLA, VANILLA] },
                 }));
                 s.play(STOCKPILE, json!({}));
                 s.expect_in_zone(STRIKER, "hand");
                 assert!(s.last_events().iter().any(
-                    |event| matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == CN_VIRUS)
+                    |event| matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == SUPER_VIRUS)
                 ));
             }
 

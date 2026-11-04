@@ -2,23 +2,23 @@
 //! Legendary, 10/10 → 20/20.
 //!
 //! Base:    "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle
-//!          {viruses|CN-Virus|CN-Viruses} into your opponent's deck."
+//!          {viruses|Super-Virus|Super-Viruses} into your opponent's deck."
 //! Radiant: "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle
-//!          {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your opponent's deck."
+//!          {viruses|Radiant Super-Virus|Radiant Super-Viruses} into your opponent's deck."
 //! Engine: the keywords are catalog data (§6.1). A kill trigger, C+ #19.5 Bot Loser's: on each
 //! `destroyed` whose `killerId` is this (R42), Cleave and Poisonous kills included, even when it has
 //! left the field since, as the snapshot it killed with and for the player who controlled it then
 //! ("Whenever", `even_if_gone`, R2396000, R212), `shuffle_into` the opponent's deck `viruses`
-//! CN-Viruses (Core #90.1), Radiant on the Radiant face; public and listed (R311), a full deck refuses it (R80).
+//! Super-Viruses (Core #90.1), Radiant on the Radiant face; public and listed (R311), a full deck refuses it (R80).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-095-1";
 
-/// §7: the CN-Virus it shuffles in.
-const CN_VIRUS: &str = "core-090-1";
+/// §7: the Super-Virus it shuffles in.
+const SUPER_VIRUS: &str = "core-090-1";
 
-/// "Whenever this destroys a Unit, shuffle {viruses} CN-Virus into your opponent's deck." `gone`: it
+/// "Whenever this destroys a Unit, shuffle {viruses} Super-Virus into your opponent's deck." `gone`: it
 /// answers the kill even once it has left the field (R2396000); the v0.5.11 script's did not (R1245).
 fn on_kill(radiant: bool, gone: bool) -> TriggerDef {
     let trigger = TriggerDef::new("cn-golem-kill", &[GameEventType::Destroyed], move |ctx, event| {
@@ -34,7 +34,7 @@ fn on_kill(radiant: bool, gone: bool) -> TriggerDef {
         };
         if killed_by_me {
             vec![shuffle_into(json_as(json!({
-                "defId": CN_VIRUS,
+                "defId": SUPER_VIRUS,
                 "count": param(&*ctx, "viruses"),
                 "player": "enemy",
                 "radiant": radiant,
@@ -69,11 +69,11 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // M #95.1 CN Golem — SPEC §8.8 row 95.1, R1245, R2396000: "Rush, Poisonous, Cleave, Pierce, 10/10;
-// whenever it is R42's killer of a Unit, even when it has left the field since, `viruses` CN-Viruses go
+// whenever it is R42's killer of a Unit, even when it has left the field since, `viruses` Super-Viruses go
 // into the opponent's deck (R311, R80); radiant 20/20 with Windfury (R636), and the viruses Radiant".
 #[cfg(test)]
 mod tests {
-    use super::{CN_VIRUS, ID};
+    use super::{SUPER_VIRUS, ID};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -110,7 +110,7 @@ mod tests {
     fn viruses(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.pile(player, "library")
             .into_iter()
-            .filter(|card| card.def_id == CN_VIRUS)
+            .filter(|card| card.def_id == SUPER_VIRUS)
             .collect()
     }
 
@@ -169,7 +169,7 @@ mod tests {
             }
 
             #[test]
-            fn r1245_a_kill_shuffles_a_cn_virus_into_the_opponents_deck() {
+            fn r1245_a_kill_shuffles_a_super_virus_into_the_opponents_deck() {
                 let mut s = game(json!({}), json!([{ "def": VANILLA, "lane": 3 }]), 4);
                 let golem = golem_id(&s);
                 let target = crate::unit_or_blank(&s, P2, 3);
@@ -183,7 +183,7 @@ mod tests {
                     (added[0].owner, added[0].controller, added[0].radiant),
                     (P2, P2, false)
                 );
-                assert_eq!(shuffled_in(&s), vec![(P2, CN_VIRUS.to_string())]);
+                assert_eq!(shuffled_in(&s), vec![(P2, SUPER_VIRUS.to_string())]);
                 assert_eq!(s.pile(P1, "library").len(), 2);
                 assert!(viruses(&s, P1).is_empty());
                 // R311: shuffled in openly, so p2's own list names it, marked Created (R943).
@@ -191,8 +191,8 @@ mod tests {
                     crate::js(&s.view(Some(P2)).you.own_library),
                     json!({
                         "cards": [
-                            { "defId": CN_VIRUS, "radiant": false, "created": true, "count": 1 },
                             { "defId": FILLER, "radiant": false, "count": 4 },
+                            { "defId": SUPER_VIRUS, "radiant": false, "created": true, "count": 1 },
                         ],
                         "unknown": 0,
                     })
@@ -231,7 +231,7 @@ mod tests {
                 let added = viruses(&s, P2);
                 assert_eq!(added.len(), 1);
                 assert_eq!((added[0].owner, added[0].radiant), (P2, false));
-                assert_eq!(shuffled_in(&s), vec![(P2, CN_VIRUS.to_string())]);
+                assert_eq!(shuffled_in(&s), vec![(P2, SUPER_VIRUS.to_string())]);
                 assert_eq!(s.pile(P2, "library").len(), 5);
                 assert!(viruses(&s, P1).is_empty());
             }

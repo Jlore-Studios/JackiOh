@@ -1020,11 +1020,11 @@
   background: inherit;
   opacity: 0.55;
   -webkit-mask-image:
-    linear-gradient(90deg, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
-    linear-gradient(180deg, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
+    linear-gradient(to right, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
+    linear-gradient(to bottom, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
   mask-image:
-    linear-gradient(90deg, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
-    linear-gradient(180deg, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
+    linear-gradient(to right, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
+    linear-gradient(to bottom, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
   pointer-events: none;
 }
 
@@ -1041,7 +1041,7 @@
    its colour. */
 .cf[data-version="version-pixel"]:not([data-radiant-face="true"]):not([data-frame]) {
   --cf-bezel: var(--pal-slate-400);
-  --cf-edge: repeating-linear-gradient(90deg, var(--pal-slate-900) 0 3px, var(--pal-slate-800) 3px 6px);
+  --cf-edge: repeating-linear-gradient(to right, var(--pal-slate-900) 0 3px, var(--pal-slate-800) 3px 6px);
 }
 
 .cf[data-version="version-pixel"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {

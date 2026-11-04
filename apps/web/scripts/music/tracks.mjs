@@ -1932,7 +1932,7 @@ const INTRO_CARDS = [
   { card: "stinkyscape-036", name: "Drone Core X", set: "Stinkyscape", type: "Spell", tags: ["Drone Core"], rarity: "Mythic" },
   { card: "stinkyscape-037", name: "Kwzka", set: "Stinkyscape", type: "Unit", tags: ["Human",  "Acclaimed"], rarity: "Legendary" },
   { card: "stinkyscape-039", name: "The Narcor Project", set: "Stinkyscape", type: "Field Spell", tags: [], rarity: "Legendary" },
-  { card: "stinkyscape-044", name: "Great Replacement Theory", set: "Stinkyscape", type: "Spell", tags: ["Quickdraw"], rarity: "Mythic" },
+  { card: "stinkyscape-044", name: "Great Paperclip Theory", set: "Stinkyscape", type: "Spell", tags: ["Quickdraw"], rarity: "Mythic" },
   { card: "stinkyscape-058", name: "Beam v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },
   { card: "stinkyscape-059", name: "Repeater v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },
   { card: "stinkyscape-060", name: "Cannon v5", set: "Stinkyscape", type: "Unit", tags: ["Weapon"], rarity: "Legendary" },

@@ -233,6 +233,18 @@ jobs:
 
       - uses: ./.github/actions/harness
 
+      # Mergiraf, the merge driver a conflict's merge uses (#2948), as bot-cache.yml builds it from
+      # main: restored, never saved (bot-night.yml's step of this name).
+      - name: The pinned Mergiraf
+        id: mergiraf
+        working-directory: bot
+        run: harness mergiraf | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        if: steps.mergiraf.outputs.version != ''
+        with:
+          path: ${{ steps.mergiraf.outputs.dir }}/bin
+          key: mergiraf-${{ runner.os }}-${{ runner.arch }}-${{ steps.mergiraf.outputs.version }}
+
       - name: Install the claude CLI
         if: needs.plan.outputs.cli == 'claude'
         run: |
@@ -284,7 +296,7 @@ jobs:
       contents: write        # the push (with the Actions token only when no bot token is set)
       issues: write
       pull-requests: write
-      actions: write         # start the next run; re-run failed CI jobs
+      actions: write         # start the next run; run CI again after a CI fix's local pass
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4

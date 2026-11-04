@@ -4,7 +4,7 @@
 //! Radiant: "Pierce\nCast on draw: Take {damage} damage."
 //! Engine: §6.2 Cast on draw (`static_flags.cast_on_draw`), which is a cast (R40, R70). It deals one
 //! `damage` instance from this card to its caster's own hero, through §4.4, with Armor applying.
-//! "Take" names the caster's hero, as §7 reads CN-Virus. The caster is whoever drew it (R549 covers a
+//! "Take" names the caster's hero, as §7 reads Super-Virus. The caster is whoever drew it (R549 covers a
 //! card drawn out of the other deck). The Radiant face prints Pierce: under R346 a Spell's printed
 //! Pierce skips the Armor step, read off the resolving face — so no `ignoreArmor` is stated, and a
 //! Nerf that removes the keyword is respected. After the cast the draw repeats (§2.4) under R58's
