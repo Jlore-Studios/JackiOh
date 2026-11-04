@@ -12644,8 +12644,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-4",
-      "owner_since": "2026-11-04T12:03:26Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-04T17:23:59Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3037, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-04T12:35:28Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -15103,12 +15103,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2944,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-11-04T14:24:26Z",
+      "queued_at": "2026-11-04T17:23:59Z",
       "run_id": "41847436374",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15129,9 +15129,17 @@
         "provider": "claude-4",
         "run": "41847436374"
       },
+      "source": "conflict",
       "started_at": "2026-11-04T14:25:33Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-04T17:23:59Z",
+        "until": "2026-11-04T17:53:59Z",
+        "why": "it waited 120 minutes for #3037, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -15151,17 +15159,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3037
-        ],
-        "ends": "2026-11-04T17:21:55Z",
-        "from_run": "41847436374",
-        "head": "d8d0a1fe81f048e022cdd11bc44bc8f479380634",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-04T15:21:55Z"
       }
     }
   },
