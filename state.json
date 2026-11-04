@@ -13204,7 +13204,9 @@
     },
     "2882": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6626192852"
+      ],
       "decision": {
         "asked_at": "2026-11-03T06:00:17Z",
         "human_required": false,
@@ -13240,8 +13242,8 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "question": "Acceptance criterion 3 of #2882 says a finished daily game claims earning exactly like a normal practice game. That can't be built inside the issue's own limits (no server, engine or catalog change). Please decide one of two things. (A) Accept today's deal as a no-earning practice option. The change on this branch already does that, so reword criterion 3 to the replay half only, and the PR can merge as it is. (B) Want earning too? Then open a separate hard issue for a server-issued daily seed per account plus a migration, and merge this PR first or hold it for that issue. The seat rule is a smaller open choice: odd day of the month is p1, even day is p2. Say if you'd rather have always p1 or another rule.",
-      "queued_at": "2026-11-03T03:45:27Z",
-      "requested_by": "MaxGoetzmann",
+      "queued_at": "2026-11-04T08:27:05Z",
+      "requested_by": "jgoetzmann",
       "run_id": "41576978744",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-03T04:14:43Z",
