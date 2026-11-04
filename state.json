@@ -14886,15 +14886,6 @@
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-11-04T14:01:34Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nPlan (issue #3038, part 1 of 11 of #3000): Starship becomes a tag with innate\nFlying+Ranged; launch costs (4) and grants no keyword; Drone Battleships lose\nthe Starship keyword for Flying+Ranged.\n\n- Done: read spec rows (06 Starship/Launch/Exile-aura/Dormant, 07 battleship\n  rows), rulings R1852003/R1852006/R1859013/R1881003/R2249000/R2259000,\n  starship.rs, layers.rs keyword layer, all 4 token scripts, scornboi,\n  after_burner, t_dormant, engine+AI starship tests, web glossary/tests.\n- Decisions:\n  - New rulings take block R3038000+ (issue #3038 owns R3038000\u2013R3038999):\n    R3038000 (tag + innate Flying/Ranged), R3038001 (keyword kept for\n    snapshots, launch grants nothing), R3038002 (battleships aren't Starships).\n  - Keyword order \"Flying, Ranged\" everywhere (issue's spelling); zh\n    \"\u98de\u884c\uff0c\u8fdc\u7a0b\". Battleship keywords replace Starship in place.\n  - Scornboi words unchanged (\"neither Human, a Starship Piece nor a\n    Starship\" still true); old script kept in-file for the reconcile.\n  - R1839002's and 06-keywords Dormant row's \"pay (3) to awaken\" left alone:\n    not in owned files; named in summary for the reconcile.\n  - sets_not_shipped.rs Tag-order test will break (Token moves +1): not an\n    owned file; named in summary.\n- Next: engine edits \u2192 cards/catalog \u2192 tests \u2192 web \u2192 spec/docs \u2192 checks.\n\n## Log\n\n- Read all touched spec, code and tests; recorded plan and decisions.\n",
-        "provider": "muse",
-        "reason": "`muse` reached its usage limit",
-        "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3038 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3038/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- agent loop failed: model failed: API error 429 [request_id=0934d02f-3be2-4e13-aaab-9226e8a16e6d]: Subscription quota exhausted. Your usage window resets at 2026-11-09T00:00:00Z. (rate_limit_error)"
-      },
       "interruptions": 0,
       "kind": "build",
       "landed": "c432b577933f7a0a1d7d08ba814cfcffa056e32a",
