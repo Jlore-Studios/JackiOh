@@ -208,22 +208,25 @@
     },
     "3029": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-04T11:11:45Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is."
+      },
       "asks": [],
-      "kind": "build",
       "live": "building",
-      "owner": "claude-squishy",
-      "owner_since": "2026-11-04T11:02:26Z",
-      "owner_why": "it took it up",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-04T11:11:33Z",
       "planned_by": "`claude-squishy` (claude, `opus`, strong)",
       "planned_by_id": "claude-squishy",
       "planned_tier": "strong",
       "provider": "claude-squishy",
+      "question": "in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is.",
       "run_id": "41818041745",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T11:02:26Z",
-      "stop_requested": false,
       "taken_asks": []
     }
   },
