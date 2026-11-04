@@ -17914,6 +17914,8 @@
       "waiting_comment": 6624496987
     },
     "3004": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T05:36:49Z",
@@ -17927,8 +17929,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -80; ls apps/web/src/wasm/pkg 2>/dev/null | head; ls ~/.cache/Cypress 2>/dev/null; git status --short | head\", \"description\": \"Read bot notes and check setup\"}\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>&1 | head; ls apps/web/src/wasm/; echo ---; sed -n 80,200p .bot-notes.md; echo CARGO_TARGET_DIR=$CARGO_TARGET_DIR; which Xvfb google-chrome chrome chromium; go\u2026\n- Grep: {\"pattern\": \"at most 820|820\", \"path\": \"e2e/cypress/component/mobile-ux.cy.tsx\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"(JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1 &) ; sleep 1; echo started; printf '\\\\n## State\\\\n\\\\n- Run 2 (build, sonnet): starting edits per plan; wasm build\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/mobile-ux.cy.tsx\", \"offset\": 510, \"limit\": 30}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/mobile-ux.cy.tsx\", \"old_string\": \" it(\\\"B31 at 390x844 the board is at most 820 px tall and the log i\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/practice-table.cy.tsx\", \"offset\": 30, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/practice-table.cy.tsx\", \"offset\": 255, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/practice-table.cy.tsx\", \"offset\": 385, \"limit\": 50}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/practice-table.cy.tsx\", \"old_string\": \"/** The outcome words the one visible outcome may wear. */\", \"\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/practice-table.cy.tsx\", \"old_string\": \" // The opponent's hero starts right under the shell's safe-ar\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2994/e2e/cypress/component/practice-table.cy.tsx\", \"old_string\": \" if (child.closest(\\\"[hidden]\\\") !== null) return;\\n const tex\u2026\n- Grep: {\"pattern\": \"practice-unearned button|max-width: 600px\\\\), \\\\(orientation\", \"path\": \"apps/web/src/practice/practice.css\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2994/apps/web/src/practice/practice.css\", \"offset\": 1640, \"limit\": 50}\n- Bash: {\"command\": \"grep -rn \\\"board-notices\\\" apps/web/src --include=*.tsx --include=*.css | head; grep -rn 'data-form' apps/web/src --include=*.tsx | head -5; grep -n \\\"practice-table\\\" apps/web/src/route\u2026\n- Bash: {\"command\": \"sed -n 1225,1260p apps/web/src/routes/practice.tsx; grep -n \\\"ResultOverlay\\\\|<Board\\\\|className=\\\\\\\"game\\\" apps/web/src/game/Game.tsx | head\", \"description\": \"Check practice table / Gam\u2026\n- said: Matches the plan's selector. Insert the CSS.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2994/apps/web/src/practice/practice.css\", \"old_string\": \".practice-table .practice-unearned button {\\n flex: none;\\n min-height:\u2026\n- Bash: {\"command\": \"tail -5 /tmp/wasm-build.log; grep -n \\\"practice-result-earning\\\" -r apps/web/src | head -3\", \"description\": \"Check wasm build progress and result-earning class\"}\n- Bash: {\"command\": \"printf -- '- edits to the 3 files done per plan; waiting on wasm build, then eslint/vitest/cypress.\\\\n' >> .bot-notes.md; pnpm exec eslint e2e/cypress/component/practice-table.cy.tsx e2e\u2026\n- said: ESLint is clean. Waiting on the wasm build.\n- Monitor: {\"command\": \"until [ -f apps/web/src/wasm/pkg/jackioh_wasm_bg.wasm ] || ! pgrep -f build-wasm.sh >/dev/null; do sleep 10; done; tail -3 /tmp/wasm-build.log; ls apps/web/src/wasm/pkg 2>&1 | head\", \"de\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until [ -f apps/web/src/wasm/pkg/jackioh_wasm_bg.wasm ] || ! pgrep -f build-wasm.sh ; do sleep 10; done; tail -3 \u2026\n- Bash: {\"command\": \"until [ -f apps/web/src/wasm/pkg/jackioh_wasm_bg.wasm ] || ! pgrep -f build-wasm.sh >/dev/null; do sleep 10; done; tail -3 /tmp/wasm-build.log; ls apps/web/src/wasm/pkg 2>&1 | head\", \"de\u2026\n- Bash: {\"command\": \"cd e2e && CI=true E2E_COMPONENT_PORT=5281 timeout 560 pnpm exec cypress run --component --browser chrome --spec cypress/component/practice-table.cy.tsx 2>&1 | tail -40\", \"description\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2994 && pnpm --dir apps/web test src/routes/practice.test.tsx src/practice 2>&1 | tail -15\", \"description\": \"Run web unit tests for practice\", \"timeo\u2026\n- Bash: {\"command\": \"printf -- '- eslint clean; practice-table spec 38/38; web unit practice 486/486; now running full component run (log /tmp/cy-full.log).\\\\n' >> .bot-notes.md; (CI=true pnpm --dir e2e exec\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT=' /tmp/cy-full.log; do sleep 15; done; tail -c 3000 /tmp/cy-full.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -30\", \"description\": \"Wait for full component run to end\", \u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-full.log | grep -c \\\"\\u2714 \\\" ; git status --short; git diff --stat; git status --porcelain -- apps/web/src/wire\", \"description\": \"Check spec count a\u2026\n- Bash: {\"command\": \"printf -- '- full component run: All specs passed, 35 specs, 699/699, 07:30, Chrome 156. Only the 3 planned files changed. Ready to report (done).\\\\n' >> .bot-notes.md\", \"description\": \"\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} --> ## What this fixes Super run job **`e2e component (chrome)`** (`pnpm --dir e2e exec cypress run --component --browser chrome`) was red on `main` (`620d660`). I reproduced it locally on Chrome 156. #2969's Chrome pin was not the\u2026"
       },
       "issue": 2994,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T06:47:26Z",
         "from_run": "41780331959",
         "gates": [
           {
@@ -18020,7 +18025,11 @@
         "source": "build",
         "until": "2026-11-04T07:15:03Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-04T06:45:03Z",
+      "run_id": "pending:f0716d98-1793774813",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18039,6 +18048,9 @@
         "provider": "claude-8",
         "run": "41780331959"
       },
+      "started_at": "2026-11-04T06:47:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18188,9 +18200,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T06:24:35Z",
+    "at": "2026-11-04T06:47:26Z",
     "url": "",
-    "what": "build #2990 on claude-3"
+    "what": "review #3004 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T06:28:24Z",
