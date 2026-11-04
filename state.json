@@ -17748,13 +17748,14 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-3",
       "queued_at": "2026-11-04T05:29:38Z",
-      "run_id": "41780189066",
+      "run_id": "pending:77df8107-1793774905",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 40,
-      "started_at": "2026-11-04T05:35:26Z",
+      "started_at": "2026-11-04T06:48:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18212,9 +18213,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T06:48:11Z",
+    "at": "2026-11-04T06:48:56Z",
     "url": "",
-    "what": "review #3005 on claude-8"
+    "what": "spot-check #2998 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-04T06:28:24Z",
@@ -32313,7 +32314,15 @@
         "n": 40,
         "pr": 2998,
         "queued_at": "2026-11-04T06:32:06Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:77df8107-1793774905",
         "sha": "e485107852599734d92622e1291c13742a3313a2",
+        "started_at": "2026-11-04T06:48:56Z",
         "status": "queued",
         "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
         "tries": 0
