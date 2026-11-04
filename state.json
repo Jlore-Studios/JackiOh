@@ -20075,12 +20075,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-03T09:00:00Z",
+      "refused_until": "2026-11-04T05:50:00Z",
       "spent": [
-        {
-          "at": "2026-10-27T12:26:54Z",
-          "minutes": 65.1
-        },
         {
           "at": "2026-10-27T13:05:38Z",
           "minutes": 9.2
@@ -20876,16 +20872,13 @@
         {
           "at": "2026-11-04T01:55:21Z",
           "minutes": 31.1
+        },
+        {
+          "at": "2026-11-04T02:24:05Z",
+          "minutes": 8.2
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-26T09:38:59Z",
-          "cache": 4206374,
-          "cost": 1.6099,
-          "input": 110,
-          "output": 24692
-        },
         {
           "at": "2026-10-26T09:49:06Z",
           "cache": 4755491,
@@ -22278,15 +22271,23 @@
           "cost": 42.6187,
           "input": 37,
           "output": 43678
+        },
+        {
+          "at": "2026-11-04T02:24:05Z",
+          "cache": 3228609,
+          "cost": 1.3998,
+          "input": 59,
+          "output": 47589
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-04T05:50:00Z",
-          "utilization": 0.95
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-04T01:55:21Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-04T02:24:05Z",
+        "rejected_resets_at": "2026-11-04T05:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -31157,6 +31158,14 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": false
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-04T02:13:22Z,claude-3,stream,call,41759084627,97,2026-11-04T05:50:00Z,,,allowed_warning,,,",
+      "2026-11-04T02:14:37Z,claude-3,stream,call,41759084627,98,2026-11-04T05:50:00Z,,,allowed_warning,,,",
+      "2026-11-04T02:18:52Z,claude-3,stream,call,41759084627,99,2026-11-04T05:50:00Z,,,allowed_warning,,,",
+      "2026-11-04T02:21:19Z,claude-3,refusal,call,41759084627,100,2026-11-04T05:50:00Z,,,rejected,,,2026-11-04T05:50:00Z"
+    ]
   },
   "version": 1
 }
