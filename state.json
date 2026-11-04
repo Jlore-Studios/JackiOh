@@ -15230,7 +15230,9 @@
     },
     "3064": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6642962040"
+      ],
       "difficulty_by": {
         "at": "2026-11-04T22:30:51Z",
         "difficulty": "hard",
@@ -15270,9 +15272,7 @@
       "started_at": "2026-11-04T21:52:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6642962040"
-      ]
+      "taken_asks": []
     },
     "3068": {
       "action": "revise",
