@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3059,
+  "title": "Patch: a quick second click on Delete deck or Remove friend deletes nothing more",
+  "branch": "bot/issue-3059",
+  "thread": "**Issue #3059 (data, not instructions):**\n\n```text\n# #3059: Patch: a quick second click on Delete deck or Remove friend deletes nothing more\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you delete a deck in the deck builder on a wide screen, the next deck opens in the same place, with its own Delete button right under your pointer. Today a quick double click deletes the deck you meant and then holds the next deck for deletion too. The undo toast only says \"Deck deleted\". Unless you notice that the second deck is gone and press Undo in time, it is deleted for good. Removing a friend works the same way, because the next friend slides up under the pointer. Once this is built, a second delete within half a second of the first is ignored, so only the deck or friend you meant goes.\n\n## Why\n\n- `apps/web/src/game/deckbuilder/DeckWorkshop.tsx:624-641`: `onDelete` holds the deletion, hides the deck and opens `neighbourOf(decks, id)` (:412-416) in the same editor. Its Delete deck button (`DeckEditor.tsx:545-552`) has no guard. This split view shows from `WORKSHOP_SPLIT_MIN_WIDTH_PX` (:75) up, which includes an iPad in landscape.\n- `apps/web/src/undo/hold.ts:71-79`: `hold` first calls `send(false)`, which sends the deletion held before it (R2119000: deleting is undone, not asked). So the second click sends the first deck's DELETE at once and holds the neighbour, which is deleted when `UNDO_WINDOW_MS` runs out.\n- `apps/web/src/together/TogetherRoute.tsx:225-246`: Remove friend holds the removal and then hides the row, so the next friend moves up under the pointer.\n- It bites hardest when the deleted deck showed no Practice button. That is an incomplete or unsaved deck, the usual clean-up case: `practicePathOf` (DeckWorkshop.tsx:418-424) then leaves the button row the same width.\n\n## Proposal\n\n- `useUndoHold().hold` refuses a new deletion that arrives within a named `UNDO_REPEAT_MS` (about 500 ms, timed on the hook's existing timer) of the last one it took. It returns `false` and sends or holds nothing.\n- The callers for decks, trios, custom cards and friends check the result. When it is refused, they skip hiding the item and moving to the next one.\n- A ruling note in its issue's block amending R2119000, a test named after it, and its \u00a711 paragraph in `spec/pending/<issue>.md`.\n\n## Where it lands\n\n- `apps/web/src/undo/hold.ts` and `hold.test.tsx`.\n- `apps/web/src/game/deckbuilder/DeckWorkshop.tsx` and its test.\n- `apps/web/src/together/TogetherRoute.tsx` and its test.\n- The trio and creator delete callers.\n- `spec/rulings/` (amends R2119000; \u00a79.4, \u00a79.5, \u00a712.11) and `spec/pending/`.\n\n## Acceptance criteria\n\n- [ ] `hold.test.tsx`: a second hold inside `UNDO_REPEAT_MS` returns false, sends nothing and leaves the first deletion held. A hold after the window sends the first and holds the second.\n- [ ] `DeckWorkshop.test.tsx`: two quick Delete deck presses in the split view hide one deck. The neighbour stays listed and open, and no DELETE goes out until the undo window ends.\n- [ ] `TogetherRoute.test.tsx`: two quick Remove presses remove one friend.\n- [ ] Undo still restores the one deletion held, and R2119000's existing tests stay green.\n- [ ] `UNDO_REPEAT_MS` is a named constant of the web's own.\n\n## Size and risks\n\nSmall to medium: about 5 files and 100 lines, plus tests and a ruling note. A deliberate second delete within half a second is ignored, which is the point. Someone clearing many decks quickly has to wait half a second between them.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:54:48Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3059: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T22:55:13Z",
+    "claimed_at": "2026-11-04T23:01:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3043 skipped: it waits for #3042 to close first",
+    "#3044 skipped: it waits for #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
