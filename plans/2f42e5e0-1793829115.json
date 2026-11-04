@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3064,
+  "title": "Patch: the AI prices what a sleeping card does when it wakes",
+  "branch": "bot/issue-3064",
+  "thread": "**Issue #3064 (data, not instructions):**\n\n```text\n# #3064: Patch: the AI prices what a sleeping card does when it wakes\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTwo Stinkyscape cards fall asleep when played and do something big when they wake. Imprisoned Cosmality splits 10 damage among the enemies, and Imprisoned Ship Smith hands out a weapon. The practice AI counts such a sleeper only as the body it will wake into, so it rarely plays one and barely reacts when you play yours. Once this is built, the AI also counts the wake-up payoff, for its own sleepers and for yours.\n\n## Why\n\n- `crates/ai/src/evaluate.rs:680-701` (`slumber_worth`, R2380000): a Dormant card is worth `share * unit_worth` of the same card awake.\n- The wake trigger (`crates/engine/src/slumber.rs:123-130`, `when_this_awakens`) is never priced, and no file in `crates/ai/src` names it. `evaluate.rs:246-249` (`has_turn_hook`) prices only the start- and end-of-turn hooks.\n- The two cards are `crates/cards/src/scripts/stinkyscape/c019_imprisoned_cosmality.rs` and `c017_imprisoned_ship_smith.rs`.\n- `training/history/sweep-2026-10-29-4.md:236-239`: Ship Smith was played 3 times in 159 affordable turns at Easy and 3 in 129 at Hard; Cosmality 2 times in 208 and once in 219. That sweep predates #2412's body price, so the gap left is smaller.\n- `crates/ai/tests/ai/slumber.rs:200` shows Cosmality played only when it is alone in hand.\n\n## Proposal\n\n- At the decision's root, as the Death, turn-hook, activation and attack-hook prices are computed, within a named probe-node budget:\n  - for each Dormant card on either field that has a wake trigger, and each Dormant unit in the seat's own hand, wake it on a sandbox copy with `slumber::awaken_card` (`slumber.rs:69`);\n  - price it as the controller's evaluation after waking, less the same waking of a twin without the trigger, as `attack_hook_prices` does.\n- The price travels in `evaluate::Prices`. `slumber_worth` adds a new `awaken` weight times the slumber share times that price, and `GREEDY_EVAL` keeps the weight at 0.\n- It reads only both fields and the seat's own hand, so hidden cards change no decision.\n- A ruling note amending R2380000, with its tests and its \u00a711 paragraph. The smoke-gate numbers go in the `config.rs` comment, as with the earlier prices.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs`, `config.rs` and `decide.rs`.\n- `crates/ai/tests/ai/slumber.rs` and `crates/ai/README.md`.\n- \u00a79 (the practice AI), `spec/rulings/` and `spec/pending/`.\n\n## Acceptance criteria\n\n- [ ] A sleeping Cosmality scores above the same body without its wake trigger, and an enemy one scores below it.\n- [ ] At Medium and Hard, on two cursors, `decide` plays Ship Smith over a 1-mana vanilla and Cosmality over a vanilla 2-drop.\n- [ ] Two states that differ only in hidden cards give the same decision.\n- [ ] `GREEDY_EVAL` scores are unchanged.\n- [ ] `cargo jackioh gate` passes at smoke size, and the pull request records its numbers.\n\n## Size and risks\n\nAbout 5 files and 250 lines. Label it hard, since it is the AI. Only two cards print the trigger today, so a training screen may read even. Cosmality's split damage rolls on the copy's random stream, so the probe prices a single roll. The probe's nodes come out of the decision's budget.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-04T21:48:06Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3064: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T21:48:29Z",
+    "claimed_at": "2026-11-04T21:52:14Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3042 skipped: it waits for #3041 to close first",
+    "#3043 skipped: it waits for #3041, #3042 to close first",
+    "#3044 skipped: it waits for #3041, #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3041, #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3041, #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3041, #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3041, #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
