@@ -24108,13 +24108,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-03T10:30:00Z",
-          "utilization": 0.7
+          "resets_at": "2026-11-04T04:10:00Z",
+          "utilization": 0.23
         },
-        "observed_at": "2026-11-03T07:36:19Z",
+        "observed_at": "2026-11-04T02:24:43Z",
         "seven_day": {
           "resets_at": "2026-11-09T09:00:00Z",
-          "utilization": 0.37
+          "utilization": 0.6
         },
         "status": "allowed_warning"
       }
@@ -31191,7 +31191,8 @@
       "2026-11-04T02:13:22Z,claude-3,stream,call,41759084627,97,2026-11-04T05:50:00Z,,,allowed_warning,,,",
       "2026-11-04T02:14:37Z,claude-3,stream,call,41759084627,98,2026-11-04T05:50:00Z,,,allowed_warning,,,",
       "2026-11-04T02:18:52Z,claude-3,stream,call,41759084627,99,2026-11-04T05:50:00Z,,,allowed_warning,,,",
-      "2026-11-04T02:21:19Z,claude-3,refusal,call,41759084627,100,2026-11-04T05:50:00Z,,,rejected,,,2026-11-04T05:50:00Z"
+      "2026-11-04T02:21:19Z,claude-3,refusal,call,41759084627,100,2026-11-04T05:50:00Z,,,rejected,,,2026-11-04T05:50:00Z",
+      "2026-11-04T02:12:24Z,claude-5,ping,before,41758997456,23,2026-11-04T04:10:00Z,60,2026-11-09T09:00:00Z,allowed_warning,40,60,"
     ],
     "runs": [
       "2026-11-04T02:21:20Z,41759084627,claude-3,opus,plan,2979,medium,interrupted,refusal,8.2,59,47589,3228609,1.3998,97,100,,,9.9,,fresh,,1"
