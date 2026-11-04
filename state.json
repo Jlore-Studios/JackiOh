@@ -18124,15 +18124,8 @@
       "taken_asks": []
     },
     "3012": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41814481188",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-04T10:44:34Z",
-        "until": "2026-11-04T11:14:34Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18144,10 +18137,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls -la .bot-plan.md 2>&1; git status --short | head; git log --oneline -2\", \"description\": \"Check draft file and branch state\"}\n- Bash: {\"command\": \"git diff --stat e0c952a4b5 HEAD -- apps/web/src/patches apps/web/static-pages.ts apps/web/scripts crates/cards/patches/patches.json spec/rulings/R0507.md spec/rulings/R724000.md spec/rul\u2026\n- Bash: {\"command\": \"grep -rln \\\"patch-entry\\\\|patch-release-art\\\\|patch-set\\\\b\\\\|release-art\\\" e2e apps/web/src --include=*.ts --include=*.tsx --include=*.cy.ts 2>/dev/null | grep -v \\\"src/patches/\\\"; grep \u2026\n- Bash: {\"command\": \"grep -n \\\"patchTestid\\\" apps/web/src/game/deckbuilder/DeckPatchBadge.test.tsx | head -5; sed -n 195,240p apps/web/src/static-pages.test.ts; grep -n \\\"e2e.*patch\\\\|patch-notes\\\" -rl e2e/c\u2026\n- Bash: {\"command\": \"grep -n -i \\\"patch\\\" e2e/cypress/e2e/47-tap-areas.cy.ts e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts e2e/cypress/e2e/38-accessibility.cy.ts | head -20\", \"description\": \"Check e2e specs \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3012/.bot-plan.md\", \"content\": \"# Plan draft for #3012 (kept in step with the final message)\\n\\nStatus: read everything (releaseArt.ts, releases.ts, P\u2026\n- said: ## Goal The Patch notes page and the release art follow each patch's recorded tier. A tier is `patch.tier` from `patches.json`, never a parsed version (R105, R1369000). - **Major.** It gets one detailed poster with no animation: the line's name large and more headline cards than `RELEASE_ART_CARD_L\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-04T08:56:46Z",
       "owner_why": "it plans it",
@@ -18160,9 +18152,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-04T08:53:22Z",
       "requested_by": "squishy-squooby",
-      "run_id": "41814481188",
+      "run_id": "pending:d77cf7c2-1793789142",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T10:28:42Z",
+      "started_at": "2026-11-04T10:46:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6627414367
@@ -18305,9 +18297,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T10:29:49Z",
+    "at": "2026-11-04T10:46:15Z",
     "url": "",
-    "what": "build #2882 on claude-7"
+    "what": "build #3012 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-04T10:22:37Z",
