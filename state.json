@@ -17062,15 +17062,8 @@
       "taken_asks": []
     },
     "2983": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41765197606",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-04T03:29:49Z",
-        "until": "2026-11-04T03:59:49Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17082,10 +17075,9 @@
         "reason": "planned on opus",
         "trail": "ure.md\",\u2026\n- Bash: {\"command\": \"cat apps/web/src/net/auth-methods.test.ts | sed -n 1,80p; grep -n \\\"describe\\\\|it(\\\" apps/web/src/net/auth-methods.test.ts | sed -n 1,80p\", \"description\": \"Read auth-methods test structu\u2026\n- Bash: {\"command\": \"sed -n 80,90p apps/web/src/net/auth-methods.test.ts; sed -n 305,345p apps/web/src/net/auth-methods.test.ts; grep -n \\\"describe\\\\|it(\\\\|R666\\\\|oauth\\\" apps/web/src/routes/login-methods.te\u2026\n- Bash: {\"command\": \"sed -n 1,125p apps/web/src/routes/login-methods.test.tsx; sed -n 415,470p apps/web/src/routes/login-methods.test.tsx\", \"description\": \"Read login-methods test setup and R666 section\"}\n- Bash: {\"command\": \"cat apps/web/src/auth/pkce.ts | head -120; grep -rn \\\"oauth\\\\|auth-oauth\\\\|loginTestid.oauth\\\\|login-oauth\\\" e2e/cypress --include=*.ts | head -20; grep -rn \\\"2629\\\" --include=*.md --inc\u2026\n- Bash: {\"command\": \"grep -rln \\\"oauth\\\\|OAuth\\\\|Continue with\\\" e2e --include=*.ts --include=*.tsx 2>/dev/null | grep -v node_modules; grep -n \\\"oauth\\\" apps/web/src/auth/testids.ts; grep -rn \\\"auth-oauth\\\"\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A 30 spec/README.md | head -50; cat spec/pending/2949.md | head -30; ls spec/rulings | grep -E \\\"^R2[0-9]{6}\\\" | tail -3; cat spec/rulings/$(ls spec/rulings \u2026\n- Bash: {\"command\": \"grep -rn \\\"R666\\\" spec --include=*.md | grep -v \\\"^spec/rulings/R0666.md\\\" | cut -c1-300; grep -rn \\\"R666\\\" docs apps/web/README.md crates/server/README.md 2>/dev/null | cut -c1-200 | he\u2026\n- Bash: {\"command\": \"ls spec | head -30; grep -n \\\"### 9.2\\\" -A 12 spec/09-*.md | cut -c1-400 | head -30\", \"description\": \"List spec notes and read \\u00a79.2\"}\n- Bash: {\"command\": \"sed -n 55,120p apps/web/src/routes/login-consent.test.tsx; grep -n \\\"signingIn =\\\\|signingUp =\\\\|refusedHere =\\\\|loginTestid.error\\\\|return (\\\" apps/web/src/routes/login.tsx | head -20\",\u2026\n- Bash: {\"command\": \"sed -n 900,990p apps/web/src/routes/login.tsx; sed -n 1105,1118p apps/web/src/routes/login.tsx; sed -n 70,125p apps/web/src/auth/auth.css\", \"description\": \"Read login render setup, error\u2026\n- Bash: {\"command\": \"sed -n 320,345p apps/web/static-pages.ts; grep -rn \\\"<iframe\\\\|iframe\\\" apps/web/src --include=*.tsx --include=*.ts -l | head; grep -rn \\\"Content-Security-Policy\\\" apps/edge/src apps/web\u2026\n- tool error: Exit code 2 /** Files Vite copies from `public/` before `writeBundle` that name `SITE_ORIGIN`. */ export const ADDRESSED_PUBLIC_FILES = [\"robots.txt\", \".well-known/security.txt\"] as const; /** The he\u2026\n- Bash: {\"command\": \"grep -rn \\\"env.example\\\\|PUBLIC_ENV_VARS\\\\|VITE_AUTH_OAUTH\\\" crates/server/tests crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/env.rs:16[6-9]\\\\|^crates/server/src/env.r\u2026\n- Bash: {\"command\": \"grep -n \\\"^export\\\" apps/web/src/net/gate.ts | head -20; grep -n \\\"it(\\\\|describe(\\\" apps/web/src/net/gate-session-changes.test.tsx | head -10; sed -n 290,300p docs/deploy-cloudflare.md\"\u2026\n- Bash: {\"command\": \"sed -n 288,305p apps/web/README.md; grep -n \\\"R666\\\\|OAuth\\\\|oauth\\\" apps/web/README.md | head\", \"description\": \"Read web README CSP and OAuth parts\"}\n- Bash: {\"command\": \"grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10; grep -n \\\"fragment\\\" docs/issues-and-patches.md | head -10\", \"description\": \"Check what a Patch title implies for fragments\"}\n- Bash: {\"command\": \"sed -n 104,118p docs/issues-and-patches.md; sed -n 140,150p docs/issues-and-patches.md\", \"description\": \"Read when a patch needs a fragment\"}\n- Bash: {\"command\": \"ls apps/web/src/auth; grep -n \\\"react-hooks\\\\|refs\\\\|react-compiler\\\" eslint.config.js | head; grep -rn \\\"Ref.current = \\\" apps/web/src --include=*.tsx | head -5; sed -n 75,95p apps/web/\u2026\n- Bash: {\"command\": \"sed -n 118,130p apps/web/src/cards/inspect/CardDetail.tsx; cat apps/web/src/test/settle.ts | head -40\", \"description\": \"Read latest-ref pattern and settle helper\"}\n- said: Good picture now. Writing the draft plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2983/.bot-plan.md\", \"content\": \"# Plan draft for #2983 (planner notes)\\n\\nRead: auth.ts (send, exchangeAuthCode, oauthProviders, oauthAuthorizeUrl), l\u2026\n- Bash: {\"command\": \"grep -n \\\"^### 9.4\\\" spec/09-architecture.md; ls spec/rulings/R0323.md; ls spec/pending/2983.md 2>&1; ls spec/rulings | grep R2983; grep -n \\\"include\\\" apps/web/vitest.config.ts | head -\u2026\n- Bash: {\"command\": \"sed -n 670,690p docs/architecture.md\", \"description\": \"Read architecture bring-up OAuth step end\"}\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/auth/no-raw-html.test.ts; grep -rn \\\"createElement(\\\\\\\"script\\\\\\\")\\\\|createElement('script')\\\" apps/web/src --include=*.ts --include=*.tsx | head\", \"description\u2026\n- Bash: {\"command\": \"grep -n \\\"pkce.ts\\\\|redirect.ts\\\\|auth/\\\" apps/web/README.md | head\", \"description\": \"Check web README lists of auth modules\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Status: plan complete, final message being written (same content as final message).\\nEOF\", \"description\": \"Mark draft status\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2983/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen the build names Google in `VITE_AUTH_OAUTH_PROVIDERS` and sets the new public `VITE_GOOGLE_CLIENT_ID`,\u2026\n- Bash: {\"command\": \"sed -i 's/^cargo test -p jackioh-server env::$/cargo clippy -p jackioh-server --all-targets -- -D warnings/' .bot-plan.md && wc -w .bot-plan.md && wc -c .bot-plan.md\", \"description\": \"Fi\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2983/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen the build names Google in `VITE_AUTH_OAUTH_PROVIDERS` and sets the new public `VITE_GOOGLE_CLIENT_ID`,\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- said: ## Goal When the build names Google in `VITE_AUTH_OAUTH_PROVIDERS` and sets the new public `VITE_GOOGLE_CLIENT_ID`, `/login` (and only `/login`) loads Google Identity Services (GIS) and shows Google's own button where R666's Google button is today. Each attempt makes a fresh nonce, gives GIS its SH\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-04T03:08:07Z",
       "owner_why": "it plans it",
@@ -17098,9 +17090,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-04T02:44:41Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41765197606",
+      "run_id": "pending:b83dceb7-1793763183",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T03:08:07Z",
+      "started_at": "2026-11-04T03:33:40Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17205,9 +17197,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T03:32:47Z",
+    "at": "2026-11-04T03:33:40Z",
     "url": "",
-    "what": "review #2984 on muse"
+    "what": "build #2983 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T03:16:56Z",
