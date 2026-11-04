@@ -18015,15 +18015,8 @@
       "taken_asks": []
     },
     "3014": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41802830121",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-04T09:07:12Z",
-        "until": "2026-11-04T09:37:12Z"
-      },
       "difficulty_by": {
         "at": "2026-11-04T09:06:59Z",
         "difficulty": "medium",
@@ -18040,9 +18033,8 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "`38-accessibility.cy.ts`, `48-tutorial-final-exam.cy.ts` | change only the one that fails | The failing assertion made deterministic (retried assertions, seed d\u2026\n- | `e2e/support/practice.ts` | change only if root cause is in `keepWholeHand`, `reachHumanTurn`, or `settledThroughAiTurn` | Helper fix, same behavior contract |\n- | `e2e/support/chrome-pin.ts` | change only if failure is the Chrome-155 socket drop with the pin not engaging | `BROKEN_CHROME_MAJORS` / `PINNED_CHROME_MILESTONE` handling |\n- | `apps/web/src/<owning module>` | change only if a product bug (not a test bug) is found | The one component/layer that owns the bug, no unrelated edits |\n- Do not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`; `crates/ai/src/mulligan.rs` and `crates/ai/src/config.rs` (#3006's behavior is intended and ruled); `spec/rulings/R2977000.md`; any timeout value. Governing spec: R2977000 (AI mulligan bound), R144 (server reseed), R181/R180 (handicaps), R\u2026\n- ## Steps\n- 1. Compute shard 7's spec list and confirm it matches the failing run: run `node e2e/scripts/shard-specs.mjs 7 8` from `e2e/`. It must print `10-invite-gate, 13-practice-vs-ai, 15-audio, 17-card-showcase-and-hovers, 25-overflow-animations, 31-counter-opponent-turn, 38-accessibility, 48-tutorial-fin\u2026\n- 2. Reproduce with the job's own path, locally: `pnpm --dir apps/web build:e2e`; serve it with `pnpm --dir apps/web exec vite preview --port 5173 --strictPort`; boot a release server with `E2E=1 cargo run --release -p jackioh-server` (fresh boot per attempt, per R144; spec 10 reseeds itself). Then f\u2026\n- 3. Read the failure output and name the single failing spec and test. Inspect that test's assertions first, in this order: (a) in spec 13, the Hard game's first-turn observability (`HARD_SEED`, `keepWholeHand`, `opponentMax` data-max=2 block) and the `replayHash` folds \u2014 #3006 changed exactly the A\u2026\n- 4. Root-cause before editing: rerun only the failing spec against a second fresh server boot. A failure that moves between tests or passes on reboot is the Chrome socket flake or a timing flake, not AI behavior \u2014 fix the test's robustness, not the product. A failure that repeats on the same asserti\u2026\n- 5. Apply the smallest robust fix: prefer a retried Cypress assertion (`should` on an already-exposed testid) over new waits; add no `cy.wait(ms)` (spec 13's header bans it) and raise no timeout. If the assertion encodes pre-#3006 AI behavior (e.g., a Hard opening hand that must now keep a 4-drop pe\u2026\n- 6. If the root cause is a product bug in `apps/web/src` (visible wrong behavior, not just test timing), fix it in its owning module only, following the code around it, with named constants per rule 9.\n- 7. Re-run the full shard-7 list from step 2 to green on a fresh server boot. Then run the checks in Tests.\n- ## Tests\n- - `node e2e/scripts/shard-specs.mjs 7 8` (shard list matches the failed job).\n- - Full shard-7 Cypress run on Chrome per step 2, green on a fresh boot; on failure, the run's screenshots under `artifacts/issue-3014` are the evidence.\n- - For any touched e2e helper or web unit file: `pnpm --dir apps/web test <that test file>` (builds the WASM module first).\n- - `cargo fmt --check`; if a Rust file was touched, `cargo clippy -p <crate> --all-targets -- -D warnings` and `cargo test -p <crate> <test name>`.\n- - `cargo jackioh spec check` only if a ruling note or `proven_in` was touched (not expected).\n- - The pull request text names job `e2e (7/8)` of the super run and says the fix was checked by the local shard-7 reproduction above (a pull request's CI runs only e2e smoke specs, so the daily shard is checked locally, not on the pull request).\n- ## Done when\n- - [ ] The failing shard-7 spec and test are named from reproduced output, not guessed.\n- - [ ] The fix addresses the root cause (deterministic expectation updated to ruled behavior, or flaky assertion made robust) \u2014 no skipped, disabled, quarantined, or deleted test; no raised timeout; no weakened check.\n- - [ ] The whole shard-7 spec list passes on Chrome against a fresh server boot.\n- - [ ] `cargo fmt --check` passes; every touched crate's targeted tests and every touched web test file pass.\n- - [ ] The pull request names job `e2e (7/8)` and the local shard-7 reproduction used to check it.\n- - [ ] No file outside the Files to touch table (outside the one failing spec/helper and, if proven, its owning product module) changed.\n- ## Risks\n- - Changing a spec seed changes what the test covers: keep the seed's documented property (first AI turn observable, Easy game ends by turn 7) and document the new seed's property in the comment, or coverage silently shrinks.\n- - The `replayHash` folds must keep passing with handicaps included: any spec-13 change must preserve the `handicaps`/`dealt` fields passed to the `replayHash` task, or a real desync hides behind a green test.\n- - If reproduction shows the AI itself misplays (not just the test's expectation), that is AI-decision work \u2014 stop, do not redesign `mulligan.rs`, and re-plan as hard.\n- - Two runs on one machine must not share the artifacts folder (Cypress empties screenshots at startup): always use `E2E_ARTIFACTS=artifacts/issue-3014`, and stop a started server by port, never by process-name pattern.\n- ## Open questions\n- - The exact failing test name from the job's log (the linked log needs a person to open; no tool here reaches GitHub). This does not block the builder: the local shard-7 reproduction in step 2 identifies it deterministically. If the local shard passes twice on fresh boots, report that with the run \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3014 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3014/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-04T08:52:14Z",
       "owner_why": "it plans it",
@@ -18053,9 +18045,9 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
-      "run_id": "41802830121",
+      "run_id": "pending:994f6f35-1793783344",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-04T08:52:14Z",
+      "started_at": "2026-11-04T09:09:44Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18092,9 +18084,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T08:56:46Z",
+    "at": "2026-11-04T09:09:44Z",
     "url": "",
-    "what": "plan #3012 on claude-1"
+    "what": "build #3014 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T08:46:55Z",
