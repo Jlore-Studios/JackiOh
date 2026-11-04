@@ -15456,12 +15456,12 @@
     "what": "plan #3064 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-04T22:21:04Z",
+    "at": "2026-11-04T22:30:06Z",
     "notes": [
-      "delivered review #3081 on claude-6 (run 41923488511): approved",
-      "delivered plan #3078 on claude-3 (run 41922080444): planned",
-      "started build #3078 on claude-3 (run 41924838455)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #3064 on claude-8 (run 41920086435): planned",
+      "started plan #3064 on claude-8 (run 41926057742)",
+      "nothing more to start: nothing is queued",
+      "#3081: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16167,7 +16167,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T22:21:04Z",
+  "loop_tick": "2026-11-04T22:30:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
