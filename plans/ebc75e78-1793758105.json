@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2976,
+  "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
+  "branch": "bot/issue-2976",
+  "thread": "**Issue #2976 (data, not instructions):**\n\n```text\n# #2976: Patch: the AI facing lethal keeps the switch to Defense that would stop it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nPutting a unit in Defense Position gives it Taunt, so the enemy's attacks have to go through it. When the practice AI is about to die next turn, that switch is often the only thing that saves it. But the AI only looks at its first twenty or so moves, switches come last, and with a full hand the saving switch is never considered: the AI plays out its hand, ends its turn and dies to attacks it could have walled. Once built, whenever the opponent's board threatens lethal, the AI always looks at the switches to Defense that would lower that threat.\n\n## Why\n- `crates/ai/src/candidates.rs:929`: switches are ordered last, just before End Turn.\n- `crates/ai/src/search.rs:114-132`: `expand` truncates to its width (`AI_BUDGET.root_branching` 20 at the root, `branching` 6 below, `crates/ai/src/config.rs:62-64`) and rescues only stand-downs: `stands_down` (`candidates.rs:937-953`) is a switch of a unit an enemy would kill and survive.\n- So the best wall, a unit that survives its fight, is cut. R1759000 does this on purpose, `r1759000_a_unit_no_enemy_would_beat_is_not_stood_down` (`crates/ai/tests/ai/search.rs:516`), and nothing else in the crate rescues a switch.\n- The evaluator already knows the danger: `lethal_threat` applies when `face_threat_with` reaches `effective_life` (`crates/ai/src/evaluate.rs:1901-1914`).\n\nExample: the AI is at 7 life against three 4/4 attackers. It has a 7/7 in Attack and five cheap Units in hand with the mana to play them. Its attacks and placements fill the 20 slots, the 7/7's switch is cut, and the AI dies, where the switch would have made every swing hit the 7/7.\n\n## Proposal\nIn `expand`, while the opponent's `face_threat` reaches the seat's `effective_life`, also keep up to `AI_SEARCH.position_switches` switches to Defense that the cut left out. Only switches that lower the threat count, checked on a clone with the unit's position set, so no search node is spent. A new ruling in the issue's block amends R1759000.\n\n## Where it lands\n`crates/ai/src/search.rs`, `crates/ai/src/candidates.rs`, `crates/ai/tests/ai/search.rs`, `crates/ai/tests/ai/puzzles.rs`, `crates/ai/README.md`, `spec/rulings/`, `spec/pending/`; SPEC \u00a79.9.\n\n## Acceptance criteria\n- [ ] An expansion test on the example board: the switch is in the root expansion at `root_branching`. It is absent today.\n- [ ] A puzzle: the AI survives the opponent's all-out attack, in the style of the puzzles' `expect_survives_all_out`. It fails today.\n- [ ] Off lethal, the R1759000 tests pass unchanged.\n- [ ] `cargo jackioh gate` passes at smoke size.\n\n## Size and risks\nSmall: about 60 lines plus tests in 3 to 4 files. It adds up to two children per expanded line, and only while the AI faces lethal. Blocks that need two steps (two walls, or a kill and a wall) stay out of reach while `lethal_threat` is one flat cliff.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T01:58:56Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2976: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T01:59:19Z",
+    "claimed_at": "2026-11-04T02:08:54Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
