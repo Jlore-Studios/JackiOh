@@ -74,9 +74,14 @@ seed and log when its sockets return (SPEC §9.5), as after any restart.
 Production promotes itself once a day, from the daily super run on `main` (the owners' call of
 2026-11-03; it was by hand only from 2026-11-02, #2750): each run on `main` that passes every job is
 promoted once, and a red one promotes nothing until the night bot's fix lets the next one pass. One
-issue labeled `production merge` stays open for good. Its title says where production stands
-("Production: 4 commits on main are not live yet", "the super run is testing 1a2b3c4 (#2901)", "the
-super run failed on 1a2b3c4 (#2901)", "everything on main is live"). The first line of its body is
+issue labeled `production merge` is open at a time. Its title says where production stands
+("Production: commits on main are not live yet", "the super run is testing 1a2b3c4 (#2901)", "the
+super run failed on 1a2b3c4 (#2901)", "everything on main is live"); the count of what waits is in
+the body, since a title that carried it was retitled with every commit of `main`. Once the issue is
+a week old (`ROTATE_DAYS`), a fresh one takes over with its state, and the old one is retitled with
+the days it covered ("Production, 2026-10-21 to 2026-11-04 (continued in #3101)") and closed with a
+link to the new one, so the thread never grows long; the closed ones are the history. A command left
+on a closed one is still carried out, and answered on the open one. The first line of its body is
 a hidden state line; leave it alone. Under it the issue lists every pull request on `main` that is
 not on production yet, with its push-to-main CI (passed, failed, running) and where it stands for
 production (in the open promotion, the next `/promote`, waits for CI). Its state line also keeps
