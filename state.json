@@ -446,6 +446,12 @@
       "lines": [
         "/harness revise Gate the nine `WALK_*` constants in `crates/run/src/config.rs` behind `#[cfg(test)]`, as your last revise run did (its commit `8357c5a` never reached the branch, which is still on the red `4f4326d`). Add no rows to `spec/15`'s constants table: these tune the test, not the dungeon, and `#[cfg(test)]` keeps them out of the check the way the engine's `config.rs` does. Push it so `rust` runs again. That was the only failure; nothing else needs to change."
       ]
+    },
+    "c:6626186100": {
+      "at": "2026-11-04T08:26:45Z",
+      "lines": [
+        "/harness revise Decisions for pass 3, below. Your last run's commit `d9d6d14` never reached the branch (it is still on `0ac23d8`), so if that work is gone, redo the parts these decisions keep."
+      ]
     }
   },
   "items": {
