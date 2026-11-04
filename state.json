@@ -17453,12 +17453,12 @@
       "queued_at": "2026-11-04T05:20:35Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "41798786273",
+      "run_id": "pending:41a7d369-1793781226",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 45,
-      "started_at": "2026-11-04T08:20:43Z",
+      "started_at": "2026-11-04T08:34:20Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18044,9 +18044,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T08:33:31Z",
+    "at": "2026-11-04T08:34:20Z",
     "url": "",
-    "what": "revise #2984 on muse"
+    "what": "spot-check #2996 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T08:17:42Z",
@@ -32224,9 +32224,9 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:41a7d369-1793781226",
         "sha": "3809c73ce671c88facee6311ffa38899a5db3adc",
-        "started_at": "2026-11-04T08:20:43Z",
+        "started_at": "2026-11-04T08:34:20Z",
         "status": "queued",
         "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
         "tries": 1
