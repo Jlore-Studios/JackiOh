@@ -17546,6 +17546,7 @@
     "2996": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T03:33:40Z",
