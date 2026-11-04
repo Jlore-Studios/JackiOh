@@ -14909,8 +14909,22 @@
       "verdict_rounds": 0
     },
     "3039": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "live": "building",
       "onto": "bot/issue-3000",
-      "part_of": 3000
+      "owner": "claude-3",
+      "owner_since": "2026-11-04T16:52:23Z",
+      "owner_why": "it took it up",
+      "part_of": 3000,
+      "pending_request": false,
+      "provider": "claude-3",
+      "run_id": "pending:3e787e25-1793811110",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-04T16:52:23Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3040": {
       "onto": "bot/issue-3000",
@@ -15104,9 +15118,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T16:13:21Z",
+    "at": "2026-11-04T16:52:23Z",
     "url": "",
-    "what": "revise #2984 on claude-7"
+    "what": "build #3039 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-04T16:37:24Z",
