@@ -14896,6 +14896,8 @@
       }
     },
     "3036": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T10:46:15Z",
@@ -14909,8 +14911,11 @@
         "trail": "sh: {\"command\": \"cat > spec/rulings/R3012000.md <<'EOF'\\n---\\nid: R3012000\\ntitle: The Patch notes page nests micro patches under their patch, and a legend on the side jumps to any entry (issue #3012)\\nc\u2026\n- Bash: {\"command\": \"echo \\\"- rulings, pending, docs written; spec check ok. Remaining: typecheck, eslint, vitest subset, classify, git status review, e2e check, final notes\\\" >> .bot-notes.md; (pnpm --dir a\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/patches/PatchNotes.test.tsx'\\ns=open(p).read()\\ns=s.replace('import { afterEach, beforeEach, describe, expect, it, vi } from \\\"vitest\\\";','import { aft\u2026\n- Bash: {\"command\": \"git fetch -q origin main 2>/dev/null; git rev-parse origin/main 2>&1 | head -1; timeout 1700 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclud\u2026\n- Bash: {\"command\": \"timeout 900 pnpm exec vitest run src/patches/PatchNotes.test.tsx 2>&1 | grep -E \\\"FAIL|\\u00d7|AssertionError|Error|Tests \\\" | cut -c1-300 | head; timeout 900 pnpm exec vitest run --proje\u2026\n- Bash: {\"command\": \"timeout 900 pnpm exec vitest run --project web src/patches 2>&1 | grep -E -A12 \\\"FAIL.*aria-current\\\" | cut -c1-200 | head -40\", \"description\": \"Get aria-current failure detail\", \"timeou\u2026\n- Bash: {\"command\": \"for i in 1 2 3; do timeout 900 pnpm exec vitest run --project web src/patches 2>&1 | grep -E \\\"\\u00d7|Error:|expected|Tests \\\" | cut -c1-250 | head -8; echo ===; done\", \"description\": \"R\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/patches/PatchNotes.test.tsx'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(old[:70],s.count(old))\\n s=s.replace\u2026\n- Bash: {\"command\": \"grep -rln \\\"patch-notes\\\\|patchNotes\\\" e2e --include=*.ts | head; \", \"description\": \"Find e2e specs that visit patch notes\"}\n- Bash: {\"command\": \"grep -n \\\"patch-notes\\\\|patchNotes\\\" -B3 -A25 e2e/cypress/e2e/47-tap-areas.cy.ts | head -90; grep -n \\\"patch\\\" e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head; grep -n \\\"patch\\\" e2e\u2026\n- Bash: {\"command\": \"grep -n \\\"expectHitAreas\\\" -B2 -A45 e2e/cypress/e2e/47-tap-areas.cy.ts | sed -n 1,90p\", \"description\": \"Read tap-areas hit-area check logic\"}\n- Bash: {\"command\": \"grep -n \\\"button\\\" apps/web/src/auth/tavern.css | head -40\", \"description\": \"Check tavern button styling selectors\"}\n- Bash: {\"command\": \"sed -n 513,566p apps/web/src/auth/tavern.css; grep -n \\\"link-button\\\" apps/web/src/index.css | head\", \"description\": \"Read link-button styles\"}\n- Bash: {\"command\": \"grep -n \\\"^\\\\.tavern\\\\.app-shell a\\\\b\\\\|^\\\\.tavern\\\\.app-shell a[:{ ,]\\\\|^a {\\\\|^a:\\\\|^a,\\\" apps/web/src/auth/tavern.css apps/web/src/index.css | head; grep -n \\\"text-decoration\\\" apps/w\u2026\n- Bash: {\"command\": \"sed -n 560,600p apps/web/src/auth/tavern.css\", \"description\": \"Read tavern anchor styles\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='apps/web/src/patches/patches.css'\\ns=open(p).read()\\nn=s.count('.tavern.app-shell .patch-legend__link')\\ns=s.replace('.tavern.app-shell .patch-legend__li\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/patches/patches.css'\\ns=open(p).read()\\nold='''.tavern.app-shell .patch-notes .patch-legend__entry[data-tier=\\\"major\\\"] > .patch-legend__link {\\n font-\u2026\n- Skill: {\"skill\": \"ui-walkthrough\"}\n- Bash: {\"command\": \"(pnpm --dir apps/web exec vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &) ; for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:5173/ && break; sleep 2; done; tail -5 /t\u2026\n- tool error: Permission to use Bash with command (pnpm --dir apps/web exec vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &) ; for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:5173/ && break; sl\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vite --port 5173 --strictPort\", \"description\": \"Run vite dev server in background\", \"timeout\": 1800000, \"run_in_background\": true}\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3012/3d6aa527-874c-43b5-a073-447e7cd388ea/tasks/b21qs9npv.output | tail -8; curl -s -o /dev/null -w \\\"%{http_code}\\\\n\\\" http://loca\u2026\n- tool error: Permission to use Bash with command tail -8; curl -s -o /dev/null -w \"%{http_code}\\n\" http://localhost:5173/patch-notes has been denied.\n- Bash: {\"command\": \"pkill -f \\\"vite --port 5173 --strictPort\\\"; echo done\", \"description\": \"Stop the vite server I started\"}\n- tool error: Exit code 144\n- Bash: {\"command\": \"git status --short; python3 -c \\\"\\nimport json;p=json.load(open('crates/cards/patches/patches.json'));print(p[-1]['version'])\\\"; git log origin/main --oneline -3; git diff HEAD origin/ma\u2026\n- Bash: {\"command\": \"cargo run --release -q -p jackioh-tools -- classify --base origin/main --claims 2>&1 | tail -15; cargo run --release -q -p jackioh-tools -- spec check 2>&1 | tail -3\", \"description\": \"Ru\u2026\n- Bash: {\"command\": \"grep -n -i \\\"release art\\\\|release-art\\\\|patch notes\\\\|patches/\\\" apps/web/README.md docs/architecture.md docs/v0.3.0/SURFACE.md 2>/dev/null | head -10; grep -rn \\\"still companion\\\\|anim\u2026\n- Bash: {\"command\": \"grep -n -i \\\"drift\\\\|still companion\\\\|animated form\\\" apps/web/src/patches/releaseArt.ts apps/web/src/patches/releaseArt.test.ts\", \"description\": \"Check remaining drift mentions\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index(\\\"## State\\\")\\nb=s.index(\\\"## Goal\\\")\\nnew='''## State\\n\\nBuild run (sonnet): DONE, ready to report. Everything in the p\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend\"} --> ## What changed The Patch notes page and the release art now follow each patch's recorded tier (R1369000, never a parsed ver\u2026"
       },
       "issue": 3012,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T12:26:13Z",
         "from_run": "41816389090",
         "gates": [
           {
@@ -15002,7 +15007,11 @@
         "source": "build",
         "until": "2026-11-04T12:55:15Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-04T12:25:15Z",
+      "run_id": "pending:dd1186f7-1793795148",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15021,6 +15030,9 @@
         "provider": "claude-1",
         "run": "41816389090"
       },
+      "started_at": "2026-11-04T12:26:13Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15034,9 +15046,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T12:16:27Z",
+    "at": "2026-11-04T12:26:13Z",
     "url": "",
-    "what": "spot-check #2992 on claude-6"
+    "what": "review #3036 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-04T12:14:50Z",
