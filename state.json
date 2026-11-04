@@ -15459,6 +15459,13 @@
     "3067": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T23:29:30Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Server-only caching change in crates/server (about 8 files: stats.rs, one fake-store hook, tests, a ruling note, README); it touches no engine rules, AI, migration or cross-crate contract, and is far under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
