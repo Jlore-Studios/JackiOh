@@ -16220,7 +16220,7 @@
       "started_at": "2026-11-03T21:26:16Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2964": {
       "action": "revise",
