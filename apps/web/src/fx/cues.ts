@@ -33,7 +33,7 @@ import { planBeats } from "./motifs/beats.ts";
 import { planSetPiece } from "./setPieces.ts";
 import { planStarship } from "./starship.ts";
 import { shotCue } from "./stage.ts";
-import { entranceCues, entranceLandMs } from "./takeover.ts";
+import { entranceCues, entranceEchoMs, entranceLandMs } from "./takeover.ts";
 import {
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
@@ -444,8 +444,15 @@ const summon: Recipe = (event, p) => {
   let entrance = 0;
   // R2722001: a Legendary's or a Mythic's entrance is bigger than the rays alone: a ring of its light
   // bursts out where it lands, and the shake is FX_LEGENDARY_TRAUMA's (a Mythic's takeover is takeover.ts's).
+  // R2803000: the Legendary's ring carries its echo, the same wave behind as the takeover's second
+  // shockwave, so a summoned Legendary lands in the shared entrance's language.
   if (facts.rarity === "Legendary") {
-    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"), ring(p.D, "gold", at, landAt));
+    cues.push(
+      rays(p.D, "legendary", at, 0),
+      burst(i, "gold", at, "area", landAt, "summonGold"),
+      ring(p.D, "gold", at, landAt),
+      ring(p.D, "gold", at, entranceEchoMs(p.D, landAt)),
+    );
     entrance = FX_LEGENDARY_TRAUMA;
   } else if (facts.rarity === "Mythic") {
     cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", landAt, "summonPrismatic"), ring(p.D, "prismatic", at, landAt));

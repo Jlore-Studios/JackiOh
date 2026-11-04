@@ -2135,6 +2135,34 @@
   }
 }
 
+/* R2803000: the shared prismatic look's own sweep, the loudest of the sweeps: it crosses farther
+   and settles in two steps, overshooting past the landing point before it rests on it.
+   Transform and opacity only (R200). */
+.fx-takeover[data-look="prismatic"] .fx-takeover-sweep {
+  animation-name: fx-takeover-prism;
+}
+
+@keyframes fx-takeover-prism {
+  0% {
+    transform: translateX(-75vw) rotate(-18deg) scale(2.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  70% {
+    transform: translateX(3vw) rotate(3deg) scale(0.82);
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
 /* #100 Ceaseless Void collapses into the dark from all around; #97 Zephrys blows in from the other side. */
 .fx-takeover[data-look="void"] .fx-takeover-sweep {
   animation-name: fx-takeover-collapse;

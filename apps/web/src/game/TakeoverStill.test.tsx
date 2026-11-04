@@ -56,7 +56,7 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(screen.queryByTestId("takeover-still")).toBeNull();
   });
 
-  it("R2722001 under reduced motion the viewer's Mythic play shows a still card and no data-takeover", () => {
+  it("R2722001 R2803000 under reduced motion the viewer's Mythic play shows a still card and no data-takeover", () => {
     writeSettings({ reduceMotion: true });
     playOut(ZEPHRYS);
     const game = screen.getByTestId("game");
@@ -66,6 +66,9 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(still).toHaveAttribute("data-takeover-def", ZEPHRYS);
     expect(still).toHaveAttribute("aria-hidden", "true");
     expect(still.querySelector("[data-animating]")).toBeNull();
+    // R2803000: the still echoes the takeover at rest: a motionless rays disc and the landing ring.
+    expect(still.querySelector(".takeover-still-rays")).not.toBeNull();
+    expect(still.querySelector(".takeover-still-ring")).not.toBeNull();
     act(() => {
       vi.advanceTimersByTime(TAKEOVER_STILL_MS);
     });

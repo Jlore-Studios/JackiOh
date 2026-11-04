@@ -221,6 +221,15 @@ export const FX_DINO_STOMP_TRAUMA = 0.55;
 export const FX_GAME_DESIGN_TRAUMA = 0.45;
 // #2793: the share of a set's non-token cards its pass gives an entry other than `none`.
 export const FX_SET_PASS_FLOOR = 0.55;
+// R2803000: the audit's floor. At least this share of the catalog's non-token cards wears an entry
+// other than `none`, so the audit's coverage test holds every pass to half the catalog.
+export const FX_COVERAGE_FLOOR = 0.5;
+// R2803000: the audit's motif floor. A drawn motif fewer than this many table entries use is folded
+// into bespoke work or its nearest motif, as the design doc's rule says.
+export const FX_MOTIF_MIN_CARDS = 3;
+// R2803000: the audit's phone budget. The heaviest set pieces and a board of four auras hold this
+// mean frame time at the phone particle cap with mobile emulation.
+export const FX_PHONE_FRAME_BUDGET_MS = 50;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most

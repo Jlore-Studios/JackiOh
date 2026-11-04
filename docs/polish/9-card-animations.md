@@ -521,6 +521,36 @@ Repeaters and Weapon Equips, `Tech/hologram` for the MAGI and the Prototypes and
 the Warp Disruptors, Imprisoned Cosmality and the Battleship. The second half (#2798) uses the same
 names.
 
+## Audit
+
+Issue #2803's audit (R2803000) closes the work above and holds it:
+
+- **Coverage:** 551 of the catalog's 634 non-token cards wear an entry other than `none`, past the
+  audit's floor of half (`FX_COVERAGE_FLOOR`, `fx/cards/coverage.test.ts`). By set: Core 87/100,
+  Classic 79/90, Classic+ 74/78, Meditative 94/102, Meditative+ 24/26, Stinkyscape 142/178,
+  Training Grounds 51/60. By type: Unit 195/277, Spell 235/236, Field Spell 87/87, Trap 24/24,
+  Field Trap 10/10. By rarity: Common 138/181, Rare 181/198, Epic 132/144, Legendary 72/81,
+  Mythic 28/30. Every Spell, Field Spell, Trap and Field Trap wears a `cast`, a recipe, a set piece
+  or the one `none` a Starship part may wear (Stinkyscape #176 Preemptive Strike, "Starship part"),
+  and every Field Spell an `aura`.
+- **Tiers:** every table entry's gallery play is planned through the board's effects layer, and every
+  cue it plans ends within its entry plus `FX_MAX_TAIL_MS` (`fx/cards/tiers.test.ts`); every set
+  piece's hold stays within `SET_PIECE_HOLD_CAP_MS`, one hold per action.
+- **Motif use:** every drawn motif is used, and every sub-look. Four motifs sit below the audit's
+  floor of three cards (`FX_MOTIF_MIN_CARDS`), each with its set pass's reason: `chain` (Spirit
+  Lash, the Examples table's citation), `ward` (Argusland, Fortify Flesh), `mirror` (Rewind, Juhan
+  Biggest Bat), `glimpse` (Fortify Mind, Feng Shui).
+- **Frame rate:** at the phone particle cap with a phone viewport, Twisting Nether, the Starship
+  launch, a Mythic takeover and a board with 4 auras hold their mean frame time within
+  `FX_PHONE_FRAME_BUDGET_MS` (`e2e/cypress/component/fx-phone-frame.cy.tsx`).
+- **Entrances:** the shared Mythic takeover, the Legendary entrance and the reduced-motion still
+  land in the motif language's two-wave landing: a summoned or cast Legendary's ring carries its
+  echo, the shared prismatic sweep has its own keyframes, the board recoils in two steps, and the
+  still echoes the takeover at rest. The music, the entrances' timing and the one capped hold are
+  unchanged (R2722000, R2722001, R2722002).
+- **Captures:** the gallery spec plays every drawn motif mid-flight and every set piece mid-flight
+  and at rest (`e2e/cypress/component/fx-gallery-captures.cy.tsx`).
+
 ## Open
 
 - #2782's full text, with its 27 motif names and section 4's table layout, is not in the
