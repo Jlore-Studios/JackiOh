@@ -4162,5 +4162,14 @@
   "Alt art": "异画",
   "Sketch": "素描",
   "Your teammate plays on without you. After {seconds} seconds the AI plays your seat until you come back.": "你的队友会继续战斗。{seconds} 秒后，AI 将替你出战，直到你回来。",
-  "Alt full art": "异画全画"
+  "Alt full art": "异画全画",
+  "Leave this fight?": "离开这场战斗？",
+  "It ends here and the fight starts over from its first turn.": "战斗将就此结束，并从第一回合重新开始。",
+  "Leave fight": "离开战斗",
+  "Claim all": "全部领取",
+  "Alert": "公告",
+  "Abandon this run? It ends here and cannot be undone.": "放弃这次探险吗？探险将就此结束，且无法撤销。",
+  "Extended art": "延伸画",
+  "Pixel": "像素",
+  "Comic": "漫画"
 }

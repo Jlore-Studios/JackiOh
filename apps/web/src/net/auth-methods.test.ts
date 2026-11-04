@@ -1,6 +1,7 @@
 // `net/auth.ts`'s three further ways in (issue #267): the email sign-in link and code (R664), the
-// authenticator app's second step (R665) and the OAuth providers (R666). The server gates each one's
-// account as a password sign-in's (§9.4), so these tests prove only what each call sends and reads.
+// authenticator app's second step (R665) and the OAuth providers (R666), with Google's ID token from
+// its own button (R2983000). The server gates each one's account as a password sign-in's (§9.4), so
+// these tests prove only what each call sends and reads.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,12 +12,14 @@ import {
   assuranceLevel,
   enrollTotp,
   exchangeAuthCode,
+  googleClientId,
   normalizeOneTimeCode,
   oauthAuthorizeUrl,
   oauthProviders,
   removeFactor,
   requestEmailSignIn,
   secondFactorFor,
+  signInWithGoogleIdToken,
   verifyEmailCode,
   verifySecondFactor,
 } from "./auth.ts";
@@ -341,5 +344,76 @@ describe("R666 OAuth providers, behind configuration", () => {
     serve(200, TOKEN_BODY);
     const exchange = await exchangeAuthCode("2b5e0c1a-8f1b-4c4f-9a35-0d8b3c1f2e77");
     expect(exchange.kind === "session" ? exchange.flow : exchange.kind).toBe("oauth");
+  });
+});
+
+describe("R2983000 Google's ID token, from Google's own button", () => {
+  const CLIENT_ID = "1234567890-abcdefghijklmnop.apps.googleusercontent.com";
+  const ID_TOKEN = tokenWith({ iss: "https://accounts.google.com", sub: "google-1", nonce: "hashed" });
+
+  it("R2983000 names a client ID only when the build offers Google", () => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google");
+    expect(googleClientId(`  ${CLIENT_ID} `)).toBe(CLIENT_ID);
+    for (const raw of [undefined, "", "   ", "GOCSPX-abcdefghijklmnop", `${CLIENT_ID} extra`, `${CLIENT_ID}.evil.com`, "sb_secret_abc"]) {
+      expect(googleClientId(raw), String(raw)).toBeNull();
+    }
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "github");
+    expect(googleClientId(CLIENT_ID)).toBeNull();
+    // No auth provider in this build: no providers, so no Google button either (R666).
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google");
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    expect(googleClientId(CLIENT_ID)).toBeNull();
+  });
+
+  it("R2983000 exchanges the ID token at grant_type=id_token with the raw nonce, in the body", async () => {
+    const calls = serve(200, TOKEN_BODY);
+    const { session, secondFactor } = await signInWithGoogleIdToken(ID_TOKEN, "raw-nonce");
+    expect(calls).toHaveLength(1);
+    const [call] = calls;
+    expect(call?.method).toBe("POST");
+    expect(`${call?.url.origin ?? ""}${call?.url.pathname ?? ""}`).toBe(`${URL_}/auth/v1/token`);
+    expect([...(call?.url.searchParams.entries() ?? [])]).toEqual([["grant_type", "id_token"]]);
+    expect(call?.headers.get("apikey")).toBe(KEY);
+    expect(call?.body).toEqual({ provider: "google", id_token: ID_TOKEN, nonce: "raw-nonce" });
+    expect(session.accessToken).toBe("access-new");
+    expect(session.refreshToken).toBe("refresh-new");
+    expect(secondFactor).toBeNull();
+  });
+
+  it("R2983000 an account with an authenticator app still needs its code (R665)", async () => {
+    serve(200, {
+      access_token: tokenWith({ sub: "user-1", aal: "aal1" }),
+      expires_in: 3600,
+      user: { factors: [{ id: "f-app", factor_type: "totp", status: "verified" }] },
+    });
+    expect((await signInWithGoogleIdToken(ID_TOKEN, "raw-nonce")).secondFactor).toBe("f-app");
+  });
+
+  it("R2983000 a refused ID token is oauthFailed in our words; a rate limit and a fault say so", async () => {
+    serve(400, { error_code: "bad_oauth_callback", msg: "PROVIDER TEXT: nonces mismatch" });
+    const refused = await refusal(signInWithGoogleIdToken(ID_TOKEN, "raw-nonce"));
+    expect(refused.failure).toBe("oauthFailed");
+    expect(refused.message).toBe(AUTH_MESSAGES.oauthFailed);
+    serve(422, { error_code: "validation_failed" });
+    expect((await refusal(signInWithGoogleIdToken(ID_TOKEN, "raw-nonce"))).failure).toBe("oauthFailed");
+    serve(429, {});
+    expect((await refusal(signInWithGoogleIdToken(ID_TOKEN, "raw-nonce"))).failure).toBe("rateLimited");
+    serve(500, {});
+    expect((await refusal(signInWithGoogleIdToken(ID_TOKEN, "raw-nonce"))).failure).toBe("service");
+    serve(200, { user: {} });
+    expect((await refusal(signInWithGoogleIdToken(ID_TOKEN, "raw-nonce"))).failure).toBe("oauthFailed");
+  });
+
+  it("R2983000 never sends what is not a JWT, or no nonce", async () => {
+    const calls = serve(200, TOKEN_BODY);
+    for (const [idToken, nonce] of [
+      ["not-a-token", "raw-nonce"],
+      ["a.b", "raw-nonce"],
+      ["a.b.c&grant_type=password", "raw-nonce"],
+      [ID_TOKEN, ""],
+    ] as const) {
+      expect((await refusal(signInWithGoogleIdToken(idToken, nonce))).failure).toBe("oauthFailed");
+    }
+    expect(calls).toHaveLength(0);
   });
 });

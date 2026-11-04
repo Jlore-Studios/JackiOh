@@ -10,7 +10,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{
-    candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down,
+    candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down, wall_switches,
 };
 use crate::config::{AI_MOVE_ORDER, AI_SEARCH, MoveOrder};
 use crate::evaluate::{NextSwing, Prices};
@@ -57,7 +57,9 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
 }
 
 /// The first `width` candidates that are not endTurn, then the first `AI_SEARCH.position_switches`
-/// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then endTurn when it is legal. With
+/// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then, while the opponent's board
+/// threatens lethal, the first `AI_SEARCH.position_switches` switches to Defense that lower that threat
+/// that both left out (`wall_switches`, #2976, R2976000), then endTurn when it is legal. With
 /// `MoveOrder::Learned` the candidates are sorted by `prior` before the first `width` are taken
 /// (`prior_order`, R1171001); with `MoveOrder::Heuristic` they keep `candidate_actions`' order.
 pub fn expansion(
@@ -116,6 +118,7 @@ fn expand(
         .filter(|action| stands_down(state, action))
         .cloned()
         .collect();
+    let walls = wall_switches(state, seat, &candidates);
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
@@ -130,6 +133,12 @@ fn expand(
         .take(AI_SEARCH.position_switches.max(0) as usize)
         .collect();
     moves.extend(left_out);
+    let walls_left_out: Vec<ActionBody> = walls
+        .into_iter()
+        .filter(|wall| !moves.contains(wall))
+        .take(AI_SEARCH.position_switches.max(0) as usize)
+        .collect();
+    moves.extend(walls_left_out);
     if let Some(end) = end {
         moves.push(end);
     }

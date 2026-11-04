@@ -164,7 +164,7 @@ The player steps onto any node of the next row.
 
 **The enemy:** its deck, with Easy's handicap (`AI_DIFFICULTY`), Medium's when it carries Looming Presence and Hard's with Overwhelming Presence; elites and bosses carry them. Its deck size is its deck's length and its hero health is `RUN_ENEMY_HEALTH` by kind.
 
-The game seed is the run's seed, row and column.
+The game seed is the run's seed, row and column. Leaving a fight unfinished asks first: it is dealt again from its seed ([[R2706000]], [[R2972000]]).
 
 Enemy decks are random for now: the enemy's own cards, then the open pool up to `RUN_ENEMY_DECK_SIZE`.
 
@@ -223,7 +223,7 @@ Discounts cut Coin prices only, and a price the run cannot pay is refused.
 
 **Shrine** (a monastery or a statue): up to `RUN_SHRINE_OFFERS` blessings not held; the player takes one or none, for the rest of the run.
 
-Abandoning at any time ends a run, lost. An ended run refuses every action.
+Abandoning at any time ends a run, lost. The start screen asks first, and the map links back to the Play menu ([[R2972000]]). An ended run refuses every action.
 
 ### 15.9 Curses
 

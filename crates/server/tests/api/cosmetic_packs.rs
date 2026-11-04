@@ -16,7 +16,8 @@ use jackioh_server::config::{
 };
 use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OfferClause,
-    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_SKETCH_ID, shipped,
+    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID,
+    VERSION_FULL_ART_ID, VERSION_PIXEL_ID, VERSION_SKETCH_ID, shipped,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
@@ -1713,6 +1714,49 @@ async fn r2940000_the_chase_refuses_alt_full_art_where_it_is_not_offered() {
     assert!(owns_cosmetic(&app, Some(&card), VERSION_ALT_FULL_ART_ID).await);
     assert!(!owns_cosmetic(&app, Some(&bare), VERSION_ALT_FULL_ART_ID).await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
+}
+
+#[tokio::test]
+async fn r2942000_the_chase_refuses_part_three_versions() {
+    let (app, token) = setup().await;
+    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Speciesist, a Common Unit, none.
+    let card = "classic-056".to_string();
+    let bare = "core-002".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, &[card.clone(), bare.clone()]).await;
+    let chase = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // Each on the card it is not offered: a 400 before its tier is read. Where it is offered, an Epic and no
+    // chase: a 409. Nothing is written, and the bar stays full.
+    let before = everything(&app).await;
+    for cosmetic in [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID] {
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+        let (status, answer) = chase(json!({ "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (
+                409,
+                json!(
+                    "the Chase Shard bar buys only a chase: a Legendary or Mythic cosmetic, but the Jlorious one"
+                )
+            ),
+            "{cosmetic}: {answer}"
+        );
+        assert!(!owns_cosmetic(&app, Some(&card), cosmetic).await, "{cosmetic}");
+    }
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
 }
 
 #[tokio::test]

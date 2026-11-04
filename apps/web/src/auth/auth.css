@@ -113,6 +113,18 @@
   flex: none;
 }
 
+/* R2983000: the slot Google Identity Services draws its own button in, centered where R666's
+   Google button stood; empty while GIS loads, when R666's button shows in its place. */
+.auth-screen .auth-oauth .auth-google {
+  display: flex;
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+.auth-screen .auth-oauth .auth-google:empty {
+  display: none;
+}
+
 .auth-screen .auth-resend {
   display: flex;
   flex-wrap: wrap;

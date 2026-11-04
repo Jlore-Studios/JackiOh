@@ -8,18 +8,13 @@ trap backrow. This file binds every agent, not only Claude.
 - `SPEC.md` points to `spec/`, the only source of rules, cards and engine design; `spec/README.md` maps its
   notes. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
   the bug.
-- `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass tables); `REVIEW.md` is
-  the audit, its reports in `reviews/`.
 - Each crate's and app's `README.md` (`crates/*`, `apps/edge`, `apps/web`, `e2e`) is its contract: read it
   before you change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform
-  (#1708), and `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/ADDING_CARDS.md`,
-  `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers), `docs/architecture.md`,
-  `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`, `training/README.md`, `docs/v0.3.0/SURFACE.md`
-  (every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442, and
-  their return to Rust, #902).
-- The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md` and the design briefs `docs/*-set*.md`,
-  each named in REVIEW.md's Part A inputs) are what REVIEW Part A checks the spec against; read them only
-  when the task is about them.
+  (#1708), and `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/issues-and-patches.md`
+  (titles, labels, patch and ruling numbers), `docs/architecture.md`, `training/README.md` and
+  `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client).
+- The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, the design briefs `docs/*-set*.md`) are
+  what REVIEW Part A checks the spec against; read them only when the task is about them.
 
 ## Rules of engagement
 
@@ -50,10 +45,9 @@ trap backrow. This file binds every agent, not only Claude.
    chunks and scripts and no game state (#442 L8), and three thread-locals of the engine's, each set for one
    call and put back after it (the shipped catalog a replay is folding under, R767000; the custom-script host
    `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight holds its game's random
-   pools, `catalog::with_pool_hold`, R2201001). A Luau script is kept pure by its host: the sandbox (L5), the
-   integer boundary every value crosses (L6) and the lint (L6, L7), all in `crates/luau/README.md`. Data
-   reaches a pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs the
-   disk or a clock goes in `crates/tools`.
+   pools, `catalog::with_pool_hold`, R2201001). A Luau script is kept pure by its host's sandbox, integer
+   boundary and lint (`crates/luau/README.md`, L5 to L7). Data reaches a pure crate only at compile time
+   (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
    reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
    `EffectContext` and the engine's read helpers and returns effects. (A custom card's Luau script does the
@@ -68,9 +62,9 @@ trap backrow. This file binds every agent, not only Claude.
    and attach the report.
 9. Every number is a named constant: rules numbers in `crates/engine/src/config.rs` (BUILD §2, the "decide"
    rulings included), server numbers in `crates/server/src/config.rs`, the AI's in `crates/ai/src/`
-   (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`. Those the client reads are generated into
-   `apps/web/src/wire/engineConfig.ts` and `serverConfig.ts` by each crate's `tests/export_config.rs`, and CI
-   fails when a run changes them. Nothing else states a number.
+   (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`. The client
+   restates none: it reads the engine's and the server's from the generated `apps/web/src/wire/engineConfig.ts`
+   and `serverConfig.ts`, the AI's and the run's from the WebAssembly module, and names only its own numbers.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
     it is): **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or more,
@@ -86,23 +80,16 @@ trap backrow. This file binds every agent, not only Claude.
     or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its
     check of the running image, and the deploy jobs poll `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
     runs. That nothing in the tree calls it is no proof it is dead (#900).
-14. A Claude session outside the bots' harness (Claude Code on the web, the desktop app, a cloud session a
-    person started) that works an issue or pull request reads its handoffs before it starts and leaves one
-    before it stops: the item's `bot-journal` file (`<issue>.md`) and the handoff comments already on it
-    first; then, at the end of every turn that pushes or leaves the work unfinished, its own comment on
-    the issue (on the pull request when there is none), edited in place, marked
-    `<!-- jackioh-session:handoff -->`, saying what was asked, what was done, what is left, what was
-    tried and failed, and every check still red by name (rule 12). `.claude/skills/handoff/SKILL.md` says
-    how. The bots' runs are exempt: the harness journals them, and their next run reads these comments
-    (#2748 section 10).
+14. A Claude session outside the bots' harness that works an issue or pull request reads its handoffs before
+    it starts and leaves its own, one comment edited in place, at the end of every turn that pushes or leaves
+    the work unfinished, as `.claude/skills/handoff/SKILL.md` says. The bots' runs are exempt (#2748 section 10).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
 ## Commands
 
-`rust-toolchain.toml` pins Rust and its two WebAssembly targets for `crates/`, and `crates/luau` needs a C++
-compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only; Go for
-`bot/go` (its `go.mod` pins it). `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
+`crates/luau` needs a C++ compiler (`mlua` builds Luau from source); `rust-toolchain.toml`, `package.json` and
+`bot/go/go.mod` pin the toolchains. `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
 
 ```
 cargo fmt --check
@@ -132,8 +119,7 @@ cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--h
 ```
 
 The rest are in `crates/tools/README.md` (every `cargo jackioh` command), `crates/luau/README.md`
-(`luau-analyze`), `docs/ADDING_CARDS.md` (`gen:voice`, `gen:music`), `analysis/README.md` (the notebooks) and
-`crates/server/README.md` (the deploy rehearsal, a real Supabase project).
+(`luau-analyze`), `docs/ADDING_CARDS.md` (`gen:voice`, `gen:music`), `analysis/README.md` and the crates' READMEs.
 
 ### Running a subset
 
@@ -167,19 +153,17 @@ has the rest, the server's fixture reseed among it.
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
 `bot selftest`. A pull request lands through `main`'s merge queue (`infra/github.tf`), which runs them again on
 `main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`): one the queue takes
-out failed there, against the newer `main`, and its fix starts from merging `main`. On a pull request `rust` includes `rust (classify)`, which labels it with its kind and tier
-and fails when the pending fragments do not match the cards that play differently (R1370000): run
-`cargo jackioh classify --base origin/main --claims` before pushing. A pull request runs only the jobs that
-read what it changes (`scripts/ci-scope.sh`, whose header says what turns each on; #751), so a file a test
-newly reads from outside its crate goes in the script's map in the same pull request, and a path joins its
-skip list (a pull request of only those paths skips every job but `bot selftest`) only with proof that
-nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A push to `main` runs everything. Everything slow
-or statistical runs daily in `super.yml`, whose header lists it, and on every pull request into `production`:
-production promotes itself each day the run on `main` passes, the commit it tested, or sooner on `/promote`
-on the `production merge` issue once that pull request's run passes (`docs/deploy-cloudflare.md` §2.1). A test moves there
-(`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test
-keeps its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does,
-`ci.yml`'s the five-minute budget of every job.
+out failed there, against the newer `main`, and its fix starts from merging `main`. Run
+`cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
+`rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
+whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the
+script's map in the same pull request, and a path joins its skip list (a pull request of only those paths skips
+every job but `bot selftest`) only with proof that nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A
+push to `main` runs everything. Everything slow or statistical runs daily in `super.yml`, whose header lists it,
+and on every pull request into `production` (`docs/deploy-cloudflare.md` §2.1). A test moves there
+(`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test keeps
+its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does, `ci.yml`'s
+the five-minute budget of every job.
 
 ## Architecture
 
@@ -189,8 +173,6 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 - `crates/cards`: a script reads state only through the prelude's read helpers, never `state.players[…]`; a
   missing verb or board fact goes into the engine (board facts in `src/query.rs`) with its test.
 - `crates/ai`: hidden cards never change a decision.
-- `crates/run`: the dungeon run (`docs/dungeon-run.md`), a seeded map of fights and tiles around plain
-  games. It changes no game: the caller plays each fight and reports its result.
 - `crates/server`: `cargo test` runs the store's in-memory fake, so RLS and triggers are checked only by the
   Docker suites, and a store change goes in `tests/store/contract.rs`.
 - `apps/web`: components take a `PlayerView` and nothing else. `Game.tsx` is the one board; each of its
@@ -198,10 +180,9 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 
 ## The night bot
 
-`@jgoetzmann-bot` (the night bot, `.harness/`) and `@squishy-squooby` (Squishy, `.squishy/`), one harness
-(`bot/go/`, a Go binary) under two configs, build issues on the owner's subscriptions; `bot/README.md` says
-which issues each takes. `human` keeps every bot off an issue, and `bot:build` queues one for the night bot,
-so never add it while retitling or relabeling.
+The night bot (`@jgoetzmann-bot`, `.harness/`) and Squishy (`@squishy-squooby`, `.squishy/`) are one harness,
+`bot/go/`, under two configs; `bot/README.md` says which issues each takes. `human` keeps every bot off an
+issue, and `bot:build` queues one for the night bot, so never add it while retitling or relabeling.
 
 A bot's builder or reviewer must not change `.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/`, except
 that Squishy may change `.claude/skills/` (the full lists are `forbidden_paths` in each bot's `config.json`):

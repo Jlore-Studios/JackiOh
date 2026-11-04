@@ -1,6 +1,6 @@
 // The Dungeon Run's start screen (DR1–DR3, DR8, DR9; DR14 part D, #2705): the mode, the seed, the
 // starting deck, its relics and curses, the Embers that raise its level, and the run under way that
-// can be picked up again or given up.
+// can be picked up again or given up (R2972000: giving it up asks first).
 //
 // Presentation only (CLAUDE.md rule 7): the run's rules are `crates/run`'s. This screen never judges a
 // starting deck: it offers the unlocked cards, counts the picks, and asks `runCheckSetup` whether the
@@ -8,7 +8,7 @@
 // deck's size, the relics' limits and points, a level's cost) are `runConstants()`'s and
 // `runLevelCost()`'s, never stated here (rule 9).
 
-import { useMemo, useState, type ReactElement } from "react";
+import { useId, useMemo, useState, type KeyboardEvent, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 import type { RunPoolCard, RunSetup, RunTier } from "@jackioh/run";
@@ -102,6 +102,21 @@ function Progress({ dungeon }: { dungeon: Dungeon }): ReactElement {
 }
 
 function SavedRun({ dungeon, onEnter }: StartScreenProps): ReactElement {
+  // R2972000: giving up a run cannot be undone, so the first press asks in place, as a token's
+  // redemption asks first (R2480000); `asked` puts the focus back on the offer when Cancel or
+  // Escape answers.
+  const [asking, setAsking] = useState(false);
+  const [asked, setAsked] = useState(false);
+  const questionId = useId();
+  const cancel = (): void => {
+    setAsking(false);
+  };
+  // Escape answers Cancel and nothing else.
+  const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    cancel();
+  };
   return (
     <section className="dungeon-block dungeon-saved" data-testid={dungeonTestid.saved}>
       <p>{t("You have a run in progress.")}</p>
@@ -109,9 +124,38 @@ function SavedRun({ dungeon, onEnter }: StartScreenProps): ReactElement {
         <button type="button" className="button-primary" data-testid={dungeonTestid.continueRun} onClick={onEnter}>
           {t("Continue the run")}
         </button>
-        <button type="button" className="button-secondary" data-testid={dungeonTestid.abandonRun} onClick={dungeon.abandon}>
-          {t("Abandon the run")}
-        </button>
+        {asking ? (
+          <div
+            className="dungeon-abandon__question"
+            role="alertdialog"
+            aria-labelledby={questionId}
+            data-testid={dungeonTestid.abandonAsk}
+            onKeyDown={cancelOnEscape}
+          >
+            <p id={questionId}>{t("Abandon this run? It ends here and cannot be undone.")}</p>
+            <div className="dungeon-actions">
+              <button type="button" data-testid={dungeonTestid.abandonConfirm} onClick={dungeon.abandon}>
+                {t("Confirm")}
+              </button>
+              <button type="button" data-testid={dungeonTestid.abandonCancel} autoFocus onClick={cancel}>
+                {t("Cancel")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="button-secondary"
+            data-testid={dungeonTestid.abandonRun}
+            autoFocus={asked}
+            onClick={() => {
+              setAsked(true);
+              setAsking(true);
+            }}
+          >
+            {t("Abandon the run")}
+          </button>
+        )}
       </div>
     </section>
   );
