@@ -17674,11 +17674,6 @@
       "owner": "claude-7",
       "owner_since": "2026-11-04T06:03:56Z",
       "owner_why": "it took it up",
-      "paused": {
-        "at": "2026-11-04T07:24:08Z",
-        "interrupt": "usage",
-        "provider": "claude-7"
-      },
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-04T05:40:40Z",
