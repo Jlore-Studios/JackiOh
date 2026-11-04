@@ -4,7 +4,7 @@
 use jackioh_engine::testkit::*;
 
 const VANILLA: &str = "core-008";
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const HIT_JOB: &str = "core-016";
 const MY_PAWN: &str = "core-096";
 const SHEEPISH: &str = "core-041";
@@ -234,7 +234,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
     fn board() -> Board {
         let g = scenario(json!({
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
-            "p2": { "hand": [BIGOT], "library": [HIT_JOB], "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
+            "p2": { "hand": [SPECIESIST], "library": [HIT_JOB], "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
         }));
         let unit = g.unit_at(PlayerId::P1, 1);
         let secret = match g.state().players.p2.hand.first() {
@@ -1073,6 +1073,176 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
     }
 }
 
+/// I8 (#2978): a `play` `reduce` accepts that the list leaves out, at the card level (a playable
+/// card no listed play names) and at the zone level (a real lane no listed play of an otherwise
+/// listed card names).
+mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
+    use super::*;
+
+    const CRATER: &str = "classicplus-034"; // C+ #34 Memory Leak: Field Spell with Crater, Locks its zone
+    const CARRIER: &str = "classicplus-033"; // C+ #33 Ivory Tower: a Unit may stack onto its zone
+    const FLYING: &str = "classicplus-051"; // C+ #51 Jlockeed's J15 Fighter: Flying
+    const TRIBUTE: &str = "core-066"; // #66 The Rock: Tribute 1
+    const FIENDER: &str = "core-092"; // (2) 5/7 Stack
+
+    fn board() -> Scenario {
+        scenario(json!({
+            "p1": { "hand": [VANILLA], "mana": 5, "library": [VANILLA, VANILLA] },
+            "p2": {},
+        }))
+    }
+
+    fn vanilla(g: &Scenario) -> CardInstance {
+        g.state().players[PlayerId::P1]
+            .hand
+            .iter()
+            .find(|card| card.def_id == VANILLA)
+            .cloned()
+            .expect("p1 should hold the Vanilla")
+    }
+
+    /// The full p1 list minus every action `pred` holds, asserting something was left out.
+    fn without_matching(g: &Scenario, pred: impl Fn(&ActionBody) -> bool) -> Vec<ActionBody> {
+        let full = legal_actions(g.state(), PlayerId::P1);
+        let kept: Vec<ActionBody> = full.iter().filter(|body| !pred(body)).cloned().collect();
+        assert!(
+            kept.len() < full.len(),
+            "the list should hold a matching action to leave out"
+        );
+        kept
+    }
+
+    fn assert_unlisted_play(found: &[String], id: &str) {
+        assert!(!found.is_empty(), "an unlisted play should be reported");
+        for message in found {
+            assert!(message.starts_with("I8 unlisted play accepted"), "{message}");
+            assert!(message.contains(id), "{message}");
+            assert!(message.contains(VANILLA), "{message}");
+            assert!(message.contains("§10.2"), "{message}");
+        }
+    }
+
+    #[test]
+    fn i8_fires_when_every_listed_play_of_a_1_cost_unit_into_one_lane_is_left_out() {
+        let g = board();
+        let card = vanilla(&g);
+        let mut lanes: Vec<i32> = legal_actions(g.state(), PlayerId::P1)
+            .iter()
+            .filter_map(|body| match body {
+                ActionBody::Play {
+                    instance_id,
+                    zone: Some(at),
+                    ..
+                } if *instance_id == card.id && at.row == Row::Units => Some(at.lane),
+                _ => None,
+            })
+            .collect();
+        lanes.sort_unstable();
+        let lane = *lanes
+            .first()
+            .expect("the list should hold a unit lane for the Vanilla");
+        let left_out = ZoneChoice {
+            row: Row::Units,
+            lane,
+        };
+        let legal = without_matching(&g, |body| {
+            matches!(
+                body,
+                ActionBody::Play {
+                    instance_id,
+                    zone: Some(at),
+                    ..
+                } if *instance_id == card.id && *at == left_out
+            )
+        });
+        let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
+        assert_unlisted_play(&found, &card.id);
+    }
+
+    #[test]
+    fn i8_fires_when_every_play_of_a_card_is_left_out() {
+        let g = board();
+        let card = vanilla(&g);
+        let legal = without_matching(
+            &g,
+            |body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
+        );
+        let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
+        assert_unlisted_play(&found, &card.id);
+    }
+
+    #[test]
+    fn i8_is_clean_on_a_board_with_locked_zones_a_stack_pile_a_flying_unit_a_tribute_card_and_a_carrier() {
+        let mut g = scenario(json!({
+            "p1": {
+                "hand": [CRATER, FLYING, TRIBUTE, VANILLA, FIENDER],
+                "backrow": [{ "def": CARRIER, "lane": 1 }],
+                "mana": 10,
+                "library": [VANILLA, VANILLA],
+            },
+            "p2": {},
+        }));
+        // Crater Locks the zone its card enters (R1850006), which the setup's placement does not
+        // run: play Memory Leak from the hand, answering its mode prompt with the first option.
+        let crater = g.card(CRATER).clone();
+        let into_lane_2 = ZoneChoice {
+            row: Row::Backrow,
+            lane: 2,
+        };
+        let play = legal_actions(g.state(), PlayerId::P1)
+            .into_iter()
+            .find(|body| {
+                matches!(
+                    body,
+                    ActionBody::Play {
+                        instance_id,
+                        zone: Some(at),
+                        ..
+                    } if *instance_id == crater.id && *at == into_lane_2
+                )
+            })
+            .expect("a play of Memory Leak into backrow lane 2 is listed");
+        g.act(play, PlayerId::P1, "play Memory Leak into backrow lane 2");
+        let mut answers = 0;
+        while g.state().pending.is_some() && answers < 5 {
+            let pending = g.state().pending.clone().expect("a prompt is open");
+            assert_eq!(pending.player_id, PlayerId::P1, "the prompt is p1's");
+            let key = pending
+                .options
+                .first()
+                .expect("the prompt offers an option")
+                .key
+                .clone();
+            g.answer(json!(key));
+            answers += 1;
+        }
+        assert!(g.state().pending.is_none(), "the play should resolve");
+        assert!(
+            is_locked(
+                g.state(),
+                ZoneSlot {
+                    player: PlayerId::P1,
+                    row: Row::Backrow,
+                    lane: 2,
+                }
+            ),
+            "Memory Leak Locks its zone as it enters"
+        );
+        // A Vanilla with the Fiender stacked atop it.
+        g.play(VANILLA, json!({ "zone": 1 }));
+        g.play(FIENDER, json!({ "zone": 1 }));
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        assert_eq!(
+            unlisted_accepted(g.state(), PlayerId::P1, &legal),
+            no_violations()
+        );
+        assert_eq!(
+            create_invariant_monitor(g.state()).unlisted(g.state()),
+            no_violations()
+        );
+    }
+}
+
 /// I8 (#1574): an activation `reduce` accepts that the list leaves out, and a malformed answer.
 mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
     use super::*;
@@ -1266,7 +1436,7 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
     fn r127_r436_i6_reads_the_empty_id_of_a_chaos_roll_with_no_card_as_no_card() {
         let mut g = scenario(json!({
             "p1": { "mana": 10, "hand": [REWIND], "library": [VANILLA, VANILLA, VANILLA] },
-            "p2": { "hand": [BIGOT], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": { "hand": [SPECIESIST], "library": [VANILLA, VANILLA, VANILLA] },
         }));
         // A Unit whose Cry is Call to Chaos (R77), in p1's graveyard.
         let fused = craft_fused(&mut g, PlayerId::P1, &[VANILLA, CALL_TO_CHAOS]);

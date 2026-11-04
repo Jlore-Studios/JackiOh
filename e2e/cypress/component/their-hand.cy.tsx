@@ -109,7 +109,7 @@ describe("#2933 Their-hand cards are full 5:7 faces", () => {
       // Control: the catalog really is in, so the faces carry full names, not def ids.
       cy.get('[data-testid="result-their-hand"] .card-name').should(($names) => {
         const names = $names.toArray().map((el) => el.textContent ?? "");
-        expect(names, "catalog names in Their hand").to.include.members(["Bigot", "Midrange Menace", "Lava Golem"]);
+        expect(names, "catalog names in Their hand").to.include.members(["Speciesist", "Midrange Menace", "Lava Golem"]);
         expect(
           names.filter((name) => /^core-\d/.test(name)),
           "def ids standing in for names",

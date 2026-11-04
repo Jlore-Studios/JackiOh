@@ -2,7 +2,7 @@
 //! sure win this turn by what they can see, and the same answer whatever the AI's hidden cards are.
 //!
 //! The human in p2 has Tempo Timmy 3/3 and Mr. Vanilla 4/4 ready, 7 to the face; the AI in p1 has an
-//! empty field and the observe tests' two sets of hidden cards (#2 Bigot and #11 Tempo Timmy against
+//! empty field and the observe tests' two sets of hidden cards (#2 Speciesist and #11 Tempo Timmy against
 //! #53 Reno and #20 Pointmaster, a face-down #41 Sheepish against #60 Bear Honeypot, the same cost).
 //! `observe.rs` holds the property over real states.
 

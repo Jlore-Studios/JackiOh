@@ -113,7 +113,7 @@ board still fits 1280×720 and 390×844.
     keeps the base line less any keyword the catalog's `radiant.keywords` drops (#86's Can't
     attack);
   - a clause the cell restates (the same leading §6.2 trigger: `Cry:`, `Death:`, `Aura:`,
-    `Combo N:`, …) replaces that base sentence (radiant Bigot prints one Cry, #46 one Aura);
+    `Combo N:`, …) replaces that base sentence (radiant Speciesist prints one Cry, #46 one Aura);
   - anything else the cell says (a changed number, "Also …", a new trigger) prints under a gold
     rule after the kept base text, and a bare "same" is not printed.
   When the radiant cell is empty or equal to the base text (#8, #38, #80, #81, #96, the tokens with
@@ -1110,7 +1110,7 @@ The deck builder does the same for its own buttons by scoping every button rule 
   cards of one theme share all four. Every theme of four or more cards spreads over at least two
   layouts, three backdrops and two skies, and the four largest themes use every layout (vitest).
 - **B41.** After each add or removal, `db-deck-status` (`role="status"`, polite) names the card,
-  the deck and its count ("Bigot added to Deck 1 · 7/20"), or the deck that already holds a card
+  the deck and its count ("Speciesist added to Deck 1 · 7/20"), or the deck that already holds a card
   a "+" could not add, and clears after `DECK_STATUS_MS` (jsdom, fake timers).
 - **B42.** A prompt option that names a card (a mulligan, a Discover, a card from hand) draws the
   card's full `CardFace` inside the `prompt-option-<key>` button, filling the box prompt.css gives

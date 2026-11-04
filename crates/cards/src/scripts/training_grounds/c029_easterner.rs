@@ -1,4 +1,4 @@
-//! SPEC §8.11 Training Grounds 29 Oriental: (3) Unit, CN, Epic, 5/9 → 10/18, a card of the held
+//! SPEC §8.11 Training Grounds 29 Easterner: (3) Unit, CN, Epic, 5/9 → 10/18, a card of the held
 //! Training Grounds set (R1420, R2194000).
 //!
 //! Base:    "Cry: Destroy all permanents in the leftmost lane."
@@ -45,7 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #29 Oriental — SPEC §8.11 row 29, BUILD M13 row TG 29.
+// TG #29 Easterner — SPEC §8.11 row 29, BUILD M13 row TG 29.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -55,7 +55,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const ORIENTAL: &str = super::ID;
+    const EASTERNER: &str = super::ID;
     const LANE: i32 = super::LEFTMOST;
     const BODY: &str = "core-008"; // Mr. Vanilla 4/4
     const ROCK: &str = "core-066"; // Indestructible
@@ -70,7 +70,7 @@ mod tests {
     fn swept(radiant: bool, zone: i32) -> Scenario {
         let mut s = scenario(json!({
             "p1": {
-                "hand": [{ "def": ORIENTAL, "radiant": radiant }, FILLER],
+                "hand": [{ "def": EASTERNER, "radiant": radiant }, FILLER],
                 "field": [{ "def": BODY, "lane": 4 }, { "def": BODY, "lane": LANE }],
                 "backrow": [{ "def": FIELD_SPELL, "lane": 4 }, { "def": TRAP, "lane": LANE, "faceUp": false }],
             },
@@ -80,7 +80,7 @@ mod tests {
                 "backrow": [{ "def": FIELD_SPELL, "lane": 4 }, { "def": FIELD_SPELL, "lane": LANE }],
             },
         }));
-        s.play(ORIENTAL, json!({ "zone": zone }));
+        s.play(EASTERNER, json!({ "zone": zone }));
         s
     }
 
@@ -101,7 +101,7 @@ mod tests {
         #[test]
         fn r2196003_lanes_2_to_5_are_untouched() {
             let s = swept(false, 5);
-            assert!(s.unit(P1, 5).is_some_and(|card| card.def_id == ORIENTAL));
+            assert!(s.unit(P1, 5).is_some_and(|card| card.def_id == EASTERNER));
             assert_eq!(holds(&s, P1, 4), (true, true));
             assert_eq!(holds(&s, P2, 4), (true, true));
         }
@@ -109,41 +109,41 @@ mod tests {
         #[test]
         fn s6_1_an_indestructible_one_stays() {
             let mut s = scenario(json!({
-                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p1": { "hand": [EASTERNER, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": ROCK, "lane": LANE }] },
             }));
-            s.play(ORIENTAL, json!({ "zone": 5 }));
+            s.play(EASTERNER, json!({ "zone": 5 }));
             assert!(s.unit(P2, LANE).is_some_and(|card| card.def_id == ROCK));
         }
 
         #[test]
         fn r13_a_card_beneath_a_stack_in_lane_1_resumes() {
             let mut s = scenario(json!({
-                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p1": { "hand": [EASTERNER, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": LANE }, { "def": FIENDER, "lane": LANE, "stack": true }] },
             }));
-            s.play(ORIENTAL, json!({ "zone": 5 }));
+            s.play(EASTERNER, json!({ "zone": 5 }));
             assert!(s.unit(P2, LANE).is_some_and(|card| card.def_id == BODY));
         }
 
         #[test]
         fn r2196003_played_into_lane_1_it_destroys_itself_as_well() {
             let mut s = scenario(json!({
-                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p1": { "hand": [EASTERNER, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": LANE }] },
             }));
-            s.play(ORIENTAL, json!({ "zone": LANE }));
-            s.expect_in_zone(ORIENTAL, "graveyard");
+            s.play(EASTERNER, json!({ "zone": LANE }));
+            s.expect_in_zone(EASTERNER, "graveyard");
             assert!(s.unit(P2, LANE).is_none());
         }
 
         #[test]
         fn s4_5_a_destroyed_card_s_death_fires() {
             let mut s = scenario(json!({
-                "p1": { "hand": [ORIENTAL, FILLER] },
+                "p1": { "hand": [EASTERNER, FILLER] },
                 "p2": { "hand": [FILLER], "library": [FILLER], "field": [{ "def": FLAGBEARER, "lane": LANE }] },
             }));
-            s.play(ORIENTAL, json!({ "zone": 5 }));
+            s.play(EASTERNER, json!({ "zone": 5 }));
             assert!(s.pile(P2, "library").iter().any(|card| card.def_id == PRIME));
         }
     }
@@ -154,7 +154,7 @@ mod tests {
         #[test]
         fn r2196003_a_10_18_that_destroys_only_the_enemy_s_lane_1_cards() {
             let mut s = swept(true, 5);
-            s.expect_stats(ORIENTAL, json!({ "attack": 10, "health": 18 }));
+            s.expect_stats(EASTERNER, json!({ "attack": 10, "health": 18 }));
             assert_eq!(holds(&s, P2, LANE), (false, false));
             assert_eq!(holds(&s, P1, LANE), (true, true));
         }
@@ -162,11 +162,11 @@ mod tests {
         #[test]
         fn r2196003_played_into_lane_1_it_spares_itself() {
             let mut s = scenario(json!({
-                "p1": { "hand": [{ "def": ORIENTAL, "radiant": true }, FILLER] },
+                "p1": { "hand": [{ "def": EASTERNER, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": LANE }] },
             }));
-            s.play(ORIENTAL, json!({ "zone": LANE }));
-            s.expect_in_zone(ORIENTAL, "field");
+            s.play(EASTERNER, json!({ "zone": LANE }));
+            s.expect_in_zone(EASTERNER, "field");
             assert!(s.unit(P2, LANE).is_none());
         }
     }

@@ -13,6 +13,14 @@
 # (`dashboard.RefreshRunners`): what every runner is doing, read from the runs going and queued
 # and their jobs. It costs a few calls and one a run, and a run's jobs read again unchanged cost no
 # rate limit (a conditional request, `gh.Cached`).
+# Those runs also stop red CI early (#2948, `events.StopRedCI`, bot/README.md "Stopping red CI
+# early"): once a required job has failed on a bot pull request's current head (its own branch,
+# never a person's, `main` or the merge queue's), the loop waits up to three minutes from the
+# failure for the run's other early jobs, records the run on bot-state, turns its auto-merge off,
+# cancels the rest of the run and queues the CI fix on the lane that owns the pull request (only
+# cancels while a run holds it). Each tick's sweep does the same, and Squishy's sweep for Squishy's
+# pull requests, which have no loop of their own. The deliveries it runs re-run a CI run with no
+# commit when a CI fix found its failing check passing locally (`ci_reruns`).
 # The hourly schedule only restarts the loop if it ever stops; the concurrency group keeps one
 # loop going and at most one waiting. Each tick also runs the sweep (bot-commands' scheduled job,
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
@@ -67,7 +75,7 @@ jobs:
       contents: write        # the state file on bot-state keeps the issue's number; a delivery's push; bot-usage
       issues: write          # the status issue, and the queue it reads and the sweep labels
       pull-requests: write   # the sweep answers and labels pull requests
-      actions: write         # whether runs are alive; start a night run and the next loop; a run's upload
+      actions: write         # whether runs are alive; start a night run and the next loop; a run's upload; stop and re-run CI
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4

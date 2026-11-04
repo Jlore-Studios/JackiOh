@@ -2730,7 +2730,7 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
 const EXPERIMENTATION: &str = "core-085";
 
 const GENNS_GREED: &str = "core-094";
-const BIGOT: &str = "core-002"; // Unit, 2
+const SPECIESIST: &str = "core-002"; // Unit, 2
 const SEVEN_SEVEN: &str = "core-025"; // Unit, 4
 
 fn fixture_card(s: &mut Scenario, id: &str, ty: &str, script: Script, cost: i32) {
@@ -2841,7 +2841,7 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
     fn r66_genn_s_greed_still_draws_every_2_cost_card_after_one_it_drew_was_cast_and_asked_r113_8_94_r135() {
         register_all();
         let mut g = scenario(
-            json!({ "p1": { "hand": [GENNS_GREED], "library": [SEVEN_SEVEN, BIGOT, BIGOT, SEVEN_SEVEN] } }),
+            json!({ "p1": { "hand": [GENNS_GREED], "library": [SEVEN_SEVEN, SPECIESIST, SPECIESIST, SEVEN_SEVEN] } }),
         );
         // A 2-cost cast-on-draw Spell whose cast asks its caster something (R70, R81).
         fixture_card(
@@ -2871,18 +2871,18 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
             .cloned()
             .collect();
         let (top, first, second) = (others.first(), others.get(1), others.get(2));
-        let bigots: Vec<CardInstance> = g
+        let speciesists: Vec<CardInstance> = g
             .state()
             .players
             .p1
             .library
             .iter()
-            .filter(|card| card.def_id == BIGOT)
+            .filter(|card| card.def_id == SPECIESIST)
             .cloned()
             .collect();
-        assert_eq!(bigots.len(), 2);
-        assert_eq!(first.map(|card| card.def_id.as_str()), Some(BIGOT));
-        assert_eq!(second.map(|card| card.def_id.as_str()), Some(BIGOT));
+        assert_eq!(speciesists.len(), 2);
+        assert_eq!(first.map(|card| card.def_id.as_str()), Some(SPECIESIST));
+        assert_eq!(second.map(|card| card.def_id.as_str()), Some(SPECIESIST));
         assert_eq!(top.map(|card| card.def_id.as_str()), Some(SEVEN_SEVEN));
 
         // The fixture is drawn first and cast (§2.4), and its cast asks.
@@ -2891,8 +2891,8 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
         g.answer(json!("a"));
         assert!(g.state().pending.is_none());
 
-        for bigot in &bigots {
-            g.expect_in_zone(&bigot.id, "hand");
+        for speciesist in &speciesists {
+            g.expect_in_zone(&speciesist.id, "hand");
         }
     }
 }

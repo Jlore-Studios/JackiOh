@@ -337,9 +337,35 @@ describe("B19 a run in progress", () => {
     fireEvent.click(byId(dungeonTestid.continueRun));
     expect(onEnter).toHaveBeenCalledTimes(1);
     expect(abandon).not.toHaveBeenCalled();
+    // R2972000: Abandon asks first; only Confirm gives the run up.
     fireEvent.click(byId(dungeonTestid.abandonRun));
+    expect(abandon).not.toHaveBeenCalled();
+    expect(byId(dungeonTestid.abandonAsk)).toHaveTextContent("Abandon this run? It ends here and cannot be undone.");
+    fireEvent.click(byId(dungeonTestid.abandonConfirm));
     expect(abandon).toHaveBeenCalledTimes(1);
     expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it("R2972000 abandoning a run asks first and only Confirm abandons", () => {
+    const abandon = vi.fn();
+    show(dungeonOf({ run: runState({ phase: { phase: "map" } }), abandon }));
+
+    fireEvent.click(byId(dungeonTestid.abandonRun));
+    expect(abandon).not.toHaveBeenCalled();
+    expect(byId(dungeonTestid.abandonAsk)).toHaveAttribute("role", "alertdialog");
+    expect(byId(dungeonTestid.abandonCancel)).toHaveFocus();
+
+    fireEvent.click(byId(dungeonTestid.abandonCancel));
+    expect(abandon).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(dungeonTestid.abandonAsk)).toBeNull();
+    expect(byId(dungeonTestid.abandonRun)).toHaveFocus();
+
+    fireEvent.click(byId(dungeonTestid.abandonRun));
+    expect(abandon).not.toHaveBeenCalled();
+    fireEvent.keyDown(byId(dungeonTestid.abandonCancel), { key: "Escape" });
+    expect(abandon).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(dungeonTestid.abandonAsk)).toBeNull();
+    expect(byId(dungeonTestid.abandonRun)).toBeInTheDocument();
   });
 
   it("B19 a finished run is no run in progress", () => {

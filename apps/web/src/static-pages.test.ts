@@ -269,7 +269,10 @@ describe("the static pages", () => {
       expect(security, `${origin} security.txt names no other host`).not.toContain(other);
       const headers = readFileSync(join(outDir, HEADERS_FILE), "utf8");
       const connect = /connect-src ([^;]+);/u.exec(headers)?.[1];
-      expect(connect, `${origin} _headers`).toBe(`'self' ${supabase ?? ""} wss://${new URL(origin).host}`);
+      // R2983000: Google Identity Services' requests beside the Supabase host the build signs in through.
+      expect(connect, `${origin} _headers`).toBe(
+        `'self' ${supabase ?? ""} https://accounts.google.com/gsi/ wss://${new URL(origin).host}`,
+      );
       expect(connect, `${origin} _headers`).toBe(connectSources(origin, supabase));
       expect(headers, `${origin} _headers names no other host`).not.toContain(`wss://${new URL(other).host}`);
       expect(headers, `${origin} _headers leaves no placeholder`).not.toMatch(/%[A-Z_]+%/u);

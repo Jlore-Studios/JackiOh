@@ -614,7 +614,7 @@ Knock-on work:
   hero at 30 health on the eighth. So two decks that do nothing end by fatigue on the second player's
   24th turn, player-turn 48, and 60 is reached only by games that heal, gain Armor, refill a deck
   (Classic #30) or replace fatigue (Core #75 Infinite Reserves). The cap becomes a backstop, fatigue
-  the usual end of a long game, and CN-Virus, Pile On, Last Hurrah, Rapid Draw and Second Wind bring
+  the usual end of a long game, and Super-Virus, Pile On, Last Hurrah, Rapid Draw and Second Wind bring
   it sooner. R2 loses "decide". **⚠ designer:** if "double" meant longer games that still end on the
   cap, the cap alone won't do it; the deck size or fatigue would have to change too.
 - The hard match ceiling (`MATCH_CEILING_MINUTES`, 60, R79): 60 player-turns at a full 75-second

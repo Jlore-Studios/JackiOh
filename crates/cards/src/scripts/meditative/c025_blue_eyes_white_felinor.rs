@@ -44,7 +44,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FELINOR: &str = "meditative-025";
-    const BIGOT: &str = "core-002"; // Cry: destroy target enemy non-Human; radiant: destroy all such.
+    const SPECIESIST: &str = "core-002"; // Cry: destroy target enemy non-Human; radiant: destroy all such.
     const GAOKAO: &str = "meditative-034"; // Destroy neither-CN-nor-KY, then Buff either.
     const MANDATE: &str = "meditative-078"; // Exile every non-CN permanent.
     const RCTA: &str = "meditative-035"; // Give a non-CN permanent the CN tag (aim: help).
@@ -115,17 +115,17 @@ mod tests {
     }
 
     #[test]
-    fn r940_bigot_cannot_pick_it_and_bigots_radiant_destroy_passes_it_by() {
-        // Base Bigot cannot pick it: the notTags [Human] declaration aims harm at a tribal tag.
-        let mut s = hunting("felinor-bigot", BIGOT, false, json!([]));
+    fn r940_speciesist_cannot_pick_it_and_speciesists_radiant_destroy_passes_it_by() {
+        // Base Speciesist cannot pick it: the notTags [Human] declaration aims harm at a tribal tag.
+        let mut s = hunting("felinor-speciesist", SPECIESIST, false, json!([]));
         let felinor = felinor_id(&s);
         s.expect_refused(|s| {
-            s.play(BIGOT, json!({ "targets": [{ "pick": "instance", "instanceId": felinor }] }))
+            s.play(SPECIESIST, json!({ "targets": [{ "pick": "instance", "instanceId": felinor }] }))
         });
-        // Radiant Bigot's destroy_all over notTags [Human] passes it by, killing only the victim
-        // (untagged, so not Human: Mr. Vanilla is Human and Bigot spares it).
-        let mut s = hunting("felinor-bigot-r", BIGOT, true, json!([{ "def": MENACE }]));
-        s.play(BIGOT, json!({}));
+        // Radiant Speciesist's destroy_all over notTags [Human] passes it by, killing only the victim
+        // (untagged, so not Human: Mr. Vanilla is Human and Speciesist spares it).
+        let mut s = hunting("felinor-speciesist-r", SPECIESIST, true, json!([{ "def": MENACE }]));
+        s.play(SPECIESIST, json!({}));
         assert!(s.unit(P2, 1).is_some(), "the Felinor stands");
         assert_eq!(s.unit(P2, 1).expect("stands").def_id, FELINOR);
         assert!(s.unit(P2, 2).is_none(), "the non-Human victim is destroyed");
@@ -227,10 +227,10 @@ mod tests {
 
     #[test]
     fn r940_a_vanilla_takes_the_immunity() {
-        let mut s = hunting("felinor-vanilla", BIGOT, true, json!([]));
+        let mut s = hunting("felinor-vanilla", SPECIESIST, true, json!([]));
         let felinor = felinor_id(&s);
         s.card_mut(felinor).vanilla = true;
-        s.play(BIGOT, json!({}));
+        s.play(SPECIESIST, json!({}));
         assert!(s.unit(P2, 1).is_none(), "without its text it is no longer immune");
     }
 
@@ -316,15 +316,15 @@ mod tests {
 
     #[test]
     fn r940_a_nerf_does_not_remove_the_immunity() {
-        // A Nerf draws one row at random, and the immunity is no keyword row: whichever it draws, Bigot's
+        // A Nerf draws one row at random, and the immunity is no keyword row: whichever it draws, Speciesist's
         // Radiant destroy still passes the Nerfed Felinor by.
         for cursor in 0..16 {
-            let mut s = hunting("felinor-nerfed", BIGOT, true, json!([]));
+            let mut s = hunting("felinor-nerfed", SPECIESIST, true, json!([]));
             let felinor = felinor_id(&s);
             s.state_mut().rng_cursor = cursor;
             run_as(&mut s, degrade(json_as(json!({ "instanceId": felinor }))), P1);
             assert!(s.card(&felinor).tuning.is_some(), "cursor {cursor}: it is Nerfed");
-            s.play(BIGOT, json!({}));
+            s.play(SPECIESIST, json!({}));
             assert_eq!(
                 s.unit(P2, 1).expect("stands").id,
                 felinor,
@@ -336,7 +336,7 @@ mod tests {
     #[test]
     fn r940_a_card_fused_onto_it_keeps_the_immunity() {
         // R77: a Fuse combines its ingredients' static flags, so the fused Felinor is as immune as it was.
-        let mut s = hunting("felinor-fused", BIGOT, true, json!([]));
+        let mut s = hunting("felinor-fused", SPECIESIST, true, json!([]));
         let felinor = s.card(felinor_id(&s)).clone();
         let mut events: Vec<GameEvent> = vec![];
         let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -355,8 +355,8 @@ mod tests {
         s.state_mut().rng_cursor = rng.cursor();
         assert_ne!(fused.def_id, FELINOR, "its definition is the fusion's own");
         assert!(immune_to_tribal_hate(s.state(), s.card(&fused.id)));
-        s.play(BIGOT, json!({}));
-        assert_eq!(s.unit(P2, 1).expect("stands").id, fused.id, "Bigot's destroy passes it by");
+        s.play(SPECIESIST, json!({}));
+        assert_eq!(s.unit(P2, 1).expect("stands").id, fused.id, "Speciesist's destroy passes it by");
     }
 
     #[test]

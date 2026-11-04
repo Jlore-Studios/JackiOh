@@ -29,7 +29,7 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
     ),
     (
         "core-090",
-        "CN-Viral Injection shuffles copies of itself (rule 4)",
+        "Super-Virus Injection shuffles copies of itself (rule 4)",
     ),
     (
         "core-095",

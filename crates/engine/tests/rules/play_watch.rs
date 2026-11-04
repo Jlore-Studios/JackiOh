@@ -1,7 +1,7 @@
 // The rest-of-game play watcher (issue #1863, R1863000): "for the rest of the game, the first time you
 // play each …" is a `never` player modifier on the caster (`watch_first_plays`) that answers its owner's
 // first resolved play of each card it names, a cast included (R70), once each. Each through a fixture
-// script (`fixtures/play_watch.rs`) before a card uses it: Stinkyscape #44 Great Replacement Theory.
+// script (`fixtures/play_watch.rs`) before a card uses it: Stinkyscape #44 Great Paperclip Theory.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

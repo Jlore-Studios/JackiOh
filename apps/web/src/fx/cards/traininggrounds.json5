@@ -39,7 +39,7 @@
   "traininggrounds-026": { cast: { motif: "vanish" } }, // Path of Exile
   "traininggrounds-027": { cast: { motif: "radiance" } }, // Hopeful Jelly Bean
   "traininggrounds-028": { cry: { motif: "lance" } }, // Occidental
-  "traininggrounds-029": { cry: { motif: "lance", palette: "Hustle/jade" } }, // Oriental
+  "traininggrounds-029": { cry: { motif: "lance", palette: "Hustle/jade" } }, // Easterner
   "traininggrounds-030": { trigger: { motif: "bless" }, death: { motif: "wipe" } }, // Floodgates
   "traininggrounds-031": { cast: { motif: "conjure" }, trigger: { motif: "radiance" }, aura: { look: "holy", scope: "side" } }, // Level Up!
   "traininggrounds-032": { cry: { motif: "bless" }, death: { motif: "bless" } }, // Selfless Protector
@@ -52,7 +52,7 @@
   "traininggrounds-039": { cast: { motif: "conjure" } }, // Call to Chaos (Training-Grounds Edition)
   "traininggrounds-039-1": "none: vanilla", // Training-Grounds Golem
   "traininggrounds-040": { bespoke: "gameDesign" }, // Goetzmann Game Design
-  "traininggrounds-041": { cry: { motif: "bolt" } }, // Legacy: Bigot
+  "traininggrounds-041": { cry: { motif: "bolt" } }, // Legacy: Speciesist
   "traininggrounds-042": { cast: { motif: "flight" } }, // Legacy: Stockpile
   "traininggrounds-043": "none: vanilla", // Legacy: Mr. Vanilla
   "traininggrounds-044": { cry: { motif: "conjure", palette: "Beast/felinor" } }, // Legacy: Duplicating Felinors

@@ -883,6 +883,190 @@ mod candidate_actions_b14 {
     }
 }
 
+/// #2976, R2976000: while the opponent's board threatens lethal, the cut keeps the switches to Defense
+/// Position that lower that threat, stand-downs or not.
+mod wall_switches_2976 {
+    use super::*;
+
+    /// Core #25, a 4-mana 7/7 with Armor 7.
+    const BIG: &str = "core-025";
+    /// Core #8 Mr. Vanilla, a 4/4.
+    const VANILLA: &str = "core-008";
+    /// Five cheap Units for p1's hand, so that its plays fill the width.
+    const FIVE_CHEAP: [&str; 5] = ["core-003", "core-008", "core-011", "core-015", "core-008"];
+
+    /// p1 at `health` with the 7/7 in Attack Position, five cheap Units in hand and the mana to play
+    /// them, against three 4/4s: the issue's example board.
+    fn facing_three_4_4s(health: i32) -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-wall-switch",
+            "p1": { "health": health, "field": [BIG], "hand": FIVE_CHEAP, "mana": 5 },
+            "p2": { "field": [VANILLA, VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// The switch of p1's first `def_id` in `position`.
+    fn switch_of(state: &GameState, def_id: &str, position: Position) -> ActionBody {
+        let unit = active_units_of(state, AI)
+            .into_iter()
+            .find(|unit| unit.def_id == def_id && unit_view(state, unit).position == position)
+            .expect("the unit stands");
+        ActionBody::SwitchPosition {
+            instance_id: unit.id.clone(),
+        }
+    }
+
+    /// R2976000: at 7 life against three 4/4s (12 face damage), the 7/7's switch to Defense would wall
+    /// every attacker, yet no 4/4 beats it, so it is no stand-down, and it comes past both widths. It is
+    /// kept, once, after the first `width` moves and before endTurn, at the root and below, in either
+    /// move order.
+    #[test]
+    fn r2976000_the_switch_that_stops_lethal_is_kept_past_the_cut_at_every_level() {
+        let state = facing_three_4_4s(7);
+        let wall = switch_of(&state, BIG, Position::Atk);
+        assert_eq!(face_threat(&state, HUMAN), 12);
+        assert_eq!(effective_life(&state, AI), 7);
+        assert!(!stands_down(&state, &wall));
+
+        let root_width = AI_BUDGET.root_branching;
+        let width = AI_BUDGET.branching;
+        let root_candidates = root_candidate_actions(&state, AI, Prices::NONE);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
+        assert!(
+            root_candidates
+                .iter()
+                .position(|action| *action == wall)
+                .is_some_and(|at| at >= root_width),
+            "{root_candidates:?}"
+        );
+        assert!(
+            candidates
+                .iter()
+                .position(|action| *action == wall)
+                .is_some_and(|at| at >= width),
+            "{candidates:?}"
+        );
+
+        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
+            for (expanded, at) in [
+                (
+                    root_expansion(&state, AI, root_width, order, &POLICY_PRIOR, Prices::NONE),
+                    root_width,
+                ),
+                (
+                    expansion(&state, AI, width, order, &POLICY_PRIOR, Prices::NONE),
+                    width,
+                ),
+            ] {
+                let walls = expanded.iter().filter(|action| **action == wall).count();
+                assert_eq!(walls, 1, "{order:?}: {expanded:?}");
+                assert_eq!(expanded.len(), at + 2, "{order:?}: {expanded:?}");
+                assert_eq!(
+                    expanded.last(),
+                    Some(&ActionBody::EndTurn),
+                    "{order:?}: {expanded:?}"
+                );
+            }
+        }
+
+        let root = root_expansion(
+            &state,
+            AI,
+            root_width,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+            Prices::NONE,
+        );
+        assert_eq!(root[..root_width], root_candidates[..root_width]);
+        assert_eq!(root[root_width], wall);
+    }
+
+    /// R2976000: off lethal nothing changes. At 13 life, one more than the 12 the 4/4s could deal, no
+    /// switch walls anything and the cut drops the 7/7's switch as R1759000 does.
+    #[test]
+    fn r2976000_off_lethal_the_cut_drops_the_switch_as_before() {
+        let state = facing_three_4_4s(13);
+        assert!(face_threat(&state, HUMAN) < effective_life(&state, AI));
+        let root_width = AI_BUDGET.root_branching;
+        let root_candidates = root_candidate_actions(&state, AI, Prices::NONE);
+        assert!(wall_switches(&state, AI, &root_candidates).is_empty());
+
+        let wall = switch_of(&state, BIG, Position::Atk);
+        let root = root_expansion(
+            &state,
+            AI,
+            root_width,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+            Prices::NONE,
+        );
+        assert!(!root.contains(&wall), "{root:?}");
+        assert_eq!(root.len(), root_width + 1, "{root:?}");
+    }
+
+    /// R2976000: at 7 life against four 7/7s (21 face damage), p1's 7/7 in Defense would soak all four
+    /// (none gets through its 7 health and Armor 8) and leave 0, its 4/4 in Defense would soak one and
+    /// leave 14, and a switch back to Attack would lower nothing. So the walls are the 7/7's switch then
+    /// the 4/4's, though the 4/4 comes first in candidate order, and the switch back is not one.
+    #[test]
+    fn r2976000_only_switches_that_lower_the_threat_count_the_least_threat_left_first() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-wall-switch-ranked",
+            "p1": { "health": 7, "field": [VANILLA, BIG, { "def": VANILLA, "position": "DEF" }] },
+            "p2": { "field": [BIG, BIG, BIG, BIG] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(face_threat(&state, HUMAN), 21);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
+        assert!(candidates.contains(&switch_of(&state, VANILLA, Position::Def)));
+        assert_eq!(
+            wall_switches(&state, AI, &candidates),
+            vec![
+                switch_of(&state, BIG, Position::Atk),
+                switch_of(&state, VANILLA, Position::Atk),
+            ]
+        );
+    }
+
+    /// R2976000: three 7/7s at 7 life against three 4/4s each wall all three alone, tied at 0 left, and
+    /// none is a stand-down. With a width of one, only the first `AI_SEARCH.position_switches` of them,
+    /// in candidate order, are kept past the cut.
+    #[test]
+    fn r2976000_at_most_the_position_switches_constant_are_kept_in_candidate_order() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-wall-switch-capped",
+            "p1": { "health": 7, "field": [BIG, BIG, BIG] },
+            "p2": { "field": [VANILLA, VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
+        let switches: Vec<ActionBody> = candidates
+            .iter()
+            .filter(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+            .cloned()
+            .collect();
+        let walls = wall_switches(&state, AI, &candidates);
+        assert_eq!(walls, switches);
+        assert_eq!(walls.len(), 3);
+        let kept = AI_SEARCH.position_switches as usize;
+        assert!(0 < kept && kept < walls.len());
+        assert!(!walls.iter().any(|wall| stands_down(&state, wall)));
+
+        let expanded = expansion(&state, AI, 1, MoveOrder::Heuristic, &POLICY_PRIOR, Prices::NONE);
+        assert_eq!(expanded.len(), 1 + kept + 1, "{expanded:?}");
+        assert_eq!(expanded[..1], candidates[..1]);
+        assert_eq!(expanded[1..1 + kept], walls[..kept]);
+        assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
+    }
+}
+
 mod lanes_that_play_differently {
     use super::*;
 

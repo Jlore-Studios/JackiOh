@@ -276,7 +276,7 @@ mod seed_search_survives_a_pool_change {
     use super::*;
     use jackioh_engine::testkit::{clear_overrides, register_catalog, seed_where};
 
-    const BIGOT: &str = "core-002";
+    const SPECIESIST: &str = "core-002";
     const PREM_PANTHER: &str = "core-032";
     const RENO: &str = "core-053";
     const SURGERY: &str = "core-063";
@@ -338,12 +338,12 @@ mod seed_search_survives_a_pool_change {
             "{moved} of {SEEDS_COMPARED} seeds' offers moved"
         );
 
-        // The converted Craft position needs no Discover: Bigot and Twisted Sorcerer are fused directly (R77).
+        // The converted Craft position needs no Discover: Speciesist and Twisted Sorcerer are fused directly (R77).
         let mut s = scenario(json!({
             "p1": { "hand": [RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [PREM_PANTHER] },
         }));
-        craft_fused(&mut s, PlayerId::P1, &[BIGOT, TWISTED_SORCERER]);
+        craft_fused(&mut s, PlayerId::P1, &[SPECIESIST, TWISTED_SORCERER]);
         let crafted = s
             .hand(PlayerId::P1)
             .iter()

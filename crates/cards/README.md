@@ -53,7 +53,7 @@ differ from the card's name on purpose (`core/c097_zephyrs.rs` for Zephrys).
 
 | Card | File |
 | --- | --- |
-| #2 Bigot (`core-002`) | `src/scripts/core/c002_bigot.rs` |
+| #2 Speciesist (`core-002`) | `src/scripts/core/c002_speciesist.rs` |
 | #51.1 KY's Empty Notebook (`core-051-1`) | `src/scripts/core/c051_1_kys_empty_notebook.rs` |
 | Rush Token (`core-t-rush`) | `src/scripts/core/t_rush.rs` |
 | C #43 Plague Nuke (`classic-043`) | `src/scripts/classic/c043_plague_nuke.rs` |
@@ -67,7 +67,7 @@ only within its set, so look a card up by id, or by `(set, index)` with `card_de
 The file names its id and builds both faces:
 
 ```rust
-//! SPEC §8.1 #2 Bigot — 6/1 → 12/2 Unit, Human, cost 2. (what the card does, and why)
+//! SPEC §8.1 #2 Speciesist — 6/1 → 12/2 Unit, Human, cost 2. (what the card does, and why)
 
 use jackioh_engine::effects::{destroy, destroy_all};
 use jackioh_engine::prelude::*;

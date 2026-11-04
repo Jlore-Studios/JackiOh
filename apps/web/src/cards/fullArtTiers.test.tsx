@@ -637,7 +637,7 @@ describe("R2725000 a card's version and augments on its face", () => {
 
   it("R2725000 R2725001 the other seat's copy wears the version and augments its owner's frozen loadout names, and nothing its card is not offered", () => {
     // The cards' entries as the server froze and sent them (a `cardLoadouts` frame, R1834003), read as the board
-    // reads them. Carnivorous Cube is offered the version and both augments; Bigot (core-002, a Common) is offered none,
+    // reads them. Carnivorous Cube is offered the version and both augments; Speciesist (core-002, a Common) is offered none,
     // so a frame naming them there (a newer client's, or a forged one) draws its normal face.
     const OFFERED = "core-022";
     const UNOFFERED = "core-002";

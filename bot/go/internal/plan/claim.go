@@ -131,6 +131,12 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			"previous_findings", py.Or(record.Get("last_findings"), []any{}),
 			"previous_question", py.Or(record.Get("question"), ""),
 		)
+		if decision := queue.DecisionOf(record); queue.WentAhead(decision) != "" {
+			// Nobody answered its question in time (#2986): this build goes ahead on its default.
+			planned.Set("on_default", decision)
+			planned.Set("previous_question", "")
+			planned.Set("default_note", DefaultNote(decision))
+		}
 		written := issueplan.PlanOf(py.OrStr(thread.Get("body"), ""))
 		if written != "" && assignment.Action == "build" {
 			// A person may have edited the plan in the description: the builder starts from that.
@@ -282,8 +288,20 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			source := py.OrStr(record.Get("source"), "request")
 			feedback := threads.PullFeedback(ctx.GH, ctx.Trust, number, cfg.BotLogin,
 				pyjson.Str(record.Get("feedback_since")), issueNumber)
+			rerunsLeft := -1 // a CI fix of the merge queue's build, or one queued before #2948: none
 			if source == "ci" {
-				feedback += "\n\n" + CILogs(ctx, record.Get("ci_run_id"))
+				feedback += "\n\n" + ciLogs(ctx, record.Get("ci_run_id"), record.Truthy("ci_early"))
+				if record.Truthy("ci_on_head") {
+					rerunsLeft = queue.CIRerunsLeft(record, cfg.CIReruns)
+					feedback += "\n\n" + CILocalNote(rerunsLeft)
+				}
+			}
+			decision := queue.DecisionOf(record)
+			if queue.WentAhead(decision) == "" {
+				decision = nil
+			} else {
+				// Nobody answered its question in time (#2986): this revision goes ahead on its default.
+				feedback += "\n\n" + DefaultNote(decision)
 			}
 			if source == "cross-review" && record.Truthy("last_findings") {
 				var lines []string
@@ -310,6 +328,19 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			)
 			message = fmt.Sprintf("Starting a revision now%s, because of: %s. %s",
 				RunLink(cfg), source, startMessage(assignment, cfg, chains))
+			if decision != nil {
+				planned.Set("on_default", decision)
+			}
+			if rerunsLeft >= 0 {
+				// The fix run runs the failing check first (#2948): a pass re-runs CI with no
+				// commit while the head has re-runs left (`ci_reruns`).
+				planned.Set("ci_reruns_left", rerunsLeft)
+			}
+			if candidate.TurnNext {
+				// Its turn came after it waited behind another pull request (#2948): a merge of `main`
+				// the harness settles, cleanly or with no conflict left, needs no builder.
+				planned.Set("turn", true)
+			}
 			if names[labelPR] && queue.Carries(record) {
 				// The work job tells its builder and reviewer; deliver decides from git alone.
 				planned.Set("cleared", queue.Cleared(record))
@@ -343,10 +374,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
-	if record.Truthy("session") && !candidate.OwnReview {
+	if record.Truthy("session") && !candidate.OwnReview && !candidate.TurnNext && !planned.Has("on_default") {
 		// The Claude session the item's last run kept, which a run on its subscription resumes
 		// (#2748): the record only; the work job fetches the sealed file itself. Not an own review
-		// run's: it reviews and fixes in fresh sessions, never its build's (#2903).
+		// run's: it reviews and fixes in fresh sessions, never its build's (#2903); nor a turn's
+		// resolution, a fresh session too (#2948); nor a go-ahead on a question's default (#2986).
 		planned.Set("session", record.Get("session"))
 	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).
@@ -403,6 +435,9 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		}
 		if kind == "build" {
 			entry.Pop(queue.BuildNextKey) // the lane its planning run kept is this run's now (#2903)
+		}
+		if kind == "revise" {
+			entry.Pop(queue.TurnKey) // and the lane kept for its turn (#2948)
 		}
 		handedOff := ""
 		if kind != "review" {
@@ -501,13 +536,28 @@ func SendBackable(ctx *hctx.Context, number int) []any {
 
 // CILogs is the tails of the failed jobs of one CI run, fenced as data.
 func CILogs(ctx *hctx.Context, runID any) string {
+	return ciLogs(ctx, runID, false)
+}
+
+// CIEarlyNote is what a CI fix of a run the status loop stopped early is told of it (#2948).
+var CIEarlyNote = "The harness stopped this CI run early, once a required job had failed on the head " +
+	"(#2948): the rest of its jobs were cancelled, not failed, so only the failed ones are below, " +
+	"and the required checks that did not run yet run in full on whatever you push."
+
+// ciLogs is CILogs; `early` is a run the status loop stopped once a required job had failed
+// (`events.StopRedCI`): its cancelled jobs say nothing, so only the failed ones are given.
+func ciLogs(ctx *hctx.Context, runID any, early bool) string {
 	if !pyjson.Truthy(runID) {
 		return prompts.Data("(no CI run was recorded)", "CI failure")
+	}
+	red := []string{"failure", "timed_out", "cancelled"}
+	if early {
+		red = config.CIRed
 	}
 	var jobs []*pyjson.Object
 	if exc, failed := herr.Catch[*herr.GitHubError](func() {
 		jobs = filter(ctx.GH.ListJobs(runID, false), func(j *pyjson.Object) bool {
-			return py.In(j.Get("conclusion"), "failure", "timed_out", "cancelled")
+			return py.In(j.Get("conclusion"), red...)
 		})
 		// The failed first: a merge-queue build cancels the rest of its run once a required check
 		// failed (ci.yml's `queue-cancel-*`), and those cancelled jobs say nothing.
@@ -534,7 +584,32 @@ func CILogs(ctx *hctx.Context, runID any) string {
 	if text == "" {
 		text = "(no failed job found)"
 	}
+	if early {
+		return CIEarlyNote + "\n\n" + prompts.Data(text, "CI run "+py.Str(runID))
+	}
 	return prompts.Data(text, "CI run "+py.Str(runID))
+}
+
+// CILocalNote is what a CI fix of a pull request's own head is told to do first (#2948, the
+// owner's decision of 2026-11-03: no flake re-run before the fix; the fix run judges): run the
+// failing check itself. With re-runs of the head left (`ci_reruns`), a pass changes nothing and
+// says so, and CI runs again with no commit, which costs none of its CI fixes; with none left, a
+// pass is not enough.
+func CILocalNote(rerunsLeft int) string {
+	first := "Before you change anything, run the failing check locally: the failed jobs' steps as " +
+		"`.github/workflows/ci.yml` runs them (CLAUDE.md's Commands name most of them), on this branch " +
+		"as it stands, `main` merged in."
+	if rerunsLeft > 0 {
+		return first + " If it passes and nothing on this branch needs changing for it, change nothing, " +
+			"and add `\"ci_local\": \"passed\"` to the first line of your final message: the harness " +
+			"then runs CI again on this head with no commit, and that costs none of its CI fixes (once " +
+			"per head). If it fails, fix the cause; the harness runs the full local checks before it " +
+			"pushes."
+	}
+	return first + " CI already ran this head again with no commit after a local pass, and it " +
+		"failed again, so a local pass is not enough now: find why CI fails where your run passes (a " +
+		"flaky or order-dependent test, a timeout, what the runner has that your run has not) and fix " +
+		"that. A revision that changes nothing counts as a CI fix that failed."
 }
 
 // Chains is whether the run `assignment` makes of `candidate` hands its lane to the change's own
@@ -571,4 +646,7 @@ func ownReviewPlan(planned *pyjson.Object, record *pyjson.Object) {
 	planned.Set("built_gates", py.Or(reserved.Get("gates"), []any{}))
 	planned.Set("built_by", reserved.Str("provider"))
 	planned.Set("source", py.OrStr(reserved.Get("source"), "build"))
+	// The CI fixes the pull request has had (#2948): its final check fixes red CI in the run only
+	// while they are not used up (`max_failures`).
+	planned.Set("ci_fixes", py.MustInt(py.Or(record.Get("ci_fixes"), 0)))
 }

@@ -3,7 +3,7 @@
 //! Base and Radiant: "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
 //! Engine: `shuffle_into({ defId: "meditative-028-1", count: param("curses"), player: opponent })`
 //! (§6.3 Shuffle into, R80's library cap, a public `shuffledIn`), the same shape as Core #90
-//! CN-Viral Injection. The curses belong to the deck's owner and are Created cards (ME-CREATED).
+//! Super-Virus Injection. The curses belong to the deck's owner and are Created cards (ME-CREATED).
 
 use jackioh_engine::prelude::*;
 

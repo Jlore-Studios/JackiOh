@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState, type ReactElement } from "react";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
+import "./entry-card.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getQuests, keptPaths, replaceQuest, type QuestsResponse } from "../net/api.ts";
@@ -105,62 +106,68 @@ export function QuestsList({
             return (
               <li
                 key={quest.questId}
-                className="account-quests__quest"
+                className="account-quests__quest entry-card"
                 data-testid={questsTestid.quest}
                 data-quest-id={quest.questId}
               >
-                <span className="account-quests__title">{title}</span>
-                <progress max={quest.target} value={quest.progress} aria-label={title} />
-                <span data-testid={questsTestid.progress}>
-                  {t("{progress} of {target}", {
-                    progress: formatNumber(quest.progress),
-                    target: formatNumber(quest.target),
-                  })}
-                </span>
-                <span className="account-quests__reward">
-                  {t("{jlore} Jlore · {xp} XP", { jlore: formatNumber(quest.jlore), xp: formatNumber(quest.xp) })}
-                </span>
-                {canReplace ? (
-                  confirming === quest.questId ? (
-                    <div className="row" role="alertdialog" aria-label={t("Replace this quest?")}>
-                      <p>{t("You lose its progress and get a different quest.")}</p>
-                      <button
-                        type="button"
-                        data-testid={questsTestid.replaceConfirm}
-                        disabled={busy}
-                        onClick={() => {
-                          void confirmReplace(quest.questId);
-                        }}
-                      >
-                        {t("Replace it")}
-                      </button>
+                <div className="entry-card__header">
+                  <span className="account-quests__title entry-card__title">{title}</span>
+                </div>
+                <div className="entry-card__body">
+                  <progress max={quest.target} value={quest.progress} aria-label={title} />
+                  <span data-testid={questsTestid.progress}>
+                    {t("{progress} of {target}", {
+                      progress: formatNumber(quest.progress),
+                      target: formatNumber(quest.target),
+                    })}
+                  </span>
+                </div>
+                <div className="entry-card__footer">
+                  <span className="account-quests__reward entry-card__pill">
+                    {t("{jlore} Jlore · {xp} XP", { jlore: formatNumber(quest.jlore), xp: formatNumber(quest.xp) })}
+                  </span>
+                  {canReplace ? (
+                    confirming === quest.questId ? (
+                      <div className="row entry-card__confirm" role="alertdialog" aria-label={t("Replace this quest?")}>
+                        <p>{t("You lose its progress and get a different quest.")}</p>
+                        <button
+                          type="button"
+                          data-testid={questsTestid.replaceConfirm}
+                          disabled={busy}
+                          onClick={() => {
+                            void confirmReplace(quest.questId);
+                          }}
+                        >
+                          {t("Replace it")}
+                        </button>
+                        <button
+                          type="button"
+                          className="link-button"
+                          data-testid={questsTestid.replaceCancel}
+                          onClick={() => {
+                            setConfirming(null);
+                          }}
+                        >
+                          {t("Keep it")}
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
                         className="link-button"
-                        data-testid={questsTestid.replaceCancel}
+                        data-testid={questsTestid.replace}
+                        aria-label={t("Replace {quest}", { quest: title })}
+                        disabled={busy}
                         onClick={() => {
-                          setConfirming(null);
+                          setReplaceError(null);
+                          setConfirming(quest.questId);
                         }}
                       >
-                        {t("Keep it")}
+                        {t("Replace")}
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="link-button"
-                      data-testid={questsTestid.replace}
-                      aria-label={t("Replace {quest}", { quest: title })}
-                      disabled={busy}
-                      onClick={() => {
-                        setReplaceError(null);
-                        setConfirming(quest.questId);
-                      }}
-                    >
-                      {t("Replace")}
-                    </button>
-                  )
-                ) : null}
+                    )
+                  ) : null}
+                </div>
               </li>
             );
           })}

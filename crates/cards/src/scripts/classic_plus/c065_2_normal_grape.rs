@@ -59,7 +59,7 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038"; // Unit printing Spell Damage +2
     const DECK_A: &str = "core-011"; // Tempo Timmy, (1) Unit
     const DECK_B: &str = "core-001"; // Big D-fender, (2) Unit
-    const DECK_C: &str = "core-002"; // Bigot, (2) Unit
+    const DECK_C: &str = "core-002"; // Speciesist, (2) Unit
     const DECK_D: &str = "core-003"; // Right-house defender, (1) Unit
     const BILLY: &str = "classicplus-069"; // Buff Billy, an (X) Unit
 

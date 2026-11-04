@@ -9,7 +9,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{
     Bench, hand_ids, in_hand, new_game, next_nonce, put, set_library, slot,
 };
-use crate::rules::fixtures::scripts::{cn_virus, infinite_reserves};
+use crate::rules::fixtures::scripts::{infinite_reserves, super_virus};
 
 const TOKEN: &str = "fx-token-rush";
 
@@ -417,7 +417,7 @@ mod r316_library_overflow {
     }
 
     #[test]
-    fn r316_reports_nothing_below_the_cap_and_a_cn_virus_chain_at_the_cap_turns_its_second_copy_away() {
+    fn r316_reports_nothing_below_the_cap_and_a_super_virus_chain_at_the_cap_turns_its_second_copy_away() {
         let mut roomy = new_game("r316-roomy", None);
         set_library(&mut roomy, PlayerId::P1, &lib(&["fx-1"]));
         let mut roomy_sink = Bench::new(&roomy);
@@ -435,10 +435,10 @@ mod r316_library_overflow {
             Vec::<Value>::new()
         );
 
-        // A full library with a CN-Virus on top: the draw takes it (59 left), the cast shuffles two
+        // A full library with a Super-Virus on top: the draw takes it (59 left), the cast shuffles two
         // copies in, the first fills the library to 60 and the second is never created.
         let mut state = new_game("r316-virus", None);
-        let mut library = vec![cn_virus().id];
+        let mut library = vec![super_virus().id];
         library.extend(vec!["fx-1".to_string(); (LIBRARY_CAP - 1) as usize]);
         set_library(&mut state, PlayerId::P1, &library);
         let mut sink = Bench::new(&state);
@@ -451,7 +451,7 @@ mod r316_library_overflow {
             .collect();
         assert_eq!(
             Value::Array(refused),
-            json!([["p1", cn_virus().id, "notCreated"]])
+            json!([["p1", super_virus().id, "notCreated"]])
         );
         assert!(state.players.p1.library.len() <= LIBRARY_CAP as usize);
     }

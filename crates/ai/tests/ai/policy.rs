@@ -32,7 +32,8 @@ fn states() -> Vec<(GameState, PlayerId)> {
 }
 
 /// Today's expansion: the first `width` candidates but End Turn, then the first `position_switches`
-/// stand-downs the cut left out (R1759000), then End Turn when it is one.
+/// stand-downs the cut left out (R1759000), then the first `position_switches` switches to Defense that
+/// lower a lethal threat (`wall_switches`, R2976000) that both left out, then End Turn when it is one.
 fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat, Prices::NONE);
     let mut moves: Vec<ActionBody> = candidates
@@ -48,6 +49,12 @@ fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
         .cloned()
         .collect();
     moves.extend(left_out);
+    let walls_left_out: Vec<ActionBody> = wall_switches(state, seat, &candidates)
+        .into_iter()
+        .filter(|wall| !moves.contains(wall))
+        .take(AI_SEARCH.position_switches.max(0) as usize)
+        .collect();
+    moves.extend(walls_left_out);
     if candidates.contains(&ActionBody::EndTurn) {
         moves.push(ActionBody::EndTurn);
     }

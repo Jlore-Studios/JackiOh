@@ -54,7 +54,7 @@ chalk (the set keeps blade for #18's knives and chalk for #38's teacher).
 | `traininggrounds-026` | Path of Exile | Spell | cast vanish | 1.45 | vanish | kept: #2784's example; the census agrees (vanish) |
 | `traininggrounds-027` | Hopeful Jelly Bean | Spell | cast radiance | 1.45 | none: no motif reads radiantSet | cast: no census family reads radiantSet, which radiance (#2793) reads |
 | `traininggrounds-028` | Occidental | Unit | cry lance | 1.55 | bolt | cry: the census's bolt saw about one card destroyed per Cry, the lane mostly holding one; its Cry clears the whole rightmost lane, which lance draws |
-| `traininggrounds-029` | Oriental | Unit | cry lance Hustle/jade | 1.55 | lance | cry: the census agrees (lance); Hustle's jade sub-look (the CN jade line, its CN tag) sets it apart from #28 |
+| `traininggrounds-029` | Easterner | Unit | cry lance Hustle/jade | 1.55 | lance | cry: the census agrees (lance); Hustle's jade sub-look (the CN jade line, its CN tag) sets it apart from #28 |
 | `traininggrounds-030` | Floodgates | Unit | death wipe; trigger bless | 1.55 | bolt | death: kept, #2800's wipe over its own side (the census's bolt is its destroyed); trigger: the census's vanish is other cards' exiles in its window, its own effect Armor on itself (keywordGranted), which bless reads |
 | `traininggrounds-031` | Level Up! | Field Spell | cast conjure; trigger radiance; aura holy side | 1.55 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census never saw this hook fire; radiance reads its radiantSet |
 | `traininggrounds-032` | Selfless Protector | Unit | cry bless; death bless | 1.35 | vanish | cry: its Radiant face's Cry gives its Units Divine Shield (keywordGranted), which bless reads; the base face has no Cry, so it draws nothing there; death: the census's vanish is one stray bounce, against its 16 Divine Shields granted (keywordGranted), which bless reads |
@@ -67,7 +67,7 @@ chalk (the set keeps blade for #18's knives and chalk for #38's teacher).
 | `traininggrounds-039` | Call to Chaos (Training-Grounds Edition) | Spell | cast conjure | 1.85 | none: no motif reads keywordGranted | cast: the census's keywordGranted is one of its ten random effects (its many grants); conjure reads the four that summon, as Core's Call to Chaos takes |
 | `traininggrounds-039-1` | Training-Grounds Golem | Unit | none: vanilla | — | not in census | a token the census never played: keywords only, which the keyword beats draw |
 | `traininggrounds-040` | Goetzmann Game Design | Spell | bespoke gameDesign | 1.60 | none: no motif reads addedToHand | bespoke: the set's Mythic, its designer's card: drafted at the board's centre in Mythic rays and dealt into the hand, which send's small flight undersells |
-| `traininggrounds-041` | Legacy: Bigot | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
+| `traininggrounds-041` | Legacy: Speciesist | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
 | `traininggrounds-042` | Legacy: Stockpile | Spell | cast flight | 1.08 | bolt | cast: the census's bolt is the fatigue its draws deal; its own effect is drawn, which flight reads |
 | `traininggrounds-043` | Legacy: Mr. Vanilla | Unit | none: vanilla | — | none: vanilla | the census agrees: no text |
 | `traininggrounds-044` | Legacy: Duplicating Felinors | Unit | cry conjure Beast/felinor | 1.28 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads, in Beast's felinor sub-look |
@@ -116,7 +116,7 @@ Each takes a motif for now; a later part may give it a set piece.
 |---|---|---|
 | #51 Legacy: Big Felinor | its Cry destroys every non-Felinor Unit, both sides | `cry: wipe` |
 | #28 Occidental | its Cry destroys every permanent in the rightmost lane | `cry: lance` |
-| #29 Oriental | its Cry destroys every permanent in the leftmost lane | `cry: lance` |
+| #29 Easterner | its Cry destroys every permanent in the leftmost lane | `cry: lance` |
 | #30 Floodgates | its Death destroys all its controller's Units | `death: wipe` |
 | #39 Call to Chaos (Training-Grounds Edition) | some of its ten random effects take the whole board (six permanents, five Rush Tokens and a rule for the game) | `cast: conjure` |
 

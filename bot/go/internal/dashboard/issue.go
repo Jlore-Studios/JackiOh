@@ -67,7 +67,12 @@ func Section(ctx *hctx.Context) string {
 	lines := []string{SectionStart, LanesMark_(ctx, state, live, halted), "## 🫧 " + title, "",
 		halt + "_@" + ctx.Cfg.BotLogin + ", on its own Claude " +
 			"account and GitHub's runners. `" + slash + " status` gives the same facts on demand._",
-		"", Headline(ctx, live, explained), "", "### What it is working on", ""}
+		"", Headline(ctx, live, explained), ""}
+	if rows := DecisionRows(ctx, state, issues, false); len(rows) > 0 {
+		// Its items that wait for a person's decision, first (#2986).
+		lines = append(append(append(lines, "### Needs a decision", ""), rows...), "")
+	}
+	lines = append(lines, "### What it is working on", "")
 	// The night bot's two charts, for this bot's runs and lanes: the timeline, then the boxes.
 	if running := RunningTable(ctx, state, live, issues); len(running) > 0 {
 		lines = append(append(lines, running...), "")
@@ -128,8 +133,10 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 			"are counted every "+
 			"%d. Times are Central; hover one "+
 			"to see how long it ran. `%s status` gives the same facts on demand.</sub>",
-			EveryMinutes, RunnersMinutes, int(stats.StatsEvery/time.Minute), config.Slash), "",
-		"## ⚡ Running now", "")
+			EveryMinutes, RunnersMinutes, int(stats.StatsEvery/time.Minute), config.Slash), "")
+	// What waits for a person's decision first (#2986): it is what a person can unblock.
+	lines = append(lines, DecisionsSection(ctx, state, issues)...)
+	lines = append(lines, "## ⚡ Running now", "")
 	var running []string
 	if table := RunningTable(ctx, state, live, issues); len(table) > 0 {
 		running = append(table, "")

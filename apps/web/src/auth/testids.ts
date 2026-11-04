@@ -84,6 +84,8 @@ export const loginTestid = {
   // R666: one button per configured OAuth provider (`data-provider` names it).
   oauth: "login-oauth",
   oauthError: "login-oauth-error",
+  // R2983000: the slot Google's own button is drawn in.
+  googleButton: "login-google-button",
 } as const;
 
 export const resetTestid = {

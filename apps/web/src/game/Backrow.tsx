@@ -87,6 +87,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
           card={entry}
           unit={unit}
           switchTarget
+          onField
           type={entry.type}
           owner={entry.owner}
           controller={entry.controller}
@@ -109,6 +110,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
       <Card
         testId={testId}
         card={entry}
+        onField
         type={entry.type}
         owner={entry.owner}
         controller={entry.controller}

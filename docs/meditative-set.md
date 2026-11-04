@@ -1112,7 +1112,7 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
 
   Helpful tag-filtered effects still reach it. The Radiant face adds §6.1 Immutable, which blocks
   Transform, Vanilla, Fuse-onto, Nerf and Buff (R23, R386). The existing hate it skips is Core #2
-  Bigot's base pick (`notTags: [Human]`) and its Radiant `destroy_all`. Core #43 Big Felinor's
+  Speciesist's base pick (`notTags: [Human]`) and its Radiant `destroy_all`. Core #43 Big Felinor's
   `notTags: [Felinor]` is moot while the card is a Felinor. Meditative #34, #45, #45.1, #52 and #78 are
   covered under ME-TRIBAL below.
 - **Rulings:** MD-B1 (what the immunity covers). A Nerf may remove the keyword: it is the card's own
@@ -1199,7 +1199,7 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
 - **Text:** Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck.
 - **Radiant:** Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck.
 - **Engine:** `shuffle_into({ defId: "meditative-028-1", count: param("curses"), player: opponent })`
-  (§6.3 Shuffle into, R80's library cap, a public `shuffledIn`), the same shape as Core #90 CN-Viral
+  (§6.3 Shuffle into, R80's library cap, a public `shuffledIn`), the same shape as Core #90 Super-Virus
   Injection. The curses belong to the deck's owner and are Created cards (ME-CREATED). The card's
   `refs` are `[meditative-028-1]`.
 - **Numbers:** curses 1 → 2 ↑.
@@ -1217,11 +1217,11 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
   Cast on draw: Take {damage} damage.
 - **Engine:** §6.2 Cast on draw (`static_flags.cast_on_draw`), which is a cast (R40, R70). It deals one
   `damage` instance from this card to its caster's own hero, through §4.4, with Armor applying.
-  "Take" names the caster's hero, as §7 reads CN-Virus. The caster is whoever drew it (R549 covers a
+  "Take" names the caster's hero, as §7 reads Super-Virus. The caster is whoever drew it (R549 covers a
   card drawn out of the other deck). The Radiant face prints Pierce: under R346 a Spell's printed
   Pierce skips the Armor step. After the cast the draw repeats (§2.4) under R58's chain cap. Setup
   never deals it (R635, R748).
-- **Numbers:** damage 7 → 7 ↓ (step 2). Down is better for its caster, as with CN-Virus's numbers.
+- **Numbers:** damage 7 → 7 ↓ (step 2). Down is better for its caster, as with Super-Virus's numbers.
 - **Check:** R275 passes on the added keyword. Its (2) cost matters only if it reaches a hand uncast
   (R58's cap, R748), and it lets Book of Buff and Book of Nerf move its cost.
 - **Class:** A.
@@ -1337,7 +1337,7 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
 - **Rulings:** MD-B6 (Created), MD-B7 (the draw) and MD-B8 (the Prime pool).
 - **Numbers:** none.
 - **Check:**
-  - It draws the opponent's gifts too. Every Ancient Curse and Core #90.1 CN-Virus in your deck is
+  - It draws the opponent's gifts too. Every Ancient Curse and Core #90.1 Super-Virus in your deck is
     cast at once (7 damage per Curse), and every Love Bomb heals.
   - R275 passes: double the stats and a Prime card.
 - **Class:** C (ME-CREATED).
@@ -1631,7 +1631,7 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
      - The AI reads no text, so nothing changes for it.
   5. **Copy, transform, fuse** (MD-B11).
      - A copy of a Chinese card is Chinese, as a copy of a Radiant card is Radiant. That covers R57's
-       `clone_of`, `add_library_copies`, CN-Virus's copies, T-AI-3 and T-AI-5.
+       `clone_of`, `add_library_copies`, Super-Virus's copies, T-AI-3 and T-AI-5.
      - A Transform's or an off-field Replace's new card is not Chinese, unless its own text makes it so
        (#37).
      - A Fuse that keeps an instance keeps its flag: R77's field target, R470's hand or deck card. A
@@ -1660,7 +1660,7 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
     top down).
 - **ME-TRIBAL: tribal tags** (#25; #34 and #35 interact with it).
   - **Proposed tribes:** Human, Felinor, KY and CN, the tags that name a people. They are the four the
-    catalog's prejudice cards name: Bigot's "non-Human", Big Felinor's "non-Felinor", 高考's "non-CN or
+    catalog's prejudice cards name: Speciesist's "non-Human", Big Felinor's "non-Felinor", 高考's "non-CN or
     KY" and Occidentless Mandate's "non-CN". A card tagged All Tribes (Meditative #87) counts as each.
     Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos, Quickdraw, Jlockeed,
     Token and Wincon name card families and mechanics, so they are not tribes. The orchestrator
@@ -1674,8 +1674,8 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
   - Note: a declaration's `tags` means all of them (`play_choices::tags_allow`), while a board or card
     scope's `tags` means any of them. #34 relies on the second.
   - **Existing tag filters the builder must handle:**
-    - **Harmful, must skip an immune card:** Core #2 Bigot (its base target filter `notTags: [Human]`
-      in `c002_bigot.rs`; its Radiant `destroy_all`); Core #43 Big Felinor (`destroy_all notTags:
+    - **Harmful, must skip an immune card:** Core #2 Speciesist (its base target filter `notTags: [Human]`
+      in `c002_speciesist.rs`; its Radiant `destroy_all`); Core #43 Big Felinor (`destroy_all notTags:
       [Felinor]`); and in Meditative, #34 高考 (destroy, `notTags: [CN, KY]`), #45 Knowledge Breaker
       (Nerf every other CN and KY card), #45.1 (destroy or exile every other CN and KY card), #52
       Economic Anxiety (its +3 against a Unit that shares no tag) and #78 Occidentless Mandate (exile
@@ -2253,7 +2253,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
   - Death: NEW: ME-DECK-BOTTOM, a fresh YileGPT Unleashed created at the bottom of the deck of the
     player who controlled this as it died. R80's cap applies, and its owner's own-library list shows the
     card (R310).
-- **Rulings:** "Virus" is #49.2 Yile's Virus. The CN-Virus is a Spell token and can't be summoned, and
+- **Rulings:** "Virus" is #49.2 Yile's Virus. The Super-Virus is a Spell token and can't be summoned, and
   one name names one card (§8), so the text prints the full name.
 - **Numbers:** none.
 - **Check:** R275: stats doubled, a Radiant Virus and a Radiant Unleashed.
@@ -2351,7 +2351,7 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 - **Rulings:** "Your hero" and "your" are the Virus's controller, its victim, since #49 and #49.1 create
   it for the opponent (R12). Forced attacks still make it attack (R53; see #49.3).
 - **Numbers:** `discards` 1 → 2 ↓; `damage` 2 → 4 ↓. Better is down because the Virus's controller is
-  its victim, as CN-Virus's numbers run (§7).
+  its victim, as Super-Virus's numbers run (§7).
 - **Check:**
   - R275: the Radiant face prints 0/8 again. The proposal is 0/16, the doubled health. **⚠ designer.**
   - "non Virus" written out.
@@ -2792,7 +2792,7 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 - **Check:** R275: Radiant casts plus a tenfold life span, so it passes.
 - **Class:** B (NEW: `anyTags`).
 
-#### Meditative #61 · Joon Jorker
+#### Meditative #61 · Joon Juicer
 `meditative-061` · (3) Unit, Human · Common · 7/5 → 14/10
 
 > **Designer:** 7/5 · End of Turn: Buff the Unit to the right 5 times. ~~~ 14/10 · End of Turn: Buff the
@@ -3571,7 +3571,7 @@ Twenty-four entries: nineteen cards (#76–#94, #99 Paranoia, the designer's sec
   one Buff on each Unit `adjacent_to` this (§3.1). "All Tribes": **ME-TRIBAL**.
 - **Rulings:** **MD-E11:** the tribal tags are Human, Felinor, KY, CN and Jlockeed (`TRIBAL_TAGS`):
   the tags that name a people, a creature or a faction, the ones "tribal tag based hate" reads (Core #2
-  Bigot's non-Human, #78's non-CN, Meditative #34's non-CN or KY); Fruit, Book, Pancake and Call to
+  Speciesist's non-Human, #78's non-CN, Meditative #34's non-CN or KY); Fruit, Book, Pancake and Call to
   Chaos name card families, and Quickdraw, Plague, AI, Catalyst, Prime, Acclaimed, Wincon and Token name
   mechanics or origins. An "All Tribes" card lists every tribal tag in its catalog `tags`, so every rule
   that reads a tag (pools, filters, auras, counts) sees each one, and the frame prints "All Tribes"
@@ -3934,7 +3934,7 @@ Jlarna is played too.
   Jlockeed (MD-E11). "All Tribes" is every tribal tag in the catalog's `tags`, plus an `allTribes`
   display flag that a cross test holds to the full list, so no tag reader changes. "A card with a
   tribal tag" is a running face whose tags meet `TRIBAL_TAGS`. "Tribal tag based hate" is an effect
-  that picks cards by having or lacking a tribal tag (Bigot, #78, Meditative #34), which Meditative
+  that picks cards by having or lacking a tribal tag (Speciesist, #78, Meditative #34), which Meditative
   #25's immunity reads.
 - **ME-RANDOMTARGETS** (#86). While a Mayor acts on the field, both players' targets are drawn by the
   engine (MD-E9): `legal_actions` offers plays, activations and attacks without targets, the reducer
@@ -4063,14 +4063,14 @@ files: `crates/cards/src/scripts/meditative/c095_call_to_chaos_meditative_editio
 #### Meditative #95.1 · CN Golem
 `meditative-095-1` · (4) Unit, CN, Token · Token (printed Legendary) · 10/10 → 20/20
 
-> **Designer:** 10/10 · Rush, Poisonous, Cleave, Pierce · On kill shuffle a CN-Virus into your
+> **Designer:** 10/10 · Rush, Poisonous, Cleave, Pierce · On kill shuffle a Super-Virus into your
 > opponents deck ~~~ 20/20 · Rush, Poisonous, Cleave, Pierce, Windfury · On kill shuffle a Radiant
-> CN-Virus into your opponents deck
+> Super-Virus into your opponents deck
 
 - **Text:** Rush, Poisonous, Cleave, Pierce
-  Whenever this destroys a Unit, shuffle {viruses|CN-Virus|CN-Viruses} into your opponent's deck.
+  Whenever this destroys a Unit, shuffle {viruses|Super-Virus|Super-Viruses} into your opponent's deck.
 - **Radiant:** Rush, Poisonous, Cleave, Pierce, Windfury
-  Whenever this destroys a Unit, shuffle {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your
+  Whenever this destroys a Unit, shuffle {viruses|Radiant Super-Virus|Radiant Super-Viruses} into your
   opponent's deck.
 - **Engine:** keywords (§6.1: Rush; Poisonous, §4.4 step 7; Cleave, step 10; Pierce, step 2; Windfury,
   `WINDFURY_ATTACKS` 2, R636). A kill trigger, C+ #19.5 Bot Loser's: a `TriggerDef` on `destroyed`
@@ -4450,7 +4450,7 @@ the Lucky side (MD-G4). The designer numbered them #98, #99 and #100; M2's numbe
   - **MD-G1, what counts as a Luck-based card:** a non-token card that prints Lucky on either face
     (§6.1) or flips a coin (MD-G4). Those are the cards with a roll that Lucky improves.
     - The pool names no set (R1420). Until the release it holds Core #4 Gary the Gambler, Core #23
-      Reoccurring Dream, Core #42 Eugenics, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
+      Reoccurring Dream, Core #42 Selective Breeding, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
       Tokens, C+ #65 Two Grapes and C+ #66 Vine of Grapes. From the release on, it also holds M #36 CN
       Peptides, M #65 Keymaster Keenus (Lucky 1 was among its every keyword until patch v0.3.7, R781004), M #86 Mayor Medinamogger
       and M #102 Catboy Maid SSR+.
@@ -4959,7 +4959,7 @@ differently is corrected in its note, not here.
   acting on the field together (pile tops and face-down cards; a card beneath a pile resumes and stays,
   R13) to its controller's hand (R747; tokens cease to exist, R11; a full hand burns, R4), then Nerfs
   once (one Degrade application, R386) each bounced card that reached a hand, hidden there (R177, R440).
-- **MD-F7** (#95.1): CN Golem shuffles one CN-Virus into its controller's opponent's deck for each Unit
+- **MD-F7** (#95.1): CN Golem shuffles one Super-Virus into its controller's opponent's deck for each Unit
   it is R42's killer of, Cleave and Poisonous kills included, while it still stands on the field when
   that `destroyed` is dispatched (a Golem that died in the same combat shuffles nothing, as for every
   field trigger); the virus is the opponent's, and R80's cap refuses it.
@@ -4970,7 +4970,7 @@ differently is corrected in its note, not here.
 - **MD-F9** (#96): The Radiant Meditative Journey shuffles in a Radiant Journey Complete. **⚠ designer**:
   the printed face says "a Journey Complete", but Journey Complete's Radiant face speaks of "the cards"
   where the base says "the two", which pairs it with the Radiant Journey's five, and a Radiant face
-  making its token Radiant is the house pattern (CN-Viral Injection, C+ #48).
+  making its token Radiant is the house pattern (Super-Virus Injection, C+ #48).
 - **MD-F10** (#96.1): Journey Complete returns, in exile order, every card its memory names that is still
   in its owner's exile, to its owner's hand (R746), Radiant (Radiant face: costing 1 less); it returns
   as many as went, two from a base Journey or five from a Radiant one, the base text's "two" being the
@@ -5182,7 +5182,7 @@ policy and the timeout can answer it.
 | MB12 | #528 | the night market: #42 CN Flea Market | ME-MARKET: the stall rolled when the market opens, prices in yuan, the `market` prompt kind (buy, barter on the Radiant face, leave), the AI's and a timeout's answers, and the client's shop | #515, #525 | hard |
 | MB13 | #529 | the YileGPT line: #46 Conjure Intellect, #47 饕餮, #48 Tranquility, #49 YileGPT Tamed, #49.1 YileGPT Unleashed, #49.2 Yile's Virus, #49.3 AI Girlfriend | pick N different entries (Call to Chaos's R423 draw as a verb); `after_attacked`, the defender's mirror of R426's hook; hero immune to damage until a turn starts; `shuffle_into` at the bottom of the deck; `fuse_cards` with a random ingredient | #515 | hard |
 | MB14 | #530 | alternative plays: #45 Knowledge Breaker, #45.1 Knowledge Breaker Prime, #99 Paranoia | ME-ALTPLAY: a Unit played face down as an Animated Field Trap that fires at its controller's start of turn (#45, #45.1), a Spell played face down as a Trap that fires at a chosen timing (#99), `legal_actions` and the play action carrying the mode, `determinize` sampling them, and the client's control for it | #515 | hard |
-| MB15 | #531 | keywords and existing primitives: #55 Dragon Fruit, #56 House Party, #61 Joon Jorker, #62 Small Time Recruits, #66 Fiery Waraxe, #68 Catnip, #70 I'M WILL BE YOUR DOOM, #70.1 Ready… I'm, #73 Plate Packer, #74 Montaña Giant | R383 revised (D7, MD-D23): an "Animated on your turn" card on its controller's side since the turn began is not summoning sick when it animates (it changes C+ #12.8 Frostspatula's play: say so); `armor_on_field` (#73); it uses R1421's Prime pool (#55), already on `main` | #515 | hard |
+| MB15 | #531 | keywords and existing primitives: #55 Dragon Fruit, #56 House Party, #61 Joon Juicer, #62 Small Time Recruits, #66 Fiery Waraxe, #68 Catnip, #70 I'M WILL BE YOUR DOOM, #70.1 Ready… I'm, #73 Plate Packer, #74 Montaña Giant | R383 revised (D7, MD-D23): an "Animated on your turn" card on its controller's side since the turn began is not summoning sick when it animates (it changes C+ #12.8 Frostspatula's play: say so); `armor_on_field` (#73); it uses R1421's Prime pool (#55), already on `main` | #515 | hard |
 | MB16 | #532 | pools and fusion: #51 Devin Bot, #57 Clip-Farming Critikal, #60 Eschews, #63 Skull of J'Nari, #65 Keymaster Keenus, #67 Sentient Cat Ears, #75 Ever Growing Tree | ME-EQUIP (#67, and #65's keyword list): played onto one of your Units, it resolves and fuses into it, with the client's drop target; the catalog query's `stats` field (printed base attack and health); `fill_board_random`, `summon_random_from_hand`; a voice-line `trigger` hook (#63's lines); it uses R1422's `anyTags` (#60), already on `main` | #515, #523 | hard |
 | MB17 | #533 | riders and outside data: #50 CN Tech, #53 Prestige, #54 Money Machine, #58 Permanent Underclassman, #59 Permanent Upperclassman, #69 The Maestro | ME-STATS: a compiled-in table of card win rates (`crates/cards/data/win_rates.json` with a `cargo jackioh winrates` command, `CN_TECH_MIN_GAMES`, ties and an empty table handled), never a runtime read (CLAUDE.md rule 4); De-Radiant; an Activate either player may use (#54); ME-GRANT: a granted Death ability as plain data (#58, #59); the `manaSpent` event (#69); multi-pool `fuse_generated` (#59) | #515, #525 | hard |
 | MB18 | #535 | combat and the judge: #52 Economic Anxiety, #64 Traitorous Blood, #71 Pareto Optimality, #71.1 The Cane, #72 The Banisher | combat-only attack modifiers and the engine's `conditionTargets`, painted yellow while dragging an attack (#52); the attack half of Redirect (#64); exile on damage (#72); ME-PARETO: the engine-side judge of the AI optimal move, on the scorer, never `crates/ai` (CLAUDE.md rule 4); ME-EMOTE: an emote as an engine action and the `emoted` event while a card listens, minted by the match actor from an emote that passed the rate gate (R643 revised), hotseat and practice alike | #515, #531 | hard |

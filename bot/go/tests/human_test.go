@@ -223,7 +223,8 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 			true)),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, dig(t, result, "status"), "blocked")
-	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
+	// `bot:pr` stays, and `needs decision` goes on beside `human required` (#2986).
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired, config.LabelNeedsDecision))
 	said := lastOf(t, h.gh.BotComments(40))
 	assertTrue(t, strings.HasPrefix(said, humanPeople+" this needs a person: I cannot revise this"))
 	assertIn(t, "`/harness revise <notes>`", said)

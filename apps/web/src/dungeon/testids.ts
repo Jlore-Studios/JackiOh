@@ -43,4 +43,8 @@ export const dungeonTestid = {
   saved: "dungeon-saved",
   continueRun: "dungeon-continue",
   abandonRun: "dungeon-abandon",
+  /** R2972000: abandoning asks first; only Confirm gives the run up. */
+  abandonAsk: "dungeon-abandon-ask",
+  abandonConfirm: "dungeon-abandon-confirm",
+  abandonCancel: "dungeon-abandon-cancel",
 } as const;
