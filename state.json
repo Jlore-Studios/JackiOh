@@ -14670,6 +14670,14 @@
         "sha": "f708b86efa8e748670b154523b83c97c70f9c586",
         "tiers": {}
       }
+    },
+    "3033": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-04T09:43:21Z",
+      "issue": 3011,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
