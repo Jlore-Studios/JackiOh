@@ -1840,8 +1840,9 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
   it. Each comment says which: the statement or the package that sends it to a person, or "a
   migration with no data-losing or access-changing statement" and "no new package in the locks"
   when it merges itself. Build scripts (`build.rs`), the server's `Dockerfile` and the rest of
-  `scripts/` merge themselves, `scripts/ci-scope.sh` too: ci.yml runs the base's copy of it, so a
-  pull request cannot shrink its own CI.
+  `scripts/` merge themselves, `scripts/ci-scope.sh` too: ci.yml runs the base's copy of it and
+  only reads the pull request's (its `LINES=`, for a job it adds), so a pull request cannot shrink
+  its own CI.
 - **It cannot change its own rules.** `.github/`, `.harness/`, `bot/`, `.claude/`, `.mcp.json`,
   editor and devcontainer config, git hooks, `.gitattributes` and `.gitmodules` are forbidden
   paths (`forbidden_paths`). They are enforced twice: in the work job, which puts such a change

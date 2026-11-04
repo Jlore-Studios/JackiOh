@@ -7,9 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 )
 
@@ -66,6 +68,9 @@ func ciscopeRun(t *testing.T, event, base, head string) []string {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("the scope step failed: %v\n%s", err, out)
 	}
+	if isFile(filepath.Join(repo, "ran")) {
+		t.Fatal("the scope step ran the pull request's copy of the script")
+	}
 	text, err := os.ReadFile(output)
 	if err != nil {
 		t.Fatal(err)
@@ -73,30 +78,44 @@ func ciscopeRun(t *testing.T, event, base, head string) []string {
 	return strings.Split(strings.TrimSpace(string(text)), "\n")
 }
 
-// The base's script prints three lines; the pull request's copy shrinks them and adds a fourth.
+// The base's script prints three lines. The pull request's copy declares a fourth and tries to
+// shrink them, both by what it prints and by writing $GITHUB_OUTPUT itself, which it never gets to:
+// the step reads its `LINES=` and never runs it.
 const (
-	ciscopeBase = "#!/bin/sh\necho full=true\necho web=true\necho e2e=true\n"
-	ciscopeHead = "#!/bin/sh\necho full=false\necho web=false\necho new_job=false\n"
+	ciscopeBase = "#!/bin/sh\nLINES=\"full web e2e\"\nfor name in $LINES; do echo \"$name=true\"; done\n"
+	ciscopeHead = "#!/bin/sh\nLINES=\"full web new_job\"\necho web=false >> \"$GITHUB_OUTPUT\"\n" +
+		"touch ran\nfor name in $LINES; do echo \"$name=false\"; done\n"
 )
 
 func TestCiscope_APullRequestCannotShrinkItsOwnCIAndItsNewLineRuns(t *testing.T) {
 	for _, event := range []string{"pull_request", "merge_group"} {
-		// The base's lines win, its `e2e` too, and the line only the pull request prints is `true`.
+		// The base's lines win, its `e2e` too, and the line only the pull request declares is `true`.
 		assertEqual(t, ciscopeRun(t, event, ciscopeBase, ciscopeHead),
 			[]string{"full=true", "web=true", "e2e=true", "new_job=true", "bot=true"}, event)
 	}
 }
 
-func TestCiscope_ABaseWithNoScriptRunsEveryLineThePullRequestPrints(t *testing.T) {
+func TestCiscope_ABaseWithNoScriptRunsEveryLineThePullRequestDeclares(t *testing.T) {
 	assertEqual(t, ciscopeRun(t, "pull_request", "", ciscopeHead),
 		[]string{"full=true", "web=true", "new_job=true", "bot=true"})
 }
 
+// Only names are read from the pull request's copy, each a plain name, and only as `true`; a copy
+// whose `LINES=` the step cannot read adds nothing, and the base's lines stand.
 func TestCiscope_ThePullRequestsCopyCannotWriteAnyOtherOutput(t *testing.T) {
-	head := "#!/bin/sh\necho full=false\necho 'bad name=false'\necho 'x;y=false'\necho no-equals\necho ok_2=false\n"
+	head := "#!/bin/sh\nLINES=\"full ok_2 $(touch ran)\"\necho full=false\n"
+	assertEqual(t, ciscopeRun(t, "pull_request", ciscopeBase, head),
+		[]string{"full=true", "web=true", "e2e=true", "bot=true"})
+	head = "#!/bin/sh\nLINES=\"full ok_2\"\necho full=false\nexit 3\n"
 	assertEqual(t, ciscopeRun(t, "pull_request", ciscopeBase, head),
 		[]string{"full=true", "web=true", "e2e=true", "ok_2=true", "bot=true"})
-	// A copy that fails adds nothing: the base's lines stand.
-	assertEqual(t, ciscopeRun(t, "pull_request", ciscopeBase, ciscopeHead+"exit 3\n"),
+	assertEqual(t, ciscopeRun(t, "pull_request", ciscopeBase, "#!/bin/sh\nLINES=\n"),
 		[]string{"full=true", "web=true", "e2e=true", "bot=true"})
+}
+
+// ci-scope.sh keeps its line names in one `LINES="…"` line, the one the step reads.
+func TestCiscope_TheScriptDeclaresItsLinesOnOneLine(t *testing.T) {
+	script := readText(t, filepath.Join(config.RepoRoot, "scripts", "ci-scope.sh"))
+	assertRegex(t, script, `(?m)^LINES="[a-z0-9_ ]+"$`)
+	assertEqual(t, len(regexp.MustCompile(`(?m)^LINES=`).FindAllString(script, -1)), 1)
 }

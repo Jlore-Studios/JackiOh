@@ -30,7 +30,8 @@
 #
 # ci.yml's `changes` job runs `main`'s copy of this script, the base's, not a pull request's own
 # (#2986): an edit here scopes the pull requests after it lands, never the one that makes it, which
-# runs every job (this script changed) and any line only its copy prints, as `true`.
+# runs every job (this script changed) and any line only its copy declares in `LINES=`, as `true`
+# (read, never run). Keep `LINES=` one line of names.
 #
 # ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
 # for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
