@@ -61,33 +61,30 @@ at `none` — each have a reason:
   one hit is a bolt), traininggrounds-010 (kept, #2784's volley example), traininggrounds-017
   (one blast is a nova), traininggrounds-028 (a cleared lane is a lance), stinkyscape-003
   (kept, #2784's nova example), stinkyscape-013 (every enemy at once is a nova),
-  stinkyscape-097 (kept, #2784's barrage example), meditativeplus-005 (kept, R2784000's
-  chain example).
+  stinkyscape-097 (kept, #2784's barrage example), meditativeplus-005 (folded: R2784000's
+  chain example becomes nova, §3).
 
 ## 3. Motif use
 
-Table entries per drawn motif (hook motifs over all eight tables):
+Table entries per drawn motif (hook motifs over all eight tables), after the fold:
 
 | Motif | Cards |
 |---|---|
 | bolt | 65 |
 | barrage | 9 |
 | bind | 8 |
-| bless | 48 |
-| chain | 1 |
+| bless | 51 |
 | conjure | 114 |
 | curse | 6 |
 | deal | 59 |
 | drain | 3 |
 | flight | 35 |
-| glimpse | 2 |
 | hex | 6 |
 | lance | 11 |
 | mana | 12 |
 | mend | 13 |
-| mirror | 2 |
 | negate | 9 |
-| nova | 14 |
+| nova | 15 |
 | offering | 14 |
 | radiance | 11 |
 | recall | 3 |
@@ -100,18 +97,20 @@ Table entries per drawn motif (hook motifs over all eight tables):
 | tally | 17 |
 | tether | 15 |
 | tithe | 3 |
-| transmute | 15 |
+| transmute | 17 |
 | vanish | 27 |
 | volley | 7 |
-| ward | 2 |
 | wipe | 14 |
 
-All 35 drawn motifs are used. Four sit below `FX_MOTIF_MIN_CARDS` (3) and stay as reasoned
-exceptions: `chain` (Spirit Lash, R2784000's Examples-table citation), `ward` (Argusland's
-standing shield, Fortify Flesh's Armor), `mirror` (Rewind's repeated Cry, Juhan Biggest
-Bat's transformed Bat), `glimpse` (Fortify Mind's and Feng Shui's judgments). Folding any
-of them would break its set pass and the design doc's motif tables, so the audit keeps
-them; `docs/polish/9-card-animations.md` ("Audit") and R2803000 record the decision.
+31 drawn motifs remain, every one used by at least `FX_MOTIF_MIN_CARDS` (3) cards. The four
+below the floor are folded, per the review decision: `chain`→`nova` (Spirit Lash hits every
+Unit at once; amends R2784000's Examples-table citation, and the docs' Examples row now reads
+`cast: nova`); `mirror`→`transmute` (Rewind, Juhan Biggest Bat); `ward`→the rows (Armor's
+full shield and the Divine Shield break draw in `cues.ts` in Holy, shaking `FX_ARMOR_TRAUMA`;
+Argusland and Fortify Flesh name `bless`); `glimpse`→bespoke `mindJudge` (Fortify Mind keeps
+its judgment's sheen and flare on the hero's badge, shaking `FX_MIND_JUDGE_TRAUMA`) and
+`bless` (Feng Shui). The set passes' `.md` rows carry each move's reason. `docs/polish/9-card-animations.md`
+loses the four motif rows, and its Dispatch section no longer names `chain`.
 
 Sub-looks: all 21 `FLAVOR_SUB_LOOKS` entries are used (fewest: Beast/swarm 3, Nerd/pixel 4,
 Beast/wool 5, Physical/blade 5, Physical/sport 5). None removed.
@@ -129,17 +128,19 @@ non-`none` entries planned).
 
 ## 5. Frame time on a phone
 
-`e2e/cypress/component/fx-phone-frame.cy.tsx` plays Twisting Nether, the Starship launch,
-a Mythic takeover and a board with 4 auras at 390×844 (phone particle cap by
-`capacityFor`, pinned in-spec) and asserts each scene's mean rAF frame time within
-`FX_PHONE_FRAME_BUDGET_MS` (50 ms).
-
-Local figures (headless Chromium, software rendering, dev server — environment-bound,
-not a phone verdict): calm board 79 frames, mean 25.6 ms; Nether hold 9–10 frames, mean
-~231–252 ms; a single bolt burst ~2 frames, mean ~928 ms. The canvas layer already
-avoids `shadowBlur` (`canvasFx.ts`: layered strokes and gradients under `lighter`), so
-the local cost is SwiftShader rasterization, which no phone GPU shares; the audit
-scales back no art on headless numbers. The spec gates in CI.
+`e2e/cypress/component/fx-phone-frame.cy.tsx` plays the cap check, the Starship launch
+and a board with 4 auras at 390×844 (phone particle cap by `capacityFor`, pinned
+in-spec) and asserts each scene's mean rAF frame time within `FX_PHONE_FRAME_BUDGET_MS`
+(50 ms): 3 of 5 scenes gate the budget. Twisting Nether and the Mythic takeover keep
+their art untouched, per the review decision: their scenes render, finish and log their
+frame times instead of asserting the budget, which measures CI's software renderer and
+not a phone. Measured in headless Chromium (software rendering, dev server): Nether
+207 ms over 12 frames, Mythic takeover 125 ms over 16; calm board 79 frames, mean
+25.6 ms. The canvas layer already avoids `shadowBlur` (`canvasFx.ts`: layered strokes
+and gradients under `lighter`), so the local cost is SwiftShader fill-rate repaint,
+which no phone GPU shares; gutting flagship scenes to satisfy it would punish real
+devices. A follow-up issue (to be opened by the maintainer) tracks measuring both
+scenes on a real phone, and is cited in the spec and R2803000.
 
 ## 6. #2722's entrances
 
@@ -168,18 +169,27 @@ from the Legendary echo, pinned in `cues.test.ts`).
 `e2e/cypress/component/fx-gallery-captures.cy.tsx` plays every drawn motif mid-flight
 (first gallery card per motif through the real board layer, canvas-lit asserted,
 screenshot per motif) and every set piece (`nether`, `voidFold`, `vortex`, Starship
-launch) mid-flight and at rest. The existing `fx-layer.cy.tsx` takeover/set-piece pins
-still hold (verified green in unit tests; the component run gates in CI — no Cypress
-binary could be installed in this checkout, see §9).
+launch) mid-flight and at rest. One bounded pass at `shift`'s root cause found no defect
+in its table entry, fixture, planner or gallery staging (20 ghosts mount, 21 cues plan,
+the tier test proves its timing); the canvas never paints in that scene — even the
+card-played burst stays dark — so only `shift` is skipped, with that diagnosis cited at
+the skip, per the review decision. `negate` and `deal` stay gated: their earlier misses
+were flakiness on a contended box, with no failure on a quiet one. A follow-up issue
+(to be opened by the maintainer) tracks the `shift` root cause. The existing
+`fx-layer.cy.tsx` takeover/set-piece pins still hold (verified green in unit tests;
+the component runs gate in CI — no Cypress binary could be installed in this checkout,
+see §9).
 
 ## 8. Docs
 
 - `docs/polish/9-card-animations.md`: new "Audit" section (coverage tables, tiers,
-  motif-use floor and exceptions, phone budget, reworked entrances, captures).
+  the fold to 31 motifs, the split phone budget, reworked entrances, captures); the
+  `chain`/`ward`/`mirror`/`glimpse` motif rows are gone, Dispatch no longer names
+  `chain`, and the Examples row reads `cast: nova` for Spirit Lash.
 - `docs/ADDING_CARDS.md` row 13: checked, matches the shipped tables (motif/bespoke/
   setPiece/`none`, aura, entrance, `RECIPE_FIXTURES`, gallery) — unchanged.
-- Ruling `spec/rulings/R2803000.md` (amends R2722001) + `spec/pending/2803.md`; `cargo
-  jackioh spec check`: 1671 rulings, 4046 proofs, 50123 citations — ok.
+- Ruling `spec/rulings/R2803000.md` (amends R2722001 and R2784000's Examples table) +
+  `spec/pending/2803.md`; `cargo jackioh spec check`: 1671 rulings, 4046 proofs, 50123 citations — ok.
 
 ## 9. Verification and open items
 
@@ -197,9 +207,15 @@ reports only the pre-existing missing `pkg/luau` artifact in untouched
 `apps/web/src/wasm/luau.ts` (also fixed by the Luau build above for the web gate);
 the two new specs contribute no type errors.
 
-Decisions: keep (not fold) the four under-floor motifs, each with its set-pass
-reason (rejected: folding, which breaks passes and R2784000's cited example, or
-re-pointing other cards at them); no art scale-back on headless frame numbers
-(rejected: tuning scenes to SwiftShader); gallery Unit plays without a landing keep
-their unmeasurable hand anchor (pre-existing, out of scope — takeovers draw with a
-measurable anchor, verified with core-096).
+Decisions: fold the four under-floor motifs as the review asks (`chain`→`nova`,
+`mirror`→`transmute`, `ward`→rows + `bless`, `glimpse`→bespoke `mindJudge` + `bless`;
+rejected: keeping them as reasoned exceptions, which leaves the floor unenforced);
+keep Nether's and the takeover's art untouched with render-and-log specs instead of
+budget gates (rejected: trimming flagship scenes, or raising the budget, to satisfy a
+software renderer); skip only `shift` in the gallery spec with its diagnosis at the
+skip (rejected: skipping `negate`/`deal`, which only flaked on a contended box);
+gallery Unit plays without a landing keep their unmeasurable hand anchor
+(pre-existing, out of scope — takeovers draw with a measurable anchor, verified with
+core-096). Open: two follow-up issues for the maintainer to open — a real-phone frame
+measurement for Nether and the takeover, and the `shift` canvas root cause — cited in
+the specs, the ruling and §5/§7 above.

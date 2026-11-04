@@ -1023,7 +1023,7 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as ward, plus the Divine Shield callout", () => {
+  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as the folded ward, plus the Divine Shield callout", () => {
     forDs("divineShieldLost", (D) => {
       const land = r(FX_MOTIF_PHASES.land * D);
       expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [

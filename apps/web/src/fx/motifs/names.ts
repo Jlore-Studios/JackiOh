@@ -8,7 +8,6 @@ export const FX_MOTIF_NAMES = [
   "bolt",
   "volley",
   "barrage",
-  "chain",
   "lance",
   "nova",
   "wipe",
@@ -18,17 +17,14 @@ export const FX_MOTIF_NAMES = [
   "drain",
   "bless",
   "curse",
-  "ward",
   "conjure",
   "rise",
   "offering",
   "shift",
   "bind",
   "tether",
-  "mirror",
   "transmute",
   "flight",
-  "glimpse",
   "mana",
   "tithe",
   "tally",
@@ -47,12 +43,13 @@ export const FX_MOTIF_NAMES = [
  * The motifs `MOTIF_PLANNERS` draws: #2784's damage and removal family, then #2786's life and
  * stats, board, cards and mana, and trap motifs, then #2793's send, radiance and mend, then #2796's
  * `deal` and `seal`, then #2794's recall (R2794000), then #2797's mark (`hex`).
+ * R2803000 folds `chain` into `nova`, `mirror` into `transmute`, `ward` into the rows and
+ * `glimpse` into bespoke `mindJudge`, so 31 drawn motifs remain.
  */
 export const FX_DRAWN_MOTIFS = [
   "bolt",
   "volley",
   "barrage",
-  "chain",
   "lance",
   "nova",
   "wipe",
@@ -62,17 +59,14 @@ export const FX_DRAWN_MOTIFS = [
   "drain",
   "bless",
   "curse",
-  "ward",
   "conjure",
   "rise",
   "offering",
   "shift",
   "bind",
   "tether",
-  "mirror",
   "transmute",
   "flight",
-  "glimpse",
   "mana",
   "tithe",
   "tally",

@@ -160,7 +160,6 @@ export const FX_MOTIF_TRAUMA = {
   bolt: 0.25,
   volley: 0.3,
   barrage: 0.35,
-  chain: 0.3,
   lance: 0.4,
   nova: 0.45,
   wipe: 0.6,
@@ -170,17 +169,14 @@ export const FX_MOTIF_TRAUMA = {
   drain: 0.3,
   bless: 0.2,
   curse: 0.25,
-  ward: 0.2,
   conjure: 0.3,
   rise: 0.35,
   offering: 0.3,
   shift: 0.15,
   bind: 0.2,
   tether: 0.25,
-  mirror: 0.25,
   transmute: 0.3,
   flight: 0,
-  glimpse: 0.1,
   mana: 0,
   tithe: 0.1,
   tally: 0.15,
@@ -193,6 +189,10 @@ export const FX_MOTIF_TRAUMA = {
   recall: 0,
   hex: 0.15,
 } as const;
+// R2803000: Armor's and a Divine Shield's shake where the folded `ward` drew (cues.ts armor,
+// shieldBreak), in Holy. A judged guess's shake (bespoke `mindJudge`) stays `glimpse`'s.
+export const FX_ARMOR_TRAUMA = 0.2;
+export const FX_MIND_JUDGE_TRAUMA = 0.1;
 // R2797000: Stinkyscape's three Flourishes (fx/cards/stinkyscape/). Olivian Expanse's rift shakes as it
 // gives up its card; Imitated Instrumentality's three boots leave FX_MAGI_STAGGER of D apart, at most
 // FX_MAGI_BOOTS of them staggered, the first shaking the board; Drone Core X's Battleship warps in from
