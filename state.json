@@ -12683,15 +12683,8 @@
       "verdict_rounds": 1
     },
     "2944": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41825985572",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-04T12:35:37Z",
-        "until": "2026-11-04T13:05:37Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12703,10 +12696,9 @@
         "reason": "planned on opus",
         "trail": "work/_temp/\u2026\n- Bash: {\"command\": \"cd /tmp/plan2944 && node -e '\\nconst gen=require(\\\"fs\\\").readFileSync(\\\"/home/runner/work/_temp/work/item-2944/apps/web/src/wire/generated/cosmetics.ts\\\",\\\"utf8\\\");\\nconst of=(k)=>JSON.p\u2026\n- Bash: {\"command\": \"cd /tmp/plan2944 && node -e '\\nconst gen=require(\\\"fs\\\").readFileSync(\\\"/home/runner/work/_temp/work/item-2944/apps/web/src/wire/generated/cosmetics.ts\\\",\\\"utf8\\\");\\nconst reg=require(\\\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"generated/cosmetics.ts\\\" crates/ --include=*.rs | head -5; grep -rn \\\"reduceMotion: true\\\" apps/web/src --include=*.test.tsx | head -3; grep -n \\\"\\\\\\\"Comic\\\\\\\"\\\\|\\\\\\\"Out of fr\u2026\n- Bash: {\"command\": \"grep -n \\\"import.*writeSettings\\\" apps/web/src/economy/XpReveal.test.tsx apps/web/src/net/viewTransition.test.tsx; grep -rn \\\"export function useOsReducedMotion\\\" -A8 apps/web/src | head\u2026\n- Bash: {\"command\": \"sed -n 1,60p e2e/cypress/component/card-versions.cy.tsx; grep -n \\\"^const \\\\|^function \\\\|^describe\\\\|^ it(\\\\|^ for (const width\\\" e2e/cypress/component/card-versions.cy.tsx | head -60; \u2026\n- Bash: {\"command\": \"grep -n \\\"visual\\\" crates/tools/README.md | head -20\", \"description\": \"Find patches --visual flag docs\"}\n- Bash: {\"command\": \"grep -n \\\"const cardsCss\\\\|const cosmeticsCss\\\\|^function rules\\\\|^function hexes\\\\|^function blockFrom\\\" apps/web/src/cards/cosmetics.test.tsx; grep -n \\\"Animated foil\\\\|animatedFoil\\\" \u2026\n- Bash: {\"command\": \"grep -n \\\"test:component\\\\|\\\\\\\"typecheck\\\\\\\"\\\\|\\\\\\\"lint\\\\\\\"\\\" e2e/package.json apps/web/package.json; grep -n \\\"pixel\\\\|component\\\" scripts/ci-scope.sh | head -10\", \"description\": \"Find \u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/cards/art/convention.test.ts\", \"description\": \"Check the art convention test's scope\"}\n- Bash: {\"command\": \"grep -rn \\\"useCardLook\\\\|artPictureOf\\\" apps/web/src --include=*.tsx --include=*.ts | grep -v test | grep -v \\\"versions.ts\\\"\", \"description\": \"Find consumers of the card look\"}\n- Bash: {\"command\": \"ls crates/server/tests/ | head -30; ls crates/server/tests/api | head -5; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -20\", \"description\": \"Find server test binary \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd the last two of #2725's versions, both Mythic chases: **Immersive** (`version-immersive`) and **Prismat\u2026\n- Bash: {\"command\": \"grep -n \\\"export function fmt\\\" -A4 apps/web/src/cards/art/hash.ts; wc -w .bot-plan.md\", \"description\": \"Check fmt signature and plan length\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd the last two of #2725's versions, both Mythic chases: **Immersive** (`version-immersive`) and **Prismat\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"grep -n \\\"export function wornCosmetics\\\" -A30 apps/web/src/cards/cosmetics.ts | head -45; grep -n \\\"rarityFoil\\\" apps/web/src/cards/settings.ts | head -5\", \"description\": \"Check whether\u2026\n- Bash: {\"command\": \"cd /tmp/plan2944 && python3 -I - <<'EOF'\\nimport re\\nt=open('/home/runner/work/_temp/work/item-2944/.bot-plan.md').read()\\nsecs=re.split(r'\\\\n(?=## )',t)\\nfor s in secs:\\n print(s.split(\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \"Add the last two of #2725's versions, both Mythic chases: **Immersive** (`version-immersive`)\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \"- **`versions.test.ts`**:\\n - Append both ids to \\\"R2725001 offers match COSMETIC_OFFERS\\\".\\n\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \"- [ ] Both entries ship; the registry check passes; `generated/cosmetics.ts` is regenerated.\\\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \" - New `r2944000_part_five_appends_immersive_and_prismatic`, copying `r2943000_part_four_\\u20\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **Slicing tests in `cosmetics.rs`.** Missing one `R2944000_NEW` breaks a distan\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \"- Decisions made (the rejected option in brackets):\\n - Parallax follows the pointer's place \u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \" - Write R2944000\\u2013R2944002 with front matter (`id`, `title`, `cards`, `proven_in`: exact\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \"Do not touch:\\n- `crates/engine`, `crates/ai` or `crates/luau`.\\n- Anything in `crates/cards`\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \" - `useImmersiveShift(ref, active)` is a `useEffect([ref, active])`. While active, it adds `p\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2944/.bot-plan.md\", \"old_string\": \" - Move `starship` above `useArtMotion`. Add `const immersive = look.version === VERSION_IMME\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md && cat .bot-plan.md\", \"description\": \"Recount and print the final plan\"}\n- said: ## Goal Add the last two of #2725's versions, both Mythic chases: **Immersive** (`version-immersive`) and **Prismatic** (`version-prismatic`). - **Server.** Each has a data `offer` and starts unowned. Where not offered, it is refused with a 400 that writes nothing, and the Collection doesn't list i\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-04T12:03:26Z",
       "owner_why": "it plans it",
@@ -12719,9 +12711,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-03T16:00:53Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41825985572",
+      "run_id": "pending:5c539d78-1793795772",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T12:03:26Z",
+      "started_at": "2026-11-04T12:36:39Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15067,9 +15059,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T12:26:51Z",
+    "at": "2026-11-04T12:36:39Z",
     "url": "",
-    "what": "spot-check #2992 on claude-6"
+    "what": "build #2944 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T12:23:47Z",
