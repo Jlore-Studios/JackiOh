@@ -18089,22 +18089,15 @@
     "what": "build #3014 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-04T08:46:55Z",
+    "at": "2026-11-04T09:05:26Z",
     "notes": [
-      "#3000 is held for `claude-7` until 02:50 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered review #2996 on claude-4 (run 41800536636): stopped",
-      "delivered review #3005 on claude-8 (run 41787954157): approved",
-      "started build #3000 on claude-7 (run 41802624051)",
-      "started review #2996 on claude-4 (run 41802725765)",
-      "started plan #3014 on muse (run 41802830121)",
-      "started plan #3011 on muse (run 41802935615)",
-      "started plan #2943 on claude-3 (run 41803049110)",
-      "started revise #3007 on claude-3 (run 41803186993)",
-      "started plan #3013 on claude-8 (run 41803304222)",
-      "started plan #3012 on claude-1 (run 41803423276)",
+      "delivered plan #3014 on muse (run 41802830121): planned",
+      "delivered review #2996 on claude-4 (run 41802725765): stopped",
+      "delivered build #3000 on claude-7 (run 41802624051): interrupted",
+      "started build #3014 on muse (run 41805174249)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3014: typed it Bug"
+      "#3023: typed it Task",
+      "#3023: the production countdown, so `tracking`"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18808,7 +18801,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T08:46:55Z",
+  "loop_tick": "2026-11-04T09:05:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
