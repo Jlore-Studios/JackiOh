@@ -1263,8 +1263,9 @@ func (x *Worker) buildPass(cycle int, role string, prompt string, why string /* 
 		x.Result.Set("report", report.Body)
 		x.Result.Set("reason", reason)
 		x.Result.Set("human_required", report.HumanRequired)
-		if report.Default > 0 {
-			// Its default, which the lane that asked builds if no trusted answer comes in time (#2986).
+		if len(report.Options) > 0 {
+			// Its options, and its default, which the lane that asked builds if no trusted answer comes
+			// in time (#2986).
 			x.Result.Set("decision", pyjson.New("options", pyjson.ListOf(report.Options), "default", report.Default,
 				"gives_up", report.GivesUp, "model", x.BuildSeat.Model))
 		}

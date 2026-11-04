@@ -56,10 +56,15 @@
 #
 # Past `full`, each piece runs only when the pull request touches what that piece reads (#751):
 # scripts/ci-scope.sh prints one line per piece (its header says what turns each on) and the
-# `changes` job exports them all. fmt and clippy run on `clippy`; each `rust (test …)` group on its
-# own `rust_<scope>` line, which follows the crate graph (a server-only change runs `rust (test
-# server)` alone); the WASM modules and the client build on `web` or `e2e`; the web's typecheck,
-# lint and unit tests on `web`; e2e smoke on `e2e`; each db suite on its own `db_<suite>` line;
+# `changes` job exports them all. It runs the base's copy of the script (`main`'s, for a pull
+# request and a merge group alike, #2986), never the pull request's, so no pull request can shrink
+# its own CI: the base's copy runs every job when the script itself changes, and a line only the
+# pull request's copy prints, the scope of a job it adds, is emitted `true`, so that job runs on
+# the pull request that adds it. ci-scope.test.ts and acceptance.rs test the pull request's copy.
+# fmt and clippy run on `clippy`; each `rust (test …)` group on its own `rust_<scope>` line, which
+# follows the crate graph (a server-only change runs `rust (test server)` alone); the WASM modules
+# and the client build on `web` or `e2e`; the web's typecheck, lint and unit tests on `web`; e2e
+# smoke on `e2e`; each db suite on its own `db_<suite>` line;
 # infra/'s terraform steps, inside `rust (checks, fuzz 200)`, on `infra`. The release build, the
 # checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary accepts a skip only
 # where the skipped piece's own line is exactly `false`, and the lines are held by

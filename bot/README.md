@@ -196,7 +196,42 @@ description, for the person, and nothing is built); when a builder or reviser st
 then on it is `human`: nothing queues, plans or builds it, and a request gets one reply. A person
 may put the label on too, which triage treats as `human`. When the rest is the bot's once a
 person has done their part, they take the label off and queue it (`/harness build`); one who
-builds it all closes it ([`go/internal/human/`](go/internal/human/)).
+builds it all closes it ([`go/internal/human/`](go/internal/human/)). `needs decision` goes on
+beside it ([below](#a-question-and-its-default)), and it never goes ahead by itself.
+
+### A question and its default
+
+A builder or reviser that cannot go on without a person's decision stops with a question (#2986,
+the owner's decision of 2026-11-04). Its prompt makes it list the options (`options`) and name a
+default (`default`, the number of the one that stays inside the issue's own stated limits) with
+what it gives up (`gives_up`); one that only a person can resolve (a secret, a dashboard, an
+account, money, a path the bot may not change) is a hand-over, `"human_required": true`, which has
+no default ([above](#priority-and-human)).
+
+- **The question** goes on `bot:blocked` with **`needs decision`** beside it. The comment lists the
+  options and marks the default, says what the default gives up and when it goes ahead
+  (`decision_wait_hours`, 24, in each bot's `config.json`; 0 never goes ahead), and @-mentions the
+  operator. The item's record keeps what was asked (`decision`: when, the options and the default,
+  the subscription and model that asked, and when it goes ahead; `queue/decision.go`).
+- **A trusted person's answer** resumes it as ever: `/harness build` (or `revise <answer>` on a pull
+  request) or `@jgoetzmann-bot <answer>` queues it again, which takes `needs decision` off, and the
+  next run reads the question and the answer, not the default. A trusted person's plain comment
+  after the question does not queue it, but it keeps it from going ahead: at its end the bot says
+  so, and it waits for that person to queue it with their answer.
+- **No answer by its end:** the sweep (or the next plan's housekeeping, `plan.SyncDecisions`) takes
+  it up again on its default. The subscription that asked owns it and builds it (an issue's build,
+  or a pull request's revision with `source: default`) on the model that asked, in a fresh session,
+  by the [ownership and hold rules](#ownership-and-the-hold): held for it while only its 5-hour
+  session keeps it, else handed off. `bot:blocked` and `needs decision` come off, each other option
+  is filed as an issue of its own (its title the item's with `(option 2 of #N)`, its type and
+  difficulty labels, nothing that queues it) for a person to approve by queuing it or to close,
+  and the run's pull request says it was built on its default because nobody answered by then.
+- **A question with no default**, an older one asked before #2986 (the first sweep labels those,
+  #2882 among them, with no deadline: `plan.OlderQuestions`), and a hand-over never go ahead.
+- `needs decision` also comes off when the item closes. The status issue lists every item that
+  carries it at its top, under **Needs a decision**: how long it has waited and when it goes ahead
+  on its default, or why it never does ("never: only a person can do this"); Squishy's are in its
+  own section. A CI-capped or failed item keeps `bot:blocked` alone.
 
 **Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
 an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
@@ -374,7 +409,10 @@ Every way of asking either gets an answer at once, or is found again later:
     `tracking`, which it puts on (#2748);
   - an item held for its owner (#2748): `bot:waiting` and its comment go on while only the owner's
     5-hour session keeps it, and come off once the owner can start again or the hold runs out
-    ([Ownership and the hold](#ownership-and-the-hold)).
+    ([Ownership and the hold](#ownership-and-the-hold));
+  - an item stopped on a question (#2986): one past its end goes ahead on its default, and a closed
+    one loses `needs decision`; the first sweep also labels the questions asked before #2986
+    ([A question and its default](#a-question-and-its-default)).
 
   It leaves anything younger than ten minutes to the handler that may still be running, so
   nothing is answered twice. Last, it starts a night run when one should be going and none is:
@@ -498,18 +536,19 @@ in place of the `bot:*` ones.
 | `bot:waiting` | beside `bot:build` or `bot:revise` (or `bot:reviewing`, for an own review run its subscription cannot start yet): held for its owner (#2748): only the 5-hour session of the subscription that owns it keeps that one from taking it, and it can start again within `hold_minutes` (120), so no other subscription takes it meanwhile. The bot's one comment on the thread says for whom, until when and why, and the commands that release it (`/harness handoff …`); the planner and the sweep take the label off once the owner can start (the owner takes it next) or the hold runs out (anyone may), and so does any step that takes the item out of the queue ([Ownership and the hold](#ownership-and-the-hold)) |
 | `bot:waiting-turn` | an approved draft that waits for an overlapping pull request ahead of it to merge before it goes ready (#2948): its own review run approved it, and its final check found it conflicts once a pull request approved before it, and conflict-free, lands ([The own review run](#the-own-review-run)). It stays a draft with auto-merge off, and no lane is held meanwhile; when that pull request merges, or after `hold_minutes` (120) anyway, the same subscription and model take it up again as a conflict revision (`bot:resolving`), with its lane kept for it. A state label: any other state (a revision, a stop, a block) takes it off |
 | `bot:merging` | a bot pull request whose auto-merge the bot turned on: approved, and in CI or `main`'s merge queue (#2748). It comes off when auto-merge goes off (a revision, a hold, `/harness stop`, a block after its CI fixes), when it merges or closes, and in the sweep once nothing keeps it merging (closed, or open with auto-merge off and out of the queue). A pull request a person merges (`ready for merge`) never carries it |
-| `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
+| `bot:blocked` | it needs a person: a question (with `needs decision` beside it), findings the reviewer would not let go of, or repeated failures |
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1) |
-| `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
+| `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, a migration that loses data, changes access or edits one `main` has, a new package in a lock, `main`'s protection, GitHub refusing it, or `auto_merge` off; its comment names which), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `tracking` | a tracker or status issue, a type label: the bot comments on it and rewrites its own, but never queues, plans, builds or splits it ([above](#priority-and-human)) |
 | `difficulty:medium`, `difficulty:hard` | the weakest tier that may plan, build and approve it: medium, strong. A person may set one; otherwise the planner rates the item, by [how hard it is](#how-hard-it-is), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts. `difficulty:easy` is retired (#2748): the sweep moves it to `difficulty:medium` on every open thread, then deletes it (`config.Relabelled`), and until then it reads as medium |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
 | `person merges` | the bot builds and reviews it, but a person merges its pull request: the pull request carries the label from its issue, and the reviews' approval labels it `ready for merge` instead of turning auto-merge on (#839; the weekly hygiene issue carries it) |
 | `human required` | the bot's hand-over: it found only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account), took its own labels off, unassigned itself and assigned both people, and its comment names them and says what. People's from then on, like `human` ([above](#priority-and-human)) |
+| `needs decision` | a stop only a person can unblock (#2986), shared by both bots like `ready for merge`: a question (beside `bot:blocked`), with a default or none, and a hand-over (beside `human required`). It comes off when a trusted person answers and queues it again, when the bot goes ahead on the question's default after `decision_wait_hours` (24), and when the item closes; the status issue lists each at its top ([A question and its default](#a-question-and-its-default)) |
 
 ## Triage
 
@@ -1748,7 +1787,8 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
    its fixes and, when it approved, marks the pull request ready, unless its final check found a pull
    request ahead of it that it conflicts with: then it waits its turn as a draft (`bot:waiting-turn`,
    #2948). It turns on auto-merge only when the
-   review rule holds, no review-only path changed and `main`'s protection requires every CI
+   review rule holds, no review-only path changed, no migration or lock it changed holds what
+   keeps it for a person ([Safety](#safety)) and `main`'s protection requires every CI
    check, with the pull request's title (and number) as the squash commit's title, and records
    the approving subscription as the merge owner; otherwise the change waits for a review run
    (`bot:cross-review`) or for you. A review run that asks for changes makes its own subscription
@@ -1778,11 +1818,30 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 - **Some changes always wait for a person.** A change that touches a review-only path
   (`review_paths`) still becomes a pull request, but you are asked to review it and auto-merge
   stays off. Once the reviews approve it, it is labelled `ready for merge`, and the bot
-  @-mentions you to merge it. The review-only paths are the files that define
-  what the checks do or how the game deploys: every `package.json` and `Cargo.toml`, the
-  lockfiles, `rust-toolchain.toml`, `rustfmt.toml` and `.cargo/`, the crates' `clippy.toml`
-  (the pure crates' purity) and build scripts, the vitest, vite, eslint, TypeScript and Cypress configs, `scripts/`,
-  `wrangler.jsonc`, the server's `Dockerfile` and the database migrations.
+  @-mentions you to merge it, its comment naming why. The review-only paths are the files that
+  define what the checks check or how the game deploys: `rust-toolchain.toml`, `rustfmt.toml`, the
+  crates' `clippy.toml` (the pure crates' purity), `.cargo/`, the vitest, vite, eslint, TypeScript
+  and Cypress configs, `wrangler.jsonc`, the Worker (`apps/edge/`), `apps/web/public/_headers`,
+  `.npmrc`, `.nvmrc`, `pnpm-workspace.yaml`, and the two scripts that deploy production
+  (`scripts/promote-production.sh`, `scripts/vercel-ignore.sh`).
+- **Some merge themselves only on a condition** (#2986, the owner's decision of 2026-11-04, amended
+  the same day; `deliver/mergegate.go`, `internal/mergegate`). A database migration
+  (`migration_paths`) merges itself unless it loses data (a statement that drops a table, schema
+  or column, or runs `TRUNCATE` or `DELETE FROM`, read outside SQL comments, a function's body
+  included; any other `DROP` but of a function, trigger, index, view or constraint, and any
+  `DROP … CASCADE`, counts as one), changes who may read or write what (a policy created, altered or
+  dropped, row-level security turned on, off or forced, a `GRANT`, `REVOKE` or `ALTER DEFAULT
+  PRIVILEGES`, a `SECURITY DEFINER` function, the `auth` or `storage` schemas: production promotes
+  itself daily since #2959), or edits or deletes a migration `main` already has. A manifest or lock
+  (`Cargo.toml`, `package.json`, `lock_files`: `Cargo.lock`, `pnpm-lock.yaml`) merges itself unless
+  a lock gains a package name `main`'s lock lacks, a new dependency, direct or transitive, or a
+  changed `Cargo.toml` names a package its `Cargo.lock` does not hold (CI builds without
+  `--locked`); a version change of a package the lock has merges itself, and CI builds and tests
+  it. Each comment says which: the statement or the package that sends it to a person, or "a
+  migration with no data-losing or access-changing statement" and "no new package in the locks"
+  when it merges itself. Build scripts (`build.rs`), the server's `Dockerfile` and the rest of
+  `scripts/` merge themselves, `scripts/ci-scope.sh` too: ci.yml runs the base's copy of it, so a
+  pull request cannot shrink its own CI.
 - **It cannot change its own rules.** `.github/`, `.harness/`, `bot/`, `.claude/`, `.mcp.json`,
   editor and devcontainer config, git hooks, `.gitattributes` and `.gitmodules` are forbidden
   paths (`forbidden_paths`). They are enforced twice: in the work job, which puts such a change
@@ -2152,7 +2211,11 @@ suggestions. On top of a plain build it has four modes.
 | Subscriptions | the pool above | `claude-squishy` only (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`): Opus for every role, always on GitHub's runners |
 
 Everything else is the night bot's: the review loop and the review rule, CI fixes, handoffs, the
-rules about `human` and priorities, and the paths no change may touch. The run's shape differs in
+rules about `human` and priorities, the paths no change may touch, the merge gates (the same
+`review_paths`, `migration_paths` and `lock_files` in `.squishy/config.json`), and a question's
+default and `needs decision`, the label shared by both bots (`decision_wait_hours: 24`; it goes
+ahead on its one account, `squishy:build` or `squishy:revise`, and its section of the status issue
+lists its own). The run's shape differs in
 one way: Squishy builds, checks and reviews a change in one run (`own_review_run: false` in
 `.squishy/config.json`), with no [own review run](#the-own-review-run) after it, and opens its pull
 request ready. An
@@ -2261,7 +2324,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/trust/`, `go/internal/commands/` | who may command it, and how a comment is read |
 | `go/internal/events/`, `go/internal/queue/` | the event workflow: commands, labels, assignment, reviews, CI |
 | `go/internal/asks/` | the reactions that follow a request from its comment to its answer |
-| `go/internal/plan/`, `go/internal/work/`, `go/internal/deliver/` | the jobs of a night run (`plan.Peek_` is the gate's first question); `plan/hold.go` is an item's owner, the hold for it and `/harness handoff` (#2748); the [own review run](#the-own-review-run) is `plan.Chains` and `plan.ownReviewer`, `work.Worker.OwnReview` with `work/ci.go` (its reading of the pull request's CI), `deliver/ownreview.go` (`handOn` and `OwnReview`) and `queue/ownreview.go` (the reservation) |
+| `go/internal/plan/`, `go/internal/work/`, `go/internal/deliver/` | the jobs of a night run (`plan.Peek_` is the gate's first question); `plan/hold.go` is an item's owner, the hold for it and `/harness handoff` (#2748); the [own review run](#the-own-review-run) is `plan.Chains` and `plan.ownReviewer`, `work.Worker.OwnReview` with `work/ci.go` (its reading of the pull request's CI), `deliver/ownreview.go` (`handOn` and `OwnReview`) and `queue/ownreview.go` (the reservation); a question's default is `deliver/decision.go` (the question comment), `plan/decision.go` (`SyncDecisions`, the go-ahead and the options it files) and `queue/decision.go` (the record, #2986) |
 | `go/internal/quiet/` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
 | `go/internal/wake/` | the wake (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago and every four hours around it |
 | `go/internal/providers/` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
@@ -2273,6 +2336,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |
 | `go/internal/stepup/` | strikes, the step up and the rebuild (#317); `go/internal/easy/`, the easy rule's checks on a plan and a change, went with `difficulty:easy` in #2748 |
 | `go/internal/spotcheck/` | the after-merge spot-check (#2748): the count of medium and hard merges, every 5th queued for Opus's review of the merged change, and the record of each check's verdict, findings and follow-up issue |
+| `go/internal/mergegate/` | what a migration or a lock must not hold to merge itself (#2986): a data-losing or access-changing statement, a package `main`'s lock lacks, a Cargo dependency its lock does not hold; `deliver/mergegate.go` reads the branch's files with it |
 | `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
 | `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |

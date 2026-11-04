@@ -6,7 +6,8 @@ package plan
 //
 //   - one whose thread closed loses `needs decision` and its record;
 //   - one that waits no more (a trusted person answered, and the item was queued again, which takes the
-//     label off; or a person took the label or `bot:blocked` off) loses its record;
+//     label off; or a person took the label, `bot:blocked` or `human required` off) loses its record,
+//     and the label;
 //   - one with a default past its end (`decision_wait_hours` after it was asked) goes ahead
 //     (`goAhead`): the subscription that asked owns it, and takes it up again on the model that asked,
 //     in a fresh session, by the ownership and hold rules (held for it while only its 5-hour window
@@ -85,6 +86,11 @@ func syncDecision(ctx *hctx.Context, number int, decision *pyjson.Object) string
 		return "" // its default's run is queued or going: its delivery forgets it
 	}
 	if !names[config.LabelNeedsDecision] || !(names[config.LabelBlocked] || queue.IsHuman(names)) {
+		// A person answered (and queued it), or took `bot:blocked` or `human required` off: the label
+		// goes with the stop.
+		if names[config.LabelNeedsDecision] {
+			ctx.GH.RemoveLabel(number, config.LabelNeedsDecision)
+		}
 		dropDecision(ctx, number)
 		return fmt.Sprintf("#%d waits for no decision any more", number)
 	}

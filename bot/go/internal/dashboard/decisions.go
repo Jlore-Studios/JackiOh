@@ -51,7 +51,11 @@ func DecisionRows(ctx *hctx.Context, state *pyjson.Object, issues []*pyjson.Obje
 			continue
 		}
 		waited := clock.HumanDelta(ctx.Now().Sub(clock.ParseISOValue(decision.Get("asked_at"))))
-		rows = append(rows, fmt.Sprintf("| %s | %s | %s |", item, waited, goesAhead(ctx, decision)))
+		when := goesAhead(ctx, decision)
+		if queue.IsHuman(queue.LabelNames(issue)) {
+			when = NeverPerson // `human`, `human required`: people's, whatever its default
+		}
+		rows = append(rows, fmt.Sprintf("| %s | %s | %s |", item, waited, when))
 	}
 	if len(rows) == 2 {
 		return nil

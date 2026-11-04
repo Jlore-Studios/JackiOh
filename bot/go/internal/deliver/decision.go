@@ -49,13 +49,16 @@ func (x *Deliverer) askDecision(number int, kind, lead, kept, question, again st
 	if chosen < 1 || chosen > len(options) {
 		chosen = 0
 	}
+	if len(options) > 0 {
+		decision.Set("options", options)
+	}
 	if chosen > 0 {
 		model := py.OrStr(asked.Get("model"), "")
 		if model == "" && x.BuildSeat != nil {
 			model = x.BuildSeat.Model
 		}
-		decision.Update(pyjson.New("options", options, "default", chosen,
-			"gives_up", py.OrStr(asked.Get("gives_up"), ""), "model", model))
+		decision.Update(pyjson.New("default", chosen, "gives_up", py.OrStr(asked.Get("gives_up"), ""),
+			"model", model))
 		if x.Cfg.DecisionsGoAhead() {
 			decision.Set("hours", x.Cfg.DecisionWaitHours)
 			decision.Set("ends", clock.ISO(now.Add(time.Duration(x.Cfg.DecisionWaitHours)*time.Hour)))

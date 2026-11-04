@@ -28,6 +28,10 @@
 #   infra              `rust (checks, fuzz 200)`'s terraform steps over infra/ (#1708): fmt, init
 #                      without the backend, validate, and the lock file
 #
+# ci.yml's `changes` job runs `main`'s copy of this script, the base's, not a pull request's own
+# (#2986): an edit here scopes the pull requests after it lands, never the one that makes it, which
+# runs every job (this script changed) and any line only its copy prints, as `true`.
+#
 # ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
 # for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
 # job-level `if:` cannot see `matrix`, a first step that turns the entry's other steps off. Each

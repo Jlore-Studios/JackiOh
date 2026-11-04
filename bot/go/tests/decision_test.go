@@ -4,6 +4,7 @@ package tests
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -177,11 +178,18 @@ func TestDecision_AStopOnlyAPersonCanUnblockNeverGoesAhead(t *testing.T) {
 	assertIn(t, config.LabelNeedsDecision, h.gh.LabelNames(12))
 	section := strings.Join(dashboard.DecisionsSection(h.ctx, h.ctx.Store.Load(), h.gh.ListIssues("", "open", 300, "")), "\n")
 	assertIn(t, "| #12 Patch: Earning | 100h 00m | "+dashboard.NeverPerson+" |", section)
+	// A person did their part and handed it back: it waits for no decision.
+	h.gh.RemoveLabel(12, config.LabelHumanRequired)
+	assertEqual(t, plan.SyncDecisions(h.ctx), []string{"#12 waits for no decision any more"})
+	assertNotIn(t, config.LabelNeedsDecision, h.gh.LabelNames(12))
 }
 
 func TestDecision_AQuestionWithNoDefaultWaitsForAPerson(t *testing.T) {
-	h, _, said := decisionAsked(t, humanBlocked("Option A or B?", false))
+	h, _, said := decisionAsked(t, `<!-- bot: {"status": "blocked", "question": "Option A or B?", `+
+		`"options": ["A", "B"]} -->`+"\nStopped.")
 	assertIn(t, config.LabelNeedsDecision, h.gh.LabelNames(12))
+	assertIn(t, "1. A\n2. B\n", said) // its options, with none marked
+	assertNotIn(t, "(the default)", said)
 	assertIn(t, "It names no default, so it waits for your answer", said)
 	assertFalse(t, decisionOf(h, 12).Has("ends"))
 	decisionLater(h, 100)
@@ -266,4 +274,12 @@ func TestDecision_ARevisionsQuestionGoesAheadAsARevision(t *testing.T) {
 	assertEqual(t, []any{planned.Get("action"), planned.Get("number")}, []any{"revise", 40})
 	assertTrue(t, planned.Truthy("on_default"))
 	assertIn(t, "goes ahead on its default: option 1", planned.Str("feedback"))
+}
+
+// The docs list the label: the conventions' labels table and the bot's README.
+func TestDecision_TheDocsSayWhatTheLabelMeans(t *testing.T) {
+	for _, doc := range [][]string{{"docs", "issues-and-patches.md"}, {"bot", "README.md"}} {
+		text := readText(t, filepath.Join(append([]string{testsupport.Root}, doc...)...))
+		assertIn(t, "| `"+config.LabelNeedsDecision+"` |", text, doc)
+	}
 }
