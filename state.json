@@ -16757,17 +16757,8 @@
       ]
     },
     "2974": {
-      "action": "plan",
-      "asks": [
-        "c:6620469347"
-      ],
-      "build_next": {
-        "from_run": "41758736592",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-04T02:26:25Z",
-        "until": "2026-11-04T02:56:25Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T02:26:11Z",
         "difficulty": "medium",
@@ -16786,10 +16777,9 @@
         "reason": "planned on sonnet",
         "trail": "/\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/audio/engine.ts | head -80; grep -n \\\"export function getAudioEngine\\\" -A12 apps/web/src/audio/engine.ts; grep -n \\\"vibrate\\\" apps/web/src/haptics/haptics.test.\u2026\n- Bash: {\"command\": \"cat apps/web/src/together/config.ts; cat apps/web/src/together/testids.ts; ls apps/web/src/together | head -50; grep -n \\\"together\\\" apps/web/README.md | head -20\"}\n- Grep: {\"pattern\": \"Disconnected|Reconnecting\\u2026|Game over|Connected\", \"path\": \"/home/runner/work/_temp/work/item-2974/apps/web/src/i18n\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"ls apps/web/src/i18n/; grep -rn \\\"zh-CN\\\" apps/web/src --include=*.test.ts --include=*.test.tsx -l | head; grep -n \\\"Game over\\\" -r apps/web/src --include=*.tsx --include=*.ts | grep -v \u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/writing.test.ts; grep -n \\\"zh-CN\\\" apps/web/src/wording.test.ts | head; grep -n \\\"Math.round\\\\|\\\\* 1000\\\\|magic\\\\|number\\\" apps/web/eslint.config.* eslint.confi\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/wording.test.ts; sed -n 290,360p apps/web/src/wording.test.ts\"}\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\" apps/web/src/i18n/i18n.test.ts | head -40; sed -n 1,60p apps/web/src/game/clockUrgency.ts\"}\n- Bash: {\"command\": \"cat apps/web/src/wire/generated/PendingView.ts 2>/dev/null | head -40; grep -n \\\"pending\\\" apps/web/src/wire/generated/PlayerView.ts; grep -n \\\"turn_clock\\\\|paused\\\\|fn pause\\\" crates/se\u2026\n- Bash: {\"command\": \"cat apps/web/src/wire/generated/PendingElsewhereView.ts apps/web/src/wire/generated/PendingPromptView.ts | grep -v \\\"^//\\\" | head -40; sed -n 135,200p crates/server/src/actor/clock.rs\"}\n- Bash: {\"command\": \"grep -n \\\"fn attach_watcher\\\" -A70 crates/server/src/actor/match_actor.rs | head -120\"}\n- Bash: {\"command\": \"grep -n \\\"export function duosView\\\" -B3 -A40 apps/web/src/test/fixtures.ts; sed -n 150,200p apps/web/src/test/fixtures.ts; grep -n \\\"turnClock\\\\|turn-mechanism\\\" apps/web/src/duos/DuosB\u2026\n- Bash: {\"command\": \"sed -n 735,755p apps/web/src/game/Game.tsx; sed -n 455,480p apps/web/src/duos/DuosBoard.tsx; sed -n 520,550p apps/web/src/duos/DuosBoard.tsx; grep -n \\\"replay\\\" apps/web/src/game/Board.t\u2026\n- Bash: {\"command\": \"grep -rn \\\"watch-reconnect\\\\|watch-gone\\\" --include=*.ts --include=*.tsx --include=*.md . -l 2>/dev/null | grep -v node_modules | head; sed -n 2175,2215p apps/web/src/game/board.css\"}\n- Bash: {\"command\": \"grep -n \\\"watch\\\" -i e2e/support/testids.ts | head -20; grep -rn \\\"e2e/support/testids\\\" apps/web/src --include=*.ts -l | head; grep -n \\\"WatchRoute\\\\|watch-status\\\\|spectate\\\" apps/web/\u2026\n- Bash: {\"command\": \"grep -rn \\\"support/testids\\\" --include=*.ts --include=*.tsx --include=*.mjs --include=*.js --include=*.sh --include=*.yml . 2>/dev/null | grep -v node_modules | grep -v \\\"^./apps/web/src\u2026\n- Bash: {\"command\": \"git show --stat --format='%s' be2d49fcb | head -30; grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10\"}\n- Bash: {\"command\": \"git show --stat --format='%s' be2d49fcb | tail -15; git log -8 --stat --format='--- %s' -- apps/web/src/together | head -50; sed -n 100,125p docs/issues-and-patches.md\"}\n- Bash: {\"command\": \"grep -rn \\\"Disconnected\\\" e2e apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"node_modules\\\" | head; grep -rln \\\"WATCH_STATUS\\\\|watch-status\\\" e2e | head\"}\n- Bash: {\"command\": \"cat apps/web/src/game/connectionWords.ts; grep -n \\\"WATCH_STATUS\\\\|status\\\\|Disconnected\\\\|closed\\\" e2e/cypress/e2e/44-watch.cy.ts | head -20\"}\n- Bash: {\"command\": \"sed -n 222,245p e2e/cypress/e2e/44-watch.cy.ts\"}\n- Bash: {\"command\": \"grep -n \\\"export function usePolled\\\" -A40 apps/web/src/together/session.ts | head -60; grep -n \\\"export function useLocale\\\" -A8 apps/web/src/i18n/i18n.ts; grep -n \\\"PRESENCE_HEARTBEAT\\\u2026\n- Bash: {\"command\": \"grep -rn \\\"setAudioEngineForTests\\\" apps/web/src --include=*.ts --include=*.tsx | head; grep -n \\\"TURN_CLOCK_MS\\\\|TURN_CLOCK_SECONDS\\\" apps/web/src/wire/serverConfig.ts\"}\n- Bash: {\"command\": \"sed -n 1,50p apps/web/src/economy/XpReveal.test.tsx; grep -n \\\"export function createAudioEngine\\\" -A25 apps/web/src/audio/engine.ts | head -50; grep -n \\\"export function fakeEngine\\\\|re\u2026\n- Bash: {\"command\": \"cat apps/web/src/audio/test/fakeAudio.ts | head -70; sed -n 1,25p apps/web/src/audio/settings.ts | head -30; grep -n \\\"alarmAudible\\\" -B2 -A12 apps/web/src/audio/clockAlarm.ts | sed -n 1\u2026\n- Bash: {\"command\": \"grep -n \\\"export function fakeAudioEngine\\\" -B3 -A60 apps/web/src/audio/test/fakeAudio.ts | head -100; grep -n \\\"FakeAudioEngine\\\" apps/web/src/audio/test/fakeAudio.ts | head\"}\n- Bash: {\"command\": \"grep -rln \\\"fakeAudioEngine\\\" apps/web/src | head -12; grep -rn \\\"clockTick\\\\|heartbeat\\\" apps/web/src/audio/types.ts | head -5\"}\n- Bash: {\"command\": \"grep -n \\\"heartbeat\\\\|clockTick\\\\|setAudioEngineForTests\\\\|fakeAudioEngine\\\\|<Clock\\\\|Game \\\" apps/web/src/audio/wiring.test.tsx | head -20\"}\n- Bash: {\"command\": \"grep -rln \\\"B50\\\\|SPECTATE_DELAY\\\" spec | head; grep -rn \\\"clockMs\\\\|clock_ms\\\" spec/*.md | head -10\"}\n- Bash: {\"command\": \"grep -n \\\"B50\\\" spec/09-architecture.md | head -5; grep -n \\\"clock\\\" -i spec/09-architecture.md | grep -i \\\"watch\\\\|spectat\\\" | head; grep -n \\\"clock\\\" -i spec/rulings/R2881000.md | head\u2026\n- Bash: {\"command\": \"node -e 'console.log(new Intl.NumberFormat(\\\"en\\\", {style:\\\"unit\\\", unit:\\\"second\\\", unitDisplay:\\\"narrow\\\", useGrouping:false}).format(50))'; grep -rn \\\"toHaveTextContent(\\\\\\\"[0-9]*s\\\\\\\u2026\n- said: Now I'll write the draft file and then the final plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2974/.bot-plan.md\", \"content\": \"# Draft plan for #2974 (planner notes)\\n\\nFound (read, not yet built):\\n- WatchRoute.tsx passes Game no `turnClock` (B\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Web-only change in apps/web (together/ and one test file): no engine, AI, migration or cross-crate contract, about 7 files.\"} --> ## Goal A watched game's turn clock counts down on its own between frames, in both the 1v1 watch and the co-op watch. It count\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-04T02:08:10Z",
       "owner_why": "it plans it",
@@ -16802,12 +16792,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-04T01:59:04Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41758736592",
+      "run_id": "pending:04e5bd13-1793759482",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T02:08:10Z",
+      "started_at": "2026-11-04T02:31:47Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6620469347"
+      ]
     },
     "2975": {
       "action": "plan",
@@ -17016,9 +17008,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T02:31:07Z",
+    "at": "2026-11-04T02:31:47Z",
     "url": "",
-    "what": "build #2972 on muse"
+    "what": "build #2974 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T02:02:21Z",
