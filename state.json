@@ -17899,6 +17899,14 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6624496987
+    },
+    "3004": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-04T05:36:49Z",
+      "issue": 2994,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e249a5faf5e8580b",
