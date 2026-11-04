@@ -17443,15 +17443,16 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-04T05:20:35Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "41782940395",
+      "run_id": "pending:32b72928-1793780408",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 45,
-      "started_at": "2026-11-04T06:02:36Z",
+      "started_at": "2026-11-04T08:20:43Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18102,9 +18103,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T08:10:01Z",
+    "at": "2026-11-04T08:20:43Z",
     "url": "",
-    "what": "review #3007 on claude-3"
+    "what": "spot-check #2996 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T08:05:48Z",
@@ -32276,7 +32277,15 @@
         "n": 45,
         "pr": 2996,
         "queued_at": "2026-11-04T08:17:17Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:32b72928-1793780408",
         "sha": "3809c73ce671c88facee6311ffa38899a5db3adc",
+        "started_at": "2026-11-04T08:20:43Z",
         "status": "queued",
         "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
         "tries": 0
