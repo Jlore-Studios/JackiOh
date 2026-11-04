@@ -14,7 +14,9 @@
 // Node's --env-file uses, and any VITE_ variable the environment already held over both. It requires
 // each one, and requires each value to appear in the bundle's JavaScript. It also requires the files
 // Cloudflare serves from the assets root (wrangler.jsonc, public/_redirects and _headers), and the
-// CSP the build wrote into _headers to let the page reach Supabase and the server's sockets.
+// CSP the build wrote into _headers to let the page reach Supabase and the server's sockets. A VITE_
+// variable in the environment that differs from the committed file's is refused too: one held
+// staging's publishable key, so production's pages could not sign in (2026-11-04).
 //
 // Exits 1, listing every problem, when anything is missing.
 
@@ -41,6 +43,16 @@ const env = {
   ...preset,
 };
 const problems = [];
+
+// The committed file's own values, which an override in the build's environment must not contradict.
+const committed = parseEnv(readFileSync(join(WEB, file), "utf8"));
+for (const [name, value] of Object.entries(preset)) {
+  if (committed[name] !== undefined && committed[name] !== value) {
+    problems.push(
+      `${name} in the build's environment differs from apps/web/${file}'s: remove the override, or change the file`,
+    );
+  }
+}
 
 for (const served of SERVED) {
   if (!existsSync(join(dist, served))) problems.push(`${served} is missing from ${dist}`);
