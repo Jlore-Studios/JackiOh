@@ -29817,7 +29817,8 @@
       "2026-11-04T14:10:27Z,claude-8,stream,call,41836233439,12,2026-11-04T17:00:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-04T14:01:34Z,41842108966,muse,muse-spark-1.3-contributor,build,3038,hard,interrupted,refusal,7,0,0,0,,0,4,98,100,1.6,,none,,1"
+      "2026-11-04T14:01:34Z,41842108966,muse,muse-spark-1.3-contributor,build,3038,hard,interrupted,refusal,7,0,0,0,,0,4,98,100,1.6,,none,,1",
+      "2026-11-04T14:10:44Z,41836233439,claude-8,opus,review,3037,hard,approved,,19.1,95,23700,5367522,3.6238,5,12,,,1,,fresh,,3"
     ]
   },
   "version": 1
