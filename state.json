@@ -17740,6 +17740,7 @@
       "run_id": "41780189066",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 40,
       "started_at": "2026-11-04T05:35:26Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -31972,9 +31973,33 @@
         "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8375cea0f9d9e93683bef0a6f0c79b76f6a4aa66",
+        "issue": 2976,
+        "merged_at": "2026-11-04T06:32:06Z",
+        "n": 40,
+        "pr": 2998,
+        "queued_at": "2026-11-04T06:32:06Z",
+        "sha": "e485107852599734d92622e1291c13742a3313a2",
+        "status": "queued",
+        "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
+        "tries": 0
       }
     ],
-    "count": 39
+    "count": 40
   },
   "statistics": {
     "at": "2026-11-04T05:48:55Z"
