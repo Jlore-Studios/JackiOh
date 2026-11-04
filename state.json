@@ -452,6 +452,12 @@
       "lines": [
         "/harness revise Decisions for pass 3, below. Your last run's commit `d9d6d14` never reached the branch (it is still on `0ac23d8`), so if that work is gone, redo the parts these decisions keep."
       ]
+    },
+    "c:6626192852": {
+      "at": "2026-11-04T08:26:54Z",
+      "lines": [
+        "/harness build Option (A): today's deal earns nothing. Change the seat rule so the seat alternates strictly from day to day."
+      ]
     }
   },
   "items": {
