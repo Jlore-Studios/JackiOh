@@ -399,6 +399,21 @@ jobs:
           commit: ${{ steps.deploy.outputs.sha }}
           seconds: ${{ env.LIVE_SECONDS }}
 
+      # R3074000: the dev dashboard (apps/admin), a Worker of its own that binds this one, so it goes
+      # after the site's, from apps/admin/.env.production. Its address, admin.jackioh.com, and the
+      # Access application in front of it are infra/cloudflare.tf's; until they are applied the
+      # Worker serves nothing. A production that predates the dashboard has none to deploy.
+      - name: build and deploy the dev dashboard
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ ! -f apps/admin/wrangler.jsonc ]; then
+            echo "::notice::production ($(git rev-parse --short HEAD)) predates the dev dashboard (apps/admin): nothing to deploy."
+            exit 0
+          fi
+          pnpm --dir apps/admin build
+          pnpm --dir apps/edge exec wrangler deploy --config ../admin/wrangler.jsonc --env=""
+
       # Only after the server reported its commit, and never failing a deploy that went live.
       - name: drop the registry's older images
         continue-on-error: true
