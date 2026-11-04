@@ -15123,7 +15123,7 @@
     "what": "build #3039 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-04T16:59:35Z",
+    "at": "2026-11-04T17:06:57Z",
     "notes": [
       "#3049 is held for `claude-4` until 11:20 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))"
     ],
@@ -15831,7 +15831,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T16:59:35Z",
+  "loop_tick": "2026-11-04T17:06:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
