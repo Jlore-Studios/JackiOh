@@ -48,18 +48,18 @@ describe("R923000 the sandbox's dev tools panel", () => {
 
   it("R923001 a found card is spawned for the seat and zone picked, Radiant when asked", () => {
     const { onTool } = setup();
-    const bigot = Object.values(registeredCatalog()).find((def) => def.name === "Bigot");
-    expect(bigot).toBeDefined();
-    if (bigot === undefined) return;
+    const speciesist = Object.values(registeredCatalog()).find((def) => def.name === "Speciesist");
+    expect(speciesist).toBeDefined();
+    if (speciesist === undefined) return;
 
     expect(screen.getByTestId(practiceTestid.sandboxSpawn), "nothing picked yet").toBeDisabled();
-    type(practiceTestid.sandboxSearch, "bigot");
-    fireEvent.click(screen.getByTestId(practiceTestid.sandboxResult(bigot.id)));
-    expect(screen.getByTestId(practiceTestid.sandboxResult(bigot.id))).toHaveAttribute("aria-pressed", "true");
+    type(practiceTestid.sandboxSearch, "speciesist");
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxResult(speciesist.id)));
+    expect(screen.getByTestId(practiceTestid.sandboxResult(speciesist.id))).toHaveAttribute("aria-pressed", "true");
 
     // The hand by default, for the human's seat.
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxSpawn));
-    expect(onTool).toHaveBeenLastCalledWith({ kind: "spawn", player: "p1", defId: bigot.id, to: { zone: "hand" } });
+    expect(onTool).toHaveBeenLastCalledWith({ kind: "spawn", player: "p1", defId: speciesist.id, to: { zone: "hand" } });
 
     // The AI's unit row, lane 3, Radiant; every zone of the field is offered, and the piles.
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxRadiant));
@@ -74,14 +74,14 @@ describe("R923000 the sandbox's dev tools panel", () => {
     expect(onTool).toHaveBeenLastCalledWith({
       kind: "spawn",
       player: "p2",
-      defId: bigot.id,
+      defId: speciesist.id,
       radiant: true,
       to: { zone: "field", row: "units", lane: 3 },
     });
 
     fireEvent.change(where, { target: { value: "libraryTop" } });
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxSpawn));
-    expect(onTool).toHaveBeenLastCalledWith({ kind: "spawn", player: "p2", defId: bigot.id, radiant: true, to: { zone: "libraryTop" } });
+    expect(onTool).toHaveBeenLastCalledWith({ kind: "spawn", player: "p2", defId: speciesist.id, radiant: true, to: { zone: "libraryTop" } });
   });
 
   it("R923002 sets a hero's health and Armor and a player's mana, sending only the values given", () => {

@@ -1,4 +1,4 @@
-//! M #61 Joon Jorker (SPEC §8.8 row 61): (3) Unit, Human, Common, 7/5 → 14/10.
+//! M #61 Joon Juicer (SPEC §8.8 row 61): (3) Unit, Human, Common, 7/5 → 14/10.
 //!   Both faces: "End of turn: Buff the Unit to the right of this {times|time|times}." — times 4
 //!   (Radiant 8; 5 and 10 through v0.5.2).
 //! Engine: at its controller's end of turn, separate Buffs (Upgrade, R386) on the acting Unit in the
@@ -46,7 +46,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #61 Joon Jorker — SPEC §8.8 row 61, BUILD M10 row M 61.
+// M #61 Joon Juicer — SPEC §8.8 row 61, BUILD M10 row M 61.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

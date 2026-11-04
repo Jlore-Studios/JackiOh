@@ -65,7 +65,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // 4/4, no text
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const FIENDER: &str = "core-092"; // Stack Unit
-    const CN_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage
+    const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage
     const FILLER: &str = "core-010"; // (0) Spell, Combo 3 — a card to keep in hand
     const PALANTIR: &str = "classic-004"; // Aura: your opponent can't draw more than 1 card each turn.
 
@@ -173,15 +173,15 @@ mod tests {
             #[test]
             fn s2_4_r58_nothing_is_cast_on_a_stopped_draw_a_cast_on_draw_card_stays_in_the_deck() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, CN_VIRUS] },
+                    "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, SUPER_VIRUS] },
                 }));
                 s.play(STOCKPILE, json!({}));
                 let library = def_ids(&s.pile(P1, "library"));
-                assert_eq!(library, vec![CN_VIRUS]);
+                assert_eq!(library, vec![SUPER_VIRUS]);
                 assert_eq!(
                     s.last_events()
                         .iter()
-                        .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == CN_VIRUS))
+                        .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == SUPER_VIRUS))
                         .count(),
                     0,
                 );

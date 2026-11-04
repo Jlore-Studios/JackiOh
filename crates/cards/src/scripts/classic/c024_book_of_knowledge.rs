@@ -69,7 +69,7 @@ mod tests {
 
     const BOOK: &str = "classic-024";
     const PALANTIR: &str = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
-    const VIRUS: &str = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
+    const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
     const FILLER: &str = "core-005";
     const A: &str = "core-019";
     const B: &str = "core-011";
@@ -128,7 +128,7 @@ mod tests {
             }
 
             #[test]
-            fn r58_each_draw_has_its_own_cast_on_draw_chain_a_cn_virus_casts_and_its_draw_repeats() {
+            fn r58_each_draw_has_its_own_cast_on_draw_chain_a_super_virus_casts_and_its_draw_repeats() {
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK], "library": [VIRUS, A, B, C, D] }, "p2": { "hand": [FILLER] } }));
                 fixed(&mut s, 3);
 

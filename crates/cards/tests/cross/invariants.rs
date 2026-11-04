@@ -4,7 +4,7 @@
 use jackioh_engine::testkit::*;
 
 const VANILLA: &str = "core-008";
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const HIT_JOB: &str = "core-016";
 const MY_PAWN: &str = "core-096";
 const SHEEPISH: &str = "core-041";
@@ -234,7 +234,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
     fn board() -> Board {
         let g = scenario(json!({
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
-            "p2": { "hand": [BIGOT], "library": [HIT_JOB], "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
+            "p2": { "hand": [SPECIESIST], "library": [HIT_JOB], "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
         }));
         let unit = g.unit_at(PlayerId::P1, 1);
         let secret = match g.state().players.p2.hand.first() {
@@ -1266,7 +1266,7 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
     fn r127_r436_i6_reads_the_empty_id_of_a_chaos_roll_with_no_card_as_no_card() {
         let mut g = scenario(json!({
             "p1": { "mana": 10, "hand": [REWIND], "library": [VANILLA, VANILLA, VANILLA] },
-            "p2": { "hand": [BIGOT], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": { "hand": [SPECIESIST], "library": [VANILLA, VANILLA, VANILLA] },
         }));
         // A Unit whose Cry is Call to Chaos (R77), in p1's graveyard.
         let fused = craft_fused(&mut g, PlayerId::P1, &[VANILLA, CALL_TO_CHAOS]);

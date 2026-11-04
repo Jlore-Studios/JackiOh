@@ -303,9 +303,9 @@ describe("QA v0.2.0, Global Cosmetic", () => {
   });
 
   it("item 8: a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb wherever the client writes one (R432)", () => {
-    const bigot = CATALOG["core-002"];
-    if (bigot === undefined) throw new Error("core-002 is missing");
-    expect(poolCardLabel(bigot, null, true)).toBe(`${bigot.name}, Unit, (${String(bigot.cost)}) Cost, ${bigot.rarity}. Show details`);
+    const speciesist = CATALOG["core-002"];
+    if (speciesist === undefined) throw new Error("core-002 is missing");
+    expect(poolCardLabel(speciesist, null, true)).toBe(`${speciesist.name}, Unit, (${String(speciesist.cost)}) Cost, ${speciesist.rarity}. Show details`);
     expect(faceDownLabel(2)).toBe("Face-down trap, (2) Cost");
     expect(costPhrase(0)).toBe("(0) Cost");
 
@@ -535,7 +535,7 @@ describe("QA v0.2.0, the reader", () => {
     expect(probe("Deal {amount} damage")).toBe(false);
     expect(probe("Discover a Cost (2) card")).toBe(false);
     expect(probe("It costs 3")).toBe(false);
-    expect(probe("Bigot, 2 mana Unit")).toBe(false);
+    expect(probe("Speciesist, 2 mana Unit")).toBe(false);
     expect(probe("Your library")).toBe(false);
     expect(probe("Discover a (2) Cost card. It costs (1) less. Gain 2 mana.")).toBe(true);
   });

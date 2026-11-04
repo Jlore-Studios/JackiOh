@@ -67,7 +67,7 @@ impl DelayPlayer {
 /// When a delayed effect comes due, in the vocabulary a card file writes: §2.2's two points. The
 /// player is relative to the controller like every other `PlayerSpec`, or `"turn"`: the player whose
 /// turn is running as the effect is made — R350's "at the end of this turn", whoever's turn that is
-/// (#90.1 CN-Virus, cast on a draw that may come on either player's turn).
+/// (#90.1 Super-Virus, cast on a draw that may come on either player's turn).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -762,7 +762,7 @@ pub struct WatchFirstPlaysArgs {
     pub data: Option<IndexMap<String, Value>>,
 }
 
-/// R1863000 (Stinkyscape #44 Great Replacement Theory): "for the rest of the game, the first time you
+/// R1863000 (Stinkyscape #44 Great Paperclip Theory): "for the rest of the game, the first time you
 /// play each …" — a `never` watcher as `watch_lane_this_turn`'s, after the controller's first resolved
 /// play (a cast too, R70) of each of `def_ids`, with its `defId` in the data.
 pub fn watch_first_plays(args: WatchFirstPlaysArgs) -> Effect {

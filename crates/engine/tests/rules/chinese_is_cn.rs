@@ -15,7 +15,7 @@ use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_as_p1 as 
 use crate::rules::fixtures::instance_data::{
     body, brittle_trap, instance_game, instance_main_phase as game, translator,
 };
-use crate::rules::fixtures::scripts::cn_virus;
+use crate::rules::fixtures::scripts::super_virus;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -169,7 +169,7 @@ mod r1176000_every_card_in_chinese_is_cn {
         translate_card(&mut state, &unit.id);
         assert_eq!(tags_of(&state, &live(&state, &unit.id)), vec![Tag::Cn]);
         // Printed CN and in Chinese: its printed tags, as they stand, and no view key.
-        let virus = first(in_hand(&mut state, &cn_virus().id, P1, 1));
+        let virus = first(in_hand(&mut state, &super_virus().id, P1, 1));
         translate_card(&mut state, &virus.id);
         assert_eq!(
             tags_of(&state, &live(&state, &virus.id)),

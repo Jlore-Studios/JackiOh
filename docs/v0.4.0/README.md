@@ -183,7 +183,7 @@ cards then, marked 14 to stay Rust and left none unreadable or unclassified.
   script()`), lints and compiles each `.luau` to `$OUT_DIR/<set>_<module>.bin`, and the generated
   registry loads it with `jackioh_luau::load_card(ID, BYTECODE)`.
 - The pilots: Core #1 Big D-Fender (an `aura` of `defense_armor_aura`, `ctx:param("armor")`,
-  `radiant = "base"`), #2 Bigot (declared `targets` with `notTags`; `destroy`, Radiant
+  `radiant = "base"`), #2 Speciesist (declared `targets` with `notTags`; `destroy`, Radiant
   `destroy_all`) and #3 Right-House Defender (`base = {}`, a Radiant `death` summon). Their 18
   tests passed unchanged.
 - The server's Docker build stage gained `g++` (Luau compiles from source); `scripts/vercel-ignore.sh`
@@ -191,7 +191,7 @@ cards then, marked 14 to stay Rust and left none unreadable or unclassified.
 - Measured: `fuzz --seeds 200` clean in 21 s; `gate` 20/20, 16/20, 18/20; `golden check` 240 of 240
   (22,713 steps); `spec check` ok.
 - Left behind: `sh scripts/build-wasm.sh` red on the old target (part 5's fix), and two `luau
-  surface` tests that read Bigot's Rust `script()` (section 6).
+  surface` tests that read Speciesist's Rust `script()` (section 6).
 
 ### 5.3 Part 5 (#447): the browser, and the go/no-go
 
@@ -463,7 +463,7 @@ Part 28 took classic-026, -030 and -035. The rest are in section 4.
   a file that calls nothing (an `ImportUnused` warning); the reconcile removed them.
 - **Tests the batches could not fix.** From part 7 on, the `jackioh-tools` runs failed
   the API survey's `luau_core_002_bigot` and `luau_reports_print_as_markdown_and_json`
-  (the survey, retired by #2579, read `script()` from `.rs` files, and Bigot has been Luau since part 4), and from
+  (the survey, retired by #2579, read `script()` from `.rs` files, and Speciesist has been Luau since part 4), and from
   part 10 on, the first to run it, `acceptance.rs`'s
   `v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other` (`crates/cards` depends on
   `jackioh-luau` since part 4). On part 28's build `cargo fmt --check` failed on one `assert!` in

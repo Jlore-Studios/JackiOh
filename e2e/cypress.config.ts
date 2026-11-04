@@ -158,7 +158,11 @@ export default defineConfig({
     retries: { runMode: 0, openMode: 0 },
     // No `testIsolation` here: Cypress rejects the option outright for component testing, where a
     // test is isolated by construction — each one mounts a fresh `fullBoardView()` of its own.
-    setupNodeEvents(on) {
+    async setupNodeEvents(on, config) {
+      // Same Chrome 155 network-service crash as the e2e block above: component specs fetch
+      // Vite modules through the same DevTools interception, so `chrome` is pinned the same way
+      // (support/chrome-pin.ts).
+      config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
       on("task", {
         /**
          * Print a measured layout row in the terminal. Cypress swallows `console.log` from the
@@ -171,6 +175,7 @@ export default defineConfig({
           return null;
         },
       });
+      return config;
     },
   },
 });
