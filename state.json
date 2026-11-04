@@ -176,6 +176,7 @@
         "by": "`claude` (strong)",
         "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f"
       },
+      "closed_at": "2026-11-04T08:17:48Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T02:38:02Z",
@@ -186,6 +187,7 @@
         "provider": "claude-squishy",
         "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f"
       },
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
