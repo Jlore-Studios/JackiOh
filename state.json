@@ -17320,10 +17320,8 @@
       }
     },
     "2992": {
-      "action": "review",
-      "asks": [
-        "c:6626186100"
-      ],
+      "action": "revise",
+      "asks": [],
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -17341,19 +17339,21 @@
       "interruptions": 0,
       "issue": 2803,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "muse",
       "question": "Pass 2 folded the 4 under-floor motifs and trimmed the heavy layers, but the gallery shift capture is still red with an unproven root cause and the docs/report/ruling rewrite is not done. Pass 3 should: finish the shift diagnosis (notes in .bot-notes.md), re-run phone+gallery on a quiet box, rewrite docs/ruling/report/pending, then verify. Details below.",
       "queued_at": "2026-11-04T08:26:53Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41773707535",
+      "run_id": "pending:1861eeae-1793781074",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-11-04T04:31:19Z",
+      "started_at": "2026-11-04T08:31:51Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6626186100"
+      ],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18040,9 +18040,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T08:20:43Z",
+    "at": "2026-11-04T08:31:51Z",
     "url": "",
-    "what": "spot-check #2996 on claude-4"
+    "what": "revise #2992 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T08:17:42Z",
