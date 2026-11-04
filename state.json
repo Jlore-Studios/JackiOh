@@ -15478,17 +15478,8 @@
       "suggestion": true
     },
     "3067": {
-      "action": "plan",
-      "asks": [
-        "c:6644318026"
-      ],
-      "build_next": {
-        "from_run": "41930530575",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-04T23:29:39Z",
-        "until": "2026-11-04T23:59:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T23:29:30Z",
         "difficulty": "medium",
@@ -15507,10 +15498,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the code the issue points at.\n- Bash: {\"command\": \"ls && ls .bot-plan.md 2>/dev/null; wc -l crates/server/src/api/stats.rs crates/server/tests/api/stats.rs; grep -n \\\"kept_window\\\\|kept_history\\\\|kept_report\\\\|CARD_STATS_KEPT\\\\|CARD_STAT\u2026\n- Read: {\"file\": \"crates/server/src/api/stats.rs\", \"limit\": 230}\n- tool error: <tool_use_error>InputValidationError: Read failed due to the following issues: The required parameter `file_path` is missing An unexpected parameter `file` was provided</tool_use_error>\n- Read: {\"file\": \"crates/server/src/api/stats.rs\", \"offset\": 560, \"limit\": 480}\n- tool error: <tool_use_error>InputValidationError: Read failed due to the following issues: The required parameter `file_path` is missing An unexpected parameter `file` was provided</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3067/crates/server/src/api/stats.rs\", \"limit\": 130}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3067/crates/server/src/api/stats.rs\", \"offset\": 560, \"limit\": 480}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3067/crates/server/src/api/stats.rs\", \"offset\": 1039, \"limit\": 370}\n- Bash: {\"command\": \"grep -n \\\"fn totals_for\\\" -A40 crates/server/src/api/stats.rs\"}\n- said: Now the engine's window code.\n- Bash: {\"command\": \"ls crates/engine/src/wire/stats/; wc -l crates/engine/src/wire/stats/*.rs; sed -n 1,260p crates/engine/src/wire/stats/window.rs\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3067/crates/engine/src/wire/stats/window.rs\", \"offset\": 260, \"limit\": 300}\n- Bash: {\"command\": \"sed -n 1230,1420p crates/server/tests/api/stats.rs\"}\n- Bash: {\"command\": \"grep -n \\\"r978000\\\\|r2491000\\\\|r1367000\\\\|r1994000\\\\|loads\\\\|full_loads\\\\|fn r[0-9]*_\\\" crates/server/tests/api/stats.rs | head -150\"}\n- Bash: {\"command\": \"grep -rn \\\"on_call\\\" crates/server/src | head -30; grep -rn \\\"statsTotals.load\\\" crates/server/src | head\"}\n- Bash: {\"command\": \"sed -n 265,300p crates/server/src/db/fake.rs; sed -n 495,520p crates/server/src/db/fake.rs; sed -n 2820,2900p crates/server/src/db/fake.rs; grep -n \\\"StatsTotalsQuery\\\" -B3 -A20 crates/s\u2026\n- Bash: {\"command\": \"grep -rn \\\"on_call\\\" crates/server/tests | head -40; grep -rn \\\"statsTotals\\\" crates/server/tests crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/db/fake.rs\\\" | head\"}\n- Bash: {\"command\": \"sed -n 230,420p crates/server/src/api/stats.rs\"}\n- Bash: {\"command\": \"sed -n 1100,1232p crates/server/tests/api/stats.rs\"}\n- Bash: {\"command\": \"sed -n 1472,1545p crates/server/tests/api/stats.rs; sed -n 1700,1735p crates/server/tests/api/stats.rs\"}\n- Bash: {\"command\": \"cd crates/server/tests/api && awk '/async fn [a-z0-9_]+\\\\(/{name=$0; n=0} /insert_records\\\\(|tokio::time::advance|purge_expired/{ if(name!=\\\"\\\"){c[name]++} } END{for(k in c) if(c[k]>1) p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3067 && sed -n 1408,1470p crates/server/tests/api/stats.rs; sed -n 2350,2420p crates/server/tests/api/stats.rs\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\.live_games\\\\b\\\\|live_games:\\\" crates/server/src/api/stats.rs | head -30; grep -n \\\"KeptWindow\\\\|kept\\\\.history\\\\|\\\\.history\\\\b\\\" crates/server/src/api/stats.rs | head -30\"}\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R(0978|1367|2491|3070|3022|3081|3083|3067)\\\" ; for f in R0978000 R2491000 R1367000; do echo \\\"=== $f\\\"; cat spec/rulings/$f.md 2>/dev/null; done; ls spec/pen\u2026\n- Bash: {\"command\": \"cat spec/pending/3070.md; sed -n 1,80p spec/README.md | head -120; grep -n \\\"R978000\\\" spec/*.md | head -20\"}\n- Bash: {\"command\": \"cat spec/rulings/R978000.md; grep -n \\\"R978000\\\\|R2491000\\\\|R1367000\\\\|kept_window\\\\|KeptReports\\\\|CARD_STATS_KEPT\\\\|card-statistics\\\\|stats/cards\\\" crates/server/README.md | head -30; s\u2026\n- Bash: {\"command\": \"grep -n \\\"kept\\\\|CARD_STATS\\\" crates/server/README.md | head -20; ls spec/rulings | grep -E \\\"^R30[0-9][0-9]\\\" ; grep -n \\\"Ruling numbers\\\" -A25 docs/issues-and-patches.md | head -60\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn games\\\\|pub fn live_games\\\" -B2 -A18 crates/engine/src/wire/stats.rs | head -80; grep -n \\\"pub struct StatsTotals\\\" -A25 crates/engine/src/wire/stats.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"fn select\\\" crates/server/src/db/*.rs | head; grep -n \\\"game_totals\\\" crates/server/src/db/*.rs | head -30\"}\n- Bash: {\"command\": \"sed -n 5100,5260p crates/server/src/db/pg.rs; grep -rn \\\"fn select\\\" crates/server/src | head\"}\n- Bash: {\"command\": \"sed -n 484,535p crates/server/README.md; grep -n \\\"pub fn now_ms\\\" -A8 crates/server/src/api/http.rs\"}\n- Bash: {\"command\": \"grep -n \\\"R978000\\\\|R2491000\\\\|CACHE_TTL\\\\|windowed\\\" crates/server/README.md | head; grep -n \\\"now_ms\\\" crates/server/src/api/http.rs | head -3; sed -n 236,240p spec/09-architecture.md \u2026\n- Bash: {\"command\": \"grep -n \\\"impl From<StoreError> for ApiError\\\" -A15 crates/server/src/api/*.rs | head -30; sed -n 1,80p crates/server/tests/api/stats.rs; grep -n \\\"fn current_patch\\\\|fn count\\\\b\\\\|fn se\u2026\n- Bash: {\"command\": \"grep -n \\\"async fn get_public\\\\|async fn insert_records\\\\|fn find\\\\b\\\\|fn cache_control\\\" -A14 crates/server/tests/api/stats.rs | head -70; grep -rn \\\"start_paused\\\" crates/server/tests/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3067/.bot-plan.md\", \"content\": \"# Draft plan for #3067 (planner notes; final message is the plan)\\n\\nRead: crates/server/src/api/stats.rs (kept_window\u2026\n- Bash: {\"command\": \"grep -rn \\\"game_totals\\\" crates/server/src/db/fake*.rs crates/server/src/db/fake/ 2>/dev/null | head; ls crates/server/src/db | head -30\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn select\\\" -B3 -A45 crates/engine/src/wire/stats.rs | head -90\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Server-only caching change in crates/server (about 8 files: stats.rs, one fake-store hook, tests, a ruling note, README); it touches no engine rules, AI, migration or cross-crate contract, and is far under 40 files.\"} --> ## Goal An unshipped `?patch=` cos\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-04T23:03:05Z",
       "owner_why": "it plans it",
@@ -15523,12 +15513,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T23:00:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41930530575",
+      "run_id": "pending:caab1560-1793835157",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T23:03:05Z",
+      "started_at": "2026-11-04T23:33:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6644318026"
+      ]
     },
     "3068": {
       "action": "revise",
@@ -15929,9 +15921,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T23:32:24Z",
+    "at": "2026-11-04T23:33:06Z",
     "url": "",
-    "what": "review #3086 on claude-3"
+    "what": "build #3067 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T23:10:15Z",
