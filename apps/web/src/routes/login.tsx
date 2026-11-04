@@ -4,13 +4,15 @@
 // Check each link token's account at `/api/auth/me`, never trust its readable address claim; confirmation links
 // never sign in (R193). Hold recovery links only after the player types the checked address; never prefill it.
 // Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
-// Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
+// Email-code sign-in (R664), OAuth (R666), Google's own button (R2983000), and MFA (R665) retain only their proven
+// session; §9.4 still gates it.
 // Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS, TERMS_VERSION } from "@jackioh/server-config";
 import Address from "../auth/Address.tsx";
+import GoogleButton from "../auth/GoogleButton.tsx";
 import { holdSignUpConsent, oldEnough, refuseSignUpHere, signUpRefusedHere } from "../auth/consent.ts";
 import {
   BirthMonthYear,
@@ -42,6 +44,7 @@ import {
   authConfig,
   authMessageOf,
   exchangeAuthCode,
+  googleClientId,
   oauthProviders,
   refreshSession,
   requestEmailSignIn,
@@ -50,6 +53,7 @@ import {
   revokeSignedOutSession,
   secondFactorFor,
   signIn,
+  signInWithGoogleIdToken,
   signInWithUsername,
   signUp,
   startOAuthSignIn,
@@ -367,6 +371,7 @@ export default function LoginRoute(): ReactElement {
   const codeWait = codeCooldown.secondsFor(email);
   const secondStep = useRef<SecondStep | null>(null);
   const [providers] = useState(oauthProviders);
+  const [googleClient] = useState(googleClientId);
   const [oauthFailed, setOauthFailed] = useState(entry.oauthFailed);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   /** Set when a notice should take focus once it renders (a sign-up that moved the form on). */
@@ -691,6 +696,26 @@ export default function LoginRoute(): ReactElement {
       setError(authMessageOf(cause));
       setBusy(false);
     });
+  }
+
+  /** R2983000: exchange Google's ID token here, with its attempt's raw nonce; signs in as R666's code does. */
+  function continueWithGoogle(idToken: string, nonce: string): void {
+    if (busy) return;
+    acted.current = true;
+    releaseLink();
+    setBusy(true);
+    setError(null);
+    setOauthFailed(false);
+    signInWithGoogleIdToken(idToken, nonce)
+      .then((result) => {
+        signInWith(result.session, result.secondFactor);
+      })
+      .catch((cause: unknown) => {
+        setError(authMessageOf(cause));
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   }
 
   /** A link this screen still answers for is let go (revoked) once the player moves on from it. */
@@ -1363,22 +1388,31 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-oauth" role="group" aria-label={t("Other ways to sign in")}>
               <p className="auth-hint">{t("or")}</p>
               <div className="auth-actions">
-                {providers.map((provider) => (
-                  <button
-                    key={provider}
-                    type="button"
-                    className={provider === "google" ? "button-secondary auth-oauth-google" : "button-secondary"}
-                    data-testid={loginTestid.oauth}
-                    data-provider={provider}
-                    disabled={busy}
-                    onClick={() => {
-                      continueWith(provider);
-                    }}
-                  >
-                    {provider === "google" ? <GoogleMark /> : null}
-                    {t("Continue with {provider}", { provider: OAUTH_PROVIDER_LABELS[provider] })}
-                  </button>
-                ))}
+                {providers.map((provider) => {
+                  const button = (
+                    <button
+                      key={provider}
+                      type="button"
+                      className={provider === "google" ? "button-secondary auth-oauth-google" : "button-secondary"}
+                      data-testid={loginTestid.oauth}
+                      data-provider={provider}
+                      disabled={busy}
+                      onClick={() => {
+                        continueWith(provider);
+                      }}
+                    >
+                      {provider === "google" ? <GoogleMark /> : null}
+                      {t("Continue with {provider}", { provider: OAUTH_PROVIDER_LABELS[provider] })}
+                    </button>
+                  );
+                  // R2983000: Google's own button when the build names its client ID; R666's until it
+                  // draws, or when GIS cannot.
+                  return provider === "google" && googleClient !== null ? (
+                    <GoogleButton key={provider} clientId={googleClient} fallback={button} onCredential={continueWithGoogle} />
+                  ) : (
+                    button
+                  );
+                })}
               </div>
             </div>
           ) : null}
