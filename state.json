@@ -14987,14 +14987,6 @@
       "failures": 0,
       "feedback_since": "2026-11-04T12:36:39Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-04T19:55:49Z",
-        "lifted": "2026-11-04T18:24:54Z",
-        "owner": "claude-4",
-        "since": "2026-11-04T17:55:49Z",
-        "until": "2026-11-04T18:20:00Z",
-        "why": "5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "issue": 2944,
       "kind": "revise",
@@ -15010,7 +15002,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T17:23:59Z",
       "round_tier": "",
-      "run_id": "41877351744",
+      "run_id": "pending:89d1de17-1793816740",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15031,7 +15023,7 @@
         "run": "41847436374"
       },
       "source": "conflict",
-      "started_at": "2026-11-04T17:24:50Z",
+      "started_at": "2026-11-04T18:26:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -15060,9 +15052,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T18:17:46Z",
+    "at": "2026-11-04T18:26:03Z",
     "url": "",
-    "what": "spot-check #2984 on claude-6"
+    "what": "revise #3050 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T18:16:23Z",
