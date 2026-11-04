@@ -13689,6 +13689,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 55,
       "started_at": "2026-11-04T17:16:35Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -29461,9 +29462,33 @@
         "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "902601709824d5ccba79188f2db2d864c55607ba",
+        "issue": 2979,
+        "merged_at": "2026-11-04T17:50:31Z",
+        "n": 55,
+        "pr": 2984,
+        "queued_at": "2026-11-04T17:50:31Z",
+        "sha": "20de1ce4c8c5b5925f0563b907dd641e27cf0537",
+        "status": "queued",
+        "title": "Patch: seeded random walks play whole dungeon runs and check that every fight starts and every count stays in bounds",
+        "tries": 0
       }
     ],
-    "count": 54
+    "count": 55
   },
   "statistics": {
     "at": "2026-11-04T17:23:01Z"
