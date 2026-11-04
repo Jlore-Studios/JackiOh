@@ -1,8 +1,14 @@
-// Emailed auth links, read once and scrubbed (R193, R323, R324).
+// Emailed auth links, read once and scrubbed (R193, R323, R324, R3024000).
 // `/login` exchanges a one-time PKCE code (R323); legacy sessions and errors arrive in fragments or queries (R324).
 // Navigation after an auth link must use `paths`.
 
-import { isAuthCode, revokeSignedOutSession } from "../net/auth.ts";
+import {
+  isAuthCode,
+  isEmailLinkToken,
+  isEmailLinkType,
+  revokeSignedOutSession,
+  type EmailLinkType,
+} from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import type { Session } from "../net/session.ts";
 import { tokenClaim } from "./claims.ts";
@@ -16,6 +22,8 @@ export type AuthRedirect =
   | { kind: "recovery"; session: Session; email: string | null }
   /** R323: a PKCE link's one-time code, for `/login` to exchange. Never a session by itself. */
   | { kind: "code"; code: string }
+  /** R3024000: a mailed link, nothing done yet: only the player's press goes on to the provider. */
+  | { kind: "press"; token: string; linkType: EmailLinkType }
   | { kind: "error"; failure: "linkExpired" | "linkDenied" };
 
 const AUTH_PARAMETERS: readonly string[] = [
@@ -32,10 +40,24 @@ const AUTH_PARAMETERS: readonly string[] = [
 
 const CODE_PARAMETER = "code";
 
+/** R3024000: what a mailed link carries in place of the provider's own address. */
+const TOKEN_PARAMETER = "token_hash";
+
 const CODE_PATHS: ReadonlySet<string> = new Set([paths.login, paths.landing]);
 
 function codeCounts(url: URL): boolean {
   return CODE_PATHS.has(url.pathname) && url.searchParams.has(CODE_PARAMETER);
+}
+
+function pressCounts(url: URL): boolean {
+  return CODE_PATHS.has(url.pathname) && url.searchParams.has(TOKEN_PARAMETER);
+}
+
+/** R3024000: a token and a type this client knows, or nothing: neither is ever sent otherwise. */
+function pressLink(params: URLSearchParams): AuthRedirect {
+  const token = params.get(TOKEN_PARAMETER) ?? "";
+  const linkType = params.get("type") ?? "";
+  return isEmailLinkToken(token) && isEmailLinkType(linkType) ? { kind: "press", token, linkType } : NONE;
 }
 
 const SESSION_TYPES: ReadonlySet<string> = new Set<SessionLinkType>(["signup", "invite", "magiclink", "email_change"]);
@@ -111,13 +133,20 @@ export function parseAuthRedirect(url: URL): AuthRedirect {
   const fromFragment = readParams(fragmentParams(url));
   if (fromFragment.kind !== "none") return fromFragment;
   const fromQuery = readParams(url.searchParams);
-  if (fromQuery.kind !== "none" || !codeCounts(url)) return fromQuery;
+  if (fromQuery.kind !== "none") return fromQuery;
+  if (pressCounts(url)) return pressLink(url.searchParams);
+  if (!codeCounts(url)) return NONE;
   const code = url.searchParams.get(CODE_PARAMETER) ?? "";
   return isAuthCode(code) ? { kind: "code", code } : NONE;
 }
 
 function carriesAuth(url: URL): boolean {
-  return hasAuthParameter(fragmentParams(url)) || hasAuthParameter(url.searchParams) || codeCounts(url);
+  return (
+    hasAuthParameter(fragmentParams(url)) ||
+    hasAuthParameter(url.searchParams) ||
+    codeCounts(url) ||
+    pressCounts(url)
+  );
 }
 
 let consumed: AuthRedirect | null = null;

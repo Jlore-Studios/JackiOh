@@ -18,6 +18,10 @@ because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler
 Nor the team's addresses for staging's Access policy: they are personal data in a public repository,
 so `var.staging_team_emails` is set in `infra/terraform.tfvars`, which git ignores (Running it).
 
+`email-templates/` holds the four mail templates both Supabase projects send (R3024000). Terraform
+does not apply them: `cutover.yml`'s `email-links` step writes a project's, and refuses while its site
+runs a commit without them.
+
 `docs/deploy-cloudflare.md` §4 Steps 2, 3, 4 and 6 point here for the settings above.
 
 `versions.tf` pins Terraform and the three providers, exactly, and `.terraform.lock.hcl` holds their
