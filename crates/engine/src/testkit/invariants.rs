@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The twelve checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
+//! The thirteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
 //! bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -44,6 +44,10 @@
 //!      (effects spend nothing, R20; forced attacks neither, R53); Windfury's first attack spends the
 //!      switch exertion (R636); re-entry advances the stint, and a confirmed `mayAttackAgain` refresh
 //!      clears the old switch beside I2's attack-count baseline.
+//!   I13 every card a seat may play but `legal_actions` lists no play of says why (§10.8, R979000, R1571000,
+//!      R2975000): while it may act, each hand card, and each graveyard card a permission admits, carries
+//!      `playReason` exactly when no play of it is listed; read off I6's view and listing in `hidden`, so
+//!      sampled with it; a seat barred to the tutorial's cards (R2533000) is not asked.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -58,10 +62,10 @@ use crate::prompts::prompt_owner_of;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
-    Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
-    Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId,
-    PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice,
-    ZoneName, has_keyword, opponent_of,
+    Action, ActionBody, CardType, CardView, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat,
+    DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind, PLAYER_IDS, PerPlayer, Phase,
+    PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team,
+    TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -958,6 +962,81 @@ pub fn hidden_information_violations(
     found
 }
 
+/// I13 for one seat on one state (§10.8, R979000, R1571000, R2975000): while it may act (R979000's
+/// window), each card in its hand, and each in its graveyard a permission admits, carries `playReason`
+/// exactly when `legal` lists no `play` of it; no other graveyard card carries one. A seat that plays
+/// only the tutorial's cards (R2533000) lists no play of any other and says nothing of it: not asked.
+pub fn play_reason_violations(
+    state: &GameState,
+    viewer: PlayerId,
+    view: &PlayerView,
+    legal: &[ActionBody],
+) -> Vec<String> {
+    if state.result.is_some()
+        || state.phase != Phase::Main
+        || state.pending.is_some()
+        || state.active != viewer
+    {
+        return Vec::new();
+    }
+    let listed: IndexSet<&str> = legal
+        .iter()
+        .filter_map(|action| match action {
+            ActionBody::Play { instance_id, .. } => Some(instance_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    let hand: &[CardView] = match &view.you.hand {
+        HandView::Cards(cards) => cards,
+        HandView::Count { .. } => &[],
+    };
+    let side = &state.players[viewer];
+    let piles = [
+        ("hand", &side.hand, hand, "R979000"),
+        (
+            "graveyard",
+            &side.graveyard,
+            view.you.graveyard.as_slice(),
+            "R1571000",
+        ),
+    ];
+    let mut found: Vec<String> = Vec::new();
+    for (pile, cards, sent, ruling) in piles {
+        for card in cards {
+            if crate::state::barred_from_play(state, viewer, card) {
+                continue;
+            }
+            let reason = sent
+                .iter()
+                .find(|shown| shown.instance_id == card.id)
+                .and_then(|shown| shown.play_reason.as_deref());
+            let admitted = pile == "hand" || crate::graveyard_play::playable_from_graveyard(state, card);
+            let is_listed = listed.contains(card.id.as_str());
+            match (admitted && !is_listed, reason) {
+                (true, None) => found.push(format!(
+                    "I13 silent card: {viewer}'s {pile} card {} ({}) has no play listed and no playReason on turn {} \
+                     (§10.8, {ruling})",
+                    card.id, card.def_id, state.turn
+                )),
+                (false, Some(reason)) => found.push(format!(
+                    "I13 stray reason: {viewer}'s {pile} card {} ({}) carries playReason \"{reason}\" though {} on turn {} \
+                     (§10.8, {ruling})",
+                    card.id,
+                    card.def_id,
+                    if is_listed {
+                        "a play of it is listed"
+                    } else {
+                        "no permission admits it"
+                    },
+                    state.turn
+                )),
+                _ => {}
+            }
+        }
+    }
+    found
+}
+
 /// I8's cards on one side: every card on that side's field, each pile's top and the cards dormant
 /// under it in both rows, and a Unit a carrier holds (§3.2, R13, R446).
 fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
@@ -1464,8 +1543,8 @@ fn name_of(card: &CardInstance) -> String {
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 for both seats
-/// and `unlisted` is I8.
+/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6 and I13 for both
+/// seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2536,15 +2615,18 @@ impl InvariantMonitor {
         found
     }
 
-    /// I6 for both seats on a state the fuzz reached, setup's included. Empty when clean. A panic in
-    /// `view_for` or `legal_actions` is reported, not raised.
+    /// I6 and I13 for both seats on a state the fuzz reached, setup's included. Empty when clean. A panic
+    /// in `view_for` or `legal_actions` is reported, not raised.
     pub fn hidden(&self, state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         for viewer in PLAYER_IDS {
             let checked = catch_unwind(AssertUnwindSafe(|| {
                 let view = crate::view_for::view_for(state, viewer);
                 let legal = crate::reduce::legal_actions(state, viewer);
-                hidden_information_violations(state, viewer, &view, &legal)
+                // I13 reads the same view and listing (R2975000).
+                let mut violations = hidden_information_violations(state, viewer, &view, &legal);
+                violations.extend(play_reason_violations(state, viewer, &view, &legal));
+                violations
             }));
             match checked {
                 Ok(violations) => found.extend(violations),
@@ -2705,7 +2787,7 @@ impl DuosInvariantMonitor {
         found
     }
 
-    /// I6 for all seats: both duels' 1v1 hidden checks, plus `duos_view_for` redaction for each seat.
+    /// I6 and I13 for all seats: both duels' 1v1 checks, plus `duos_view_for` redaction for each seat.
     pub fn hidden(&self, state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         for (duel, monitor) in self.monitors.iter().enumerate() {

@@ -14,11 +14,13 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I12 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I13 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
-//! shadows chosen switches and declared attacks through each turn and stint (R49, R636). Only the costly
-//! I6 (no card a seat may not read in its view or legal actions, §10.8) and I8 (no unlisted attack, switch
-//! or activation `reduce` accepts, §4.1, §4.2, §10.2) are sampled, by their strides.
+//! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
+//! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
+//! R2975000). Only the costly I6 (no card a seat may not read in its view or legal actions, §10.8) and I8
+//! (no unlisted attack, switch or activation `reduce` accepts, §4.1, §4.2, §10.2) are sampled, by their
+//! strides; I13 reads I6's view and listing, so it rides I6's stride.
 //!
 //! And after every action, GROWTH (#1254): each action is weighed by the events `reduce` returned, the
 //! largest number on any card instance and the instances in play, and a seed fails in the "growth" stage
