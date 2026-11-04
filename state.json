@@ -14600,6 +14600,18 @@
       "asks": [],
       "ci_fixed_head": "4678ff9f5304ddbf257be99a7a92e30056790363",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "at": "2026-11-04T13:04:44Z",
+        "built_by": "claude-7",
+        "by": "`claude` (medium)",
+        "sha": "4678ff9f5304ddbf257be99a7a92e30056790363"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T10:29:49Z",
@@ -14615,6 +14627,7 @@
       "issue": 2882,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-04T11:33:45Z",
