@@ -13220,7 +13220,9 @@
     },
     "2882": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6626192852"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-03T04:13:51Z",
@@ -13266,9 +13268,7 @@
       ],
       "strikes": 2,
       "suggestion": true,
-      "taken_asks": [
-        "c:6626192852"
-      ]
+      "taken_asks": []
     },
     "2883": {
       "action": "build",
