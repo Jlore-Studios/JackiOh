@@ -18034,16 +18034,12 @@
     "what": "spot-check #2998 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-04T07:05:16Z",
+    "at": "2026-11-04T07:22:05Z",
     "notes": [
       "CI on #2964: #2964: queued a CI fix",
-      "#3000: `claude-7` can start again, so its hold is lifted",
-      "delivered review #2998 on claude-3 (run 41788948361): stopped",
-      "delivered review #2999 on muse (run 41780035603): approved",
-      "started build #3000 on claude-7 (run 41790249223)",
-      "started review #2998 on claude-3 (run 41790335966)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered review #2998 on claude-3 (run 41790335966): stopped",
+      "delivered build #3000 on claude-7 (run 41790249223): interrupted",
+      "delivered review #2992 on muse (run 41773707535): blocked"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18747,7 +18743,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T07:05:16Z",
+  "loop_tick": "2026-11-04T07:22:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
