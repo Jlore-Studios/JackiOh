@@ -1,6 +1,7 @@
-// R2784000: the damage motifs (docs/polish/9-card-animations.md): bolt, volley, barrage, chain, lance,
-// nova and scorch. Each gathers at its source, travels, lands on its targets and lingers, every beat a
-// phase of the entry (build.ts), and returns nothing when the entry holds nothing it reads.
+// R2784000: the damage motifs (docs/polish/9-card-animations.md): bolt, volley, barrage, lance,
+// nova and scorch (R2803000 folds `chain` into `nova`). Each gathers at its source, travels, lands on
+// its targets and lingers, every beat a phase of the entry (build.ts), and returns nothing when the
+// entry holds nothing it reads.
 
 import type { PlayerView } from "@jackioh/shared";
 
@@ -13,7 +14,6 @@ import {
   earlierHits,
   flies,
   hit,
-  hitAnchor,
   MOTIF_FOOT,
   MOTIF_TUNING,
   motifBurst,
@@ -104,32 +104,6 @@ export const barrage: MotifPlanner = {
       cues.push(...hit(spec, h.event, h.at, t.D, lands, MOTIF_TUNING.small));
     });
     cues.push(...motifShake(spec, t.L));
-    return cues;
-  },
-};
-
-/** chain: one bolt hopping target to target, each hop an equal share of travel to linger, on from the play's last hit. */
-export const chain: MotifPlanner = {
-  reads: HITS,
-  replaces: ["damage"],
-  plan(spec, entry, view, env) {
-    const hits = readEvents(entry, view, env, HITS);
-    const first = hits[0];
-    if (first === undefined) return [];
-    const t = timesOf(entry.durationMs);
-    const s = sourceOf(first.event, view, env);
-    // A hop split into its own entry leaves from the play's last hit, while that card is still shown.
-    const last = earlierHits(env, entry).at(-1);
-    const from0 = last === undefined ? s : (hitAnchor(view, last) ?? s);
-    const hop = Math.floor((t.Li - t.T) / hits.length);
-    const cues: FxCue[] = [];
-    if (s !== null && last === undefined) cues.push(motifBurst(spec, s, "point", t.G, MOTIF_TUNING.gather));
-    hits.forEach((h, k) => {
-      const from = k === 0 ? from0 : (hits[k - 1]?.at ?? null);
-      if (flies(from, h.at)) cues.push(motifShot(spec, "bolt", from, h.at, t.T + k * hop, hop));
-      cues.push(...hit(spec, h.event, h.at, t.D, t.T + (k + 1) * hop));
-    });
-    cues.push(...motifShake(spec, t.T + hits.length * hop));
     return cues;
   },
 };

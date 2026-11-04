@@ -13,7 +13,7 @@ import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import type { CardDelta, FieldChange } from "./diff.ts";
 import { cardCount, countsLine, patchCards, type PatchCards } from "./history.ts";
 import { releaseArtPath } from "./releaseArt.ts";
-import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, type NoteSection, type Release } from "./releases.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, tiers, type NoteSection, type Release } from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
 /** One shipped version's record in `shipped.json`: the commit that brought it to main. */
@@ -154,7 +154,8 @@ function lines(heading: string, icon: string, items: readonly string[]): string[
   return items.length === 0 ? [] : [`### ${icon} ${heading}`, items.map((line) => `- ${prose(line)}`).join("\n")];
 }
 
-type Placed = { readonly release: Release; readonly major: boolean };
+/** `major` opens its line (R724000); `art` is whether the release shows artwork: every version but a micro patch (R3012001). */
+type Placed = { readonly release: Release; readonly major: boolean; readonly art: boolean };
 
 function body(patch: Patch, placed: Placed, technical: readonly string[], cards: PatchCards, live: boolean, sites: Sites, detail: CardDetail): string {
   const out = [WRITTEN_BY];
@@ -168,9 +169,10 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
   }
   const tier = patch.tier === undefined ? [] : [TIER_NAME[patch.tier]];
   out.push([`**${patch.date}**`, markdownText(placed.release.name), ...tier].join(" · "));
-  // #2681: the patch's artwork, served by the host the footer names (a staging build has it before production does).
+  // #2681, R3012001: the artwork of a major (its still poster) or a patch, served by the host the footer
+  // names (a staging build has it before production does). A micro patch has none: its notes read under its patch.
   const site = live ? sites.production : sites.staging;
-  out.push(`![${markdownText(`${patch.version}: ${playerTitle(patch)}, release artwork`)}](${site}${releaseArtPath(patch.version, "animated")})`);
+  if (placed.art) out.push(`![${markdownText(`${patch.version}: ${playerTitle(patch)}, release artwork`)}](${site}${releaseArtPath(patch.version)})`);
   if (placed.major) out.push(...lineSection(placed.release));
   for (const { key, heading } of NOTE_SECTIONS) out.push(...lines(heading, SECTION_ICON[key], patch.player?.[key] ?? []));
   out.push(...lines("Technical changes", TECHNICAL_ICON, technical));
@@ -217,9 +219,12 @@ export function githubReleases(input: {
   const commits = new Map(input.shipped.map((record) => [record.version, record.commit]));
   const technical = technicalLines(input.technical);
   const placed = new Map<string, Placed>();
+  const tierOf = new Map(tiers(patches).map((tier, at) => [patches[at]?.version ?? "", tier]));
   for (const group of releaseGroups(patches, input.releases ?? RELEASES)) {
     const oldest = group.patches.at(-1)?.version;
-    for (const patch of group.patches) placed.set(patch.version, { release: group.release, major: patch.version === oldest });
+    for (const patch of group.patches) {
+      placed.set(patch.version, { release: group.release, major: patch.version === oldest, art: tierOf.get(patch.version) !== "micro" });
+    }
   }
 
   let before: Snapshot | null = null;

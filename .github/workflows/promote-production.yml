@@ -20,7 +20,8 @@
 #
 # Three ways in:
 #   issue_comment      `/promote [sha]` (or `/fast-forward`), `/skip-super <reason>` or `/cancel` on the
-#                      production issue, from someone GitHub calls an owner, member or collaborator.
+#                      production issue (or on one a fresh issue took over from, which the script
+#                      opens weekly), from someone GitHub calls an owner, member or collaborator.
 #                      `/hold`, `/resume` and `/delay` are answered that there is nothing to hold.
 #   workflow_run       a super run on main that passed: the daily promotion. A finished super run on a
 #                      promotion pull request (`promote/*`): it merges when the run passed, and says so
@@ -157,6 +158,9 @@ jobs:
           ACTOR: ${{ github.actor }}
           INPUT_SHA: ${{ inputs.sha }}
           INPUT_SKIP_REASON: ${{ inputs.skip_super_reason }}
+          # The issue a command is on: a production issue that a fresh one has since taken over from
+          # (the script's ROTATE_DAYS) is still read, so a command left there is carried out.
+          COMMENT_ISSUE: ${{ github.event.issue.number }}
         run: bash scripts/promote-production.sh
 
   # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge

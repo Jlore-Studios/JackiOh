@@ -75,12 +75,12 @@ function unitsOf(side: PlayerView["you"]): UnitOf[] {
 /**
  * One motif's fixture events, as `player` would deal them from `sourceId` on `view`: bolt and scorch hit
  * the first enemy unit, volley the first three, barrage rains six hits over four units and the hero,
- * chain hops four units in order, nova blasts every enemy unit, lance hits lane 3, wipe destroys every
+ * nova blasts every enemy unit, lance hits lane 3, wipe destroys every
  * unit, vanish exiles the second enemy unit, negate counters a card, drain streams from the enemy hero
- * into its first unit, bless buffs and curse degrades the viewer's first unit, ward shields the first
- * enemy unit, conjure and rise summon a token, offering sinks the viewer's first unit as a cost, shift
- * swaps the board, bind locks an enemy zone, tether takes the first enemy unit, mirror and transmute
- * turn the viewer's third unit into a token, flight draws a card, glimpse judges a prediction, mana
+ * into its first unit, bless buffs and curse degrades the viewer's first unit,
+ * conjure and rise summon a token, offering sinks the viewer's first unit as a cost, shift
+ * swaps the board, bind locks an enemy zone, tether takes the first enemy unit, transmute
+ * turns the viewer's third unit into a token, flight draws a card, mana
  * refills the viewer's crystals, tithe discounts the viewer's first hand card, tally ticks a counter,
  * snap fires a hidden trap, send puts a card in the hand, radiance makes the viewer's first hand card
  * Radiant and mend heals the viewer's first unit. Deal (#2796) adds a card to the player's hand and
@@ -102,8 +102,6 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
       const targets = [...ids.slice(0, 4), `hero-${enemy.player}`];
       return Array.from({ length: 6 }, (_, k) => damage(targets[k % targets.length] ?? "", 1));
     }
-    case "chain":
-      return ids.slice(0, 4).map((id) => damage(id, 2));
     case "nova":
       return ids.map((id) => damage(id, 2));
     case "lance": {
@@ -141,10 +139,6 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
       const mine = unitsOf(view.you)[0];
       return mine === undefined ? [] : [{ type: "degraded", instanceId: mine.instanceId, defId: mine.defId, change: { kind: "stats", attack: -1, health: -1 } }];
     }
-    case "ward": {
-      const foe = foes[0];
-      return foe === undefined ? [] : [{ type: "damageAbsorbed", sourceId: null, targetId: foe.instanceId, absorbed: 5, combat: false }];
-    }
     case "conjure":
     case "rise":
       return [{ type: "summoned", player, instanceId: "fx-conjured", defId: "token-sheep", row: "units", lane: 1 }];
@@ -173,7 +167,6 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
       const foe = foes[0];
       return foe === undefined ? [] : [{ type: "controlChanged", instanceId: foe.instanceId, controller: view.viewer, row: "units", lane: 4 }];
     }
-    case "mirror":
     case "transmute": {
       const mine = unitsOf(view.you)[2] ?? unitsOf(view.you)[0];
       return mine === undefined
@@ -182,8 +175,6 @@ export function motifFixture(motif: DrawnMotif, view: PlayerView, sourceId: stri
     }
     case "flight":
       return [{ type: "drawn", player, instanceId: "fx-drawn", defId: "core-055" }];
-    case "glimpse":
-      return [{ type: "predicted", player, secretId: "fx-secret", guess: "attack", outcome: "won" }];
     case "mana":
       return [{ type: "manaChanged", player, current: 4, max: 4 }];
     case "tithe": {
@@ -408,6 +399,11 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   jadeCrack: (_view, _instanceId, player) => [
     { type: "healthLost", player, amount: 2 },
     { type: "addedToHand", player, instanceId: "fx-jade", defId: "meditative-039-2" },
+  ],
+  // R2803000: Fortify Mind's judged guess, as `glimpse` drew it: the prediction judged on the badge.
+  mindJudge: (_view, _instanceId, player) => [
+    { type: "predicted", player, secretId: "fx-secret", guess: "attack", outcome: "won" },
+    { type: "secretRevealed", player, secretId: "fx-secret", choice: "attack" },
   ],
   cnSweep: (view, _instanceId, player) => {
     const hand = Array.isArray(view.you.hand) ? view.you.hand : [];

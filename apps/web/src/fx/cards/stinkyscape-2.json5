@@ -71,7 +71,7 @@
   "stinkyscape-142": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Jade Launcher
   "stinkyscape-143": { cry: { motif: "conjure", palette: "Tech/rocket" } }, // Book Launcher
   "stinkyscape-144": { cast: { motif: "snap" } }, // Prepare For Liftoff
-  "stinkyscape-145": { cast: { motif: "ward" } }, // Fortify Flesh
+  "stinkyscape-145": { cast: { motif: "bless" } }, // Fortify Flesh
   "stinkyscape-146": { bespoke: "flashFreeze" }, // Flash Freeze
   "stinkyscape-147": { death: { motif: "send" } }, // IN33DH3
   "stinkyscape-147-1": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // IN33DH3 Prime

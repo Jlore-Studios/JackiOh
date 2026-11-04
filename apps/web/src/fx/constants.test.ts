@@ -43,7 +43,7 @@ const S2 = {
   FX_SLAM_MAX_TRAUMA: 0.5,
   FX_LEGENDARY_TRAUMA: 0.7,
   FX_TAKEOVER_TAIL_MS: 700,
-  FX_TAKEOVER_TRAUMA: 1,
+  FX_TAKEOVER_TRAUMA: 0.6,
   FX_TRAP_TRAUMA: 0.4,
   FX_RESULT_TRAUMA: 0.9,
   FX_LETHAL_LEAD_MAX_MS: 600,
@@ -138,7 +138,6 @@ const S2 = {
     bolt: 0.25,
     volley: 0.3,
     barrage: 0.35,
-    chain: 0.3,
     lance: 0.4,
     nova: 0.45,
     wipe: 0.6,
@@ -148,17 +147,14 @@ const S2 = {
     drain: 0.3,
     bless: 0.2,
     curse: 0.25,
-    ward: 0.2,
     conjure: 0.3,
     rise: 0.35,
     offering: 0.3,
     shift: 0.15,
     bind: 0.2,
     tether: 0.25,
-    mirror: 0.25,
     transmute: 0.3,
     flight: 0,
-    glimpse: 0.1,
     mana: 0,
     tithe: 0.1,
     tally: 0.15,
@@ -172,6 +168,9 @@ const S2 = {
     recall: 0,
     hex: 0.15,
   },
+  // R2803000: the folded `ward`'s shake in the rows, and bespoke `mindJudge`'s.
+  FX_ARMOR_TRAUMA: 0.2,
+  FX_MIND_JUDGE_TRAUMA: 0.1,
   // Issue #2797: Stinkyscape's Flourishes (R2797000).
   FX_TERMINUS_TRAUMA: 0.5,
   FX_MAGI_STAGGER: 0.05,
@@ -195,6 +194,10 @@ const S2 = {
   FX_DINO_STOMP_TRAUMA: 0.55,
   FX_GAME_DESIGN_TRAUMA: 0.45,
   FX_SET_PASS_FLOOR: 0.55,
+  // R2803000: the audit's floors and its phone budget.
+  FX_COVERAGE_FLOOR: 0.5,
+  FX_MOTIF_MIN_CARDS: 3,
+  FX_PHONE_FRAME_BUDGET_MS: 50,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
@@ -404,6 +407,17 @@ describe("S2 the effects constants", () => {
   it("S2 the particle caps shrink from desktop to phone to the adaptive floor", () => {
     expect(constants.FX_PARTICLE_CAP_MIN).toBeLessThan(constants.FX_PARTICLE_CAP_MOBILE);
     expect(constants.FX_PARTICLE_CAP_MOBILE).toBeLessThan(constants.FX_PARTICLE_CAP);
+  });
+
+  it("R2803000 the audit's floors and phone budget hold the finished work", () => {
+    expect(constants.FX_COVERAGE_FLOOR).toBe(0.5);
+    expect(constants.FX_MOTIF_MIN_CARDS).toBe(3);
+    expect(constants.FX_PHONE_FRAME_BUDGET_MS).toBe(50);
+    // The audit's floor is looser than any one pass's: a set's pass holds its own cards to more.
+    expect(constants.FX_COVERAGE_FLOOR).toBeLessThan(constants.FX_SET_PASS_FLOOR);
+    // The phone budget is a frame at 20 fps: a miss means the scene, not the budget, is scaled back.
+    expect(constants.FX_PHONE_FRAME_BUDGET_MS).toBeLessThanOrEqual(50);
+    expect(constants.FX_PHONE_FRAME_BUDGET_MS).toBeGreaterThan(0);
   });
 
   it("S2 the shake caps stay inside [0, 1] trauma", () => {

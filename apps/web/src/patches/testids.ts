@@ -14,9 +14,21 @@ export const patchTestid = {
   technical: "patch-technical",
   /** A patch's lines from the technical log (R1369000). */
   technicalLog: "patch-technical-log",
-  /** One patch, `data-version` its version. */
+  /** One major or patch, `data-version` its version; its micro patches sit inside it (R3012000). */
   patch: "patch-entry",
-  /** #2681: a patch's artwork, `data-version` its version, `data-major` "true" for a major's. */
+  /** R3012000: a micro patch inside the entry of the patch it follows, `data-version` its version. */
+  micro: "patch-micro",
+  /** R3012000: the legend on the side of the page, a `<nav>`. */
+  legend: "patch-legend",
+  /** A release line's link in the legend, `data-set` its id. */
+  legendLine: "patch-legend-line",
+  /** One link of the legend to a version's entry, `data-version` its version, `data-tier` its tier. */
+  legendLink: "patch-legend-link",
+  /** The legend's drawer button on a phone. */
+  legendToggle: "patch-legend-toggle",
+  /** A patch's button in the legend that shows or hides its micro patches, `data-version` the patch. */
+  legendMicros: "patch-legend-micros",
+  /** #2681, R3012001: the artwork of a major or a patch, `data-version` its version, `data-major` "true" for a major's poster. */
   releaseArt: "patch-release-art",
   /** A patch's player note (R724001). */
   note: "patch-note",

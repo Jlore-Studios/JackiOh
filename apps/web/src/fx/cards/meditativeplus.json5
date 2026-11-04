@@ -20,7 +20,7 @@
   "meditativeplus-002": { cast: { motif: "deal", palette: "Tech/hologram" } }, // NA Tech
   "meditativeplus-003": { cast: { motif: "flight" } }, // Wondrous Wand
   "meditativeplus-004": { cast: { motif: "seal" } }, // Jlockeed's Supply Drop
-  "meditativeplus-005": { cast: { motif: "chain" } }, // Spirit Lash
+  "meditativeplus-005": { cast: { motif: "nova" } }, // Spirit Lash
   "meditativeplus-006": { cast: { motif: "seal", palette: "Dark/blood" } }, // Bloodbloom
   "meditativeplus-007": "none: vanilla", // Life Mage
   "meditativeplus-008": "none: vanilla", // Arch Mage

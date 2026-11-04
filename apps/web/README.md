@@ -716,6 +716,7 @@ src/practice/
                       PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
+  todaysDeal.ts       today's deal (R2882000): the UTC day's seed daily-YYYY-MM-DD and seat, on a random deck
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   sandbox.ts SandboxPanel.tsx sandbox.css
                       a sandbox game's dev tools (R923000–R923003): the card search, the cards the

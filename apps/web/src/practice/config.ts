@@ -58,6 +58,12 @@ export const PRACTICE_SEED_BYTES = 4;
 
 export const PRACTICE_SEED_MAX_LENGTH = 64;
 
+/** R2882000: today's deal plays on this and its UTC day, `daily-YYYY-MM-DD`. */
+export const DAILY_DEAL_SEED_PREFIX = "daily-";
+
+/** R2882000: a UTC day in milliseconds; the day counted from 1970-01-01 sets the human's seat on today's deal. */
+export const DAILY_DEAL_DAY_MS = 86_400_000;
+
 export const PRACTICE_RESULT_PARTICLES = 18;
 
 /** R768: retained free-game replays. */

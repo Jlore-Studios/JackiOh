@@ -5,11 +5,11 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import type { AnimationEntry } from "../../game/animations.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
-import { bind, conjure, hex, mirror, offering, rise, shift, tether, transmute } from "./board.ts";
+import { bind, conjure, hex, offering, rise, shift, tether, transmute } from "./board.ts";
 import { readEvents, type MotifPlanner, type MotifSpec } from "./build.ts";
-import { barrage, bolt, chain, lance, nova, scorch, volley } from "./damage.ts";
-import { deal, flight, glimpse, mana, recall, seal, send, tally, tithe } from "./hand.ts";
-import { bless, curse, drain, mend, radiance, ward } from "./life.ts";
+import { barrage, bolt, lance, nova, scorch, volley } from "./damage.ts";
+import { deal, flight, mana, recall, seal, send, tally, tithe } from "./hand.ts";
+import { bless, curse, drain, mend, radiance } from "./life.ts";
 import type { DrawnMotif } from "./names.ts";
 import { negate, vanish, wipe } from "./removal.ts";
 import { snap } from "./trap.ts";
@@ -19,7 +19,6 @@ export const MOTIF_PLANNERS: { readonly [M in DrawnMotif]: MotifPlanner } = {
   bolt,
   volley,
   barrage,
-  chain,
   lance,
   nova,
   wipe,
@@ -29,17 +28,14 @@ export const MOTIF_PLANNERS: { readonly [M in DrawnMotif]: MotifPlanner } = {
   drain,
   bless,
   curse,
-  ward,
   conjure,
   rise,
   offering,
   shift,
   bind,
   tether,
-  mirror,
   transmute,
   flight,
-  glimpse,
   mana,
   tithe,
   tally,

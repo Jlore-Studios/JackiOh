@@ -19,11 +19,15 @@
 # Staging is not this script's: deploy-staging.yml deploys every commit of main whose push-to-main CI
 # passed, by itself, and nothing here holds or hurries it.
 #
-# The production issue. One issue labeled RELEASE_LABEL stays open for good. Its title says where
+# The production issue. One issue labeled RELEASE_LABEL is open at a time. Its title says where
 # production stands (everything live, commits waiting, or a candidate under test or red); its body
 # lists what main has that is not live yet (the queue) and the commands. Its first line is a hidden
 # state line: the last comment read (`last`), the last red super run it reported (`reported`) and
-# the last passing super run on main it promoted from (`daily`).
+# the last passing super run on main it promoted from (`daily`). Once it is ROTATE_DAYS old, a fresh
+# issue takes its place with the same state line, and the old one is retitled with the days it
+# covered and closed with a link to the new one, so no thread gathers every comment and retitle
+# (#1543 had 43 comments in two weeks). A command someone still leaves on a closed one is carried out
+# all the same (COMMENT_ISSUE) and answered on the open one.
 # Anyone with write access comments on it:
 #   /promote [sha]         opens the promotion pull request: main's newest commit whose push-to-main
 #                          CI passed, or that commit of main. `/fast-forward` says the same.
@@ -101,6 +105,13 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 # The branch whose passing super runs production follows (the daily promotion).
 : "${MAIN_BRANCH:=main}"
 : "${LISTED_COMMITS:=100}"
+# How many days one production issue lasts before a fresh one takes over (the header says why).
+: "${ROTATE_DAYS:=7}"
+# The clock, in seconds since the epoch: when the open issue is old enough to hand over.
+: "${NOW:=$(date -u +%s)}"
+# The issue the comment that woke this run is on (the workflow's github.event.issue.number): a
+# production issue that has since closed when it is not ISSUE.
+: "${COMMENT_ISSUE:=}"
 : "${MERGE_ATTEMPTS:=4}"
 : "${MERGE_RETRY_SECONDS:=5}"
 : "${PROMOTE_TOKEN:=${GH_TOKEN:-}}"
@@ -478,9 +489,10 @@ title_for() {
     testing) echo "Production: the super run is testing ${CAND:0:7} (#$PR_NUMBER)" ;;
     failed) echo "Production: the super run failed on ${CAND:0:7} (#$PR_NUMBER)" ;;
     *)
+      # No count: the body's queue has it. A title with the count changed with every commit of main,
+      # and GitHub keeps every retitle in the issue's timeline.
       if [ "$WAITING" = 0 ]; then echo "Production: everything on main is live"
-      elif [ "$WAITING" = 1 ]; then echo "Production: 1 commit on main is not live yet"
-      else echo "Production: $WAITING commits on main are not live yet"; fi
+      else echo "Production: commits on main are not live yet"; fi
       ;;
   esac
 }
@@ -516,9 +528,9 @@ Comment here. Only people with write access are heard; a command gets a 👍, or
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
 A newer `/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled. A promotion or a deploy that fails opens "CI: production promotion failed" for Squishy (`promote-production.yml`'s `report`).
-
-This issue stays open for good. Plan: `docs/deploy-cloudflare.md`. Written by `scripts/promote-production.sh`; the first line is its state, so leave it be.
 TEXT
+  printf '\nA fresh issue takes over from this one every %s days, carrying its state, so the thread stays short: [the closed ones](%s) are the history. Plan: `docs/deploy-cloudflare.md`. Written by `scripts/promote-production.sh`; the first line is its state, so leave it be.\n' \
+    "$ROTATE_DAYS" "${GITHUB_SERVER_URL:-https://github.com}/$REPO/issues?q=is%3Aissue+is%3Aclosed+label%3A%22${RELEASE_LABEL// /+}%22"
 }
 
 # Reads issue $1, or starts its state afresh when it has lost its state line. A line the countdown
@@ -527,9 +539,11 @@ TEXT
 # tested makes that run a no-op.
 load_issue() {
   local m info
-  info=$(try gh issue view "$1" --json title,body)
+  info=$(try gh issue view "$1" --json title,body,createdAt)
   title=$(jq -r .title <<<"$info")
   body=$(jq -r .body <<<"$info" | tr -d '\r')
+  created=$(jq -r '.createdAt // empty | fromdateiso8601' <<<"$info" 2>/dev/null) \
+    || echo "::warning::#$1's createdAt did not parse, so it is not handed over to a fresh issue."
   m=$(grep -o 'promote-production [^>]*' <<<"$body" | head -n1 || true)
   last=0 reported=- daily=-
   if [[ $m =~ last=([0-9]+) ]]; then last=${BASH_REMATCH[1]}; else echo "#$1 has lost its state line; starting it afresh."; fi
@@ -548,20 +562,26 @@ save_issue() {
   fi
   title=$want body=$text
 }
-# The production issue, ISSUE: the oldest open one, which stays open for good, a newer duplicate
-# closed; or a new one when none is open.
+# Opens a production issue holding the state in hand (last, reported, daily), and makes it ISSUE.
+new_issue() {
+  local f url
+  title=$(title_for) body=$(body_for) created=$NOW
+  f=$(mktemp)
+  printf '%s\n' "$body" > "$f"
+  ensure_label
+  url=$(try gh issue create --title "$title" --label "$RELEASE_LABEL" --label "$HUMAN_LABEL" \
+    --assignee "$ASSIGNEES" --body-file "$f")
+  rm -f "$f"
+  ISSUE=${url##*/}
+}
+# The production issue, ISSUE: the oldest open one, a newer duplicate closed; or a new one when none
+# is open.
 find_issue() {
-  local issues n f url
+  local issues n
   issues=$(open_issues)
   if [ -z "$issues" ]; then
     last=0 reported=- daily=-
-    f=$(mktemp)
-    body_for > "$f"
-    ensure_label
-    url=$(try gh issue create --title "$(title_for)" --label "$RELEASE_LABEL" --label "$HUMAN_LABEL" \
-      --assignee "$ASSIGNEES" --body-file "$f")
-    rm -f "$f"
-    ISSUE=${url##*/}
+    new_issue
     echo "Opened #$ISSUE, the production issue."
   else
     ISSUE=$(head -n1 <<<"$issues")
@@ -570,6 +590,20 @@ find_issue() {
     done
   fi
   load_issue "$ISSUE"
+}
+# Once ISSUE is ROTATE_DAYS old, a fresh one takes over with its state line (comment ids are the
+# repository's, so `last` holds across issues), and the old one is retitled with the days it covered
+# and closed with a link to the new one. Run after this run's replies, which stay with the comments
+# they answer.
+rotate_issue() {
+  local old=$ISSUE span
+  [ -n "$created" ] && [ $((NOW - created)) -ge $((ROTATE_DAYS * 86400)) ] || return 0
+  span="$(jq -rn --argjson t "$created" '$t | strftime("%Y-%m-%d")') to $(jq -rn --argjson t "$NOW" '$t | strftime("%Y-%m-%d")')"
+  new_issue
+  try gh issue close "$old" --reason completed \
+    --comment "Continued in #$ISSUE: a fresh production issue takes over every $ROTATE_DAYS days, with this one's state, so no thread grows long. Comment there from now on."
+  try gh issue edit "$old" --title "Production, $span (continued in #$ISSUE)"
+  echo "Opened #$ISSUE, the production issue from now on; closed #$old ($span)."
 }
 say() { try gh issue comment "$ISSUE" --body "$1" >/dev/null; }
 react() { gh api -X POST "repos/$REPO/issues/comments/$1/reactions" -f content="$2" --silent >/dev/null || true; }
@@ -595,9 +629,12 @@ said_skip() {
   esac
 }
 
-# Reads the comments on the issue newer than `last` and carries out each command.
+# Reads the comments on the issue newer than `last` and carries out each command, in order. When the
+# comment that woke this run is on a production issue that has since closed (COMMENT_ISSUE), that
+# one's comments are read too, so a command left there is not lost; the replies come here.
 apply_commands() {
-  local line id who cmdline cmd arg sha p num head
+  local line id who cmdline cmd arg sha p num head from=$ISSUE
+  [ -z "$COMMENT_ISSUE" ] || [ "$COMMENT_ISSUE" = "$ISSUE" ] || from="$ISSUE $COMMENT_ISSUE"
   while IFS= read -r line; do
     id=$(jq -r .id <<<"$line")
     [ "$id" -gt "$last" ] || continue
@@ -650,8 +687,10 @@ apply_commands() {
         ;;
     esac
     react "$id" '+1'
-  done < <(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate \
-    --jq '.[] | {id, login: .user.login, bot: (.user.type == "Bot"), assoc: .author_association, at: .created_at, body} | tojson')
+  done < <(for n in $from; do
+      gh api "repos/$REPO/issues/$n/comments" --paginate \
+        --jq '.[] | {id, login: .user.login, bot: (.user.type == "Bot"), assoc: .author_association, at: .created_at, body} | tojson'
+    done | jq -c -s 'sort_by(.id) | .[]')
 }
 
 # A manual run: /promote for INPUT_SHA, or /skip-super with INPUT_SKIP_REASON.
@@ -682,7 +721,7 @@ case $EVENT in
   *) fail "promote-production.sh does not handle the $EVENT event: production follows a passing super run, by itself or on /promote." ;;
 esac
 
-QUEUE='' STATUS=idle WAITING=0 WHY='' RESULT='' PR_NUMBER='' BRANCH='' CAND='' SUPER_URL='' COUNT=0 CATALOG=''
+QUEUE='' STATUS=idle WAITING=0 WHY='' RESULT='' PR_NUMBER='' BRANCH='' CAND='' SUPER_URL='' COUNT=0 CATALOG='' created=''
 find_issue
 case $EVENT in
   issue_comment) apply_commands ;;
@@ -691,4 +730,5 @@ esac
 daily_promotion
 reconcile
 refresh_queue
+rotate_issue
 save_issue

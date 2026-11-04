@@ -2014,6 +2014,11 @@
   "The patch notes didn't load. Check your connection and try again.": "更新日志未能加载。请检查网络连接后重试。",
   "1 patch": "1次更新",
   "{n} patches": "{n}次更新",
+  "1 micro patch": "1次小更新",
+  "{n} micro patches": "{n}次小更新",
+  "Micro patches": "小更新",
+  "Patch notes legend": "更新日志目录",
+  "Jump to a patch": "跳转到某次更新",
   "Classic & Classic+": "经典与经典+",
   "Earlier patches": "更早的更新",
   "Technical changes": "技术改动",
@@ -3548,7 +3553,6 @@
   "drawn {n}×, played {m}×": "被抽到 {n} 次，打出 {m} 次",
   "Use default": "使用默认",
   "Hover or focus a cosmetic to see it on the card. Choose one to wear it on this card only.": "悬停或聚焦某个外观即可在卡牌上预览。选择一个，仅让这张卡牌佩戴它。",
-  "No full art": "无全画",
   "Animated": "动态",
   "Card token": "卡牌代币",
   "Purchases": "购买说明",
@@ -4176,5 +4180,9 @@
   "Abandon this run? It ends here and cannot be undone.": "放弃这次探险吗？探险将就此结束，且无法撤销。",
   "Extended art": "延伸画",
   "Pixel": "像素",
-  "Comic": "漫画"
+  "Comic": "漫画",
+  "Play today's deal": "开始今日牌局",
+  "Everyone gets the same decks today at the same difficulty and “More cards from” pick. A new deal comes at midnight UTC. It earns no Jlore or XP.": "今天在相同难度和“更多牌来自”选择下，所有人拿到相同的卡组。UTC 午夜换新牌局。本局不会获得 Jlore 或经验。",
+  "Set showcase": "系列珍藏",
+  "Out of frame": "破框"
 }
