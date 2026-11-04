@@ -18091,16 +18091,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-3",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/i18n/zh-CN.json"
+          ],
+          "from": "40a6ff96878d8d3da5b3f12922ff26cb1b41e08f",
+          "main": "e0c952a4b57dad312246b21852116382c3a38e70"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "41797421265",
+            "run": "41803186993",
             "tier": "strong"
           }
         ],
-        "sha": "40a6ff96878d8d3da5b3f12922ff26cb1b41e08f",
+        "sha": "721bb607f537b6c10966a10f1c8ed0313cd1a0c9",
         "tiers": {
           "claude": "strong"
         }
