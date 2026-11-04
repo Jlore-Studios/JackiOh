@@ -17500,6 +17500,7 @@
         "by": "`claude` (strong)",
         "sha": "4539713ba5f9605f54b6927c5dcfb2dc863e19ae"
       },
+      "closed_at": "2026-11-04T08:16:59Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "hard",
@@ -17515,6 +17516,7 @@
         "provider": "claude-3",
         "sha": "4539713ba5f9605f54b6927c5dcfb2dc863e19ae"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-04T05:20:35Z",
