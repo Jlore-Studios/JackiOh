@@ -816,6 +816,109 @@ async fn r2940000_a_version_not_offered_is_400_and_writes_nothing() {
     assert_eq!((status, body), (200, worn));
 }
 
+/// R2942000: a card offered each of #2942's three versions and both augments: Scratch Pad, a Mythic Spell.
+const ALL_THREE: &str = "meditativeplus-026";
+
+#[tokio::test]
+async fn r2942000_r2942002_a_version_not_offered_or_signature_beside_one_is_400_and_writes_nothing() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    let nothing = json!({ "cards": [] });
+    // Owned on Speciesist by a grant no shop makes, none of #2942's versions is offered there.
+    for id in ["version-extended-art", "version-pixel", "version-comic"] {
+        own(&app, &profile, BARE, id).await;
+    }
+    for id in [
+        "version-pixel",
+        "version-comic",
+        "augment-animated",
+        "augment-signature",
+    ] {
+        own(&app, &profile, ALL_THREE, id).await;
+    }
+    let calls = record_store_calls(&app).await;
+    for (body, message) in [
+        (
+            json!({ "cardId": BARE, "fullArt": "version-extended-art" }),
+            "\"fullArt\" is not offered on this card",
+        ),
+        (
+            json!({ "cardId": BARE, "fullArt": "version-pixel" }),
+            "\"fullArt\" is not offered on this card",
+        ),
+        (
+            json!({ "cardId": BARE, "fullArt": "version-comic" }),
+            "\"fullArt\" is not offered on this card",
+        ),
+        // Offered, but not owned there.
+        (
+            json!({ "cardId": ALL_THREE, "fullArt": "version-extended-art" }),
+            "\"fullArt\" is a cosmetic this account does not own",
+        ),
+        // R2942002, R2949000: Signature fits none of them, Animated beside it or not.
+        (
+            json!({ "cardId": ALL_THREE, "fullArt": "version-pixel", "augments": ["augment-animated", "augment-signature"] }),
+            "\"augments\" lists Signature, which needs the Full art version and Animated on this card",
+        ),
+        (
+            json!({ "cardId": ALL_THREE, "fullArt": "version-comic", "augments": ["augment-signature"] }),
+            "\"augments\" lists Signature, which needs the Full art version and Animated on this card",
+        ),
+    ] {
+        assert_eq!(refusal(put(&app, TOKEN, body.clone()).await), message, "{body}");
+        assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing.clone()), "{body}");
+    }
+    assert!(
+        economy_calls(&calls)
+            .iter()
+            .all(|call| call != "economy.cardPicks.put"),
+        "{:?}",
+        economy_calls(&calls)
+    );
+    // R2942002: where it is offered and owned, Pixel and Animated round-trip, and so does Comic; a later Signature
+    // is refused and leaves them as they were.
+    for version in ["version-pixel", "version-comic"] {
+        let worn = json!({ "cards": [{
+            "cardId": ALL_THREE,
+            "fullArt": version,
+            "augments": ["augment-animated"],
+        }] });
+        let (status, body) = put(
+            &app,
+            TOKEN,
+            json!({ "cardId": ALL_THREE, "fullArt": version, "augments": ["augment-animated"] }),
+        )
+        .await;
+        assert_eq!((status, body), (200, worn.clone()), "{version}");
+        assert_eq!(
+            refusal(
+                put(
+                    &app,
+                    TOKEN,
+                    json!({ "cardId": ALL_THREE, "augments": ["augment-animated", "augment-signature"] })
+                )
+                .await
+            ),
+            "\"augments\" lists Signature, which needs the Full art version and Animated on this card",
+            "{version}"
+        );
+        assert_eq!(get(&app, Some(TOKEN)).await, (200, worn.clone()), "{version}");
+    }
+    // An upload leaves an unoffered version out, and with it the entry that held only that.
+    let worn = json!({ "cards": [{
+        "cardId": ALL_THREE,
+        "fullArt": "version-comic",
+        "augments": ["augment-animated"],
+    }] });
+    let (status, body) = upload(
+        &app,
+        TOKEN,
+        json!([{ "cardId": BARE, "fullArt": "version-pixel" }]),
+    )
+    .await;
+    assert_eq!((status, body), (200, worn));
+}
+
 #[tokio::test]
 async fn r2725002_a_signed_full_art_owner_picks_full_art_with_both_augments() {
     let app = test_app().await;

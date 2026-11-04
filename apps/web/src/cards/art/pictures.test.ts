@@ -2,7 +2,8 @@
 // apart from the card's normal picture, base and Radiant, on every card Signature is offered on. The faces
 // wearing it are fullArtTiers.test.tsx's; the pixels are e2e's cypress/component/card-versions.cy.tsx.
 // R2940001: Alt art's picture, seeded apart as Signature's is, and the Sketch, the normal picture in pencil; the
-// faces wearing them are versionLooks.test.tsx's.
+// faces wearing them are versionLooks.test.tsx's. R2942001: Pixel's and Comic's, the normal picture restyled; the
+// faces wearing them are versionLooks3.test.tsx's.
 
 import { createElement } from "react";
 import { cleanup, render } from "@testing-library/react";
@@ -14,7 +15,7 @@ import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
 import { artMotionOf } from "../fullArt.ts";
 import { AUGMENT_SIGNATURE_ID } from "../versions.ts";
 import { CardArt, type CardArtProps } from "./CardArt.tsx";
-import { artSeedOf, sketchSvg, type ArtPicture } from "./pictures.ts";
+import { artSeedOf, comicSvg, pixelSvg, restyledSvg, restyleOf, sketchSvg, type ArtPicture } from "./pictures.ts";
 
 afterEach(cleanup);
 
@@ -174,5 +175,97 @@ describe("R2940001 Alt art's picture and the Sketch", () => {
     expect(sketchSvg(picture, false, "core-008")).not.toBe(sketchSvg(picture, false, "core-083"));
     expect(sketchSvg(picture, false, "core-008")).toContain('<rect width="100" height="100" fill="#123456"/>');
     expect(sketchSvg(picture, false, "core-008")).not.toContain('viewBox="0 0 100 100"><rect');
+  });
+});
+
+describe("R2942001 Pixel's and Comic's pictures", () => {
+  it("R2942001 Pixel and Comic restyle the normal picture: seeded by the card's own id, each its own restyle", () => {
+    for (const picture of ["pixel", "comic"] as const) expect(artSeedOf("core-022", picture), picture).toBe("core-022");
+    expect((["normal", "signature", "alt", "sketch", "pixel", "comic"] as const).map(restyleOf)).toEqual([null, null, null, "sketch", "pixel", "comic"]);
+  });
+
+  /** One card of each painter, as R2940001's tests: two procedural cards, a Stinkyscape one and a Training Grounds one. */
+  const PAINTED = ["core-008", "core-083", "stinkyscape-154", "traininggrounds-040"] as const;
+
+  it("R2942001 Pixel and Comic draw the normal picture under their filters, apart from every other picture, base and Radiant, on every painter", () => {
+    for (const id of PAINTED) {
+      for (const radiant of [false, true]) {
+        const where = `${id} ${radiant ? "Radiant" : "base"}`;
+        const normal = drawnArt(id, radiant, "normal");
+        const sketch = drawnArt(id, radiant, "sketch");
+        const pixel = drawnArt(id, radiant, "pixel");
+        const comic = drawnArt(id, radiant, "comic");
+        expect(new Set([normal.picture, sketch.picture, pixel.picture, comic.picture]).size, where).toBe(4);
+        expect([pixel.marked, comic.marked], where).toEqual(["pixel", "comic"]);
+        // The subject is the normal picture's: its motif and family.
+        for (const drawn of [pixel, comic]) expect([drawn.motif, drawn.family], where).toEqual([normal.motif, normal.family]);
+        for (const [drawn, filter] of [
+          [pixel.picture ?? "", "px-pixel"],
+          [comic.picture ?? "", "pop-comic"],
+        ] as const) {
+          expect(drawn, `${where} ${filter}`).toContain(`filter id="${filter}"`);
+          expect(drawn, `${where} ${filter}`).toContain(`filter="url(#${filter})"`);
+          expect(drawn, `${where} ${filter}`).toContain(inner(normal.picture ?? ""));
+          expect(drawn.match(/<svg[\s>]/g) ?? [], `${where} ${filter}`).toHaveLength(1);
+          for (const banned of ["href", "<text", "<title", "NaN", "undefined"]) expect(drawn, `${where} ${filter} ${banned}`).not.toContain(banned);
+        }
+        // R2725004: a base face's Pixel cuts its colours to the palette, a Radiant one keeps its paint; a Radiant face's
+        // painted picture washes back over its Comic, a base face's never.
+        expect((pixel.picture ?? "").includes('result="px-palette"'), where).toBe(!radiant);
+        expect((comic.picture ?? "").includes('result="pop-wash"'), where).toBe(radiant);
+      }
+    }
+  });
+
+  it("R2942001 a Legacy card's and a Starship's picture are restyled, and a delivered file gives way to the painter", () => {
+    const LEGACY = "traininggrounds-044";
+    const normal = drawnArt(LEGACY, false, "normal");
+    const ship = { starship: { pieces: 2, launched: false } };
+    const flying = drawnArt("core-008", true, "normal", ship);
+    for (const picture of ["pixel", "comic"] as const) {
+      const legacy = drawnArt(LEGACY, false, picture);
+      expect(legacy.family, picture).toBe("legacy");
+      expect(legacy.marked, picture).toBe(picture);
+      expect(legacy.picture, picture).toContain(inner(normal.picture ?? ""));
+      const restyledShip = drawnArt("core-008", true, picture, ship);
+      expect(restyledShip.family, picture).toBe("starship");
+      expect(restyledShip.picture, picture).toContain(inner(flying.picture ?? ""));
+      expect(restyledShip.picture, picture).not.toBe(flying.picture);
+    }
+    const id = "core-008";
+    const manifest = { [id]: { base: true } } as const;
+    for (const picture of ["pixel", "comic"] as const) {
+      const drawn = drawnArt(id, false, picture, { manifest });
+      expect(drawn.art, picture).toBe("procedural");
+      expect(drawn.picture, picture).toBe(drawnArt(id, false, picture).picture);
+    }
+  });
+
+  it("R2942002 an animated Pixel or Comic moves its restyled picture", () => {
+    const id = "core-008";
+    const motion = artMotionOf(id);
+    expect(motion).not.toBeNull();
+    for (const picture of ["pixel", "comic"] as const) {
+      const still = drawnArt(id, false, picture);
+      const moving = drawnArt(id, false, picture, { motion });
+      expect(moving.picture, picture).toContain("art-m-");
+      expect(moving.picture, picture).not.toBe(still.picture);
+      expect(moving.marked, picture).toBe(picture);
+    }
+  });
+
+  it("R2942001 restyledSvg draws each restyle, the same for the same picture, and none takes a seed but the Sketch", () => {
+    const picture = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#123456"/></svg>';
+    for (const radiant of [false, true]) {
+      expect(restyledSvg(picture, "sketch", radiant, "core-008")).toBe(sketchSvg(picture, radiant, "core-008"));
+      expect(restyledSvg(picture, "pixel", radiant, "core-008")).toBe(pixelSvg(picture, radiant));
+      expect(restyledSvg(picture, "comic", radiant, "core-008")).toBe(comicSvg(picture, radiant));
+      expect(restyledSvg(picture, "pixel", radiant, "core-008")).toBe(restyledSvg(picture, "pixel", radiant, "core-083"));
+      expect(restyledSvg(picture, "comic", radiant, "core-008")).toBe(restyledSvg(picture, "comic", radiant, "core-083"));
+      for (const drawn of [pixelSvg(picture, radiant), comicSvg(picture, radiant)]) {
+        expect(drawn).toContain('<rect width="100" height="100" fill="#123456"/>');
+        expect(drawn).not.toContain('viewBox="0 0 100 100"><rect');
+      }
+    }
   });
 });

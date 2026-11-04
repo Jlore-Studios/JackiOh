@@ -138,7 +138,8 @@ for contract reasons rather than rules reasons.
    are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
    sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host. Spec 44 watches a
    friend's live game over `/ws/watch`. A watcher holds no seat, so it reseeds and activates
-   `e2e-pending` (R144) for the other seat.
+   `e2e-pending` (R144) for the other seat, whose Node socket hears the watcher's emote from the
+   sideline strip (`sideline-*`, R2990000).
 
 Every one of these is either an ask on another team or a convention this suite invented because
 BUILD does not fix it. They are all made in `support/`, never in a spec, so each has exactly one

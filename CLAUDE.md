@@ -124,7 +124,7 @@ The rest are in `crates/tools/README.md` (every `cargo jackioh` command), `crate
 ### Running a subset
 
 ```
-cargo test -p jackioh-engine --features testkit --test 'rules*'     # the engine's rule tests (the binaries rules and rules_2)
+cargo test -p jackioh-engine --features testkit --test 'rules*'     # the engine's rule tests (the binaries rules, rules_2 and rules_3)
 cargo test -p jackioh-cards c002_speciesist                         # one card's tests
 cargo test -p jackioh-engine --features testkit --test 'rules*' r58 # by ruling: every test whose name holds r58
 cargo test -p jackioh-server --test server actor::                  # one area of the server suite

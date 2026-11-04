@@ -189,8 +189,9 @@ var saidModeLabels = []string{"fullsend", "tree"}
 // creates them.
 var shared = []labelDef{
 	{"ready for merge", "0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"},
-	// #2986: a stop only a person can unblock, a question or a hand-over, beside `bot:blocked`.
-	{"needs decision", "d73a4a", "A bot stopped on a question or on what only a person can do: its comment says what, and until when"},
+	// #2986, #3009: a question a person answers and the bot carries out, beside `bot:blocked`;
+	// the `suggestion` label's colour.
+	{"needs decision", "d4c5f9", "A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it"},
 	{"human", "ededed", "People do this: the night bot never queues, plans, builds or labels it"},
 	{"human required", "e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"},
 	{"person merges", "1d76db", "The bot builds it, but a person reviews and merges its pull request"},
@@ -711,6 +712,9 @@ type Config struct {
 	// DecisionWaitHours: how long a question with a default waits for a trusted answer before the
 	// lane that asked builds its default (#2986, `decision.go`); 0, when left out, never goes ahead.
 	DecisionWaitHours int // default: 0
+	// DecisionAssignees: the people a question assigns while it waits for their answer (#3009,
+	// `decision.go`); none when left out.
+	DecisionAssignees []string // default: ()
 	UploadTranscripts bool
 	Install           *Gate
 	Gates             []*Gate

@@ -27,9 +27,10 @@ ts-rs = { workspace = true, optional = true }
 jackioh-cards = { workspace = true }
 
 # The integration-test binaries for the ported engine tests (SURFACE §1), the modules of
-# `tests/rules/` from `a` to `o` in `rules` and the rest in `rules_2`, which compile side by side in
-# CI (#2090). They reach the engine through `jackioh_engine::testkit`, so they build only with that
-# feature: `cargo test -p jackioh-engine --features testkit --test 'rules*'`.
+# `tests/rules/` from `a` to `o` in `rules`, from `p` through `r` in `rules_2` and the rest in
+# `rules_3`, which compile side by side in CI (#2090, #2957). They reach the engine through
+# `jackioh_engine::testkit`, so they build only with that feature:
+# `cargo test -p jackioh-engine --features testkit --test 'rules*'`.
 [[test]]
 name = "rules"
 path = "tests/rules.rs"
@@ -38,6 +39,11 @@ required-features = ["testkit"]
 [[test]]
 name = "rules_2"
 path = "tests/rules_2.rs"
+required-features = ["testkit"]
+
+[[test]]
+name = "rules_3"
+path = "tests/rules_3.rs"
 required-features = ["testkit"]
 
 # The golden replay (§13), through `jackioh_engine::testkit::golden`, which `cargo jackioh golden check`

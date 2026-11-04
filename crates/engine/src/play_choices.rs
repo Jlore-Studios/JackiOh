@@ -2047,8 +2047,9 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
 /// R979000, §10.8: why a card in `player`'s hand cannot be played now, the first refusal in a fixed
 /// order, as `UnitView.attack_reason` (R849000) is for an attack. Each branch reads what `legal_actions`
 /// and §10.5 step 1 call, so the reason and the listing cannot disagree (`reduce.rs`'s header); `None`
-/// when a play is listed or no refusal fires. The order is ban (R455), price, zone, Tribute, choices: a
-/// card refused at every price is refused whatever the board holds, then step 1's own order.
+/// when a play is listed or no refusal fires. The order is ban (R455), price, zone, Tribute, choices,
+/// then the choices' own costs (R2975000): a card refused at every price is refused whatever the board
+/// holds, then step 1's own order.
 pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
     // R1223: borrowed mana pays; R1180004: a Spell its player's health price reaches is refused by no mana.
     let mana = crate::credit::spendable_mana(state, player);
@@ -2118,7 +2119,10 @@ fn why_unplayable(
     let prices = play_prices(state, player, card);
     if prices.is_empty() {
         if chooses_x(state, card) && legal_x_values(state, player, card).is_empty() {
+            // R2975000: an X the mana allows is then asked against the most X the play may choose, as
+            // step 1's refuse_x asks it: a copier's is what its own price leaves (B5 E14, R545).
             return why_x_refused(state, player, MIN_CHOSEN_X, None)
+                .and_then(|()| why_x_refused(state, player, MIN_CHOSEN_X, Some(most_x(state, player, card))))
                 .err()
                 .map(|error| error.message);
         }
@@ -2167,36 +2171,55 @@ fn why_unplayable(
         &stamped_for_play(state, card, cheapest.x, cheapest.embiggen),
         cheapest.cost,
     );
-    if play_choice_combinations(state, player, &face, None).is_empty() {
-        let paid: &[String] = tribute_sets.first().map(Vec::as_slice).unwrap_or(&[]);
-        let probe = PlayAction {
-            instance_id: card.id.clone(),
-            zone: if needs_zone(state, card) {
-                default_zone_for(state, player, card, paid).map(|slot| ZoneChoice {
-                    row: slot.row,
-                    lane: slot.lane,
-                })
-            } else {
-                None
-            },
-            x: cheapest.x,
-            embiggen: cheapest.embiggen,
-            equip: None,
-            tributes: if paid.is_empty() {
-                None
-            } else {
-                Some(paid.to_vec())
-            },
-            targets: None,
-            modes: None,
-            plague: None,
-            face_down: None,
-        };
+    let combos = play_choice_combinations(state, player, &face, None);
+    let paid: &[String] = tribute_sets.first().map(Vec::as_slice).unwrap_or(&[]);
+    let probe = PlayAction {
+        instance_id: card.id.clone(),
+        zone: if needs_zone(state, card) {
+            default_zone_for(state, player, card, paid).map(|slot| ZoneChoice {
+                row: slot.row,
+                lane: slot.lane,
+            })
+        } else {
+            None
+        },
+        x: cheapest.x,
+        embiggen: cheapest.embiggen,
+        equip: None,
+        tributes: if paid.is_empty() {
+            None
+        } else {
+            Some(paid.to_vec())
+        },
+        targets: None,
+        modes: None,
+        plague: None,
+        face_down: None,
+    };
+    if combos.is_empty() {
         return why_choices_refused(state, player, card, &probe)
             .err()
             .map(|error| error.message);
     }
-    None
+    // (f) The choices' own costs (R2975000): the face offers combinations, yet the listing drops each
+    // whose targets' discards the hand cannot pay (R682) or whose Tribute pick is no unit it tributes
+    // (R123). Each goes to §10.5 step 1 on the probe above, carrying its picks: one step 1 accepts
+    // leaves nothing to say; otherwise the first combination's refusal is said, in step 1's words.
+    let mut refusal: Option<String> = None;
+    for choices in &combos {
+        let picked = PlayAction {
+            targets: choices.targets.clone(),
+            modes: choices.modes.clone(),
+            ..probe.clone()
+        };
+        match why_choices_refused(state, player, card, &picked) {
+            Ok(()) => return None,
+            Err(error) => {
+                refusal.get_or_insert(error.message);
+            }
+        }
+    }
+    refusal
 }
 
 /// R1571000, §10.8: R979000's order and words for a card in the player's own graveyard that a

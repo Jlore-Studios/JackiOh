@@ -55,6 +55,7 @@ type Client interface {
 	Dequeue(nodeID string)
 	PinIssue(nodeID string)
 	MarkReady(nodeID string)
+	MarkDraft(nodeID string)
 	MergePull(number int, method string, title string) *pyjson.Object
 	GetFile(path string, ref string) (string, string)
 	PutFile(path string, text string, branch string, sha string, message string)

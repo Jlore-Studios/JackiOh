@@ -60,7 +60,8 @@ import {
 import { FullArtOwned, OwnCopy } from "./fullArt.ts";
 import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ALT_FULL_ART_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
 import { FULL_ART_MOTION, SIGNATURE_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
-import { SKETCH_INK, SKETCH_PAPER, artSeedOf, sketchSvg } from "./art/pictures.ts";
+import { COMIC_DOT_OPACITY, COMIC_INK, COMIC_LEVELS, PIXEL_LEVELS, SKETCH_INK, SKETCH_PAPER, artSeedOf, comicSvg, pixelSvg, sketchSvg } from "./art/pictures.ts";
+import { PIXEL_NAME_INK, PIXEL_NAME_SHADOW } from "./pixelName.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
@@ -1468,5 +1469,37 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     }
     // Its frame's colours are the palette's slates.
     for (const rule of sketchRules) for (const hex of colorsOf(rule.body)) expect(inRadiantGold(hex), `${rule.selector}: #${hex}`).toBe(false);
+  });
+
+  it("R2942001 Pixel's and Comic's colours keep out of the Radiant gold window", () => {
+    const hex = (level: number): string => Math.round(level * 255).toString(16).padStart(2, "0");
+    /** Every colour channels cut to `levels` make: 27 for three levels. */
+    const cut = (levels: readonly number[]): string[] => levels.flatMap((r) => levels.flatMap((g) => levels.map((b) => `${hex(r)}${hex(g)}${hex(b)}`)));
+    const mix = (top: string, under: string, alpha: number): string =>
+      [0, 2, 4].map((at) => hex((alpha * parseInt(top.slice(at, at + 2), 16) + (1 - alpha) * parseInt(under.slice(at, at + 2), 16)) / 255)).join("");
+    // A base face's Pixel picture is its palette's 27 colours; Comic's flat colour is its own 27, under its ink at any
+    // opacity up to a dot's and to an outline's whole.
+    const pixel = cut(PIXEL_LEVELS);
+    const comic = cut(COMIC_LEVELS);
+    expect([pixel.length, comic.length]).toEqual([27, 27]);
+    const ink = COMIC_INK.slice(1);
+    const inked = comic.flatMap((flat) => [0.1, 0.2, 0.3, COMIC_DOT_OPACITY, 0.6, 0.8, 1].map((alpha) => mix(ink, flat, alpha)));
+    for (const color of [...pixel, ...comic, ...inked]) expect(inRadiantGold(color), `#${color}`).toBe(false);
+    // The filters' own colours, base and Radiant, and the pixel name face's.
+    for (const radiant of [false, true]) {
+      const colors = [...hexes(pixelSvg("<svg></svg>", radiant)), ...hexes(comicSvg("<svg></svg>", radiant))];
+      expect(colors.length).toBeGreaterThan(0);
+      for (const color of colors) expect(inRadiantGold(color), `#${color}`).toBe(false);
+    }
+    for (const color of [COMIC_INK, PIXEL_NAME_INK, PIXEL_NAME_SHADOW]) expect(inRadiantGold(color.slice(1)), color).toBe(false);
+    // Their frames' and banners' colours in cards.css, and Extended art's frame: the palette's, no gold.
+    const partThree = rules(cardsCss).filter((rule) => /\[data-version="version-(extended-art|pixel|comic)"\]/.test(rule.selector));
+    const box = partThree.filter((rule) => rule.selector.endsWith(".card-text"));
+    const drawn = partThree.filter((rule) => !rule.selector.endsWith(".card-text"));
+    expect(drawn.length).toBeGreaterThan(8);
+    for (const rule of drawn) for (const color of colorsOf(rule.body)) expect(inRadiantGold(color), `${rule.selector}: #${color}`).toBe(false);
+    // Extended art's rules box is the parchment every face's box is made of, no colour of its own.
+    expect(box).toHaveLength(1);
+    expect(colorsOf(box[0]?.body ?? "")).toEqual([PALETTE.get("--pal-parchment")?.slice(1)]);
   });
 });
