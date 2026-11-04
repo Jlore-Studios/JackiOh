@@ -15092,15 +15092,8 @@
       "part_of": 3000
     },
     "3049": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41847555345",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-04T14:55:57Z",
-        "until": "2026-11-04T15:25:57Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15112,10 +15105,9 @@
         "reason": "planned on opus",
         "trail": "40; grep -n \\\"pub enum WindowSource\\\\|string_union\\\" -A8 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rn \\\"catalog::register_catalog(\\\" crates apps --include=*.rs | head; grep -rn \\\"win_rate_leader\\\\|win_rate_trailer\\\" crates --include=*.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -n \\\"pub struct EffectContext\\\" -A8 crates/engine/src/*.rs crates/engine/src/*/*.rs | head -12; sed -n 455,492p crates/server/tests/suppor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 2778,2805p crates/engine/src/state.rs; sed -n 86,100p crates/engine/src/script.rs; grep -n \\\"pub state: &\\\" crates/engine/src/script.rs \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rhn \\\"ctx\\\\.state()\\\\|ctx\\\\.state\\\\b\\\" crates/cards/src/scripts | head -3; grep -n \\\"pub fn state(&self)\\\" -B2 -A3 crates/engine/src/scri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -n \\\"pub fn create_game_for_reset\\\" -B6 -A30 crates/engine/src/state.rs | head -50; grep -rn \\\"create_game_for_reset(\\\" crates/engine/src \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 130,215p crates/engine/src/subsystems/glitch.rs\", \"description\": \"Read how a Glitch reset carries fields\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rn \\\"reset_match\\\\|fn r676_\\\\|fn r678_\\\" crates/engine/tests/rules/*.rs | head -10\", \"description\": \"Find Glitch reset tests\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 230,262p crates/engine/tests/rules/deck_marks.rs\", \"description\": \"Read a reset_match test pattern\"}\n- Bash: {\"command\": \"mkdir -p /tmp/plan3049 && cat > /tmp/plan3049/w.py <<'EOF'\\nimport math\\nfrom math import isqrt\\ndef wb(w,n,S=10**6):\\n zn,zd=2401,625\\n a=2*zd*w+zn; b=zn*(4*zd*w*(n-w)+n*zn); c=2*(zd*n+\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 98,140p crates/engine/tests/rules/meditative_riders.rs; sed -n 405,460p crates/engine/tests/rules/pool_hold.rs; sed -n 1336,1440p crates\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 1510,1525p crates/engine/src/state.rs; grep -n \\\"fn playing\\\" -A15 crates/engine/tests/rules/pool_hold.rs | head -20\", \"description\": \"C\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 60,100p crates/server/src/api/game_records.rs; grep -rn \\\"fn fold_args_of\\\\|fold_args_of(\\\" crates/server/src | head\", \"description\": \"R\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; sed -n 1,12p spec/rulings/R807000.md | cut -c1-400; head -12 spec/rulings/R750000.md | cut -c1-300; grep -n \\\"proven_in\\\" -A6 spec/rulings/R252\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rln \\\"golden\\\" crates/tools/src/*.rs | head -3; ls e2e/fixtures 2>/dev/null | head; grep -rl \\\"meditative-050\\\\|meditativeplus-002\\\" e2e/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -n \\\"fixture\\\\|FIXTURE\\\" crates/tools/src/golden.rs 2>/dev/null | head -5; ls crates/tools/src | grep -i gold; grep -rn \\\"hotseat.*fixture\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rn \\\"HOTSEAT_HASH\\\" crates --include=*.rs | head -3; grep -rn \\\"pub const HOTSEAT_HASH\\\\|fn hotseat_fixture\\\\|include_str!.*hotseat\\\" cra\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -c \\\"meditative-050\\\\|meditativeplus-002\\\" crates/engine/tests/golden/01-hotseat-full-game.json; ls crates/engine/tests/golden/\", \"descrip\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rln \\\"meditative-050\\\\|meditativeplus-002\\\\|CN Tech\\\\|NA Tech\\\" e2e apps/web/src crates/tools/src crates/ai/src crates/server/src 2>/dev/\u2026\n- Bash: {\"command\": \"cat >> /tmp/plan3049/w.py <<'EOF'\\nprint('lead', wb(25,32), wb(300,450))\\nprint('trail', wb(2,20), wb(50,250))\\nprint('tie0', wb(0,20), wb(0,40))\\nEOF\\npython3 -I /tmp/plan3049/w.py | ta\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rn \\\"fn leader_of\\\\|fn trailer_of\\\\|fn snapshot_of\\\\|fn wilson_bounds\\\\|fn kept_for_game\\\\|fn win_rates_of\\\\|fn win_rate_snapshot\\\" crate\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -n \\\"win_rate\\\\|WinRate\\\\|strength\\\" crates/server/tests/bots/pool.rs | head -20; grep -rn \\\"deal_random_deck_with_strength\\\\|deal_random_\u2026\n- said: Surveys are in. I have the full shape now; writing the plan draft.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -n \\\"fn sink_for\\\\|pub use.*sink_for\\\" crates/engine/src/testkit/*.rs | head -2; grep -n \\\"both_stores!\\\\|last_board\\\" crates/server/tests\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; grep -rn \\\"fn sink_for\\\" crates/engine | head -2; grep -n \\\"last_boards\\\" crates/server/tests/store/contract.rs | head -4; grep -rln \\\"fn inser\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3049/.bot-plan.md\", \"content\": \"## Goal\\n\\nM #50 CN Tech and M+ #2 NA Tech pick from a **win-rate snapshot the game is handed at its start**: the serv\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; wc -w .bot-plan.md; wc -c .bot-plan.md; grep -n \\\"r1101\\\\|R1101\\\" crates/cards/src/scripts/meditative/c050_cn_tech.rs | head -3; grep -n \\\"prov\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3049/.bot-plan.md\", \"content\": \"## Goal\\n\\nM #50 CN Tech and M+ #2 NA Tech pick from a **win-rate snapshot the game is handed at its start**. The serv\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3049; wc -w .bot-plan.md; wc -c .bot-plan.md; git status --porcelain\", \"description\": \"Measure the trimmed draft and confirm no tracked edits\"}\n- said: ## Goal M #50 CN Tech and M+ #2 NA Tech pick from a **win-rate snapshot the game is handed at its start**. The server takes it from the cached `/api/stats/cards` report (R1367000) and passes it as `CreateGameOptions.winRates`. The game keeps it in `GameState.winRates`, fixed for the whole game, and\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-04T14:26:17Z",
       "owner_why": "it plans it",
@@ -15128,9 +15120,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T14:18:35Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41847555345",
+      "run_id": "pending:9533d86f-1793804191",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T14:26:17Z",
+      "started_at": "2026-11-04T14:57:05Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15285,9 +15277,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T14:35:00Z",
+    "at": "2026-11-04T14:57:05Z",
     "url": "",
-    "what": "revise #3037 on claude-8"
+    "what": "build #3049 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T14:42:15Z",
