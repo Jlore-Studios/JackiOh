@@ -34,7 +34,7 @@ import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { newestFirst } from "./patches/history.ts";
 import { releaseArtAssets, releaseArtPath } from "./patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./patches/releases.ts";
-import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./patches/fixtures.ts";
+import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./patches/fixtures.ts";
 import type { Patch, Snapshot } from "./patches/source.ts";
 import AccessibilityRoute from "./routes/accessibility.tsx";
 import AiRoute from "./routes/ai.tsx";
@@ -381,21 +381,24 @@ describe("the static pages", () => {
 });
 
 describe("#2681 the release artwork beside the static pages", () => {
-  const snapshot = (version: string): Snapshot | null => FIXTURE_SNAPSHOTS[version] ?? null;
-  // V1 is a major here, V2 and V3 are not.
-  const patches = FIXTURE_PATCHES.map((patch) => (patch.version === V1 ? { ...patch, tier: "major" as const } : patch));
+  const snapshot = (version: string): Snapshot | null => TIERED_SNAPSHOTS[version] ?? null;
+  // V1 is a major, V2 and V3 patches and M1 and M2 micros (R3012001).
+  const patches = TIERED_PATCHES;
 
-  it("#2681 writes normal release art for every patch and a still companion for each major", () => {
+  it("R3012001 writes release art for every major and patch, a still companion for each major, and no file for a new micro", () => {
     const outDir = writeAll(fixtureCatalog(), patches, SITE_ORIGIN, { snapshot });
     expect(readdirSync(join(outDir, "release-art")).sort()).toEqual([`${V1}-still.svg`, `${V1}.svg`, `${V2}.svg`, `${V3}.svg`].sort());
-    // Each file is what releaseArt.ts draws for its path: the major's normal file moves, the rest hold still.
+    expect(existsSync(join(outDir, releaseArtPath(M1)))).toBe(false);
+    expect(existsSync(join(outDir, releaseArtPath(M2)))).toBe(false);
+    // Each file is what releaseArt.ts draws for its path, and nothing in any of them moves; a major's `-still` file is its poster.
     const assets = releaseArtAssets(patches, snapshot);
     expect(assets).toHaveLength(4);
-    for (const asset of assets) expect(readFileSync(join(outDir, asset.path), "utf8"), asset.path).toBe(asset.svg);
-    expect(readFileSync(join(outDir, releaseArtPath(V1, "animated")), "utf8")).toContain("<style>");
-    for (const path of [releaseArtPath(V1, "still"), releaseArtPath(V2, "animated"), releaseArtPath(V3, "animated")]) {
-      expect(readFileSync(join(outDir, path), "utf8"), path).not.toContain("<style");
+    for (const asset of assets) {
+      const written = readFileSync(join(outDir, asset.path), "utf8");
+      expect(written, asset.path).toBe(asset.svg);
+      expect(written, asset.path).not.toMatch(/<style|<animate|@keyframes|animation/u);
     }
+    expect(readFileSync(join(outDir, releaseArtPath(V1, "still")), "utf8")).toBe(readFileSync(join(outDir, releaseArtPath(V1)), "utf8"));
     // The pages are written as before, and a build handed no snapshots writes no artwork.
     expect(existsSync(join(outDir, "patch-notes", "index.html"))).toBe(true);
     expect(existsSync(join(writeAll(fixtureCatalog(), patches), "release-art"))).toBe(false);
@@ -428,13 +431,14 @@ describe("#2681 the release artwork beside the static pages", () => {
       );
       return seen;
     };
-    // The real history: a major's animated file and its still companion, and a patch's file, with a query string.
-    const animated = serve(`${releaseArtPath("v0.4.0", "animated")}?t=1`);
-    expect(animated.type).toBe("image/svg+xml");
-    expect(animated.body).toContain("<style>");
-    expect(animated.body).toContain("v0.4.0");
-    expect(serve(releaseArtPath("v0.4.0", "still")).body).not.toContain("<style");
-    expect(serve(releaseArtPath("v0.4.1", "animated")).body).toContain("v0.4.1");
+    // The real history: a major's file and its still companion, a patch's file, and a micro patch's file from before micros lost theirs, with a query string.
+    const poster = serve(`${releaseArtPath("v0.4.0")}?t=1`);
+    expect(poster.type).toBe("image/svg+xml");
+    expect(poster.body).toContain("v0.4.0");
+    expect(poster.body).not.toContain("<style");
+    expect(serve(releaseArtPath("v0.4.0", "still")).body).toBe(poster.body);
+    expect(serve(releaseArtPath("v0.4.1")).body).toContain("v0.4.1");
+    expect(serve(releaseArtPath("v0.1.0b")).body).toContain("v0.1.0b");
     for (const url of [releaseArtPath("v0.4.1", "still"), "/release-art/nobody.svg", "/patch-notes", "/", "/release-art/"]) {
       const seen = serve(url);
       expect(seen.passed, url).toBe(true);
