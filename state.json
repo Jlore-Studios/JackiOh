@@ -15230,6 +15230,13 @@
     "3059": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T23:11:11Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No line of the rule holds: only apps/web and spec/ change, with no engine, AI, migration or cross-crate contract, and about 12 files in all."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
