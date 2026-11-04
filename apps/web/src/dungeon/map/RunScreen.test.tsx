@@ -16,6 +16,8 @@ import type {
   RunStats,
 } from "@jackioh/run";
 
+import { navTestid } from "../../routes/nav.tsx";
+import { at } from "../../test/stubServer.ts";
 import { fightTestid } from "../fight/testids.ts";
 import type { Dungeon } from "../store.ts";
 import { RUN_STAT_LABELS } from "./RunOverScreen.tsx";
@@ -214,6 +216,23 @@ describe("B24 the run's time on screen between fights", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("R2972000 the run map links back to the Play menu", () => {
+  // R2972000
+  it("R2972000 the run map links back to the Play menu and keeps the run", () => {
+    at("/");
+    const { dungeon, act, abandon } = fakeDungeon(runWith({ phase: "map" }));
+    render(<RunScreen dungeon={dungeon} />);
+    const back = screen.getByTestId(navTestid.back);
+    expect(back).toHaveAttribute("data-route", "/play");
+    fireEvent.click(back);
+    expect(window.location.pathname).toBe("/play");
+    // Following it sends nothing: the run stays saved, and the start screen offers Continue.
+    expect(act).not.toHaveBeenCalled();
+    expect(abandon).not.toHaveBeenCalled();
+    at("/");
   });
 });
 

@@ -10,6 +10,9 @@ import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
 import type { RunAction, RunContent, RunFightSetup, RunState } from "@jackioh/run";
 import type { CustomCard } from "@jackioh/shared";
 
+import { navigate, paths } from "../../net/navigate.ts";
+import { at } from "../../test/stubServer.ts";
+
 import {
   PRACTICE_PACING_FAST,
   PRACTICE_SHOWCASE_HOLD_MAX_MS,
@@ -323,6 +326,48 @@ describe("B25, B26 the fight's end goes to the run", () => {
     fireEvent.click(proceed);
     expect(screen.getByTestId(fightTestid.actRefusal)).toHaveTextContent("the run is not in a fight");
     expect(proceed).toBeEnabled();
+  });
+});
+
+describe("R2972000 leaving a fight in progress asks first", () => {
+  it("R2972000 leaving a fight in progress is held and says the fight starts over", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    // An in-app move off the fight is held, and the question says the fight starts over.
+    expect(navigate(paths.play)).toBe(false);
+    expect(window.location.pathname).toBe(paths.dungeon);
+    const dialog = await screen.findByTestId(fightTestid.leaveDialog);
+    expect(dialog).toHaveAttribute("role", "alertdialog");
+    expect(dialog).toHaveTextContent("It ends here and the fight starts over from its first turn.");
+    expect(screen.getByTestId(fightTestid.leaveStay)).toHaveFocus();
+
+    // Stay keeps the fight: still no report asked for, and the same game carries on.
+    fireEvent.click(screen.getByTestId(fightTestid.leaveStay));
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    expect(host.reports()).toBe(0);
+    expect(host.starts()).toHaveLength(1);
+    at(paths.dungeon);
+  });
+
+  it("R2972000 once the fight has its result nothing is held", async () => {
+    at(paths.dungeon);
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    renderFight(fightHost(), fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    expect(navigate(paths.play)).toBe(true);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    at("/");
   });
 });
 
