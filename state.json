@@ -14425,14 +14425,6 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 85%, at or over its 85% cap; it resets at 2026-11-04T12:00:00Z",
         "trail": "nd crates -type d -name pending | head; grep -rn \\\"\\\\\\\"#2942\\\\\\\"\\\\|#2942\\\" --include=*.json crates/cards | head -5; grep -n \\\"visual\\\\|--source\\\\|--notes\\\" crates/tools/README.md | hea\u2026\n- Bash: {\"command\": \"sed -n 20980,21010p crates/cards/patches/patches.json; git log --oneline -3 -- crates/cards/patches/pending 2>/dev/null | head\", \"description\": \"Read #2942's shipped patch entry\"}\n- Bash: {\"command\": \"git show --stat HEAD | head -30; git show --stat e0c952a4b5 | grep pending\", \"description\": \"See how recent patches handled fragments\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/e2e/cypress/component; grep -n \\\"data-long\\\\|longest\\\" *.cy.tsx | head -12\", \"description\": \"Find known long-layout cards in specs\"}\n- Bash: {\"command\": \"git show e0c952a4b5 --stat | grep -i \\\"patches\\\\|fragment\\\"; git log --diff-filter=A --name-only --format=\\\"%h %s\\\" -5 -- 'crates/cards/patches/pending/*' | head -20\", \"description\": \"Fi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/e2e/cypress/component; grep -n \\\"LONG_FACES\\\" -A10 card-faces.cy.tsx | head -20\", \"description\": \"Find LONG_FACES list\"}\n- Bash: {\"command\": \"git show e0c952a4b5:crates/cards/patches/pending/extended-art-pixel-and-comic-card-versions.json\", \"description\": \"Show #2942's pending fragment\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/apps/web/src/cards; grep -rn \\\"export const LONG_FACES\\\" -A12 . | head -16\", \"description\": \"Read LONG_FACES definition\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/apps/web/src/cards; sed -n 75,93p shortText.ts; grep -n \\\"LONG_FACES\\\" -r . --include=*.ts --include=*.tsx | grep -v test | head\", \"description\"\u2026\n- Bash: {\"command\": \"./../../../JackiOh/JackiOh/target/release/jackioh --help >/dev/null 2>&1; ls -la /home/runner/work/JackiOh/JackiOh/target/release/jackioh && /home/runner/work/JackiOh/JackiOh/target/rele\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/e2e/cypress/component; python3 - <<'EOF'\\np='proficiency-stamp.cy.tsx'\\ns=open(p).read()\\nold=\\\"\\\"\\\" // The longest layout moved the band up, an\u2026\n- Bash: {\"command\": \"cat crates/cards/patches/pending/card-proficiency-where-playing-a-card-levels-it-up-and.json\", \"description\": \"Show generated fragment\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\np='crates/cards/patches/pending/card-proficiency-where-playing-a-card-levels-it-up-and.json'\\nd=json.load(open(p))\\nd['player']={\\n \\\"title\\\": \\\"Card prof\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next (me): step 9 SQL, spec 13, docs 14, fragment 15; then full checks.\\\",\\n\\\"- Done (me): step 9 SQL (46_card_pro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013; cp apps/web/src/cards/stamps.css /tmp/stamps.css.bak; sed -i '0,/ top: 49.9cqh;/s// top: 45cqh;/' apps/web/src/cards/stamps.css; sed -i 's/ rig\u2026\n- Bash: {\"command\": \"cargo fmt -p jackioh-server && cargo fmt --check && echo FMT_OK; git status --short | grep -v \\\"^??\\\" | head -50; git status --short | grep \\\"^??\\\"\", \"description\": \"Format server crate \u2026\n- said: Now clippy on the server crate.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013; python3 - <<'EOF'\\np='apps/web/src/cards/stamps.css'\\ns=open(p).read()\\ns=s.replace(\\\"bottom: calc(var(--mf-stat, 26cqh) + var(--mf-plate, 11cq\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | grep -E \\\"^(error|warning)\\\" -A12 | head -80; echo; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013; echo \\\"- web fork: cypress proficiency-stamp.cy.tsx passes (1/1); mutation runs (stamp over the name, minion stamp into the portrait) fail as t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013; timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -5; timeout 900 pnpm exec eslint apps/web e2e 2>&1 | tail -10\", \"description\": \"Run web t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/e2e; timeout 600 pnpm run typecheck:component 2>&1 | tail -5\", \"description\": \"Typecheck Cypress component project\", \"timeout\": 700000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013; timeout 3000 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/apps/web; grep -n \\\"cardPicksSync\\\\|loadouts.ts\\\\|CardCosmeticsView\\\" README.md | head\", \"description\": \"Check apps/web README module mentions\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/apps/web; sed -n 460,500p README.md\", \"description\": \"Read README Collection section\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/apps/web; python3 - <<'EOF'\\np='README.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\" the collection is read again;\\n collection/\\n holds the panels\\\"\\\"\\\"\\nn\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3013/apps/web; grep -n \\\"R1834\\\\|loadout\\\" README.md | head -8\", \"description\": \"Find loadout mentions in README\"}\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/web-changed.log; do sleep 15; done; grep -E \\\"Test Files|Tests |EXIT|FAIL|\\u00d7\\\" /tmp/web-changed.log | head -30\", \"description\": \"Wait for changed web tes\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | grep -B5 -A25 \\\"error\\\" | head -60\", \"description\": \"Show clippy error detail\", \"timeout\": 900000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/economy/proficiency.rs'\\ns=open(p).read()\\nstart=s.index(\\\" #[test]\\\\n fn r3013000_the_curve_rises_from_a_quick_first_level()\\\")\\nend=s.index(\\\" #\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/economy/proficiency.rs'\\ns=open(p).read()\\nold=s[s.index(\\\" fn r3013000_level_for_plays_steps_at_each_threshold() {\\\"):]\\nold=old[:old.index(\\\" }\\\u2026\n- tool error: Exit code 137\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-04T12:28:09Z",
-        "lifted": "2026-11-04T11:09:25Z",
-        "owner": "claude-8",
-        "since": "2026-11-04T10:28:09Z",
-        "until": "2026-11-04T11:00:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -14455,7 +14447,7 @@
       "queued_at": "2026-11-04T08:53:27Z",
       "requested_by": "squishy-squooby",
       "round_tier": "strong",
-      "run_id": "41808007729",
+      "run_id": "pending:b59ffa08-1793792363",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -14474,7 +14466,7 @@
         "provider": "claude-8",
         "run": "41808007729"
       },
-      "started_at": "2026-11-04T09:30:01Z",
+      "started_at": "2026-11-04T11:40:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -14944,9 +14936,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T11:39:06Z",
+    "at": "2026-11-04T11:40:00Z",
     "url": "",
-    "what": "review #3033 on muse"
+    "what": "build #3013 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T10:55:03Z",
