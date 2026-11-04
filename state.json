@@ -18022,6 +18022,13 @@
     "3014": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41802830121",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-04T09:07:12Z",
+        "until": "2026-11-04T09:37:12Z"
+      },
       "difficulty_by": {
         "at": "2026-11-04T09:06:59Z",
         "difficulty": "medium",
