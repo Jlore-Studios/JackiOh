@@ -1,7 +1,7 @@
 // R2784000: the board motifs (docs/polish/9-card-animations.md): conjure, rise, offering, shift,
-// bind, tether, mirror and transmute, and R2797000's hex. Card-table-only overlays (`replaces: []`
-// but bind and transmute): the event rows still play underneath, and each plans nothing without an
-// event it reads.
+// bind, tether and transmute (R2803000 folds `mirror` into `transmute`), and R2797000's hex.
+// Card-table-only overlays (`replaces: []` but bind and transmute): the event rows still play
+// underneath, and each plans nothing without an event it reads.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -265,31 +265,6 @@ export const tether: MotifPlanner = {
       const to = event.type === "held" ? (hitAnchor(view, event.holderId) ?? h.at) : h.at;
       if (from !== null && flies(from, to)) cues.push(motifShot(spec, "bolt", from, to, t.T, t.L - t.T));
       cues.push(motifBurst(spec, to, "area", t.L, MOTIF_TUNING.land));
-    }
-    cues.push(...motifShake(spec, t.L));
-    return cues;
-  },
-};
-
-const MIRROR_READS = ["transformed"] as const;
-
-/**
- * mirror: a translucent double peels off the source toward the copy: a sheen travelling with it
- * and a flare where it arrives.
- */
-export const mirror: MotifPlanner = {
-  reads: MIRROR_READS,
-  replaces: [],
-  plan(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv) {
-    const hits = readEvents(entry, view, env, MIRROR_READS);
-    if (hits.length === 0) return [];
-    const t = timesOf(entry.durationMs);
-    const cues: FxCue[] = [];
-    for (const h of hits) {
-      const to = h.event.type === "transformed" ? (hitAnchor(view, h.event.newInstanceId) ?? h.at) : h.at;
-      cues.push({ kind: "sheen", at: h.at, delayMs: t.T, durationMs: t.L - t.T });
-      if (flies(h.at, to)) cues.push({ kind: "ghost", from: h.at, to, delayMs: t.T, durationMs: t.L - t.T });
-      cues.push(motifBurst(spec, to, "point", t.L, MOTIF_TUNING.small));
     }
     cues.push(...motifShake(spec, t.L));
     return cues;

@@ -9,8 +9,8 @@
 // (build.ts) and the shared callout (callout.ts), over cues that exist already.
 //
 // Issue #2790: the defensive and life keywords' beats, on the same machinery and the same caps.
-// Divine Shield and Armor fold into the `ward` motif (R2784000): the row draws the gold ring, shards
-// and shield flash, the beat only the callout (and Armor's grey absorbed-amount splat, R1361).
+// Divine Shield and Armor draw in the rows (R2803000 folds `ward`, R2784000): the row draws the gold
+// ring, shards and shield flash, the beat only the callout (and Armor's grey absorbed-amount splat, R1361).
 // Indestructible keys on the absorption R1361 reports when Armor takes a hit whole on its holder (a
 // hit meeting Indestructible itself is stopped unreported, so no `damage` key could fire); Immutable
 // and Immune to Spells key on the grant that raises their shell and ward (a refused change emits

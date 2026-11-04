@@ -77,9 +77,9 @@ const DELEGATED: readonly Delegated[] = [
     motif: "transmute",
     flavor: "Nerd",
   },
-  // Issue #2790: `armor` and `shieldBreak` still route through `ward`, but their entries now
-  // carry beat callouts too, so `planFx`-equals-`planMotif` no longer holds for them; beats.test.ts
-  // pins them instead.
+  // Issue #2790: `armor` and `shieldBreak` draw in the rows (R2803000 folds `ward`), but their
+  // entries now carry beat callouts too, so `planFx`-equals-`planMotif` never held for them;
+  // beats.test.ts pins them instead.
   { recipe: "draw", events: () => [{ type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" }], motif: "flight", flavor: "Spirit" },
   { recipe: "mana", events: () => [{ type: "manaChanged", player: "p1", current: 4, max: 4 }], motif: "mana", flavor: "Holy" },
   {

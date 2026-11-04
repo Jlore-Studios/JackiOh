@@ -77,6 +77,11 @@ export type PracticeStartConfig = {
    */
   earning?: true;
   /**
+   * R2882000: today's deal, the UTC day (`YYYY-MM-DD`) whose seed and seat it plays (`todaysDeal.ts`). It brings
+   * no last board and asks the server for no seed, so every device deals it alike; it earns nothing.
+   */
+  dailyDeal?: string;
+  /**
    * DR14, R2706000: a dungeon run's fight (`docs/dungeon-run.md` DR5). When set, its decks,
    * handicaps, deck marks and seed replace `deck`, `difficulty`'s handicap and the dealt AI deck: the
    * run deck, its handicap and marks at `humanSeat`, the enemy's deck and handicap at the AI's seat.

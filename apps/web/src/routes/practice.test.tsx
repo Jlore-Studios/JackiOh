@@ -39,6 +39,7 @@ import {
   type PracticeSavedDeck,
 } from "../practice/decks.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
+import { writeLastBoard } from "../practice/lastBoard.ts";
 import type {
   PracticeDebug,
   PracticeRequestBody,
@@ -2473,6 +2474,66 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
 
     expect(unasked.requestSeed).not.toHaveBeenCalled();
     expect(unasked.claim).not.toHaveBeenCalled();
+  });
+
+  /** R2882000: the setup at medium, a random deck leaning on Classic+, then the deck picker on a preset and Sandbox ticked. */
+  async function startTodaysDeal(): Promise<void> {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.parse("2026-11-03T12:00:00.000Z"));
+    await settle({ ticks: 10 });
+    fireEvent.click(screen.getByTestId(T.medium));
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
+    fireEvent.change(screen.getByTestId(practiceTestid.leanNewest), { target: { value: "Classic+" } });
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(practiceTestid.dailyDeal));
+    await screen.findByTestId("game");
+  }
+
+  it("R2882000 Play today's deal starts the UTC day's deal at the setup's difficulty and pick: no server seed, no sandbox, no last board", async () => {
+    writeLastBoard([{ defId: "core-008", radiant: false }]);
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await startTodaysDeal();
+
+    expect(host.starts()[0]).toEqual({
+      seed: "daily-2026-11-03",
+      difficulty: "medium",
+      humanSeat: "p1",
+      deck: { kind: "random", leanSet: "Classic+" },
+      dailyDeal: "2026-11-03",
+    });
+    expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
+      difficulty: "medium",
+      deck: "preset:humans",
+      leanSet: "Classic+",
+    });
+    expect(earning.requestSeed).not.toHaveBeenCalled();
+  });
+
+  it("R2882000 Play again on today's deal deals the day's deal at the click, the new day's after UTC midnight", async () => {
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await startTodaysDeal();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+
+    vi.setSystemTime(Date.parse("2026-11-04T00:00:01.000Z"));
+    fireEvent.click(screen.getByTestId(T.playAgain));
+    await waitFor(() => {
+      expect(host.starts()).toHaveLength(2);
+    });
+    const [first, second] = host.starts();
+    expect(second).toMatchObject({
+      seed: "daily-2026-11-04",
+      humanSeat: "p2",
+      difficulty: first?.difficulty,
+      deck: first?.deck,
+      dailyDeal: "2026-11-04",
+    });
+    expect(earning.requestSeed).not.toHaveBeenCalled();
   });
 
   it("R1310000 with the economy live an active account's game asks for a seed", async () => {
