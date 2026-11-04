@@ -17371,13 +17371,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "8a1625addb7e043f4613304e4606d4f1221180ee",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "41773616578",
+            "tier": "medium"
+          }
+        ],
+        "sha": "5aba8f1a7e9ae13ab7545084d12c86eb3191afd6",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "2992": {
