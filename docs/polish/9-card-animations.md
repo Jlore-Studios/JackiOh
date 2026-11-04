@@ -48,6 +48,14 @@ number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: ea
 out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
 phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
 
+Stinkyscape's first pass (#2797, R2797000) adds three more, in `fx/cards/stinkyscape/`, the same way:
+
+| Card | Recipe | Why bespoke |
+|---|---|---|
+| #4 Olivian Expanse | `terminusRift` | a Mythic whose whole play is one Discover: a void rift tears open over the board's centre at its first card added, and the card flies out of it into the caster's hand |
+| #18 Imitated Instrumentality | `magiBoot` | its three Field Spells come online one after another: a hologram beam from the caster's hero into each zone, booting with a ring and a burst, `FX_MAGI_STAGGER` of the entry apart within one |
+| #36 Drone Core X | `battleshipWarp` | the Mythic top of the Drone Core line: stars gather where the Drone Battleship will stand and it streaks in from the board's top edge (`FX_WARP_FROM`), landing in exhaust |
+
 Stinkyscape's pass, part two (#2798), adds three more, in `fx/cards/stinkyscape/` on the same shared
 spec (`fx/cards/core/flourish.ts`); the two mark flourishes draw in the colors of the mark the engine
 sends (`stinkyscape/markLook.ts`), as its brand row does:
@@ -103,7 +111,7 @@ and three parameters:
 | `bind` | locked, unlocked | both | frost and chains over a Locked unit; gold shards when it releases |
 | `tether` | stolen, controlChanged, held | nothing | an arcane line from where the card was to whose it is now |
 | `mirror` | transformed | nothing | a translucent double peeling off the source toward the copy |
-| `transmute` | transformed | nothing | smoke and sparks as one card becomes another |
+| `transmute` | transformed, fused, upgraded, degraded | all four | smoke and sparks as one card becomes another, landing on the card a fusion makes (an Equip fusing into its host, #2797), with a ring and rays for an upgrade and a crack for a degrade (#2908) |
 | `flight` | drawn | drawn | a card back flying from the library into the hand, landing with its sparkle |
 | `glimpse` | predicted, secretRevealed | nothing | a sheen and a small flare on the hero's badge |
 | `mana` | manaChanged, manaSpent | manaChanged | one sparkle per crystal gained spread across Travel to Land, landing together; a soft pulse where a spend drained |
@@ -134,6 +142,13 @@ Drawn in #2794 (R2794000), for the cards that return one to the hand:
 | Motif | Reads | Replaces | What it looks like |
 |---|---|---|---|
 | `recall` | addedToHand | nothing | a card back flying from its owner's graveyard pile into the hand: a gather on the pile, the flight, the hand's sparkle as it lands; no shake. The event names no zone, so a card back from exile flies from the graveyard pile too |
+
+Drawn in #2797, Stinkyscape's first pass (R2797000), for a mark, which five of its first half's
+cards put on or lift (Freeze Ray, Absolute Zero, CASPER, Kwzka, Siva 1):
+
+| Motif | Reads | Replaces | What it looks like |
+|---|---|---|---|
+| `hex` | marked | nothing | a mark put on (a Freeze, an Allure) closes a ring on the card, a sheen crosses it and it flares as the mark takes; a mark lifted flares in a ring of sparkles; the mark's row keeps its color |
 
 Every one-shot motif is drawn. `aura` on a hook parses and plays nothing (`planCardMotif` returns
 nothing), so the card plays its event rows only: a card's standing look is its entry's `aura` field
@@ -272,9 +287,10 @@ Stinkyscape is split so its two set passes merge without conflicts.
   `tables.test.ts` holds each file to the catalog: every card present, in order, each comment its
   name, no card twice, no unknown hook, motif, look, scope, palette, field or recipe.
 - **Hooks by kind:** `cast` is a non-Unit's play (a Spell's, a Field Spell's, a Trap's), `cry` a
-  Unit's; a `cry` on a non-Unit or a `cast` on a Unit fails the loader. `death`, `trigger` and
-  `activate` are accepted and plan nothing until #2783's `hookResolving` marker lands. A Trap's
-  `cast` is inert too: a firing opens no play.
+  Unit's; a `cry` on a non-Unit or a `cast` on a Unit fails the loader. `death`, `trigger` (a
+  start-of-turn or end-of-turn hook or a Whenever trigger) and `activate` play from the hook's own
+  `hookResolving` marker (R2783000), and a Trap's `cast` from its `trapFired` (R2797000, Dispatch).
+  A hook no marker reports (an attack's own, a Starship's launch) plays nothing.
 - **entrance** (R2794000): a marquee Unit's entrance (`fx/entrances.ts`, R670) beside its hooks,
   `{ entrance: "titanBloom", cry: { motif: "flight" } }` (Classic #45 Nature Titan). Only a Unit may
   name one, and an entrance alone stays `{ bespoke: "<key>" }`.
@@ -322,6 +338,14 @@ answering it keeps its own row) and leaves a run over a whole pile to its one wa
 each hit of a run that sweeps no whole side its own entry, so the play remembers the ids its hits
 landed on (`FxPlay.hits`): a volley gathers once, a chain hops on from its last hit, a lance beams a lane once,
 and a card its hits already reached dies under its own row, so a lethal bolt flies once.
+
+A card's hook is an entry too (R2797000): a Death's, a start-of-turn or end-of-turn hook's, a
+Whenever trigger's or an Activate's `hookResolving` marker, and a Trap's `trapFired`, opens one for
+its card in the memory, innermost (`FxPlay.hook`), so the events after it are the hook's and its
+card's `death`, `trigger`, `activate` or `cast` names the motif. A Cry's marker opens none: its
+play already keys it. The hook's entry ends at the next marker or firing, a `cardResolved` or
+`countered`, an attack, a turn's end or start and the game's end; a hidden marker keys nothing
+(R202), and a modifier a hook adds wears no aura (R2787000).
 
 ## Constraints
 
@@ -394,7 +418,7 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 | Play | Entry | How it plays |
 |---|---|---|
 | board | a drawn motif on `cast` or `cry` | the card resolves over the motif's fixture through the real board's effects layer |
-| director | a drawn motif on `death`, `trigger` or `activate` only | the motif's fixture through the gallery's director, in the hook's palette (else the card's flavor) at the card's scale, as the board does not draw those hooks yet |
+| hook | a drawn motif on `death`, `trigger` or `activate` only | the hook's marker under the card's play, then the motif's fixture, through the real board's effects layer (R2797000) |
 | recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' fixtures sit beside their recipes in `fx/cards/classic/`) |
 | entrance | a marquee entrance (`bespoke`, R2794000) | the card lands in the viewer's unit row as it plays, so its entrance plays |
 | set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds |
@@ -430,7 +454,7 @@ the removals sound once, condensed, as it ends.
 The clears of one side, or too small to hold the game, take `wipe` on their hook: Classic+ #32.2
 Brawl (it spares a Unit), both Calls to Chaos (Classic+ #73, Stinkyscape #151: one random effect of
 theirs clears one side), the Anomaly Found! token (its caster's side) and Training Grounds #30
-Floodgates (`death: wipe`, its own side, which plans nothing until `death` hooks draw). Stinkyscape
+Floodgates (`death: wipe`, its own side, from its Death's marker). Stinkyscape
 #12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
 ids R97 hides on both seats.
 
@@ -486,7 +510,16 @@ Twelve cards across the sets wear the first motifs, as the pattern for the passe
 | Training Grounds #10 Fan of Knives | `cast: volley` |
 | Training Grounds #26 Path of Exile | `cast: vanish` |
 
-No `negate` example: every counter in the catalog is a Trap, whose firing opens no play.
+No `negate` example: every counter in the catalog is a Trap, whose `cast` plays from its firing
+(R2797000).
+
+Stinkyscape 001 to 090 (#2797, `stinkyscape-1.md`) is the first half of Stinkyscape's pass. It takes
+`send` (#2793) for the cards it makes into a hand or a deck, `mend` for Healing Capsule's heals, `hex`
+for its marks and `transmute` for its eight Equip Cries, and it keeps each Tech card apart by its
+sub-look (#2792): `Tech/rocket` for the Drone Cores, Cannons and Flaks, `Tech/laser` for the Beams,
+Repeaters and Weapon Equips, `Tech/hologram` for the MAGI and the Prototypes and `Tech/starfield` for
+the Warp Disruptors, Imprisoned Cosmality and the Battleship. The second half (#2798) uses the same
+names.
 
 ## Open
 
