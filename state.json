@@ -15094,6 +15094,13 @@
     "3049": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41847555345",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-04T14:55:57Z",
+        "until": "2026-11-04T15:25:57Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
