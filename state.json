@@ -17527,6 +17527,7 @@
       "run_id": "41782940395",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 45,
       "started_at": "2026-11-04T06:02:36Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -32318,9 +32319,33 @@
         "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "4539713ba5f9605f54b6927c5dcfb2dc863e19ae",
+        "issue": 2983,
+        "merged_at": "2026-11-04T08:17:17Z",
+        "n": 45,
+        "pr": 2996,
+        "queued_at": "2026-11-04T08:17:17Z",
+        "sha": "3809c73ce671c88facee6311ffa38899a5db3adc",
+        "status": "queued",
+        "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
+        "tries": 0
       }
     ],
-    "count": 44
+    "count": 45
   },
   "statistics": {
     "at": "2026-11-04T08:00:40Z"
