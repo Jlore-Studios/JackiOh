@@ -11,7 +11,7 @@
 // offered toggles on top; either write keeps the other (`writeCardVersion`), so a retired full art's pick becomes
 // the version and the augments it combines on its first edit (R2725002). R2949000: Signature waits, listed and
 // previewed but not chosen, until the card wears the Full art version and Animated, and turning either off turns
-// it off (`updateCardPicks`).
+// it off (`updateCardPicks`). R3013001: an owned card also shows its proficiency and its stamps (ProficiencyPanel.tsx).
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -50,6 +50,7 @@ import {
   type StripKind,
 } from "./collection.ts";
 import ItemPreview, { trapTab, usePreviewHold } from "./ItemPreview.tsx";
+import ProficiencyPanel from "./ProficiencyPanel.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 
 /** The card in its own picks and, over it while a foil, finish or border is shown, a copy wearing that. */
@@ -406,6 +407,8 @@ export default function CardCosmeticsView({
                 }}
               />
             ))}
+            {/* R3013001: an owned card's proficiency and the stamps it has unlocked. */}
+            {owned ? <ProficiencyPanel def={def} /> : null}
             <div className="collection-cardview__actions">
               <button
                 type="button"

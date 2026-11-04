@@ -34,7 +34,7 @@ use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
 
 /// A card a deck may hold: in the catalog, and no token.
-fn is_playable(app: &App, card_id: &str) -> bool {
+pub(crate) fn is_playable(app: &App, card_id: &str) -> bool {
     app.catalog.card_ids.iter().any(|id| id == card_id) && !app.catalog.is_token(card_id)
 }
 

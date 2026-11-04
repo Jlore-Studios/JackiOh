@@ -53,6 +53,7 @@ import ConsentPrompt from "./auth/ConsentPrompt.tsx";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { useCardPicksAccountSync } from "./cards/cardPicksSync.ts";
+import { useProficiencyAccountSync } from "./cards/proficiencySync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
@@ -452,6 +453,8 @@ export function Gated({ allowPending = false, consentExempt = false, engine = fa
   useSettingsAccountSync(account);
   // R1834000: and its picks of each card, which live on the account, the device's being their cache.
   useCardPicksAccountSync(account);
+  // R3013001: and its card proficiency, which only the account holds, and the stamp each card wears.
+  useProficiencyAccountSync(account);
   const target = redirectFor(account, allowPending);
   // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
   // renders nothing by changing.

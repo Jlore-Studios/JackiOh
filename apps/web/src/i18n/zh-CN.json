@@ -4165,5 +4165,13 @@
   "Alt full art": "异画全画",
   "Extended art": "延伸画",
   "Pixel": "像素",
-  "Comic": "漫画"
+  "Comic": "漫画",
+  "Level {level} stamp": "{level} 级印章",
+  "Proficiency": "熟练度",
+  "Top level reached.": "已达到最高熟练等级。",
+  "Progress to the next level": "距下一级的进度",
+  "{plays} of {needed} plays to the next level": "已打出 {plays} 次，共需 {needed} 次升到下一级",
+  "Stamps": "印章",
+  "No stamp": "不用印章",
+  "Unlocks at level {level}": "{level} 级解锁"
 }

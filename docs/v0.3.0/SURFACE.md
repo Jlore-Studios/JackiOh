@@ -1000,7 +1000,12 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
-  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:
+  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3013 (R3013002): a frozen loadout
+  holds `stamps` (`[{ cardId, stamp }]`, each dealt card's proficiency stamp), and a `cardLoadouts`
+  frame and a replay page's entry carry the stamps of the cards they send, `{ seat, cards, stamps? }`,
+  `stamps` left out when none, by the same send rule; two more `Active` routes, `GET /api/proficiency`
+  → `{ cards }` (`{ cardId, plays, level, stamp }`) and `PUT /api/proficiency/stamp` `{ cardId, stamp }`
+  (`api/proficiency.rs`, over `public.card_proficiency`, migration 0080; R3013000, R3013001). Three routes, all `Active`:
   `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
   fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, `full-art-…` or `animated-…`, R2655000, R2715000) and `POST /api/card-picks/upload` `{ cards }`
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in

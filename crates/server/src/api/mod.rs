@@ -20,6 +20,7 @@ pub mod health;
 pub mod http;
 pub mod news;
 pub mod practice;
+pub mod proficiency;
 pub mod quests;
 pub mod queue;
 pub mod ranked;

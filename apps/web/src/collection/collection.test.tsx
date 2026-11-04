@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { GLOBAL_PACK_NAME, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
+import { GLOBAL_PACK_NAME, PROFICIENCY_LEVELS, PROFICIENCY_LEVEL_PLAYS, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, type CardDef } from "@jackioh/shared";
 
 import {
@@ -25,6 +25,7 @@ import {
   type CardPickChange,
 } from "../cards/cosmetics.ts";
 import { CHINESE } from "../cards/chinese.ts";
+import { STAMP_LEVELS, readOwnProficiency, replaceOwnProficiency, resetProficiencyForTests, subscribeStampWrites } from "../cards/stamps.ts";
 import { FullArtOwned } from "../cards/fullArt.ts";
 import { ownedCardCosmetics } from "../cards/ownedFullArt.ts";
 import {
@@ -1048,5 +1049,111 @@ describe("R1655000 the account's cosmetics as tiles", () => {
     fireEvent.click(within(screen.getByTestId(T.tile("table-astral"))).getByRole("button"));
     expect(readCosmetics().table).toBe("table-astral");
     expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-equipped", "true");
+  });
+});
+
+describe("R3013001 a card's proficiency in its view", () => {
+  const PLAYED = "core-002";
+  const UNPLAYED = "core-004";
+  const TOPPED = "core-001";
+  const LOCKED = "core-022";
+  const CARDS = [PLAYED, UNPLAYED, TOPPED, LOCKED].map(defOf);
+  const TOP = PROFICIENCY_LEVEL_PLAYS[PROFICIENCY_LEVELS - 1] ?? 0;
+
+  beforeEach(() => {
+    resetProficiencyForTests();
+    replaceOwnProficiency([
+      { cardId: PLAYED, plays: 20, level: 2, stamp: 1 },
+      { cardId: TOPPED, plays: TOP + 7, level: PROFICIENCY_LEVELS, stamp: null },
+    ]);
+  });
+
+  afterEach(() => {
+    resetProficiencyForTests();
+  });
+
+  /** Opens `id`, owning every card but LOCKED. */
+  function open(id: string): void {
+    render(<OwnedCards collection={collectionOwning(CARDS.filter((def) => def.id !== LOCKED).map((def) => def.id))} defs={CARDS} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    fireEvent.click(screen.getByTestId(T.card(id)));
+  }
+  const stamp = (level: number): HTMLElement => screen.getByTestId(T.stamp(level));
+  const largeStamp = (): string | null =>
+    screen.getByTestId(T.cardViewFace).querySelector(".cf .cf-stamp")?.getAttribute("data-stamp") ?? null;
+
+  it("R3013001 the card view shows the level, the progress and the stamps, locked ones with their level", () => {
+    open(PLAYED);
+    const panel = screen.getByTestId(T.proficiency);
+    expect(within(panel).getByTestId(T.proficiencyLevel)).toHaveTextContent(`Level 2 of ${String(PROFICIENCY_LEVELS)}`);
+    const next = PROFICIENCY_LEVEL_PLAYS[2] ?? 0;
+    const reached = PROFICIENCY_LEVEL_PLAYS[1] ?? 0;
+    const plays = within(panel).getByTestId(T.proficiencyPlays);
+    expect(plays).toHaveTextContent(`20 of ${String(next)} plays to the next level`);
+    // The bar runs between the level's plays and the next's.
+    const progress = plays.querySelector("progress");
+    expect(progress?.getAttribute("max")).toBe(String(next - reached));
+    expect(progress?.getAttribute("value")).toBe(String(20 - reached));
+    // Every level's stamp is listed; those past the card's level are locked with the level each needs.
+    for (const level of STAMP_LEVELS) {
+      const button = stamp(level);
+      expect(button.querySelector(`.cf-stamp[data-stamp="${String(level)}"]`), String(level)).not.toBeNull();
+      if (level <= 2) {
+        expect(button, String(level)).not.toHaveAttribute("aria-disabled");
+        expect(button, String(level)).not.toHaveTextContent("Unlocks");
+      } else {
+        expect(button, String(level)).toHaveAttribute("aria-disabled", "true");
+        expect(button, String(level)).toHaveTextContent(`Unlocks at level ${String(level)}`);
+      }
+    }
+    expect(stamp(1)).toHaveAttribute("aria-pressed", "true");
+    expect(stamp(2)).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(T.stampNone)).toHaveAttribute("aria-pressed", "false");
+    // The large face wears the card's stamp.
+    expect(largeStamp()).toBe("1");
+
+    // A card never played is at level 0, every stamp locked, the first level PROFICIENCY_LEVEL_PLAYS[0] plays away.
+    fireEvent.click(screen.getByTestId(T.card(UNPLAYED)));
+    expect(screen.getByTestId(T.proficiencyLevel)).toHaveTextContent(`Level 0 of ${String(PROFICIENCY_LEVELS)}`);
+    expect(screen.getByTestId(T.proficiencyPlays)).toHaveTextContent(`0 of ${String(PROFICIENCY_LEVEL_PLAYS[0] ?? 0)} plays to the next level`);
+    for (const level of STAMP_LEVELS) expect(stamp(level)).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByTestId(T.stampNone)).toHaveAttribute("aria-pressed", "true");
+    expect(largeStamp()).toBeNull();
+
+    // A card at the top has nothing more to reach, and every stamp unlocked.
+    fireEvent.click(screen.getByTestId(T.card(TOPPED)));
+    expect(screen.getByTestId(T.proficiencyLevel)).toHaveTextContent(`Level ${String(PROFICIENCY_LEVELS)} of ${String(PROFICIENCY_LEVELS)}`);
+    expect(screen.getByTestId(T.proficiencyPlays)).toHaveTextContent("Top level reached.");
+    for (const level of STAMP_LEVELS) expect(stamp(level)).not.toHaveAttribute("aria-disabled");
+
+    // A card not owned shows no proficiency.
+    fireEvent.click(screen.getByTestId(T.card(LOCKED)));
+    expect(screen.queryByTestId(T.proficiency)).toBeNull();
+  });
+
+  it("R3013001 an unlocked stamp is picked and a locked one writes nothing", () => {
+    const writes: [string, number | null][] = [];
+    subscribeStampWrites((defId, picked) => {
+      writes.push([defId, picked]);
+    });
+    open(PLAYED);
+    fireEvent.click(stamp(2));
+    expect(writes).toEqual([[PLAYED, 2]]);
+    expect(readOwnProficiency(PLAYED)?.stamp).toBe(2);
+    expect(stamp(2)).toHaveAttribute("aria-pressed", "true");
+    expect(stamp(1)).toHaveAttribute("aria-pressed", "false");
+    expect(largeStamp()).toBe("2");
+
+    fireEvent.click(stamp(3));
+    expect(writes).toHaveLength(1);
+    expect(readOwnProficiency(PLAYED)?.stamp).toBe(2);
+
+    fireEvent.click(screen.getByTestId(T.stampNone));
+    expect(writes).toEqual([
+      [PLAYED, 2],
+      [PLAYED, null],
+    ]);
+    expect(screen.getByTestId(T.stampNone)).toHaveAttribute("aria-pressed", "true");
+    expect(largeStamp()).toBeNull();
   });
 });

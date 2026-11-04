@@ -9586,12 +9586,12 @@ mod duos {
 
 mod economy {
     use super::*;
-    use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
+    use jackioh_server::config::{PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL};
     use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
-        JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled,
-        QuestGrant, TrackGrant,
+        CardProficiency, CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow,
+        InventoryGrant, JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed,
+        PracticeSettled, QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -10736,6 +10736,141 @@ mod economy {
         );
     }
 
+    fn proficiency(card_id: &str, plays: i64, level: i64, stamp: Option<i64>) -> CardProficiency {
+        CardProficiency {
+            card_id: card_id.to_string(),
+            plays,
+            level,
+            stamp,
+        }
+    }
+
+    /// R3013000: a put writes each card's plays and level, inserting a new card and replacing a held
+    /// one's; a read is the account's own, by card (`collate "C"`); a row migration 0080's checks
+    /// refuse (an id that is no slug, no play, a level past the curve, a card listed twice) is refused,
+    /// writing nothing; and a deleted account takes its rows with it.
+    async fn r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            Vec::new()
+        );
+        q!(harness, t => t.economy_card_proficiency_put(
+            &owner.id,
+            &[proficiency("core-009", 2, 0, None), proficiency("core-008", 3, 1, None)],
+            now
+        ));
+        q!(harness, t => t.economy_card_proficiency_put(
+            &owner.id,
+            &[proficiency("core-009", 15, 2, None)],
+            now + 1
+        ));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![
+                proficiency("core-008", 3, 1, None),
+                proficiency("core-009", 15, 2, None)
+            ]
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&other.id)),
+            Vec::new()
+        );
+        let top = i64::try_from(PROFICIENCY_LEVELS).expect("a few levels");
+        for refused in [
+            vec![proficiency("Core-008", 3, 1, None)],
+            vec![proficiency("", 3, 1, None)],
+            vec![proficiency(&"a".repeat(41), 3, 1, None)],
+            vec![proficiency("core-008", 0, 0, None)],
+            vec![proficiency("core-008", 3, -1, None)],
+            vec![proficiency("core-008", 3, top + 1, None)],
+            vec![
+                proficiency("core-001", 3, 1, None),
+                proficiency("core-001", 4, 1, None),
+            ],
+            // One refused row refuses the lot.
+            vec![
+                proficiency("core-001", 3, 1, None),
+                proficiency("core-002", 0, 0, None),
+            ],
+        ] {
+            assert!(
+                call!(harness, t => t.economy_card_proficiency_put(&owner.id, &refused, now)).is_err(),
+                "{}: {refused:?}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)).len(),
+            2
+        );
+        // An empty put writes nothing.
+        q!(harness, t => t.economy_card_proficiency_put(&other.id, &[], now));
+        q!(harness, t => t.economy_card_proficiency_put(&other.id, &[proficiency("core-008", 1, 0, None)], now));
+
+        assert!(q!(harness, t => t.profiles_remove(&other.id)));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&other.id)),
+            Vec::new()
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)).len(),
+            2
+        );
+    }
+
+    /// R3013001: a stamp is kept on a card's row only at or below the row's level, and cleared with
+    /// `None`: one above it, or for a card with no row, answers false and writes nothing; one outside
+    /// `1..=PROFICIENCY_LEVELS` is refused; a put of plays and level keeps the stamp, and one that
+    /// would leave it above the level is refused.
+    async fn r3013001_a_stamp_is_kept_only_at_or_below_its_level(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.economy_card_proficiency_put(&owner.id, &[proficiency("core-008", 15, 2, None)], now));
+        assert!(!q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(3), now)));
+        assert!(!q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-009", Some(1), now)));
+        assert!(!q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-009", None, now)));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![proficiency("core-008", 15, 2, None)]
+        );
+        let top = i64::try_from(PROFICIENCY_LEVELS).expect("a few levels");
+        for refused in [0, -1, top + 1] {
+            assert!(
+                call!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(refused), now))
+                    .is_err(),
+                "{}: {refused}",
+                harness.name
+            );
+        }
+        assert!(q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(2), now)));
+        assert!(q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(1), now + 1)));
+        // A put of plays and level leaves the stamp as it was.
+        q!(harness, t => t.economy_card_proficiency_put(&owner.id, &[proficiency("core-008", 16, 2, None)], now + 2));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![proficiency("core-008", 16, 2, Some(1))]
+        );
+        // A level below the stamp it wears is refused, as migration 0080's stamp check refuses it.
+        assert!(
+            call!(harness, t => t.economy_card_proficiency_put(
+                &owner.id,
+                &[proficiency("core-008", 16, 0, None)],
+                now + 3
+            ))
+            .is_err(),
+            "{}",
+            harness.name
+        );
+        assert!(q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", None, now + 4)));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![proficiency("core-008", 16, 2, None)]
+        );
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10757,6 +10892,8 @@ mod economy {
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
         practice_claims_count_once_per_bucket_and_utc_day,
+        r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
+        r3013001_a_stamp_is_kept_only_at_or_below_its_level,
     );
 }
 

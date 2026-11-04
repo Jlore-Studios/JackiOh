@@ -9,7 +9,8 @@
 //! - `POST /api/dev/xp`: XP to a shipping set's track (§14.7), up to `SET_TRACK_LEVELS`; no rewards are paid.
 //! - `POST /api/dev/jlore`: Jlore (§14.1).
 //! - `POST /api/dev/fill`: every collectable card to `MAX_COPIES` and every cosmetic but each kind's default,
-//!   which every account owns with no row (§14.2), a full art on its card (R1313000).
+//!   which every account owns with no row (§14.2), a full art on its card (R1313000); and every collectable
+//!   card to its top proficiency level (§14.14, R3013001), progress with no ledger row.
 //! - `POST /api/dev/clear/:part`: cards, cosmetics, jlore, counters, tracks, or everything; packs,
 //!   tokens and quests are no part of any.
 //! - `POST /api/dev/bar/:bar` (R1310003): a token bar filled, paying as a pack's duplicates would (§14.5).
@@ -32,9 +33,10 @@ use crate::cosmetics::offered;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
 use crate::economy::math::level_for_xp;
 use crate::economy::packs::{bar_before, cycle_at, cycle_step, delta_of};
+use crate::economy::proficiency::{top_level, top_level_plays};
 use crate::economy::store::{
-    CosmeticGrant, Counter, CounterGrant, EconomyReason, InventoryGrant, InventoryItem, JloreGrant,
-    JloreReason, SetTrack, TrackGrant,
+    CardProficiency, CosmeticGrant, Counter, CounterGrant, EconomyReason, InventoryGrant, InventoryItem,
+    JloreGrant, JloreReason, SetTrack, TrackGrant,
 };
 use crate::economy::tokens::{settle_bar, settle_cosmetic_bar};
 
@@ -216,6 +218,24 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
             cosmetics_written += usize::from(granted);
         }
     }
+
+    // [[R3013001]]: every collectable card at its top proficiency level, so each stamp is unlocked.
+    // Progress, no holding: no ledger row (§14.11), and a card already at the top is left as it is.
+    let proficiency = tx.economy_card_proficiency_get(&profile.id).await?;
+    let topped: Vec<CardProficiency> = cards
+        .iter()
+        .filter_map(|card_id| {
+            let held = proficiency.iter().find(|row| row.card_id == *card_id);
+            let plays = held.map_or(0, |row| row.plays).max(top_level_plays());
+            (held.map(|row| (row.plays, row.level)) != Some((plays, top_level()))).then(|| CardProficiency {
+                card_id: card_id.to_string(),
+                plays,
+                level: top_level(),
+                stamp: held.and_then(|row| row.stamp),
+            })
+        })
+        .collect();
+    tx.economy_card_proficiency_put(&profile.id, &topped, at).await?;
     tx.commit().await?;
     log_dev(&profile, "fill", grants.len() + cosmetics_written);
     Ok(json(
