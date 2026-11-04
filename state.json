@@ -15384,17 +15384,8 @@
       "suggestion": true
     },
     "3064": {
-      "action": "plan",
-      "asks": [
-        "c:6642962040"
-      ],
-      "build_next": {
-        "from_run": "41926057742",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-04T23:12:46Z",
-        "until": "2026-11-04T23:42:46Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T23:12:36Z",
         "difficulty": "hard",
@@ -15413,10 +15404,9 @@
         "reason": "planned on opus",
         "trail": "sed -n 27p spec/rulings/R1839000.md | grep -o \\\"The AI.*\\\" | cut -c1-600\", \"description\": \"Read AI sentences in \\u00a7\u2026\n- Bash: {\"command\": \"sed -n 49p spec/06-keywords.md | grep -o \\\".\\\\{300\\\\}R2380000.\\\\{100\\\\}\\\"\", \"description\": \"Show \\u00a76.1 Dormant row text near R2380000\"}\n- Bash: {\"command\": \"cd /tmp/proto-3064 && git diff HEAD~1 -- crates/ai/src/evaluate.rs crates/ai/src/decide.rs | head -400\", \"description\": \"Show the prototype's verified source diff\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3064/4842c1f7-edfc-49d6-92c3-83f71b9d7f7b/tasks/bztk0ya9k.output\"}\n- Bash: {\"command\": \"cd /tmp/proto-3064 && sed -i '622s/awaken: 1.0,/awaken: 0.0,/' crates/ai/src/config.rs && grep -n \\\"^ awaken:\\\" crates/ai/src/config.rs && cargo build --release -p jackioh-tools 2>&1 | t\u2026\n- said: The smoke gate at `awaken` 1.0 reads 20, 19 and 20 of 20 (floors 17, 10, 16), the same as the earlier plan's numbers. Now running it at 0 for the comparison, and writing the plan.\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- Smoke gate at awaken 1.0 (proto release build): ai-vs-random 20/20 (17 needed), ai-vs-greedy 19/20 (10),\\n hard-vs-easy 20/20 (16), 0 panics; perf slowest \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.final.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2, the AI: a new root probe and evaluation weight in crates\u2026\n- Bash: {\"command\": \"git status --porcelain; wc -w .bot-plan.final.md; wc -c .bot-plan.final.md\", \"description\": \"Check the draft file is untracked-ignored and its size\"}\n- Bash: {\"command\": \"cat .bot-plan.final.md >> .bot-plan.md && rm .bot-plan.final.md && git status --porcelain; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3064/4842c1f7-edfc-49d6-92c3-83f71b9d7f7\u2026\n- Monitor: {\"description\": \"gate at awaken 0 finishing\", \"timeout_ms\": 600000, \"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-3064/4842c1f7-edfc-49d6-92c3-83f71b9d7f7b/tasks/bml7bqdsd.output; \u2026\n- tool error: Quoted text in this command can't be checked before it runs\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2, the AI: a new root probe and evaluation weight in crates/ai/sr\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"wc -w .bot-plan.md; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3064/4842c1f7-edfc-49d6-92c3-83f71b9d7f7b/tasks/bml7bqdsd.output\", \"description\": \"Check draft size and gate-at\u2026\n- Bash: {\"command\": \"sed -n '/^## Measured in the prototype/,/^- Running gate at awaken 0 now./p' .bot-plan.md > /tmp/plan-notes-3064.txt; wc -l /tmp/plan-notes-3064.txt\", \"description\": \"Save the measuremen\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"offset\": 1, \"limit\": 2}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2, the AI: a new root probe and evaluation weight in crates/ai/sr\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; echo >> .bot-plan.md; echo \\\"<!-- planner notes (draft only) -->\\\" >> .bot-plan.md; cat /tmp/plan-notes-3064.txt >> .bot-plan.md; git status --por\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"old_string\": \"I built this in a scratch copy outside the worktree; the code below is that copy's. Measured \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"old_string\": \" - Model the body on `R2688000.md`. Open with what R2380000 missed, then \\\"No Hearthstone rul\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"old_string\": \" - After \\\"\\u2026while the unit may attack.\\\" (~L123), add: \\\"A Dormant card's \\\"When this aw\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **Determinism (rule 4).** The wake runs on the clone's own seed and cursor, and\u2026\n- Bash: {\"command\": \"sed -n '1,/<!-- planner notes/p' .bot-plan.md | wc -w; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3064/4842c1f7-edfc-49d6-92c3-83f71b9d7f7b/tasks/bml7bqdsd.output | tail -4\",\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3064/.bot-plan.md'\\ns=open(p).read()\\nstart=s.index(\\\"3. **Price reader.**\\\")\\nend=s.index(\\\"4. **`slumber_worth`**\\\")\\nnew='''3. \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3064/.bot-plan.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old[:60]\\n s=s.replace(old,new,1)\\nre\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3064/4842c1f7-edfc-49d6-92c3-83f71b9d7f7b/tasks/bml7bqdsd.output\", \"description\": \"Read gate-at-0 results\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3064/.bot-plan.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old[:60]\\n s=s.replace(old,new,1)\\nre\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3064/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3064/.bot-plan.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old[:60]\\n s=s.replace(old,new,1)\\nre\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: a new root probe and evaluation weight in crates/ai/src/evaluate.rs, decide.rs and config.rs\"} --> ## Goal The practice AI prices what a Dormant card does when it wakes, for its own sleepers and the enemy's. At a decision's root, `awaken_pric\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-04T21:52:14Z",
       "owner_why": "it plans it",
@@ -15429,12 +15419,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-04T21:48:29Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41926057742",
+      "run_id": "pending:6e7ff26f-1793834127",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T22:31:42Z",
+      "started_at": "2026-11-04T23:15:55Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6642962040"
+      ]
     },
     "3065": {
       "asks": [
@@ -15717,9 +15709,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T23:15:13Z",
+    "at": "2026-11-04T23:15:55Z",
     "url": "",
-    "what": "revise #3084 on claude-3"
+    "what": "build #3064 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T22:58:40Z",
