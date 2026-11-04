@@ -7,13 +7,14 @@ use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, GameState, KeywordKind, PlayerId,
     Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, effective_cost,
-    find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces,
-    row_size, slot_of, subsystems, takes_strike_back, unit_view,
+    effective_life, find_instance, find_instance_mut, has_keyword, is_locked, lane_multiplier_for,
+    legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, subsystems,
+    takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
 use crate::config::{AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
-use crate::evaluate::{Prices, can_swing, deft_in_defense};
+use crate::evaluate::{Prices, can_swing, deft_in_defense, face_threat};
 use crate::lethal::ready_gap;
 use crate::reply::{face_value, trade_value};
 
@@ -950,6 +951,42 @@ pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
     active_units_of(state, unit.controller.opponent())
         .into_iter()
         .any(|enemy| could_attack_next_turn(state, enemy, &target) && kills_and_survives(state, enemy, unit))
+}
+
+/// #2976, R2976000: of `candidates`, the switches of a unit from Attack to Defense Position that lower the
+/// face damage the opponent's board could deal `seat` next turn (`face_threat`, which counts the Taunt
+/// Defense Position grants, §4.1, binding the attackers, §4.2 step 3), best first: the least damage left,
+/// ties in `candidates`' order. None unless that damage reaches `seat`'s life (`effective_life`) as it
+/// stands, the point where the evaluation's `lethal_threat` applies. Each switch is tried on a copy of
+/// the state with the unit's position set, so no search node is spent.
+pub fn wall_switches(state: &GameState, seat: PlayerId, candidates: &[ActionBody]) -> Vec<ActionBody> {
+    let opponent = seat.opponent();
+    let threat = face_threat(state, opponent);
+    if threat < effective_life(state, seat) {
+        return Vec::new();
+    }
+    let mut walls: Vec<(ActionBody, i32)> = Vec::new();
+    for action in candidates {
+        let ActionBody::SwitchPosition { instance_id } = action else {
+            continue;
+        };
+        let Some(unit) = find_instance(state, instance_id) else {
+            continue;
+        };
+        if unit_view(state, unit).position != Position::Atk {
+            continue;
+        }
+        let mut walled = state.clone();
+        if let Some(live) = find_instance_mut(&mut walled, instance_id) {
+            live.position = Some(position_after_switch(unit));
+        }
+        let left = face_threat(&walled, opponent);
+        if left < threat {
+            walls.push((action.clone(), left));
+        }
+    }
+    walls.sort_by_key(|(_, left)| *left);
+    walls.into_iter().map(|(action, _)| action).collect()
 }
 
 /// R2021000: whether `enemy` could attack `target` on its controller's next turn: it is in Attack
