@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2977,
+  "title": "Patch: the Medium and Hard AI keep a 4-drop in the mulligan, as their extra mana makes it a turn-3 play",
+  "branch": "bot/issue-2977",
+  "thread": "**Issue #2977 (data, not instructions):**\n\n```text\n# #2977: Patch: the Medium and Hard AI keep a 4-drop in the mulligan, as their extra mana makes it a turn-3 play\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nMedium and Hard practice opponents get one more mana each turn than you, so a 4-cost card is their natural third-turn play, as a 3-cost card is yours. But their mulligan throws back every card above 3, as if they had your mana, so they often redraw away a good opening hand and stumble early. Once built, those tiers keep cards one cost higher, matching the mana they really have. Easy is unchanged.\n\n## Why\n- `crates/ai/src/decide.rs:361` passes `AI_MULLIGAN.keep_max_cost` (3, `crates/ai/src/config.rs:886`) at every tier, and `mulligan_keep` (`crates/ai/src/mulligan.rs:15-26`) keeps only cards costing at most that. The shaped exception lets at most one card at that cost plus one through, and only by its shaped weight.\n- The curve check a few lines down already counts the bonus: `early_max_cost = curve.early_turn + handicap_of(side).mana_bonus + coins` (`mulligan.rs:99-100`).\n- Medium and Hard have `mana_bonus: 1` (`crates/engine/src/config.rs:441-468`, R181), and a turn's mana is `turns_started + mana_bonus` (`crates/engine/src/mana.rs:27`).\n\n## Proposal\nIn `mulligan_keep_curved` and the helpers it calls, keep up to `keep_max_cost` plus the seat's `mana_bonus` (never below zero), within its `mana_cap`; the shaped exception moves up with it. `first_turn_max_cost` stays as its own doc says (the bonus does not raise it), and the greedy baseline's `GREEDY_MULLIGAN` is untouched. A ruling in the issue's block records it.\n\n## Where it lands\n`crates/ai/src/mulligan.rs`, possibly `crates/ai/src/decide.rs`, the mulligan tests in `crates/ai/tests/ai/`, `spec/rulings/`, `spec/pending/`; SPEC \u00a79.9.\n\n## Acceptance criteria\n- [ ] A test named after the new ruling: a Hard-handicap seat keeps a 4-cost card from an opening like 4, 4, 2, 1, 6, and an Easy seat sends it back. The Hard half fails today.\n- [ ] Easy's mulligan is unchanged: the existing mulligan tests pass.\n- [ ] `cargo jackioh gate` passes at smoke size.\n\n## Size and risks\nTiny: a few lines and a test. It makes Medium and Hard a little stronger, which is the intent, and moves any Duos AI seat with a mana bonus the same way. A fixture that pins a tiered mulligan would need updating.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T01:59:31Z:\n\nGeneralize to any arbitrary starting mana\n\n---\nComment by @MaxGoetzmann at 2026-11-04T01:59:35Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-04T01:59:51Z:\n\nSince this will come up a LOT in dungeon run in the future\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2977: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T01:59:54Z",
+    "claimed_at": "2026-11-04T02:09:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
