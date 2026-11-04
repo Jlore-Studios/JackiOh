@@ -44,72 +44,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6523476781": {
-      "at": "2026-10-30T13:02:45Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523487143": {
-      "at": "2026-10-30T13:03:25Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523494117": {
-      "at": "2026-10-30T13:03:42Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523583625": {
-      "at": "2026-10-30T13:08:23Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523593049": {
-      "at": "2026-10-30T13:08:49Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523603778": {
-      "at": "2026-10-30T13:09:23Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523612728": {
-      "at": "2026-10-30T13:09:51Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6523667281": {
-      "at": "2026-10-30T13:12:47Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523672978": {
-      "at": "2026-10-30T13:13:03Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6523794359": {
-      "at": "2026-10-30T13:19:14Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6524696782": {
-      "at": "2026-10-30T14:03:31Z",
-      "lines": [
-        "/harness revise FUCKING MERGE THIS"
-      ]
-    },
     "c:6528737137": {
       "at": "2026-10-30T17:11:46Z",
       "lines": [
@@ -492,6 +426,12 @@
       "at": "2026-11-04T08:26:54Z",
       "lines": [
         "/harness build Option (A): today's deal earns nothing. Change the seat rule so the seat alternates strictly from day to day."
+      ]
+    },
+    "c:6635610985": {
+      "at": "2026-11-04T16:10:12Z",
+      "lines": [
+        "/harness revise CI is red on this head (`7182401fd`): `rust (classify)` says the pending fragments' claims do not match the change, and `rust` is red with it. Merge `main`, run `cargo jackioh classify --base origin/main --claims` and make the fragments match what this change does (or drop a fragment that claims a change it does not make), then run the full checks. Keep the `#[cfg(test)]` gate on the nine `WALK_*` constants from the last revision. The block was not this pull request's fault: GitHub lost the last delivery's record (an HTTP 500), and the retried delivery took its own push for a moved branch (fixed in #3030)."
       ]
     }
   },
