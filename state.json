@@ -220,8 +220,12 @@
     "what": "build #2157 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-04T02:12:10Z",
-    "notes": [],
+    "at": "2026-11-04T02:35:26Z",
+    "notes": [
+      "#2980 needs a plan",
+      "#2981 needs a plan",
+      "started a night run, as a lane was free: #2980 (hard) is queued to build, for `claude-squishy`: plan on `claude-squishy` (claude, `opus`, strong); build on `claude-squishy` (claude, `opus`, strong); review on `claude-squishy` (claude, `opus`, strong)"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "providers": {
