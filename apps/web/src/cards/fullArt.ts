@@ -8,7 +8,8 @@
 // R2725000: a face wears a look (versions.ts, `useCardLook`): its version, the normal face or the Full art version (which
 // any card it is offered may wear, `wearsFullArt`), and the Animated and Signature augments layered on it. The 21 still
 // print full art by the setting alone; any other card wears a version only by its own pick. A retired full art's pick
-// looks as it did (`tierOfLook` gives its tier back).
+// looks as it did (`tierOfLook` gives its tier back). R2940001: Alt full art prints the full-art layout as Full art
+// does (`isFullBleed`), on any card it is offered.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -34,8 +35,10 @@ import { getStored } from "../net/storage.ts";
 import {
   AUGMENT_ANIMATED_ID,
   NORMAL_LOOK,
+  VERSION_ALT_FULL_ART_ID,
   VERSION_FULL_ART_ID,
   augmentsOf,
+  isFullBleed,
   lookOf,
   offeredOn,
   type CardLook,
@@ -125,9 +128,13 @@ export function isFullArtCard(defId: string): boolean {
   return !isGlitch(defId) && FULL_ART_CARDS.has(fullArtSource(defId));
 }
 
-/** R2725000: whether a copy of `defId` may wear full art at all: a full-art card, or one offered the Full art version; never the Glitch. */
+/**
+ * R2725000: whether a copy of `defId` may wear full art at all: a full-art card, or one offered the Full art version
+ * (R2940001: or Alt full art); never the Glitch.
+ */
 export function wearsFullArt(defId: string): boolean {
-  return isFullArtCard(defId) || (!isGlitch(defId) && offeredOn(VERSION_FULL_ART_ID, fullArtSource(defId)));
+  const source = fullArtSource(defId);
+  return isFullArtCard(defId) || (!isGlitch(defId) && (offeredOn(VERSION_FULL_ART_ID, source) || offeredOn(VERSION_ALT_FULL_ART_ID, source)));
 }
 
 /**
@@ -328,7 +335,10 @@ export function useFullArtTier(defId: string, worn: boolean = false): FullArtTie
   return tierOfLook(useCardLook(defId, worn));
 }
 
-/** Whether a copy of `defId` prints full art at all (R2725000: it wears the Full art version), not the Animated art's normal face (R2715000). */
+/**
+ * Whether a copy of `defId` prints full art at all (R2725000: it wears the Full art version, R2940001: or Alt full art),
+ * not the Animated art's normal face (R2715000).
+ */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
-  return useCardLook(defId, worn).version === VERSION_FULL_ART_ID;
+  return isFullBleed(useCardLook(defId, worn).version);
 }

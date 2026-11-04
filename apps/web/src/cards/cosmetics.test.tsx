@@ -58,9 +58,9 @@ import {
   type CosmeticKind,
 } from "./cosmetics.ts";
 import { FullArtOwned, OwnCopy } from "./fullArt.ts";
-import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
+import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ALT_FULL_ART_ID, VERSION_FULL_ART_ID, offeredOn } from "./versions.ts";
 import { FULL_ART_MOTION, SIGNATURE_MOTION, artMotionFor, particleMarkup } from "./art/motion.ts";
-import { artSeedOf } from "./art/pictures.ts";
+import { SKETCH_INK, SKETCH_PAPER, artSeedOf, sketchSvg } from "./art/pictures.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
@@ -1324,8 +1324,9 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
           expect(animates(cosmeticsCss, '.cf.cf-full-art--animated[data-full-art-motion="animated"] '), id).toBe(true);
           break;
         case "version":
-          // R2725000: the Full art version is still, as the Epic full art was; Animated moves it (R2725003).
-          expect(id).toBe(VERSION_FULL_ART_ID);
+          // R2725000: the Full art version is still, as the Epic full art was; Animated moves it (R2725003). R2940002:
+          // so is Alt full art, which Animated moves as it does Full art.
+          expect([VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID]).toContain(id);
           break;
         case "augment":
           // R2725000: the Signature signs itself wherever it is worn, by its class on the face.
@@ -1422,8 +1423,9 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
 
   it("R2725004 no version or augment colour is within the Radiant gold window", () => {
     // The rules that draw the Full art version's band and the augments: the signature, its ink, pen and burst.
-    const drawn = rules(cosmeticsCss).filter(
-      (rule) => /\.cf-signature|\.cf-full-art-sweep|\.cf-full-art--animated|\.cf-full-art--signed/.test(rule.selector),
+    // R2940001: and the Sketch version's pencilled frame.
+    const drawn = rules(cosmeticsCss).filter((rule) =>
+      /\.cf-signature|\.cf-full-art-sweep|\.cf-full-art--animated|\.cf-full-art--signed|\[data-version="version-sketch"\]/.test(rule.selector),
     );
     expect(drawn.length).toBeGreaterThan(5);
     const colors = drawn.flatMap((rule) => colorsOf(rule.body).map((hex) => [rule.selector, hex] as const));
@@ -1452,5 +1454,19 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
       expect(colors.length, id).toBeGreaterThan(0);
       for (const hex of colors) expect(inRadiantGold(hex), `${id}'s Signature particles: #${hex}`).toBe(false);
     }
+  });
+
+  it("R2940001 the sketch's paper and ink keep out of the Radiant gold window", () => {
+    // The colours the Sketch's picture is drawn in, base and Radiant, and its frame's: the window's ring here, the
+    // edge and bezel in cards.css.
+    const sketchRules = [...rules(cosmeticsCss), ...rules(cardsCss)].filter((rule) => rule.selector.includes('[data-version="version-sketch"]'));
+    expect(sketchRules.length).toBeGreaterThan(1);
+    for (const radiant of [false, true]) {
+      const colors = hexes(sketchSvg("<svg></svg>", radiant, "core-008"));
+      expect(colors.length).toBeGreaterThan(0);
+      for (const hex of [...colors, SKETCH_PAPER.slice(1), SKETCH_INK.slice(1)]) expect(inRadiantGold(hex), `#${hex}`).toBe(false);
+    }
+    // Its frame's colours are the palette's slates.
+    for (const rule of sketchRules) for (const hex of colorsOf(rule.body)) expect(inRadiantGold(hex), `${rule.selector}: #${hex}`).toBe(false);
   });
 });

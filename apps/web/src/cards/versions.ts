@@ -3,10 +3,13 @@
 // each is offered on the cards `COSMETIC_OFFERS` lists, the server's own reading of the entry's offer, and on no
 // other. R2725002: a retired full art (R2655000, R2715000) counts as owning what it combines (`impliedBy`), and a
 // card pick written before #2725 looks as it did (`lookOf`). R2949000: Signature is worn only beside the Full art
-// version and Animated (`signatureFits`), and a face wearing it shows the Signature look. Presentation only: nothing
-// here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
+// version and Animated (`signatureFits`), and a face wearing it shows the Signature look. R2940000: #2940 adds the Alt
+// art, Sketch and Alt full art versions; R2940001: the full bleed of Full art and Alt full art (`isFullBleed`) and the
+// picture each version draws (`artPictureOf`). Presentation only: nothing here reaches the engine, an action,
+// `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import type { ArtPicture } from "./art/pictures.ts";
 
 /** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
 export const ANIMATED_ART_ID_PREFIX = "animated-";
@@ -25,6 +28,26 @@ export const AUGMENT_ANIMATED_ID = "augment-animated";
 
 /** R2725000: the Signature augment, Mythic: the card's name signed across its art. */
 export const AUGMENT_SIGNATURE_ID = "augment-signature";
+
+/** R2940000: the Alt art version, Rare: a new picture of the card's subject in the normal frame. */
+export const VERSION_ALT_ART_ID = "version-alt-art";
+
+/** R2940000: the Sketch version, Rare: the card's picture in pencil and ink on paper, its frame a pencilled outline. */
+export const VERSION_SKETCH_ID = "version-sketch";
+
+/** R2940000: the Alt full art version, Legendary: Alt art's picture across the whole face. */
+export const VERSION_ALT_FULL_ART_ID = "version-alt-full-art";
+
+/** R2940001: whether a face wearing `version` lays its art across the whole face: Full art and Alt full art. */
+export function isFullBleed(version: string | null): boolean {
+  return version === VERSION_FULL_ART_ID || version === VERSION_ALT_FULL_ART_ID;
+}
+
+/** R2940001: the picture a face wearing `version` draws (pictures.ts): Alt art's for Alt art and Alt full art, the Sketch for Sketch. */
+export function artPictureOf(version: string | null): ArtPicture {
+  if (version === VERSION_ALT_ART_ID || version === VERSION_ALT_FULL_ART_ID) return "alt";
+  return version === VERSION_SKETCH_ID ? "sketch" : "normal";
+}
 
 /**
  * R2725000: what a face wears: its version (null for the normal face) and the augments layered on it. R2949000:

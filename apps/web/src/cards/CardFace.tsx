@@ -42,6 +42,10 @@
 // only beside Full art and Animated (versions.ts `signatureFits`), never on the normal face, and shows the Signature
 // look: a picture of its own (CardArt's `picture`, `data-art-picture="signature"`), a motion of its own
 // (`SIGNATURE_MOTION`) and the signed name. R2725004: a Radiant face keeps every Radiant mark under every look.
+// R2940001: Alt full art prints the full-art layout as Full art does (versions.ts `isFullBleed`); Alt art and Alt full
+// art draw Alt art's picture and the Sketch the normal one in pencil (`artPictureOf`, CardArt's `picture`), and the
+// Sketch's base frame is a pencilled outline (cosmetics.css). R2940002: Animated, a foil, a finish and a border layer
+// on each, and Signature on none.
 //
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
@@ -82,7 +86,7 @@ import { useCardSettings } from "./settings.ts";
 import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
 import { questFaceText } from "./questFace.ts";
 import { MINUS } from "./tuning.ts";
-import { NORMAL_LOOK, VERSION_FULL_ART_ID, augmentsOf } from "./versions.ts";
+import { NORMAL_LOOK, artPictureOf, augmentsOf, isFullBleed } from "./versions.ts";
 
 import "./cards.css";
 import "./setmark.css";
@@ -291,8 +295,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
   // R2725000: the look its pick names, its version and augments (R2655000's tiers among them).
   const cardLook = useCardLook(face.defId, worn);
-  // R2715000: the Animated art prints the normal face; R2725000: only the Full art version prints full art.
-  const fullArtOn = cardLook.version === VERSION_FULL_ART_ID;
+  // R2715000: the Animated art prints the normal face; R2725000: only the Full art version prints full art, and
+  // R2940001 Alt full art.
+  const fullArtOn = isFullBleed(cardLook.version);
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -397,7 +402,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               shape={fullArt ? "full" : ART_SHAPE[face.type]}
               lazy={lazyArt}
               starship={face.inPlay ? face.starship : null}
-              picture={signatureLook ? "signature" : "normal"}
+              picture={signatureLook ? "signature" : artPictureOf(look.version)}
               motion={artMotion ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null}
             />
           )}

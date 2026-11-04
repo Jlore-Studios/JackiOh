@@ -8,6 +8,9 @@
 // R2949000: given a `picture` of its own (pictures.ts), the procedural, Stinkyscape and Training Grounds
 // painters draw the card's subject in a picture seeded apart from its normal one (`data-art-picture`); a
 // Starship's art and a Legacy card's keep their one picture.
+// R2940001: Alt art's picture ("alt") is seeded apart as Signature's is; the Sketch ("sketch") pencils whatever
+// picture the window draws, a Starship's and a Legacy card's too. A delivered file is the normal picture's (and the
+// Signature look's, R2949000), so Alt art and the Sketch draw the painter's.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -43,7 +46,7 @@ export type CardArtProps = {
   starship?: { pieces: number; launched: boolean } | null;
   /** R2715001: the card's moving art, which its procedural picture draws in place of the still one; null holds it still. */
   motion?: ArtMotion | null;
-  /** R2949000: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
+  /** R2949000, R2940001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
   picture?: ArtPicture;
 };
 
@@ -89,9 +92,11 @@ export function CardArt({
   const yard = isTrainingGroundsArt(defId);
   const motif = stinky || yard ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
-  const real = starship === null ? artUrl(defId, radiant, manifest) : null;
+  // R2940001: the Sketch pencils the window's picture, whatever draws it.
+  const sketch = picture === "sketch";
+  const real = starship === null && picture !== "alt" && !sketch ? artUrl(defId, radiant, manifest) : null;
   // R2949000: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture.
-  const ownPicture = picture !== "normal" && starship === null && coreId === null;
+  const ownPicture = picture !== "normal" && !sketch && starship === null && coreId === null;
   const seedId = ownPicture ? artSeedOf(defId, picture) : defId;
 
   if (real !== null && real.src !== failedSrc) {
@@ -121,14 +126,14 @@ export function CardArt({
   const uri = !near
     ? null
     : starship !== null
-      ? starshipArtUri(starship.pieces, starship.launched, radiant)
+      ? starshipArtUri(starship.pieces, starship.launched, radiant, sketch)
       : stinky
-        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId)
+        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, sketch)
         : yard
-          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId)
+          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, sketch)
           : coreId !== null
-            ? legacyArtUri(defId, coreId, cardName, tags, type, radiant)
-            : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion);
+            ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, sketch)
+            : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, sketch);
   const family =
     starship !== null
       ? "starship"
@@ -149,7 +154,7 @@ export function CardArt({
       data-art-variant={variant}
       data-art-motif={motif ?? undefined}
       data-art-family={family}
-      data-art-picture={ownPicture ? picture : undefined}
+      data-art-picture={ownPicture || sketch ? picture : undefined}
       data-art-pending={uri === null ? "true" : undefined}
       data-art-moving={uri !== null && starship === null && coreId === null && motion !== null ? "true" : undefined}
       aria-hidden="true"

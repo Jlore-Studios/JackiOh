@@ -4152,5 +4152,8 @@
   "Version": "版本",
   "Augments": "增强",
   "Signature": "签名",
-  "Needs Full art and Animated": "需要全画和动态"
+  "Needs Full art and Animated": "需要全画和动态",
+  "Alt art": "异画",
+  "Sketch": "素描",
+  "Alt full art": "异画全画"
 }
