@@ -307,6 +307,8 @@ pub fn tag_count(tag: Tag) -> usize {
         // (Faction).
         Tag::Resource => stinkyscape(6),
         Tag::Faction => stinkyscape(5),
+        // R3038000: the Dormant Starship, the tag's only card; the Drone Battleships are no Starships.
+        Tag::Starship => stinkyscape(1),
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()

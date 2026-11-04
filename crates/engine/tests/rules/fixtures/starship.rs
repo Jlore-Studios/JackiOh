@@ -66,9 +66,9 @@ fn piece(name: &str, index: u32, stats: (i32, i32), more: Value, tags: Value) ->
     )
 }
 
-/// The Dormant Starship, as Stinkyscape prints it: "(3) Unit, 0/0. Dormant. Activate: pay (3) to
-/// launch." Its Activate is the engine's (`starship::launch_decl`), so its script prints Dormant and the
-/// hull and nothing else.
+/// The Dormant Starship, as Stinkyscape prints it: "(3) Unit, 0/0, Starship. Flying, Ranged.
+/// Dormant. Activate: pay (4) to launch." Its Activate is the engine's (`starship::launch_decl`), so
+/// its script prints Dormant and the hull and nothing else.
 pub static hull: LazyLock<CardDef> = LazyLock::new(|| {
     let mut card = def(
         DORMANT_STARSHIP_DEF_ID,
@@ -76,8 +76,8 @@ pub static hull: LazyLock<CardDef> = LazyLock::new(|| {
         "Unit",
         3,
         (0, 0),
-        json!([]),
-        json!([]),
+        json!([{ "kind": "Flying" }, { "kind": "Ranged" }]),
+        json!(["Starship"]),
     );
     card.name = "Dormant Starship (Starship fixture)".to_string();
     card

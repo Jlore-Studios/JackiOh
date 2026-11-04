@@ -13,11 +13,13 @@
 //!   the middle first, standing there, else their unit row the same way (R2249000), else stacked on top of
 //!   their lane-3 unit zone, Locked or not, and the copy fuses into it at once, so no state check reads it at
 //!   0/0. A Fuse never makes it a piece (R1852001).
-//! - **The launch.** While Dormant its one ability is the engine's launch, Activate: (3) (`launch_decl`,
+//! - **The launch.** While Dormant its one ability is the engine's launch, Activate: (4) (`launch_decl`,
 //!   `STARSHIP_LAUNCH_COST`, moved by "your Starship launch costs (N)", R1852006), which awakens it; any
-//!   awakening of a hull is its launch (`slumber::awaken_card` calls `launch`): it takes the Starship keyword
-//!   and a random name (R1852004), `starshipLaunched` goes out, its fused Cries fire as a triggered Cry does
+//!   awakening of a hull is its launch (`slumber::awaken_card` calls `launch`): it takes a random name
+//!   (R1852004), `starshipLaunched` goes out, its fused Cries fire as a triggered Cry does
 //!   (R467: prompts for its controller), then its fused "When launched" triggers answer the event (R1852003).
+//!   It takes no keyword: it holds the Starship tag, which the layers read as Flying and Ranged (R3038000,
+//!   R3038001).
 //! - **The exile.** A Stack card played onto a Dormant Starship lands and is exiled before it resolves
 //!   (R1852007), the one exception to R1839003.
 //!
@@ -35,7 +37,7 @@ use crate::state::{
 };
 use crate::subsystems::fuse::{FuseArgs, fuse};
 use crate::wire::{
-    GameEvent, GameEventType, Keyword, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName, has_keyword,
+    GameEvent, GameEventType, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName, has_keyword,
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, is_open, place_on_field, place_standing_on_field, takes_move,
@@ -344,7 +346,7 @@ pub fn launch_cost(state: &GameState, player: PlayerId) -> i32 {
         .max(0)
 }
 
-/// R1852003: a Dormant Starship's one ability, "Activate: pay (3) to launch", priced for its controller
+/// R1852003: a Dormant Starship's one ability, "Activate: pay (4) to launch", priced for its controller
 /// now (R1852006). `subsystems::activate` runs the launch (`pay_launch`), so its own list is empty.
 pub fn launch_decl(state: &GameState, card: &CardInstance) -> ActivationDecl {
     let cost = launch_cost(state, card.controller);
@@ -403,9 +405,10 @@ pub fn launch_names(tags: &[Tag]) -> Vec<&'static str> {
 }
 
 /// R1852003: a hull awakened (`slumber::awaken_card`, already reported as `awakened`) launches: it takes
-/// the Starship keyword and a random name (R1852004), and its fused Cries fire as a triggered Cry does,
-/// its controller choosing (R467). Its fused "When launched" triggers answer `starshipLaunched` once the
-/// Cries are done (R113: work drains before the trigger queue moves).
+/// a random name (R1852004), and its fused Cries fire as a triggered Cry does, its controller choosing
+/// (R467). Its fused "When launched" triggers answer `starshipLaunched` once the Cries are done (R113:
+/// work drains before the trigger queue moves). R3038001: it takes no keyword; it holds the Starship
+/// tag, which the layers read as Flying and Ranged (R3038000).
 pub fn launch(sink: &mut EngineSink<'_>, instance_id: &str) {
     let Some(card) = find_instance(sink.state, instance_id).cloned() else {
         return;
@@ -422,16 +425,9 @@ pub fn launch(sink: &mut EngineSink<'_>, instance_id: &str) {
         .unwrap_or_default();
     let seq = sink.state.next_seq;
     sink.state.next_seq += 1;
-    let prints_it = has_keyword(
-        &crate::layers::unit_view(sink.state, &card).keywords,
-        KeywordKind::Starship,
-    );
     let Some(live) = find_instance_mut(sink.state, instance_id) else {
         return;
     };
-    if !prints_it {
-        live.granted_keywords.push(Keyword::Starship);
-    }
     let memory = live.starship.get_or_insert_with(StarshipMemory::default);
     memory.name = Some(name.clone());
     memory.launched = Some(seq);

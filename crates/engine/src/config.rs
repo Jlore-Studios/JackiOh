@@ -2246,8 +2246,8 @@ pub const STARSHIP_FULL_ROW_LANE: i32 = 3;
 /// R2249000: the lanes a Dormant Starship is summoned into, the middle first: its owner's backrow zones
 /// in this order, standing there (R1081000), then their unit zones in the same order.
 pub const STARSHIP_LANE_ORDER: [i32; 5] = [3, 2, 4, 1, 5];
-/// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (3) to awaken").
-pub const STARSHIP_LAUNCH_COST: i32 = 3;
+/// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (4) to awaken").
+pub const STARSHIP_LAUNCH_COST: i32 = 4;
 /// R1852003: how many times a turn the launch may be activated (once; a launched Starship has no
 /// launch left to activate).
 pub const STARSHIP_LAUNCH_USES: i32 = 1;

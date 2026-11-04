@@ -24,6 +24,8 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * (R1857000). Legacy marks Training Grounds #41 to #60, the frozen copies of Core cards, a family tag
  * no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources, Reknite to Red
  * Narcor, every one a token) and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162).
+ * Issue #3038 adds Starship (the Dormant Starship, which every Starship card carries): a card holding
+ * it has Flying and Ranged (R3038000).
  */
 export type Tag =
   | "Human"
@@ -55,6 +57,7 @@ export type Tag =
   | "Legacy"
   | "Resource"
   | "Faction"
+  | "Starship"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
