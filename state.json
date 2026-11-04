@@ -17397,6 +17397,8 @@
       }
     },
     "2992": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T01:47:27Z",
@@ -17410,8 +17412,11 @@
         "trail": "4 non-token cards animate (floor `FX_COVERAGE_FLOOR`), every Spell/Trap wears cast/bespoke/setPiece (one documented Starship-part `none`), every Field Spell an aura. `apps/web/src/fx/cards/tiers.test.ts` plans all 645 non-`none` e\u2026\n- - Consistency/motif: census (default 200 seeds) vs tables compared; all 364 overrides carry set-pass reasons, no table changed. Four motifs below the floor of 3 (`chain`, `ward`, `mirror`, `glimpse`) kept as reasoned exceptions; all 21 sub-looks used.\n- - Entrances reworked into the two-wave landing: Legendary ring echo (`entranceEchoMs`, shared by `takeover.ts` and the `cues.ts` summon path), prismatic sweep keyframes (`fx-takeover-prism`), two-step recoil, still with static rays disc and ring (`TAKEOVER_STILL_MS` unchanged). Pins updated in `tak\u2026\n- - New component specs `fx-phone-frame.cy.tsx` (4 heaviest scenes vs the 50 ms budget) and `fx-gallery-captures.cy.tsx` (35 motifs mid-flight, 4 set pieces mid-flight and at rest).\n- - Docs: \"Audit\" section in `9-card-animations.md`; `ADDING_CARDS.md` row 13 verified current; report `reviews/2026-11-04-issue-2803-card-animations.md`.\n- How tested: 281 vitest tests over the 12 touched files green; `pnpm --dir apps/web typecheck`, eslint on fx plus both new specs, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh spec/catalog/patches check` all green. Takeover mid-hold and the still v\u2026\n- Decisions: kept the four under-floor motifs (folding breaks set passes and R2784000's cited `chain` example); no art scale-back on headless frame numbers (calm 25.6 ms vs Nether ~231 ms in SwiftShader is environment-bound; the canvas already avoids `shadowBlur`); gallery Unit-without-landing takeov\u2026\n- Reviewer look twice: the Cypress specs could not run here (`cypress install` 404s, no runner binary), so they gate in CI \u2014 the local frame figures in the report are headless-Chromium numbers, not phone verdicts.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: audit the card animations: coverage, consi\u2026\n- This part audits #2782's card-animation work and lands its report under ruling R2803000 (amends R2722001). Real component-spec runs were obtained (Cypress binary provisioned via direct CDN zip; Xvfb via apt debs + proot bind for its hardcoded xkbcomp path; DISPLAY=:99): the phone spec passes 3/5 an\u2026\n- What changed: coverage test (551/634 non-token cards animate; Spell/Trap cast and Field Spell aura rules) and tier test (every table entry's cues end within `FX_MAX_TAIL_MS`, holds capped, one hold per action); `FX_COVERAGE_FLOOR`/`FX_MOTIF_MIN_CARDS`/`FX_PHONE_FRAME_BUDGET_MS` constants with pins;\u2026\n- How tested: 281 vitest tests over 12 touched files green; web typecheck, eslint, `cargo fmt --check`, clippy, `spec`/`catalog`/`patches` check green; takeover mid-hold and the still verified in a headless browser with screenshots.\n- Decisions: no art scale-back for the two phone misses (Nether 207 ms, takeover 125 ms vs 50 ms budget \u2014 fill-rate cost of CPU software rendering that no phone GPU shares; starship and auras pass in the same renderer); no folding of the four reasoned motifs. Reviewer look twice: the pre-existing fx-\u2026\n- This part audits the finished card-animation work from #2782 and lands its report under ruling R2803000 (which amends R2722001). All repo work is complete and verified where this machine can verify it; two acceptance gates are red for environment-bound reasons, reported below with measurements, and\u2026\n- **Coverage.** `apps/web/src/fx/cards/coverage.test.ts` proves 551 of 634 non-token cards animate (floor `FX_COVERAGE_FLOOR` = 0.5, i.e. 317), every Spell/Field Spell/Trap/Field Trap wears a cast, bespoke recipe, set piece, or the one documented Starship-part `none`, and every Field Spell wears an a\u2026\n- **Consistency and motif use.** Compared the default-200-seed `fx census` JSON against every table: all 364 overrides carry their set pass's Why-cell reason, so no table entry changed. All 35 drawn motifs are used; `chain`, `ward`, `mirror`, `glimpse` sit below `FX_MOTIF_MIN_CARDS` (3) and stay as r\u2026\n- **Tiers.** `apps/web/src/fx/cards/tiers.test.ts` plans all 645 non-`none` entries through the real effects layer: every cue ends within its entry plus `FX_MAX_TAIL_MS`, every set piece hold is within its cap with one hold per action, and hidden plays key nothing. Green (5 tests).\n- **Entrances (#2722).** Shared looks reworked into the two-wave landing: Legendary ring echo (`entranceEchoMs`, shared by `takeover.ts` and the `cues.ts` summon path), prismatic sweep keyframes (`fx-takeover-prism`), two-step board recoil, and a reduced-motion still with static rays disc + ring (`TA\u2026\n- **Phone frame-time (red, environment-bound).** `fx-phone-frame.cy.tsx` run for real (Cypress binary + Xvfb provisioned locally): cap check, Starship launch, and 4-aura board PASS at the 50 ms budget; Twisting Nether (mean 207 ms/12 frames) and Mythic takeover (125 ms/16 frames) miss under CPU softw\u2026\n- **Gallery captures (nearly green).** `fx-gallery-captures.cy.tsx` run for real: 36/39 motif plays render mid-flight (plus per-motif screenshots) and all 4 set pieces render mid-flight and at rest. Three misses: shift (entry fires, DOM mounts, canvas never paints \u2014 same pre-existing gallery-staging \u2026\n- **Verification.** 281 vitest tests over 12 touched files, web typecheck, eslint, `cargo fmt --check`, clippy, `spec`/`catalog`/`patches` check all green. Decisions recorded in the report and ruling. Lingering processes for whoever picks this up: dev server on :5173 and Xvfb on :99 (both setsid-deta\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-2803 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-2803/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2803,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T04:31:19Z",
         "from_run": "41756448599",
         "gates": [
           {
@@ -17470,8 +17475,15 @@
         "source": "build",
         "until": "2026-11-04T04:57:46Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-04T04:27:46Z",
+      "run_id": "pending:a3fc8226-1793766642",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-04T04:31:19Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17485,9 +17497,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T04:30:26Z",
+    "at": "2026-11-04T04:31:19Z",
     "url": "",
-    "what": "review #2991 on muse"
+    "what": "review #2992 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T04:03:56Z",
