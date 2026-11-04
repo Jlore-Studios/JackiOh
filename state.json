@@ -14423,7 +14423,7 @@
       "started_at": "2026-11-04T09:43:21Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3012": {
       "action": "build",
