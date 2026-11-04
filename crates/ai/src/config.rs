@@ -883,16 +883,20 @@ pub struct AiMulligan {
     pub keep_max_cost: i32,
 }
 
+/// The mulligan's bound for a seat with no mana bonus: `mulligan_keep_curved` raises it by the seat's
+/// bonus, within its mana cap (`mulligan_keep_bound`, R2977000).
 pub const AI_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 
-/// The greedy baseline's mulligan, frozen with GREEDY_EVAL for the same reason.
+/// The greedy baseline's mulligan, frozen with GREEDY_EVAL for the same reason. No mana bonus raises it
+/// (R2977000).
 pub const GREEDY_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 
 /// `AI_MULLIGAN_CURVE`'s shape (#993).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiMulliganCurve {
-    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` exactly.
+    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` at the seat's bound
+    /// (`mulligan_keep_bound`, R2977000).
     pub on: bool,
     /// A card costing at most this is a first-turn play. The mana bonus (R181) does not raise it: the
     /// cap is on the cheapest bodies, so a Hard seat's two-drops are not capped.
