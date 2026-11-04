@@ -16818,7 +16818,9 @@
     },
     "2978": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6620498246"
+      ],
       "failures": 0,
       "forced": false,
       "in_lane": true,
@@ -16837,9 +16839,7 @@
       "started_at": "2026-11-04T02:10:30Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6620498246"
-      ]
+      "taken_asks": []
     },
     "2979": {
       "action": "plan",
