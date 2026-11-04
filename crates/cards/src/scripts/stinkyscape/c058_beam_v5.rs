@@ -1,4 +1,4 @@
-//! Stinkyscape #58 Beam v5 (SPEC §8.10 row 58). Unit 0/8 → 0/16, Weapon, cost 4, Legendary.
+//! Stinkyscape #58 Beam v5 (SPEC §8.10 row 58). Unit 0/4 → 0/8, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn
 //!            cooldown." — damage 11 (12 until #2657)
@@ -147,7 +147,7 @@ mod tests {
     /// The printed `damage`, and the Radiant face's (12 and 24 until #2657), and its Radiant health.
     const DAMAGE: i32 = 11;
     const RADIANT_DAMAGE: i32 = 22;
-    const RADIANT_HEALTH: i32 = 16;
+    const RADIANT_HEALTH: i32 = 8;
 
     fn at(target: &str) -> Value {
         json!({ "ability": "beam", "targets": pick::id(target) })

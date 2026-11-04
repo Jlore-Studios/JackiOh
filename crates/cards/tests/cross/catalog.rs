@@ -5433,8 +5433,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "51",
@@ -5443,8 +5443,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "52",
@@ -5453,8 +5453,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "53",
@@ -5463,8 +5463,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "54",
@@ -5473,8 +5473,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "55",
@@ -5483,8 +5483,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "56",
@@ -5493,8 +5493,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "57",
@@ -5503,8 +5503,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "58",
@@ -5513,8 +5513,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "59",
@@ -5523,8 +5523,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "60",
@@ -5533,8 +5533,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "61",
@@ -5543,8 +5543,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "62",
@@ -6277,8 +6277,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "141",
@@ -6287,8 +6287,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "142",
@@ -6297,8 +6297,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn, G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "143",
@@ -6307,8 +6307,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "144",

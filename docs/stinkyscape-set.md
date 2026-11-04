@@ -1584,7 +1584,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** A
 
 #### Stinkyscape #50 · Beam v3
-`stinkyscape-050` · (2) Unit, Weapon · Rare · 0/4 → 0/8 · built by S06 (#1862)
+`stinkyscape-050` · (2) Unit, Weapon · Rare · 0/2 → 0/4 · built by S06 (#1862)
 
 > **Designer:** (2) Beam v3, Unit, Rare, Weapon, Stinkyscape, #50 · [0/4] / Starship Piece / Equip / Activate 1: Deal 6 damage, Cleave, Pierce *{has an extra turn cooldown}* / *{deals half damage to heroes}* ~~~ [0/8] / Starship Piece / Equip / Activate 1: Deal 12 damage, Cleave, Pierce *{has an extra turn cooldown}* / *{deals half damage to heroes}*
 
@@ -1597,7 +1597,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #51 · Repeater v3
-`stinkyscape-051` · (2) Unit, Weapon · Rare · 0/4 → 0/8 · built by S06 (#1862)
+`stinkyscape-051` · (2) Unit, Weapon · Rare · 0/2 → 0/4 · built by S06 (#1862)
 
 > **Designer:** (2) Repeater v3, Unit, Rare, Weapon, Stinkyscape, #51 · [0/4] / Starship Piece / Equip / Activate 4: Deal 1 damage, Pierce / *{deals half damage to heroes}* ~~~ [0/8] / Starship Piece / Equip / Activate 4: Deal 2 damage, Pierce / *{deals half damage to heroes}*
 
@@ -1610,7 +1610,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #52 · Cannon v3
-`stinkyscape-052` · (2) Unit, Weapon · Rare · 0/4 → 0/8 · built by S06 (#1862)
+`stinkyscape-052` · (2) Unit, Weapon · Rare · 0/2 → 0/4 · built by S06 (#1862)
 
 > **Designer:** (2) Cannon v3, Unit, Rare, Weapon, Stinkyscape, #52 · [0/4] / Starship Piece / Equip / Activate 1: Deal 5 damage / *{deals half damage to heroes}* ~~~ [0/8] / Starship Piece / Equip / Activate 1: Deal 10 damage / *{deals half damage to heroes}*
 
@@ -1623,7 +1623,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #53 · Flak v3
-`stinkyscape-053` · (2) Unit, Weapon · Rare · 0/4 → 0/8 · built by S06 (#1862)
+`stinkyscape-053` · (2) Unit, Weapon · Rare · 0/2 → 0/4 · built by S06 (#1862)
 
 > **Designer:** (2) Flak v3, Unit, Rare, Weapon, Stinkyscape, #53 · [0/4] / Starship Piece / Equip / Activate 1: Deal 2 damage to all enemies ~~~ [0/8] / Starship Piece / Equip / Activate 1: Deal 4 damage to all enemies
 
@@ -1636,7 +1636,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** A
 
 #### Stinkyscape #54 · Beam v4
-`stinkyscape-054` · (3) Unit, Weapon · Epic · 0/6 → 0/12 · built by S06 (#1862)
+`stinkyscape-054` · (3) Unit, Weapon · Epic · 0/3 → 0/6 · built by S06 (#1862)
 
 > **Designer:** (3) Beam v4, Unit, Epic, Weapon, Stinkyscape, #54 · [0/6] / Starship Piece / Equip / Activate 1: Deal 9 damage, Cleave, Pierce *{has an extra turn cooldown}* / *{deals half damage to heroes}* ~~~ [0/12] / Starship Piece / Equip / Activate 1: Deal 18 damage, Cleave, Pierce *{has an extra turn cooldown}* / *{deals half damage to heroes}*
 
@@ -1649,7 +1649,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #55 · Repeater v4
-`stinkyscape-055` · (3) Unit, Weapon · Epic · 0/6 → 0/12 · built by S06 (#1862)
+`stinkyscape-055` · (3) Unit, Weapon · Epic · 0/3 → 0/6 · built by S06 (#1862)
 
 > **Designer:** (3) Repeater v4, Unit, Epic, Weapon, Stinkyscape, #55 · [0/6] / Starship Piece / Equip / Activate 6: Deal 1 damage, Pierce / *{deals half damage to heroes}* ~~~ [0/12] / Starship Piece / Equip / Activate 6: Deal 2 damage, Pierce / *{deals half damage to heroes}*
 
@@ -1662,7 +1662,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #56 · Cannon v4
-`stinkyscape-056` · (3) Unit, Weapon · Epic · 0/6 → 0/12 · built by S06 (#1862)
+`stinkyscape-056` · (3) Unit, Weapon · Epic · 0/3 → 0/6 · built by S06 (#1862)
 
 > **Designer:** (3) Cannon v4, Unit, Epic, Weapon, Stinkyscape, #56 · [0/6] / Starship Piece / Equip / Activate 1: Deal 7 damage / *{deals half damage to heroes}* ~~~ [0/12] / Starship Piece / Equip / Activate 1: Deal 14 damage / *{deals half damage to heroes}*
 
@@ -1675,7 +1675,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #57 · Flak v4
-`stinkyscape-057` · (3) Unit, Weapon · Epic · 0/6 → 0/12 · built by S06 (#1862)
+`stinkyscape-057` · (3) Unit, Weapon · Epic · 0/3 → 0/6 · built by S06 (#1862)
 
 > **Designer:** (3) Flak v4, Unit, Epic, Weapon, Stinkyscape, #57 · [0/6] / Starship Piece / Equip / Activate 1: Deal 2 damage to all enemies, twice ~~~ [0/12] / Starship Piece / Equip / Activate 1: Deal 4 damage to all enemies, twice
 
@@ -1688,7 +1688,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** A
 
 #### Stinkyscape #58 · Beam v5
-`stinkyscape-058` · (4) Unit, Weapon · Legendary · 0/8 → 0/16 · built by S06 (#1862)
+`stinkyscape-058` · (4) Unit, Weapon · Legendary · 0/4 → 0/8 · built by S06 (#1862)
 
 > **Designer:** (4) Beam v5, Unit, Legendary, Weapon, Stinkyscape, #58 · [0/8] / Starship Piece / Equip / Activate 1: Deal 15 damage, Cleave, Pierce *{has an extra turn cooldown}* / *{deals half damage to heroes}* ~~~ [0/16] / Starship Piece / Equip / Activate 1: Deal 30 damage, Cleave, Pierce *{has an extra turn cooldown}* / *{deals half damage to heroes}*
 
@@ -1701,7 +1701,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #59 · Repeater v5
-`stinkyscape-059` · (4) Unit, Weapon · Legendary · 0/8 → 0/16 · built by S06 (#1862)
+`stinkyscape-059` · (4) Unit, Weapon · Legendary · 0/4 → 0/8 · built by S06 (#1862)
 
 > **Designer:** (4) Repeater v5, Unit, Legendary, Weapon, Stinkyscape, #59 · [0/8] / Starship Piece / Equip / Activate 6: Deal 2 damage, Pierce / *{deals half damage to heroes}* ~~~ [0/16] / Starship Piece / Equip / Activate 6: Deal 4 damage, Pierce / *{deals half damage to heroes}*
 
@@ -1714,7 +1714,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #60 · Cannon v5
-`stinkyscape-060` · (4) Unit, Weapon · Legendary · 0/8 → 0/16 · built by S06 (#1862)
+`stinkyscape-060` · (4) Unit, Weapon · Legendary · 0/4 → 0/8 · built by S06 (#1862)
 
 > **Designer:** (4) Cannon v5, Unit, Legendary, Weapon, Stinkyscape, #60 · [0/8] / Starship Piece / Equip / Activate 1: Deal 10 damage / *{deals half damage to heroes}* ~~~ [0/16] / Starship Piece / Equip / Activate 1: Deal 20 damage / *{deals half damage to heroes}*
 
@@ -1727,7 +1727,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C
 
 #### Stinkyscape #61 · Flak v5
-`stinkyscape-061` · (4) Unit, Weapon · Legendary · 0/8 → 0/16 · built by S06 (#1862)
+`stinkyscape-061` · (4) Unit, Weapon · Legendary · 0/4 → 0/8 · built by S06 (#1862)
 
 > **Designer:** (4) Flak v5, Unit, Legendary, Weapon, Stinkyscape, #61 · [0/8] / Starship Piece / Equip / Activate 1: Deal 2 damage to all enemies, thrice ~~~ [0/16] / Starship Piece / Equip / Activate 3: Deal 4 damage to all enemies, thrice
 
@@ -2845,20 +2845,20 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** C (M16's cast it for yourself).
 
 #### Stinkyscape #140 · Rush Token Launcher
-`stinkyscape-140` · (2) Unit, Weapon · Rare · 0/4 → 0/8 · built by S06 (#1862)
+`stinkyscape-140` · (2) Unit, Weapon · Rare · 0/2 → 0/4 · built by S06 (#1862)
 
 > **Designer:** (2) Rush Token Launcher, Unit, Rare, Weapon, Stinkyscape, #140 · [0/4] / Starship Piece / Equip / Activate 1: Target an enemy, summon a Rush token to attack it *{obey's taunt}* / *{deals half damage to heroes}* ~~~ [0/8] / Starship Piece / Equip / Activate 1: Target an enemy, summon a Radiant Rush token to attack it *{obey's taunt}* / *{deals half damage to heroes}*
 
 - **Text:** Starship Piece, Equip / Activate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first.
 - **Radiant:** Starship Piece, Equip / Activate: Summon a Radiant Rush Token that attacks an enemy Unit, Taunt Units first.
-- **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate ([[R384]]): a declared enemy Unit, a Taunt one while the enemy has one ([[§4.2]] step 3 read for the choice), then `summon` the Rush Token ([[§7]]) into the leftmost open unit zone ([[R64]]) and a forced attack by it on that Unit ([[R53]]), as Core #60 Bear Honeypot's tokens attack; with no open zone, nothing. Radiant: a Radiant Rush Token (6/6, Cleave). The designer's "deals half damage to heroes" has nothing to halve, its target being a Unit (ST9).
+- **Engine:** Equip ([[R1086]]): played onto one of your Units it fuses into it, the host keeping its zone and taking its stats, keywords and text ([[R77]], [[R102]]), Starship Piece only into a piece ([[R1852001]]); played alone its death fuses a copy into its owner's Dormant Starship ([[R1852000]]); an equipped host takes the Activate. Activate ([[R384]]): a declared enemy Unit, a Taunt one while the enemy has one ([[§4.2]] step 3 read for the choice), then `summon` the Rush Token ([[§7]]) into the leftmost open unit zone, else the leftmost empty Locked one ([[R64]], [[R688]]), and a forced attack by it on that Unit ([[R53]]), as Core #60 Bear Honeypot's tokens attack; with every unit zone holding a Unit, nothing (#3040). Radiant: a Radiant Rush Token (6/6, Cleave). The designer's "deals half damage to heroes" has nothing to halve, its target being a Unit (ST9).
 - **Rulings:** ST-S06-5: "Target an enemy" is an enemy Unit (ST9's default: the token attacks a Unit); "obeys taunt" makes a Taunt Unit the only choice while the enemy has one; "deals half damage to heroes" has nothing to halve. These are proposals for the S06 part, which takes R-numbers from its own block.
 - **Numbers:** none (no number is printed).
 - **Check:** The designer's notes "{obey's taunt}" and "{deals half damage to heroes}" read as above. R275: the token Radiant.
 - **Class:** B
 
 #### Stinkyscape #141 · Fruit Launcher
-`stinkyscape-141` · (2) Unit, Weapon · Rare · 0/4 → 0/8 · built by S06 (#1862)
+`stinkyscape-141` · (2) Unit, Weapon · Rare · 0/2 → 0/4 · built by S06 (#1862)
 
 > **Designer:** (2) Fruit Launcher, Unit, Rare, Weapon, Stinkyscape, #141 · [0/4] / Starship Piece / Equip / Activate 1: Target a permanent, cast a random fruit ~~~ [0/8] / Starship Piece / Equip / Activate 1: Target a permanent, cast a random Radiant fruit
 
@@ -2871,7 +2871,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** B
 
 #### Stinkyscape #142 · Jade Launcher
-`stinkyscape-142` · (3) Unit, CN, Weapon · Epic · 0/6 → 0/12 · built by S06 (#1862)
+`stinkyscape-142` · (3) Unit, CN, Weapon · Epic · 0/3 → 0/6 · built by S06 (#1862)
 
 > **Designer:** (3) Jade Launcher, Unit, Epic, CN, Weapon, Stinkyscape, #142 · [0/6] / Starship Piece / Equip / Activate 1: Target an enemy, shoot a Auspicious Rock at it *{deal 2 damage, you gain the reward}* ~~~ [0/12] / Starship Piece / Equip / Activate 2: Target an enemy, shoot a Auspicious Rock at it *{deal 2 damage, you gain the reward}*
 
@@ -2884,7 +2884,7 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Class:** B
 
 #### Stinkyscape #143 · Book Launcher
-`stinkyscape-143` · (3) Unit, Weapon · Epic · 0/6 → 0/12 · built by S06 (#1862)
+`stinkyscape-143` · (3) Unit, Weapon · Epic · 0/3 → 0/6 · built by S06 (#1862)
 
 > **Designer:** (3) Book Launcher, Unit, Epic, Weapon, Stinkyscape, #143 · [0/6] / Starship Piece / Equip / Activate 1: Target an enemy, cast a random harmful book on it / Activate 1: Target an ally, cast a random helpful book on it ~~~ [0/12] / Starship Piece / Equip / Activate 1: Target an enemy, cast a random Radiant harmful book on it / Activate 1: Target an ally, cast a random Radiant helpful book on it
 

@@ -20361,7 +20361,7 @@
     "loc": 52,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20374,7 +20374,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20412,7 +20412,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20425,7 +20425,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20463,7 +20463,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20476,7 +20476,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20522,7 +20522,7 @@
     "loc": 27,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20535,7 +20535,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20577,7 +20577,7 @@
     "loc": 52,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20590,7 +20590,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20628,7 +20628,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20641,7 +20641,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20679,7 +20679,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20692,7 +20692,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20738,7 +20738,7 @@
     "loc": 32,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20751,7 +20751,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20793,7 +20793,7 @@
     "loc": 52,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20806,7 +20806,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20844,7 +20844,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20857,7 +20857,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20895,7 +20895,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20908,7 +20908,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20954,7 +20954,7 @@
     "loc": 37,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -20967,7 +20967,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24137,7 +24137,7 @@
     "loc": 62,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24150,7 +24150,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24178,7 +24178,7 @@
     "loc": 38,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24191,7 +24191,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24233,7 +24233,7 @@
     "loc": 40,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24246,7 +24246,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24274,7 +24274,7 @@
     "loc": 62,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -24287,7 +24287,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"

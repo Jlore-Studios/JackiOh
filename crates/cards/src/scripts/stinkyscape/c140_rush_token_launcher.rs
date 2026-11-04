@@ -1,4 +1,4 @@
-//! Stinkyscape #140 Rush Token Launcher (SPEC §8.10 row 140). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
+//! Stinkyscape #140 Rush Token Launcher (SPEC §8.10 row 140). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Summon a Rush Token that attacks an enemy Unit, Taunt Units first."
 //!   Radiant: "Starship Piece, Equip
@@ -10,8 +10,10 @@
 //! While the enemy has a Taunt Unit, only those may be chosen (§4.2 step 3 read for the choice): its
 //! Taunt read through the layers, so an Indestructible one has none (R347), and one no attack may name
 //! (Can't be attacked, a carrier's Unit) binds nobody (B5 E35). Then §7's Rush Token is summoned into
-//! the leftmost open unit zone (R64) and makes a forced attack on that Unit (R53), which strikes back,
-//! as Core #60 Bear Honeypot's tokens attack; one the token may not attack (§4.2 step 2) takes none.
+//! the leftmost open unit zone, else the leftmost empty Locked one (R64, R688), and makes a forced
+//! attack on that Unit (R53), which strikes back, as Core #60 Bear Honeypot's tokens attack; one the
+//! token may not attack (§4.2 step 2) takes none. The Activate is offered while the token has such a
+//! zone, a Locked one included (R1862003, since #3040); through v0.5.11o only an open one counted.
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;
@@ -37,7 +39,19 @@ fn taunt_first(state: &GameState, candidate: &CardInstance) -> bool {
             .any(|unit| taunts(state, unit))
 }
 
-fn launch(radiant: bool) -> ActivationDecl {
+/// R430, R64, R688: the token has a zone to enter, the leftmost open one or else the leftmost empty
+/// Locked one, as a summon with no named zone finds it (`first_entry_zone`).
+fn has_entry_zone(state: &GameState, player: PlayerId) -> bool {
+    first_entry_zone(state, player, Row::Units).is_some()
+}
+
+/// R767000: through v0.5.11o the Activate wanted an open (unlocked) unit zone, so a Locked one left it
+/// not offered; `KEPT_SCRIPTS` folds those versions' replays under `script_v0_5_11o`.
+fn has_open_zone(state: &GameState, player: PlayerId) -> bool {
+    !open_zones(state, player, Row::Units).is_empty()
+}
+
+fn launch(radiant: bool, has_room: fn(&GameState, PlayerId) -> bool) -> ActivationDecl {
     ActivationDecl {
         id: "rushToken".into(),
         label: "Summon a Rush Token that attacks an enemy Unit".into(),
@@ -49,11 +63,10 @@ fn launch(radiant: bool) -> ActivationDecl {
             json!({ "side": "enemy", "of": ["unit"], "check": TAUNT_FIRST }),
         )],
         modes: vec![],
-        can_activate: Some(condition_hook(|c| {
-            // R430, R64: room for the token, as #60 Bear Honeypot waits for it; and "attacks an enemy
-            // Unit": with none it is not activated, as C #78 Mutate Spell's ability needs a pick.
-            !open_zones(c.state, c.controller, Row::Units).is_empty()
-                && !active_units_of(c.state, opponent_of(c.controller)).is_empty()
+        can_activate: Some(condition_hook(move |c| {
+            // R430, R64, R688: room for the token, as #60 Bear Honeypot waits for it; and "attacks an
+            // enemy Unit": with none it is not activated, as C #78 Mutate Spell's ability needs a pick.
+            has_room(c.state, c.controller) && !active_units_of(c.state, opponent_of(c.controller)).is_empty()
         })),
         has: None,
         run: hook(move |ctx| {
@@ -73,9 +86,9 @@ fn launch(radiant: bool) -> ActivationDecl {
     }
 }
 
-fn launcher(radiant: bool) -> Script {
+fn launcher(radiant: bool, has_room: fn(&GameState, PlayerId) -> bool) -> Script {
     Script {
-        activations: vec![launch(radiant)],
+        activations: vec![launch(radiant, has_room)],
         target_checks: IndexMap::from([(
             TAUNT_FIRST,
             target_check(|args| {
@@ -89,8 +102,17 @@ fn launcher(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: launcher(false),
-        radiant: launcher(true),
+        base: launcher(false, has_entry_zone),
+        radiant: launcher(true, has_entry_zone),
+    }
+}
+
+/// R767000: the scripts v0.5.11o and every version before it ran, the Activate offered only while an
+/// open (unlocked) unit zone stood free; `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: launcher(false, has_open_zone),
+        radiant: launcher(true, has_open_zone),
     }
 }
 
@@ -203,16 +225,63 @@ mod tests {
         }
 
         #[test]
-        fn r1862003_with_no_open_unit_zone_it_is_not_activated() {
+        fn r1862003_with_every_unit_zone_holding_a_unit_it_is_not_activated() {
+            // The launcher and four Units fill the row, the last one's zone Locked as well: a Locked
+            // zone with a Unit in it is no room (R688 lets a summon into an empty one only).
             let mut s = weapon_board(
                 "s140-full",
                 json!({ "field": [ID, VANILLA, VANILLA, VANILLA, VANILLA] }),
                 json!({ "field": [VANILLA] }),
             );
+            s.state_mut().players.p1.locks.units[(UNIT_ZONES - 1) as usize] = true;
             let target = s.unit_at(P2, 1).id;
             assert_eq!(activations(&s), 0);
             s.expect_refused(|s| s.activate(ID, at(&target)));
             assert!(summoned(s.events()).is_empty());
+        }
+
+        #[test]
+        fn r1862003_r688_a_full_row_but_one_locked_zone_still_offers_it_and_the_token_enters_the_lock() {
+            // Four Units in lanes 1 to 4, lane 5 Locked and empty: no unit zone is open, one is free.
+            let mut s = weapon_board(
+                "s140-locked",
+                json!({ "field": [ID, VANILLA, VANILLA, VANILLA] }),
+                json!({ "field": [VANILLA] }),
+            );
+            s.state_mut().players.p1.locks.units[(UNIT_ZONES - 1) as usize] = true;
+            assert!(open_zones(s.state(), P1, Row::Units).is_empty());
+            let target = s.unit_at(P2, 1).id;
+            assert_eq!(activations(&s), 1);
+            s.activate(ID, at(&target));
+            let tokens = summoned(s.last_events());
+            let [(token, lane)] = tokens.as_slice() else {
+                panic!("one Rush Token: {tokens:?}");
+            };
+            assert_eq!(*lane, UNIT_ZONES);
+            // R53: it made its forced attack there and took the strike back, as it does in an open zone.
+            assert_eq!(
+                hits(s.last_events()),
+                vec![(target.clone(), TOKEN_ATTACK), (token.clone(), VANILLA_ATTACK)]
+            );
+            s.expect_stats(target.as_str(), json!({ "health": 4 - TOKEN_ATTACK }));
+            s.expect_in_zone(token.as_str(), "gone");
+            // The use is spent (R384): it is not offered again this turn.
+            assert_eq!(activations(&s), 0);
+        }
+
+        #[test]
+        fn r1862003_r64_an_open_zone_comes_before_a_locked_one() {
+            // Lane 2 Locked and empty, lane 3 open: the summon takes the unlocked zone first.
+            let mut s = launcher_on(false, json!({ "field": [VANILLA] }));
+            s.state_mut().players.p1.locks.units[1] = true;
+            let target = s.unit_at(P2, 1).id;
+            assert_eq!(activations(&s), 1);
+            s.activate(ID, at(&target));
+            let tokens = summoned(s.last_events());
+            let [(_, lane)] = tokens.as_slice() else {
+                panic!("one Rush Token: {tokens:?}");
+            };
+            assert_eq!(*lane, 3);
         }
 
         #[test]
@@ -254,7 +323,7 @@ mod tests {
         fn its_health_is_doubled() {
             let s = launcher_on(true, json!({}));
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, 8));
+            assert_eq!((view.attack, view.health), (0, 4));
         }
     }
 }

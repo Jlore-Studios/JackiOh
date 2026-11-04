@@ -61,13 +61,25 @@ fn price_of(prices: &[ActivationPrice], def_id: &str, controller: PlayerId) -> f
         .unwrap_or_else(|| panic!("{controller}'s {def_id}'s Activate is priced: {prices:?}"))
 }
 
-/// The AI's Sorcerer and `hand` against the human's Cannon v3, Mr. Vanilla and `backrow`.
+/// A Mr. Vanilla cut to 3/3. Cannon v3 is a 0/2 since #3040: unpriced it is the smaller kill (2 against
+/// 6.6), with its shot the bigger one (8.5), which the printed 4/4's 8.8 would outweigh.
+fn smaller_vanilla() -> Value {
+    json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 3 } })
+}
+
+/// The AI's Sorcerer and `hand` against the human's Cannon v3, a 3/3 Vanilla and `backrow`.
 fn cannon_against_vanilla(seed: &str, hand: Value, backrow: Value) -> GameState {
     board(
         seed,
         json!({ "hand": hand, "field": [SORCERER] }),
-        json!({ "hand": [VANILLA], "field": [CANNON, VANILLA], "backrow": backrow }),
+        json!({ "hand": [VANILLA], "field": [CANNON, smaller_vanilla()], "backrow": backrow }),
     )
+}
+
+/// The Postdoc as a 1/2, a vanilla on the field (its Cry fires only as it is played). Beside Cannon v3's
+/// 0/2 and its shot (7.1) the printed 2/4 (6.4) is no longer the plain loss the AI tributes first.
+fn lesser_postdoc() -> Value {
+    json!({ "def": POSTDOC, "statsOverride": { "attack": 1, "health": 2 } })
 }
 
 /// `state` with the AI's Sorcerer just summoned, so it cannot attack this turn.
@@ -117,7 +129,7 @@ fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
     );
     assert!(
         unpriced_cannon < unpriced_vanilla,
-        "unpriced, the 0/4 is the smaller kill: {unpriced_cannon} against {unpriced_vanilla}"
+        "unpriced, the 0/2 is the smaller kill: {unpriced_cannon} against {unpriced_vanilla}"
     );
     let unpriced_eval = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
     let (prices, _) = priced(&state);
@@ -181,7 +193,7 @@ fn r2564000_the_ai_tributes_its_vanilla_before_its_cannon() {
         "seed": "ai-activation-tribute",
         "p1": {
             "hand": [THE_ROCK],
-            "field": [CANNON, POSTDOC, { "def": MENACE, "position": "DEF" }],
+            "field": [CANNON, lesser_postdoc(), { "def": MENACE, "position": "DEF" }],
             "library": LIBRARY,
         },
         "p2": { "hand": [VANILLA], "field": [SORCERER, VOIDWALKER], "library": LIBRARY },

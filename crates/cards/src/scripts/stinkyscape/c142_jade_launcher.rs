@@ -1,4 +1,4 @@
-//! Stinkyscape #142 Jade Launcher (SPEC §8.10 row 142). Unit 0/6 → 0/12, CN, Weapon, cost 3, Epic.
+//! Stinkyscape #142 Jade Launcher (SPEC §8.10 row 142). Unit 0/3 → 0/6, CN, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock gives."
 //!            — damage 2
@@ -210,7 +210,7 @@ mod tests {
         fn its_health_is_doubled() {
             let s = launcher_on(true, json!({}));
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, 12));
+            assert_eq!((view.attack, view.health), (0, 6));
         }
     }
 }
