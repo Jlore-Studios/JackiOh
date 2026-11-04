@@ -15113,11 +15113,9 @@
     "what": "build #3041 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-04T19:41:37Z",
+    "at": "2026-11-04T19:50:53Z",
     "notes": [
-      "CI on #3050: #3050: queued a CI fix",
-      "started revise #3037 on claude-8 (its run is not listed yet)",
-      "started revise #3050 on claude-4 (its run is not listed yet)",
+      "started build #3041 on claude-1 (run 41901123978)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15824,7 +15822,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T19:41:37Z",
+  "loop_tick": "2026-11-04T19:50:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
