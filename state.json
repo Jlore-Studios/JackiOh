@@ -32227,12 +32227,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:41a7d369-1793781226",
+        "run_id": "",
         "sha": "3809c73ce671c88facee6311ffa38899a5db3adc",
         "started_at": "2026-11-04T08:34:20Z",
         "status": "queued",
         "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 45
