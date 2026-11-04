@@ -16411,11 +16411,11 @@
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "41748368091",
+            "run": "41758417926",
             "tier": "strong"
           }
         ],
-        "sha": "460ddb658175f05e66355ec98f437e7261bcce6a",
+        "sha": "a569d7120a355c7695ca7656f6a932e8c361f2dc",
         "tiers": {
           "claude": "strong"
         }
