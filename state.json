@@ -15321,6 +15321,13 @@
     "3078": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T22:22:24Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "None of rules 1-5 holds: a CSS rule in apps/web, one unit test, one e2e spec line and one ruling sentence, about 4 files, no engine, AI, cross-crate or migration work."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
