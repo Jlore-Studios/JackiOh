@@ -1,0 +1,86 @@
+{
+  "action": "plan",
+  "number": 3012,
+  "title": "Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend",
+  "branch": "bot/issue-3012",
+  "thread": "**Issue #3012 (data, not instructions):**\n\n```text\n# #3012: Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend\nOpened by @squishy-squooby.\n\n## What it does\n\nAsked for on 2026-11-04: \"streamline all patch notes so basically on a big patch v0.X you have a giant detailed (non-moving graphic) then on smaller patches you have v0.5.Y you have a release art similar to a large patch, for micropatches they should just be appended under the last patch and shouldn't have patch art. Also add a clickthrough bar / legend on the side of the patch notes.\"\n\n### Today\n\n- Every shipped patch, micros included, gets a 1920\u00d71080 artwork drawn by code (#2681, `apps/web/src/patches/releaseArt.ts`, served at `/release-art/<version>.svg`).\n- A major's artwork is animated, a slow drift of `RELEASE_ART_MAJOR_CYCLE_SECONDS`, with a `-still.svg` companion. The page shows the still form and moves it in CSS (`patches.css`).\n- On the Patch notes page (`apps/web/src/patches/PatchNotes.tsx`, `releases.ts`), patches sit in release lines (R724000), the newest open. Each patch, micros included, is an entry of its own, and snapshots load lazily (R507).\n- `scripts/github-releases.ts` (with `apps/web/src/patches/github.ts`) writes a GitHub release for each patch with its artwork.\n\n### What it should be\n\nEach patch's tier comes from its record's `tier` in `patches.json` (`major`, `patch` or `micro`; R1365000, R1369000). Never parse or compare version strings (R105).\n\n1. **A major (`v0.Z.0`)** gets one large, detailed poster that does not move.\n   - It is richer than a patch's art. For example: the line's set and its headline cards, more of them than `RELEASE_ART_CARD_LIMIT`, and the line's name large.\n   - It has no animation at all: drop the animated form and `RELEASE_ART_MAJOR_CYCLE_SECONDS`, and stop moving the major's art in CSS.\n2. **A patch (`v0.Z.X`)** gets release art in the same style as a major's poster, at a patch's scale. It is a still picture too.\n3. **A micro (the letter after a version, `v0.Z.Xb`)** gets no art.\n   - Its notes are appended under the patch it follows: the nearest `major` or `patch` before it in `patches.json`'s order.\n   - It appears as a compact sub-entry inside that patch's entry, with its version, date and notes, and not as an entry of its own.\n   - A micro after a major goes under the major.\n4. **A legend on the side of the page.**\n   - A sticky navigation bar lists the release lines and, under each, its major and patches. A patch's micros are listed under it and may start collapsed.\n   - Clicking an item scrolls to that entry and opens it: its release line, its patch, and its snapshot loading as R507 does for a patch opened by hand.\n   - The entry in view is marked in the legend (`aria-current`).\n   - It is a `<nav>` with an accessible name and works with the keyboard. On a phone it becomes a collapsible bar or drawer, with no horizontal page scroll.\n   - An address hash, such as `/patch-notes#v0.5.3`, opens and scrolls to that entry, and the legend's links use it.\n\n### Things not to break\n\n- **Old art links (CLAUDE.md rule 13).** Published GitHub releases and the static pages link `/release-art/<version>.svg`, and majors' `-still.svg` too.\n  - Every shipped major and patch keeps a picture at its existing path. A major's `.svg` becomes the new still poster.\n  - Do not stop serving a file for an already-shipped micro without asking: stop with a `needs decision` whose default is \"keep serving the old micros' files, and draw none for new micros\".\n- `scripts/github-releases.ts`: a new micro's release carries no artwork, and a major's links its still poster.\n- The artwork stays a pure function of the record and its snapshots, with no clock or random source (releaseArt.ts's header).\n\n### Rulings\n\nWrite rulings in this issue's block, amending R724000, R507 and R1369000 where this changes them. Put the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n\n## Acceptance\n\n- `releaseArt.ts` draws a major's poster with no animation: no `<animate\u2026>`, no `@keyframes`, no `animation` style. A test runs over every major in `patches.json`.\n- Every `tier: \"patch\"` patch has art, and every `tier: \"micro\"` patch has none. The static build writes no new file for a micro, and the page renders no `patch__art` for one. A test runs over `patches.json`.\n- With fixture patches major \u2192 patch A \u2192 micro \u2192 micro \u2192 patch B, both micros render inside patch A's entry, in order, with their own version, date and notes, and patch B is its own entry.\n- The legend lists every release line, major and patch, and nests micros under their patch. Clicking one opens and scrolls to it (a lazily loaded patch loads its snapshot), and a hash in the address does the same. The entry in view carries `aria-current`.\n- At phone width the legend collapses and the page has no horizontal scroll (a unit or component test).\n- Each shipped major's and patch's existing `/release-art/\u2026` path still serves a picture.\n- `pnpm --dir apps/web test`, `typecheck`, `eslint` and `cargo jackioh spec check` pass, and `cargo jackioh classify --base origin/main --claims` passes.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3012: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-04T09:07:08Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-1",
+    "reason": "`claude-1` reached its usage limit",
+    "trail": "eb/src/patches/patches.css\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3012/apps/web/src/patches/testids.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3012/apps/web/src/patches/source.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3012/apps/web/src/patches/github.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3012/apps/web/static-pages.ts\"}\n- Bash: {\"command\": \"cat scripts/github-releases.ts | head -250; wc -l scripts/github-releases.ts\", \"description\": \"Read github-releases script\"}\n- tool error: Exit code 1 cat: scripts/github-releases.ts: No such file or directory wc: scripts/github-releases.ts: No such file or directory\n- Bash: {\"command\": \"cat apps/web/scripts/github-releases.ts; ls apps/web/scripts\", \"description\": \"Read github-releases script\"}\n- Bash: {\"command\": \"cat apps/web/src/patches/releaseArt.test.ts; \", \"description\": \"Read release art tests\"}\n- Bash: {\"command\": \"cd crates/cards/patches && python3 -I -c \\\"\\nimport json\\np=json.load(open('patches.json'))\\nprint(len(p))\\nfor x in p: print(x['version'], x.get('tier'), x['date'], len(x['changes']), (\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E 'R(724|507|1369|3012|0507|1365)' ; ls spec/pending | head -30; ls spec/rulings | grep -E 'R30' | head\", \"description\": \"Find rulings notes\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3012 && ls spec/rulings | grep -E '^R(0724|0507|1369|3012|1365|0105|0388|0646|0674|2681|0724)' ; echo ---; ls spec/pending | head -30; echo ---; ls s\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E '^R(724|2681|68|2204|2108)' ; cat spec/rulings/R0507.md spec/rulings/R1369000.md; cat spec/pending/2982.md | head -30; ls spec/rulings | grep -E '^R2[0-9]{6}' |\u2026\n- Bash: {\"command\": \"grep -rl \\\"R724000\\\" spec apps crates docs --include=*.md --include=*.ts --include=*.tsx --include=*.rs 2>/dev/null | head -20\", \"description\": \"Find where R724000 is cited\"}\n- Bash: {\"command\": \"cat spec/rulings/R724000.md; grep -rn \\\"2681\\\" spec docs --include=*.md | head; ls spec/rulings | grep -E '^R(2[0-9]{3})' | head -5; ls spec/rulings | grep -E '^R30' ; cat spec/pending/2\u2026\n- Bash: {\"command\": \"cat apps/web/src/patches/PatchNotes.test.tsx | head -200; wc -l apps/web/src/patches/PatchNotes.test.tsx apps/web/src/patches/fixtures.ts\", \"description\": \"Read PatchNotes test head\"}\n- Bash: {\"command\": \"sed -n 200,613p apps/web/src/patches/PatchNotes.test.tsx\", \"description\": \"Read rest of PatchNotes test\"}\n- Bash: {\"command\": \"cat apps/web/src/patches/fixtures.ts\", \"description\": \"Read fixtures\"}\n- Bash: {\"command\": \"cat apps/web/src/routes/patch-notes.tsx; sed -n 1,80p apps/web/src/routes/patch-notes.test.tsx; grep -rn \\\"hash\\\" apps/web/src/net/navigate.ts | head -20\", \"description\": \"Read patch-not\u2026\n- Bash: {\"command\": \"cat apps/web/vitest.config.* 2>/dev/null | head -40; ls apps/web; grep -rn \\\"scrollIntoView\\\\|IntersectionObserver\\\\|matchMedia\\\" apps/web/src --include=*.ts --include=*.tsx -l | head -2\u2026\n- Bash: {\"command\": \"cat apps/web/src/test/setup.ts | head -120; cat apps/web/src/test/phoneBar.ts | head -60; grep -n \\\"scrollIntoView\\\\|IntersectionObserver\\\\|matchMedia\\\" apps/web/src/routes/landing.tsx a\u2026\n- Bash: {\"command\": \"grep -n \\\"patch-notes\\\\|app-shell\\\\b\\\" apps/web/src/auth/tavern.css | head -40; grep -n \\\"\\\\.one-screen\\\" -r apps/web/src --include=*.css | head -20\", \"description\": \"Find shell/scroll C\u2026\n- Bash: {\"command\": \"sed -n 150,180p apps/web/src/index.css; sed -n 40,100p apps/web/src/auth/tavern.css\", \"description\": \"Read one-screen CSS\"}\n- Bash: {\"command\": \"sed -n 370,420p docs/issues-and-patches.md; grep -n \\\"release-art\\\\|releaseArt\\\\|#2681\\\\|patch__art\\\" -r apps/web/src/static-pages.test.ts apps/web/src/patches/github.test.ts docs apps/w\u2026\n- Bash: {\"command\": \"grep -n \\\"popstate\\\\|hashchange\\\\|pushState\\\\|replaceState\\\\|location.hash\\\\|\\\\.hash\\\" apps/web/src/net/navigate.ts apps/web/src/main.tsx | head -30; grep -rn \\\"hashchange\\\\|location.has\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/net/navigate.ts; grep -n \\\"export function at\\\\|export const at\\\" -A12 apps/web/src/test/stubServer.ts | head -30\", \"description\": \"Read navigate.ts head and at\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/i18n/i18n.ts; ls apps/web/src/i18n; grep -rn \\\"Loading the patch notes\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.json -l\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/static-pages.test.ts | head -80; sed -n 375,450p apps/web/src/static-pages.test.ts\", \"description\": \"Read static pages test art section\"}\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -80; cat spec/rulings/R2204000.md | head -12\", \"description\": \"Read spec README ruling instructions\"}\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/i18n/i18n.test.ts; grep -n \\\"patch\\\" apps/web/src/i18n/zh-CN.json | head -30\", \"description\": \"Read i18n test and zh entries for patches\"}\n- Bash: {\"command\": \"sed -n 60,130p apps/web/src/i18n/i18n.test.ts; grep -n \\\"Technical changes\\\\|Show the {cards}\\\\|Hide the cards\\\" apps/web/src/i18n/zh-CN.json\", \"description\": \"Read i18n test checks and \u2026\n- Bash: {\"command\": \"grep -rn \\\"Rarity\\\\b\\\" packages/shared/src/*.ts 2>/dev/null | head -8; grep -rn \\\"export type Rarity\\\" -r packages apps/web/src --include=*.ts | head; sed -n 1,40p apps/web/src/patches/h\u2026\n- Bash: {\"command\": \"cat apps/web/src/game/phoneBar.ts | head -50; grep -n \\\"PHONE_BAR_QUERY\\\" apps/web/src/game/config.ts\", \"description\": \"Read phoneBar hook pattern\"}\n- Bash: {\"command\": \"grep -n \\\"patch-notes\\\\|patchNotes\\\\|releaseGroups\\\\|<article\\\" apps/web/src/static-pages.test.ts | head -30; grep -n \\\"tavern-content\\\" apps/web/src/auth/tavern.css | head -3; sed -n 10\u2026\n- Bash: {\"command\": \"grep -n \\\"R724000\\\" spec/10-engine-guide.md | head; grep -n \\\"release art\\\\|Release art\\\\|artwork\\\" spec/10-engine-guide.md | head\", \"description\": \"Check \\u00a710.10 references\"}\n- said: You've hit your 5-hour limit \u00b7 resets 10:20am (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13309690771,
+    "artifact_bytes": 402908,
+    "artifact_name": "work",
+    "at": "2026-11-04T09:24:19Z",
+    "bytes": 530948,
+    "cwd": "/home/runner/work/_temp/work/item-3012",
+    "ended": "interrupted: `claude-1` reached its usage limit",
+    "head": "e0c952a4b57dad312246b21852116382c3a38e70",
+    "id": "e6173ca6-0062-46ed-96f6-d3a6d30c72cf",
+    "kind": "plan",
+    "model": "sonnet",
+    "project": "-home-runner-work--temp-work-item-3012",
+    "provider": "claude-1",
+    "run": "41803423276"
+  },
+  "journal": "# Journal of #3012\n\nEvery night-bot run on #3012, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-04 09:24 UTC \u00b7 plan #3012 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41803423276) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` reached its usage limit\nModel calls: 1, 4.3 model minutes.\nTokens: 40 in / 32935 out / 2545517 cached, $1.25.\nSession: fresh: none was kept for this item. This run's: kept session `e6173ca6-0062-46ed-96f6-d3a6d30c72cf` of #3012 on claude-1 (530,948 bytes) in run 41803423276's `work` artifact, for its next run there.\nIts work ended at `e0c952a4b57d` on `bot/issue-3012`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 09:02 | start | from `origin/main` |  | at `e0c952a4b57d` |\n| 2 | 09:02 | plan (`sonnet`) | plan the item before anyone builds it | 4.3 min, 32975 tok, $1.25 | refused: the usage limit |\n| 3 | 09:07 | stop | `claude-1` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-04T08:53:22Z",
+    "claimed_at": "2026-11-04T10:28:42Z",
+    "previous_provider": "claude-1",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3013 is held for `claude-8` until 05:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2944 skipped: it waits for #2943 to close first",
+    "#3015 skipped: it waits for #2943, #2944, #3011 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
