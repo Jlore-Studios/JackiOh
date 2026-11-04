@@ -15098,6 +15098,13 @@
     "3058": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T21:27:10Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Test-only speedups in three crates/tools files: no engine rules, AI search, migration or cross-crate design, far under 40 files; the ci.yml split is a person's edit."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
