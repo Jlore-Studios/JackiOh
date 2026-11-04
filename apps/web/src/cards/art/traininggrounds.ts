@@ -14,6 +14,7 @@ import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
+import type { ArtPart } from "./pictures.ts";
 import { artSpec, type ArtSpec, type SkyScheme } from "./procedural.ts";
 import { compositionFor, mixHex, RADIANT_PALETTE, themeFor, turnHue } from "./themes.ts";
 
@@ -923,6 +924,7 @@ function rays(seed: number): string {
 /**
  * The SVG document a Training Grounds face draws, unencoded; R2715001: moving as `motion` says. R2949000: its subject is
  * `defId`'s, and the rest of the picture grows from `seedId` (pictures.ts `artSeedOf`), the card's id by default.
+ * R2943001: `part` "backdrop" leaves its subject out, and "subject" draws the subject alone (pictures.ts `ArtPart`).
  */
 export function trainingGroundsSvg(
   defId: string,
@@ -932,6 +934,7 @@ export function trainingGroundsSvg(
   radiant: boolean,
   motion: ArtMotion | null = null,
   seedId: string = defId,
+  part: ArtPart = "whole",
 ): string {
   const subject = yardSubject(defId, name, tags, type);
   const seed = hashId(seedId);
@@ -945,16 +948,16 @@ export function trainingGroundsSvg(
   defs.push(VIGNETTE);
   const yard = backdrop(behind, p, FAMILY_PAINTS[subject.family].sky === NIGHT_SKY, defs);
   const drawn = subjectMarkup(ahead, p, subject, name);
+  // R2943001: a part other than "whole" draws the backdrop with no subject (its shadow kept), or the subject on nothing.
+  const behindSubject = part !== "subject";
+  const figure = part !== "backdrop";
   return (
     SVG_OPEN +
     `<defs>${defs.join("")}</defs>` +
     motionStyle(motion, CENTER_ORIGIN) +
-    moving("back", yard, motion) +
-    (radiant ? rays(seed) : "") +
-    ellipse(SUBJECT_X, SUBJECT_Y + 40, 30, 4.5, "#000000", { opacity: 0.2 }) +
-    moving("subject", group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn), motion) +
-    particleMarkup(motion, seedId) +
-    rect(0, 0, BOX, BOX, "url(#v)") +
+    (behindSubject ? moving("back", yard, motion) + (radiant ? rays(seed) : "") + ellipse(SUBJECT_X, SUBJECT_Y + 40, 30, 4.5, "#000000", { opacity: 0.2 }) : "") +
+    (figure ? moving("subject", group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn), motion) : "") +
+    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
     "</svg>"
   );
 }
