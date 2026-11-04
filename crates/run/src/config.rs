@@ -207,24 +207,36 @@ pub const RUN_SCORE_CURSE_POINT_PERCENT: i64 = 10;
 /// DR9, a strawman: the score one Ember is worth.
 pub const RUN_SCORE_PER_EMBER: i64 = 100;
 
+/// Tests only: the whole-run walks' tuning (`walk_tests`). Each is `#[cfg(test)]`, so the shipped
+/// crate and the spec's constants table (B33's check reads only the lines before the first
+/// `#[cfg(test)]`, as the engine's `config.rs` does) hold dungeon rules only.
 /// Tests only: the whole-run walks (`walk_tests`): how many seeded runs each content plays (§15.13,
 /// a strawman tuned so `cargo test -p jackioh-run` stays a few seconds).
+#[cfg(test)]
 pub const WALK_SEEDS: usize = 25;
 /// Tests only: a walk's refused random picks retried before it falls back to the free way on.
+#[cfg(test)]
 pub const WALK_TRIES: usize = 8;
 /// Tests only: the percent of a walk's steps forced onto the free way on, so narrow paths stay
 /// covered.
+#[cfg(test)]
 pub const WALK_WAY_ON_PERCENT: i32 = 10;
 /// Tests only: the percent of a walk's fights lost, so losses and dead runs stay covered.
+#[cfg(test)]
 pub const WALK_LOSS_PERCENT: i32 = 10;
 /// Tests only: the steps before a walk is a loop: the map is 29 rows, and every shop stay spends
 /// stock or funds, so only a real loop reaches it.
+#[cfg(test)]
 pub const WALK_MAX_STEPS: usize = 5000;
 /// Tests only: the most damage a walk's random fight report deals.
+#[cfg(test)]
 pub const WALK_DAMAGE_MAX: i32 = 50;
 /// Tests only: the most healing a walk's random fight report does.
+#[cfg(test)]
 pub const WALK_HEALING_MAX: i32 = 10;
 /// Tests only: the most cards a walk's random fight report draws.
+#[cfg(test)]
 pub const WALK_DRAWN_MAX: i32 = 15;
 /// Tests only: the most turns a walk's random fight report lasts.
+#[cfg(test)]
 pub const WALK_TURNS_MAX: i32 = 12;
