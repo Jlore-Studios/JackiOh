@@ -153,6 +153,13 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(band).toContain("height: min(var(--hit-min), calc(100cqh - var(--badges-top)));");
   });
 
+  it("lane 1's stack has no neighbour to clear and no column to wrap into, so it starts at the card's top and never wraps", () => {
+    const lane1 = /\.board \.zone\[data-lane="1"\]\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phoneBlock())?.[1] ?? "";
+    expect(lane1).toContain("--badges-top: calc((100cqh - var(--field-card-h)) / 2);");
+    expect(lane1).toContain("flex-wrap: nowrap;");
+    expect(lane1).toContain("align-items: flex-end;");
+  });
+
   it("the match bar rides the top strip and the seats are thinner", () => {
     const phone = phoneBlock();
     expect(phone).toMatch(/\.app-shell--wide\s*>\s*\.game\[data-rail-top="true"\]\s*\{[^}]*display:\s*grid;/);

@@ -3100,6 +3100,15 @@ button.modifier-badge[data-open="true"] {
     pointer-events: none;
   }
 
+  /* Lane 1 has no zone to its left: no switch to keep clear of, so its stack starts at the card's own
+     top, with the zone's whole height to stand in, and no column to its left to wrap into (it would
+     be off the screen), so it never wraps: what could not fit would run down, not out of sight. */
+  .board .zone[data-lane="1"] > .field-badges {
+    --badges-top: calc((100cqh - var(--field-card-h)) / 2);
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+
   /* The marks' wrapper is no box: each mark is a flex item of the stack (the Activate control's
      wrapper is none either, activate.css). */
   .field-badges .keywords {

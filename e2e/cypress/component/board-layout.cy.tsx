@@ -947,6 +947,45 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
         ).to.eq(control);
       });
     });
+
+    it(`#2932 lane 1's badge stack stays on the screen, in one column in its zone, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      const base = fullBoardView();
+      const first = base.you.units[0];
+      if (first === null || first === undefined) throw new Error("fullBoardView has a unit in lane 1");
+      const badged = {
+        ...first,
+        keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
+        activations: [{ ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true }],
+      };
+      const view = { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 0 ? badged : each)) } };
+
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={view} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      cy.document({ log: false }).should((doc) => {
+        const zone = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="1"]`);
+        const stack = zone?.querySelector<HTMLElement>(":scope > .field-badges") ?? null;
+        expect(stack, "lane 1 holds its badge stack").to.not.eq(null);
+        if (zone === null || stack === null) return;
+        const zoneBox = zone.getBoundingClientRect();
+        const boxes = [...stack.querySelectorAll<HTMLElement>(".activate-control, .keyword-icon:not([data-chip=\"hidden\"]), .cf-kw-more")].map((each) =>
+          each.getBoundingClientRect(),
+        );
+        expect(boxes.length, "the control and the marks are drawn").to.be.at.least(3);
+        for (const box of boxes) {
+          // Every item is on the screen (the lane has no zone to its left to hold a second column) ...
+          expect(box.left, `a badge is on the screen at ${where}`).to.be.at.least(0);
+          // ... in one column against the card, inside its zone's height.
+          expect(box.right, `a badge is flush with the first column at ${where}`).to.be.closeTo(boxes[0]?.right ?? 0, 0.5);
+          expect(box.top, `a badge is under the zone's top at ${where}`).to.be.at.least(zoneBox.top - SLACK_PX / 2);
+          expect(box.bottom, `a badge is above the zone's bottom at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX / 2);
+        }
+      });
+    });
   }
 
   it("#2932 an ATK unit's drawn area at 390x664 is larger than before #2900, and its height beats main's row", () => {
