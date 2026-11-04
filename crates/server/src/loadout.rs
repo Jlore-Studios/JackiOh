@@ -888,9 +888,9 @@ mod tests {
     fn r2725000_a_loadout_freezes_a_version_and_its_owned_augments() {
         use crate::cosmetics::{AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID};
         // The shipped registry: Carnivorous Cube (an Epic Unit) is offered the version and the augments,
-        // Bigot (a Common Unit) is not, and Mr. Vanilla is one of the 21 with retired full arts.
+        // Speciesist (a Common Unit) is not, and Mr. Vanilla is one of the 21 with retired full arts.
         let registry = registry();
-        let (cube, bigot, vanilla) = ("core-022", "core-002", "core-008");
+        let (cube, speciesist, vanilla) = ("core-022", "core-002", "core-008");
         let row = |card: &str, id: &str| CardCosmetic {
             card_id: card.to_owned(),
             cosmetic_id: id.to_owned(),
@@ -912,10 +912,10 @@ mod tests {
             cards: vec![
                 row(cube, VERSION_FULL_ART_ID),
                 row(cube, AUGMENT_ANIMATED_ID),
-                // Owned on Bigot by a grant no shop makes, none of them is offered there.
-                row(bigot, VERSION_FULL_ART_ID),
-                row(bigot, AUGMENT_ANIMATED_ID),
-                row(bigot, AUGMENT_SIGNATURE_ID),
+                // Owned on Speciesist by a grant no shop makes, none of them is offered there.
+                row(speciesist, VERSION_FULL_ART_ID),
+                row(speciesist, AUGMENT_ANIMATED_ID),
+                row(speciesist, AUGMENT_SIGNATURE_ID),
                 // A retired signed full art owns the version and both augments it combines (R2725002).
                 row(vanilla, "full-art-mr-vanilla-signed"),
             ],
@@ -923,7 +923,7 @@ mod tests {
         };
         let picks = [
             pick(cube, version(), &every_augment),
-            pick(bigot, version(), &every_augment),
+            pick(speciesist, version(), &every_augment),
             pick(vanilla, version(), &[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]),
         ];
         let loadout = freeze_loadout(
@@ -932,7 +932,7 @@ mod tests {
             &AccountPicks::default(),
             None,
             &picks,
-            &cards(&[cube, bigot, vanilla]),
+            &cards(&[cube, speciesist, vanilla]),
         );
         // The owned version, and only the owned, known augments, once each, in the registry's order.
         assert_eq!(
@@ -940,7 +940,7 @@ mod tests {
             Some(&pick(cube, version(), &[AUGMENT_ANIMATED_ID]))
         );
         // Not offered: nothing of its own, so the card is left out.
-        assert_eq!(loadout.card(bigot), None);
+        assert_eq!(loadout.card(speciesist), None);
         assert_eq!(
             loadout.card(vanilla),
             Some(&pick(

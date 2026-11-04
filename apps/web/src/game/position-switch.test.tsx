@@ -70,21 +70,106 @@ describe("#37 positionSwitched turns the card between its two resting transforms
   });
 });
 
-describe("#2876 a phone held upright draws field cards as tiles that fill their zones", () => {
-  it("the phone block names the tile cap, sizes zones, and lifts the 0.72 cap for field cards", () => {
-    const start = board.indexOf("@media (max-width: 600px) {");
-    expect(start, "board.css has a phone portrait block").toBeGreaterThan(-1);
-    const end = board.indexOf("@media (max-width: 380px) {");
-    expect(end, "the narrow-phone block follows the phone portrait block").toBeGreaterThan(start);
-    const phone = board.slice(start, end);
-    expect(phone).toContain("--field-tile-max: 1.25;");
+/** The phone portrait block of board.css, which ends where the narrow phone's begins. */
+function phoneBlock(): string {
+  const start = board.indexOf("@media (max-width: 600px) {");
+  expect(start, "board.css has a phone portrait block").toBeGreaterThan(-1);
+  const end = board.indexOf("@media (max-width: 380px) {");
+  expect(end, "the narrow-phone block follows the phone portrait block").toBeGreaterThan(start);
+  return board.slice(start, end);
+}
+
+describe("#2932 a phone held upright draws field cards in a card shape that grows by height", () => {
+  it("the phone block names the shape bounds, drops #2900's tile, and sizes the card off its zone", () => {
+    const phone = phoneBlock();
+    expect(phone).toContain("--field-ratio-min: 0.72;");
+    expect(phone).toContain("--field-ratio-max: 0.86;");
+    expect(phone).not.toContain("field-tile-max");
+    expect(phone).not.toContain("--tile-w");
     expect(phone).toMatch(/\.zone\s*\{[^}]*container-type:\s*size;/);
-    const tile = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
-    expect(tile, "board.css has a phone `.zone > .card` rule").toBeDefined();
-    if (tile === undefined) return;
-    expect(tile).toContain("--tile-w: min(100%, calc(100cqh * var(--field-tile-max)))");
-    expect(tile).toContain("max-width: 100%");
-    expect(tile).toMatch(/--def-scale:\s*min\(1,\s*tan\(atan2\(/);
+    const card = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(card, "board.css has a phone `.zone > .card` rule").toBeDefined();
+    if (card === undefined) return;
+    expect(card).toContain("--field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));");
+    expect(card).toContain("--field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));");
+    expect(card).toContain("width: var(--field-card-w);");
+    expect(card).toContain("height: var(--field-card-h);");
+    expect(card).toContain("max-width: 100%");
+    expect(card).toMatch(/--def-scale:\s*min\(1,\s*tan\(atan2\(100cqw, var\(--field-card-h\)\)\),\s*tan\(atan2\(100cqh, var\(--field-card-w\)\)\)\)/);
+  });
+
+  it("the four rows still share the field's height, none shrunk for the others", () => {
+    const phone = phoneBlock();
+    expect(phone).toMatch(/\.field\s*\{[^}]*align-content:\s*stretch;/);
+    const lane = /\.lane\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(lane, "the phone block sizes the lane").toBeDefined();
+    expect(lane).toContain("height: 100%;");
+    expect(lane).toContain("grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));");
+  });
+
+  it("the badges hang off the card's corner, the match bar rides the top strip, and the seats are thinner", () => {
+    const phone = phoneBlock();
+    const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(badges, "the phone block places `.field-badges`").toBeDefined();
+    expect(badges).toContain("position: absolute;");
+    // The stack's corner is the card's own top-left, worked out from the card's size (the zone
+    // centres the card): never the zone's bare corner, so it tracks the card on a tall phone too.
+    expect(badges).toContain("--field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));");
+    expect(badges).toContain("--field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));");
+    expect(badges).toContain("right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);");
+    expect(badges).not.toContain("top: 0;");
+    // It hangs over the zone beside it, whose switch sits at that corner: only the Activate control takes a press.
+    expect(badges).toContain("pointer-events: none;");
+  });
+
+  it("the badges start below the switch target of the zone beside them, wrap inside their own zone's height, and keep their press band under the control", () => {
+    const phone = phoneBlock();
+    const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
+    // The stack's top is the card's top or the switch target's height, whichever is lower down: the
+    // zone left of this one holds its switch (⟳) at its top-right, where this stack hangs.
+    expect(badges).toContain(
+      "--badges-top: max(calc((100cqh - var(--field-card-h)) / 2), min(var(--switch-target), calc(50cqh - var(--switch-clear))));",
+    );
+    expect(badges).toContain("top: var(--badges-top);");
+    // ... and the target it clears is the switch's own: the same two numbers as the switch's rule.
+    const switchRule = /\.board \.zone\s*>\s*\.switch-button\s*\{([\s\S]*?)\}/.exec(board)?.[1] ?? "";
+    for (const name of ["--switch-target", "--switch-clear"]) {
+      const of = (rule: string): string | undefined => new RegExp(`${name}:\\s*([^;]+);`).exec(rule)?.[1];
+      expect(of(switchRule), `the switch declares ${name}`).toBeDefined();
+      expect(of(badges), `the stack's ${name} is the switch's`).toBe(of(switchRule));
+    }
+    expect(switchRule).toContain("width: min(var(--switch-target), calc(50% - var(--switch-clear)));");
+    expect(switchRule).toContain("height: min(var(--switch-target), calc(50% - var(--switch-clear)));");
+    // What does not fit under it wraps to a column on its left: it never reaches the row below.
+    expect(badges).toContain("flex-wrap: wrap-reverse;");
+    expect(badges, "wrap-reverse swaps the cross axis: flex-start is the card's edge").toContain("align-items: flex-start;");
+    expect(badges).toContain("max-height: calc(100cqh - var(--badges-top));");
+    // The Activate control's press band reaches down from the control, never up over the switch or
+    // the row above, and no further than its zone.
+    const activate = readSheet("src/game/activate.css");
+    const band = /\.board \.field-badges \.activate-control::before\s*\{([\s\S]*?)\}/.exec(activate)?.[1] ?? "";
+    expect(band).toContain("top: -1px;");
+    expect(band).toContain("bottom: auto;");
+    expect(band).toContain("height: min(var(--hit-min), calc(100cqh - var(--badges-top)));");
+  });
+
+  it("lane 1's stack has no neighbour to clear and no column to wrap into, so it starts at the card's top and never wraps", () => {
+    const lane1 = /\.board \.zone\[data-lane="1"\]\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phoneBlock())?.[1] ?? "";
+    expect(lane1).toContain("--badges-top: calc((100cqh - var(--field-card-h)) / 2);");
+    expect(lane1).toContain("flex-wrap: nowrap;");
+    expect(lane1).toContain("align-items: flex-end;");
+  });
+
+  it("the match bar rides the top strip and the seats are thinner", () => {
+    const phone = phoneBlock();
+    expect(phone).toMatch(/\.app-shell--wide\s*>\s*\.game\[data-rail-top="true"\]\s*\{[^}]*display:\s*grid;/);
+    expect(phone).toMatch(/\.game\[data-rail-top="true"\]\s*>\s*\.turn-banner\s*\{[^}]*grid-row:\s*1;/);
+    // The finished-game chip is in-flow, so it takes a row of its own under the board instead of
+    // auto-placing beside the rail and crushing the one-line ranks.
+    expect(phone).toMatch(/\.game\[data-rail-top="true"\]\s*>\s*:is\(\[data-testid="result-overlay"\], \.trade-bar\)\s*\{[^}]*grid-row:\s*3;/);
+    expect(phone).toMatch(/\.hero\s*\{[^}]*--hero-h:\s*44px;/);
+    // The thinner seat leaves a pile's 44px band over your hand's top strip: the band stays above it (B29).
+    expect(phone).toMatch(/\.seat\s+\.pile--browsable\s*\{[^}]*z-index:\s*var\(--z-content\);/);
   });
 });
 

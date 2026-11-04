@@ -100,7 +100,7 @@ const CORE: &[SpecRow] = &[
     ),
     row(
         "2",
-        "Bigot",
+        "Speciesist",
         c(2),
         T::Unit,
         &[G::Human],
@@ -473,7 +473,7 @@ const CORE: &[SpecRow] = &[
     row("41", "Sheepish", c(1), T::Trap, &[], R::Epic, NO_STATS, NO_STATS),
     row(
         "42",
-        "Eugenics",
+        "Selective Breeding",
         c(2),
         T::Spell,
         &[],
@@ -964,7 +964,7 @@ const CORE: &[SpecRow] = &[
     ),
     row(
         "90",
-        "CN-Viral Injection",
+        "Super-Virus Injection",
         c(1),
         T::Spell,
         &[G::Cn],
@@ -974,7 +974,7 @@ const CORE: &[SpecRow] = &[
     ),
     row(
         "90.1",
-        "CN-Virus",
+        "Super-Virus",
         c(1),
         T::Spell,
         &[G::Cn, G::Token],
@@ -3869,7 +3869,7 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "61",
-        "Joon Jorker",
+        "Joon Juicer",
         c(3),
         T::Unit,
         &[G::Human],
@@ -5368,7 +5368,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row(
         "44",
-        "Great Replacement Theory",
+        "Great Paperclip Theory",
         c(2),
         T::Spell,
         &[G::Quickdraw],
@@ -7191,7 +7191,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     ),
     row(
         "29",
-        "Oriental",
+        "Easterner",
         c(3),
         T::Unit,
         &[G::Cn],
@@ -7321,7 +7321,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     ),
     row(
         "41",
-        "Legacy: Bigot",
+        "Legacy: Speciesist",
         c(2),
         T::Unit,
         &[G::Human, G::Legacy],
@@ -8515,11 +8515,16 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             assert!(card.name.starts_with("Legacy: "), "{}", card.name);
         }
         let core = &CATALOG["core-002"];
-        let bigot = &CATALOG["traininggrounds-041"];
-        assert_eq!(bigot.name, format!("Legacy: {}", core.name));
-        assert_eq!(bigot.tags, [Tag::Human, Tag::Legacy]);
+        let speciesist = &CATALOG["traininggrounds-041"];
+        assert_eq!(speciesist.name, format!("Legacy: {}", core.name));
+        assert_eq!(speciesist.tags, [Tag::Human, Tag::Legacy]);
         assert_eq!(
-            (bigot.cost, bigot.rarity, &bigot.base, &bigot.radiant),
+            (
+                speciesist.cost,
+                speciesist.rarity,
+                &speciesist.base,
+                &speciesist.radiant
+            ),
             (core.cost, core.rarity, &core.base, &core.radiant)
         );
         assert_eq!(CATALOG["traininggrounds-060"].name, "Legacy: Rush Token Farm");
@@ -8531,9 +8536,9 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         };
         assert_eq!(
             shared_names(&[core, &twin]),
-            ["Bigot (core-002, traininggrounds-041)"]
+            ["Speciesist (core-002, traininggrounds-041)"]
         );
-        assert_eq!(shared_names(&[core, bigot]), Vec::<String>::new());
+        assert_eq!(shared_names(&[core, speciesist]), Vec::<String>::new());
     }
 
     #[test]

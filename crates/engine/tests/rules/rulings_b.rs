@@ -2076,7 +2076,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let felinor: Tag = Tag::Felinor;
         assert!(def_of(Some(&state), FUSE_B).tags.contains(&felinor));
 
-        // A token index of the "N.1" form addresses a card (#90.1 CN-Virus).
+        // A token index of the "N.1" form addresses a card (#90.1 Super-Virus).
         assert_eq!(
             def_by_index(SetName::Core, "51.1").map(|def| def.id.clone()),
             Some(DOTTED.to_string())

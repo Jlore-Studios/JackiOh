@@ -1,4 +1,4 @@
-//! #42 Eugenics (SPEC §8.2). Spell, cost 2, Common.
+//! #42 Selective Breeding (SPEC §8.2). Spell, cost 2, Common.
 //!   Base:    "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 30%
 //!             chance to become Radiant." (patch v0.3.10; it exiled 7 random cards before)
 //!   Radiant: "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes
@@ -15,7 +15,7 @@ pub const ID: &str = "core-042";
 /// Patch v0.3.10 (#831): "Exile all cards in your deck that cost (2) or less", on both faces, each card's
 /// cost read per R65 as the clause resolves (an X card out of play is 0, an embiggen card its base
 /// price, R831014). It exiled 7 random cards before.
-const EUGENICS_MAX_COST: i32 = 2;
+const SELECTIVE_BREEDING_MAX_COST: i32 = 2;
 
 /// "a 30% chance" on the base face as v0.4.4b printed it, before it was the declared `chance`
 /// (R1748003); the Radiant face makes every card left Radiant, so nothing is left to chance there and
@@ -30,7 +30,7 @@ const PERCENT: i32 = 100;
 /// 30% when `declared` is off), the Radiant face's certain. Any Lucky given (`given_lucky_on`, R1438)
 /// still rolls the base face's chance twice a card. The exile runs first and the chance rolls over
 /// what is left.
-fn eugenics(radiant: bool, declared: bool) -> Script {
+fn selective_breeding(radiant: bool, declared: bool) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
         cry: Some(hook(move |ctx| {
@@ -47,7 +47,7 @@ fn eugenics(radiant: bool, declared: bool) -> Script {
                 chance_args["lucky"] = json!(lucky);
             }
             vec![
-                exile_matching(json_as(json!({ "zones": ["library"], "maxCost": EUGENICS_MAX_COST }))),
+                exile_matching(json_as(json!({ "zones": ["library"], "maxCost": SELECTIVE_BREEDING_MAX_COST }))),
                 radiant_chance(json_as(chance_args)),
             ]
         })),
@@ -57,8 +57,8 @@ fn eugenics(radiant: bool, declared: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: eugenics(false, true),
-        radiant: eugenics(true, true),
+        base: selective_breeding(false, true),
+        radiant: selective_breeding(true, true),
     }
 }
 
@@ -66,12 +66,12 @@ pub fn script() -> CardScripts {
 /// under it.
 pub fn script_v0_4_4b() -> CardScripts {
     CardScripts {
-        base: eugenics(false, false),
-        radiant: eugenics(true, false),
+        base: selective_breeding(false, false),
+        radiant: selective_breeding(true, false),
     }
 }
 
-// #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R65, R80, R831014).
+// #42 Selective Breeding (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R65, R80, R831014).
 //
 // The must-pass row (BUILD M4-T4 #42) (R65).
 
@@ -101,7 +101,7 @@ mod tests {
         library
     }
 
-    /// p1 casts Eugenics (Radiant on `radiant`) over `library`; #21 Hinder rides along so the turn does
+    /// p1 casts Selective Breeding (Radiant on `radiant`) over `library`; #21 Hinder rides along so the turn does
     /// not auto-end after it (R82).
     fn cast_face(radiant: bool, library: Vec<Value>, seed: &str) -> Scenario {
         let mut s = scenario(json!({
@@ -155,22 +155,22 @@ mod tests {
     #[test]
     fn r1748003_chance_moves_with_a_buff_or_a_nerf() {
         crate::register_all();
-        let plain = cast(mixed(), "eugenics-tuned")
+        let plain = cast(mixed(), "selective-breeding-tuned")
             .pile(PlayerId::P1, "library")
             .iter()
             .filter(|card| card.radiant)
             .count();
         // A Nerf takes it to 20%: the same rolls keep no more cards (each roll below 0.2 is below 0.3).
-        assert!(converted_tuned(None, "eugenics-tuned") <= plain);
+        assert!(converted_tuned(None, "selective-breeding-tuned") <= plain);
         // Seven Buffs take it to its bound of 100%: every card left becomes Radiant.
-        assert_eq!(converted_tuned(Some(7), "eugenics-tuned"), 50);
+        assert_eq!(converted_tuned(Some(7), "selective-breeding-tuned"), 50);
     }
 
     #[test]
     fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_chance() {
         crate::under_kept(ID, script_v0_4_4b(), || {
             // The kept script never reads the declared number: seven Buffs leave it at 30%.
-            assert!(converted_tuned(Some(7), "eugenics-tuned") < 50);
+            assert!(converted_tuned(Some(7), "selective-breeding-tuned") < 50);
         });
     }
 
@@ -187,7 +187,7 @@ mod tests {
         ids
     }
 
-    /// "#42 Eugenics — base"
+    /// "#42 Selective Breeding — base"
     mod base {
         use super::*;
 
@@ -197,7 +197,7 @@ mod tests {
             library.extend(copies(2, MENACE));
             library.extend(copies(3, VANILLA));
             library.extend(copies(2, STOCKPILE));
-            let s = cast(library, "eugenics");
+            let s = cast(library, "selective-breeding");
 
             assert_eq!(sorted_def_ids(&s, "exile"), vec![STOCKPILE, STOCKPILE, VANILLA, VANILLA, VANILLA]);
             assert_eq!(sorted_def_ids(&s, "library"), vec![MENACE, MENACE, PLAIN, PLAIN, PLAIN, PLAIN]);
@@ -213,7 +213,7 @@ mod tests {
                 json!({ "def": VANILLA, "costMod": 2 }),     // (1) made (3): kept.
                 json!(MENACE),                               // (3): kept.
             ];
-            let s = cast(library, "eugenics-r65");
+            let s = cast(library, "selective-breeding-r65");
 
             assert_eq!(sorted_def_ids(&s, "exile"), vec!["core-019", "core-024", "core-046", "core-056"]);
             assert_eq!(sorted_def_ids(&s, "library"), vec![VANILLA, MENACE]);
@@ -221,7 +221,7 @@ mod tests {
 
         #[test]
         fn an_empty_library_exiles_nothing_and_the_spell_still_counts_as_played() {
-            let mut s = cast(vec![], "eugenics");
+            let mut s = cast(vec![], "selective-breeding");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 0);
             s.expect_events(json!(["cardPlayed"]));
@@ -230,7 +230,7 @@ mod tests {
 
         #[test]
         fn rolls_each_remaining_library_card_independently_at_30_percent_so_neither_0_nor_all_50_come_up() {
-            let s = cast(mixed(), "eugenics");
+            let s = cast(mixed(), "selective-breeding");
             let remaining = s.pile(PlayerId::P1, "library");
 
             assert_eq!(remaining.len(), 50);
@@ -242,7 +242,7 @@ mod tests {
 
         #[test]
         fn r60_r831014_the_exiled_cards_are_never_rolled_the_exile_happens_first_the_chance_rolls_over_what_is_left() {
-            let s = cast(mixed(), "eugenics");
+            let s = cast(mixed(), "selective-breeding");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
             assert!(s.pile(PlayerId::P1, "exile").iter().all(|card| !card.radiant));
@@ -251,8 +251,8 @@ mod tests {
         #[test]
         fn s9_3_is_deterministic_the_same_seed_and_steps_give_the_same_flags() {
             assert_eq!(
-                radiant_flags(&cast(mixed(), "eugenics-determinism")),
-                radiant_flags(&cast(mixed(), "eugenics-determinism")),
+                radiant_flags(&cast(mixed(), "selective-breeding-determinism")),
+                radiant_flags(&cast(mixed(), "selective-breeding-determinism")),
             );
         }
 
@@ -269,9 +269,9 @@ mod tests {
     /// 50 more draws than the plain base face over the same exile, and more cards come up Radiant.
     #[test]
     fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
-        let plain = cast(mixed(), "eugenics-lucky");
+        let plain = cast(mixed(), "selective-breeding-lucky");
         let mut lucky = scenario(json!({
-            "seed": "eugenics-lucky",
+            "seed": "selective-breeding-lucky",
             "p1": { "hand": ["core-042", "core-021"], "library": mixed() },
         }));
         crate::give_lucky(&mut lucky, "core-042", 1);
@@ -288,13 +288,13 @@ mod tests {
         assert!(converted(&lucky) < 50);
     }
 
-    /// "#42 Eugenics — radiant"
+    /// "#42 Selective Breeding — radiant"
     mod radiant {
         use super::*;
 
         #[test]
         fn r831014_the_radiant_face_exiles_the_same_cards_and_every_card_left_becomes_radiant() {
-            let s = cast_face(true, mixed(), "eugenics");
+            let s = cast_face(true, mixed(), "selective-breeding");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
             assert!(s.pile(PlayerId::P1, "exile").iter().all(|card| !card.radiant));
@@ -318,14 +318,14 @@ mod tests {
         }
     }
 
-    /// "#42 Eugenics — R311 the owner's library list"
+    /// "#42 Selective Breeding — R311 the owner's library list"
     mod r311_the_owners_library_list {
         use super::*;
 
         /// "R311 a card rolled Radiant inside the library is still listed with the face it went in with"
         #[test]
         fn r311_a_card_rolled_radiant_inside_the_library_is_still_listed_with_the_face_it_went_in_with() {
-            let s = cast(copies(57, PLAIN), "eugenics");
+            let s = cast(copies(57, PLAIN), "selective-breeding");
             let remaining = s.pile(PlayerId::P1, "library");
             assert!(remaining.iter().any(|card| card.radiant));
 

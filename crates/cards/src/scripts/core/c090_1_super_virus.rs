@@ -1,4 +1,4 @@
-//! #90.1 CN-Virus (SPEC §8.5, §7, §4.4, R57, R58, R70, R80, R316, R350).
+//! #90.1 Super-Virus (SPEC §8.5, §7, §4.4, R57, R58, R70, R80, R316, R350).
 //!
 //! Base: "Pierce. Cast on draw: take 1 damage; at end of turn, shuffle 2 copies of this into your deck".
 //! Radiant: take 2 damage, 3 copies (§8's cell, R275: both numbers scale).
@@ -13,8 +13,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-090-1";
 
-// No `mod tests` here: #90.1's behavior is proved by #90 CN Viral Injection's tests
-// (`c090_cn_viral_injection.rs`).
+// No `mod tests` here: #90.1's behavior is proved by #90 Super-Virus Injection's tests
+// (`c090_super_virus_injection.rs`).
 
 /// R350: the step the end-of-turn delayed effect re-enters (§10.6: `script.resume[step]`).
 const COPIES_STEP: &str = "copies";

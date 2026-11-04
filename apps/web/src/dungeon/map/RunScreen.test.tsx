@@ -39,7 +39,7 @@ vi.mock("../../wasm/index.ts", async (importOriginal) => {
 const CONTENT: RunContent = {
   pool: [
     { id: "core-001", name: "Big D-fender", rarity: "Common", set: "Core", cardType: "Unit", tags: [] },
-    { id: "core-002", name: "Bigot", rarity: "Common", set: "Core", cardType: "Unit", tags: [] },
+    { id: "core-002", name: "Speciesist", rarity: "Common", set: "Core", cardType: "Unit", tags: [] },
     { id: "core-003", name: "Right-house defender", rarity: "Common", set: "Core", cardType: "Unit", tags: [] },
     { id: "core-004", name: "Gary the Gambler", rarity: "Common", set: "Core", cardType: "Unit", tags: [] },
   ],

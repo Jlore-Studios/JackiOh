@@ -58,7 +58,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const FIENDER: &str = "core-092"; // (2) Stack Unit
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const RISKY_DIE: &str = "classic-079"; // (1) Spell: Draw 3; they cost (1) less; …
     const FILLER: &str = "core-010"; // (0) Spell
     const SECOND_WIND: &str = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
@@ -182,10 +182,10 @@ mod tests {
         #[test]
         fn r70_a_cast_pays_nothing_a_spell_cast_on_draw_is_played_for_0() {
             let mut s = scenario(json!({
-                "p1": { "hand": [STOCKPILE, FILLER], "field": [MONKEY], "library": [CN_VIRUS, VANILLA, VANILLA] }
+                "p1": { "hand": [STOCKPILE, FILLER], "field": [MONKEY], "library": [SUPER_VIRUS, VANILLA, VANILLA] }
             }));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(played_cost(s.last_events(), Some(CN_VIRUS)), Some(0));
+            assert_eq!(played_cost(s.last_events(), Some(SUPER_VIRUS)), Some(0));
         }
 
         /// §3.2 R13 it is off while dormant under a Stack pile
@@ -318,12 +318,12 @@ mod tests {
                 "p1": {
                     "hand": [STOCKPILE, FILLER],
                     "field": [{ "def": MONKEY, "radiant": true }],
-                    "library": [CN_VIRUS, VANILLA, VANILLA],
+                    "library": [SUPER_VIRUS, VANILLA, VANILLA],
                     "mana": 9
                 }
             }));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(played_cost(s.last_events(), Some(CN_VIRUS)), Some(0));
+            assert_eq!(played_cost(s.last_events(), Some(SUPER_VIRUS)), Some(0));
         }
     }
 }

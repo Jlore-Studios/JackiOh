@@ -43,7 +43,7 @@ fn unit_def_of(name: &str, index: u32, overrides: Value) -> CardDef {
     json_as(def)
 }
 
-/// #2 Bigot's radiant destroys every *non-Human* enemy unit, so the scope needs both halves.
+/// #2 Speciesist's radiant destroys every *non-Human* enemy unit, so the scope needs both halves.
 const HUMAN: &str = "bw-human";
 /// #43 Big Felinor spares Felinors, its own token included (t-felinor).
 const FELINOR: &str = "bw-felinor";

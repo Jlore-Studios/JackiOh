@@ -18,3 +18,6 @@ export { SOCIAL_POLL_MS };
 /** The watch socket (B50): how long after an unexpected close it opens again, and how often it tries. */
 export const WATCH_RECONNECT_MS = 2_000;
 export const WATCH_RECONNECT_ATTEMPTS = 5;
+
+/** How often a watched game's clock repaints (presentation only, not a SPEC value). */
+export const WATCH_CLOCK_TICK_MS = 250;

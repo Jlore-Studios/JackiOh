@@ -227,7 +227,7 @@ A plain wave deals any one card in fewer than one seed in ten, so for card work 
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
-- **Seed-pinned tests** ("the first Discover offers Bigot, the second Twisted Sorcerer"): `crates/cards/tests/cross/` pins no
+- **Seed-pinned tests** ("the first Discover offers Speciesist, the second Twisted Sorcerer"): `crates/cards/tests/cross/` pins no
   pool's roll (#848). A test that needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or
   `cursor_where(seed, accept)` (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), and
   a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a

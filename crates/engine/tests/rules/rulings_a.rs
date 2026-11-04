@@ -73,7 +73,7 @@ const SHEEP: &str = "ra-sheep";
 const BREAD: &str = "ra-bread";
 /// A Spell with a Cry, for R1's cast.
 const BOLT: &str = "ra-bolt";
-/// #21 Hinder / #90.1 CN-Virus: cast on draw (R40).
+/// #21 Hinder / #90.1 Super-Virus: cast on draw (R40).
 const CAST_ON_DRAW_SPELL: &str = "ra-cast-on-draw";
 /// R2179002: a Field Spell that answers its controller's plays and their resolutions, by two
 /// different hits on the enemy hero, so a test can tell which of the two answered.

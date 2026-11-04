@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// The deck holds Core cards with their own tests; Bigot's Cry would destroy an enemy Unit, which a
+// The deck holds Core cards with their own tests; Speciesist's Cry would destroy an enemy Unit, which a
 // Recruit never fires (R1); a Rush Token card stands for a unit-token card a deck may hold (R11).
 #[cfg(test)]
 mod tests {
@@ -53,7 +53,7 @@ mod tests {
     const PILE_ON: &str = "classic-060";
     const VANILLA: &str = "core-008"; // Unit 4/4
     const GARY: &str = "core-004"; // Unit 1/1, Cry: flip 5 coins
-    const BIGOT: &str = "core-002"; // Unit 6/1, Cry: destroy target enemy non-Human Unit
+    const SPECIESIST: &str = "core-002"; // Unit 6/1, Cry: destroy target enemy non-Human Unit
     const MANA_WELL: &str = "core-006"; // Field Spell
     const SHEEPISH: &str = "core-041"; // Trap
     const BREAD: &str = "core-018"; // Field Trap
@@ -73,7 +73,7 @@ mod tests {
         Value::Array((1..=5).map(|lane| s.backrow(PlayerId::P1, lane).map(|card| json!(card.def_id)).unwrap_or(Value::Null)).collect())
     }
 
-    const MIXED_DECK: [&str; 8] = [STOCKPILE, VANILLA, MANA_WELL, LUNAR, SHEEPISH, GARY, BREAD, BIGOT];
+    const MIXED_DECK: [&str; 8] = [STOCKPILE, VANILLA, MANA_WELL, LUNAR, SHEEPISH, GARY, BREAD, SPECIESIST];
 
     mod c_60_pile_on {
         use super::*;
@@ -119,15 +119,15 @@ mod tests {
             fn recruits_every_permanent_of_the_deck_top_to_bottom_each_into_its_row_spells_stay_in_order() {
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": MIXED_DECK, "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
-                assert_eq!(unit_row(&s), json!([VANILLA, GARY, BIGOT, null, null]));
+                assert_eq!(unit_row(&s), json!([VANILLA, GARY, SPECIESIST, null, null]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, SHEEPISH, BREAD, null, null]));
                 assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![STOCKPILE, LUNAR, PILE_ON]);
             }
 
             #[test]
-            fn r1_no_recruited_cards_cry_fires_bigot_destroys_nothing_gary_flips_no_coins() {
+            fn r1_no_recruited_cards_cry_fires_speciesist_destroys_nothing_gary_flips_no_coins() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [PILE_ON, FILLER], "library": [BIGOT, GARY], "mana": 5 },
+                    "p1": { "hand": [PILE_ON, FILLER], "library": [SPECIESIST, GARY], "mana": 5 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
                 }));
                 s.play(PILE_ON, json!({}));
@@ -166,7 +166,7 @@ mod tests {
                     "p1": {
                         "hand": [PILE_ON, FILLER],
                         "field": [VANILLA, VANILLA, VANILLA, VANILLA],
-                        "library": [GARY, LUNAR, BIGOT, VANILLA, MANA_WELL],
+                        "library": [GARY, LUNAR, SPECIESIST, VANILLA, MANA_WELL],
                         "mana": 5,
                     },
                     "p2": { "hand": [FILLER] },
@@ -174,7 +174,7 @@ mod tests {
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, VANILLA, VANILLA, VANILLA, GARY]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, null, null, null, null]));
-                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![LUNAR, BIGOT, VANILLA, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![LUNAR, SPECIESIST, VANILLA, PILE_ON]);
             }
 
             #[test]
@@ -281,7 +281,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(PILE_ON, json!({}));
-                assert_eq!(unit_row(&s), json!([VANILLA, GARY, BIGOT, null, null]));
+                assert_eq!(unit_row(&s), json!([VANILLA, GARY, SPECIESIST, null, null]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, SHEEPISH, BREAD, null, null]));
                 assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![STOCKPILE, LUNAR]);
             }

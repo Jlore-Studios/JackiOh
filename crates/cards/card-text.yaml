@@ -35,14 +35,14 @@ core-001: # Big D-fender
     name: 大D守卫
     base: 光环：你处于守备表示的单位拥有+{armor}点护甲。
     radiant: 光环：你处于守备表示的单位拥有+{armor}点护甲。
-core-002: # Bigot
+core-002: # Speciesist
   flavour: He has a strong opinion about everyone who isn't him, and none of them are good.
   voice:
     play: Ugh. Not your kind again.
     attack: Begone, riffraff!
     death: Tolerance wins. Again.
   zh:
-    name: 偏执者
+    name: 物种歧视者
     base: 战吼：消灭一个敌方非人类单位。
     radiant: 战吼：消灭所有敌方非人类单位。
 core-003: # Right-house defender
@@ -404,12 +404,12 @@ core-041: # Sheepish
     name: 害羊
     base: 当你的对手打出一个单位时揭示：在其结算后，将其变形成为一个绵羊衍生物。
     radiant: 当你的对手打出一个单位时揭示：在其结算后，将其变形成为一个绵羊衍生物。将一张熔岩魔神置入你的手牌。其法力值消耗为({setCost})。
-core-042: # Eugenics
+core-042: # Selective Breeding
   flavour: Bad science, worse ethics, and a deck that pays for both.
   voice:
     cast: Science has gone too far.
   zh:
-    name: 优生学
+    name: 选择性育种
     base: 放逐你牌库中所有法力值消耗为(2)或更低的牌。你牌库中剩余的每张牌都有{chance}%的几率变为光辉。
     radiant: 放逐你牌库中所有法力值消耗为(2)或更低的牌。你牌库中剩余的每张牌都变为光辉。
 core-043: # Big Felinor
@@ -840,20 +840,20 @@ core-089: # Corpse Eater
     name: 噬尸者
     base: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。"
     radiant: "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
-core-090: # CN-Viral Injection
+core-090: # Super-Virus Injection
   flavour: Spread it around. Let them shuffle it themselves.
   voice:
     cast: Just a little pinch.
   zh:
-    name: CN病毒注射
-    base: 将一张CN病毒洗入你对手的牌库。
-    radiant: 将一张光辉CN病毒洗入你对手的牌库。
-core-090-1: # CN-Virus
+    name: 超级病毒注射
+    base: 将一张超级病毒洗入你对手的牌库。
+    radiant: 将一张光辉超级病毒洗入你对手的牌库。
+core-090-1: # Super-Virus
   flavour: A tickle in the throat, then a deck full of sniffles.
   voice:
     cast: Achoo! Sorry. Achoo!
   zh:
-    name: CN病毒
+    name: 超级病毒
     base: "穿透\n抽到时施放：受到{damage}点伤害。在本回合结束时，将{copies}张这张牌的复制洗入你的牌库。"
     radiant: "穿透\n抽到时施放：受到{damage}点伤害。在本回合结束时，将{copies}张这张牌的复制洗入你的牌库。"
 core-091: # Fed Fauci
@@ -3515,14 +3515,14 @@ meditative-060: # Eschews
     radiant: "回合结束时：施放{casts}张随机光辉人类、书、中国或AI生成的牌。\n当你的{deaths}个单位死亡后，献祭此牌。"
     previews:
       of your Units have died: 个单位死亡
-meditative-061: # Joon Jorker
+meditative-061: # Joon Juicer
   flavour: He never tells a joke about himself. His neighbour is always the punchline.
   voice:
     play: Let me hype up my neighbor!
     attack: Hype hit!
     death: Who hypes you now?
   zh:
-    name: 俊·乔克
+    name: 俊·榨汁机
     base: 回合结束时：强化此单位右边的单位{times}次。
     radiant: 回合结束时：强化此单位右边的单位{times}次。
 meditative-062: # Small Time Recruits
@@ -3907,8 +3907,8 @@ meditative-095-1: # CN Golem
     death: Back to the factory.
   zh:
     name: 中国魔像
-    base: "突袭，剧毒，顺劈，穿透\n每当此单位消灭一个单位，将{viruses}张CN病毒洗入你对手的牌库。"
-    radiant: "突袭，剧毒，顺劈，穿透，风怒\n每当此单位消灭一个单位，将{viruses}张光辉CN病毒洗入你对手的牌库。"
+    base: "突袭，剧毒，顺劈，穿透\n每当此单位消灭一个单位，将{viruses}张超级病毒洗入你对手的牌库。"
+    radiant: "突袭，剧毒，顺劈，穿透，风怒\n每当此单位消灭一个单位，将{viruses}张光辉超级病毒洗入你对手的牌库。"
 meditative-096: # Meditative Journey
   flavour: Pack light. Leave behind what you love.
   voice:
@@ -4887,12 +4887,12 @@ stinkyscape-043: # Healing Capsule
     name: 治疗舱
     base: "星舰部件\n回合结束时：为你的英雄和你的每个单位恢复{heal}点生命值。"
     radiant: "星舰部件\n回合结束时：为你的英雄和你的每个单位恢复{heal}点生命值。"
-stinkyscape-044: # Great Replacement Theory
+stinkyscape-044: # Great Paperclip Theory
   flavour: Every tier of core is quietly replaced by the next. Nobody asked the cores.
   voice:
     cast: One core makes way for the next.
   zh:
-    name: 大替代理论
+    name: 大回形针理论
     base: 将一张无人机核心I置入你的手牌。在本局对战的剩余时间内，每一级无人机核心在你第一次打出时，都会将下一级无人机核心置入你的手牌。
     radiant: 将一张光辉无人机核心I置入你的手牌。在本局对战的剩余时间内，每一级无人机核心在你第一次打出时，都会将一张光辉的下一级无人机核心置入你的手牌。
 stinkyscape-045: # Drone Commander
@@ -5336,7 +5336,7 @@ stinkyscape-088: # Siva 2
   zh:
     name: Siva 2
     base: 光环：你的人类单位拥有剧毒。
-    radiant: "光环：你的人类单位拥有剧毒。\n战吼：用偏执者填满你的手牌。"
+    radiant: "光环：你的人类单位拥有剧毒。\n战吼：用物种歧视者填满你的手牌。"
 stinkyscape-089: # Spice
   flavour: The spice must flow, preferably through your account.
   voice:
@@ -6711,7 +6711,7 @@ traininggrounds-028: # Occidental
     name: 西方人
     base: 战吼：消灭最右侧纵列中的所有永久物。
     radiant: 战吼：消灭最右侧纵列中的所有敌方永久物。
-traininggrounds-029: # Oriental
+traininggrounds-029: # Easterner
   flavour: Came from the east, and the left lane has not been the same since.
   voice:
     play: The left lane is mine.
@@ -6829,14 +6829,14 @@ traininggrounds-040: # Goetzmann Game Design
     name: 高兹曼游戏设计
     base: 将一张随机牌置入你的手牌。
     radiant: 将一张随机光辉牌置入你的手牌。
-traininggrounds-041: # Legacy: Bigot
+traininggrounds-041: # Legacy: Speciesist
   flavour: He has a strong opinion about everyone who isn't him, and none of them are good.
   voice:
     play: Ugh. Not your kind again.
     attack: Begone, riffraff!
     death: Tolerance wins. Again.
   zh:
-    name: 传统：偏执者
+    name: 传统：物种歧视者
     base: 战吼：消灭一个敌方非人类单位。
     radiant: 战吼：消灭所有敌方非人类单位。
 traininggrounds-042: # Legacy: Stockpile

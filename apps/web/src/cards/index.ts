@@ -23,7 +23,7 @@ export { PileDepth } from "./CardStates.tsx";
 
 export { CardFace, faceText } from "./CardFace.tsx";
 export { RulesText } from "./RulesText.tsx";
-export { MinionFace } from "./MinionFace.tsx";
+export { KeywordIcons, MinionFace } from "./MinionFace.tsx";
 export { CardBack } from "./CardBack.tsx";
 export { Icon } from "./icons.tsx";
 export type { IconName } from "./icons.tsx";

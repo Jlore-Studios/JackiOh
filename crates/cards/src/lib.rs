@@ -719,7 +719,7 @@ mod tests {
         let typed = serde_json::to_value(&*CATALOG).expect("CardDefs serialize");
         assert_eq!(typed, raw);
         assert_eq!(CATALOG_IDS.first().map(String::as_str), Some("core-001"));
-        assert_eq!(card_def("core-002").name, "Bigot");
+        assert_eq!(card_def("core-002").name, "Speciesist");
         assert_eq!(card_def_by_index(SetName::Core, "2").id, "core-002");
     }
 

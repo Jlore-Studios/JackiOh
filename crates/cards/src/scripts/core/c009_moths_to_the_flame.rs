@@ -84,14 +84,14 @@ mod tests {
             }));
             let scarab = s.card("core-007").clone();
             let felinors = s.card("core-012").clone();
-            let bigot = s.card("core-002").clone();
+            let speciesist = s.card("core-002").clone();
 
             s.start_turn();
 
             let declared = attacks(&s);
             assert_eq!(
                 declared.iter().map(|event| event.attacker_id.clone()).collect::<Vec<_>>(),
-                vec![scarab.id.clone(), felinors.id.clone(), bigot.id.clone()]
+                vec![scarab.id.clone(), felinors.id.clone(), speciesist.id.clone()]
             );
             assert_eq!(declared.iter().map(|event| event.forced).collect::<Vec<_>>(), vec![true, true, true]);
             let moths = s.card("core-009").id.clone();
@@ -105,7 +105,7 @@ mod tests {
             // The target strikes back: its 1 attack kills the 1-health attackers.
             s.expect_in_zone(&scarab, "graveyard");
             s.expect_stats(&felinors, json!({ "health": 3, "maxHealth": 4 }));
-            s.expect_in_zone(&bigot, "graveyard");
+            s.expect_in_zone(&speciesist, "graveyard");
         }
 
         #[test]
@@ -138,12 +138,12 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
-                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot
+                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Speciesist
                 // (a 4/1) is set to 8/1; the Shredder is a 6/10.
                 "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 8, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();
-            let bigot = s.card("core-002").clone();
+            let speciesist = s.card("core-002").clone();
             let shredder = s.card("core-013").clone();
             let scarab = s.card("core-007").clone();
 
@@ -151,12 +151,12 @@ mod tests {
 
             assert_eq!(
                 attacks(&s).iter().map(|event| event.attacker_id.clone()).collect::<Vec<_>>(),
-                vec![bigot.id.clone(), shredder.id.clone()]
+                vec![speciesist.id.clone(), shredder.id.clone()]
             );
             s.expect_in_zone(&moths, "graveyard");
             // Each forced attack was its own combat with its own state check: the 8/1 died to the
             // strike-back of the combat it started, before the 6/10 attacked.
-            s.expect_in_zone(&bigot, "graveyard");
+            s.expect_in_zone(&speciesist, "graveyard");
             s.expect_stats(&shredder, json!({ "health": 9, "maxHealth": 10 }));
             s.expect_in_zone(&scarab, "field");
             s.expect_stats(&scarab, json!({ "health": 1, "maxHealth": 1 }));
@@ -171,7 +171,7 @@ mod tests {
                 "p2": { "field": ["core-012", "core-002"] }
             }));
             let felinors = s.card("core-012").clone();
-            let bigot = s.card("core-002").clone();
+            let speciesist = s.card("core-002").clone();
 
             s.start_turn();
 
@@ -179,7 +179,7 @@ mod tests {
             s.expect_stats("core-009", json!({ "attack": 2, "health": 23, "maxHealth": 28 }));
             // The radiant face strikes back with 2.
             s.expect_stats(&felinors, json!({ "health": 2, "maxHealth": 4 }));
-            s.expect_in_zone(&bigot, "graveyard");
+            s.expect_in_zone(&speciesist, "graveyard");
         }
     }
 }

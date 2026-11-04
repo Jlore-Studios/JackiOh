@@ -73,7 +73,7 @@ mod tests {
     const TWINSPELL: &str = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
     const TOXINS: &str = "classic-042"; // (2) Field Spell: "Activate: Place a Plague Counter on each of 2 random Units."
     const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
-    const BIGOT: &str = "core-002"; // (2) Unit: "Cry: Destroy an enemy non-Human Unit.", a declared target.
+    const SPECIESIST: &str = "core-002"; // (2) Unit: "Cry: Destroy an enemy non-Human Unit.", a declared target.
     const BRINGER: &str = "classic-076"; // (2) Unit: "Cry: Place 2 Plague Counters; draw 1."
     const PUNISH: &str = "classic-020"; // (2) Field Spell: "Activate: Choose one: Deal 2 damage; ..."
     const TESLA: &str = "classic-005"; // (2) Field Trap: "Activates when your opponent summons a Unit: Deal 4 damage to it."
@@ -307,15 +307,15 @@ mod tests {
             }
 
             #[test]
-            fn r651_a_units_declared_cry_pick_draws_no_joro_bigots_destroy() {
+            fn r651_a_units_declared_cry_pick_draws_no_joro_speciesists_destroy() {
                 // C #53 Plague Crawler's pick made this case until patch v0.3.10 made it a prompt.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
-                    "p2": { "hand": [BIGOT, STOCKPILE] },
+                    "p2": { "hand": [SPECIESIST, STOCKPILE] },
                 }));
                 let menace = s.card(MENACE).id.clone();
-                s.play(BIGOT, json!({ "targets": [{ "pick": "instance", "instanceId": menace }] }));
+                s.play(SPECIESIST, json!({ "targets": [{ "pick": "instance", "instanceId": menace }] }));
                 assert!(redirects(&s).is_empty());
                 s.expect_in_zone(JORO, "hand");
                 s.expect_in_zone(&menace, "graveyard");

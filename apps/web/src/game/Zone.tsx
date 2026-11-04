@@ -113,6 +113,7 @@ export default function Zone(props: ZoneProps): ReactElement {
           card={unit}
           unit={unit}
           switchTarget
+          onField
           target={{ on: "unit", instanceId: unit.instanceId, side, lane }}
           highlight={props.highlight}
           animating={props.animating}
