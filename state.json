@@ -13924,7 +13924,7 @@
       "stop_requested": false
     },
     "2992": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -13952,21 +13952,21 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2803,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "muse",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-4",
       "question": "",
       "queued_at": "2026-11-04T11:32:52Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "41819742505",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:bc5cb7e3-1793792415",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-04T11:15:57Z",
+      "started_at": "2026-11-04T11:40:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -14936,9 +14936,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T11:40:00Z",
+    "at": "2026-11-04T11:40:55Z",
     "url": "",
-    "what": "build #3013 on claude-8"
+    "what": "review #2992 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T10:55:03Z",
