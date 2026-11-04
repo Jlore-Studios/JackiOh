@@ -12,7 +12,8 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { CONNECT_SRC_PLACEHOLDER, connectSources } from "../../static-pages.ts";
+import { GIS_SCRIPT_URL } from "../auth/googleIdentity.ts";
+import { CONNECT_SRC_PLACEHOLDER, GOOGLE_IDENTITY_SOURCE, connectSources } from "../../static-pages.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
@@ -86,6 +87,21 @@ function blocks(): HeaderBlock[] {
 
 const IMMUTABLE: Header[] = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
 
+/**
+ * The CSP, exactly. WebAssembly compilation needs `wasm-unsafe-eval` (docs/v0.3.0/SURFACE.md §10.3);
+ * Google's own sign-in button (R2983000) needs its script and, under its path, its styles, frames and
+ * requests (connect-src's, filled in by the build); `frame-src` keeps the 'self' it had from default-src.
+ */
+const CSP =
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; worker-src 'self'; " +
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob:; media-src 'self' blob:; " +
+  "font-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src %CONNECT_SRC%; object-src 'none'; " +
+  "base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+
+function csp(): string {
+  return blocks()[0]?.headers.find((header) => header.key === "Content-Security-Policy")?.value ?? "";
+}
+
 describe("public/_headers", () => {
   it("has three blocks: every path, the fonts and the bundle", () => {
     expect(blocks().map((block) => block.path)).toEqual(["/*", "/fonts/*", "/assets/*"]);
@@ -105,26 +121,47 @@ describe("public/_headers", () => {
     expect(headers.get("x-content-type-options")).toBe("nosniff");
     expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
-    const csp = headers.get("content-security-policy") ?? "";
-    // WebAssembly compilation needs `wasm-unsafe-eval` (docs/v0.3.0/SURFACE.md §10.3).
-    expect(csp).toMatch(/script-src 'self' 'wasm-unsafe-eval'(;|$)/u);
-    expect(csp).toMatch(/frame-ancestors 'none'/u);
-    expect(csp).toMatch(/^default-src 'self';/u);
+    expect(headers.get("content-security-policy")).toBe(CSP);
   });
 
   it("leaves the CSP's connect-src to the build, which names its own hosts in it", () => {
-    const csp = blocks()[0]?.headers.find((header) => header.key === "Content-Security-Policy")?.value ?? "";
-    expect(/connect-src ([^;]+)/u.exec(csp)?.[1]).toBe(CONNECT_SRC_PLACEHOLDER);
-    // The bundle connects only to its own origin (the API), Supabase (sign-in) and its own host's sockets.
+    expect(/connect-src ([^;]+)/u.exec(csp())?.[1]).toBe(CONNECT_SRC_PLACEHOLDER);
+    // The bundle connects only to its own origin (the API), Supabase and Google Identity Services
+    // (sign-in, R2983000) and its own host's sockets.
     expect(connectSources("https://jackioh.com", "https://exmjdaswedxhnzmpzqrq.supabase.co")).toBe(
-      "'self' https://exmjdaswedxhnzmpzqrq.supabase.co wss://jackioh.com",
+      "'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://accounts.google.com/gsi/ wss://jackioh.com",
     );
     expect(connectSources("https://staging.jackioh.com", "https://exmjdaswedxhnzmpzqrq.supabase.co/")).toBe(
-      "'self' https://exmjdaswedxhnzmpzqrq.supabase.co wss://staging.jackioh.com",
+      "'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://accounts.google.com/gsi/ wss://staging.jackioh.com",
     );
-    // A build without Supabase (`build:e2e`) never signs in, so its CSP names no Supabase host.
+    // A build without Supabase (`build:e2e`) never signs in, so its CSP names neither sign-in host.
     expect(connectSources("https://staging.jackioh.com", undefined)).toBe("'self' wss://staging.jackioh.com");
     expect(connectSources("https://staging.jackioh.com", "")).toBe("'self' wss://staging.jackioh.com");
+  });
+
+  it("R2983000 widens the CSP by Google Identity Services' sources alone", () => {
+    const sources = csp()
+      .split(";")
+      .flatMap((directive) => directive.trim().split(/\s+/u).slice(1))
+      .filter((source) => source.startsWith("https:"));
+    expect(sources).toEqual([GIS_SCRIPT_URL, GOOGLE_IDENTITY_SOURCE, GOOGLE_IDENTITY_SOURCE]);
+    const directive = (name: string): string[] =>
+      csp()
+        .split("; ")
+        .find((part) => part.startsWith(`${name} `))
+        ?.split(" ")
+        .slice(1) ?? [];
+    expect(directive("script-src")).toEqual(["'self'", "'wasm-unsafe-eval'", GIS_SCRIPT_URL]);
+    expect(directive("style-src")).toEqual(["'self'", "'unsafe-inline'", GOOGLE_IDENTITY_SOURCE]);
+    expect(directive("frame-src")).toEqual(["'self'", GOOGLE_IDENTITY_SOURCE]);
+    // Google's requests are let in by the build, beside the Supabase host it signs in through.
+    const connect = connectSources("https://jackioh.com", "https://fuzpvmjdejvbjcarypyi.supabase.co").split(" ");
+    expect(connect.filter((source) => source.startsWith("https:"))).toEqual([
+      "https://fuzpvmjdejvbjcarypyi.supabase.co",
+      GOOGLE_IDENTITY_SOURCE,
+    ]);
+    expect(GIS_SCRIPT_URL).toBe("https://accounts.google.com/gsi/client");
+    expect(GOOGLE_IDENTITY_SOURCE).toBe("https://accounts.google.com/gsi/");
   });
 
   it("sends no X-Robots-Tag: staging is behind Access, so no crawler reaches it, and production is meant to be found", () => {

@@ -254,11 +254,11 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   it("B40 an Easy game seated p2: the AI thinks and plays, human turns end cleanly, the log replays, and a concede is a Loss", () => {
     visitPractice(practiceUrl(EASY_SEED, "easy", "p2"));
 
-    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
-      .should("have.attr", "data-difficulty", "easy")
-      .and("have.attr", "data-human-seat", "p2")
-      .and("have.attr", "data-ai-seat", "p1");
-    cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
+    // No HUD above the board: the enemy hero's seat names the AI and the difficulty.
+    cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
+    cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
+    cy.get(ts("hero-you")).should("contain.text", "You");
+    cy.get(ts(PRACTICE_HUD)).should("not.exist");
     cy.get(ts(PRACTICE_SETUP)).should("not.exist");
 
     cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
@@ -359,7 +359,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
 
   it("R768000 a conceded game opens its replay from the result dialog, steps forward and back, shares its last turn as a GIF, and leaves", () => {
     visitPractice(practiceUrl(`${SEED}:replay`, "easy", "p2"), { downloads: true });
-    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
     reachHumanTurn();
     cy.concede();
     cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
@@ -380,9 +381,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   it("B40 a Hard game seated p2: the AI's first turn shows mana-opponent data-max=2", () => {
     visitPractice(practiceUrl(HARD_SEED, "hard", "p2"), { reducedMotion: true });
 
-    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
-      .should("have.attr", "data-difficulty", "hard")
-      .and("have.attr", "data-ai-seat", "p1");
+    cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
+    cy.get(ts("hero-opponent")).should("contain.text", "AI · Hard");
     keepWholeHand(BOOT_TIMEOUT);
     reachHumanTurn();
 
@@ -437,7 +437,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   });
   it("R668 a reload in the middle of a game picks it up on the same state", () => {
     visitPractice(practiceUrl(`${SEED}:reload`, "medium", "p2"), { reducedMotion: true });
-    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
+    cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts("hero-opponent")).should("contain.text", "AI · Medium");
     keepWholeHand(BOOT_TIMEOUT);
     reachHumanTurn();
 
@@ -448,9 +449,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
 
         // R668: without a new-game parameter, the worker restores its saved game.
         visitPractice("/practice?pace=fast");
-        cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
-          .should("have.attr", "data-difficulty", "medium")
-          .and("have.attr", "data-human-seat", "p2");
+        cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
+        cy.get(ts("hero-opponent")).should("contain.text", "AI · Medium");
         cy.get(ts(PRACTICE_SETUP)).should("not.exist");
         cy.get(ts(PRACTICE_ERROR)).should("not.exist");
         reachHumanTurn();
@@ -468,7 +468,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
 
   it("R765 Save and leave keeps the game for the menu's banner, Resume picks it up on the same state, and Leave without saving keeps nothing", () => {
     visitPractice(practiceUrl(`${SEED}:save`, "medium", "p2"), { reducedMotion: true });
-    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
+    cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts("hero-opponent")).should("contain.text", "AI · Medium");
     keepWholeHand(BOOT_TIMEOUT);
     reachHumanTurn();
 
@@ -490,9 +491,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
         cy.get(ts(PRACTICE_HUD)).should("not.exist");
 
         cy.get(ts(PRACTICE_RESUME)).click();
-        cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
-          .should("have.attr", "data-difficulty", "medium")
-          .and("have.attr", "data-human-seat", "p2");
+        cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
+        cy.get(ts("hero-opponent")).should("contain.text", "AI · Medium");
         cy.get(ts(PRACTICE_ERROR)).should("not.exist");
         reachHumanTurn();
         practiceHandle()

@@ -1,4 +1,4 @@
-<!-- version: 6 -->
+<!-- version: 8 -->
 # Revise pull request #$number
 
 You are the builder for a revision of pull request #$number of `$repo`, on its branch `$branch`
@@ -41,11 +41,14 @@ Read the whole change before editing: `git diff $base...HEAD`.
 
 - `request`: answer each point at its file and line. Where a request is wrong or out of scope,
   change nothing for it and say why in your report.
-- `ci`: find the real cause in the log. When the failure is not this branch's doing (a flaky test,
-  a breakage already on `main`), change nothing and say so plainly with the evidence. Never skip,
-  ignore or disable a test, or weaken a check, to get green (CLAUDE.md rule 12): a red check you
-  cannot fix honestly is reported, not hidden. After three CI fixes the harness stops and asks a
-  person.
+- `ci`: CI was not re-run first: you judge it. Run the failing check locally before anything else,
+  as "What was asked" says, then find the real cause in the log. When it passes and nothing here
+  needs changing, change nothing and say so in your first line when "What was asked" allows it
+  (`"ci_local": "passed"`): the harness runs CI again on this head with no commit. When the failure
+  is not this branch's doing (a breakage already on `main`), change nothing and say so plainly
+  with the evidence. Never skip, ignore or disable a test, or weaken a check, to get green
+  (CLAUDE.md rule 12): a red check you cannot fix honestly is reported, not hidden. After three CI
+  fixes the harness stops and asks a person.
 - `conflict`: resolve every marker so both `main`'s change and this branch's change survive with
   their meaning. Remove every marker. Do not stage, commit or abort the merge: the harness does.
   A ruling of this branch whose number `main` took meanwhile takes the next number free in its
@@ -73,11 +76,18 @@ The very first line must be a single HTML comment carrying JSON, with nothing be
 
     <!-- bot: {"status": "done", "title": "Pull request title for the whole change"} -->
 
-or `{"status": "blocked", "question": "..."}` when a person must decide something first. When
-nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or `bot/`, a
-secret or a token, a dashboard setting such as Vercel's or Render's, an account), add
-`"human_required": true` and say in `question` exactly what a person must do: the harness hands
-the thread to the people (`human required`, the bot's labels off) and names them.
+with `"ci_local": "passed"` added for a `ci` revision whose failing check passed locally with
+nothing changed, or `{"status": "blocked", "question": "...", "options": ["...", "..."], "default": 1, "gives_up": "..."}`
+when a person must decide something first: `options` lists every answer you see, and `default` is the
+number (from 1) of the one that stays inside the issue's own stated limits, with `gives_up` saying what
+choosing it gives up. Name one whenever an option keeps within those limits: if no trusted person
+answers in time, the same subscription and model take it up again in a fresh session and build
+the default, and each other option becomes an issue of its own for a person to approve; leave `default`
+out only when no option does. When nobody but a person can do it (a change under `.github/`,
+`.harness/`, `.squishy/` or `bot/`, a secret or a token, a dashboard setting such as Supabase's or
+Cloudflare's, an account, money), add `"human_required": true`, give no default, and say in `question`
+exactly what a person must do: the harness hands the thread to the people (`human required`, the
+bot's labels off) and names them, and it never goes ahead by itself.
 
 After that line, write a short Markdown report for the pull request conversation: each point of
 feedback and what you did about it (or why you did nothing), and how you tested it.

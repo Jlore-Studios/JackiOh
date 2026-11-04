@@ -7,12 +7,8 @@
 use jackioh_engine::restrictions::{immutable_bars, immutable_in_play, targeting_type_of};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, next_nonce, put, slot};
+use crate::rules::fixtures::harness::{ids, in_hand, new_game, next_nonce, put, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
 
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;

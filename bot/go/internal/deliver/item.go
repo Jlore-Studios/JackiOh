@@ -80,6 +80,7 @@ func (x *Deliverer) Item() {
 		who, tier := x.planner()
 		x.remember(number, pyjson.New("planned_at", clock.ISO(x.Ctx.Now()), "planned_by", who,
 			"planned_by_id", x.Provider.ID, "planned_tier", tier))
+		x.notePlanModel(number, false) // planned in a build's run: its builder's model builds it
 		x.planIntoIssue(number, who)
 		if x.RatingNote != "" && x.Result.Get("status") != "planned" {
 			x.try(func() { x.GH.CreateComment(number, x.RatingNote) })
@@ -171,6 +172,7 @@ func (x *Deliverer) deliverItem(number int) {
 	} else {
 		x.build(number, status)
 	}
+	x.closeDecision(number, status)
 	x.settle(number)
 }
 
@@ -192,6 +194,7 @@ func (x *Deliverer) planned(number int, status string) {
 		who, tier := x.planner()
 		x.remember(number, pyjson.New("planned_at", clock.ISO(x.Ctx.Now()), "planned_by", who,
 			"planned_by_id", x.Provider.ID, "planned_tier", tier))
+		x.notePlanModel(number, false) // a person builds it
 		placed := x.planIntoIssue(number, who)
 		rated := x.RatingNote
 		kept := fmt.Sprintf(" Planned on %s (%s)", who, x.link())
@@ -226,17 +229,21 @@ func (x *Deliverer) planned(number int, status string) {
 	who, tier := x.planner()
 	x.remember(number, pyjson.New("planned_at", clock.ISO(x.Ctx.Now()), "planned_by", who,
 		"planned_by_id", x.Provider.ID, "planned_tier", tier))
+	x.notePlanModel(number, true) // its subscription builds it on this model (#2903)
 	x.requeueLabel(number, "build")
 	rated := x.RatingNote
 	if rated != "" {
 		rated += " "
 	}
 	difficulty := x.Difficulty(number)
-	var next string
+	var next, kept string
 	if tier != "" && !providers.TierAtLeast(tier, config.PlanFloor[difficulty]) {
 		// A medium planner rated it hard: a strong model plans it next (part 6, #695).
 		next = fmt.Sprintf("A %s model plans `difficulty:%s` work, so one plans it next; it is queued for that.",
 			config.PlanFloor[difficulty], difficulty)
+	} else if kept = x.keepLane(number, difficulty); kept != "" {
+		// Planned in its own lane (#2903): that lane is kept for its build, on the same model.
+		next = "Cleared and queued to build. " + kept
 	} else {
 		next = fmt.Sprintf("Cleared and queued to build, on the cheapest model `difficulty:%s` allows.", difficulty)
 	}
@@ -248,9 +255,13 @@ func (x *Deliverer) planned(number int, status string) {
 	}
 	plan := x.resultPlan()
 	text := py.SliceTo(redact.Redact(py.OrStr(plan.Get("text"), ""), nil), issueplan.PlanChars)
+	queued := "It is queued to build from this plan, on the cheapest model its difficulty allows."
+	if kept != "" {
+		queued = "It is queued to build from this plan. " + kept
+	}
 	x.GH.CreateComment(number, fmt.Sprintf("Planned on %s (%s), but the description could not take "+
-		"the plan, so it is here. It is queued to build from this plan, on the cheapest model its "+
-		"difficulty allows.\n\n<details><summary>The plan</summary>\n\n%s\n\n</details>", who, x.link(), text))
+		"the plan, so it is here. %s\n\n<details><summary>The plan</summary>\n\n%s\n\n</details>", who,
+		x.link(), queued, text))
 }
 
 // ApplyRating is Deliverer._apply_rating.
@@ -918,9 +929,11 @@ func (x *Deliverer) NeedsPerson(number int, question string, what string /* = "b
 	if !queue.LabelNames(thread)[config.LabelHumanRequired] {
 		x.GH.AddLabels(number, []string{config.LabelHumanRequired})
 	}
+	x.needsDecision(number) // only a person can unblock it, and it never goes ahead (#2986)
 	x.GH.CreateComment(number, human.Ask(question, x.Cfg.BotLogin, what, kept, again))
 	// The next run reads it with the thread, once a person has queued the item again.
-	x.remember(number, pyjson.New("question", question))
+	x.remember(number, pyjson.New("question", question, queue.DecisionKey, pyjson.New("asked_at",
+		clock.ISO(x.Ctx.Now()), "human_required", true, "question", py.SliceTo(question, queue.QuestionChars))))
 	x.cameToNothing(number, "the bot could not build it: "+question)
 	x.log(fmt.Sprintf("#%d needs a person: handed to people, %s", number, config.LabelHumanRequired))
 }
@@ -1051,11 +1064,10 @@ func (x *Deliverer) build(number int, status string) {
 			x.remember(number, pyjson.New("last_findings", []any{}))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
-		x.GH.CreateComment(number, fmt.Sprintf("I need a decision before I can build this.%s\n\n"+
-			"%s\n\nAnswer here, then `%s build` (or "+
-			"`@%s <your answer>`) queues it again.", kept, question, config.Slash, x.Cfg.BotLogin))
-		x.remember(number, pyjson.New("last_findings", []any{}, "question", question))
+		x.askDecision(number, "build", "I need a decision before I can build this.", kept, question,
+			fmt.Sprintf("answer here, then `%s build` (or `@%s <your answer>`) queues it again", config.Slash,
+				x.Cfg.BotLogin))
+		x.remember(number, pyjson.New("last_findings", []any{}))
 		return
 	}
 	if !(x.Repo.Rev("origin/"+branch) != "" || pushed) {

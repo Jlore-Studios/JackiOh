@@ -13,6 +13,10 @@
 //! - **A settle, once** ([[R2422000]]): the pay marks the seed `paid` only where unmarked, a refusal
 //!   `refused`. The shutdown drain waits for running settles, and the retention loop settles a claim
 //!   left past `PRACTICE_SETTLE_GRACE_SECONDS` (`sweep_unsettled`).
+//! - **A count** (#2884): each claim's outcome adds one to its day's `ClaimBucket` (migration
+//!   0078), as the last statement of the transaction that decided it: the settle that marked the
+//!   seed paid or refused, or a refusal before the burn, which counts best effort. Each refusal also
+//!   logs `practice.claim.refused` with its seed and reason, and no account.
 //!
 //! The issue and the claim answer only while the economy is on ([[R1302006]]): an issue is a 409, a
 //! claim `economy_off`; a release, paying nothing, answers either way. The page asks for a seed only
@@ -37,8 +41,8 @@ use crate::config::{
     MS_PER_SECOND, PRACTICE_PAY_ATTEMPTS, PRACTICE_PAY_BACKOFF_MS, PRACTICE_SEED_TTL_SECONDS,
     PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
 };
-use crate::db::store::{LastBoardKind, StoreResult};
-use crate::economy::practice::{ClaimRefusal, ClaimedResult, Verified, verify};
+use crate::db::store::{LastBoardKind, StoreResult, Tx};
+use crate::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult, Verified, verify};
 use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{GameEconomy, GameMode, GameSummary, pay_game_rewards};
 use crate::economy::store::{PracticeClaim, PracticeDeck, PracticeOutcome, PracticeSeed, PracticeSetup};
@@ -76,6 +80,34 @@ fn body_of<T: for<'de> Deserialize<'de>>(body: &Value, what: &str) -> Result<T, 
 
 fn refused(reason: ClaimRefusal) -> ApiResult {
     Ok(json_response(200, json!({ "paid": false, "reason": reason })))
+}
+
+/// #2884: one line per refusal, for looking a claim up: its seed and reason, no account.
+fn log_refused(seed: &str, reason: ClaimRefusal) {
+    log_info(
+        "practice.claim.refused",
+        json!({ "seed": seed, "reason": reason }),
+    );
+}
+
+/// #2884: a refusal made before the burn, counted in `tx` (which wrote nothing else) and committed,
+/// then logged and answered. A failed count is only logged: the answer is as before.
+async fn refuse_unburned(tx: StoreResult<Tx<'_>>, seed: &str, reason: ClaimRefusal) -> ApiResult {
+    let counted: StoreResult<()> = async move {
+        let mut tx = tx?;
+        tx.economy_practice_claim_count(ClaimBucket::Refused(reason), now_ms())
+            .await?;
+        tx.commit().await
+    }
+    .await;
+    if let Err(error) = counted {
+        log_warn(
+            "practice.claim.countFailed",
+            json!({ "seed": seed, "reason": reason, "message": error.to_string() }),
+        );
+    }
+    log_refused(seed, reason);
+    refused(reason)
 }
 
 /// `POST /api/practice/seeds` with `{ difficulty, humanSeat, deck, catalog }` (`AuthLevel::Active`).
@@ -179,7 +211,7 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let claim: ClaimRequest = body_of(&req.body, "a practice game's claim")?;
     if !app.economy_live {
-        return refused(ClaimRefusal::EconomyOff);
+        return refuse_unburned(app.db.begin(None).await, &claim.seed, ClaimRefusal::EconomyOff).await;
     }
 
     // The seed, burned before the check, so a claim pays once whatever happens after; the claim
@@ -191,19 +223,19 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let Some(held) = tx.economy_practice_seed_get(&profile.id, &claim.seed).await? else {
-        return refused(ClaimRefusal::UnknownSeed);
+        return refuse_unburned(Ok(tx), &claim.seed, ClaimRefusal::UnknownSeed).await;
     };
     if held.claimed_at.is_some() {
-        return refused(ClaimRefusal::AlreadyClaimed);
+        return refuse_unburned(Ok(tx), &claim.seed, ClaimRefusal::AlreadyClaimed).await;
     }
     if now - held.issued_at > SEED_TTL_MS {
-        return refused(ClaimRefusal::Expired);
+        return refuse_unburned(Ok(tx), &claim.seed, ClaimRefusal::Expired).await;
     }
     if !tx
         .economy_practice_seed_claim(&profile.id, &claim.seed, now, &claimed)
         .await?
     {
-        return refused(ClaimRefusal::AlreadyClaimed);
+        return refuse_unburned(Ok(tx), &claim.seed, ClaimRefusal::AlreadyClaimed).await;
     }
     tx.commit().await?;
 
@@ -225,7 +257,11 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
             }),
         )),
         Settlement::Refused(reason) => refused(reason),
-        Settlement::Already => refused(ClaimRefusal::AlreadyClaimed),
+        // #2884: the settle that marked the seed first counted the claim, so this counts nothing.
+        Settlement::Already => {
+            log_refused(&claim.seed, ClaimRefusal::AlreadyClaimed);
+            refused(ClaimRefusal::AlreadyClaimed)
+        }
     }
 }
 
@@ -296,7 +332,8 @@ async fn settle(
     let verified = match check(app, held, claim.result, claim.log).await? {
         Ok(verified) => verified,
         Err(reason) => {
-            mark_refused(app, &profile_id, &seed).await;
+            log_refused(&seed, reason);
+            mark_refused(app, &profile_id, &seed, reason).await;
             return Ok(Settlement::Refused(reason));
         }
     };
@@ -319,13 +356,20 @@ async fn settle(
     })
 }
 
-/// [[R2422000]]: a refused claim's seed marked `refused`, in a transaction of its own. A failure is
-/// only logged: the claim stays unsettled for the sweep to refuse.
-async fn mark_refused(app: &App, profile_id: &str, seed: &str) {
+/// [[R2422000]]: a refused claim's seed marked `refused`, in a transaction of its own, and counted
+/// under `reason` only when this marked it (#2884). A failure is only logged: the claim stays
+/// unsettled for the sweep to refuse.
+async fn mark_refused(app: &App, profile_id: &str, seed: &str, reason: ClaimRefusal) {
     let marked: StoreResult<()> = async {
         let mut tx = app.db.begin(Some(profile_id)).await?;
-        tx.economy_practice_seed_settle(profile_id, seed, PracticeOutcome::Refused, now_ms())
-            .await?;
+        let at = now_ms();
+        if tx
+            .economy_practice_seed_settle(profile_id, seed, PracticeOutcome::Refused, at)
+            .await?
+        {
+            tx.economy_practice_claim_count(ClaimBucket::Refused(reason), at)
+                .await?;
+        }
         tx.commit().await
     }
     .await;
@@ -348,9 +392,10 @@ async fn pay(
     board: Option<&[LastBoardEntry]>,
 ) -> StoreResult<Option<GameEconomy>> {
     let mut tx = app.db.begin(Some(&summary.profile_id)).await?;
+    let at = now_ms();
     // R2422000: the mark first, and only where there is none, so a pay lands once whoever runs it.
     if !tx
-        .economy_practice_seed_settle(&summary.profile_id, seed, PracticeOutcome::Paid, now_ms())
+        .economy_practice_seed_settle(&summary.profile_id, seed, PracticeOutcome::Paid, at)
         .await?
     {
         return Ok(None);
@@ -360,6 +405,9 @@ async fn pay(
         tx.last_boards_put(&summary.profile_id, LastBoardKind::Practice, board, summary.at)
             .await?;
     }
+    // #2884: the count last, so the day's row, which every claim shares, is taken after the
+    // account's lock and held only until the commit.
+    tx.economy_practice_claim_count(ClaimBucket::Paid, at).await?;
     tx.commit().await?;
     Ok(Some(paid))
 }

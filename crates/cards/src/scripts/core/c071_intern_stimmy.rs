@@ -59,11 +59,12 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     fn setup(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

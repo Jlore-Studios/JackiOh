@@ -67,20 +67,22 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const GOING_LONG: &str = "core-084"; // Field Spell, cost 2 embiggen 4, no Quickdraw (#2521)
-    const BIGOT: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
+    const SPECIESIST: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
     const MAGIC_JAMMED: &str = "core-036"; // Spell, 1 — "Destroy target backrow card; Lock its zone"
     const STOCKPILE: &str = "core-005"; // the spare card that keeps a turn meaningful (§2.5)
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
     const SCARAB: &str = "core-007"; // 1/1, no Taunt — a body of p1's so §2.5 never auto-ends the turn
 
-    /// Bigot at the 6/1 these hits are measured with.
+    /// Speciesist at the 6/1 these hits are measured with.
     fn six_one() -> Value {
-        json!({ "def": BIGOT, "statsOverride": { "attack": 6, "health": 1 } })
+        json!({ "def": SPECIESIST, "statsOverride": { "attack": 6, "health": 1 } })
     }
 
     /// `extra` with the spare hand `[STOCKPILE, TIMMY]` and library `[MENACE, TIMMY]` set.
@@ -118,7 +120,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_gives_armor_3_or_paid_6_and_a_degrade_armor_1_or_paid_4() {
         for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 6), (false, true, 4)] {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
                 "p2": spare(json!({ "field": [six_one()] })),
@@ -196,14 +197,13 @@ mod tests {
 
         #[test]
         fn s4_4_step_2_paid_2_gives_your_hero_armor_2_so_a_6_attack_hit_lands_for_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
                 "p2": { "field": [six_one()], "hand": [STOCKPILE] },
             }));
 
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![4]);
             s.expect_health(P1, 26);
@@ -211,13 +211,12 @@ mod tests {
 
         #[test]
         fn your_hero_the_armor_protects_its_controller_only() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [GOING_LONG], "field": [six_one()], "hand": [STOCKPILE] },
                 "p2": { "hand": [STOCKPILE] },
             }));
 
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p2"), vec![6]);
             s.expect_health(P2, 24);
@@ -225,7 +224,6 @@ mod tests {
 
         #[test]
         fn embiggen_4_costs_4_mana_and_gives_armor_5_so_the_same_6_attack_hit_lands_for_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
                 "p2": spare(json!({ "field": [six_one()] })),
@@ -235,7 +233,7 @@ mod tests {
             s.expect_mana(P1, 0); // MAX_MANA 4 − the embiggen price 4
 
             s.end_turn(); // p2's turn
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
             s.expect_health(P1, 29);
@@ -243,7 +241,6 @@ mod tests {
 
         #[test]
         fn the_base_price_is_still_2_and_paying_it_gives_armor_2_rather_than_5() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
                 "p2": spare(json!({ "field": [six_one()] })),
@@ -253,7 +250,7 @@ mod tests {
             s.expect_mana(P1, 2);
 
             s.end_turn();
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![4]);
             s.expect_health(P1, 26);
@@ -261,15 +258,14 @@ mod tests {
 
         #[test]
         fn the_armor_stops_the_moment_the_field_spell_leaves_the_backrow() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
                 "p2": { "field": [six_one(), six_one()], "hand": [MAGIC_JAMMED, STOCKPILE] },
             }));
             let going_long = s.backrow(P1, 1).expect("Going Long in the backrow");
-            let first = s.unit(P2, 1).expect("the first Bigot");
-            let second = s.unit(P2, 2).expect("the second Bigot");
+            let first = s.unit(P2, 1).expect("the first Speciesist");
+            let second = s.unit(P2, 2).expect("the second Speciesist");
 
             s.attack(&first, "hero"); // 6 − 2 = 4
             s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&going_long.id) }));
@@ -287,7 +283,6 @@ mod tests {
 
         #[test]
         fn armor_4_paid_2_on_the_radiant_face_so_a_6_attack_hit_lands_for_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [{ "def": GOING_LONG, "radiant": true }], "hand": [STOCKPILE] },
@@ -296,7 +291,7 @@ mod tests {
 
             assert_eq!(shown_armor(&s, P1), 4);
 
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), vec![2]);
             s.expect_health(P1, 28);
@@ -304,7 +299,6 @@ mod tests {
 
         #[test]
         fn paid_4_armor_10_the_radiant_embiggen_price_gives_armor_10_so_a_6_attack_hit_is_nothing_r63() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": GOING_LONG, "radiant": true }, STOCKPILE],
@@ -319,7 +313,7 @@ mod tests {
             assert_eq!(shown_armor(&s, P1), 10);
 
             s.end_turn();
-            s.attack(BIGOT, "hero");
+            s.attack(SPECIESIST, "hero");
 
             assert_eq!(damage_to(&s, "hero-p1"), Vec::<i32>::new());
             s.expect_health(P1, 30);
@@ -328,7 +322,6 @@ mod tests {
 
         #[test]
         fn the_radiant_face_is_still_a_field_spell_in_the_backrow_and_has_no_quickdraw() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": GOING_LONG, "radiant": true }, STOCKPILE],

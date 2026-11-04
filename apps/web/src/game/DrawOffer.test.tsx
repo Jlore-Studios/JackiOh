@@ -213,4 +213,19 @@ describe("the Offer draw control", () => {
     fireEvent.click(control);
     expect(onAction).toHaveBeenCalledWith({ type: "offerDraw" });
   });
+
+  it("#2883 a board with showOfferDraw off (practice's) draws no Offer draw, even while offerDraw is listed, and keeps Concede", () => {
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    render(
+      <Game
+        view={view()}
+        legal={[{ type: "endTurn" }, { type: "offerDraw" }, { type: "concede" }]}
+        onAction={onAction}
+        showOfferDraw={false}
+      />,
+    );
+    expect(screen.queryByTestId("offer-draw")).toBeNull();
+    expect(screen.getByTestId("concede")).toBeEnabled();
+    expect(onAction).not.toHaveBeenCalled();
+  });
 });

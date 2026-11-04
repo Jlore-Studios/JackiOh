@@ -12,7 +12,7 @@ use crate::rules::fixtures::damage_combat::{
     gambit_asker, grunt, husk, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle,
     recorder, replays_to, round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
-use crate::rules::fixtures::harness::{Bench, events_json, in_hand, live, live_mut, put, slot};
+use crate::rules::fixtures::harness::{Bench, events_json, in_hand, input, live, live_mut, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 const P1: PlayerId = PlayerId::P1;
@@ -75,10 +75,6 @@ fn deal(
 
 fn hero_target(player: PlayerId) -> DamageTarget {
     DamageTarget::Hero { player }
-}
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {

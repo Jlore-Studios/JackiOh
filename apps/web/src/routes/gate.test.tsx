@@ -12,6 +12,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
+import { cachedRead } from "../net/readCache.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { SKELETON_DELAY_MS } from "../skeleton/Skeleton.tsx";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -595,5 +596,23 @@ describe("R2630000 a screen opens on the page's last read of the account", () =>
     render(<Gated>{() => <p>the next screen</p>}</Gated>);
     expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
     expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R2630000 the answer is kept by the commit that shows it, so no late effect undoes a change announced after", async () => {
+    signIn();
+    serveAs("active");
+    // Looked at in the microtask after the commit that draws the screen, before any later task: a
+    // change announced there must not be undone by a kept answer written behind it.
+    let keptWhenShown: unknown = "never shown";
+    const observer = new MutationObserver(() => {
+      if (keptWhenShown === "never shown" && screen.queryByText("the first screen") !== null) {
+        keptWhenShown = cachedRead("e2e-token", "/api/auth/me");
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    render(<Gated>{() => <p>the first screen</p>}</Gated>);
+    expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
+    observer.disconnect();
+    expect(keptWhenShown).toMatchObject({ profile: { status: "active" } });
   });
 });

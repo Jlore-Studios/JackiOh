@@ -13,18 +13,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody } from "@jackioh/shared";
-import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
+import { getAudioEngine } from "../audio/index.ts";
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
 import { connectionWords } from "../game/connectionWords.ts";
 import { awaitsYou, installDevHandle, pageWake, remainingMs, viewDerivedState } from "../game/net.ts";
 import { readPlayLean } from "../game/playLean.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { getDuosAgain, offerDuosAgain, type DuosAgainStatus } from "../net/duos.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { guardLeaving, navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import { useSetting } from "../settings/index.ts";
+import { useSideline } from "../sideline/useSideline.ts";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { DUOS_CLOCK_TICK_MS } from "./config.ts";
 import { DuosChromeContext, type DuosChrome, type DuosPlayAgain } from "./context.ts";
@@ -209,10 +213,38 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
     document.title = yourMove ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.duos(matchId));
   }, [yourMove, matchId, locale]);
 
+  // R2973000: while the co-op game is live, every way off the board (its Back, the browser's Back, any
+  // in-app move but a forced one) asks first and names the teammate playing on and the AI taking the
+  // seat after the disconnect grace (§13.8). A finished game, or a closed or refused socket, has
+  // nothing to come back to, so it is left at once.
+  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
+  const atStake =
+    view !== null && view.result === null && match.connection !== "closed" && match.connection !== "refused";
+  useEffect(() => {
+    if (!atStake) return;
+    const release = guardLeaving((leave) => {
+      setLeaving({ leave });
+    });
+    return () => {
+      release();
+      setLeaving(null);
+    };
+  }, [atStake]);
+
   const refusedWith = match.connection === "refused" ? (match.error ?? "no reason given") : null;
   useEffect(() => {
     if (refusedWith !== null) console.error(`The server refused the co-op socket for match ${matchId}: ${refusedWith}`);
   }, [refusedWith, matchId]);
+
+  // R2990000, R2990004: the watchers' emotes, each relay landing once by its `seq`, as the match route's.
+  const sideline = useSideline({ engine: getAudioEngine(), globalMute: useSetting("muteSpectatorEmotes") });
+  const watcherEmote = match.spectatorEmote;
+  const lastWatcherSeq = useRef(0);
+  useEffect(() => {
+    if (watcherEmote === null || watcherEmote.seq === lastWatcherSeq.current) return;
+    lastWatcherSeq.current = watcherEmote.seq;
+    sideline.receive(watcherEmote.watcher, watcherEmote.emote);
+  }, [watcherEmote, sideline]);
 
   const chrome: DuosChrome = useMemo(
     () => ({
@@ -221,6 +253,15 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
         <>
           {t("Co-op match")} ·{" "}
           <ConnectionLine state={match.connection} onReconnect={match.connect} />
+          {/* R2881000: the server's `watchers {count}` frame, while anyone is watching. */}
+          {match.watchers > 0 ? (
+            <>
+              {" "}·{" "}
+              <span data-testid={duosTestid.watchers} data-count={match.watchers} role="status">
+                {match.watchers === 1 ? t("A friend is watching") : t("{count} friends are watching", { count: match.watchers })}
+              </span>
+            </>
+          ) : null}
           {DEV_ONLY ? (
             <>
               {" "}· {t("match")} <code>{matchId}</code>
@@ -240,7 +281,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
       playAgain,
     }),
     // `locale`: the words are drawn in the reader's language, and follow a switch (#711).
-    [match.connection, match.connect, match.clock, match.teammate, matchId, locale, playAgain],
+    [match.connection, match.connect, match.clock, match.teammate, match.watchers, matchId, locale, playAgain],
   );
 
   if (view === null) {
@@ -308,6 +349,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
             onPing={match.sendPing}
             jloreCapped={match.jloreCapped}
             economy={match.economy}
+            sideline={sideline}
             error={
               refusedWith === null
                 ? match.error
@@ -315,6 +357,18 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
             }
           />
         </DuosChromeContext.Provider>
+        {leaving === null ? null : (
+          <ConfirmLeaveMatch
+            body={t(
+              "Your teammate plays on without you. After {seconds} seconds the AI plays your seat until you come back.",
+              { seconds: DISCONNECT_GRACE_SECONDS },
+            )}
+            onStay={() => {
+              setLeaving(null);
+            }}
+            onLeave={leaving.leave}
+          />
+        )}
       </CatalogContext.Provider>
     </div>
   );

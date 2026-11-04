@@ -76,6 +76,8 @@ mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -181,7 +183,6 @@ mod tests {
 
             #[test]
             fn s9_3_the_random_survivor_replays_from_a_json_copy_to_the_same_hash() {
-                crate::register_all();
                 let s = scenario(json!({
                     "seed": "brawl-replay",
                     "p1": { "hand": [BRAWL, FILLER], "field": [TIMMY, MENACE] },
@@ -201,7 +202,6 @@ mod tests {
 
             #[test]
             fn r46_an_indestructible_unit_stays_as_well_a_reborn_unit_comes_back() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "brawl-keywords",
                     "p1": { "hand": [BRAWL, FILLER], "field": [UNBREAKABLE, MENACE] },
@@ -235,7 +235,6 @@ mod tests {
 
             #[test]
             fn r129_with_no_unit_there_is_nothing_to_destroy_and_nothing_is_drawn() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BRAWL, FILLER] } }));
                 let cursor = s.state().rng_cursor;
                 s.play(BRAWL, json!({}));
@@ -246,7 +245,6 @@ mod tests {
 
             #[test]
             fn s8_7_a_lone_unit_is_the_survivor() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BRAWL, FILLER] }, "p2": { "field": [MENACE] } }));
                 s.play(BRAWL, json!({}));
                 s.expect_in_zone(MENACE, "field");
@@ -273,7 +271,6 @@ mod tests {
 
             #[test]
             fn r81_an_immune_to_spells_unit_can_t_be_the_chosen_survivor_and_stays_all_the_same() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BRAWL, "radiant": true }, FILLER], "field": [TIMMY] },
                     "p2": { "field": [{ "def": TOP_LOSER, "radiant": true }, MENACE] },

@@ -4,6 +4,9 @@
 // socket's loadouts dress both seats (R1834004).
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance time.
+// #2974: the watched turn clock counts down from each frame's `clockMs` (fake `performance` and `setInterval`),
+// silently, and a finished game's status line says "Game over" after its socket closes. R2990000, R2990001:
+// the watcher's dealt hand, its pick on the watch socket and the other watchers' relays, 1v1 and co-op.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,16 +14,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registeredCatalog } from "@jackioh/engine";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
+import { setAudioEngineForTests } from "../audio/engine.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf } from "../cards/cosmetics.ts";
+import { duosTestid } from "../duos/testids.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import type { Friend } from "../net/social.ts";
-import { baseView, card, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
+import { sidelineTestid } from "../sideline/testids.ts";
+import { baseView, card, duosView, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
 import { must, signIn, stubServer } from "../test/stubServer.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
+import { watchCoopOf, watchFriendOf, watchLink } from "./watchLink.ts";
 import { WatchRoute } from "./WatchRoute.tsx";
 
 /** A stubbed round trip plus a lazy route chunk can outrun the 1 s default under load. */
@@ -100,6 +108,11 @@ async function advance(ms: number): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
   });
+}
+
+/** #2974: the clock reads `performance.now()` and repaints on an interval, so both are faked with the timeouts. */
+function fakeClockTimers(): void {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance"] });
 }
 
 function wakeTab(): void {
@@ -650,5 +663,274 @@ describe("R1834004 the watched board wears both seats' loadouts", () => {
     expect(screen.getByTestId("hand-card-h-2").querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
     expect(document.querySelector('.card[data-owner="p2"] > .cf')?.getAttribute("data-frame")).toBe(theirBorder);
     expect(document.querySelector(".field")?.getAttribute("data-their-table")).toBe(table);
+  });
+});
+
+describe("#2974 the watched turn clock and a finished game's status", () => {
+  let engine: FakeAudioEngine;
+
+  beforeEach(() => {
+    engine = fakeAudioEngine();
+    setAudioEngineForTests(engine);
+  });
+
+  afterEach(() => {
+    setAudioEngineForTests(null);
+    Reflect.deleteProperty(window.navigator, "vibrate");
+  });
+
+  function clockText(): string | null {
+    return screen.getByTestId("watch-clock").textContent;
+  }
+
+  it("#2974 a frame's clockMs counts down from its arrival and a new frame resets it", async () => {
+    fakeClockTimers();
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 60 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("60s");
+
+    await advance(10 * MS_PER_SECOND);
+    expect(clockText()).toBe("50s");
+    expect(screen.getByTestId("watch-clock").getAttribute("data-remaining-ms")).toBe("50000");
+
+    // A new frame resets the countdown, even when its number repeats.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 60 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("60s");
+
+    await advance(MS_PER_SECOND);
+    expect(clockText()).toBe("59s");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 30 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("30s");
+
+    // It floors at zero and never reads a negative number.
+    await advance(40 * MS_PER_SECOND);
+    expect(clockText()).toBe("0s");
+    expect(screen.getByTestId("watch-clock").getAttribute("data-remaining-ms")).toBe("0");
+
+    // A frame with no turn clock shows none.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: null }), legal: [] });
+    expect(screen.queryByTestId("watch-clock")).toBeNull();
+  });
+
+  it("#2974 the watched clock sounds no alarm and buzzes nothing", async () => {
+    fakeClockTimers();
+    const vibrate = vi.fn(() => true);
+    Object.defineProperty(window.navigator, "vibrate", { configurable: true, value: vibrate });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    // Twelve seconds is inside the final thirty, where the player's own clock heartbeats and then ticks.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 12 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("12s");
+
+    await advance(15 * MS_PER_SECOND);
+
+    expect(clockText()).toBe("0s");
+    expect(engine.playSfx.mock.calls.filter(([id]) => id === "heartbeat" || id === "clockTick")).toEqual([]);
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it("#2974 a finished game's frame and its socket's close say Game over, never Disconnected", () => {
+    fakeClockTimers();
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", result: { winner: "p1", reason: "concede" }, clockMs: 5 * MS_PER_SECOND }), legal: [] });
+
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Game over");
+    expect(screen.getByTestId("watch-status")).not.toHaveTextContent("Connected");
+    expect(screen.queryByTestId("watch-clock")).toBeNull();
+
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Game over");
+    expect(screen.getByTestId("watch-status")).not.toHaveTextContent("Disconnected");
+    expect(connection("watch-status")).toBe("closed");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+  });
+
+  it("#2974 R2881000 a co-op watch shows the same ticking clock and a finished co-op game says Game over", async () => {
+    fakeClockTimers();
+    render(<WatchRoute matchId="m-watch" friendId="f-ann" coop />);
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: { ...duosView(1), own: baseView({ clockMs: 60 * MS_PER_SECOND }) }, legal: [] });
+    expect(clockText()).toBe("60s");
+
+    await advance(10 * MS_PER_SECOND);
+    expect(clockText()).toBe("50s");
+
+    socket.frame({ type: "view", view: { ...duosView(2), own: baseView({ clockMs: 30 * MS_PER_SECOND }) }, legal: [] });
+    expect(clockText()).toBe("30s");
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Connected");
+
+    socket.frame({ type: "view", view: duosView(3, { outcome: "win", winner: "a", reason: "concede" }), legal: [] });
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Game over");
+    expect(screen.getByTestId("watch-status")).not.toHaveTextContent("Disconnected");
+    expect(screen.queryByTestId("watch-clock")).toBeNull();
+  });
+});
+
+describe("R2881000 watching a friend's co-op game", () => {
+  function watchCoop(): void {
+    render(<WatchRoute matchId="m-watch" friendId="f-ann" coop />);
+  }
+
+  it("R2881000 a co-op watch opens /ws/watch, says hello and draws the friend's seat on the co-op board, offered nothing", async () => {
+    watchCoop();
+    const socket = latest();
+    expect(new URL(socket.url).pathname).toBe("/ws/watch");
+    socket.emit("open");
+    expect(socket.sent.map((text) => JSON.parse(text) as unknown)).toEqual([{ type: "hello", matchId: "m-watch", friendId: "f-ann" }]);
+    expect(screen.getByTestId("watch-waiting")).toBeInTheDocument();
+
+    socket.frame({ type: "view", view: duosView(1), legal: [] });
+
+    expect(screen.queryByTestId("watch-waiting")).toBeNull();
+    // The co-op board, read-only: the portal to the teammate's duel, never Both boards or Concede.
+    expect(screen.getByTestId(duosTestid.portal)).toBeInTheDocument();
+    expect(screen.queryByTestId(duosTestid.both)).toBeNull();
+    expect(screen.queryByTestId(duosTestid.concede)).toBeNull();
+    for (const board of screen.getAllByTestId("game")) expect(board.getAttribute("data-replay")).toBe("true");
+    expect(screen.getByTestId("watch-status").getAttribute("data-connection")).toBe("open");
+    await waitFor(() => {
+      expect(screen.getByTestId("watch-status")).toHaveTextContent("Ann#2");
+    }, SLOW);
+    // The screen sends nothing after its hello (CLAUDE.md rule 7).
+    expect(socket.sent).toHaveLength(1);
+  });
+
+  it("R2881000 a co-op watch's forbidden frame shows the can't-watch panel", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watchCoop();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "error", code: "forbidden", message: "you may not watch this match" });
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-refused")).toBeInTheDocument();
+    expect(connection("watch-screen")).toBe("refused");
+    await advance(WATCH_RECONNECT_MS * (WATCH_RECONNECT_ATTEMPTS + 1));
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("R2881000 a co-op view with the result ends the watch: its close reopens nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watchCoop();
+    // A live game's socket that drops is opened again.
+    latest().emit("open");
+    latest().frame({ type: "view", view: duosView(2), legal: [] });
+    latest().emit("close");
+    await advance(WATCH_RECONNECT_MS);
+    expect(sockets).toHaveLength(2);
+
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: duosView(3, { outcome: "win", winner: "a", reason: "concede" }), legal: [] });
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-status").getAttribute("data-connection")).toBe("closed");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+    await advance(WATCH_RECONNECT_MS * (WATCH_RECONNECT_ATTEMPTS + 1));
+    expect(sockets).toHaveLength(2);
+  });
+
+  it("R2881000 a co-op friend's watch link carries coop=1, which watchCoopOf reads", () => {
+    const searchOf = (link: string): string => new URL(link, "https://jackioh.test").search;
+    const coop = watchLink("m-watch", "f-ann", true);
+    const plain = watchLink("m-watch", "f-ann");
+
+    expect(new URL(coop, "https://jackioh.test").pathname).toBe(new URL(plain, "https://jackioh.test").pathname);
+    expect(watchCoopOf(searchOf(coop))).toBe(true);
+    expect(watchFriendOf(searchOf(coop))).toBe("f-ann");
+    expect(watchCoopOf(searchOf(plain))).toBe(false);
+    expect(plain).not.toContain("coop");
+  });
+});
+
+describe("R2990000 a watcher's emotes from the sidelines", () => {
+  const HAND = ["wave", "clap", "heart"];
+
+  function sentFrames(socket: FakeWatchSocket): unknown[] {
+    return socket.sent.map((text) => JSON.parse(text) as unknown);
+  }
+
+  function shows(): { watcher: string | null; text: string | null }[] {
+    return screen.queryAllByTestId(sidelineTestid.emote).map((show) => ({
+      watcher: show.getAttribute("data-watcher"),
+      text: show.querySelector(".sideline-emote__name")?.textContent ?? null,
+    }));
+  }
+
+  it("R2990000 a 1v1 watcher's pick goes out as {type:'emote'} and shows as You; another watcher's relay shows by name", () => {
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "spectatorHand", emotes: HAND });
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+
+    fireEvent.click(screen.getByTestId(sidelineTestid.menu));
+    expect(screen.getAllByRole("menuitem").map((item) => item.getAttribute("data-testid"))).toEqual(HAND.map((emote) => `emote-${emote}`));
+    fireEvent.click(screen.getByTestId("emote-clap"));
+
+    expect(sentFrames(socket)).toEqual([
+      { type: "hello", matchId: "m-watch", friendId: "f-ann" },
+      { type: "emote", emote: "clap" },
+    ]);
+    expect(shows()).toEqual([{ watcher: "", text: "You" }]);
+
+    socket.frame({ type: "spectatorEmote", watcher: "Bo#7", emote: "sob" });
+    expect(shows()).toEqual([
+      { watcher: "", text: "You" },
+      { watcher: "Bo#7", text: "Bo#7" },
+    ]);
+    // A relay is never answered.
+    expect(socket.sent).toHaveLength(2);
+  });
+
+  it("R2990001 the strip offers the hand the socket dealt only while it is open, and a hand with a voice line is no hand", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "spectatorHand", emotes: ["greetings", "wave"] });
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
+
+    socket.frame({ type: "spectatorHand", emotes: HAND });
+    fireEvent.click(screen.getByTestId(sidelineTestid.menu));
+    expect(screen.getByTestId("emote-menu")).toBeInTheDocument();
+
+    socket.emit("close");
+    expect(connection("watch-status")).toBe("connecting");
+    expect(screen.queryByTestId(sidelineTestid.menu)).toBeNull();
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+
+    // The reopened socket offers the hand again, with the menu shut.
+    await advance(WATCH_RECONNECT_MS);
+    latest().emit("open");
+    expect(screen.getByTestId(sidelineTestid.menu)).toBeInTheDocument();
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+  });
+
+  it("R2990000 a co-op watch shows the strip: its pick goes out on the watch socket and the others' relays show by name", () => {
+    render(<WatchRoute matchId="m-watch" friendId="f-ann" coop />);
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "spectatorHand", emotes: HAND });
+    socket.frame({ type: "view", view: duosView(1), legal: [] });
+
+    expect(screen.getAllByTestId(sidelineTestid.strip)).toHaveLength(1);
+    socket.frame({ type: "spectatorEmote", watcher: "Bo#7", emote: "sob" });
+    expect(shows()).toEqual([{ watcher: "Bo#7", text: "Bo#7" }]);
+
+    fireEvent.click(screen.getByTestId(sidelineTestid.menu));
+    fireEvent.click(screen.getByTestId("emote-heart"));
+    expect(sentFrames(socket).at(-1)).toEqual({ type: "emote", emote: "heart" });
+    expect(shows().map((show) => show.text)).toEqual(["Bo#7", "You"]);
   });
 });

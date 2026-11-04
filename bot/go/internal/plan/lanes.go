@@ -18,8 +18,9 @@ import (
 )
 
 // Lanes is the runs that hold work now: item number (0 for a suggestion survey) -> provider id.
-// `planning` are the items whose run is a planning run: those hold the planning lane
-// (`Pool.plan_lanes`), not a lane of their provider's. GitHub's runners and the bot's machine
+// `planning` are the items whose run is a planning run on the planning lane (`Pool.plan_lanes`):
+// those hold no lane of their provider's (a planning run in a lane of its own subscription,
+// `queue.InLaneKey`, #2903, holds that lane as a build does). GitHub's runners and the bot's machine
 // have lanes of their own, so neither waits on the other: `limit` is GitHub's
 // (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and `machine`
 // names the subscriptions that run on the machine. Every run holds a runner where it runs, a
@@ -45,8 +46,14 @@ type Lanes struct {
 	Filling      map[int]bool    // default: field(default_factory=set)
 	InForce      map[string]int  // default: field(default_factory=dict)
 	// Reserved are the items whose lane is reserved for their own review run (#2748,
-	// `queue.OwnReviewReserved`): held by no run yet, but by the subscription it is for.
+	// `queue.OwnReviewReserved`), or for their build by the planning run that held it (#2903,
+	// `queue.BuildReserved`): held by no run yet, but by the subscription it is for.
 	Reserved map[int]bool // default: field(default_factory=set)
+	// Builds are those of the reserved lanes that are kept for a build (#2903), not an own review.
+	Builds map[int]bool // default: field(default_factory=set)
+	// Turns are those kept for a pull request whose turn came (#2948, `queue.TurnReserved`): its
+	// conflict revision on the subscription and model that approved it.
+	Turns map[int]bool // default: field(default_factory=set)
 }
 
 // LanesInForce is how many lanes each subscription may hold for a run that starts now, by id
@@ -225,7 +232,8 @@ func (x *Lanes) WithRun(number int, providerID string, action string, filling bo
 	}
 	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
 		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
-		InForce: x.InForce, Reserved: without(x.Reserved, number)}
+		InForce: x.InForce, Reserved: without(x.Reserved, number), Builds: without(x.Builds, number),
+		Turns: without(x.Turns, number)}
 }
 
 // without is `set - {number}`.
@@ -265,7 +273,8 @@ func (x *Lanes) Without(number int) *Lanes {
 	}
 	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
 		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
-		InForce: x.InForce, Reserved: without(x.Reserved, number)}
+		InForce: x.InForce, Reserved: without(x.Reserved, number), Builds: without(x.Builds, number),
+		Turns: without(x.Turns, number)}
 }
 
 // Describe is plan.Lanes.describe.
@@ -286,7 +295,11 @@ func (x *Lanes) Describe() string {
 		if x.Planning[n] {
 			part += " (planning)"
 		}
-		if x.Reserved[n] {
+		if x.Reserved[n] && x.Builds[n] {
+			part += " (reserved for its build)"
+		} else if x.Reserved[n] && x.Turns[n] {
+			part += " (reserved for its turn)"
+		} else if x.Reserved[n] {
 			part += " (reserved for its own review)"
 		}
 		parts = append(parts, part)
@@ -354,9 +367,11 @@ func WorkingThreads(ctx *hctx.Context) []*pyjson.Object {
 
 // ReadLanes is the lanes held by runs that are still going. A run that ended without
 // delivering holds nothing: housekeeping requeues its item. A pull request whose build handed its
-// lane to its own review run (#2748, `queue.OwnReviewReserved`) holds that lane for the
-// subscription it is reserved for until the reservation runs out, so no other item takes it in
-// between; the own review run itself takes it (`Lanes.Without`).
+// lane to its own review run (#2748, `queue.OwnReviewReserved`), an issue whose planning run handed
+// its lane to its build (#2903, `queue.BuildReserved`, `reservedBuilds`), and a pull request whose
+// turn came after it waited behind another (#2948, `queue.TurnReserved`, `reservedTurns`), hold that
+// lane for the subscription it is reserved for until the reservation runs out, so no other item takes
+// it in between; the run it is for takes it (`Lanes.Without`).
 func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	pool := ctx.Cfg.Pool
 	machine := map[string]bool{}
@@ -367,7 +382,8 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	}
 	lanes := &Lanes{Limit: pool.MaxParallel, Held: map[int]string{}, Planning: map[int]bool{},
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
-		Filling: map[int]bool{}, InForce: LanesInForce(ctx, state), Reserved: map[int]bool{}}
+		Filling: map[int]bool{}, InForce: LanesInForce(ctx, state), Reserved: map[int]bool{},
+		Builds: map[int]bool{}, Turns: map[int]bool{}}
 	lanes.Shared = OthersOnGithub(ctx)
 	for _, thread := range WorkingThreads(ctx) {
 		number := py.MustInt(thread.Get("number"))
@@ -382,7 +398,7 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 		}
 		if RunAlive(ctx, record.Get("run_id")) {
 			lanes.Held[number] = py.OrStr(record.Get("provider"), providers.LegacyProvider)
-			if eqStr(record.Get("action"), "plan") {
+			if queue.PlanningPool(record) {
 				lanes.Planning[number] = true
 			}
 			if FillsIn(pool, record) {
@@ -390,11 +406,71 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 			}
 		}
 	}
+	reservedBuilds(ctx, state, lanes)
+	reservedTurns(ctx, state, lanes)
 	survey := state.Obj("suggest")
 	if survey.Truthy("provider") && RunAlive(ctx, survey.Get("run_id")) {
 		lanes.Held[0] = py.Str(survey.Get("provider"))
 	}
 	return lanes
+}
+
+// reservedBuilds puts into `lanes` the lanes planning runs handed to their items' builds (#2903,
+// `queue.BuildReserved`): an issue still open, queued to build (`bot:build`), neither held by a run
+// nor kept from the bot, whose reservation has not run out. An issue GitHub cannot read holds none.
+func reservedBuilds(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes) {
+	items := state.Obj("items")
+	for _, key := range items.Keys() {
+		record, isDict := items.Get(key).(*pyjson.Object)
+		if !py.IsDecimal(key) || !isDict || !queue.BuildReserved(record, ctx.Now()) {
+			continue
+		}
+		number := py.MustInt(key)
+		if _, held := lanes.Held[number]; held {
+			continue
+		}
+		var thread *pyjson.Object
+		if _, failed := herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(number) }); failed {
+			continue
+		}
+		names := queue.LabelNames(thread)
+		if !eqStr(thread.Get("state"), "open") || thread.Has("pull_request") || !names[config.LabelBuild] ||
+			config.IsLive(names) || queue.IsHuman(names) {
+			continue
+		}
+		lanes.Held[number] = queue.BuildNextOf(record).Str("provider")
+		lanes.Reserved[number] = true
+		lanes.Builds[number] = true
+	}
+}
+
+// reservedTurns puts into `lanes` the lanes kept for pull requests whose turn came (#2948,
+// `queue.TurnReserved`): one still open, queued to revise (`bot:revise`), neither held by a run nor
+// kept from the bot, whose reservation has not run out. One GitHub cannot read holds none.
+func reservedTurns(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes) {
+	items := state.Obj("items")
+	for _, key := range items.Keys() {
+		record, isDict := items.Get(key).(*pyjson.Object)
+		if !py.IsDecimal(key) || !isDict || !queue.TurnReserved(record, ctx.Now()) {
+			continue
+		}
+		number := py.MustInt(key)
+		if _, held := lanes.Held[number]; held {
+			continue
+		}
+		var thread *pyjson.Object
+		if _, failed := herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(number) }); failed {
+			continue
+		}
+		names := queue.LabelNames(thread)
+		if !eqStr(thread.Get("state"), "open") || !thread.Has("pull_request") || !names[config.LabelRevise] ||
+			config.IsLive(names) || queue.IsHuman(names) {
+			continue
+		}
+		lanes.Held[number] = queue.TurnOf(record).Str("provider")
+		lanes.Reserved[number] = true
+		lanes.Turns[number] = true
+	}
 }
 
 // FillsIn is: an item's run is in another subscription's lane: it went to its provider's

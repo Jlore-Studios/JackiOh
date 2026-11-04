@@ -1,4 +1,5 @@
-// "Leave the match?": what every way off a live online match opens (R2479000). Leaving closes the
+// "Leave the match?": what every way off a live online match opens (R2479000). It takes its line
+// of consequence as a prop (R2973000): the 1v1 loss line unless given. Leaving closes the
 // match socket, and the server's disconnect grace runs: back within DISCONNECT_GRACE_SECONDS, or the
 // match counts as a loss (§9.5). Stay is the default: it takes the focus, and Escape, Back (R2127000)
 // or a click outside the panel means the same. It decides nothing (CLAUDE.md rule 7): Leave makes
@@ -20,6 +21,8 @@ export type ConfirmLeaveMatchProps = {
   onStay(): void;
   /** "Leave": make the held move. */
   onLeave(): void;
+  /** The line of consequence under the question; the 1v1 loss line unless given. */
+  body?: string;
 };
 
 export const leaveMatchTestid = {
@@ -28,7 +31,7 @@ export const leaveMatchTestid = {
   leave: "leave-match-leave",
 } as const;
 
-export default function ConfirmLeaveMatch({ onStay, onLeave }: ConfirmLeaveMatchProps): ReactElement {
+export default function ConfirmLeaveMatch({ onStay, onLeave, body }: ConfirmLeaveMatchProps): ReactElement {
   useLocale();
   const titleId = useId();
   const bodyId = useId();
@@ -63,9 +66,10 @@ export default function ConfirmLeaveMatch({ onStay, onLeave }: ConfirmLeaveMatch
           {t("Leave the match?")}
         </h2>
         <p className="concede-dialog__body" id={bodyId}>
-          {t("It goes on without you. Come back within {seconds} seconds or it counts as a loss.", {
-            seconds: DISCONNECT_GRACE_SECONDS,
-          })}
+          {body ??
+            t("It goes on without you. Come back within {seconds} seconds or it counts as a loss.", {
+              seconds: DISCONNECT_GRACE_SECONDS,
+            })}
         </p>
         <div className="concede-dialog__actions">
           <button

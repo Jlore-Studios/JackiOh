@@ -58,6 +58,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -370,7 +372,6 @@ mod tests {
 
         #[test]
         fn r1000_unspent_yuan_is_gone_on_leave() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "market-twice",
                 "p1": { "hand": [ID, ID, FILLER], "library": [FILLER, FILLER] },
@@ -411,7 +412,6 @@ mod tests {
 
         #[test]
         fn yuan_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "market-param",
                 "p1": { "hand": [ID, FILLER], "library": [FILLER, FILLER] },

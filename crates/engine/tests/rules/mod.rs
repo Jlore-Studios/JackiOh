@@ -1,11 +1,12 @@
 //! The engine's rule tests (SURFACE §1), plus the test-only scripts and catalogs in `fixtures`. Each
 //! file starts with `use jackioh_engine::testkit::*;`.
 //!
-//! The modules from `a` to `o`, in the `rules` binary; those from `p` on are `mod_2.rs`'s, in
-//! `rules_2` (`tests/rules_2.rs`). One binary took CI's `rust (test engine rules)` past seven
-//! minutes, nearly all of it compiling, so the two compile side by side, each with `fixtures`
-//! (#2090). The cut is not the middle: `rules_2`'s replays take the longest to run. A new module
-//! goes in the file its name falls in.
+//! The modules from `a` to `o`, in the `rules` binary; those from `p` through `r` are `mod_2.rs`'s,
+//! in `rules_2` (`tests/rules_2.rs`), and the rest are `mod_3.rs`'s, in `rules_3` (`tests/rules_3.rs`).
+//! One binary took CI's `rust (test engine rules)` past seven minutes, nearly all of it compiling,
+//! so the three compile side by side, each with `fixtures` (#2090, #2957). The `p`–`r` / `s`–`z` cut
+//! halves the old `rules_2` binary's compile and run time. A new module goes in the file its name
+//! falls in.
 
 pub mod activate;
 pub mod activation_spend_use;
@@ -161,6 +162,7 @@ pub mod graveyard_play_reason;
 pub mod graveyard_reset;
 pub mod hand_size;
 pub mod handicap;
+pub mod hero_armor;
 pub mod hero_floor;
 pub mod hero_immune;
 pub mod hero_power;

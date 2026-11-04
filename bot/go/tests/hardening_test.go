@@ -156,19 +156,21 @@ func TestHardening_TheBuildLabelOnAPullRequestAsksForARevision(t *testing.T) {
 	assertEqual(t, gh.LabelNames(9), setOf(config.LabelRevise))
 }
 
+// A failed run and a cancelled one (one the bot did not stop itself) each get a CI fix (#2948: no
+// re-run first).
 func TestHardening_AFailedAndACancelledRunCountAsCI(t *testing.T) {
 	gh, ctx := newHardeningEvents()
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR}, SHA: "s1"})
-	for _, run := range [][2]string{{"CI", "failure"}, {"CI", "cancelled"}} {
+	for i, run := range [][2]string{{"CI", "failure"}, {"CI", "cancelled"}} {
 		name, conclusion := run[0], run[1]
 		payload := pyjson.New("name", name, "conclusion", conclusion, "head_branch", "bot/issue-5",
-			"head_sha", "s1", "id", len(gh.Reruns)+1, "run_attempt", 1,
+			"head_sha", "s1", "id", i+1, "run_attempt", 1,
 			"pull_requests", []any{pyjson.New("number", 9)})
-		flowUpdateItem(ctx, 9, pyjson.New("ci_reruns", pyjson.New()))
-		events.Handle(ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Bot,
-			"workflow_run", payload))
+		gh.RemoveLabel(9, config.LabelRevise) // the last fix landed
+		assertEqual(t, events.Handle(ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Bot,
+			"workflow_run", payload)), []string{"#9: queued a CI fix"})
 	}
-	assertEqual(t, len(gh.Reruns), 2)
+	assertEqual(t, []any{len(gh.Reruns), dig(t, ctx.Store.Load(), "items", "9", "ci_fixes")}, []any{0, 2})
 }
 
 func TestHardening_RunNowIsWrittenDownBeforeItStarts(t *testing.T) {

@@ -50,6 +50,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -100,7 +102,6 @@ mod tests {
 
     #[test]
     fn nothing_at_the_opponents_start() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
@@ -115,7 +116,6 @@ mod tests {
 
     #[test]
     fn the_hand_cap_burns_the_cn_card_first() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],

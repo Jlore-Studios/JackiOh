@@ -8,7 +8,9 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::indestructible;
-use crate::rules::fixtures::harness::{Bench, both, events_of_type, live, live_mut, new_game, put, slot};
+use crate::rules::fixtures::harness::{
+    Bench, both, events_of_type, ids, live, live_mut, new_game, put, slot,
+};
 
 // Fixture cards.
 
@@ -180,10 +182,6 @@ fn chosen() -> Value {
 
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {

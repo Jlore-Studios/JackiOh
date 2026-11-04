@@ -326,17 +326,24 @@ export const HEADERS_FILE = "_headers";
 /** What `public/_headers` spells in place of its CSP's `connect-src` sources, which differ by build. */
 export const CONNECT_SRC_PLACEHOLDER = "%CONNECT_SRC%";
 
+/** R2983000: Google Identity Services' requests (Google's own sign-in button), as the CSP names them. */
+export const GOOGLE_IDENTITY_SOURCE = "https://accounts.google.com/gsi/";
+
 /** Any `%NAME%` left in a written file: a placeholder the build did not fill. */
 const PLACEHOLDER = /%[A-Z][A-Z0-9_]*%/u;
 
 /**
  * The CSP's `connect-src` for a build served from `origin`: 'self', where the server answers
- * `/api/*` (wrangler.jsonc `run_worker_first`), Supabase's origin, which a build without
- * `VITE_SUPABASE_URL` never signs in through, and `wss://` on the build's own host for the sockets.
+ * `/api/*` (wrangler.jsonc `run_worker_first`), Supabase's origin and Google Identity Services'
+ * (R2983000), which a build without `VITE_SUPABASE_URL` never signs in through, and `wss://` on the
+ * build's own host for the sockets.
  */
 export function connectSources(origin: string, supabaseUrl: string | undefined): string {
   const sources = ["'self'"];
-  if (supabaseUrl !== undefined && supabaseUrl.length > 0) sources.push(new URL(supabaseUrl).origin);
+  if (supabaseUrl !== undefined && supabaseUrl.length > 0) {
+    sources.push(new URL(supabaseUrl).origin);
+    sources.push(GOOGLE_IDENTITY_SOURCE);
+  }
   sources.push(`wss://${new URL(origin).host}`);
   return sources.join(" ");
 }

@@ -118,6 +118,8 @@ pub fn script_v0_4_4b() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const OUTBREAK: &str = "classic-039";
     const SLIME: &str = "classic-027"; // (0) Unit 1/1: placements on it doubled.
     const CHALICE: &str = "classic-087"; // (X) Field Spell.
@@ -157,7 +159,6 @@ mod tests {
 
     #[test]
     fn r1748003_draw_per_moves_with_a_buff_or_a_nerf() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }], "library": lib(6) },
             "p2": { "hand": [ANCHOR] },
@@ -193,7 +194,6 @@ mod tests {
 
             #[test]
             fn places_1_plague_counter_on_your_own_permanent_then_draws_one_card_per_token_on_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 2 } }], "library": lib(5) },
                     "p2": { "hand": [ANCHOR] },
@@ -209,7 +209,6 @@ mod tests {
 
             #[test]
             fn your_own_permanent_always_draws_even_at_or_above_its_cost() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -224,7 +223,6 @@ mod tests {
 
             #[test]
             fn an_enemy_permanent_with_fewer_tokens_than_its_cost_it_draws_one_per_token() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -240,7 +238,6 @@ mod tests {
 
             #[test]
             fn r15_r171_an_enemy_permanent_reaching_its_cost_is_stolen_into_the_same_lane_an_entry_and_nothing_is_drawn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(5) },
                     "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "lane": 2, "counters": { "plague": 2 } }] },
@@ -259,7 +256,6 @@ mod tests {
 
             #[test]
             fn a_0_cost_enemy_permanent_is_always_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [SLIME] },
@@ -273,7 +269,6 @@ mod tests {
 
             #[test]
             fn c_27_a_pestilent_slime_doubles_the_placement_your_own_slime_takes_2_and_you_draw_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -288,7 +283,6 @@ mod tests {
 
             #[test]
             fn r15_with_no_free_zone_in_your_row_the_stolen_card_stays_with_them_and_nothing_is_drawn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE, MENACE], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
@@ -304,7 +298,6 @@ mod tests {
 
             #[test]
             fn s2_4_the_hand_cap_burns_the_draws_that_do_not_fit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [OUTBREAK, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
@@ -323,7 +316,6 @@ mod tests {
 
             #[test]
             fn r33_a_stolen_face_down_trap_is_read_by_you_alone_from_then_on() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": PAWN, "faceUp": false }] },
@@ -340,7 +332,6 @@ mod tests {
 
             #[test]
             fn r177_a_face_down_enemy_option_and_the_placement_on_it_never_name_it_to_you() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
@@ -358,7 +349,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_on_the_field_costs_the_x_it_was_played_for_a_buff_billy_played_for_3_is_not_stolen_by_1_token() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(4) },
@@ -379,7 +369,6 @@ mod tests {
 
             #[test]
             fn r396_c_87_a_plague_chalice_played_for_3_enters_with_3_plague_counters_so_1_more_reaches_its_x_and_steals_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(4) },
@@ -398,7 +387,6 @@ mod tests {
 
             #[test]
             fn r396_an_x_card_that_arrived_with_no_x_chosen_costs_0_on_the_field_so_it_is_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "backrow": [CHALICE] },
@@ -412,7 +400,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_places_2_an_enemy_2_cost_permanent_is_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
@@ -432,7 +419,6 @@ mod tests {
 
             #[test]
             fn places_2_your_own_permanent_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "field": [VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -447,7 +433,6 @@ mod tests {
 
             #[test]
             fn places_2_an_enemy_3_cost_permanent_with_1_already_reaches_3_and_is_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "counters": { "plague": 1 } }] },
@@ -462,7 +447,6 @@ mod tests {
 
             #[test]
             fn r396_a_buff_billy_played_for_3_is_not_stolen_by_2_tokens_it_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(4) },
@@ -480,7 +464,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_places_3_a_buff_billy_played_for_3_reaches_its_x_and_is_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [{ "def": OUTBREAK, "radiant": true }, ANCHOR], "library": lib(4) },

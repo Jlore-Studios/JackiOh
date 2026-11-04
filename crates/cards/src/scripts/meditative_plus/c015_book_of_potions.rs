@@ -70,7 +70,6 @@ mod tests {
 
     #[test]
     fn r386_cards_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "m+015-param",
             "p1": { "hand": [BOOK, FILLER] },

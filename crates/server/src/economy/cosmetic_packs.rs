@@ -29,7 +29,7 @@ use crate::config::{
     CHASE_SHARD_PACKS, COSMETIC_PACK_CARD_WEIGHTS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
     PACK_FLOORED_SLOT,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics};
+use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics, implying, offered};
 use crate::db::store::Tx;
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
 use crate::economy::packs::{BarsSettled, bar_before, grant_counter, grant_unlocked, settle_bars};
@@ -38,7 +38,7 @@ use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryGrant, InventoryItem, OwnedCosmetics,
 };
 use crate::economy::tiers::{TierOdds, cosmetic_odds, cosmetic_tier};
-use crate::economy::tokens::{BarState, choice_of, conflict, cosmetic_bar_points, held};
+use crate::economy::tokens::{BarState, choice_of, conflict, cosmetic_bar_points, held, unsold};
 
 // A cosmetic pack holds a slot, and a full Chase Shard bar holds a pack.
 const _: () = assert!(COSMETIC_PACK_SLOTS >= 1);
@@ -173,18 +173,22 @@ pub struct CosmeticPacks {
     pub odds: CosmeticPackOdds,
 }
 
-/// The pool cards a per-card cosmetic is not owned on: all of them, or a full art's own card
-/// alone (R1313000). An account cosmetic has none.
+/// The pool cards a per-card cosmetic is not owned on: those it is offered (R2725001), all of them for a foil,
+/// a finish or a border, a full art's own card alone (R1313000). One a retired full art owns by implication is
+/// owned there (R2725002). An account cosmetic has none.
 fn placements<'p>(cosmetic: &Cosmetic, pool: &'p [PoolCard], holdings: &CosmeticHoldings) -> Vec<&'p str> {
     if !cosmetic.kind.is_per_card() {
         return Vec::new();
     }
     pool.iter()
-        .filter(|card| cosmetic.card.as_deref().is_none_or(|names| names == card.id))
+        .filter(|card| offered(cosmetic, Some(&card.id)))
         .filter(|card| {
-            !holdings
-                .card_cosmetics
-                .contains(&(card.id.clone(), cosmetic.id.clone()))
+            let held = |id: &str| {
+                holdings
+                    .card_cosmetics
+                    .contains(&(card.id.clone(), id.to_string()))
+            };
+            !held(&cosmetic.id) && !implying(&card.id, &cosmetic.id).any(held)
         })
         .map(|card| card.id.as_str())
         .collect()
@@ -517,6 +521,9 @@ pub async fn buy_chase_once(
         .iter()
         .find(|entry| entry.id == cosmetic_id)
         .ok_or_else(|| bad_request(format!("no cosmetic is named \"{cosmetic_id}\"")))?;
+    if let Some(why) = unsold(cosmetic, card_id) {
+        return Err(bad_request(why));
+    }
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
     if let Some(before) = replayed(&mut tx, profile_id, request).await? {
@@ -679,6 +686,7 @@ mod tests {
             chase: rarity.is_chase(),
             jlorious: false,
             card: None,
+            offer: Vec::new(),
         }
     }
 
@@ -867,7 +875,8 @@ mod tests {
             .into_iter()
             .map(|entry| entry.id)
             .collect();
-        assert_eq!(ids, ["table-drop", "foil-drop", "full-art-drop"]);
+        // R2725000: a full art is retired, so no pack drops one.
+        assert_eq!(ids, ["table-drop", "foil-drop"]);
 
         // An account cosmetic drops for the account, on no card, and once.
         let only_table = [table("table-drop", CosmeticRarity::Common)];
@@ -1163,13 +1172,14 @@ mod tests {
 
     #[test]
     fn r2715000_an_epic_slot_drops_a_card_s_animated_art() {
-        // A card's still Epic full art held and its Animated art, an Epic too, not: the Epic slot
-        // drops the Animated art on its card, a pack slot like any other Epic per-card cosmetic.
+        // A card's still Epic full art held and its Animated art, an Epic too, not: handed both, the Epic
+        // slot drops the Animated art on its card, a pack slot like any other Epic per-card cosmetic.
+        // R2725000: both are retired, so the shipped pool lists neither.
         let droppable = [
             full_art("full-art-a", CosmeticRarity::Epic, "card-1"),
             full_art("animated-a", CosmeticRarity::Epic, "card-1"),
         ];
-        assert_eq!(cosmetic_pack_cosmetics(&droppable), droppable);
+        assert!(cosmetic_pack_cosmetics(&droppable).is_empty());
         let pool = pool_of(10);
         let holdings = CosmeticHoldings {
             owned: owning(&["card-1"]),
@@ -1192,6 +1202,53 @@ mod tests {
         };
         assert_eq!(
             slot_grant(Epic, Epic, &pool, &droppable, &both, &mut rng),
+            CosmeticSlotGrant::Bars
+        );
+    }
+
+    #[test]
+    fn r2725001_a_pack_places_a_version_on_an_offered_card() {
+        use crate::cosmetics::{VERSION_FULL_ART_ID, registry};
+        let droppable: Vec<Cosmetic> = cosmetic_pack_cosmetics(registry())
+            .into_iter()
+            .filter(|cosmetic| cosmetic.id == VERSION_FULL_ART_ID)
+            .collect();
+        assert_eq!(droppable.len(), 1);
+        // Speciesist, a Common Unit, is not offered the Full art version; The Mother Pancake, a Legendary Unit, is.
+        let pool = [
+            PoolCard {
+                id: "core-002".to_owned(),
+                rarity: PrintedRarity::Common,
+            },
+            PoolCard {
+                id: "classicplus-012".to_owned(),
+                rarity: PrintedRarity::Legendary,
+            },
+        ];
+        let holdings = CosmeticHoldings {
+            owned: owning(&["core-002", "classicplus-012"]),
+            ..CosmeticHoldings::default()
+        };
+        for seed in ["r2725001-a", "r2725001-b", "r2725001-c"] {
+            let mut rng = Rng::new(seed, 0);
+            assert_eq!(
+                slot_grant(Legendary, Legendary, &pool, &droppable, &holdings, &mut rng),
+                CosmeticSlotGrant::Cosmetic {
+                    cosmetic_id: VERSION_FULL_ART_ID.to_owned(),
+                    cosmetic_rarity: Legendary,
+                    card_id: Some("classicplus-012".to_owned()),
+                    card_granted: false,
+                }
+            );
+        }
+        // R2725002: its retired still Epic full art owns the version there, so nothing is left to place.
+        let legacy = CosmeticHoldings {
+            owned: owning(&["core-002", "classicplus-012"]),
+            ..wearing("classicplus-012", &["full-art-the-mother-pancake"])
+        };
+        let mut rng = Rng::new("r2725001-d", 0);
+        assert_eq!(
+            slot_grant(Legendary, Legendary, &pool, &droppable, &legacy, &mut rng),
             CosmeticSlotGrant::Bars
         );
     }

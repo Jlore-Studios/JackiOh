@@ -7,7 +7,7 @@
 //! from p2 would read its own low-numbered library cards as p1's. Every scenario-based AI test therefore
 //! puts the AI in p1's seat and keeps the scenario under 20 instances; p2's states come from real games.
 //!
-//! `det`, `ai_options`, `js` and `unit` are here so no test file copies them (#1826;
+//! `det`, `ai_options`, `js`, `unit` and `ids` are here so no test file copies them (#1826, #2930;
 //! crates/tools/tests/acceptance.rs refuses a copy).
 
 #![allow(dead_code)]
@@ -26,6 +26,11 @@ use jackioh_engine::testkit::{
 };
 
 pub use jackioh_engine::testkit::scenario;
+
+/// The cards' ids, in order (#2930).
+pub fn ids(cards: &[CardInstance]) -> Vec<String> {
+    cards.iter().map(|card| card.id.clone()).collect()
+}
 
 /// `determinize` with the default options.
 pub fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {

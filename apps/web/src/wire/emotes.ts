@@ -92,15 +92,28 @@ export type EmoteGate =
   | { ok: true; sentAt: readonly number[] }
   | { ok: false; retryAfterMs: number; sentAt: readonly number[] };
 
-/** Shared pure gate (R643): returns a window-pruned history so client and server cannot disagree. */
-export function emoteGate(sentAt: readonly number[], now: number): EmoteGate {
-  const kept = sentAt.filter((at) => now - at < EMOTE_WINDOW_MS);
+/** A rate limit's three numbers (R643): the engine's `EmoteLimits`. A watcher's are the server's own (R2990002). */
+export type EmoteLimits = { readonly cooldownMs: number; readonly windowMs: number; readonly windowMax: number };
+
+/** A seat's limit (R643), the engine config's three numbers: the engine's `SEAT_EMOTE_LIMITS`. */
+export const SEAT_EMOTE_LIMITS: EmoteLimits = {
+  cooldownMs: EMOTE_COOLDOWN_MS,
+  windowMs: EMOTE_WINDOW_MS,
+  windowMax: EMOTE_WINDOW_MAX,
+};
+
+/**
+ * Shared pure gate (R643): returns a window-pruned history so client and server cannot disagree.
+ * `limits` is a seat's unless handed another, as the engine's `emote_gate_within` takes (R2990002).
+ */
+export function emoteGate(sentAt: readonly number[], now: number, limits: EmoteLimits = SEAT_EMOTE_LIMITS): EmoteGate {
+  const kept = sentAt.filter((at) => now - at < limits.windowMs);
   const last = kept[kept.length - 1];
-  if (last !== undefined && now - last < EMOTE_COOLDOWN_MS) {
-    return { ok: false, retryAfterMs: EMOTE_COOLDOWN_MS - (now - last), sentAt: kept };
+  if (last !== undefined && now - last < limits.cooldownMs) {
+    return { ok: false, retryAfterMs: limits.cooldownMs - (now - last), sentAt: kept };
   }
-  if (kept.length >= EMOTE_WINDOW_MAX) {
-    return { ok: false, retryAfterMs: EMOTE_WINDOW_MS - (now - (kept[0] ?? now)), sentAt: kept };
+  if (kept.length >= limits.windowMax) {
+    return { ok: false, retryAfterMs: limits.windowMs - (now - (kept[0] ?? now)), sentAt: kept };
   }
   return { ok: true, sentAt: kept };
 }

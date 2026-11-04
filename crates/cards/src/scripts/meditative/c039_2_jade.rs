@@ -35,7 +35,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -45,7 +46,6 @@ mod tests {
 
     #[test]
     fn r961_adds_1_and_gains_1_mana_on_both_views() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
         let before = s.view(P1).you.mana.current;
 
@@ -62,7 +62,6 @@ mod tests {
 
     #[test]
     fn r962_the_fifth_jade_summons_a_beauty() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, ID, ID, ID, ID, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -82,7 +81,6 @@ mod tests {
 
     #[test]
     fn radiant_adds_2_and_gains_2() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -99,7 +97,6 @@ mod tests {
 
     #[test]
     fn r961_jade_changed_is_public_on_both_views() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
         s.play(ID, json!({}));
         for viewer in [P1, P2] {
@@ -120,7 +117,6 @@ mod tests {
     #[test]
     fn r961_the_counter_is_never_lowered() {
         // The crossing at 5 summons and keeps the count: the sixth Jade counts on from 5.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, ID, ID, ID, ID, ID, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -141,7 +137,6 @@ mod tests {
 
     #[test]
     fn the_mana_is_temporary() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
@@ -158,7 +153,6 @@ mod tests {
     #[test]
     fn r962_a_crossing_runs_inside_the_same_effect() {
         // From 4, the fifth Jade's crossing summons the Beauty before the Jade's mana is gained.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, ID, ID, ID, ID, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -186,7 +180,6 @@ mod tests {
 
     #[test]
     fn jade_and_mana_read_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [ID, FILLER] }, "p2": { "hand": [FILLER] } }));
         set_param(s.card_mut(ID), "jade", 3);
         set_param(s.card_mut(ID), "mana", 4);

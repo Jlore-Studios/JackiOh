@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -419,14 +420,18 @@ func TestUsageIssue_LastHourIsWastedWhenItsLiftGoesUnusedWithWorkQueued(t *testi
 	assertTrue(t, usageIssueRule(t, ctx, usageIssueLastHours(2), "claude-4", usage.SuggestLastHour) == nil)
 }
 
-// usageIssueHolds is four holds for claude-4 a day apart, each `minutes` long, and a run handed
-// off that waited `wait` minutes (none when it is 0).
+// usageIssueHolds is four holds for claude-4 a day apart, each `minutes` long (a tick each
+// `usage.TickEvery` while it lasts, as the loop takes them), and a run handed off that waited
+// `wait` minutes (none when it is 0).
 func usageIssueHolds(minutes []float64, wait float64) *usage.Facts {
 	f := &usage.Facts{Now: usageAt}
 	for i, m := range minutes {
 		from := usageAt.Add(-time.Duration(i+1) * 24 * time.Hour)
-		f.Ticks = append(f.Ticks, &usage.Tick{At: from, Subscription: "claude-4", HeldForIt: usage.N(1)},
-			&usage.Tick{At: from.Add(time.Duration(m) * time.Minute), Subscription: "claude-4", HeldForIt: usage.N(0)})
+		end := from.Add(time.Duration(m) * time.Minute)
+		for at := from; at.Before(end); at = at.Add(usage.TickEvery) {
+			f.Ticks = append(f.Ticks, &usage.Tick{At: at, Subscription: "claude-4", HeldForIt: usage.N(1)})
+		}
+		f.Ticks = append(f.Ticks, &usage.Tick{At: end, Subscription: "claude-4", HeldForIt: usage.N(0)})
 	}
 	if wait > 0 {
 		f.Runs = []*usage.Run{{EndedAt: usageAt.Add(-time.Hour), RunID: "7", Subscription: "claude-1", HandedOff: "cap",
@@ -439,16 +444,19 @@ func usageIssueHolds(minutes []float64, wait float64) *usage.Facts {
 // them run out; not when a handoff waits longer, nor at half run out.
 func TestUsageIssue_HoldMinutesNeedsMoving(t *testing.T) {
 	_, ctx := usageIssueCtx(t)
-	assertEqual(t, ctx.Cfg.HoldMinutes, 60)
+	// The committed hold (120 since #2903): a hold that lasts all of it ran out.
+	hold := float64(ctx.Cfg.HoldMinutes)
+	assertEqual(t, ctx.Cfg.HoldMinutes, 120)
 	s := usage.SuggestHoldMinutes(ctx, usageIssueHolds([]float64{30, 30, 30, 30}, 10))
 	assertTrue(t, s != nil, "holds of 30 minutes, a handoff of 10")
-	assertEqual(t, []string{s.Subscription, s.Key, s.Now, s.Suggested}, []string{"", "hold_minutes (config.json)", "60", "10"})
+	assertEqual(t, []string{s.Subscription, s.Key, s.Now, s.Suggested},
+		[]string{"", "hold_minutes (config.json)", strconv.Itoa(ctx.Cfg.HoldMinutes), "10"})
 	assertTrue(t, usage.SuggestHoldMinutes(ctx, usageIssueHolds([]float64{30, 30, 30, 30}, 40)) == nil, "a handoff of 40")
-	out := usage.SuggestHoldMinutes(ctx, usageIssueHolds([]float64{60, 60, 60, 20}, 0))
+	out := usage.SuggestHoldMinutes(ctx, usageIssueHolds([]float64{hold, hold, hold, 20}, 0))
 	assertTrue(t, out != nil, "3 of 4 ran out")
 	assertEqual(t, out.Suggested, "20")
 	assertIn(t, "3 of the 4 holds ran out", out.Evidence)
-	assertTrue(t, usage.SuggestHoldMinutes(ctx, usageIssueHolds([]float64{60, 60, 20, 20}, 0)) == nil, "2 of 4 ran out")
+	assertTrue(t, usage.SuggestHoldMinutes(ctx, usageIssueHolds([]float64{hold, hold, 20, 20}, 0)) == nil, "2 of 4 ran out")
 }
 
 // usageIssueWalls is gpt's two closed weeks, at its cap on the given days of each.

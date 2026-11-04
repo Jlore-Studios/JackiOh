@@ -11,115 +11,115 @@
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
 // recipe) or "keep" (it plays over that recipe).
 {
-  "core-001": "none: pending", // Big D-fender
-  "core-002": "none: pending", // Bigot
-  "core-003": "none: pending", // Right-house defender
-  "core-004": "none: pending", // Gary the Gambler
-  "core-005": "none: pending", // Stockpile
-  "core-006": "none: pending", // Mana Well
-  "core-007": "none: pending", // Jewelosco Scarab
-  "core-008": "none: pending", // Mr. Vanilla
-  "core-009": "none: pending", // Moths to the Flame
-  "core-010": "none: pending", // Rapid Replenish
-  "core-011": "none: pending", // Tempo Timmy
-  "core-012": "none: pending", // Duplicating Felinors
-  "core-013": "none: pending", // Jlockeed Shredder-10
-  "core-014": { aura: { look: "storm", scope: "side" } }, // Jlockeed's Weapons
-  "core-015": "none: pending", // Me and Mr Token
-  "core-016": "none: pending", // Hit Job
+  "core-001": "none: its Aura is standing Armor, with no moment to draw", // Big D-fender
+  "core-002": { cry: { motif: "bolt" } }, // Speciesist
+  "core-003": "none: vanilla", // Right-house defender
+  "core-004": { cry: { motif: "bless", palette: "Hustle/cash" } }, // Gary the Gambler
+  "core-005": { cast: { motif: "flight" } }, // Stockpile
+  "core-006": { cast: { motif: "conjure" }, trigger: { motif: "mana" }, aura: { look: "arcane", scope: "zone" } }, // Mana Well
+  "core-007": { cry: { motif: "send", palette: "Beast/swarm" } }, // Jewelosco Scarab
+  "core-008": "none: vanilla", // Mr. Vanilla
+  "core-009": "none: its start-of-turn attacks are combat, which the attack rows and keyword beats draw", // Moths to the Flame
+  "core-010": { cast: { motif: "flight" } }, // Rapid Replenish
+  "core-011": "none: vanilla", // Tempo Timmy
+  "core-012": { cry: { motif: "conjure", palette: "Beast/felinor" } }, // Duplicating Felinors
+  "core-013": { trigger: { motif: "volley", palette: "Tech/laser" } }, // Jlockeed Shredder-10
+  "core-014": { cast: { motif: "conjure", palette: "Tech/laser" }, aura: { look: "storm", scope: "side" } }, // Jlockeed's Weapons
+  "core-015": { cry: { motif: "conjure" } }, // Me and Mr Token
+  "core-016": { cast: { motif: "bolt", palette: "Physical/blade" } }, // Hit Job
   "core-017": { setPiece: "vortex" }, // Flood
-  "core-018": "none: pending", // Bread and Butter
-  "core-019": "none: pending", // Midrange Menace
-  "core-020": "none: pending", // Pointmaster
+  "core-018": { cast: { motif: "snap" } }, // Bread and Butter
+  "core-019": { trigger: { motif: "mend" } }, // Midrange Menace
+  "core-020": "none: vanilla", // Pointmaster
   "core-021": { bespoke: "manaCrack" }, // Hinder
-  "core-022": "none: pending", // Carnivorous Cube
-  "core-023": "none: pending", // Reoccurring Dream
-  "core-024": "none: pending", // Efficiency Dividend
-  "core-025": "none: pending", // 4-mana 7/7
-  "core-026": "none: pending", // Glowy Jelly Bean
+  "core-022": { cry: { motif: "offering" }, death: { motif: "conjure" } }, // Carnivorous Cube
+  "core-023": { cast: { motif: "radiance" } }, // Reoccurring Dream
+  "core-024": { cast: { motif: "bolt", palette: "Hustle/cash" } }, // Efficiency Dividend
+  "core-025": "none: vanilla", // 4-mana 7/7
+  "core-026": { cast: { motif: "radiance" } }, // Glowy Jelly Bean
   "core-027": { bespoke: "bloodDrain" }, // Blood Ridden Glowy Jelly Bean
-  "core-028": "none: pending", // Knockoff Temu Glowy Jelly Bean
-  "core-029": "none: pending", // GIGA Glowy Jelly Bean
-  "core-030": "none: pending", // Archivist
-  "core-031": "none: pending", // KY's Math Equation
-  "core-032": "none: pending", // Prem Panther
-  "core-033": "none: pending", // Unstable Clone Machine
-  "core-034": "none: pending", // Collateral Damage
+  "core-028": { cast: { motif: "radiance" } }, // Knockoff Temu Glowy Jelly Bean
+  "core-029": { cast: { motif: "radiance" } }, // GIGA Glowy Jelly Bean
+  "core-030": { cry: { motif: "flight", palette: "Nerd/ink" } }, // Archivist
+  "core-031": { cast: { motif: "bolt", palette: "Nerd/chalk" } }, // KY's Math Equation
+  "core-032": { trigger: { motif: "flight", palette: "Beast/felinor" } }, // Prem Panther
+  "core-033": { cast: { motif: "conjure", palette: "Tech/glitch" }, trigger: { motif: "send", palette: "Tech/glitch" }, aura: { look: "storm", palette: "Tech/glitch", scope: "zone" } }, // Unstable Clone Machine
+  "core-034": { cast: { motif: "vanish" } }, // Collateral Damage
   "core-035": { cast: { motif: "bolt" } }, // Lunar Eclipse
-  "core-036": "none: pending", // Magic Jammed
-  "core-037": "none: pending", // Gravedigger
-  "core-038": "none: pending", // Quickstriker
-  "core-039": "none: pending", // Recycling Initiative
-  "core-040": "none: pending", // Echoes of the Forgotten
-  "core-041": "none: pending", // Sheepish
-  "core-042": "none: pending", // Eugenics
-  "core-043": "none: pending", // Big Felinor
-  "core-044": "none: pending", // True Strike
-  "core-045": "none: pending", // Deft Duelist
-  "core-046": { aura: { look: "void", scope: "board" } }, // Suppressive Aura
-  "core-047": "none: pending", // Fig of Life
-  "core-048": "none: pending", // 5pek Controller
-  "core-049": "none: pending", // Snom Bunny Mind Control
-  "core-050": "none: pending", // K-Pop Fanatic
-  "core-051": "none: pending", // KY's Private Tutor
-  "core-051-1": "none: pending", // KY's Empty Notebook
-  "core-052": "none: pending", // Silly Silas
-  "core-053": "none: pending", // Reno
-  "core-054": "none: pending", // Straaza
-  "core-055": "none: pending", // Lava Golem
-  "core-056": "none: pending", // Jilliax
-  "core-057": "none: pending", // Conjure KY
-  "core-058": "none: pending", // Rush Token Farm
-  "core-059": "none: pending", // Unbiased Immigration
-  "core-060": "none: pending", // Bear Honeypot
-  "core-061": "none: pending", // Prejudiced Postdoc
-  "core-062": "none: pending", // Friend of Felinors
-  "core-063": "none: pending", // Plastic Surgery
-  "core-064": "none: pending", // Gifted Program
-  "core-065": "none: pending", // Masochism Mask
-  "core-065-1": "none: pending", // Spikey Pillow
-  "core-066": "none: pending", // The Rock
-  "core-067": "none: pending", // Zoomerbin Oomen
-  "core-068": "none: pending", // Twisted Sorcerer
-  "core-069": "none: pending", // Call to Arms
-  "core-070": "none: pending", // Spiteful Stab
-  "core-071": "none: pending", // Intern Stimmy
-  "core-072": "none: pending", // Reminisce
-  "core-073": "none: pending", // Anti-oneshot Armor
-  "core-074": "none: pending", // Adaptive UI
-  "core-075": "none: pending", // Infinite Reserves
-  "core-076": "none: pending", // Field of Dreams
-  "core-077": "none: pending", // Professor Curvature
-  "core-078": "none: pending", // /fullsend
-  "core-079": "none: pending", // Twinspell
-  "core-080": "none: pending", // Zao Gao
-  "core-081": "none: pending", // Radiant Saintess
-  "core-082": "none: pending", // KY's Trial
-  "core-083": "none: pending", // Transmogulate
-  "core-084": "none: pending", // Going Long
-  "core-085": "none: pending", // Unlicensed Experimentation
-  "core-086": "none: pending", // "Miss" Mrow
-  "core-087": "none: pending", // Pocket Chaos
+  "core-036": { cast: { motif: "bolt", palette: "Dark/curse" } }, // Magic Jammed
+  "core-037": { trigger: { motif: "send" } }, // Gravedigger
+  "core-038": { cast: { motif: "conjure", palette: "Physical/wind" }, aura: { look: "ember", palette: "Physical/wind", scope: "side" } }, // Quickstriker
+  "core-039": { cast: { motif: "vanish" }, trigger: { motif: "send" } }, // Recycling Initiative
+  "core-040": { cast: { motif: "conjure" }, trigger: { motif: "bolt" }, aura: { look: "void", scope: "zone" } }, // Echoes of the Forgotten
+  "core-041": { cast: { motif: "snap", palette: "Beast/wool" } }, // Sheepish
+  "core-042": { cast: { motif: "vanish" } }, // Selective Breeding
+  "core-043": { cry: { motif: "wipe", palette: "Beast/felinor" } }, // Big Felinor
+  "core-044": { cast: { motif: "bolt" } }, // True Strike
+  "core-045": "none: vanilla", // Deft Duelist
+  "core-046": { cast: { motif: "bolt" }, aura: { look: "void", scope: "board" } }, // Suppressive Aura
+  "core-047": { cast: { motif: "mend" } }, // Fig of Life
+  "core-048": { cast: { motif: "shift" } }, // 5pek Controller
+  "core-049": { cast: { motif: "tether", palette: "Dark/curse" } }, // Snom Bunny Mind Control
+  "core-050": "none: no motif reads marked, its Allure; the mark's own row plays", // K-Pop Fanatic
+  "core-051": { cast: { motif: "send", palette: "Nerd/chalk" } }, // KY's Private Tutor
+  "core-051-1": { cast: { motif: "send", palette: "Nerd/ink" } }, // KY's Empty Notebook
+  "core-052": { cry: { motif: "shift" } }, // Silly Silas
+  "core-053": { cry: { motif: "mend" } }, // Reno
+  "core-054": { cry: { motif: "send" } }, // Straaza
+  "core-055": { cry: { motif: "offering" } }, // Lava Golem
+  "core-056": "none: vanilla", // Jilliax
+  "core-057": { cast: { motif: "send" } }, // Conjure KY
+  "core-058": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "bloom", scope: "zone" } }, // Rush Token Farm
+  "core-059": { cast: { motif: "conjure" }, trigger: { motif: "send" }, aura: { look: "arcane", scope: "zone" } }, // Unbiased Immigration
+  "core-060": { cast: { motif: "snap" } }, // Bear Honeypot
+  "core-061": { cry: { motif: "conjure", palette: "Nerd/chalk" } }, // Prejudiced Postdoc
+  "core-062": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Friend of Felinors
+  "core-063": { cast: { motif: "bless" } }, // Plastic Surgery
+  "core-064": { cast: { motif: "conjure" }, trigger: { motif: "radiance" }, aura: { look: "holy", scope: "side" } }, // Gifted Program
+  "core-065": { cast: { motif: "conjure", palette: "Dark/blood" }, trigger: { motif: "drain", palette: "Dark/blood" }, aura: { look: "void", palette: "Dark/blood", scope: "zone" } }, // Masochism Mask
+  "core-065-1": "none: its Aura is a standing Attack loss, with no moment to draw", // Spikey Pillow
+  "core-066": { cry: { motif: "offering" } }, // The Rock
+  "core-067": { cry: { motif: "conjure" } }, // Zoomerbin Oomen
+  "core-068": { cry: { motif: "bolt" } }, // Twisted Sorcerer
+  "core-069": { cast: { motif: "conjure" } }, // Call to Arms
+  "core-070": { cast: { motif: "bolt", palette: "Physical/blade" } }, // Spiteful Stab
+  "core-071": { cast: { motif: "snap" } }, // Intern Stimmy
+  "core-072": { cast: { motif: "send" } }, // Reminisce
+  "core-073": { cast: { motif: "flight", palette: "Physical/steel" }, aura: { look: "frost", palette: "Physical/steel", scope: "side" } }, // Anti-oneshot Armor
+  "core-074": { cast: { motif: "bolt", palette: "Tech/hologram" } }, // Adaptive UI
+  "core-075": { cast: { motif: "flight", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "zone" } }, // Infinite Reserves
+  "core-076": { cast: { motif: "send" } }, // Field of Dreams
+  "core-077": "none: its Cry adds a next-turn discount, whose modifier badge glints on its own", // Professor Curvature
+  "core-078": { cast: { motif: "mana" } }, // /fullsend
+  "core-079": { cast: { motif: "conjure" }, aura: { look: "arcane", scope: "zone" } }, // Twinspell
+  "core-080": { cast: { motif: "conjure" } }, // Zao Gao
+  "core-081": { death: { motif: "radiance" } }, // Radiant Saintess
+  "core-082": { cast: { motif: "send" } }, // KY's Trial
+  "core-083": { bespoke: "legendaryTide" }, // Transmogulate
+  "core-084": { cast: { motif: "conjure" }, aura: { look: "holy", scope: "side" } }, // Going Long
+  "core-085": { cast: { motif: "snap" } }, // Unlicensed Experimentation
+  "core-086": { death: { motif: "tether", palette: "Beast/felinor" } }, // "Miss" Mrow
+  "core-087": { cast: { motif: "shift" } }, // Pocket Chaos
   "core-088": { setPiece: "nether" }, // Twisting Nether
-  "core-089": "none: pending", // Corpse Eater
-  "core-090": "none: pending", // CN-Viral Injection
-  "core-090-1": "none: pending", // CN-Virus
-  "core-091": "none: pending", // Fed Fauci
-  "core-092": "none: pending", // Felinor Fiender
-  "core-093": "none: pending", // Combo-Index
-  "core-093-1": "none: pending", // Combo-Fodder
-  "core-094": "none: pending", // Genn's Greed
-  "core-095": "none: pending", // Call to Chaos (Core Edition)
-  "core-095-1": "none: pending", // Chaos Golem
-  "core-096": "none: pending", // My Pawn
-  "core-097": "none: pending", // Zephrys
-  "core-098": "none: pending", // Heroic Power
-  "core-099": "none: pending", // Craft a Card
+  "core-089": "none: it grows in hand, with no board change to draw", // Corpse Eater
+  "core-090": { cast: { motif: "send" } }, // Super-Virus Injection
+  "core-090-1": { cast: { motif: "bolt" } }, // Super-Virus
+  "core-091": { trigger: { motif: "mana" } }, // Fed Fauci
+  "core-092": "none: no hook; its Legendary entrance plays", // Felinor Fiender
+  "core-093": { cast: { motif: "conjure" }, trigger: { motif: "tally" }, aura: { look: "storm", scope: "zone" } }, // Combo-Index
+  "core-093-1": { cast: { motif: "bolt" } }, // Combo-Fodder
+  "core-094": { cast: { motif: "vanish", palette: "Hustle/cash" } }, // Genn's Greed
+  "core-095": { cast: { motif: "conjure" } }, // Call to Chaos (Core Edition)
+  "core-095-1": "none: vanilla", // Chaos Golem
+  "core-096": { cast: { motif: "snap" } }, // My Pawn
+  "core-097": { bespoke: "perfectWish" }, // Zephrys
+  "core-098": { cast: { motif: "conjure" }, activate: { motif: "bolt" }, aura: { look: "holy", scope: "zone" } }, // Heroic Power
+  "core-099": { bespoke: "fusionForge" }, // Craft a Card
   "core-100": { setPiece: "voidFold" }, // Ceaseless Void
-  "core-t-rush": "none: pending", // Rush Token
-  "core-t-sheep": "none: pending", // Sheep Token
-  "core-t-felinor": "none: pending", // Felinor Token
-  "core-t-bread": "none: pending", // Bread Token
-  "core-t-coin": "none: pending", // The Coin
-  "core-t-ghoul": "none: pending", // Ghoul Token
+  "core-t-rush": "none: vanilla", // Rush Token
+  "core-t-sheep": "none: vanilla", // Sheep Token
+  "core-t-felinor": "none: vanilla", // Felinor Token
+  "core-t-bread": "none: vanilla", // Bread Token
+  "core-t-coin": { cast: { motif: "mana", palette: "Hustle/cash" } }, // The Coin
+  "core-t-ghoul": "none: vanilla", // Ghoul Token
 }

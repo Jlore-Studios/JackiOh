@@ -26,6 +26,8 @@ import MatchRoute, { matchTestid, promptHolderOf, withoutToken } from "./match.t
 import { navigate, paths, usePathname } from "../net/navigate.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";
+import { writeSettings } from "../settings/index.ts";
+import { sidelineTestid } from "../sideline/testids.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { navTestid } from "./nav.tsx";
 
@@ -668,6 +670,12 @@ describe("the match screen's ranks (R604, R612)", () => {
     const short = banner.querySelector(".match-ranks__short");
     expect(short).toHaveTextContent("Normal III");
     expect(short).toHaveTextContent("Raisin");
+    // #2932: the compact line's words ride spans the top strip hides visually (board.css), the crests carrying the ranks, so
+    // a screen reader reads the same sentence: the label once, each seat's rank words once.
+    expect(short?.querySelectorAll(".match-ranks__label")).toHaveLength(1);
+    expect(short?.querySelector(".match-ranks__label")).toHaveTextContent("Ranked ·");
+    expect([...(short?.querySelectorAll(".match-ranks__tier") ?? [])].map((tier) => tier.textContent)).toEqual(["Normal III", "Raisin"]);
+    expect(short?.textContent).toMatch(/^Ranked · Max#3 \(you\)\s*Normal III vs/);
     // #1650: a small crest beside each seat's words on both lines, which carry no pips or placements words.
     for (const name of ["Normal Grape III · 1/3 pips", "Raisin · 2/5 placements"]) {
       const crests = within(banner).getAllByRole("img", { name, hidden: true });
@@ -994,6 +1002,58 @@ describe("R169 the modifier list at the online table", () => {
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach();
     expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+  });
+});
+
+describe("R2990004 the watchers' emotes at the online table", () => {
+  function deliver(frame: Record<string, unknown>): void {
+    act(() => {
+      live().onmessage?.({ data: JSON.stringify(frame) });
+    });
+  }
+
+  function watchers(): (string | null)[] {
+    return screen.queryAllByTestId(sidelineTestid.emote).map((show) => show.getAttribute("data-watcher"));
+  }
+
+  afterEach(() => {
+    writeSettings({ muteSpectatorEmotes: false });
+  });
+
+  it("R2990000 a relayed spectatorEmote shows in the sideline strip under the watcher's name, and the board offers no menu", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
+
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "party" });
+
+    const strip = screen.getByTestId(sidelineTestid.strip);
+    expect(within(strip).getByTestId(sidelineTestid.emote)).toHaveAttribute("data-emote", "party");
+    expect(strip).toHaveTextContent("Wes#13");
+    expect(screen.queryByTestId(sidelineTestid.menu)).toBeNull();
+    // Cosmetic: nothing went back out for it.
+    expect(live().frames().map((frame) => frame.type)).toEqual(["hello"]);
+  });
+
+  it("R2990004 Mute hides the watchers' emotes for the rest of the match", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "party" });
+    expect(watchers()).toEqual(["Wes#13"]);
+
+    fireEvent.click(screen.getByTestId(sidelineTestid.mute));
+    expect(watchers()).toEqual([]);
+    deliver({ type: "spectatorEmote", watcher: "Ann#2", emote: "sob" });
+    expect(watchers()).toEqual([]);
+    expect(screen.getByTestId(sidelineTestid.mute)).toHaveTextContent("Spectators muted");
+  });
+
+  it("R2990004 with muteSpectatorEmotes on, a watcher's emote never shows", () => {
+    writeSettings({ muteSpectatorEmotes: true });
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "party" });
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
   });
 });
 

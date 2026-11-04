@@ -75,7 +75,7 @@ import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
 import { ChallengeToast } from "./together/ChallengeToast.tsx";
 import { usePresenceHeartbeat } from "./together/presence.ts";
-import { watchFriendOf } from "./together/watchLink.ts";
+import { watchCoopOf, watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
 // screen that failed to load anything else, so account.tsx is in the entry chunk either way.
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
@@ -797,15 +797,17 @@ export function App(): ReactElement {
       );
     }
 
-    // #936 B50: a friend's live game, watched from their seat; the friend rides on `?friend=`.
+    // #936 B50: a friend's live game, watched from their seat; the friend rides on `?friend=`, and a
+    // co-op game on `&coop=1` (R2881000).
     const watchId = watchIdOf(path);
     if (watchId !== null) {
       const friendId = watchFriendOf(window.location.search);
+      const coop = watchCoopOf(window.location.search);
       return (
         <Gated key={path} engine>
           {() => (
             <EngineGate>
-              <WatchRoute key={friendId} matchId={watchId} friendId={friendId} />
+              <WatchRoute key={coop ? `${friendId}:coop` : friendId} matchId={watchId} friendId={friendId} coop={coop} />
             </EngineGate>
           )}
         </Gated>

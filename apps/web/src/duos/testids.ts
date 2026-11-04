@@ -66,6 +66,8 @@ export const duosTestid = {
   /** #1599: the sentence that stands in for a socket closed for good before any view (a voided match). */
   gone: "duos-gone",
   connection: "duos-connection",
+  /** R2881000: how many friends watch the game, while any do. */
+  watchers: "duos-watchers",
   reconnect: "duos-reconnect",
   clock: "duos-clock",
   // The co-op replay's own (#965): its root; its controls carry the replay player's ids (replayTestid).

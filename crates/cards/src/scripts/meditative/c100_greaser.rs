@@ -21,7 +21,6 @@ mod tests {
 
     /// p1 plays Greaser (Radiant on `radiant`), with a filler behind it so no turn auto-ends.
     fn played(seed: &str, radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = crate::scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "mana": 2 },

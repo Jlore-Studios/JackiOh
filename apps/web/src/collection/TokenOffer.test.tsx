@@ -17,6 +17,7 @@ import type { CollectionResponse, TokenBarsResponse } from "../net/api.ts";
 import { collectionOf, tokenBars } from "../shop/fixtures.ts";
 import { settle } from "../test/settle.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
+import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID } from "../cards/versions.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
 import { collectionTestid as T } from "./collection.ts";
@@ -190,43 +191,42 @@ describe("R1953001 a held cosmetic token, offered in the preview", () => {
     }
   });
 
-  it("R2655000 a locked Epic full art offers an Epic token, and its animated and signed full arts none", async () => {
-    const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9 });
-    // Every card's Epic full art is one an Epic token buys; no Rare or Epic token buys a Legendary or Mythic one.
+  it("R2655000 R2725000 a retired full art offers no token, and the Full art version a Legendary one alone", async () => {
+    const all = held({ cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9 });
+    // R2725000: the 84 retired full arts are sold no more, whatever the token.
     const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
     expect(fullArts).toHaveLength(21 * 4);
-    for (const fullArt of fullArts) expect(offerTier(fullArt, plenty), fullArt.id).toBe(fullArt.rarity === "Epic" ? "Epic" : null);
-    expect(offerTier(entry("full-art-league-of-losers"), held({ cosmeticRare: 9 }))).toBeNull();
+    for (const fullArt of fullArts) expect(offerTier(fullArt, all), fullArt.id).toBeNull();
+    // The Full art version is a Legendary chase: no Rare or Epic token buys it, a Legendary one does.
+    expect(offerTier(entry(VERSION_FULL_ART_ID), held({ cosmeticRare: 9, cosmeticEpic: 9 }))).toBeNull();
+    expect(offerTier(entry(VERSION_FULL_ART_ID), all)).toBe("Legendary");
 
-    tokenServer({ cosmeticEpic: 2 }, refusal(500, "internal", "unused"));
+    tokenServer({ cosmeticLegendary: 2 }, refusal(500, "internal", "unused"));
     cardViewOf(() => Promise.resolve(new Map()));
-    expect(await within(previewOf("full-art-big-d-fender")).findByTestId(T.tokenOffer("full-art-big-d-fender"))).toHaveTextContent(
-      "Unlock with an Epic token (2 held)",
+    expect(await within(previewOf(VERSION_FULL_ART_ID)).findByTestId(T.tokenOffer(VERSION_FULL_ART_ID))).toHaveTextContent(
+      "Unlock with a Legendary token (2 held)",
     );
     closePreview();
-    for (const id of ["full-art-big-d-fender-animated", "full-art-big-d-fender-signed"]) {
-      expect(screen.getByTestId(T.stripItem(id)), id).toHaveAttribute("data-owned", "false");
-      expect(within(previewOf(id)).queryByTestId(T.tokenOffer(id)), id).toBeNull();
-      closePreview();
-    }
+    // Signature is a Mythic, which no token buys.
+    expect(screen.getByTestId(T.stripItem(AUGMENT_SIGNATURE_ID))).toHaveAttribute("data-owned", "false");
+    expect(within(previewOf(AUGMENT_SIGNATURE_ID)).queryByTestId(T.tokenOffer(AUGMENT_SIGNATURE_ID))).toBeNull();
+    closePreview();
+    for (const retired of ["full-art-big-d-fender", "animated-big-d-fender"]) expect(screen.queryByTestId(T.stripItem(retired)), retired).toBeNull();
   });
 
-  it("R2715000 a locked Animated art offers an Epic token", async () => {
-    // Every card's Animated art is an Epic, no chase: an Epic token buys it, a Rare one does not.
-    const animated = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt" && cosmetic.id.startsWith("animated-"));
-    expect(animated).toHaveLength(21);
-    for (const fullArt of animated) {
-      expect(fullArt.chase, fullArt.id).toBe(false);
-      expect(offerTier(fullArt, held({ cosmeticRare: 9, cosmeticEpic: 9 })), fullArt.id).toBe("Epic");
-      expect(offerTier(fullArt, held({ cosmeticRare: 9 })), fullArt.id).toBeNull();
-    }
+  it("R2715000 R2725000 a locked Animated augment offers an Epic token", async () => {
+    // The Animated augment is an Epic, no chase: an Epic token buys it, a Rare one does not.
+    const animated = entry(AUGMENT_ANIMATED_ID);
+    expect(animated.chase).toBe(false);
+    expect(offerTier(animated, held({ cosmeticRare: 9, cosmeticEpic: 9 }))).toBe("Epic");
+    expect(offerTier(animated, held({ cosmeticRare: 9 }))).toBeNull();
 
     tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
     cardViewOf(() => Promise.resolve(new Map()));
-    expect(await within(previewOf("animated-big-d-fender")).findByTestId(T.tokenOffer("animated-big-d-fender"))).toHaveTextContent(
+    expect(await within(previewOf(AUGMENT_ANIMATED_ID)).findByTestId(T.tokenOffer(AUGMENT_ANIMATED_ID))).toHaveTextContent(
       "Unlock with an Epic token (1 held)",
     );
-    expect(screen.getByTestId(T.stripItem("animated-big-d-fender"))).toHaveAttribute("data-owned", "false");
+    expect(screen.getByTestId(T.stripItem(AUGMENT_ANIMATED_ID))).toHaveAttribute("data-owned", "false");
   });
 
   it("R1953001 a refusal shows the server's words and changes nothing", async () => {
@@ -313,7 +313,7 @@ describe("R1953001 a held cosmetic token, offered in the preview", () => {
 describe("R2728000 a held Legendary token, offered in the preview", () => {
   it("R2728000 a Legendary token covers up to Legendary, a chase included, and never a Mythic", async () => {
     const legendary = held({ cosmeticLegendary: 1 });
-    for (const id of ["foil-glitter", "foil-galaxy", "foil-molten-gold", "table-obsidian-slab", "full-art-big-d-fender-animated"]) {
+    for (const id of ["foil-glitter", "foil-galaxy", "foil-molten-gold", "table-obsidian-slab", VERSION_FULL_ART_ID]) {
       expect(offerTier(entry(id), legendary), id).toBe("Legendary");
     }
     const all = held({ cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9 });
@@ -552,7 +552,7 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
     fireEvent.click(await within(preview).findByTestId(T.tokenOffer("core-002")));
 
     const dialog = screen.getByTestId(T.tokenOfferDialog("core-002"));
-    expect(screen.getByRole("alertdialog", { name: "Unlock Bigot? This spends 1 card token." })).toBe(dialog);
+    expect(screen.getByRole("alertdialog", { name: "Unlock Speciesist? This spends 1 card token." })).toBe(dialog);
     expect(screen.getByTestId(T.tokenOfferCancel("core-002"))).toHaveFocus();
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(0);
 

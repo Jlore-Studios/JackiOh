@@ -32,6 +32,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const LIBRARY: [&str; 4] = ["core-011", "core-011", "core-011", "core-011"];
 
     mod n6_mana_well_s8_1_row_6 {
@@ -39,7 +41,6 @@ mod tests {
 
         #[test]
         fn a_turn_4_player_has_5_mana_at_the_start_of_the_turn_above_a_max_of_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-006-base",
                 "p1": { "backrow": ["core-006"], "hand": ["core-011"], "library": LIBRARY },
@@ -59,7 +60,6 @@ mod tests {
 
         #[test]
         fn the_gain_is_temporary_not_cumulative_the_next_start_of_turn_is_5_again() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-006-temporary",
                 "p1": { "backrow": ["core-006"], "hand": ["core-011"], "library": LIBRARY },
@@ -77,7 +77,6 @@ mod tests {
 
         #[test]
         fn only_the_controller_gains_and_only_on_their_own_turn_s2_2_r68() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-006-controller",
                 "p1": { "backrow": ["core-006"], "hand": ["core-011"], "library": LIBRARY },
@@ -93,7 +92,6 @@ mod tests {
 
         #[test]
         fn the_field_spell_leaves_back_to_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-006-leaves",
                 // #34 Collateral Damage exiles a chosen permanent on either side (§8.2 row 34).
@@ -114,7 +112,6 @@ mod tests {
 
         #[test]
         fn radiant_gains_2_a_turn_4_player_has_6() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-006-radiant",
                 "p1": {
@@ -134,7 +131,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gains_2_a_turn_and_a_radiant_degrade_1() {
             for (radiant, upgrade, mana) in [(false, true, 6), (true, false, 5)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "core-006-tuned",
                     "p1": {

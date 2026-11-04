@@ -309,14 +309,24 @@ from-selfplay <shards>… --out <file>` files each game of an export that still 
 catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
 and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
 `learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
-records' counts go into the totals and no row is kept per game, so staging's database (JackiOh-Staging,
-where the development lanes file; production's holds live games alone) grows with the patches and not
-the games. Runs follow one another, so an export comes about every two days; a
+records' counts go into the totals and no row is kept per game, so each project's database (both file
+the development lanes' games, R1933001) grows with the patches and not the games. Runs follow one another, so an export comes about every two days; a
 patch shipped between two has none until the next. `.github/workflows/gather.yml` plays `GATHER_GAMES`
 (2,000) games of each patch as it ships, on the PC, and files them the same way, but only while the
 repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about 3 MB of
 the database however few its games, too much for the free plan at 2 to 7 patches a day, so it waits
-for the Pro plan. To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
+for the Pro plan.
+
+2,000 games are too few for the card win rates (#2888). A card's rate counts only the games where
+exactly one seat holds it (R1284000), about 150 of the 2,000 for a typical card, so its 95%
+interval is about ±8 points. `cargo jackioh stats sample-size` prints the games a run needs at
+this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
+`--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
+`crates/tools/README.md` has the formula. Pointing `gather.yml` at it, with the dispatch's
+`games` input kept as an override, is a person's change, since the bots never edit `.github/`;
+so is growing `GATHER_STRIDE` (100,000), which N passes at about 2,000 cards.
+
+To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
 `cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
 --totals-only <file>`. The training box has been given back (#682's audit,
 `reviews/2026-10-22-issue-682-subscriptions.md`), so what follows is the lane's contract for a box that

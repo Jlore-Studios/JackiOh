@@ -33,6 +33,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -115,7 +117,6 @@ mod tests {
         #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
             for (radiant_face, size) in [(false, 4), (true, 8)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOP, "radiant": radiant_face }, FILLER], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -155,7 +156,6 @@ mod tests {
 
             #[test]
             fn s4_1_it_can_t_be_switched_to_defense_position_the_switch_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": TOP, "lane": 1 }] },
                     "p2": { "hand": [FILLER] },
@@ -198,7 +198,6 @@ mod tests {
             #[test]
             fn r53_a_forced_attack_from_another_lane_does_not_happen_a_radiant_honeypot_s_tokens_attack_it_only_from_its_lane(
             ) {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -343,7 +342,6 @@ mod tests {
 
             #[test]
             fn s4_1_it_still_can_t_be_in_defense_position() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": TOP, "lane": 1, "radiant": true }] },
                     "p2": { "hand": [FILLER] },

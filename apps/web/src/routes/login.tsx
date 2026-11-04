@@ -4,13 +4,15 @@
 // Check each link token's account at `/api/auth/me`, never trust its readable address claim; confirmation links
 // never sign in (R193). Hold recovery links only after the player types the checked address; never prefill it.
 // Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
-// Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
+// Email-code sign-in (R664), OAuth (R666), Google's own button (R2983000), and MFA (R665) retain only their proven
+// session; §9.4 still gates it.
 // Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS, TERMS_VERSION } from "@jackioh/server-config";
 import Address from "../auth/Address.tsx";
+import GoogleButton from "../auth/GoogleButton.tsx";
 import { holdSignUpConsent, oldEnough, refuseSignUpHere, signUpRefusedHere } from "../auth/consent.ts";
 import {
   BirthMonthYear,
@@ -42,6 +44,7 @@ import {
   authConfig,
   authMessageOf,
   exchangeAuthCode,
+  googleClientId,
   oauthProviders,
   refreshSession,
   requestEmailSignIn,
@@ -50,6 +53,7 @@ import {
   revokeSignedOutSession,
   secondFactorFor,
   signIn,
+  signInWithGoogleIdToken,
   signInWithUsername,
   signUp,
   startOAuthSignIn,
@@ -308,6 +312,18 @@ function signedInAddress(): string | null {
   return emailFromToken(session.accessToken) ?? "";
 }
 
+/** #1890: Google's four-colour "G", unaltered, as its sign-in branding guidelines ask of a Google button. */
+function GoogleMark(): ReactElement {
+  return (
+    <svg className="auth-oauth-mark" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true" focusable="false">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
 export default function LoginRoute(): ReactElement {
   const [entry] = useState(readEntry);
   const [mode, setMode] = useState<Mode>(entry.mode);
@@ -355,6 +371,7 @@ export default function LoginRoute(): ReactElement {
   const codeWait = codeCooldown.secondsFor(email);
   const secondStep = useRef<SecondStep | null>(null);
   const [providers] = useState(oauthProviders);
+  const [googleClient] = useState(googleClientId);
   const [oauthFailed, setOauthFailed] = useState(entry.oauthFailed);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   /** Set when a notice should take focus once it renders (a sign-up that moved the form on). */
@@ -679,6 +696,26 @@ export default function LoginRoute(): ReactElement {
       setError(authMessageOf(cause));
       setBusy(false);
     });
+  }
+
+  /** R2983000: exchange Google's ID token here, with its attempt's raw nonce; signs in as R666's code does. */
+  function continueWithGoogle(idToken: string, nonce: string): void {
+    if (busy) return;
+    acted.current = true;
+    releaseLink();
+    setBusy(true);
+    setError(null);
+    setOauthFailed(false);
+    signInWithGoogleIdToken(idToken, nonce)
+      .then((result) => {
+        signInWith(result.session, result.secondFactor);
+      })
+      .catch((cause: unknown) => {
+        setError(authMessageOf(cause));
+      })
+      .finally(() => {
+        setBusy(false);
+      });
   }
 
   /** A link this screen still answers for is let go (revoked) once the player moves on from it. */
@@ -1349,23 +1386,33 @@ export default function LoginRoute(): ReactElement {
           {(signingIn || signingUp) && !refusedHere && providers.length > 0 ? (
             // R666: only the providers this build names, so none appears before it is set up.
             <div className="auth-oauth" role="group" aria-label={t("Other ways to sign in")}>
-              <p className="auth-hint">{t("Or continue with")}</p>
+              <p className="auth-hint">{t("or")}</p>
               <div className="auth-actions">
-                {providers.map((provider) => (
-                  <button
-                    key={provider}
-                    type="button"
-                    className="button-secondary"
-                    data-testid={loginTestid.oauth}
-                    data-provider={provider}
-                    disabled={busy}
-                    onClick={() => {
-                      continueWith(provider);
-                    }}
-                  >
-                    {OAUTH_PROVIDER_LABELS[provider]}
-                  </button>
-                ))}
+                {providers.map((provider) => {
+                  const button = (
+                    <button
+                      key={provider}
+                      type="button"
+                      className={provider === "google" ? "button-secondary auth-oauth-google" : "button-secondary"}
+                      data-testid={loginTestid.oauth}
+                      data-provider={provider}
+                      disabled={busy}
+                      onClick={() => {
+                        continueWith(provider);
+                      }}
+                    >
+                      {provider === "google" ? <GoogleMark /> : null}
+                      {t("Continue with {provider}", { provider: OAUTH_PROVIDER_LABELS[provider] })}
+                    </button>
+                  );
+                  // R2983000: Google's own button when the build names its client ID; R666's until it
+                  // draws, or when GIS cannot.
+                  return provider === "google" && googleClient !== null ? (
+                    <GoogleButton key={provider} clientId={googleClient} fallback={button} onCredential={continueWithGoogle} />
+                  ) : (
+                    button
+                  );
+                })}
               </div>
             </div>
           ) : null}

@@ -58,6 +58,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -67,7 +69,6 @@ mod tests {
 
     /// p1 plays the Lawyer (base unless `radiant_face`).
     fn lawyered(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -165,7 +166,6 @@ mod tests {
                 // The same game with a textless vanilla in the Lawyer's place: the rng cursor and
                 // the event types match it exactly.
                 let mut s = lawyered("lawyer-no-lock", false);
-                crate::register_all();
                 let mut plain = scenario(json!({
                     "seed": "lawyer-no-lock",
                     "p1": { "hand": [VANILLA, FILLER], "library": filler(4) },

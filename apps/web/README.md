@@ -172,7 +172,7 @@ present for exactly that window.
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
-**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks nothing.
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
@@ -195,8 +195,9 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 - Hotseat: an offer from the seat holding the device hands it to the other seat to answer, and the
   answer hands it back to the player whose turn it is (`hotseat.ts`). Only the offer moves it: if
   the players pass the device back unanswered with the seat switch, the offerer plays on and the
-  offer lapses with the turn (R269). Practice hides the Offer draw
-  control (SPEC §9.9, R188); an offer made anyway is declined at once and reads as declined.
+  offer lapses with the turn (R269). Practice and a dungeon fight draw no Offer draw
+  control (their `Game`'s `showOfferDraw={false}`, SPEC §9.9, R188; practice.css hides it on every other
+  `.practice-table` board); an offer made anyway is declined at once and reads as declined.
 
 ## Patch v0.2.0 at the table
 
@@ -261,6 +262,24 @@ only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot w
 it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
 Tablets and desktops keep the buttons in the bar.
 
+**The phone board's top strip and field badges** (#2932). Only on a phone held upright (`@media
+(max-width: 600px)`, `usePhonePortrait` in `game/phoneBar.ts`); wide screens and a phone held sideways
+are unchanged. A route that has a rail (a match's, a replay's, a watch's: `← Back` and the compact rank
+line) passes `phoneRailTop` to `Game`, which then draws the rail as its own first child
+(`board-rail--top`, `data-rail-top` on `.game`) beside the turn banner's pill, in the row the pill already
+took, instead of in the control bar: the rank line is one line (its words and the crests' pip rows are
+hidden visually, the crests and the names carrying it), and the control bar keeps only End turn, the log,
+⋯ and the gear. The Duos board keeps its own bar. A field card keeps a card shape (width over height
+between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by height; the seats are one
+fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
+A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
+stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
+never turns it. The zone left of it holds its own switch (⟳) at that corner, so the stack starts below
+that switch's target (`--badges-top`, the target's own height) and what does not fit its zone's height
+wraps into a column to its left: a press on a neighbour's ⟳ is never this unit's Activate, and the stack
+never reaches the row below. The Activate control's tap band (up to 44px) reaches down from the control
+only, never up over that switch; the marks let a tap through.
+
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
@@ -294,7 +313,10 @@ puts `.env.staging` in the build's environment (`node --env-file`), where Vite n
 variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,
 `public/_headers` sends the security headers, and the build fills its CSP's `connect-src` with its
 own hosts (`static-pages.ts` `connectSources`): `'self'`, its `VITE_SUPABASE_URL` and `wss://` on
-its own host, since the server shares the site's origin. `scripts/check-production-bundle.mjs`
+its own host, since the server shares the site's origin. Beyond those the CSP lets in only Google
+Identity Services, Google's own sign-in button on `/login` (R2983000): its script
+(`https://accounts.google.com/gsi/client`) and, under `https://accounts.google.com/gsi/`, its frames,
+styles and requests (`connect-src` names it beside Supabase). `scripts/check-production-bundle.mjs`
 (`--staging` for staging's) refuses a bundle that would deploy without its settings or that CSP.
 
 The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,
@@ -318,8 +340,11 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 
 `/dev/fx` (`routes/dev/fx.tsx`, development only, as `/dev/hotseat`) is the card-animation gallery
 (R2784000, `docs/polish/9-card-animations.md`): over the fixture board it plays any drawn motif
-(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and any card whose entry in its set's
-effects table (`fx/cards/<set>.json5`) names a motif, as that card's play. It calls no engine.
+(`fx/motifs/`) in any flavor's palette or sub-look (#2792) at any gallery scale, and every entry of its set's
+effects table (`fx/cards/<set>.json5`, #2793, #2796, #2798, #2799, R2794000) other than `none` (`galleryPlayOf`): a cast,
+a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/motifs/gallery.ts`), a set piece or an aura
+plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
+card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
@@ -564,8 +589,21 @@ routes (net/navigate.ts paths, and public/_redirects):
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
                          Chat (always), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
-                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out
-  /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
+                         legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
+                         `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
+                         with &coop=1 (a friend whose `duos` is true) the co-op seat's views on DuosBoard,
+                         drawn as a co-op replay step is (R2881000); the watcher's emotes from the
+                         sidelines (R2990000–R2990002): the socket's `spectatorHand` is the hand the
+                         sideline strip's Send an emote offers while it is open, a pick goes out as
+                         `{type:"emote"}` and shows at once as You, and the other watchers' relays show by name
+  /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos; a watcher's emote
+                         (`spectatorEmote`) shows in its sideline strip, as on /match/:id
+sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.tsx, sideline.css), the watchers'
+                         emotes at the screen's inline end (along its top on a phone), each with its watcher's
+                         name, on /match/:id, /duos/:matchId and /watch/:matchId; useSideline.ts over
+                         session.ts (a watcher's gate at the server's SPECTATOR_EMOTE_* numbers, R2990002, one
+                         show per watcher), wire.ts (the frames' checks); its Mute lasts the match and the
+                         Audio tab's Mute spectator emotes mutes every match's from its start
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
@@ -648,7 +686,8 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
 `friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
-`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>` and `duos-ping-marker`.
+`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
+`sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
 
 ## Practice
 
@@ -666,6 +705,8 @@ src/practice/
                       request, strictly in order
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
+  aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
+                      showcase holds), shared by the route and a dungeon fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
@@ -746,7 +787,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   audio engine's channel; a mark that is never cleared holds the AI for at most
   `PRACTICE_VOICE_HOLD_MAX_MS`), and while the showcase holds up the card the AI has just played
   (`data-showcase`, at most `PRACTICE_SHOWCASE_HOLD_MAX_MS`). `?pace=fast` waits for neither the
-  voice nor the showcase. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
+  voice nor the showcase. A dungeon fight's `FightScreen` holds the AI the same way, through
+  `practice/aiTable.ts`; it has no `?pace=fast`. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
 - A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
   Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the

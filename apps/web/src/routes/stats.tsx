@@ -34,7 +34,14 @@ import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
+import {
+  ADJUSTED_RANGE_DIGITS,
+  CARD_STATS_MIN_SAMPLE,
+  PLAYER_SEARCH_DEBOUNCE_MS,
+  SET_STATS_DIGITS,
+  SET_STATS_OUTLIER_Z,
+  WIN_RATE_RANGE_DIGITS,
+} from "../stats/config.ts";
 import { CreatedPanel } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
 import { faceRate, formatPlayedDelta } from "../stats/model.ts";
@@ -193,6 +200,19 @@ function adjustedText(rate: number | null | undefined): string {
   return typeof rate === "number" ? `${(rate * 100).toFixed(1)}%` : "—";
 }
 
+/**
+ * R2895000: a rate's 95% range under its figure, its ends to `digits` decimals of a percent (Adjusted's tenths,
+ * Win rate's whole points); nothing when the server sent none.
+ */
+function RangeText({ low, high, digits, testid }: { low?: number | null; high?: number | null; digits: number; testid: string }): ReactElement | null {
+  if (typeof low !== "number" || typeof high !== "number") return null;
+  return (
+    <span className="stats-sample-hint stats-range" data-testid={testid}>
+      {`${(low * 100).toFixed(digits)}–${(high * 100).toFixed(digits)}%`}
+    </span>
+  );
+}
+
 /** R2777000: the table's default order, the adjusted win rate descending. */
 const DEFAULT_SORT: SortColumn = "adjustedWinRate";
 
@@ -208,21 +228,21 @@ function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection 
 }
 
 /**
- * R2777001: the match types the page reads, Constructed (Best of 1 and Conquest together) first and the default,
- * then All Random, then each constructed mode alone. No figure mixes chosen decks with dealt ones, so every mode
- * together is not offered.
+ * R2777004: the match types the page reads. Every mode together comes first and is what the page opens on, then
+ * Constructed (Best of 1 and Conquest together, R2777001), All Random, and each constructed mode alone.
  */
-const MODES = ["constructed", "random", "bo1", "bo3"] as const;
+const MODES = ["all", "constructed", "random", "bo1", "bo3"] as const;
 type StatsMode = (typeof MODES)[number];
-const DEFAULT_MODE: StatsMode = "constructed";
+const DEFAULT_MODE: StatsMode = "all";
 const MODE_LABELS: Record<StatsMode, string> = {
+  all: "All modes",
   constructed: "Constructed",
   random: "All Random",
   bo1: "Best of 1",
   bo3: "Conquest",
 };
 
-/** R2777001: the mode an address asks for; one the page does not offer (an old `all`, or none) is Constructed. */
+/** R2777004: the mode an address asks for; none, or one the page does not offer, is every mode. */
 function modeOf(params: URLSearchParams): StatsMode {
   const asked = params.get("mode");
   return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
@@ -267,6 +287,8 @@ export default function StatsRoute(): ReactElement {
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
   const [showTokens, setShowTokens] = useState(initialParams.get("tokens") === "1");
+  // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
+  const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
 
   const [visibleCols, setVisibleCols] = useState({
@@ -336,11 +358,12 @@ export default function StatsRoute(): ReactElement {
     if (cardDrillDownId) params.set("card", cardDrillDownId);
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
     if (showTokens) params.set("tokens", "1");
+    if (showRanges) params.set("ranges", "1");
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showTokens]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showTokens, showRanges]);
 
   useEffect(() => {
     updateUrl();
@@ -917,6 +940,19 @@ export default function StatsRoute(): ReactElement {
                 </label>
               </div>
 
+              {/* R2895000: the 95% ranges, off by default */}
+              <div className="stats-view-toggle">
+                <button
+                  type="button"
+                  className={`stats-view-btn ${showRanges ? "stats-view-btn--active" : ""}`}
+                  data-testid={statsTestid.rangesToggle}
+                  aria-pressed={showRanges}
+                  onClick={() => setShowRanges((shown) => !shown)}
+                >
+                  {t("Show 95% ranges")}
+                </button>
+              </div>
+
               {/* Column visibility toggles */}
               {view === "table" && (
                 <div className="stats-col-toggles">
@@ -1009,12 +1045,20 @@ export default function StatsRoute(): ReactElement {
                       </button>
                       <dl className="stats-grid-figures">
                         <dt>{t("Adjusted")}</dt>
-                        <dd>{card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}</dd>
+                        <dd>
+                          {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
+                          {showRanges && card.hasEnoughGames && (
+                            <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                          )}
+                        </dd>
                         <dt>{t("Win rate")}</dt>
                         <dd>
                           {card.hasEnoughGames && card.winRate !== null
                             ? `${Math.round(card.winRate * 100)}%`
                             : t("not enough games")}
+                          {showRanges && card.hasEnoughGames && card.winRate !== null && (
+                            <RangeText low={card.winRateLow} high={card.winRateHigh} digits={WIN_RATE_RANGE_DIGITS} testid={statsTestid.winRateRange} />
+                          )}
                         </dd>
                         <dt>{t("Radiant")}</dt>
                         <dd>{radiant !== null ? `${Math.round(radiant * 100)}%` : "—"}</dd>
@@ -1216,6 +1260,9 @@ export default function StatsRoute(): ReactElement {
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
                             {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
+                            {showRanges && card.hasEnoughGames && (
+                              <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                            )}
                           </td>
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
@@ -1227,6 +1274,9 @@ export default function StatsRoute(): ReactElement {
                                     style={{ width: `${Math.round(card.winRate * 100)}%` }}
                                   />
                                 </div>
+                                {showRanges && (
+                                  <RangeText low={card.winRateLow} high={card.winRateHigh} digits={WIN_RATE_RANGE_DIGITS} testid={statsTestid.winRateRange} />
+                                )}
                               </div>
                             ) : (
                               <span className="stats-not-enough">{t("not enough games")}</span>
@@ -1272,6 +1322,13 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </TableScroll>
+            )}
+
+            {/* R2895000: what a range means, while they show */}
+            {showRanges && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
+              <p className="stats-sample-hint" data-testid={statsTestid.rangesNote}>
+                {t("A range is where the card's true rate most likely sits, 95% sure. Two cards whose ranges overlap may be no different.")}
+              </p>
             )}
 
             {/* R2370000: the tokens alone, each with its win rate */}

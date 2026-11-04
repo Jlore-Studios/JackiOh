@@ -20,6 +20,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const WRONG: &str = "classicplus-006";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const VANILLA: &str = "core-008"; // (1) 4/4, no keywords.
@@ -28,7 +30,6 @@ mod tests {
     const STOCKPILE: &str = "core-005";
 
     fn setup(radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": {
                 "hand": [{ "def": WRONG, "radiant": radiant_face }, HIT_JOB, HIT_JOB, FILLER],

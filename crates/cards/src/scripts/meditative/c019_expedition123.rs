@@ -84,6 +84,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const EXPEDITION: &str = "meditative-019";
@@ -141,7 +143,6 @@ mod tests {
 
         #[test]
         fn each_refresh_floors_at_0() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "expedition123-floor",
                 "turn": 1,

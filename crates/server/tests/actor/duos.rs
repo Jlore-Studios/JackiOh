@@ -2800,3 +2800,523 @@ mod an_account_that_is_not_active_is_refused_the_co_op_and_watch_sockets {
         }
     }
 }
+
+// R2881000 — a friend watches a live co-op game as a 1v1 game is watched
+
+mod r2881000_watching_a_coop_game {
+    //! `/ws/watch` for a co-op game (R2881000, §9.5): a friend of either person watches that person's
+    //! seat, `SPECTATE_DELAY_MS` behind and offered nothing; whom a 1v1 watch refuses, and the friend's
+    //! own teammate, are refused; both seats hear the count; the watch ends after the result's view.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+    use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATOR_EMOTE_HAND_SIZE, SPECTATORS_PER_MATCH};
+
+    use super::*;
+    use crate::support::store::befriend;
+
+    /// How late past `SPECTATE_DELAY_MS` a delayed view may still arrive.
+    const DELAY_SLACK: Duration = Duration::from_secs(1);
+
+    /// `who` says hello to watch `friend` in the co-op game.
+    async fn watch(h: &Duos, who: &Account, friend: &Account) -> WsClient {
+        let client = h.served.connect(WATCH_PATH, &who.token).await;
+        client
+            .send_json(json!({ "type": "hello", "matchId": h.match_id, "friendId": friend.id }))
+            .await;
+        settle().await;
+        client
+    }
+
+    /// Let in: no refusal, the socket open.
+    fn assert_admitted(client: &WsClient) {
+        assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+        assert!(client.close_code().is_none(), "the watcher is let in");
+    }
+
+    async fn block(app: &Arc<App>, who: &Account, whom: &Account) {
+        let (status, body) = api(
+            app,
+            "POST",
+            "/api/blocks",
+            &who.token,
+            json!({ "profileId": whom.id }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+    }
+
+    /// `forbidden`, then the socket closes, and no view ever arrived: what a 1v1 watch's refusal is.
+    async fn assert_forbidden(client: &WsClient) {
+        let refusal = client
+            .wait_for(0, PROMPTLY, |frame| {
+                frame["type"] == "error" && frame["code"] == "forbidden"
+            })
+            .await;
+        assert!(refusal.is_some(), "no forbidden: {:?}", client.frames());
+        assert_eq!(
+            client.wait_closed(PROMPTLY).await,
+            Some(WS_CLOSE.forbidden),
+            "{:?}",
+            client.frames()
+        );
+        assert!(client.of_type("view").is_empty(), "{:?}", client.frames());
+    }
+
+    /// `forbidden`, as a refused hello gets, then the socket closes with R148's 4403.
+    async fn assert_let_go(client: &WsClient) {
+        let refusal = client
+            .wait_for(0, PROMPTLY, |frame| {
+                frame["type"] == "error" && frame["code"] == "forbidden"
+            })
+            .await;
+        assert!(refusal.is_some(), "no forbidden: {:?}", client.frames());
+        assert_eq!(
+            client.wait_closed(PROMPTLY).await,
+            Some(WS_CLOSE.forbidden),
+            "{:?}",
+            client.frames()
+        );
+    }
+
+    /// The counts a seat's socket was told, in order.
+    fn counts(client: &WsClient) -> Vec<Value> {
+        client
+            .of_type("watchers")
+            .iter()
+            .map(|frame| frame["count"].clone())
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_friend_watches_the_friends_coop_seat_spectate_delay_ms_late_with_no_legal_actions() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+        let delay = ms(SPECTATE_DELAY_MS);
+
+        let acted = Instant::now();
+        h.keep(&a1, "a1-keep").await;
+        let (_, at, frame) = watcher
+            .wait_for(0, delay + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && mulligan_answered(&frame["view"]["own"])
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the keep: {:?}", watcher.frames()));
+
+        assert!(
+            at >= acted + delay,
+            "shown {:?} after the state, before the delay",
+            at - acted
+        );
+        assert_eq!(frame["legal"], json!([]), "{frame}");
+        assert_eq!(frame["view"]["seat"], "a1", "the friend's seat: {frame}");
+        assert!(frame.get("jloreCapped").is_none(), "{frame}");
+        assert!(frame.get("economy").is_none(), "{frame}");
+        for view in watcher.of_type("view") {
+            assert_eq!(view["legal"], json!([]), "{view}");
+            assert_eq!(view["view"]["seat"], "a1", "{view}");
+        }
+        // Both people hear the one watcher.
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat), vec![json!(1)], "{:?}", seat.frames());
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_watcher_is_held_to_the_friends_duos_view_for_and_never_sent_a_ping_or_the_ai_teams_hand()
+     {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+
+        // B39: A2's ping reaches A1, and the watcher of A1's seat is not sent it.
+        let target = json!({ "duel": 0, "at": "hero", "side": "p2" });
+        let a1_from = a1.received();
+        a2.send_json(ping("thumbsUp", target.clone())).await;
+        settle().await;
+        assert_eq!(
+            a1.of_type_since(a1_from, "ping"),
+            vec![relayed("a2", "thumbsUp", &target)]
+        );
+        // Nothing is played while the people owe their mulligans: the watcher catches up.
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+
+        let seen = last_view(&watcher);
+        assert_eq!(
+            seen["view"],
+            last_view(&a1)["view"],
+            "the friend's seat's own view"
+        );
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let mut unclocked = seen["view"].clone();
+        unclocked["own"]["clockMs"] = Value::Null;
+        assert_eq!(
+            unclocked,
+            serde_json::to_value(actor.view_for(DuosSeat::A1)).expect("a view serializes"),
+            "the friend's `duos_view_for`, and only its clock beside it"
+        );
+        // The AI team's hands are counts in both duels.
+        for duel in ["own", "teammate"] {
+            let hand = &seen["view"][duel]["opponent"]["hand"];
+            assert!(hand["count"].is_number(), "{duel}: {hand}");
+            assert!(!hand.is_array(), "{duel}: {hand}");
+        }
+        // R2990001: its own emote hand first, then views only.
+        let frames = watcher.frames();
+        let (hand, views) = frames.split_first().expect("the watcher was sent frames");
+        assert_eq!(hand["type"], "spectatorHand", "{hand}");
+        for frame in views {
+            assert_eq!(frame["type"], "view", "a watcher is sent views only: {frame}");
+        }
+
+        // R1103000: a later hello is answered with the view last sent.
+        let from = watcher.received();
+        watcher
+            .send_json(json!({ "type": "hello", "matchId": h.match_id, "friendId": h.host.id }))
+            .await;
+        let (_, _, again) = watcher
+            .wait_for(from, PROMPTLY, |frame| frame["type"] == "view")
+            .await
+            .unwrap_or_else(|| panic!("the hello went unanswered: {:?}", watcher.frames()));
+        assert_eq!(again, seen);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_stranger_a_blocked_pair_and_the_friends_own_teammate_are_forbidden() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let blocked = account(&h.app, 4, "Bo").await;
+        befriend(&h.app, &blocked, &h.host).await;
+        block(&h.app, &h.host, &blocked).await;
+        // The guest is the host's friend, and their teammate in this game.
+        befriend(&h.app, &h.guest, &h.host).await;
+
+        for who in [&h.outsider, &blocked, &h.guest] {
+            let client = watch(&h, who, &h.host).await;
+            assert_forbidden(&client).await;
+        }
+
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 0);
+        assert!(counts(&a1).is_empty(), "{:?}", a1.frames());
+    }
+
+    /// A watcher of one seat is shown its teammate's duel (§13.6), so a block between the watcher and
+    /// the friend's teammate, either way, refuses the hello and ends a watch already running (§9.4);
+    /// the teammate ending a friendship with the watcher does not, as no friendship with them was asked.
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_block_with_the_friends_teammate_forbids_the_watch_and_ends_one_running() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let shunned = account(&h.app, 4, "Sid").await;
+        let shunner = account(&h.app, 5, "Sal").await;
+        let fan = account(&h.app, 6, "Fay").await;
+        let mutual = account(&h.app, 7, "Mo").await;
+        for who in [&shunned, &shunner, &fan, &mutual] {
+            befriend(&h.app, who, &h.host).await;
+        }
+        befriend(&h.app, &mutual, &h.guest).await;
+        // The teammate blocks one of the host's friends; another blocks the teammate.
+        block(&h.app, &h.guest, &shunned).await;
+        block(&h.app, &shunner, &h.guest).await;
+
+        for who in [&shunned, &shunner] {
+            let client = watch(&h, who, &h.host).await;
+            assert_forbidden(&client).await;
+        }
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 0);
+
+        let first = watch(&h, &fan, &h.host).await;
+        let second = watch(&h, &mutual, &h.host).await;
+        assert_admitted(&first);
+        assert_admitted(&second);
+
+        // The teammate unfriends a watcher of the host's seat: still the host's friend, it watches on.
+        let (status, body) = api(
+            &h.app,
+            "DELETE",
+            &format!("/api/friends/{}", mutual.id),
+            &h.guest.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+        assert!(
+            second.close_code().is_none(),
+            "an unfriend of the teammate ends no watch"
+        );
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 2);
+
+        // The teammate blocks a watcher mid-watch: it goes.
+        block(&h.app, &h.guest, &fan).await;
+        settle().await;
+        assert_let_go(&first).await;
+        assert!(second.close_code().is_none(), "the other still watches");
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(1)), "{:?}", seat.frames());
+        }
+
+        // A watcher blocks the teammate mid-watch: it goes too.
+        block(&h.app, &mutual, &h.guest).await;
+        settle().await;
+        assert_let_go(&second).await;
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(0)), "{:?}", seat.frames());
+        }
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_full_coop_game_is_forbidden_to_one_watcher_more() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let mut watching = Vec::new();
+        for n in 0..SPECTATORS_PER_MATCH {
+            let number = 4 + u32::try_from(n).expect("a small number");
+            let fan = account(&h.app, number, &format!("Fan{n}")).await;
+            befriend(&h.app, &fan, &h.host).await;
+            let client = watch(&h, &fan, &h.host).await;
+            assert_admitted(&client);
+            watching.push(client);
+        }
+        let number = 4 + u32::try_from(SPECTATORS_PER_MATCH).expect("a small number");
+        let late = account(&h.app, number, "Late").await;
+        befriend(&h.app, &late, &h.host).await;
+
+        let refused = watch(&h, &late, &h.host).await;
+
+        assert_forbidden(&refused).await;
+        for client in &watching {
+            assert!(client.close_code().is_none(), "those in still watch");
+        }
+        assert_eq!(counts(&a1).last(), Some(&json!(SPECTATORS_PER_MATCH)));
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), SPECTATORS_PER_MATCH);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_an_unfriend_a_block_or_a_deleted_account_lets_the_watcher_go_and_both_seats_hear_the_count()
+     {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let hosts_friend = account(&h.app, 4, "Hal").await;
+        let guests_friend = account(&h.app, 5, "Gil").await;
+        befriend(&h.app, &hosts_friend, &h.host).await;
+        befriend(&h.app, &guests_friend, &h.guest).await;
+        let first = watch(&h, &hosts_friend, &h.host).await;
+        let second = watch(&h, &guests_friend, &h.guest).await;
+        settle().await;
+        assert_admitted(&first);
+        assert_admitted(&second);
+        // One cap for the game: both seats' watchers are counted together.
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(2)), "{:?}", seat.frames());
+        }
+        // A seat that comes back is told the count again.
+        let a2 = h.seat(&h.guest).await;
+        settle().await;
+        assert_eq!(counts(&a2), vec![json!(2)], "{:?}", a2.frames());
+
+        // The host removes their friend: that watcher goes, the other stays.
+        let (status, body) = api(
+            &h.app,
+            "DELETE",
+            &format!("/api/friends/{}", hosts_friend.id),
+            &h.host.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+        assert_let_go(&first).await;
+        assert!(second.close_code().is_none(), "the guest's friend still watches");
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(1)), "{:?}", seat.frames());
+        }
+
+        // The guest's friend blocks the guest.
+        block(&h.app, &guests_friend, &h.guest).await;
+        settle().await;
+        assert_let_go(&second).await;
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(0)), "{:?}", seat.frames());
+        }
+
+        // A third watcher deletes their account.
+        let leaver = account(&h.app, 6, "Ida").await;
+        befriend(&h.app, &leaver, &h.host).await;
+        let third = watch(&h, &leaver, &h.host).await;
+        assert_admitted(&third);
+        assert_eq!(counts(&a1).last(), Some(&json!(1)));
+        let (status, body) = api(&h.app, "DELETE", "/api/account", &leaver.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+        assert_let_go(&third).await;
+        for seat in [&a1, &a2] {
+            assert_eq!(counts(seat).last(), Some(&json!(0)), "{:?}", seat.frames());
+        }
+        assert_eq!(registry(&h.app).watcher_count(&h.match_id), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_watchers_frames_never_reach_the_coop_game() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let (logged, hash, next_seq) = (h.logged().await.len(), actor.hash(), actor.next_seq());
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+
+        watcher.send_json(action("w-concede", concede())).await;
+        watcher
+            .send_json(ping("thumbsUp", json!({ "duel": 0, "at": "hero", "side": "p2" })))
+            .await;
+        // A seat's hello takes no seat.
+        watcher.send_json(hello(&h.match_id)).await;
+        watcher.send_text("not json").await;
+        settle().await;
+
+        assert_eq!(h.logged().await.len(), logged, "nothing logged");
+        assert_eq!(actor.hash(), hash, "the state is untouched");
+        assert_eq!(actor.next_seq(), next_seq);
+        for kind in ["ack", "error", "ping"] {
+            assert!(watcher.of_type(kind).is_empty(), "{kind}: {:?}", watcher.frames());
+        }
+        for (seat, from) in [(&a1, a1_from), (&a2, a2_from)] {
+            assert!(seat.of_type_since(from, "ping").is_empty(), "{:?}", seat.frames());
+        }
+        assert!(watcher.close_code().is_none(), "within its malformed budget");
+    }
+
+    /// R2990000: a co-op watcher's emote, from its own hand (R2990001), goes live to both people's
+    /// sockets and the other watcher, of either seat, and never back to its sender or into the game.
+    #[tokio::test(start_paused = true)]
+    async fn r2990000_a_coop_watchers_emote_reaches_both_people_and_the_other_watcher_and_never_the_game() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        let pal = account(&h.app, 5, "Pal").await;
+        befriend(&h.app, &fan, &h.host).await;
+        befriend(&h.app, &pal, &h.guest).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        let other = watch(&h, &pal, &h.guest).await;
+        assert_admitted(&watcher);
+        assert_admitted(&other);
+        let hands: Vec<Vec<Value>> = [&watcher, &other]
+            .into_iter()
+            .map(|client| {
+                client
+                    .of_type("spectatorHand")
+                    .first()
+                    .and_then(|frame| frame["emotes"].as_array().cloned())
+                    .unwrap_or_else(|| panic!("no spectatorHand frame: {:?}", client.frames()))
+            })
+            .collect();
+        for hand in &hands {
+            assert_eq!(hand.len(), SPECTATOR_EMOTE_HAND_SIZE, "{hand:?}");
+        }
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let (logged, hash, next_seq) = (h.logged().await.len(), actor.hash(), actor.next_seq());
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+        let (watcher_from, other_from) = (watcher.received(), other.received());
+
+        watcher
+            .send_json(json!({ "type": "emote", "emote": hands[0][0] }))
+            .await;
+        settle().await;
+
+        let expected = json!({ "type": "spectatorEmote", "watcher": fan.name, "emote": hands[0][0] });
+        for (seat, from) in [(&a1, a1_from), (&a2, a2_from)] {
+            assert_eq!(
+                seat.of_type_since(from, "spectatorEmote"),
+                vec![expected.clone()],
+                "{:?}",
+                seat.frames()
+            );
+        }
+        let (_, _, frame) = other
+            .wait_for(other_from, PROMPTLY, |frame| frame["type"] == "spectatorEmote")
+            .await
+            .unwrap_or_else(|| panic!("the other watcher never heard it: {:?}", other.frames()));
+        assert_eq!(frame, expected);
+        assert!(
+            watcher.of_type_since(watcher_from, "spectatorEmote").is_empty(),
+            "no echo"
+        );
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        assert_eq!(h.logged().await.len(), logged, "nothing logged");
+        assert_eq!(actor.hash(), hash, "the state is untouched");
+        assert_eq!(actor.next_seq(), next_seq);
+
+        // R2990001: a voice line, or an emoji outside the hand, is dropped silently; R2990000: an id
+        // outside the pool is answered `malformed`.
+        let outside = jackioh_engine::EMOJI_EMOTE_IDS
+            .iter()
+            .map(|id| json!(id.as_str()))
+            .find(|id| !hands[1].contains(id))
+            .expect("an emoji outside the hand");
+        for id in [json!("greetings"), outside, json!("sobbing")] {
+            other.send_json(json!({ "type": "emote", "emote": id })).await;
+        }
+        settle().await;
+        for seat in [&a1, &a2] {
+            assert_eq!(seat.of_type("spectatorEmote").len(), 1, "{:?}", seat.frames());
+        }
+        let answers = other.of_type("error");
+        assert_eq!(answers.len(), 1, "{:?}", other.frames());
+        assert_eq!(answers[0]["code"], "malformed", "{}", answers[0]);
+        assert!(other.close_code().is_none(), "within its malformed budget");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2881000_a_coop_watch_ends_after_the_result_view_even_once_both_seats_have_left() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+
+        h.concede_both(&a1, &a2).await;
+        a1.hang_up().await;
+        a2.hang_up().await;
+        let held = registry(&h.app);
+        let actor = held.get(&h.match_id).expect("the finished actor");
+        assert!(actor.is_finished());
+        assert!(!actor.has_open_socket(), "both people have left");
+        jackioh_server::duos::sweep(&h.app).await.expect("the sweep");
+        assert!(held.has(&h.match_id), "a watcher is still owed the result");
+
+        let (_, _, last) = watcher
+            .wait_for(0, ms(SPECTATE_DELAY_MS) + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && !frame["view"]["result"].is_null()
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the result: {:?}", watcher.frames()));
+        assert_eq!(last["legal"], json!([]), "{last}");
+        assert_eq!(watcher.wait_closed(PROMPTLY).await, Some(1000));
+        assert_eq!(actor.watcher_count(), 0);
+
+        jackioh_server::duos::sweep(&h.app).await.expect("the sweep");
+        assert!(!held.has(&h.match_id), "reaped once its watcher had the result");
+    }
+}

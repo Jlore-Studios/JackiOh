@@ -101,6 +101,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -167,7 +169,6 @@ mod tests {
 
         #[test]
         fn s8_prints_rush_and_1_6_and_the_script_grants_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [FAUCI] } }));
             s.expect_stats(FAUCI, json!({ "attack": 1, "health": 6, "maxHealth": 6 }));
             assert_eq!(kinds(&keywords_in_lane(&s, P1, 1)), vec!["Rush".to_string()]);
@@ -286,7 +287,6 @@ mod tests {
 
         #[test]
         fn s8_prints_rush_and_2_12_on_the_radiant_face() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [{ "def": FAUCI, "radiant": true }] } }));
             s.expect_stats(FAUCI, json!({ "attack": 2, "health": 12, "maxHealth": 12 }));
             assert_eq!(kinds(&keywords_in_lane(&s, P1, 1)), vec!["Rush".to_string()]);
@@ -322,7 +322,6 @@ mod tests {
 
         #[test]
         fn r63_still_holds_on_the_radiant_face_a_0_hit_makes_no_token() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": FAUCI, "radiant": true, "position": "DEF" }], "hand": [GARY] },
@@ -341,7 +340,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_gains_2_a_counter_and_a_radiant_degrade_1_and_the_preview_says_so() {
         for (radiant, upgrade, rate) in [(false, true, 2), (true, false, 1)] {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": FAUCI, "radiant": radiant }], "hand": [GARY] },

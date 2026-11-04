@@ -13,8 +13,8 @@
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
 #   rust_cards_lib     `rust_tools_wasm`, which also runs `tools fuzz` and `tools duos, selfplay`;
 #   rust_cards         `rust_engine` also runs `engine golden`, `rust_engine_rules` `engine
-#   rust_server        rules 2`, and `rust_server` `server api`, `server practice` and `server
-#                      practice rulings`)
+#   rust_server        rules 2` and `engine rules 3`, and `rust_server` `server api`, `server
+#                      practice` and `server practice rulings`)
 #   rust_ai
 #   rust_ai_slow
 #   rust_luau
@@ -27,6 +27,11 @@
 #   e2e                `e2e smoke`
 #   infra              `rust (checks, fuzz 200)`'s terraform steps over infra/ (#1708): fmt, init
 #                      without the backend, validate, and the lock file
+#
+# ci.yml's `changes` job runs `main`'s copy of this script, the base's, not a pull request's own
+# (#2986): an edit here scopes the pull requests after it lands, never the one that makes it, which
+# runs every job (this script changed) and any line only its copy declares in `LINES=`, as `true`
+# (read, never run). Keep `LINES=` one line of names.
 #
 # ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
 # for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
@@ -296,7 +301,7 @@ for file in $files; do
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
-    scripts/browse.sh | scripts/promote-production.sh | scripts/worktree.sh) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done

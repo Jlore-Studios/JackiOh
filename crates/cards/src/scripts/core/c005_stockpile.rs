@@ -33,6 +33,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// Nine simple cards, enough to fill a hand to the cap next to the Stockpile being played.
     const NINE_FILLERS: [&str; 9] = [
         "core-001", "core-002", "core-003", "core-004", "core-008", "core-011", "core-012", "core-015", "core-020",
@@ -43,7 +45,6 @@ mod tests {
 
         #[test]
         fn draws_2_and_heals_the_hero_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-005"], "health": 20, "library": ["core-025", "core-007", "core-012"] }
             }));
@@ -59,7 +60,6 @@ mod tests {
 
         #[test]
         fn the_hero_may_go_above_30_it_has_no_maximum_health_s3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-005"], "health": 30, "library": ["core-025", "core-007"] }
             }));
@@ -88,7 +88,6 @@ mod tests {
 
         #[test]
         fn radiant_draws_4_and_heals_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": "core-005", "radiant": true }],
@@ -109,7 +108,6 @@ mod tests {
             for (upgrade, key, cards, health) in
                 [(true, "draw", 3, 22), (true, "heal", 2, 23), (false, "draw", 1, 22), (false, "heal", 2, 21)]
             {
-                crate::register_all();
                 let mut s = scenario(json!({
                     // #10 Rapid Replenish, a (0) Spell, keeps the turn from auto-ending (R82).
                     "p1": { "hand": ["core-005", "core-010"], "health": 20, "library": ["core-025", "core-007", "core-012", "core-011"] }

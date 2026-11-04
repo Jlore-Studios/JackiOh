@@ -24,7 +24,7 @@ const CARD_FACE_LABEL =
 
 /**
  * WCAG 2.5.3 Label in Name, the deck builder's list: an open deck's strip shows cost and name, and its
- * name says what pressing it does ("Remove Bigot from Deck 2"), naming the card but not the cost.
+ * name says what pressing it does ("Remove Speciesist from Deck 2"), naming the card but not the cost.
  */
 const DECK_TILE_LABEL =
   "A deck's card strip shows its cost and name; its name says what pressing it does and names the card. Reading the cost too is the same design decision.";
@@ -36,6 +36,14 @@ const DECK_TILE_LABEL =
  */
 const LOG_LINE_SIZE =
   "The game log's card buttons sit in a dense list with a mouse (B29); a finger gets 44 px rows. Spacing a mouse's rows out is a design decision.";
+
+/**
+ * WCAG 2.5.8 Target Size (Minimum), on a phone. A pile that opens is a 16 px pill in the thinner seat; a
+ * finger gets the 44 px band its `::after` draws (B29, apps/web/src/game/inspectable.css), proven in a
+ * browser by mobile-ux.cy.tsx. axe measures the element's box, not its pseudo-element, so it sees the pill.
+ */
+const PILE_BAND_SIZE =
+  "A browsable pile is a 16 px pill on a phone; a finger gets its 44 px ::after band (B29), which axe does not measure. A taller pill takes height back from the board, a design decision.";
 
 export const AXE_EXCEPTIONS: readonly AxeException[] = [
   { route: "/", rule: "label-content-name-mismatch", selector: ".landing-fan-card", reason: CARD_FACE_LABEL },
@@ -50,4 +58,6 @@ export const AXE_EXCEPTIONS: readonly AxeException[] = [
   { route: "/almanac (phone)", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
   { route: "/decks (phone)", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
   { route: "/practice board (phone)", rule: "label-content-name-mismatch", selector: ".prompt-card", reason: CARD_FACE_LABEL },
+  { route: "/practice board (phone)", rule: "target-size", selector: ".pile--browsable", reason: PILE_BAND_SIZE },
+  { route: "hotseat board (phone)", rule: "target-size", selector: ".pile--browsable", reason: PILE_BAND_SIZE },
 ];

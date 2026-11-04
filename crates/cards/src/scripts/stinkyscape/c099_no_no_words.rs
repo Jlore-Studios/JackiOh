@@ -88,7 +88,6 @@ mod tests {
     }
 
     fn nono_board(radiant: bool, theirs: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "hand": [{ "def": NONO, "radiant": radiant }, FILLER] },
             "p2": { "hand": [FILLER], "field": theirs },

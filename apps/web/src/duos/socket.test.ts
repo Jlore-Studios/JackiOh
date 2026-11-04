@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import {
@@ -554,5 +554,61 @@ describe("#1664 a finished view carries the seat's economy", () => {
     h.socket().deliver({ type: "view", view: { round: 2 }, legal: [], economy: { ...ECONOMY, quests: 5 } });
     expect(roundOf(h)).toBe(2);
     expect(h.client.snapshot().economy).toBeNull();
+  });
+});
+
+// R2881000: how many friends watch the game, on both seats' sockets
+
+describe("R2881000 a co-op seat hears how many friends watch", () => {
+  it("R2881000 a watchers frame sets the seat's watcher count; one not a whole count is no frame", () => {
+    const h = connected();
+    expect(h.client.snapshot().watchers).toBe(0);
+    h.socket().deliver({ type: "watchers", count: 2 });
+    expect(h.client.snapshot().watchers).toBe(2);
+    h.socket().deliver({ type: "watchers", count: 0 });
+    expect(h.client.snapshot().watchers).toBe(0);
+    for (const count of [1.5, -1, "3", null]) {
+      expect(parseDuosFrame(JSON.stringify({ type: "watchers", count }))).toBeNull();
+      h.socket().deliver({ type: "watchers", count });
+    }
+    expect(h.client.snapshot().watchers).toBe(0);
+    expect(parseDuosFrame(JSON.stringify({ type: "watchers", count: 1 }))).toEqual({ type: "watchers", count: 1 });
+  });
+});
+
+// R2990000, R2990001: a watcher's emotes, on both people's seat sockets and the co-op watch socket
+
+describe("R2990000 a co-op seat hears the watchers' emotes", () => {
+  it("R2990000 a spectatorEmote frame reaches the seat's snapshot with a seq that bumps on a repeat", () => {
+    const h = connected();
+    expect(h.client.snapshot().spectatorEmote).toBeNull();
+    h.socket().deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "heart" });
+    expect(h.client.snapshot().spectatorEmote).toEqual({ watcher: "Wes#13", emote: "heart", seq: 1 });
+    h.socket().deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "heart" });
+    expect(h.client.snapshot().spectatorEmote).toEqual({ watcher: "Wes#13", emote: "heart", seq: 2 });
+
+    for (const frame of [
+      { type: "spectatorEmote", watcher: "", emote: "heart" },
+      { type: "spectatorEmote", watcher: "Wes#13", emote: "thanks" },
+      { type: "spectatorEmote", watcher: "Wes#13" },
+    ]) {
+      expect(parseDuosFrame(JSON.stringify(frame)), JSON.stringify(frame)).toBeNull();
+      h.socket().deliver(frame);
+    }
+    expect(h.client.snapshot().spectatorEmote?.seq).toBe(2);
+  });
+
+  it("R2990001 a spectatorHand frame parses for the co-op watch screen; a voice line, too many, a repeat or no list is no frame", () => {
+    const hand = ["yawn", "cool", "gasp"];
+    expect(parseDuosFrame(JSON.stringify({ type: "spectatorHand", emotes: hand }))).toEqual({ type: "spectatorHand", emotes: hand });
+    const pool = ["sob", "yawn", "laugh", "angry", "wahWah", "wave", "clap", "thumbsUp"];
+    for (const emotes of [[], ["oops"], pool.slice(0, SPECTATOR_EMOTE_HAND_SIZE + 1), ["cool", "cool"], "cool", null]) {
+      expect(parseDuosFrame(JSON.stringify({ type: "spectatorHand", emotes })), JSON.stringify(emotes)).toBeNull();
+    }
+    // A seat is dealt none: the frame changes nothing it holds.
+    const h = connected();
+    const before = h.client.snapshot();
+    h.socket().deliver({ type: "spectatorHand", emotes: hand });
+    expect(h.client.snapshot()).toBe(before);
   });
 });

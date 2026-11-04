@@ -81,6 +81,50 @@
   min-height: 44px;
 }
 
+/* #1890: Google's own sign-in button (its branding guidelines' light theme), in the palette's
+   nearest colors: white, a grey edge, near-black text and the unaltered "G", in place of the
+   tavern's wood. The extra :not() outranks the
+   tavern's button rule (tavern.css), which carries four. */
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-google:not(.link-button) {
+  display: inline-flex;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border: 1px solid var(--pal-grey-500);
+  border-radius: 4px;
+  background: var(--pal-white);
+  color: color-mix(in srgb, var(--pal-black) 88%, var(--pal-white));
+  font-family: var(--font-text);
+  font-size: var(--type-lg);
+  font-weight: 500;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-google:not(.link-button):hover:not(:disabled) {
+  border-color: var(--pal-grey-500);
+  background: color-mix(in srgb, var(--pal-white) 95%, var(--pal-black));
+  color: color-mix(in srgb, var(--pal-black) 88%, var(--pal-white));
+}
+
+.auth-screen .auth-oauth .auth-oauth-mark {
+  flex: none;
+}
+
+/* R2983000: the slot Google Identity Services draws its own button in, centered where R666's
+   Google button stood; empty while GIS loads, when R666's button shows in its place. */
+.auth-screen .auth-oauth .auth-google {
+  display: flex;
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+.auth-screen .auth-oauth .auth-google:empty {
+  display: none;
+}
+
 .auth-screen .auth-resend {
   display: flex;
   flex-wrap: wrap;

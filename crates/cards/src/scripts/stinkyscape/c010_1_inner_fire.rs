@@ -75,7 +75,6 @@ mod tests {
 
         #[test]
         fn r1867002_a_2_6_becomes_6_6_and_a_7_3_becomes_3_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [INNER_FIRE, INNER_FIRE, FILLER],
@@ -99,7 +98,6 @@ mod tests {
 
         #[test]
         fn r1867002_a_unit_under_an_attack_aura_shows_its_health() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [INNER_FIRE], "field": [VANILLA], "backrow": [WEAPONS] },
                 "p2": { "hand": [FILLER] },
@@ -114,7 +112,6 @@ mod tests {
 
         #[test]
         fn s8_10_a_unit_immune_to_spells_cannot_be_chosen() {
-            crate::register_all();
             let s = scenario(json!({
                 "p1": { "hand": [INNER_FIRE, FILLER], "field": [VANILLA] },
                 "p2": { "hand": [FILLER], "field": [{ "def": IMMUNE, "radiant": true }] },
@@ -135,7 +132,6 @@ mod tests {
 
         #[test]
         fn r386_the_radiant_shift_is_untuned_on_the_base_face() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [INNER_FIRE, FILLER],
@@ -157,7 +153,6 @@ mod tests {
 
         #[test]
         fn r1867002_a_friendly_2_6_becomes_10_6() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": INNER_FIRE, "radiant": true }, FILLER],
@@ -174,7 +169,6 @@ mod tests {
 
         #[test]
         fn r1867002_an_enemy_7_3_becomes_0_3_and_an_enemy_2_6_is_unchanged() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": INNER_FIRE, "radiant": true }, FILLER], "mana": 9 },
                 "p2": {
@@ -194,7 +188,6 @@ mod tests {
 
         #[test]
         fn r1867002_an_enemy_2_6_stays_2_6_attack_never_below_0() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": INNER_FIRE, "radiant": true }, FILLER] },
                 "p2": {

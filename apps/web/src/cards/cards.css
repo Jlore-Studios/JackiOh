@@ -285,6 +285,14 @@
     0 1px 3px rgb(0 0 0 / 0.55);
 }
 
+/* R2940001: the Sketch version's base frame is a pencilled outline: its edge hatched in graphite on paper and its
+   bezel graphite, the palette's slates and no gold. A Radiant face keeps its gold-foil frame, and R2940002 a worn
+   border (cosmetics.css) its own edge and bezel; the art window's pencil ring is cosmetics.css's. */
+.cf[data-version="version-sketch"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-slate-700);
+  --cf-edge: repeating-linear-gradient(135deg, var(--pal-slate-700) 0 1px, var(--pal-slate-100) 1px 3px);
+}
+
 .cf-scale {
   position: absolute;
   inset: 1.2% 1.7%;
@@ -968,6 +976,158 @@
   white-space: nowrap;
 }
 
+/* -------------------------------------------------------------------------- extended art --- */
+
+/* R2942001: Extended art, a borderless print: the card's own picture runs past its window across the whole panel
+   (CardArt's "full" shape) and every part of the normal face stays over it. The panel lies over the picture as a
+   translucent frame, at EXTENDED_ART_FRAME_OPACITY (constants.ts) at the rim and fading to nothing 14% in from the
+   sides and 10% from the top and foot, as R2720000's finish band does; it is the panel itself, so R2942002 a finish's
+   panel shows through it as the type's does. A base face's rules box is its parchment at EXTENDED_ART_BOX_PCT over
+   the picture; a Radiant face keeps its gold box, gilded panel and gold-foil edge, the rim round the picture.
+   Selectors carry the face's type where the ordinary rule does, so they outrank it whatever the order. */
+.cf[data-version="version-extended-art"] .cf-art-frame,
+.cf[data-version="version-extended-art"][data-card-type] .cf-art-frame {
+  inset: 0;
+  z-index: 0;
+  height: auto;
+  filter: none;
+  background: inherit;
+}
+
+/* A Trap's notched plate behind its window has no window to frame. */
+.cf[data-version="version-extended-art"][data-card-type] .cf-art-frame::before {
+  content: none;
+}
+
+/* The picture is a square EXTENDED_ART_PICTURE_PCT of the face's height standing on its foot, so its middle, where
+   a painter puts its subject, sits where the normal window's does, clear of the name banner, and the rest runs past
+   it to every edge. */
+.cf[data-version="version-extended-art"] .cf-art-frame > .cf-art {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: auto;
+  height: 150%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  box-shadow: none;
+}
+
+.cf[data-version="version-extended-art"] .cf-art-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  opacity: 0.55;
+  -webkit-mask-image:
+    linear-gradient(to right, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
+    linear-gradient(to bottom, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
+  mask-image:
+    linear-gradient(to right, var(--pal-black), transparent 14%, transparent 86%, var(--pal-black)),
+    linear-gradient(to bottom, var(--pal-black), transparent 10%, transparent 90%, var(--pal-black));
+  pointer-events: none;
+}
+
+.cf[data-version="version-extended-art"]:not([data-radiant-face="true"]) .card-text {
+  background: color-mix(in srgb, var(--pal-parchment) 90%, transparent);
+}
+
+/* --------------------------------------------------------------------------------- pixel --- */
+
+/* R2942001: the Pixel version's retro frame on a base face: an edge of stepped slate bars and a slate bezel, the
+   palette's slates and no gold, a hard-stepped ring round the window (black, the bezel, black) and a flat name
+   banner, the name in the pixel face (pixelName.ts, `--cf-pixel-name`) over the banner's own unseen words. A Radiant
+   face keeps its gold-foil frame and gilded banner, and R2942002 a worn border its edge and bezel, the ring taking
+   its colour. */
+.cf[data-version="version-pixel"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-slate-400);
+  --cf-edge: repeating-linear-gradient(to right, var(--pal-slate-900) 0 3px, var(--pal-slate-800) 3px 6px);
+}
+
+.cf[data-version="version-pixel"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.5cqw var(--pal-black),
+    0 0 0 1.1cqw var(--cf-bezel),
+    0 0 0 1.6cqw var(--pal-black);
+}
+
+.cf[data-version="version-pixel"] .card-name {
+  clip-path: none;
+  background: var(--cf-frame);
+}
+
+/* The pixel face's box, the banner less 1.1cqh above and below and 2cqw at each end (no chevron to clear): 5.4cqh by
+   90cqw, so on the smallest full face (150px) a name of PIXEL_NAME_MAX_GLYPHS keeps every cell at
+   PIXEL_NAME_CELL_MIN_PX (pixelName.ts, held by versionLooks3.test.tsx). */
+.cf[data-version="version-pixel"] .card-name[data-pixel-name="true"] {
+  padding: 1.1cqh 2cqw;
+  color: transparent;
+  text-shadow: none;
+  background: var(--cf-pixel-name) center / contain no-repeat content-box, var(--cf-frame);
+}
+
+/* --------------------------------------------------------------------------------- comic --- */
+
+/* R2942001: the Comic version's pop-art frame on a base face: a heavy black edge and a white bezel, inked round the
+   window, and the name in a burst, bold italic black on cyan (yellow is too near Radiant's gold). A Radiant face keeps
+   its gold-foil frame and its gilded banner in the burst's shape, and R2942002 a worn border its edge and bezel. */
+.cf[data-version="version-comic"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-white);
+  --cf-edge: linear-gradient(var(--pal-black) 0 0);
+}
+
+.cf[data-version="version-comic"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.6cqw var(--cf-bezel),
+    0 0 0 1.5cqw var(--pal-black);
+}
+
+/* The burst: fourteen spikes 12% deep along the banner's top and foot, and a point at each end. */
+.cf[data-version="version-comic"] .card-name {
+  font-style: italic;
+  font-weight: 900;
+  clip-path: polygon(
+    0 50%,
+    3% 12%,
+    8% 0,
+    15% 12%,
+    22% 0,
+    29% 12%,
+    36% 0,
+    43% 12%,
+    50% 0,
+    57% 12%,
+    64% 0,
+    71% 12%,
+    78% 0,
+    85% 12%,
+    92% 0,
+    97% 12%,
+    100% 50%,
+    97% 88%,
+    92% 100%,
+    85% 88%,
+    78% 100%,
+    71% 88%,
+    64% 100%,
+    57% 88%,
+    50% 100%,
+    43% 88%,
+    36% 100%,
+    29% 88%,
+    22% 100%,
+    15% 88%,
+    8% 100%,
+    3% 88%
+  );
+}
+
+.cf[data-version="version-comic"]:not([data-radiant-face="true"]) .card-name {
+  background: var(--pal-cyan-400);
+  color: var(--pal-black);
+  text-shadow: 0.25cqh 0.25cqh 0 var(--pal-white);
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {
@@ -1162,6 +1322,12 @@
     height: auto;
   }
 
+  /* R2942001: so does an Extended art face. */
+  .cf[data-version="version-extended-art"]:not([data-layout="minion"])[data-card-type] .cf-art-frame {
+    inset: 0;
+    height: auto;
+  }
+
   .cf:not([data-layout="minion"]) .card-name,
   .cf:not([data-layout="minion"])[data-layout] .card-name {
     top: 52cqh;
@@ -1190,6 +1356,14 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  /* R2942001: a Pixel face's name in the normal face, on two lines as above: the pixel face, one line of bitmap cells,
+     would draw them under a pixel here. */
+  .cf[data-version="version-pixel"]:not([data-layout="minion"]) .card-name[data-pixel-name="true"] {
+    color: var(--pal-white);
+    text-shadow: var(--cf-outline);
+    background: var(--cf-frame);
   }
 
   .cf:not([data-layout="minion"]) .cf-gem,
@@ -1563,8 +1737,8 @@
 }
 
 /* One chip per keyword, each in its own color, so "RU" and "LS" read apart at a glance. */
-.cf .keyword,
-.cf .cf-kw-more {
+:is(.cf, .field-badges) .keyword,
+:is(.cf, .field-badges) .cf-kw-more {
   --kw: #3a3f52;
 
   display: block;
@@ -1584,47 +1758,47 @@
   white-space: nowrap;
 }
 
-.cf .keyword[data-chip="hidden"] {
+:is(.cf, .field-badges) .keyword[data-chip="hidden"] {
   display: none;
 }
 
-.cf .cf-kw-more {
+:is(.cf, .field-badges) .cf-kw-more {
   --kw: #20242f;
 }
 
-.cf .keyword[data-keyword="Taunt"] { --kw: #6b7488; }
-.cf .keyword[data-keyword="Rush"] { --kw: #c2610c; }
-.cf .keyword[data-keyword="Charge"] { --kw: #c0262d; }
-.cf .keyword[data-keyword="First Strike"] { --kw: #b58a0c; }
-.cf .keyword[data-keyword="Poisonous"] { --kw: #2f8f3a; }
-.cf .keyword[data-keyword="Lifesteal"] { --kw: #a3173f; }
-.cf .keyword[data-keyword="Reborn"] { --kw: #1f8fb8; }
-.cf .keyword[data-keyword="Divine Shield"] { --kw: #c79a1c; }
-.cf .keyword[data-keyword="Trample"] { --kw: #8a4b1c; }
-.cf .keyword[data-keyword="Cleave"] { --kw: #7240c9; }
-.cf .keyword[data-keyword="Pierce"] { --kw: #0f7f86; }
-.cf .keyword[data-keyword="Windfury"] { --kw: #2b86c5; }
-.cf .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
-.cf .keyword[data-keyword="Deft"] { --kw: #b03a8c; }
-.cf .keyword[data-keyword="Untributable"] { --kw: #6b5a3e; }
-.cf .keyword[data-keyword="Equip"] { --kw: #c2372f; }
-.cf .keyword[data-keyword="Ranged"] { --kw: #7a5a1f; }
-.cf .keyword[data-keyword="Flying"] { --kw: #4f7fb8; }
-.cf .keyword[data-keyword="Cloaked"] { --kw: #5b4a7a; }
-.cf .keyword[data-keyword="Crater"] { --kw: #7a4a2a; }
-.cf .keyword[data-keyword="Flashback"] { --kw: #c46a1a; }
-.cf .keyword[data-keyword="Tradable"] { --kw: #2f7a6a; }
-.cf .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
-.cf .keyword[data-keyword="Immutable"] { --kw: #52607a; }
-.cf .keyword[data-keyword="Stack"] { --kw: #2f55c2; }
-.cf .keyword[data-keyword="Can't attack"] { --kw: #4a4a55; }
-.cf .keyword[data-keyword="Armor"] { --kw: #5d6d8a; }
-.cf .keyword[data-keyword="Lucky"] { --kw: #108a5e; }
-.cf .keyword[data-keyword="Animated"] { --kw: #9a6a12; }
-.cf .keyword[data-keyword="Animated on your turn"] { --kw: #7d5a1e; }
-.cf .keyword[data-keyword="Brittle"] { --kw: #5b7c96; }
-.cf .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
-.cf .keyword[data-keyword="Immune to Spells"] { --kw: #6a3fb0; }
+:is(.cf, .field-badges) .keyword[data-keyword="Taunt"] { --kw: #6b7488; }
+:is(.cf, .field-badges) .keyword[data-keyword="Rush"] { --kw: #c2610c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Charge"] { --kw: #c0262d; }
+:is(.cf, .field-badges) .keyword[data-keyword="First Strike"] { --kw: #b58a0c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Poisonous"] { --kw: #2f8f3a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Lifesteal"] { --kw: #a3173f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Reborn"] { --kw: #1f8fb8; }
+:is(.cf, .field-badges) .keyword[data-keyword="Divine Shield"] { --kw: #c79a1c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Trample"] { --kw: #8a4b1c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Cleave"] { --kw: #7240c9; }
+:is(.cf, .field-badges) .keyword[data-keyword="Pierce"] { --kw: #0f7f86; }
+:is(.cf, .field-badges) .keyword[data-keyword="Windfury"] { --kw: #2b86c5; }
+:is(.cf, .field-badges) .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Deft"] { --kw: #b03a8c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Untributable"] { --kw: #6b5a3e; }
+:is(.cf, .field-badges) .keyword[data-keyword="Equip"] { --kw: #c2372f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Ranged"] { --kw: #7a5a1f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Flying"] { --kw: #4f7fb8; }
+:is(.cf, .field-badges) .keyword[data-keyword="Cloaked"] { --kw: #5b4a7a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Crater"] { --kw: #7a4a2a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Flashback"] { --kw: #c46a1a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Tradable"] { --kw: #2f7a6a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
+:is(.cf, .field-badges) .keyword[data-keyword="Immutable"] { --kw: #52607a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Stack"] { --kw: #2f55c2; }
+:is(.cf, .field-badges) .keyword[data-keyword="Can't attack"] { --kw: #4a4a55; }
+:is(.cf, .field-badges) .keyword[data-keyword="Armor"] { --kw: #5d6d8a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Lucky"] { --kw: #108a5e; }
+:is(.cf, .field-badges) .keyword[data-keyword="Animated"] { --kw: #9a6a12; }
+:is(.cf, .field-badges) .keyword[data-keyword="Animated on your turn"] { --kw: #7d5a1e; }
+:is(.cf, .field-badges) .keyword[data-keyword="Brittle"] { --kw: #5b7c96; }
+:is(.cf, .field-badges) .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
+:is(.cf, .field-badges) .keyword[data-keyword="Immune to Spells"] { --kw: #6a3fb0; }
 
 /* Divine Shield: a golden bubble over the portrait, and under the name plate its rim would
    otherwise cross (R438: no keyword's treatment covers the name, the attack or the health). */

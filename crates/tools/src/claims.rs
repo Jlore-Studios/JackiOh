@@ -170,10 +170,10 @@ mod tests {
                     .to_string()
             ]
         );
-        let fragment = named("bigot.json", &[], &["core-002"], false);
+        let fragment = named("speciesist.json", &[], &["core-002"], false);
         assert!(problems(&change, std::slice::from_ref(&fragment), &[]).is_empty());
         // A token's claim counts for its card, and a catalog claim for its family.
-        let token = named("bigot.json", &["core-002-1"], &[], false);
+        let token = named("speciesist.json", &["core-002-1"], &[], false);
         assert!(problems(&change, &[token], &[]).is_empty());
     }
 

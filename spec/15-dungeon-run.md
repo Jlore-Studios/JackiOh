@@ -114,7 +114,7 @@ A run starts at max HP, with no Coins or Tickets, artifacts at level 1 and no ca
 
 **Kinds:**
 
-- Combat: works inside a fight; inert until the second stage.
+- Combat: works inside a fight: its fight effect changes the human's side of each fight's setup, once per level ([[§15.6]], [[R2922001]]).
 - Economic: works on the map.
 - Enemy: carried by enemies only (Looming Presence, Overwhelming Presence, a boss's own).
 - Blessing: a shrine's, from a god.
@@ -123,7 +123,7 @@ A player's artifact has a tier, Bronze to Diamond, which sets its strength, its 
 
 Those points are what the starting deck's limits count ([[§15.3]]): at most `RUN_STARTER_ARTIFACTS_MAX` artifacts, worth at most `RUN_STARTER_ARTIFACT_POINTS`.
 
-Artifacts start at level 1, and a shop raises them, at `RUN_LEVEL_TICKETS` times the level, up to `RUN_ARTIFACT_LEVEL_MAX` ([[§15.8]]). An artifact's map effect counts once per level; a blessing's counts once.
+Artifacts start at level 1, and a shop raises them, at `RUN_LEVEL_TICKETS` times the level, up to `RUN_ARTIFACT_LEVEL_MAX` ([[§15.8]]). An artifact's map or fight effect counts once per level; a blessing's counts once.
 
 **Effects:**
 
@@ -135,6 +135,8 @@ Artifacts start at level 1, and a shop raises them, at `RUN_LEVEL_TICKETS` times
 - more max HP.
 
 Max HP is `RUN_MAX_HP` plus the max-HP effects. A rise heals by the rise, and HP never stays above the max.
+
+**Fight effects** (a Combat artifact's): more cards in the opening hand, or Armor the hero starts each fight with ([[R2922000]]).
 
 No run holds an artifact twice. Every roll (reward, chest, event, shop) deals a Combat or Economic artifact that is neither Unobtainable nor held, and a boss drop already held is not offered.
 
@@ -162,7 +164,7 @@ The player steps onto any node of the next row.
 
 **The enemy:** its deck, with Easy's handicap (`AI_DIFFICULTY`), Medium's when it carries Looming Presence and Hard's with Overwhelming Presence; elites and bosses carry them. Its deck size is its deck's length and its hero health is `RUN_ENEMY_HEALTH` by kind.
 
-The game seed is the run's seed, row and column.
+The game seed is the run's seed, row and column. Leaving a fight unfinished asks first: it is dealt again from its seed ([[R2706000]], [[R2972000]]).
 
 Enemy decks are random for now: the enemy's own cards, then the open pool up to `RUN_ENEMY_DECK_SIZE`.
 
@@ -176,7 +178,7 @@ A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_D
 
 A win sets HP to the final health, kept between 1 and the max. Any other end drops HP to zero and ends the run.
 
-Combat artifacts and curses change no fight until the second stage.
+**Curses and Combat artifacts** change the two handicaps after Presence ([[R2922001]]). Each curse taken changes the enemy's once: more hero health, more opening cards, or more crystals every turn, bonus and cap together ([[R181]]). Each Combat artifact held changes the human's once per level: more opening cards ([[R182]]) or starting Armor ([[R2922000]]). A negative amount counts as none, and an enemy's own artifacts other than Presence change nothing. The placeholders' numbers are strawmen ([[§15.13]]).
 
 ### 15.7 After a fight
 
@@ -221,7 +223,7 @@ Discounts cut Coin prices only, and a price the run cannot pay is refused.
 
 **Shrine** (a monastery or a statue): up to `RUN_SHRINE_OFFERS` blessings not held; the player takes one or none, for the rest of the run.
 
-Abandoning at any time ends a run, lost. An ended run refuses every action.
+Abandoning at any time ends a run, lost. The start screen asks first, and the map links back to the Play menu ([[R2972000]]). An ended run refuses every action.
 
 ### 15.9 Curses
 
@@ -229,7 +231,7 @@ Curses are tiers chosen at the start, like Ascension. Each is worth its points, 
 
 Each point adds `RUN_SCORE_CURSE_POINT_PERCENT` to the score.
 
-They change no fight until the second stage.
+Each also makes every fight's enemy stronger ([[§15.6]], [[R2922001]]).
 
 ### 15.10 Score, Embers and leaderboards
 
@@ -266,9 +268,9 @@ Today, beating the final boss ends the run, won.
 
 ### 15.12 What is built
 
-**The first stage, the Sandbox:** `crates/run`'s core; fights that read the run (HP, Presence, Radiant and buffed cards); the Sandbox screens and device store; Economic artifacts and blessings; real cards, with placeholder enemies, artifacts, blessings, events and curses.
+**The first stage, the Sandbox:** `crates/run`'s core; fights that read the run (HP, Presence, Radiant and buffed cards); the Sandbox screens and device store; Economic artifacts and blessings; Combat artifacts and curses inside fights; real cards, with placeholder enemies, artifacts, blessings, events and curses.
 
-**The second stage:** the Campaign, ghosts from real players, Combat artifacts and curses inside fights, the extended campaign.
+**The second stage:** the Campaign, ghosts from real players, the extended campaign.
 
 The designer's content replaces the placeholders.
 

@@ -1,20 +1,11 @@
-# The one-off move from Render to Cloudflare (docs/deploy-cloudflare.md section 4, steps 3 and 6, and
-# section 8's copy), run by hand from Actions -> cutover, so no secret passes through anyone's machine:
-# each value goes from where it lives (Render's jackioh-server, this repository's secrets) straight to
-# where it is used, masked in the log. Once section 4's step 7 has run, delete this workflow, its line in
-# bot/go/internal/dashboard (runners.go and testdata/python.json), and the PRODUCTION_* secrets.
+# What is left of the move from Render to Cloudflare (docs/deploy-cloudflare.md section 4), run by hand
+# from Actions -> cutover, so no secret passes through anyone's machine: each value goes from where it
+# lives (this repository's secrets, a project's Management API) straight to where it is used, masked in
+# the log. Render's jackioh-server was deleted on 2026-11-03 (section 4, step 7), and with it the steps
+# that read it: staging-secrets, drop-ping, production-secrets, copy, after-cutover and delete-render
+# (they are in this file's history). The steps below still run.
 #
 # Each run does one `step`:
-#   staging-secrets     the five server secrets (SERVER_SECRETS, apps/edge/src/routing.ts) from Render
-#                       into the `jackioh-staging` Worker, then a staging deploy, since a container reads
-#                       its secrets as it starts (step 3). Staging keeps the project production used.
-#   drop-ping           drops public.ping() and public.keepalive from staging's database: the free plan's
-#                       keep-alive, which the Pro plan does not need (the owner's call, 2026-11-01). Run it
-#                       before the copy, so production never has them.
-#   production-secrets  the `jackioh` Worker's: CODE_PEPPER, CREATE_ISSUES_TOKEN and DEV_PROFILE_IDS as
-#                       Render holds them (the copy keeps every hash and id they fit), with
-#                       JackiOh-Production's own key and database from the repository secrets
-#                       PRODUCTION_SUPABASE_SECRET_KEY and PRODUCTION_DATABASE_URL (step 6.1).
 #   check-production    writes nothing: whether PRODUCTION_SUPABASE_SECRET_KEY is shaped like a secret
 #                       key, and whether PRODUCTION_DATABASE_URL reaches JackiOh-Production and what it
 #                       holds. Run it after setting either secret.
@@ -26,7 +17,7 @@
 #                       staging's Redirect URLs, keeping the rest (section 4, step 4). A value that names
 #                       staging's project, and a secret the API does not hand back, stay out and are
 #                       named. With `dry_run` (the default) it lists what it would change and writes
-#                       nothing. Run it before the copy's real run.
+#                       nothing.
 #   email               both projects' sign-in emails through Resend, from no-reply@jackioh.com, since
 #                       Supabase's own mailer reaches only the project's team, two an hour. With the
 #                       repository secret RESEND_API_KEY (a Full access key): adds jackioh.com to Resend
@@ -34,12 +25,18 @@
 #                       infra/cloudflare.tf), verifies the domain, makes a sending-only key for it and
 #                       sets it as both projects' SMTP (SUPABASE_ACCESS_TOKEN), then deletes the keys an
 #                       earlier run made, so running it again rotates the key. `dry_run` changes nothing.
-#                       When this workflow is deleted, this step moves to a workflow of its own.
-#   copy                staging's database into the empty JackiOh-Production (section 8): roles, schema
-#                       and data, the four statistics tables' live rows alone and none of
-#                       game_record_batches (R1933000), in one transaction; then profiles, matches and
-#                       auth.users counted on both sides, which must agree. With `dry_run` (the default)
-#                       it dumps and counts and writes nothing.
+#   stats-logins        JackiOh-Production's two statistics logins, each with a new password of its own
+#                       (the copy brought both from staging with staging's): stats_importer, which the
+#                       development lanes file through, and stats_reader, read-only, which
+#                       winrates-refresh.yml and db-size.yml read through (R1933001). Each address is
+#                       checked, then printed encrypted to `public_key` for a person to decrypt into the
+#                       repository secrets PRODUCTION_STATS_IMPORT_DATABASE_URL and the reader's.
+#   dev-stats           staging's development statistics into JackiOh-Production (R1933001): the
+#                       totals' development rows and game_record_batches, replacing whatever production
+#                       holds of them, in one transaction whose counts must agree with staging's. Live
+#                       rows are not touched. Run it again whenever the two may have drifted (a gather or
+#                       learn run whose import into production failed and was not run again): staging
+#                       files every development run, so its rows are the whole of them.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
 # and all, with the password itself in PRODUCTION_DB_PASSWORD: the workflow percent-encodes it, so a
@@ -59,31 +56,27 @@ on:
         required: true
         type: choice
         options:
-          - staging-secrets
-          - drop-ping
-          - production-secrets
           - check-production
           - production-auth
           - email
-          - copy
+          - stats-logins
+          - dev-stats
       dry_run:
-        description: "copy, production-auth and email: show what it would do, and write nothing"
+        description: "production-auth, email, stats-logins and dev-stats: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
+      public_key:
+        description: "stats-logins: an RSA public key (SPKI DER, base64) the addresses are encrypted to in the log"
+        required: false
+        type: string
 
 env:
-  CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
-  RENDER_SERVICE: jackioh-server
   STAGING_REF: exmjdaswedxhnzmpzqrq
   PRODUCTION_REF: fuzpvmjdejvbjcarypyi
-  # Supabase's CLI, for `db dump` (section 8).
-  SUPABASE_CLI: "2.122.0"
 
 permissions:
   contents: read
-  # `gh workflow run deploy-staging.yml` after staging's secrets.
-  actions: write
 
 concurrency:
   group: cutover
@@ -99,21 +92,10 @@ jobs:
         with:
           ref: main
 
-      # wrangler (apps/edge's) and Node for the Supabase CLI. Before any secret is read, so no action
-      # runs after one is on disk.
-      - uses: ./.github/actions/setup
-        with:
-          rust: "false"
-
-      - name: read jackioh-server's settings from Render, and staging's database address
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      - name: the database address helper
         run: |
           set -euo pipefail
           umask 077
-          [ -n "$RENDER_API_KEY" ] || { echo "::error::RENDER_API_KEY is not set"; exit 1; }
-
           # A database URL as the session pooler's, its password masked: argv is (ref, url, pooler host
           # or ""), the URL goes to stdout and what it names to stderr.
           cat > "$RUNNER_TEMP/pooler.py" <<'EOF'
@@ -159,34 +141,8 @@ jobs:
           sys.stdout.write(url)
           EOF
 
-          render() {
-            curl -fsS --retry 3 --max-time 60 -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Accept: application/json" "https://api.render.com/v1$1"
-          }
-          id=$(render "/services?name=$RENDER_SERVICE&limit=20" |
-            jq -r --arg n "$RENDER_SERVICE" '[.[].service | select(.name == $n)][0].id // empty')
-          [ -n "$id" ] || { echo "::error::Render has no service named $RENDER_SERVICE"; exit 1; }
-          vars=$(render "/services/$id/env-vars?limit=100")
-          # Every value masked before anything else can print it, but for those under eight characters
-          # (TRUSTED_PROXY_HOPS's `1`, CYPRESS_INSTALL_BINARY's `0`): no secret is that short, and masking
-          # a lone digit stars it out of every line of the log.
-          jq -r '.[].envVar.value // empty' <<<"$vars" | while IFS= read -r value; do
-            if [ "${#value}" -ge 8 ]; then echo "::add-mask::$value"; fi
-          done
-          jq '[.[].envVar | {(.key): .value}] | add // {}' <<<"$vars" > "$RUNNER_TEMP/render.json"
-          echo "Render's $RENDER_SERVICE ($id) holds: $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/render.json")"
-
-          db=$(jq -r '.DATABASE_URL // empty' "$RUNNER_TEMP/render.json")
-          [ -n "$db" ] || { echo "::error::Render's $RENDER_SERVICE has no DATABASE_URL"; exit 1; }
-          python3 "$RUNNER_TEMP/pooler.py" "$STAGING_REF" "$db" "$STATS_IMPORT_DATABASE_URL" \
-            > "$RUNNER_TEMP/staging.url.raw" 2> "$RUNNER_TEMP/staging.where"
-          grep '^::add-mask::' "$RUNNER_TEMP/staging.url.raw" || true
-          grep -v '^::add-mask::' "$RUNNER_TEMP/staging.url.raw" | tr -d '\n' > "$RUNNER_TEMP/staging.url"
-          echo "staging's database: $(cat "$RUNNER_TEMP/staging.where")"
-          rm -f "$RUNNER_TEMP/staging.url.raw"
-
       - name: production's database address
-        if: ${{ inputs.step == 'production-secrets' || inputs.step == 'check-production' || inputs.step == 'copy' }}
+        if: ${{ contains(fromJSON('["check-production", "stats-logins", "dev-stats"]'), inputs.step) }}
         env:
           PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
           DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
@@ -219,44 +175,6 @@ jobs:
           echo "production's database: $(cat "$RUNNER_TEMP/production.where")"
           rm -f "$RUNNER_TEMP/production.url.raw"
 
-      - name: staging's secrets into jackioh-staging, then deploy staging
-        if: ${{ inputs.step == 'staging-secrets' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          umask 077
-          status=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/jackioh-staging/settings")
-          if [ "$status" != 200 ]; then
-            echo "::error::the jackioh-staging Worker answers $status: deploy staging creates it, so let its first run finish"
-            exit 1
-          fi
-          file="$RUNNER_TEMP/staging.secrets.json"
-          jq --rawfile db "$RUNNER_TEMP/staging.url" \
-            '{SUPABASE_SECRET_KEY, CODE_PEPPER, CREATE_ISSUES_TOKEN, DEV_PROFILE_IDS} + {DATABASE_URL: $db}
-             | with_entries(select(.value != null and .value != ""))' "$RUNNER_TEMP/render.json" > "$file"
-          for need in SUPABASE_SECRET_KEY CODE_PEPPER DATABASE_URL; do
-            jq -e --arg k "$need" 'has($k)' "$file" > /dev/null || { echo "::error::Render holds no $need"; exit 1; }
-          done
-          echo "setting on jackioh-staging: $(jq -r 'keys | join(", ")' "$file")"
-          (cd apps/edge && pnpm exec wrangler secret bulk "$file" --config ../../wrangler.jsonc --env staging)
-          rm -f "$file"
-          gh workflow run deploy-staging.yml --repo "$GITHUB_REPOSITORY" --ref main
-          echo "deploy staging started: its container starts with these secrets"
-
-      - name: drop the keep-alive from staging's database
-        if: ${{ inputs.step == 'drop-ping' }}
-        run: |
-          set -euo pipefail
-          command -v psql > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client; }
-          db=$(cat "$RUNNER_TEMP/staging.url")
-          psql "$db" -XAtq -v ON_ERROR_STOP=1 -c "select 'before: ' || coalesce(to_regprocedure('public.ping()')::text, 'no ping()') || ', ' || coalesce(to_regclass('public.keepalive')::text, 'no keepalive')"
-          psql "$db" -Xq -v ON_ERROR_STOP=1 --single-transaction \
-            -c "drop function if exists public.ping()" -c "drop table if exists public.keepalive"
-          psql "$db" -XAtq -v ON_ERROR_STOP=1 -c "select 'after: ' || coalesce(to_regprocedure('public.ping()')::text, 'no ping()') || ', ' || coalesce(to_regclass('public.keepalive')::text, 'no keepalive')"
-
       - name: check production's secrets, writing nothing
         if: ${{ inputs.step == 'check-production' }}
         env:
@@ -271,44 +189,11 @@ jobs:
             "") shape="EMPTY or unset" ;;
             *) shape="NOT a Supabase key" ;;
           esac
-          [ "$key" = "$(jq -r '.SUPABASE_SECRET_KEY // empty' "$RUNNER_TEMP/render.json")" ] && shape="staging's key, not production's"
           echo "PRODUCTION_SUPABASE_SECRET_KEY: $shape, ${#key} characters" | tee -a "$GITHUB_STEP_SUMMARY"
           [ -s "$RUNNER_TEMP/production.url" ] || exit 1
           held=$(psql "$(cat "$RUNNER_TEMP/production.url")" -XAtq -v ON_ERROR_STOP=1 -c "select (select count(*) from information_schema.tables where table_schema = 'public') || ' public tables, ' || (select count(*) from auth.users) || ' users'")
           echo "PRODUCTION_DATABASE_URL reaches JackiOh-Production: $held" | tee -a "$GITHUB_STEP_SUMMARY"
           case "$shape" in a\ *) ;; *) exit 1 ;; esac
-
-      - name: production's secrets into jackioh
-        if: ${{ inputs.step == 'production-secrets' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          PRODUCTION_SUPABASE_SECRET_KEY: ${{ secrets.PRODUCTION_SUPABASE_SECRET_KEY }}
-        run: |
-          set -euo pipefail
-          umask 077
-          if [ -z "$PRODUCTION_SUPABASE_SECRET_KEY" ]; then
-            echo "::error::PRODUCTION_SUPABASE_SECRET_KEY is not set: JackiOh-Production -> Project Settings -> API Keys -> a secret key"
-            exit 1
-          fi
-          # A secret key (sb_secret_…) or a legacy service_role JWT (eyJ…): never the publishable key, or
-          # whatever else was on the clipboard when the secret was set.
-          case "$PRODUCTION_SUPABASE_SECRET_KEY" in
-            sb_secret_* | eyJ*) ;;
-            *) echo "::error::PRODUCTION_SUPABASE_SECRET_KEY is not a Supabase secret key (sb_secret_…): set it again from JackiOh-Production -> Project Settings -> API Keys"; exit 1 ;;
-          esac
-          if [ "$PRODUCTION_SUPABASE_SECRET_KEY" = "$(jq -r '.SUPABASE_SECRET_KEY // empty' "$RUNNER_TEMP/render.json")" ]; then
-            echo "::error::PRODUCTION_SUPABASE_SECRET_KEY is staging's key, not JackiOh-Production's"
-            exit 1
-          fi
-          file="$RUNNER_TEMP/production.secrets.json"
-          jq --arg key "$PRODUCTION_SUPABASE_SECRET_KEY" --rawfile db "$RUNNER_TEMP/production.url" \
-            '{CODE_PEPPER, CREATE_ISSUES_TOKEN, DEV_PROFILE_IDS} + {SUPABASE_SECRET_KEY: $key, DATABASE_URL: $db}
-             | with_entries(select(.value != null and .value != ""))' "$RUNNER_TEMP/render.json" > "$file"
-          jq -e 'has("CODE_PEPPER")' "$file" > /dev/null || { echo "::error::Render holds no CODE_PEPPER"; exit 1; }
-          echo "setting on jackioh: $(jq -r 'keys | join(", ")' "$file")"
-          (cd apps/edge && pnpm exec wrangler secret bulk "$file" --config ../../wrangler.jsonc --env="")
-          rm -f "$file"
-          echo "production's server reads these from its next deploy: promote production with redeploy (section 4, step 6.3)"
 
       - name: copy staging's sign-in settings to JackiOh-Production
         if: ${{ inputs.step == 'production-auth' }}
@@ -521,68 +406,137 @@ jobs:
             echo "deleted the earlier $KEY_NAME key $gone"
           done
 
-      - name: copy staging's database into JackiOh-Production
-        if: ${{ inputs.step == 'copy' }}
+      - name: production's statistics logins, sealed for a person
+        if: ${{ inputs.step == 'stats-logins' }}
         env:
           DRY_RUN: ${{ inputs.dry_run }}
+          PUBLIC_KEY: ${{ inputs.public_key }}
         run: |
           set -euo pipefail
           umask 077
-          # PostgreSQL 17's client, from PGDG: a dump made by a current pg_dump opens with `\restrict`,
-          # which an older psql refuses.
-          sudo apt-get install -y -qq postgresql-common > /dev/null
-          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
-          sudo apt-get install -y -qq postgresql-client-17 > /dev/null
-          psql() { /usr/lib/postgresql/17/bin/psql "$@"; }
-          staging=$(cat "$RUNNER_TEMP/staging.url")
           production=$(cat "$RUNNER_TEMP/production.url")
-          q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 -c "$2"; }
-          supabase() { npx --yes "supabase@$SUPABASE_CLI" "$@"; }
-          stats="game_records card_totals game_totals record_totals"
-
-          held=$(q "$production" "select (select count(*) from information_schema.tables where table_schema = 'public') + (select count(*) from auth.users)")
-          if [ "$held" != 0 ]; then
-            echo "::error::JackiOh-Production is not empty ($held public tables and users): the copy goes into an empty project only"
-            exit 1
-          fi
-          for table in $stats; do
-            [ "$(q "$staging" "select count(*) from information_schema.columns where table_schema = 'public' and table_name = '$table' and column_name = 'source'")" = 1 ] ||
-              { echo "::error::public.$table has no source column to keep the live rows by"; exit 1; }
-          done
-
-          mkdir -p "$RUNNER_TEMP/copy" && cd "$RUNNER_TEMP/copy"
-          supabase db dump --db-url "$staging" -f roles.sql --role-only
-          supabase db dump --db-url "$staging" -f schema.sql
-          supabase db dump --db-url "$staging" -f data.sql --use-copy --data-only \
-            -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
-            -x public.game_record_batches
-          for table in $stats; do
-            psql "$staging" -Xq -v ON_ERROR_STOP=1 -c "\\copy (select * from public.$table where source = 'live') to '$table.csv' csv"
-          done
-          # profiles, matches, users: what must agree on both sides.
-          counts="select (select count(*) from public.profiles)::text || ' ' || (select count(*) from public.matches)::text || ' ' || (select count(*) from auth.users)::text"
-          read -r profiles matches users <<<"$(q "$staging" "$counts")"
-          from="$profiles profiles, $matches matches, $users users"
-          {
-            echo "staging holds $from"
-            echo "auth.users in data.sql: $(grep -cE '^COPY "?auth"?\."?users"? ' data.sql || true) COPY block(s)"
-            for file in roles.sql schema.sql data.sql; do echo "$file: $(du -h "$file" | cut -f1)"; done
-            for table in $stats; do echo "$table: $(wc -l < "$table.csv") live rows"; done
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          host=$(python3 -c 'import sys, urllib.parse as u; print(u.urlsplit(sys.argv[1]).hostname)' "$production")
+          q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 "${@:2}"; }
+          # training/learn.md's two logins: stats_importer acts as service_role only by `set role`, and
+          # stats_reader's every transaction is read-only. The copy brought both from staging.
+          q "$production" -c "select rolname || ': ' || case when rolconfig is null then 'no settings' else array_to_string(rolconfig, ', ') end
+            from pg_roles where rolname in ('stats_importer', 'stats_reader') order by 1" | sed 's/^/production holds /'
           if [ "$DRY_RUN" = true ]; then
-            echo "dry run: nothing written to JackiOh-Production" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "dry_run: would give stats_importer and stats_reader new passwords and print their addresses sealed"
             exit 0
           fi
+          [ -n "$PUBLIC_KEY" ] || { echo "::error::public_key is empty: the addresses are printed only sealed"; exit 1; }
+          base64 -d <<<"$PUBLIC_KEY" > "$RUNNER_TEMP/key.der"
+          openssl pkey -pubin -inform DER -in "$RUNNER_TEMP/key.der" -out "$RUNNER_TEMP/key.pem"
 
-          copies=()
-          for table in $stats; do copies+=(-c "\\copy public.$table from '$table.csv' csv"); done
-          # The last statement of the one transaction: counts that differ roll the whole copy back.
-          # $check$ is SQL's dollar quoting, for psql, not the shell's.
-          # shellcheck disable=SC2016
-          check=$(printf 'do $check$ begin if (%s) <> %s then raise exception %s; end if; end $check$' \
-            "$counts" "'$profiles $matches $users'" "'the counts differ from staging''s: $from'")
-          psql "$production" -X -q --single-transaction -v ON_ERROR_STOP=1 -f roles.sql -f schema.sql \
-            -c 'set session_replication_role = replica' -f data.sql "${copies[@]}" -c "$check"
-          read -r profiles matches users <<<"$(q "$production" "$counts")"
-          echo "JackiOh-Production holds $profiles profiles, $matches matches, $users users, as staging does" | tee -a "$GITHUB_STEP_SUMMARY"
-          rm -f ./*.sql ./*.csv
+          importer=$(openssl rand -hex 24)
+          reader=$(openssl rand -hex 24)
+          echo "::add-mask::$importer"
+          echo "::add-mask::$reader"
+          # Each password goes to the database as its SCRAM verifier, so no statement or log holds it.
+          cat > "$RUNNER_TEMP/scram.py" <<'EOF'
+          import base64, hashlib, hmac, os, sys
+          salt, rounds = os.urandom(16), 4096
+          key = hashlib.pbkdf2_hmac("sha256", sys.stdin.read().encode(), salt, rounds)
+          client = hmac.new(key, b"Client Key", "sha256").digest()
+          server = hmac.new(key, b"Server Key", "sha256").digest()
+          b = lambda v: base64.b64encode(v).decode()
+          print(f"SCRAM-SHA-256${rounds}:{b(salt)}${b(hashlib.sha256(client).digest())}:{b(server)}")
+          EOF
+          scram() { printf %s "$1" | python3 "$RUNNER_TEMP/scram.py"; }
+          q "$production" -v importer="$(scram "$importer")" -v reader="$(scram "$reader")" <<'SQL'
+          do $$
+          begin
+            if not exists (select from pg_roles where rolname = 'stats_importer') then
+              create role stats_importer login noinherit;
+              grant service_role to stats_importer;
+            end if;
+            if not exists (select from pg_roles where rolname = 'stats_reader') then
+              create role stats_reader login;
+              grant service_role to stats_reader;
+              alter role stats_reader set default_transaction_read_only = on;
+            end if;
+          end
+          $$;
+          alter role stats_importer password :'importer';
+          alter role stats_reader password :'reader';
+          SQL
+
+          for login in stats_importer stats_reader; do
+            case "$login" in stats_importer) pw=$importer ;; *) pw=$reader ;; esac
+            url="postgresql://$login.$PRODUCTION_REF:$pw@$host:5432/postgres"
+            echo "::add-mask::$url"
+            # The pooler may take a moment to see a new password.
+            for wait in 5 10 20 0; do
+              if held=$(q "$url" -c "set role service_role; select 'read-only ' || current_setting('default_transaction_read_only') || ', ' || count(*) || ' card rows in reach' from public.card_totals"); then
+                break
+              fi
+              [ "$wait" = 0 ] && { echo "::error::$login cannot sign in to JackiOh-Production"; exit 1; }
+              sleep "$wait"
+            done
+            sealed=$(printf %s "$url" | openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/key.pem" \
+              -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 | base64 -w0)
+            echo "$login signs in: $held"
+            echo "$login sealed: $sealed"
+          done
+
+      - name: development statistics into JackiOh-Production
+        if: ${{ inputs.step == 'dev-stats' }}
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          STAGING_STATS: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [ -n "$STAGING_STATS" ] || { echo "::error::STATS_IMPORT_DATABASE_URL is not set"; exit 1; }
+          production=$(cat "$RUNNER_TEMP/production.url")
+          q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 "${@:2}"; }
+          mkdir -p "$RUNNER_TEMP/dev" && cd "$RUNNER_TEMP/dev"
+          tables=(card_totals game_totals record_totals game_record_batches)
+          dev() { case "$1" in game_record_batches) echo "true" ;; *) echo "source = 'dev'" ;; esac; }
+
+          # Both sides' columns in the same order, or the rows would land in the wrong ones.
+          columns="select string_agg(table_name || '(' || cols || ')', ' ' order by table_name) from (
+            select table_name, string_agg(column_name, ',' order by ordinal_position) as cols
+            from information_schema.columns where table_schema = 'public'
+            and table_name in ('card_totals', 'game_totals', 'record_totals', 'game_record_batches') group by 1) t"
+          # As service_role (stats_importer inherits nothing), inside a transaction, which keeps one
+          # connection even through a transaction pooler.
+          a=$(q "$STAGING_STATS" -c "begin read only" -c "set local role service_role" -c "$columns" -c "commit")
+          b=$(q "$production" -c "$columns")
+          [ "$a" = "$b" ] || { echo "::error::the statistics tables differ: staging $a, production $b"; exit 1; }
+
+          # Staging's, in one snapshot.
+          copies=(-c "begin isolation level repeatable read read only" -c "set local role service_role")
+          for t in "${tables[@]}"; do
+            copies+=(-c "\\copy (select * from public.$t where $(dev "$t")) to '$t.tsv'")
+          done
+          copies+=(-c "commit")
+          q "$STAGING_STATS" "${copies[@]}"
+          counts=()
+          for t in "${tables[@]}"; do
+            n=$(grep -c . "$t.tsv" || true)
+            counts+=("$t=$n")
+          done
+          games=$(q "$STAGING_STATS" -c "set role service_role; select coalesce(sum((total->>'games')::bigint), 0) || ' games over ' || count(distinct patch) || ' patches' from public.game_totals where source = 'dev'")
+          echo "staging's development statistics: ${counts[*]} ($games)"
+          echo "production holds now: $(q "$production" -c "select (select count(*) from public.card_totals where source = 'dev') || ' development card rows, '
+            || (select count(*) from public.game_record_batches) || ' batches'")"
+
+          # Production's development rows replaced by staging's, the counts checked before commit.
+          load=()
+          check="do \$\$ begin"
+          for t in "${tables[@]}"; do
+            load+=(-c "delete from public.$t where $(dev "$t")" -c "\\copy public.$t from '$t.tsv'")
+            n=$(grep -c . "$t.tsv" || true)
+            check+=" if (select count(*) from public.$t where $(dev "$t")) <> $n then raise exception '$t holds a different count'; end if;"
+          done
+          check+=" end \$\$"
+          last=()
+          [ "$DRY_RUN" = true ] && last=(-c rollback)
+          psql "$production" -X -q --single-transaction -v ON_ERROR_STOP=1 "${load[@]}" -c "$check" "${last[@]}"
+          if [ "$DRY_RUN" = true ]; then
+            echo "dry run: staging's development statistics loaded into JackiOh-Production and agreed, then rolled back"
+            exit 0
+          fi
+          echo "JackiOh-Production now holds $(q "$production" -c "select coalesce(sum((total->>'games')::bigint), 0) || ' development games over ' || count(distinct patch) || ' patches' from public.game_totals where source = 'dev'"), as staging does" | tee -a "$GITHUB_STEP_SUMMARY"

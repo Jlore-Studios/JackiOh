@@ -106,6 +106,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const CRAFT: &str = "core-099"; // Spell, 3, Mythic
@@ -258,7 +260,6 @@ mod tests {
 
         #[test]
         fn s6_3_discover_the_first_prompt_offers_3_distinct_non_token_units_to_the_caster_only() {
-            crate::register_all();
             let mut s = craft_scenario(CraftOpts::default());
             s.play(CRAFT, json!({}));
 
@@ -286,7 +287,6 @@ mod tests {
 
         #[test]
         fn r113_answering_the_first_discover_opens_the_second_the_sequence_resumes_through_state_work() {
-            crate::register_all();
             let mut s = craft_scenario(CraftOpts::default());
             s.play(CRAFT, json!({}));
 
@@ -333,7 +333,6 @@ mod tests {
 
         #[test]
         fn s8_5_radiant_opens_three_discovers_each_resuming_into_the_next_r113() {
-            crate::register_all();
             let mut s = craft_scenario(CraftOpts { radiant_face: true, ..CraftOpts::default() });
             s.play(CRAFT, json!({}));
 
@@ -350,7 +349,6 @@ mod tests {
 
         #[test]
         fn s10_5_step_4_the_spell_counts_as_played_before_it_asks_anything() {
-            crate::register_all();
             let mut s = craft_scenario(CraftOpts::default());
             s.play(CRAFT, json!({}));
             assert_eq!(s.state().counters.played, 1);
@@ -639,7 +637,6 @@ mod tests {
 
         #[test]
         fn r102_with_fewer_than_two_ingredients_nothing_is_built_and_nothing_changes() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [TIMMY], "hand": [SPARE] } }));
             let timmy = must(s.unit(P1, 1), "the #11 on the field");
             let mut rng = rng_for(&s);
@@ -693,7 +690,6 @@ mod tests {
 
         #[test]
         fn r102_with_a_target_that_is_not_on_the_field_refused() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [TIMMY], "hand": [SPARE, MENACE] } }));
             let timmy = must(s.unit(P1, 1), "the #11");
             let in_hand = must(s.hand(P1).into_iter().find(|card| card.def_id == MENACE), "the #19 in hand");
@@ -715,7 +711,6 @@ mod tests {
 
         #[test]
         fn r102_with_neither_a_target_nor_a_destination_hand_refused() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [TIMMY, MENACE], "hand": [SPARE] } }));
             let timmy = must(s.unit(P1, 1), "the #11");
             let menace = must(s.unit(P1, 2), "the #19");

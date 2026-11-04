@@ -99,6 +99,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const ESCHEWS: &str = "meditative-060";
@@ -115,7 +117,6 @@ mod tests {
     /// p1 holds Eschews (`radiant_face`) with five Timmies on the field to die and five Eclipses to
     /// kill them with on the same turn — before any end-of-turn cast could interfere.
     fn boarded(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -167,7 +168,6 @@ mod tests {
 
             #[test]
             fn r1082_end_of_turn_casts_a_human_book_cn_or_ai_card() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "eschews-cast",
                     "p1": { "hand": [ESCHEWS, FILLER], "library": filler(3) },
@@ -228,7 +228,6 @@ mod tests {
 
             #[test]
             fn the_cast_card_is_radiant() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "eschews-radiant-cast",
                     "p1": {

@@ -4,15 +4,21 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
-import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import { leaveMatchTestid } from "../game/ConfirmLeaveMatch.tsx";
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { PLAY_LEAN_SET_KEY } from "../game/playLean.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { navigate, paths, usePathname } from "../net/navigate.ts";
+import { navTestid } from "../routes/nav.tsx";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { writeSettings } from "../settings/index.ts";
+import { sidelineTestid } from "../sideline/testids.ts";
 import { baseView, duosTeamView, duosView, pendingFor } from "../test/fixtures.ts";
 import { at, must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -368,5 +374,188 @@ describe("R2092000 Play again on the co-op result", () => {
     await flush();
     expect(server.to("GET", AGAIN)).toHaveLength(2);
     expect(screen.getByTestId(duosTestid.resultAgainStatus)).toHaveTextContent("Your teammate wants to play again");
+  });
+});
+
+describe("R2881000 the co-op seat's watcher count", () => {
+  function deliver(frame: Record<string, unknown>): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify(frame) });
+    });
+  }
+
+  it("R2881000 a co-op seat is told how many friends watch", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+    deliver({ type: "view", view: duosView(1), legal: [] });
+    expect(screen.queryByTestId(duosTestid.watchers)).toBeNull();
+
+    deliver({ type: "watchers", count: 1 });
+    expect(screen.getByTestId(duosTestid.watchers)).toHaveTextContent("A friend is watching");
+    deliver({ type: "watchers", count: 3 });
+    expect(screen.getByTestId(duosTestid.watchers)).toHaveTextContent("3 friends are watching");
+    expect(screen.getByTestId(duosTestid.watchers)).toHaveAttribute("data-count", "3");
+    deliver({ type: "watchers", count: 0 });
+    expect(screen.queryByTestId(duosTestid.watchers)).toBeNull();
+  });
+});
+
+describe("R2990004 the watchers' emotes on the co-op board", () => {
+  function deliver(frame: Record<string, unknown>): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify(frame) });
+    });
+  }
+
+  function joined(): void {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+    deliver({ type: "view", view: duosView(1), legal: [] });
+  }
+
+  function watchers(): (string | null)[] {
+    return screen.queryAllByTestId(sidelineTestid.emote).map((show) => show.getAttribute("data-watcher"));
+  }
+
+  afterEach(() => {
+    writeSettings({ muteSpectatorEmotes: false });
+  });
+
+  it("R2990000 a relayed spectatorEmote shows in the sideline strip by name, on whichever board the portal shows", () => {
+    joined();
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
+
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "salute" });
+
+    expect(screen.getAllByTestId(sidelineTestid.strip)).toHaveLength(1);
+    expect(screen.getByTestId(sidelineTestid.emote)).toHaveAttribute("data-emote", "salute");
+    expect(screen.getByTestId(sidelineTestid.strip)).toHaveTextContent("Wes#13");
+    expect(screen.queryByTestId(sidelineTestid.menu)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(duosTestid.portal));
+    expect(screen.getAllByTestId(sidelineTestid.strip)).toHaveLength(1);
+    expect(watchers()).toEqual(["Wes#13"]);
+  });
+
+  it("R2990004 Mute hides the watchers' emotes for the rest of the game", () => {
+    joined();
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "salute" });
+    fireEvent.click(screen.getByTestId(sidelineTestid.mute));
+
+    expect(watchers()).toEqual([]);
+    deliver({ type: "spectatorEmote", watcher: "Ann#2", emote: "gasp" });
+    expect(watchers()).toEqual([]);
+    expect(screen.getByTestId(sidelineTestid.mute)).toBeDisabled();
+  });
+
+  it("R2990004 with muteSpectatorEmotes on, a watcher's emote never shows on the co-op board", () => {
+    writeSettings({ muteSpectatorEmotes: true });
+    joined();
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "salute" });
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
+  });
+});
+
+// R2973000: the leave guard (R1754000) holds every way off a live co-op board, naming the teammate
+// playing on and the AI taking the seat after the disconnect grace. The real `navigate` goes back
+// in for these tests so that the board's Back meets the guard, as `routes/match.test.tsx` does.
+describe("R2973000 leaving a live co-op game asks first, and names the teammate and the AI", () => {
+  const AT = paths.duos("dm-1");
+  const WORDS = `Your teammate plays on without you. After ${String(DISCONNECT_GRACE_SECONDS)} seconds the AI plays your seat until you come back.`;
+  const FINISHED = duosView(3, { outcome: "win", winner: "b", reason: "concede" });
+
+  /** The board, and what a move off it lands on: `usePathname`'s listener needs a reader. */
+  function Shell(): ReactElement {
+    const path = usePathname();
+    return path === AT ? <DuosRoute matchId="dm-1" token="tok-duos" /> : <p data-testid="elsewhere">{path}</p>;
+  }
+
+  function open(): void {
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+  }
+
+  /** A `view` frame as the server pushes one; the title reads the view alone, so nothing is legal. */
+  function push(view: DuosView): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
+    });
+  }
+
+  beforeEach(() => {
+    at(AT);
+  });
+
+  afterEach(() => {
+    at("/");
+  });
+
+  it("R2973000 the co-op Back on a live game asks first and stays; Stay keeps the board, Leave goes to Play together", () => {
+    render(<Shell />);
+    open();
+    push(duosView(1));
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    const dialog = screen.getByTestId(leaveMatchTestid.dialog);
+    expect(window.location.pathname).toBe(AT);
+    expect(dialog).toHaveTextContent("Leave the match?");
+    expect(dialog).toHaveTextContent(WORDS);
+    expect(document.activeElement).toBe(screen.getByTestId(leaveMatchTestid.stay));
+
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.stay));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(AT);
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.leave));
+    expect(window.location.pathname).toBe(paths.together);
+    expect(screen.getByTestId("elsewhere")).toHaveTextContent(paths.together);
+  });
+
+  it("R2973000 a finished co-op game asks nothing", () => {
+    render(<Shell />);
+    open();
+    push(FINISHED);
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(paths.together);
+  });
+
+  it("R2973000 a closed co-op socket asks nothing", () => {
+    render(<Shell />);
+    open();
+    push(duosView(1));
+
+    act(() => {
+      latest().onclose?.({ code: VOIDED_CLOSE_CODE, reason: "", wasClean: true });
+    });
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(paths.together);
+  });
+
+  it("R2973000 Play again's forced move is not held", () => {
+    render(<Shell />);
+    open();
+    push(duosView(1));
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(screen.getByTestId(leaveMatchTestid.dialog)).toBeInTheDocument();
+
+    act(() => {
+      navigate(paths.duos("dm-2"), { force: true });
+    });
+    expect(window.location.pathname).toBe(paths.duos("dm-2"));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(screen.getByTestId("elsewhere")).toHaveTextContent(paths.duos("dm-2"));
   });
 });

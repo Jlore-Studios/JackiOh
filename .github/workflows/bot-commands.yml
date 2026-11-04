@@ -4,6 +4,12 @@
 # days back and answers anything an event never delivered or a handler failed to answer, then
 # starts a night run if one should be going and none is (GitHub drops scheduled bot-night runs),
 # then rewrites the pinned "Night bot status" issue.
+# Red CI on a bot pull request's head queues its CI fix at once, on the lane that owns it, with no
+# re-run of the failed jobs first (#2948, `events.OnCI`): the fix run judges, and when the failing
+# check passes there its delivery runs CI again with no commit (`ci_reruns`). A CI run the bot
+# stopped itself is ignored whatever its conclusion: the status loop (and each sweep here, so
+# `actions: write`) cancels a bot pull request's CI once a required job has failed on its head
+# (`events.StopRedCI`, bot/README.md "Stopping red CI early") and queues that fix itself.
 name: bot-commands
 
 on:
@@ -41,7 +47,9 @@ jobs:
     # for a vote on a suggestion (#929): that gate is only a substring, and the handler decides
     # whether the word stood alone on a line. The bot's own comments and labels are skipped by
     # actor. A CI run and a closed bot pull request are handled whoever caused them: the bot's own
-    # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A CI run of
+    # push starts the CI runs it answers, and GitHub credits an auto-merge to the bot. A closed one
+    # also lets a draft that waited its turn behind it take its turn (#2948, `plan.SyncTurns`; the
+    # sweep does the same for any other pull request it waited behind). A CI run of
     # the merge queue's (`gh-readonly-queue/main/pr-<n>-<sha>`) is any pull request's; the handler
     # answers only the bot's own (`events.OnQueueCI`).
     if: >-
@@ -78,7 +86,7 @@ jobs:
       contents: write        # the state file on the bot-state branch
       issues: write
       pull-requests: write
-      actions: write         # start a forced run; re-run failed CI jobs once
+      actions: write         # start a forced run; the sweep stops a bot pull request's red CI
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4

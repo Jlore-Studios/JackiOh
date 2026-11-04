@@ -2437,6 +2437,16 @@ pub const CHALLENGE_TTL_MS: i64 = 120_000;
 pub const SPECTATE_DELAY_MS: i64 = 5_000;
 /// B50: watchers one live match may hold at once.
 pub const SPECTATORS_PER_MATCH: usize = 8;
+/// R2990001: the emoji in a watcher's emote hand, dealt from the match seed and the watcher's own
+/// account, with no voice line in it (a voice line would sound like a player speaking).
+pub const SPECTATOR_EMOTE_HAND_SIZE: usize = 5;
+/// R2990002: the least time between two of one watcher's emotes, twice a player's
+/// (`EMOTE_COOLDOWN_MS`), so the sidelines never drown out the players.
+pub const SPECTATOR_EMOTE_COOLDOWN_MS: i64 = 3_000;
+/// R2990002: the rolling window `SPECTATOR_EMOTE_WINDOW_MAX` counts a watcher's emotes in.
+pub const SPECTATOR_EMOTE_WINDOW_MS: i64 = 30_000;
+/// R2990002: the most emotes one watcher sends in `SPECTATOR_EMOTE_WINDOW_MS`.
+pub const SPECTATOR_EMOTE_WINDOW_MAX: usize = 3;
 /// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).
 pub const CHAT_MAX_CHARS: usize = 500;
 /// B53: chat messages one account may send in a minute; the next is 429.
@@ -2638,6 +2648,15 @@ const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
 /// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
 /// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
 pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
+/// SPEC §14.2, R2725001: the fewest cards each version and each augment is offered on, across the shipped
+/// sets (the registry's check holds every one to it).
+pub const VERSION_OFFER_MIN_CARDS: usize = 20;
+/// SPEC §14.2, R2725001: the fewest cards of each shipped set each version and each augment is offered on, so
+/// every set has some.
+pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
+/// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
+/// seeded hash, modulo this, falls below the percent.
+pub const OFFER_SAMPLE_PERCENT_SCALE: u32 = 100;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
 /// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
 /// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter

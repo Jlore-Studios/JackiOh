@@ -15,7 +15,7 @@ use crate::config::{
     GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY,
     PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity, global_cosmetics, pack_cosmetics};
+use crate::cosmetics::{Cosmetic, CosmeticRarity, global_cosmetics, offered, pack_cosmetics, row_owns};
 use crate::economy::math::{PityCounters, apply_pity};
 use crate::economy::store::CardCosmetic;
 use crate::economy::tiers::{card_tier, cosmetic_tier, tier_draw};
@@ -223,7 +223,9 @@ pub fn draw_card<'p>(
 /// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002), a tiered roll
 /// on `COSMETIC_TIER_WEIGHTS` on its own scale, whatever the card's rarity (R1339000, R1333000): one
 /// of `droppable` of that rarity unowned on that card, picked uniformly (one draw), else the bars (no
-/// draw), never another tier. One that names a card, a full art, is of that card alone (R1313000).
+/// draw), never another tier. One that names a card, a full art, is of that card alone (R1313000); a version
+/// or an augment drops only on a card it is offered, and not where a retired full art already owns it
+/// (R2725001, R2725002).
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: CosmeticRarity,
@@ -234,11 +236,11 @@ pub fn duplicate_grant(
     let unowned: Vec<&Cosmetic> = droppable
         .iter()
         .filter(|cosmetic| cosmetic.rarity == cosmetic_rarity)
-        .filter(|cosmetic| cosmetic.card.as_deref().is_none_or(|card| card == card_id))
+        .filter(|cosmetic| offered(cosmetic, Some(card_id)))
         .filter(|cosmetic| {
             !owned
                 .iter()
-                .any(|held| held.card_id == card_id && held.cosmetic_id == cosmetic.id)
+                .any(|held| held.card_id == card_id && row_owns(&held.cosmetic_id, &cosmetic.id))
         })
         .collect();
     match rng.pick(&unowned) {
@@ -756,7 +758,10 @@ mod tests {
             card: Some("m".to_owned()),
             ..foil("full-art-m", CosmeticRarity::Epic)
         };
-        let droppable = pack_cosmetics(&[full_art]);
+        // R2725000: a full art is retired, so the shipped pool never lists one; handed one, a duplicate still
+        // places it on its own card alone (R1313000).
+        assert!(pack_cosmetics(std::slice::from_ref(&full_art)).is_empty());
+        let droppable = [full_art];
         let mut rng = Rng::new("r1301002-full-art", 0);
         assert_eq!(
             duplicate_grant("m", CosmeticRarity::Epic, &droppable, &[], &mut rng),
@@ -785,33 +790,55 @@ mod tests {
         );
     }
 
-    #[test]
-    fn r2655000_a_duplicate_s_mythic_roll_drops_the_card_s_signed_full_art() {
-        use crate::cosmetics::registry;
-        let droppable = pack_cosmetics(registry());
-        // League of Losers with every other Mythic per-card cosmetic held on it: its Mythic
-        // duplicate drops its signed full art, a chase no account is granted (R2655000).
-        let card = "classicplus-019";
-        let held_mythics: Vec<CardCosmetic> = droppable
+    /// The rows of every cosmetic of `droppable` at `rarity` but `except`, held on `card`.
+    fn holding_all_but(
+        droppable: &[Cosmetic],
+        rarity: CosmeticRarity,
+        except: &str,
+        card: &str,
+    ) -> Vec<CardCosmetic> {
+        droppable
             .iter()
-            .filter(|cosmetic| cosmetic.rarity == CosmeticRarity::Mythic && cosmetic.card.is_none())
+            .filter(|cosmetic| cosmetic.rarity == rarity && cosmetic.id != except)
             .map(|cosmetic| held(card, &cosmetic.id))
-            .collect();
+            .collect()
+    }
+
+    #[test]
+    fn r2655000_r2725001_a_duplicate_drops_a_version_only_on_an_offered_card_not_owned() {
+        use crate::cosmetics::{AUGMENT_SIGNATURE_ID, VERSION_FULL_ART_ID, registry};
+        let droppable = pack_cosmetics(registry());
+        // R2725000: the retired full arts drop nowhere.
+        assert!(
+            droppable
+                .iter()
+                .all(|cosmetic| cosmetic.kind != CosmeticKind::FullArt)
+        );
+        // League of Losers with every other Mythic per-card cosmetic held on it: its Mythic duplicate drops the
+        // Signature augment, which it is offered, a chase no account is granted.
+        let card = "classicplus-019";
+        let held_mythics = holding_all_but(&droppable, CosmeticRarity::Mythic, AUGMENT_SIGNATURE_ID, card);
         assert!(!held_mythics.is_empty());
         let mut rng = Rng::new("r2655000-signed", 0);
         assert_eq!(
             duplicate_grant(card, CosmeticRarity::Mythic, &droppable, &held_mythics, &mut rng),
             SlotGrant::Cosmetic {
-                cosmetic_id: "full-art-league-of-losers-signed".to_owned(),
+                cosmetic_id: AUGMENT_SIGNATURE_ID.to_owned(),
                 cosmetic_rarity: CosmeticRarity::Mythic,
             }
         );
-        // Its Legendary roll may drop its animated full art, and another card's never does.
-        let held_legendaries: Vec<CardCosmetic> = droppable
-            .iter()
-            .filter(|cosmetic| cosmetic.rarity == CosmeticRarity::Legendary && cosmetic.card.is_none())
-            .map(|cosmetic| held(card, &cosmetic.id))
-            .collect();
+        // R2725002: its retired signed full art owns Signature there, so that roll goes to the bars.
+        let mut signed = held_mythics.clone();
+        signed.push(held(card, "full-art-league-of-losers-signed"));
+        assert_eq!(
+            duplicate_grant(card, CosmeticRarity::Mythic, &droppable, &signed, &mut rng),
+            SlotGrant::Bars {
+                cosmetic_rarity: CosmeticRarity::Mythic
+            }
+        );
+        // Its Legendary roll drops the Full art version, unless its retired animated full art owns it.
+        let held_legendaries =
+            holding_all_but(&droppable, CosmeticRarity::Legendary, VERSION_FULL_ART_ID, card);
         assert_eq!(
             duplicate_grant(
                 card,
@@ -821,10 +848,19 @@ mod tests {
                 &mut rng
             ),
             SlotGrant::Cosmetic {
-                cosmetic_id: "full-art-league-of-losers-animated".to_owned(),
+                cosmetic_id: VERSION_FULL_ART_ID.to_owned(),
                 cosmetic_rarity: CosmeticRarity::Legendary,
             }
         );
+        let mut animated = held_legendaries.clone();
+        animated.push(held(card, "full-art-league-of-losers-animated"));
+        assert_eq!(
+            duplicate_grant(card, CosmeticRarity::Legendary, &droppable, &animated, &mut rng),
+            SlotGrant::Bars {
+                cosmetic_rarity: CosmeticRarity::Legendary
+            }
+        );
+        // A card neither is offered on (Speciesist, a Common Unit) never drops one.
         let other: Vec<CardCosmetic> = held_mythics
             .iter()
             .map(|row| held("core-002", &row.cosmetic_id))
@@ -838,36 +874,28 @@ mod tests {
     }
 
     #[test]
-    fn r2715000_a_duplicate_s_epic_roll_drops_the_card_s_animated_art() {
-        use crate::cosmetics::registry;
+    fn r2715000_r2725002_a_duplicate_s_epic_roll_drops_animated_unless_the_retired_animated_art_owns_it() {
+        use crate::cosmetics::{AUGMENT_ANIMATED_ID, registry};
         let droppable = pack_cosmetics(registry());
-        // League of Losers with every other Epic per-card cosmetic held on it, its still Epic full
-        // art among them: its Epic duplicate drops its Animated art, which no account is granted.
+        // League of Losers with every other Epic per-card cosmetic held on it: its Epic duplicate drops the
+        // Animated augment, which no account is granted. Its retired Animated art no longer drops (R2725000).
         let card = "classicplus-019";
-        let held_epics: Vec<CardCosmetic> = droppable
-            .iter()
-            .filter(|cosmetic| {
-                cosmetic.rarity == CosmeticRarity::Epic
-                    && cosmetic.card.as_deref().is_none_or(|of| of == card)
-                    && cosmetic.id != "animated-league-of-losers"
-            })
-            .map(|cosmetic| held(card, &cosmetic.id))
-            .collect();
+        let held_epics = holding_all_but(&droppable, CosmeticRarity::Epic, AUGMENT_ANIMATED_ID, card);
         assert!(
-            held_epics
+            droppable
                 .iter()
-                .any(|row| row.cosmetic_id == "full-art-league-of-losers")
+                .all(|cosmetic| cosmetic.id != "animated-league-of-losers")
         );
         let mut rng = Rng::new("r2715000-animated", 0);
         assert_eq!(
             duplicate_grant(card, CosmeticRarity::Epic, &droppable, &held_epics, &mut rng),
             SlotGrant::Cosmetic {
-                cosmetic_id: "animated-league-of-losers".to_owned(),
+                cosmetic_id: AUGMENT_ANIMATED_ID.to_owned(),
                 cosmetic_rarity: CosmeticRarity::Epic,
             }
         );
-        // Once it is held too, the Epic roll has nothing left and goes to the bars; another card's
-        // Epic duplicate holding the same rows never drops it.
+        // R2725002: a held retired Animated art owns the augment there, so the Epic roll has nothing left and
+        // goes to the bars; another card's Epic duplicate holding the same rows is not offered it.
         let mut every = held_epics.clone();
         every.push(held(card, "animated-league-of-losers"));
         assert_eq!(
@@ -876,7 +904,7 @@ mod tests {
                 cosmetic_rarity: CosmeticRarity::Epic
             }
         );
-        let other: Vec<CardCosmetic> = every
+        let other: Vec<CardCosmetic> = held_epics
             .iter()
             .map(|row| held("core-002", &row.cosmetic_id))
             .collect();

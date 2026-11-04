@@ -23,6 +23,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -45,7 +47,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_2_armor_7_zeroes_a_7_hit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "big-armor",
                     "p1": { "hand": [FILLER], "field": [BIG], "library": [FILLER] },
@@ -80,7 +81,6 @@ mod tests {
 
             #[test]
             fn r275_the_radiant_face_is_a_14_14_with_armor_7_and_reborn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "big-radiant-face",
                     "p1": { "hand": [FILLER], "field": [{ "def": BIG, "radiant": true }] },
@@ -97,7 +97,6 @@ mod tests {
 
             #[test]
             fn s4_4_step_2_its_armor_7_zeroes_a_7_hit_and_its_14_back_kills_a_base_7_7_through_that_one_s_armor() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "big-radiant-armor",
                     "p1": { "hand": [FILLER], "field": [{ "def": BIG, "radiant": true }] },
@@ -116,7 +115,6 @@ mod tests {
 
             #[test]
             fn s4_5_step_4_reborn_brings_it_back_once_at_1_health_and_without_reborn_when_it_dies_in_combat() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "big-radiant-reborn",
                     "active": "p2",
@@ -139,7 +137,6 @@ mod tests {
 
             #[test]
             fn s6_3_a_tribute_is_a_death_too_so_reborn_brings_it_back_from_that_as_well() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "big-sacrifice",
                     "p1": { "hand": [CUBE, FILLER], "field": [{ "def": BIG, "radiant": true }] },
@@ -156,7 +153,6 @@ mod tests {
 
             #[test]
             fn s6_1_s6_3_an_exile_removes_it_for_good_no_death_so_no_reborn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "big-exile",
                     "p1": { "hand": [EXILER, FILLER], "field": ["core-008"] },

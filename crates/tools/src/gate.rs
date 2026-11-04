@@ -1214,7 +1214,8 @@ pub fn run(args: Args) -> Result<()> {
 #[cfg(test)]
 mod tests {
     //! The gates' smoke run: every check that reads no game, and 4 games of each matchup held to
-    //! `gateNeeded(matchup, 4)` and B31. The greedy and hard-vs-easy smokes play the frozen fixture
+    //! `gateNeeded(matchup, 4)` and B31, but hard-vs-easy's, which plays the CLI smoke's
+    //! `AI_GATE.smoke_seeds` (R2977000). The greedy and hard-vs-easy smokes play the frozen fixture
     //! pool (issue #1113); ai-vs-random keeps the live table.
 
     use super::*;
@@ -1223,23 +1224,23 @@ mod tests {
     const SMOKE_GAMES: i32 = 4;
 
     fn smoke(name: &str) {
-        smoke_with(name, play_gate);
+        smoke_with(name, SMOKE_GAMES, play_gate);
     }
 
     /// Issue #1113: the seeded fixtures' smoke: the same games, dealt from the frozen fixture
     /// pool, so a shadow-ban change re-deals none of them.
-    fn smoke_fixture(name: &str) {
-        smoke_with(name, play_fixture_gate);
+    fn smoke_fixture(name: &str, games: i32) {
+        smoke_with(name, games, play_fixture_gate);
     }
 
-    fn smoke_with(name: &str, play: fn(Matchup, &[i32]) -> GateReport) {
+    fn smoke_with(name: &str, games: i32, play: fn(Matchup, &[i32]) -> GateReport) {
         jackioh_cards::register_all();
         let matchup = parse_matchup(name).unwrap();
-        let played: Vec<i32> = (1..=SMOKE_GAMES).collect();
+        let played: Vec<i32> = (1..=games).collect();
         let run = play(matchup, &played);
         check_report(&run, &played).unwrap();
         check_clean(&run).unwrap();
-        let needed = needed(matchup, SMOKE_GAMES);
+        let needed = needed(matchup, games);
         assert!(
             run.wins >= needed,
             "{} wins, {} turn-cap draws, {needed} needed; not won: {}",
@@ -1292,7 +1293,7 @@ mod tests {
     #[test]
     #[ignore = "daily: a gate matchup's smoke games; `gate --full` plays it at full size daily, and b28_b31 keeps a smoke matchup per pull request"]
     fn b29_b31_the_easy_ai_wins_against_the_greedy_baseline_and_every_game_is_clean() {
-        smoke_fixture("ai-vs-greedy");
+        smoke_fixture("ai-vs-greedy", SMOKE_GAMES);
     }
 
     #[test]
@@ -1311,7 +1312,7 @@ mod tests {
     #[test]
     #[ignore = "daily: a gate matchup's smoke games; `gate --full` plays it at full size daily, and b28_b31 keeps a smoke matchup per pull request"]
     fn b30_b31_the_hard_ai_wins_against_itself_on_easy_and_every_game_is_clean() {
-        smoke_fixture("hard-vs-easy");
+        smoke_fixture("hard-vs-easy", smoke_seeds());
     }
 
     #[test]

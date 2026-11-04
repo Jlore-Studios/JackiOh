@@ -65,7 +65,7 @@ fn catalog_of(defs: Vec<CardDef>) -> CardDefs {
     defs.into_iter().map(|def| (def.id.clone(), def)).collect()
 }
 
-fn ids<D: Borrow<CardDef>>(defs: &[D]) -> Vec<String> {
+fn ids_of_defs<D: Borrow<CardDef>>(defs: &[D]) -> Vec<String> {
     defs.iter().map(|def| def.borrow().id.clone()).collect()
 }
 
@@ -75,7 +75,7 @@ fn q(args: Value) -> CatalogQueryArgs {
 }
 
 fn pool(args: Value) -> Vec<String> {
-    ids(&query(&q(args)))
+    ids_of_defs(&query(&q(args)))
 }
 
 fn as_json(args: &CatalogQueryArgs) -> Value {
@@ -179,7 +179,7 @@ mod r382_the_fruit_pool_holds_the_grapes_and_only_a_pool_that_takes_every_token_
     #[test]
     fn r382_with_tokens_takes_every_token_of_every_set_beside_the_cards_dropshipping_itself_excluded() {
         setup();
-        let pool = ids(&query(&excluding_def_id(
+        let pool = ids_of_defs(&query(&excluding_def_id(
             None,
             &q(json!({ "withTokens": true })),
             Some("classicplus-058"),
@@ -250,7 +250,7 @@ mod r387_a_card_never_generates_itself_named_by_its_id {
             self_def_ids(None, "t-2:(t-1:classic-043+core-047)+classicplus-058"),
             vec!["classic-043", "core-047", "classicplus-058"]
         );
-        let pool = ids(&query(&excluding_def_id(
+        let pool = ids_of_defs(&query(&excluding_def_id(
             None,
             &q(json!({})),
             Some("t-2:(t-1:classic-043+core-047)+classicplus-058"),

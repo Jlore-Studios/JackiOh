@@ -5,7 +5,7 @@ use jackioh_engine::mana::effective_cost;
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{Bench, act, act_result, events_json, matches_object, put, slot};
+use crate::rules::fixtures::harness::{Bench, act, act_result, events_json, ids, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
     only, pb_playing, plantation, plays_of, quest_card, round_trip, second_wind, three_spell, titan,
@@ -44,10 +44,6 @@ fn no_card_in_hand(text: &str, player: &str) -> bool {
     let tail = format!(" in {player}'s hand");
     text.find(head)
         .is_some_and(|at| text[at + head.len()..].contains(&tail))
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn add_modifier_to(state: &mut GameState, player: PlayerId, expiry: ModifierExpiry, kind: ModifierKind) {

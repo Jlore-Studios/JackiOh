@@ -56,4 +56,10 @@ tutorialCardsOnly?: boolean,
  * Absent means MAX_COPIES, so every other game hashes as before the field existed. Only a
  * lesson's two seats set it (`TUTORIAL_HUMAN`, and `AI_TUTORIAL` since R2533001).
  */
-deckCopies?: number, };
+deckCopies?: number, 
+/**
+ * R2922000: the Armor this seat's hero starts the game with, on the hero as any Armor it gains
+ * (§4.4 step 2, R124). Absent or 0 means none, so every other game hashes as before the field
+ * existed. Only a dungeon run's fight sets it (R2922001).
+ */
+heroArmor?: number, };

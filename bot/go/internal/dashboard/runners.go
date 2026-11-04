@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/memory"
@@ -75,7 +76,7 @@ var Workflows = map[string]string{
 	"claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 " +
 		"Central",
 	"code-audit.yml":         "every three days: the code audit's issue for the night bot",
-	"cutover.yml":            "by hand, once: the move's secrets and database copy (delete after it)",
+	"cutover.yml":            "by hand: production's sign-in settings, email key, statistics logins and dev statistics",
 	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
 	"deploy-staging.yml":     "deploys main to staging after every green CI run on main",
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
@@ -86,7 +87,7 @@ var Workflows = map[string]string{
 	"lock-conversations.yml": "locks every conversation to collaborators",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
-	"promote-production.yml": "production by hand: /promote opens a pull request super must pass",
+	"promote-production.yml": "production daily, from a passing super run on main; /promote sooner",
 	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",
 	"selfplay-shards.yml":    "one round of a self-play export's shards",
 	"selfplay.yml":           "a self-play export, on the owner's PC unless asked otherwise",
@@ -270,6 +271,16 @@ type Found struct {
 	Gather []*pyjson.Object // default: field(default_factory=list)
 	PC     *pyjson.Object   // default: None
 	PCNote string           // default: ""
+
+	// Read is every run read, with all its jobs, the finished ones too: the early stop of a bot
+	// pull request's red CI looks at them (#2948, `StopRed`).
+	Read []RunJobs
+}
+
+// RunJobs is a run and its jobs, as `ReadRunners` read them.
+type RunJobs struct {
+	Run  *pyjson.Object
+	Jobs []*pyjson.Object
 }
 
 // ReadRunners is read_runners: the jobs of the runs going and queued, from GitHub, since it lists
@@ -299,6 +310,7 @@ func ReadRunners(ctx *hctx.Context) *Found {
 			found.Unread++
 			continue
 		}
+		found.Read = append(found.Read, RunJobs{Run: run, Jobs: jobs})
 		for _, job := range jobs {
 			switch job.Str("status") {
 			case "in_progress":
@@ -1422,10 +1434,39 @@ func RunnersSection(ctx *hctx.Context, state *pyjson.Object, found *Found /* = N
 // RefreshRunners is refresh_runners; a variable so the tests can replace it.
 var RefreshRunners = refreshRunners
 
+// StopRed is the early stop of a bot pull request's red CI (#2948, `events.StopRedCI`) over the
+// runs the runners refresh read, so it costs no call of its own: the notes of what it did. A run it
+// could not judge is a note, never an end to the redraw.
+func StopRed(ctx *hctx.Context, found *Found) []string {
+	var notes []string
+	for _, read := range found.Read {
+		if err := herr.Try(func() {
+			if note := events.StopRedCI(ctx, read.Run, read.Jobs); note != "" {
+				notes = append(notes, note)
+			}
+		}); err != nil {
+			notes = append(notes, fmt.Sprintf("CI run %s was not judged: %s", py.Str(read.Run.Get("id")),
+				py.SliceTo(herr.Str(err), 200)))
+		}
+	}
+	return notes
+}
+
 // refreshRunners is refresh_runners: redraw the status issue's runners section alone, between the
 // loop's rewrites, and the PC's progress chart at its top (`progress`): the rest of the issue stays
-// as the last rewrite left it, and the table lists what room it leaves.
+// as the last rewrite left it, and the table lists what room it leaves. The runs it reads go to the
+// early stop of red CI first (`StopRed`), whose notes follow what it says of the issue.
 func refreshRunners(ctx *hctx.Context) string {
+	var stopped []string
+	said := redrawRunners(ctx, func(found *Found) { stopped = StopRed(ctx, found) })
+	if len(stopped) > 0 {
+		said += "; " + strings.Join(stopped, "; ")
+	}
+	return said
+}
+
+// redrawRunners is the redraw itself; `read` is given the runs as soon as they are read.
+func redrawRunners(ctx *hctx.Context, read func(*Found)) string {
 	state := ctx.Store.Load()
 	number := state.Obj("dashboard").Get("issue")
 	if !pyjson.Truthy(number) {
@@ -1438,6 +1479,7 @@ func refreshRunners(ctx *hctx.Context) string {
 		return "#" + py.Str(number) + " has no runners section to redraw: the next rewrite draws it"
 	}
 	found := ReadRunners(ctx)
+	read(found)
 	top, bottom := strings.Index(body, ProgressStart), strings.Index(body, ProgressEnd)
 	if 0 <= top && top < bottom && bottom < start {
 		body = body[:top] + Progress(ctx, found) + body[bottom+len(ProgressEnd):]

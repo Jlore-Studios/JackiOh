@@ -262,9 +262,15 @@ func Misspelt(args string) string {
 	return bestName
 }
 
-// The lines of `body` that may carry a command: outside fences, not quoted.
+// The lines of `body` that may carry a command: outside fences, not quoted, and none of a Claude
+// session's handoff (config.IsSessionHandoff).
 func CommandLines(body string) []string {
 	lines := []string{}
+	if config.IsSessionHandoff(body) {
+		// A Claude session's handoff (CLAUDE.md rule 14) quotes what was asked and what is left,
+		// `/harness` lines and votes included: it is notes for the next run, never a request.
+		return lines
+	}
 	fenced := false
 	for _, line := range py.Splitlines(body) {
 		if isFence(line) {

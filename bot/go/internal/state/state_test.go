@@ -121,9 +121,6 @@ func TestUpdateMakesTheBranchAndReappliesALostRace(t *testing.T) {
 	if !g.branches["bot-state"] || after.Obj("items").Obj("12").Int("a") != 1 {
 		t.Fatalf("first update: %s", pyjson.Dumps(after))
 	}
-	if !strings.Contains(g.files[[2]string{"bot-state", "vercel.json"}][0], "deploymentEnabled") {
-		t.Error("the state branch starts with its vercel.json")
-	}
 	g.conflicts = 1
 	after = store.Update(func(s *pyjson.Object) any { Item(s, 13).Set("b", 2); return nil }, "state")
 	loaded := store.Load()

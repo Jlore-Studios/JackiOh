@@ -75,6 +75,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -154,7 +156,6 @@ mod tests {
 
             #[test]
             fn is_a_2_2_and_its_cry_places_1_plague_counter_on_an_enemy_unit_you_choose_as_one_placement() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [VANILLA] } }));
                 let vanilla = s.card(VANILLA).clone();
 
@@ -167,7 +168,6 @@ mod tests {
 
             #[test]
             fn r81_either_side_your_own_unit_or_a_field_spell_in_your_backrow_takes_the_token() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, CRAWLER, ANCHOR], "field": [VANILLA], "backrow": [MANA_WELL], "library": lib(2) },
                     "p2": { "hand": [ANCHOR] },
@@ -185,7 +185,6 @@ mod tests {
 
             #[test]
             fn an_immutable_permanent_takes_tokens_too_a_token_is_a_counter_not_a_change_of_text() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "radiant": true }] },
@@ -207,7 +206,6 @@ mod tests {
 
             #[test]
             fn r831016_its_prompt_offers_every_permanent_itself_included_and_on_itself_it_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR], "field": [VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [MENACE], "backrow": [MANA_WELL] },
@@ -226,7 +224,6 @@ mod tests {
 
             #[test]
             fn s3_2_r13_a_card_dormant_under_a_stack_pile_is_not_offered_the_top_of_the_pile_is() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, { "def": FIENDER, "stack": true }] },
@@ -247,7 +244,6 @@ mod tests {
 
             #[test]
             fn r831016_with_no_other_permanent_on_the_field_it_offers_itself_alone() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, ANCHOR], "library": lib(2) }, "p2": { "hand": [ANCHOR] } }));
                 let crawler = s.card(CRAWLER).clone();
 
@@ -262,7 +258,6 @@ mod tests {
 
             #[test]
             fn r177_a_face_down_enemy_trap_is_offered_by_its_id_alone_and_the_placement_on_it_never_names_it_to_you() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
@@ -284,7 +279,6 @@ mod tests {
 
             #[test]
             fn whenever_plague_counters_are_placed_on_it_it_draws_1_a_second_crawlers_cry_on_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, CRAWLER, ANCHOR], "library": lib(3) }, "p2": { "hand": [ANCHOR] } }));
                 let (first, second) = two_crawlers(&s);
                 // The first one alone on the field may only place on itself (R831016), and draws for it.
@@ -300,7 +294,6 @@ mod tests {
 
             #[test]
             fn by_either_player_the_opponents_crawler_placing_on_yours_draws_you_1_and_them_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ANCHOR], "field": [CRAWLER], "library": lib(3) },
@@ -319,7 +312,6 @@ mod tests {
 
             #[test]
             fn once_per_placement_however_many_tokens_a_radiant_crawlers_placement_of_2_on_it_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRAWLER, "radiant": true }, ANCHOR], "field": [CRAWLER], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -336,7 +328,6 @@ mod tests {
 
             #[test]
             fn c_27_a_crawler_fused_onto_a_pestilent_slime_takes_2_from_a_placement_of_1_and_still_draws_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR], "field": [SLIME], "library": lib(3) },
                     "p2": { "hand": [CRAWLER, ANCHOR] },
@@ -368,7 +359,6 @@ mod tests {
 
             #[test]
             fn its_own_cry_on_another_permanent_draws_it_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR], "field": [VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -400,7 +390,6 @@ mod tests {
 
             #[test]
             fn s2_4_with_an_empty_deck_the_draw_is_fatigue() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, ANCHOR], "field": [CRAWLER], "health": 20 }, "p2": { "hand": [ANCHOR] } }));
                 let on_field = s.unit(P1, 1).expect("a Crawler on the field");
                 let in_hand = s.hand(P1).into_iter().find(|card| card.def_id == CRAWLER).expect("a Crawler in hand");
@@ -419,7 +408,6 @@ mod tests {
 
             #[test]
             fn r78_its_tokens_go_when_it_leaves_the_field_bounced_it_comes_back_with_none() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR], "field": [{ "def": CRAWLER, "counters": { "plague": 3 } }], "library": lib(3) },
                     "p2": { "hand": [FLOOD, ANCHOR] },
@@ -435,7 +423,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_its_tokens_places_2_in_one_placement_of_its_draw_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, CRAWLER, ANCHOR], "library": lib(4) },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
@@ -459,7 +446,6 @@ mod tests {
 
             #[test]
             fn is_a_4_4_and_its_cry_places_2_plague_counters_on_another_permanent_as_one_placement() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRAWLER, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
@@ -474,7 +460,6 @@ mod tests {
 
             #[test]
             fn whenever_plague_counters_are_placed_on_it_it_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR], "field": [{ "def": CRAWLER, "radiant": true }], "library": lib(3) },
                     "p2": { "hand": [ANCHOR] },
@@ -489,7 +474,6 @@ mod tests {
 
             #[test]
             fn r177_a_face_down_enemy_trap_takes_its_2_tokens_without_being_named_to_you() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": CRAWLER, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
@@ -504,7 +488,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_its_draw_draws_1_of_its_tokens_places_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, { "def": CRAWLER, "radiant": true }, ANCHOR], "library": lib(4) },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },

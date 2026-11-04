@@ -83,6 +83,25 @@ export const COSMETIC_FOIL_ANIMATED_MAX = 6;
 export const FULL_ART_FINISH_OPACITY = 0.6;
 
 /**
+ * R2942001: the most the Extended art version's translucent frame covers the art it runs over: the panel lies over the
+ * picture at this opacity at the rim and fades to nothing toward the middle, as R2720000's band. Mirrored in cards.css.
+ */
+export const EXTENDED_ART_FRAME_OPACITY = 0.55;
+
+/**
+ * R2942001: the share, in percent, of a base Extended art face's rules box that is its parchment, the rest the art
+ * under it: enough that over the darkest art, the watermark on it, every ink reads as well as over the normal box's
+ * edge (R2718000). Mirrored in cards.css.
+ */
+export const EXTENDED_ART_BOX_PCT = 90;
+
+/**
+ * R2942001: the side of the Extended art version's square picture, in percent of the face's height. Standing on the
+ * face's foot, its middle sits a quarter of the way down, where the normal window's does. Mirrored in cards.css.
+ */
+export const EXTENDED_ART_PICTURE_PCT = 150;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim.
@@ -106,3 +125,6 @@ export const DORMANT_DIM = 0.6;
 
 /** #2435: one beat of the Dormant seal's pulse, runes and crescent (dormant.css). */
 export const DORMANT_PULSE_MS = 3200;
+
+/** R2801000: the most hull plates a Dormant Starship's face bolts on, one a piece (StarshipHull.tsx). */
+export const STARSHIP_HULL_PLATES_MAX = 8;

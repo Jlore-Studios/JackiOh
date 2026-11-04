@@ -4116,5 +4116,393 @@
     "pr": 2780,
     "title": "patches ship: v0.5.10g",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "ffafa76b1a51e5670bd24d7d2d7f63fe2c608229",
+    "pr": 2781,
+    "title": "retire `cargo jackioh luau surface`, the survey for moving official cards to Luau",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "1263b5d620282af12fbcaaff605ba3fcd5040487",
+    "pr": 2806,
+    "title": "patches log: 414e158..c1f09b9",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "4e8b2ae5b759bcce402ee0df6b900552e2709818",
+    "pr": 2805,
+    "title": "cosmetic token cycle Rare, Epic, Legendary, Rare, Epic, Cosmetic Pack, each step its own bar size",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "aee4e6039c0fa0f951be45d8b9003465fdacfe51",
+    "pr": 2810,
+    "title": "bot: build pass 1 for #2762",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "e80c4021cabd00f429892015f29cc6a7b4bbb2f6",
+    "pr": 2809,
+    "title": "the AI prices a turn hook as many times as the engine fires it: Joint Filing's extra runs and Living Bomb's hook on the opponent's turn",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a7f01aa8be284dcd3bbc4e9eed9f91b1028a2d69",
+    "pr": 2758,
+    "title": "production and staging on Cloudflare, each with its own Supabase project",
+    "kind": "app",
+    "player": "The Privacy Policy names Cloudflare as the host of the site and the game server."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "990f9a5714d27325013b6baccf0e72b7c05fd89f",
+    "pr": 2811,
+    "title": "the AI reads its own deck as its owner was shown it, so a card turned Radiant inside the deck stays unknown to it",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "be314c9deaeba663b4c1f5f861ec0ac59316ced7",
+    "pr": 2813,
+    "title": "in a hand, a Buff may give Cloaked or remove Crater, and a Nerf may remove Cloaked or give Crater",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "e292574c8db47dfecace201977f66a122e3354c5",
+    "pr": 2774,
+    "title": "Legendary and Mythic entrances with far bigger music, a board-wide takeover for every Mythic, and both on a hidden card's reveal",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "ee56a6a079f2f1e82fde726fde2fd7ebe1d25518",
+    "pr": 2814,
+    "title": "patches-ship's watch unlocks a night-bot log before it closes it with a comment",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "47f950af71e3ae3650704b4c928ee4c3c5f1676f",
+    "pr": 2807,
+    "title": "a Discover is just its cards, with no panel or words around them, the way Hearthstone draws one",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b227dd9b39d75976fa087946bb872e163a4be78c",
+    "pr": 2770,
+    "title": "hold a collection item to preview it fullscreen, and spend a token from that preview",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b35b2e897ca5d9236f7fc3b668f2d20a88acf051",
+    "pr": 2817,
+    "title": "patches ship: v0.5.11, v0.5.11b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "34fad70edf181e233b6e9e59015f257b1bc396c3",
+    "pr": 2818,
+    "title": "an issue once Cloudflare's usage spend is on course past $15 a billing period",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "47d3df8cf7eb6add6a21b8eb132bbb7b45e3992a",
+    "pr": 2820,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "cc885c09959cb22d2d557ddda1538b53c17dcc83",
+    "pr": 2812,
+    "title": "the AI prices a Field Spell's Death, as it already prices a Unit's",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "b30422a1bf7bcce2d15302295ce33534879af377",
+    "pr": 2819,
+    "title": "the cutover's secrets and database copy run as a workflow, so no secret passes through a person",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "253cfbf29a906a7f7a794716a088fe24b9b1e18f",
+    "pr": 2822,
+    "title": "patches ship: v0.5.11c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "0d1edca27b66bb9ecfaa07d8b596e6b4d54cf649",
+    "pr": 2823,
+    "title": "patches ship: v0.5.11d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "a5a55704dffa1a2df888bd81efede79f6c9aa582",
+    "pr": 2824,
+    "title": "a card that asks for a lane is answered on the board, the whole lane lit as one oblong highlight",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "4c9c38a4c48efeeb25eb47841a9d723b98f3899d",
+    "pr": 2830,
+    "title": "the motif language: the motif framework, per-set card animation tables, a /dev/fx gallery and the damage and removal motifs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "aa905b8e84cbc21e3b77101610b344d46c3219c0",
+    "pr": 2832,
+    "title": "events say why: the keyword behind a damage, heal or death, and a marker as each card hook resolves",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "d044c4a46e8b8fe30607543b2d9f43290fdba1c8",
+    "pr": 2821,
+    "title": "the dungeon run, playable offline in the Sandbox",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "6b6cbcb01417fb55199a0fb5fe0ac4f58b833512",
+    "pr": 2842,
+    "title": "main builds again: the dungeon run's fight tally matches a heal whatever its `via`",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "21eff8eb12ce233bbbfbd87910c406643c7eb070",
+    "pr": 2854,
+    "title": "spec check reads the edge worker's ruling citations too",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "29af96cfc28b40a47f2a436107d2fb0664628361",
+    "pr": 2840,
+    "title": "determinize samples each side's hidden cards against that side's shown cards",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "5a6f39b3bc1c1f6a21b6668df8c904bb2b5f15eb",
+    "pr": 2833,
+    "title": "an adjusted card win rate, Constructed and All Random apart, and an All Random card counted once seen",
+    "kind": "app",
+    "player": "Card statistics now rank cards by an adjusted win rate that discounts small samples, show Constructed and All Random apart, and count an All Random card only once it was drawn."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "2b0e333344cfa2f876fa844e5b4e57ba40eb06e7",
+    "pr": 2838,
+    "title": "bot: build pass 1 for #2788",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "33aa9b94b5d00a3f551afab450fa29d8bd929d76",
+    "pr": 2837,
+    "title": "the cutover checks production's secrets before using them, and encodes its database password",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "9d41bbcd2af1240cfbb9ddec9bd322a13ba0508b",
+    "pr": 2858,
+    "title": "more ladder bots to grind against, and separate Constructed and All Random ranks",
+    "kind": "app",
+    "player": "Ranked now has separate Constructed and All Random ladders, each with its own rank and leaderboard, and more ladder bots are online to play against."
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "3fbfb5f427a766236b383e3d4d964f5e00744d5b",
+    "pr": 2859,
+    "title": "drop the web tests that pin a generated constant to its literal (game, cards)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "2d9577236a462a4dc622d757fbf3c2fbf14a30ba",
+    "pr": 2836,
+    "title": "set pieces: one capped, skippable board-wide beat per action, and a Big moments setting",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "78d1b165530f089f859b0199b85177abb911de3d",
+    "pr": 2861,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "ee9a7b97ac6813f1268233550cf21bfda2120279",
+    "pr": 2862,
+    "title": "drop the web tests that pin a generated constant to its literal (audio, practice, emotes)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "74af1cfbbca10da6c92c2359840c06d1c1cfdc79",
+    "pr": 2863,
+    "title": "drop the printed-data readback tests from the sets #1140 did not reach",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "884357e3eaec11e63d9b98306579c560370f3e76",
+    "pr": 2860,
+    "title": "production moves by hand only, through a pull request the super run must pass",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "604589b0f816e11527fe3f140cd0f8f99910bd53",
+    "pr": 2865,
+    "title": "cutover copies staging's sign-in settings to production; Terraform adopts staging's Access",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "112b8d4672a215a5ff4dff710bb37ed6f8de53a7",
+    "pr": 2867,
+    "title": "the stats drill-down's loading skeleton fills its column on a phone",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "edb0f0953caf3ca33aa2a184c9431acb2cbc5957",
+    "pr": 2870,
+    "title": "drop the server tests that pin a config constant to its literal",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "aae5bdea8d99eeddee93aa81c272e297cb9bb994",
+    "pr": 2871,
+    "title": "the logo stays sharp on Safari and iPhone",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "9c57733067052a7c5bd50b73f4351b93b4ff8f5e",
+    "pr": 2841,
+    "title": "sub-looks for the crowded flavors, and particles of their own for Nature, Tech and Snack",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f06c55ee92d0e8c94aafda4986a5b3d1b73c6049",
+    "pr": 2843,
+    "title": "the Duos AI passes a card it could play itself when its teammate's follow-up is worth more",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "d76cfeb8c5772d18bd64cbdbec9ea8cfeabd9771",
+    "pr": 2872,
+    "title": "sign-in mail through Resend, so players outside the team can confirm and reset",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "f2b227e25b52b117970a4c1ec3e367d26ce2085a",
+    "pr": 2866,
+    "title": "cull the redundant and plumbing tests in the server's API and actor suites and the tools crate",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "fa942d1c969d576455b09e86ed82309f2a4b1648",
+    "pr": 2868,
+    "title": "cull the redundant cases in the web's largest route and deckbuilder tests",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "1b418ead95896b8ff40016bf4df77da80411adeb",
+    "pr": 2869,
+    "title": "fold the web cue tests that restate their tables row by row",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "8d30b2d5302b9b8dcefb7f9249f0e20c4cc7fa9c",
+    "pr": 2864,
+    "title": "the AI orders its own attacks by value instead of always going face first",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "fc319ba492e5e920854025f6e4a70fb4959f507b",
+    "pr": 2873,
+    "title": "set pieces for the board wipes: Twisting Nether, Ceaseless Void and every card that clears the board",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "87b82eb14f8bc0dca57cf62f7a0c7bfa636248c5",
+    "pr": 2839,
+    "title": "the fuzz gate probes playing through an open prompt",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "dac96b006f9fd8924f74833148417633b031e58f",
+    "pr": 2874,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "2c11d3a71f9472aadf1f5d75be0ef3a601e8dc3b",
+    "pr": 2835,
+    "title": "auras: a quiet lasting look while a Field Spell or lasting effect holds",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "fd387725ae1ca954bdd6d9d73da0b98c049b8bcf",
+    "pr": 2886,
+    "title": "fold the card tests that re-prove engine keywords and one-verb effects",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "cc73e95a6958784ffb7f2cc5b0b0fca6c1188844",
+    "pr": 2831,
+    "title": "the rest of the motifs: life and stats, board, cards and mana, and traps",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "01b194a20afc2d13d340b8cd8c04ebb7e5f6d203",
+    "pr": 2885,
+    "title": "a News bookmark on the landing, each patch and alert with a reward to claim",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.11",
+    "commit": "87e53f887bb2f62222e13d67c8609ff7bca560d3",
+    "pr": 2879,
+    "title": "the night bot's rework (own-lane review chain, holds and handoffs, no easy) and its usage history",
+    "kind": "internal"
   }
 ]

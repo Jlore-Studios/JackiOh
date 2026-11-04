@@ -60,6 +60,10 @@ describe("R2882000 today's deal", () => {
       seed: "daily-2026-11-03",
       humanSeat: "p1",
     });
+    // The seat alternates every day, a month's end included: the day of the month's parity gives p1 on both of these.
+    expect(dailyDealOf(Date.parse("2026-10-31T12:00:00.000Z")).humanSeat).toBe("p2");
+    expect(dailyDealOf(Date.parse("2026-11-01T12:00:00.000Z")).humanSeat).toBe("p1");
+    expect(dailyDealOf(Date.parse("2026-11-04T12:00:00.000Z")).humanSeat).toBe("p2");
     // 23:30 at UTC-5 is 04:30 UTC the next day.
     expect(dailyDealOf(Date.parse("2026-11-03T23:30:00-05:00")).day).toBe("2026-11-04");
   });

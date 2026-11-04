@@ -15,6 +15,7 @@ import Board from "./Board.tsx";
 import { SAND_FEEL } from "./SandSurface.tsx";
 import { LANES, NO_HIGHLIGHT, testid, type ClickTarget, type Highlight } from "./contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { stubPhoneBar } from "../test/phoneBar.ts";
 
 const FIELD_SLOTS = [
   { side: "opponent", row: "backrow" },
@@ -404,6 +405,63 @@ describe("Board", () => {
     for (const badge of badges) expect(badge.getAttribute("title")).toBe("Jade Counter");
   });
 
+  it("enemyLabel names the opponent hero's seat, and the viewer's stays You", () => {
+    render(<Board view={fullBoardView()} enemyLabel="AI · Easy" />);
+    expect(screen.getByTestId(testid.hero("opponent")).querySelector(".hero-seat")).toHaveTextContent("AI · Easy");
+    expect(screen.getByTestId(testid.hero("you")).querySelector(".hero-seat")).toHaveTextContent("You");
+    cleanup();
+
+    render(<Board view={fullBoardView()} />);
+    expect(screen.getByTestId(testid.hero("opponent")).querySelector(".hero-seat")).toHaveTextContent("Opponent");
+  });
+
+  it("controlExtras sits beside Concede on desktop, in the match menu's rows on phones", () => {
+    const desktop = stubPhoneBar(false);
+    try {
+      render(
+        <Board
+          view={fullBoardView()}
+          controlExtras={
+            <button type="button" className="control control-practice-new" data-testid="practice-new-game">
+              New game
+            </button>
+          }
+        />,
+      );
+      const extra = screen.getByTestId("practice-new-game");
+      expect(extra.closest(".control-bar")).not.toBeNull();
+      expect(extra.closest('[data-testid="match-menu-panel"]')).toBeNull();
+      expect(screen.queryByTestId(testid.matchMenu)).toBeNull();
+      cleanup();
+    } finally {
+      desktop();
+    }
+
+    const phone = stubPhoneBar(true);
+    try {
+      render(
+        <Board
+          view={fullBoardView()}
+          controlExtras={
+            <button type="button" className="control control-practice-new" data-testid="practice-new-game">
+              New game
+            </button>
+          }
+        />,
+      );
+      // The menu is mounted but closed, so its rows are hidden with it.
+      expect(screen.getByTestId(testid.matchMenuPanel)).toHaveAttribute("hidden");
+      const extra = screen.getByTestId("practice-new-game");
+      expect(extra.closest('[data-testid="match-menu-panel"]')).not.toBeNull();
+
+      fireEvent.click(screen.getByTestId(testid.matchMenu));
+      expect(screen.getByTestId(testid.matchMenuPanel)).not.toHaveAttribute("hidden");
+      expect(screen.getByTestId("practice-new-game")).toBeInTheDocument();
+    } finally {
+      phone();
+    }
+  });
+
   it("R1840000 R1840005 R2250000 both seats' Credits show as a badge on their hero, and nothing without them; no Resource tray is drawn", () => {
     const plain = fullBoardView();
     render(<Board view={plain} />);
@@ -428,7 +486,9 @@ describe("Board", () => {
       expect(badge.classList.contains("hero-credits")).toBe(true);
       expect(screen.getByTestId(testid.hero(side)).contains(badge)).toBe(true);
     }
-    expect(document.querySelector("[data-testid^='tray-']")).toBeNull();
+    // #2877's hero tray (`tray-<side>`, `tray-more-<side>`, `tray-list-<side>`) reuses the
+    // prefix; the Resource tray's names were `tray-card-*` and `tray-count-*`, which stay gone.
+    expect(document.querySelector("[data-testid^='tray-card-'], [data-testid^='tray-count-']")).toBeNull();
   });
 
   it("writes the log from view.events without naming a drawn card", () => {

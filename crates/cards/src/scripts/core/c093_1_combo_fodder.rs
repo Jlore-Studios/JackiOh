@@ -45,6 +45,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -96,7 +98,6 @@ mod tests {
 
         #[test]
         fn s8_it_costs_0_deals_2_to_the_chosen_unit_and_its_lifesteal_heals_you_2_once() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FODDER, ANCHOR], "health": 20 },
                 "p2": { "field": [POSTDOC] },
@@ -115,7 +116,6 @@ mod tests {
 
         #[test]
         fn r11_a_spell_token_resolves_at_the_enemy_hero_and_goes_to_the_graveyard_like_any_spell() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [FODDER, ANCHOR], "health": 20 } }));
             let fodder = s.card(FODDER).clone();
 
@@ -134,7 +134,6 @@ mod tests {
 
         #[test]
         fn r275_only_the_number_changes_so_4_damage_kills_the_2_4_and_lifesteal_heals_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": FODDER, "radiant": true }, ANCHOR], "health": 20 },
                 "p2": { "field": [POSTDOC] },
@@ -153,7 +152,6 @@ mod tests {
 
         #[test]
         fn r275_the_radiant_face_reaches_a_hero_too_and_still_goes_to_the_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": FODDER, "radiant": true }, ANCHOR], "health": 20 },
             }));
@@ -170,7 +168,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_deals_3_and_a_degrade_1_and_the_lifesteal_heals_that() {
         for (upgrade, amount) in [(true, 3), (false, 1)] {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [FODDER, ANCHOR], "health": 20 } }));
             let moved = if upgrade {
                 crate::upgrade_number(&mut s, FODDER, "damage")

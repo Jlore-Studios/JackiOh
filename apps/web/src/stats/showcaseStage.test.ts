@@ -147,7 +147,8 @@ describe("R2649000 the game's own mechanics on the stage", () => {
       ["marked", "jk-radiant-pulse", "brand"],
       ["marked", "jk-radiant-pulse", "brand"],
     ],
-    launch: [["starshipLaunched", "jk-radiant-pulse", "brand"]],
+    // R2801000: the launch lifts off and lands on its own keyframe; the brand recipe is the fallback of a Starship the seat cannot place.
+    launch: [["starshipLaunched", "jk-starship-launch", "brand"]],
   };
 
   it("R2649000 each new animation plays the board's entries for its events on the stage card or its zone", () => {
@@ -210,8 +211,9 @@ describe("R2649000 the game's own mechanics on the stage", () => {
     expect(kinds("crumble", "you", 0)).toContain("crack");
     expect(kinds("doom", "you", 0)).toContain("brand");
     expect(kinds("freeze", "opponent", 0)).toContain("brand");
-    // The board's brand recipe draws a mark's sigil, and a launch carries no mark: the board plays its keyframe alone, and so does the stage.
-    expect(kinds("launch", "you", 0)).toEqual([]);
+    // R2801000: a launch is the Starship's (fx/starship.ts): unheld on the stage, it lifts off at once with its
+    // flame, its contrail and its landing, and no countdown.
+    expect(kinds("launch", "you", 0)).toEqual(expect.arrayContaining(["launch", "projectile", "ring", "shake"]));
     expect(kinds("inTime", "you", 0)).toEqual(expect.arrayContaining(["burst", "ring"]));
   });
 });

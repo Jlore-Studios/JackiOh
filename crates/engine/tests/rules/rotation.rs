@@ -4,7 +4,7 @@
 use jackioh_engine::subsystems::rotation::{RotationResult, rotate_rings};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_json, live, live_mut, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_json, ids, live, live_mut, new_game, put, slot};
 
 // Fixture cards.
 
@@ -108,10 +108,6 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .collect()
 }
 
-fn ids(cards: &[&CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
-
 mod r14_rotation_m3_t7 {
     use super::*;
 
@@ -136,11 +132,11 @@ mod r14_rotation_m3_t7 {
         assert_eq!(where_is(&state, &lane1), "p1 units 2");
         assert_eq!(where_is(&state, &lane5), "p2 units 5");
         assert!(card_at(&state, slot(PlayerId::P1, Row::Units, 1)).is_none());
-        assert_eq!(result.moved, ids(&[&lane1, &lane5]));
+        assert_eq!(result.moved, ids([&lane1, &lane5]));
 
         assert_eq!(live(&state, &lane1).controller, PlayerId::P1);
         assert_eq!(live(&state, &lane5).controller, PlayerId::P2);
-        assert_eq!(result.crossed, ids(&[&lane5]));
+        assert_eq!(result.crossed, ids([&lane5]));
         assert!(result.bounced.is_empty());
 
         // One `rotated` for the rotation, whatever moved (§10.3).
@@ -178,7 +174,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(where_is(&state, &lane1), "p2 units 1");
         assert_eq!(where_is(&state, &lane3), "p1 units 2");
         assert_eq!(live(&state, &lane1).controller, PlayerId::P2);
-        assert_eq!(result.crossed, ids(&[&lane1]));
+        assert_eq!(result.crossed, ids([&lane1]));
         assert_eq!(
             events_json(&events, GameEventType::Rotated),
             vec![json!({ "type": "rotated", "direction": "left" })]
@@ -217,7 +213,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(where_is(&state, &enemy_back), "p1 backrow 1");
         assert_eq!(live(&state, &back).controller, PlayerId::P2);
         assert_eq!(live(&state, &enemy_back).controller, PlayerId::P1);
-        assert_eq!(result.crossed, ids(&[&back, &enemy_back]));
+        assert_eq!(result.crossed, ids([&back, &enemy_back]));
         assert_eq!(events_json(&events, GameEventType::Rotated).len(), 1);
         assert_eq!(
             field_of(&events, GameEventType::ControlChanged, "row"),
@@ -332,7 +328,7 @@ mod r14_rotation_m3_t7 {
             Some(crossing.id.clone())
         );
         assert!(result.bounced.is_empty());
-        assert_eq!(result.crossed, ids(&[&crossing]));
+        assert_eq!(result.crossed, ids([&crossing]));
         assert!(events_json(&events, GameEventType::Bounced).is_empty());
         assert_eq!(events_json(&events, GameEventType::ControlChanged).len(), 1);
         // It never left the field, so its damage and buffs come along (R14); the zone stays Locked.
@@ -376,7 +372,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(where_is(&state, &mine), "hand");
         assert!(state.players.p1.hand.iter().any(|c| c.id == mine.id));
         assert_eq!(live(&state, &mine).cost_override, Some(0));
-        assert_eq!(result.bounced, ids(&[&mine]));
+        assert_eq!(result.bounced, ids([&mine]));
         assert_eq!(
             field_of(&events, GameEventType::Bounced, "instanceId"),
             vec![json!(mine.id)]
@@ -389,7 +385,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(crossed.owner, PlayerId::P2);
         assert_eq!(crossed.summoned_turn, Some(state.turn));
         assert!(crossed.cost_override.is_none());
-        assert_eq!(result.crossed, ids(&[&theirs]));
+        assert_eq!(result.crossed, ids([&theirs]));
         assert_eq!(
             field_of(&events, GameEventType::ControlChanged, "instanceId"),
             vec![json!(theirs.id)]
@@ -398,7 +394,7 @@ mod r14_rotation_m3_t7 {
         // A card that stays on its own side rotates as usual, at its printed cost.
         assert_eq!(where_is(&state, &staying), "p1 units 3");
         // Ring order from p1's seat: p1's lanes 1 to 5, then p2's 5 down to 1 (§3.1).
-        assert_eq!(result.moved, ids(&[&staying, &theirs]));
+        assert_eq!(result.moved, ids([&staying, &theirs]));
         assert!(live(&state, &staying).cost_override.is_none());
     }
 
@@ -429,7 +425,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(where_is(&state, &me), "p1 units 4");
         assert_eq!(where_is(&state, &ally), "p1 units 5");
         assert_eq!(where_is(&state, &back), "p1 backrow 4");
-        assert_eq!(result.moved, ids(&[&me, &ally, &back]));
+        assert_eq!(result.moved, ids([&me, &ally, &back]));
     }
 
     #[test]
@@ -528,7 +524,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(live(&state, &under).damage, 1);
         assert_eq!(live(&state, &top).controller, PlayerId::P2);
         assert_eq!(live(&state, &under).controller, PlayerId::P2);
-        assert_eq!(result.crossed, ids(&[&top, &under]));
+        assert_eq!(result.crossed, ids([&top, &under]));
         // Nothing beneath the top resumed, so no Stack note is kept against it (R212).
         let note = state
             .field_exits
@@ -551,7 +547,7 @@ mod r14_rotation_m3_t7 {
 
         let (events, result) = rotate(&mut state, "right", json!({ "radiant": true }));
 
-        assert_eq!(result.bounced, ids(&[&token]));
+        assert_eq!(result.bounced, ids([&token]));
         assert_eq!(
             field_of(&events, GameEventType::Bounced, "instanceId"),
             vec![json!(token.id)]

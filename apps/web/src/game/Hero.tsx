@@ -1,15 +1,16 @@
 // A hero: health, armor and the Heroic Power (SPEC §3, BUILD M5-T1).
 //
 // A click target like any card, `hero-<side>`, for a click or a DragLayer drag; whether it may be attacked is
-// `props.highlight.legal` (Taunt lives in the engine). Modifier badges are `SideView.modifiers` (R169, §10.1,
-// both seats), rendered here only, one `modifiers-<side>` element per seat; one rebuilt from the event window
-// (§10.8) could appear and never leave. Heroic Powers (R43, R384, R510, R752) are each once per turn: the first keeps
-// the `power` testid e2e presses, others `power-<instanceId>`; the opponent's are tags; `usedThisTurn` is drawn,
-// never obeyed; the flash plays on `card-<instanceId>`. Portrait (R1449): a click, Enter or Space on a non-target
-// toggles the emote menu (R643: the opponent's is a one-item mute); a hold opens `emotes/HeroInspect.tsx` (R1330).
-// R847: "Rift turn used" (`SideView.riftExtraTurn`); owed extra turns are the modifier badge (R846). R1840005: a
-// seat's Credits (spent by R1853003's Marketplace, earned by R2250001's Resource) show as `market-credits-<side>`,
-// even at 0; a Resource is a hand card (#2250, R2250000), so the hand draws it.
+// `props.highlight.legal` (Taunt lives in the engine). The plate holds the portrait, the seat label and the
+// Heroic Powers only, at one fixed size (#2877); the seat's effects live in `HeroTray.tsx`'s tray hung off it:
+// modifier badges (`SideView.modifiers`, R169, §10.1, both seats), one `modifiers-<side>` element per seat, of
+// which one rebuilt from the event window (§10.8) could appear and never leave. Heroic Powers (R43, R384, R510,
+// R752) are each once per turn: the first keeps the `power` testid e2e presses, others `power-<instanceId>`; the
+// opponent's are tags; `usedThisTurn` is drawn, never obeyed; the flash plays on `card-<instanceId>`.
+// Portrait (R1449): a click, Enter or Space on a non-target toggles the emote menu (R643: the opponent's is a
+// one-item mute); a hold opens `emotes/HeroInspect.tsx` (R1330). Owed extra turns are a modifier badge (R846).
+// R1840005: a seat's Credits (spent by R1853003's Marketplace, earned by R2250001's Resource) show as
+// `market-credits-<side>`, even at 0; a Resource is a hand card (#2250, R2250000), so the hand draws it.
 
 import type { ReactElement } from "react";
 
@@ -23,9 +24,8 @@ import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
 import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx";
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
-import { animTestid } from "./animations.ts";
-import { ModifierBadge } from "./ModifierBadge.tsx";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
+import HeroTray, { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE } from "./HeroTray.tsx";
 import {
   sideView,
   testid,
@@ -38,7 +38,6 @@ import {
 } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
-import { secretBadgeText } from "./secrets.ts";
 import { t } from "../i18n/i18n.ts";
 import type { HeroPowerView, PlayerView } from "@jackioh/shared";
 
@@ -53,14 +52,15 @@ export type HeroProps = {
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
   emotes?: HeroEmotes;
+  /** The seat's label, drawn over `You`/`Opponent` (a practice game's `AI · Easy` on the opponent's seat). */
+  seatLabel?: string;
 };
 
 /** The portrait's hold has no overlay of its own: it opens the hero's view through Game. */
 const NO_OVERLAY = (): null => null;
 
-/** R847: the badge a side wears once a Temporal Rift has granted it its one extra turn, and its tooltip. */
-export const RIFT_SPENT_LABEL = "Rift turn used";
-export const RIFT_SPENT_NOTE = "Temporal Rift has granted this player's one extra turn this game; another Rift grants none";
+/** R847's words live with the tray that draws them (`HeroTray.tsx`); re-exported for their tests. */
+export { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE };
 
 /** R1449: the keys that open the inspect view from the portrait's button, a hold's keyboard twin. */
 function isInspectKey(event: { key: string; shiftKey: boolean }): boolean {
@@ -81,9 +81,6 @@ export default function Hero(props: HeroProps): ReactElement {
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
   const target: ClickTarget = { on: "hero", side };
-
-  const modifiersId = animTestid.modifiers(side);
-  const modifiers = seat.modifiers ?? [];
 
   // R1331: the portrait reacts as its menu or its view opens, and not at all under either Reduce
   // Motion switch.
@@ -176,6 +173,25 @@ export default function Hero(props: HeroProps): ReactElement {
         {emotes?.show !== null && emotes?.show !== undefined && (
           <EmoteShowEl key={emotes.show.key} show={emotes.show} />
         )}
+        {/* #2877: the Jade Counter (R961) and the Credits (R1840005) ride on the portrait as
+            health and armor do, so gaining one never moves the plate. The same elements —
+            classes, testids and attributes — only their parent moved. */}
+        {(seat.jade ?? 0) > 0 && (
+          <span className="hero-jade" data-jade={seat.jade} title={t("Jade Counter")}>
+            {seat.jade}
+          </span>
+        )}
+        {/* R1840005: the Credits, 0 included, once the view carries them. */}
+        {seat.marketCredits !== undefined && (
+          <span
+            className="hero-credits"
+            data-testid={`market-credits-${side}`}
+            data-credits={seat.marketCredits}
+            title={t("Credits")}
+          >
+            {seat.marketCredits}
+          </span>
+        )}
         {/* R1449: the click's menu, hung off the portrait as it was before R1330. A hold puts the
             same menu in the inspect view below instead. */}
         {emotes !== undefined && menu === "emotes" && !inspect && (
@@ -185,23 +201,7 @@ export default function Hero(props: HeroProps): ReactElement {
           <MuteMenu muted={emotes.muted} onMute={emotes.onMute} onClose={emotes.onCloseMenu} />
         )}
       </HeroPortrait>
-      <span className="hero-seat">{side === "you" ? t("You") : t("Opponent")}</span>
-      {(seat.jade ?? 0) > 0 && (
-        <span className="hero-jade" data-jade={seat.jade} title={t("Jade Counter")}>
-          {seat.jade}
-        </span>
-      )}
-      {/* R1840005: the Credits, 0 included, once the view carries them. */}
-      {seat.marketCredits !== undefined && (
-        <span
-          className="hero-credits"
-          data-testid={`market-credits-${side}`}
-          data-credits={seat.marketCredits}
-          title={t("Credits")}
-        >
-          {seat.marketCredits}
-        </span>
-      )}
+      <span className="hero-seat">{props.seatLabel ?? (side === "you" ? t("You") : t("Opponent"))}</span>
 
       {hero.power !== null &&
         (side === "you" ? (
@@ -242,51 +242,9 @@ export default function Hero(props: HeroProps): ReactElement {
           ),
         )}
 
-      {/* R169: one badge per `SideView.modifiers` entry, in the view's order. Always present, so
-          `modifierChanged` has an element to fade even when the badge that changed is the one that
-          has just gone. */}
-      <span
-        className="modifiers"
-        data-testid={modifiersId}
-        data-count={modifiers.length}
-        data-animating={props.animating?.get(modifiersId)}
-        // WCAG 4.1.2 (#757): a name needs a role.
-        role="group"
-        aria-label={side === "you" ? t("Your modifiers") : t("Opponent modifiers")}
-      >
-        {/* #2321: each opens its whole label on a tap, which a touch screen's missing hover cannot. */}
-        {modifiers.map((modifier) => (
-          <ModifierBadge key={modifier.id} modifier={modifier} />
-        ))}
-      </span>
-
-      {/* R860: one badge per secret this seat holds, in the view's order. The badge names the
-          choice only where the view carries it — the owner's seat, or anyone once revealed —
-          and the opponent's badge says only "Secret". */}
-      {(seat.secrets?.length ?? 0) > 0 && (
-        <span className="modifiers secrets" data-testid={`secrets-${side}`}>
-          {(seat.secrets ?? []).map((secret) => (
-            <span
-              key={secret.id}
-              className="modifier-badge secret-badge"
-              data-secret-id={secret.id}
-              data-choice={secret.choice}
-            >
-              {secretBadgeText(secret.choice)}
-            </span>
-          ))}
-        </span>
-      )}
-
-      {/* R847: the once-a-game Temporal Rift flag, public on both seats. Outside `modifiers-<side>`,
-          whose badges are the view's modifiers (R169). */}
-      {seat.riftExtraTurn === true && (
-        <span className="modifiers rift" data-testid={`rift-spent-${side}`}>
-          <span className="modifier-badge rift-badge" data-rift-extra-turn="true" title={t(RIFT_SPENT_NOTE)}>
-            {t(RIFT_SPENT_LABEL)}
-          </span>
-        </span>
-      )}
+      {/* #2877: the seat's effects live in the tray hung off the plate, out of flow, so the
+          plate keeps one size however many the seat carries. */}
+      <HeroTray side={side} seat={seat} animating={props.animating} />
 
       <PopLayer pops={props.pops} />
 

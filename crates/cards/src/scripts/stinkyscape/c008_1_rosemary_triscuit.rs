@@ -38,7 +38,6 @@ mod tests {
 
         #[test]
         fn refreshes_2_spent_mana_never_above_max_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [TRISCUIT, FILLER], "mana": 1 },
                 "p2": { "hand": [FILLER] },
@@ -52,7 +51,6 @@ mod tests {
 
         #[test]
         fn r364_at_full_mana_nothing_happens() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [TRISCUIT, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -67,7 +65,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_of_refresh_makes_it_refresh_more() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [TRISCUIT, FILLER], "mana": 0 },
                 "p2": { "hand": [FILLER] },
@@ -85,7 +82,6 @@ mod tests {
 
         #[test]
         fn refreshes_4_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": TRISCUIT, "radiant": true }, FILLER], "mana": 0 },
                 "p2": { "hand": [FILLER] },

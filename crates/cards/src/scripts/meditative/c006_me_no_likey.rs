@@ -72,6 +72,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -90,7 +92,6 @@ mod tests {
 
         #[test]
         fn r803_gives_your_unit_to_their_lane_and_gains_its_cost() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [FODDER] },
@@ -109,7 +110,6 @@ mod tests {
 
         #[test]
         fn r803_with_their_row_full_it_stays_and_gains_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [FODDER, FODDER, FODDER, FODDER, FODDER] },
@@ -124,7 +124,6 @@ mod tests {
 
         #[test]
         fn r803_an_x_unit_gives_its_x() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [BILLY, LIKELY, FILLER], "mana": 9 },
                 "p2": { "hand": [FILLER] },
@@ -141,7 +140,6 @@ mod tests {
 
         #[test]
         fn r803_r2618000_dying_it_goes_to_their_graveyard_as_theirs() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE, FODDER] },
                 // No Taunt on their side: the gift is the Menace's to attack (§4.2 step 3).
@@ -166,7 +164,6 @@ mod tests {
 
         #[test]
         fn an_enemy_unit_is_no_legal_target() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [FODDER] },
@@ -180,7 +177,6 @@ mod tests {
 
         #[test]
         fn radiant_gains_twice_the_cost() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": LIKELY, "radiant": true }, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [FODDER] },
@@ -196,7 +192,6 @@ mod tests {
 
         #[test]
         fn r386_radiant_multiple_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": LIKELY, "radiant": true }, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER] },
@@ -211,7 +206,6 @@ mod tests {
 
         #[test]
         fn r13_only_the_top_of_a_pile_is_a_legal_target() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [LIKELY, FILLER],
@@ -232,7 +226,6 @@ mod tests {
 
         #[test]
         fn r15_it_lands_in_its_own_lane_when_that_is_free() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [FODDER, { "def": MENACE, "lane": 3 }] },
                 "p2": { "hand": [FILLER] },
@@ -246,7 +239,6 @@ mod tests {
 
         #[test]
         fn r15_else_their_first_free_unit_zone() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [FODDER, FODDER] },
@@ -261,7 +253,6 @@ mod tests {
 
         #[test]
         fn r171_it_is_summoning_sick_for_them() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
@@ -277,7 +268,6 @@ mod tests {
 
         #[test]
         fn control_changed_is_reported_publicly() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE] },
                 "p2": { "hand": [FILLER] },

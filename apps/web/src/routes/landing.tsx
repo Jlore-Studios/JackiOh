@@ -422,6 +422,8 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
   // Nothing held and nothing due (R1304002): nothing to show, as on `/collection`.
   if (quests !== null && quests.quests.length === 0 && quests.nextDueAt === null) return null;
   const held = quests?.quests.length ?? 0;
+  // WCAG 2.5.3 (spec 38's axe check): the name holds the count the bubble shows.
+  const questsName = held > 0 ? t("Quests, {count} held", { count: formatNumber(held) }) : t("Quests");
   return (
     <div ref={root} className="landing-quests" style={UNROLL_STYLE}>
       {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
@@ -438,7 +440,7 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
         type="button"
         className="landing-quests-bookmark"
         data-testid={landingTestid.questsBookmark}
-        aria-label={t("Quests")}
+        aria-label={questsName}
         title={t("Quests")}
         aria-expanded={open}
         aria-controls={panelId}
@@ -478,6 +480,8 @@ function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion 
 
   if (news === null || news.length === 0) return null;
   const unclaimed = news.filter((entry) => !entry.claimed).length;
+  // WCAG 2.5.3 (spec 38's axe check): the name holds the count the bubble shows.
+  const newsName = unclaimed > 0 ? t("News, {count} to claim", { count: formatNumber(unclaimed) }) : t("News");
   return (
     <div ref={root} className="landing-news" style={UNROLL_STYLE}>
       {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
@@ -494,7 +498,7 @@ function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion 
         type="button"
         className="landing-news-bookmark"
         data-testid={landingTestid.newsBookmark}
-        aria-label={t("News")}
+        aria-label={newsName}
         title={t("News")}
         aria-expanded={open}
         aria-controls={panelId}

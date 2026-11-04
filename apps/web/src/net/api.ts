@@ -480,9 +480,17 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
 
 /**
  * One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt`
- * may be false, true (the Epic) or a full art's id (R2655000).
+ * may be false, true (the Epic) or a full art's id (R2655000) or a version's (R2725000), `augments` the
+ * augment ids layered on it.
  */
-export type CardPicksEntry = { cardId: string; foil?: string; finish?: string; border?: string; fullArt?: boolean | string };
+export type CardPicksEntry = {
+  cardId: string;
+  foil?: string;
+  finish?: string;
+  border?: string;
+  fullArt?: boolean | string;
+  augments?: readonly string[];
+};
 
 export type CardPicksResponse = { cards: CardPicksEntry[] };
 
@@ -493,13 +501,17 @@ export type CardPickPut = {
   finish?: string | null;
   border?: string | null;
   fullArt?: boolean | string | null;
+  augments?: readonly string[] | null;
 };
 
 export function getCardPicks(token: string): Promise<CardPicksResponse> {
   return apiRequest<CardPicksResponse>("/api/card-picks", { token });
 }
 
-/** `PUT /api/card-picks` (`active`): one card's change; 400 for an unknown card, or an id of the wrong kind or not owned. */
+/**
+ * `PUT /api/card-picks` (`active`): one card's change; 400 for an unknown card, or an id of the wrong kind, not owned,
+ * or a version or augment the card is not offered (R2725001).
+ */
 export function putCardPick(token: string, change: CardPickPut): Promise<CardPicksResponse> {
   return apiRequest<CardPicksResponse>("/api/card-picks", { method: "PUT", token, body: change });
 }
@@ -1460,6 +1472,14 @@ export type PublicCardStat = {
    * headline rate. Null when it was never seen or never unseen; absent from a server deployed before it.
    */
   adjustedWinRate?: number | null;
+  /**
+   * R2895000: the 95% ranges of `winRate` (Wilson, over the games it counts) and of `adjustedWinRate` (its
+   * posterior), as fractions; null where the rate is, absent from a server deployed before them.
+   */
+  winRateLow?: number | null;
+  winRateHigh?: number | null;
+  adjustedLow?: number | null;
+  adjustedHigh?: number | null;
   playRate: number;
   hasEnoughGames: boolean;
   window?: PublicCardWindow;

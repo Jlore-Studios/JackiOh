@@ -19,21 +19,10 @@ use crate::rules::fixtures::field::{
     banner, cover, flush, fuser, golem, mourner, notes_of, playing, tower, watcher, wrecker,
 };
 use crate::rules::fixtures::harness::{
-    act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
+    act, act_result, by, events_of_type, ids, in_hand, input, json_of, live, matches_object, put, sink_for,
+    slot,
 };
 use crate::rules::fixtures::scripts::heroic_power;
-
-/// An `ActionInput` from a `json!` object literal (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
 
 fn expect_match(actual: impl Serialize, expected: Value) {
     let actual = json_of(actual);
@@ -56,10 +45,6 @@ fn instance_ids(events: impl Serialize) -> Vec<String> {
 
 fn refusal(check: Result<(), EngineError>) -> Option<String> {
     check.err().map(|error| error.message)
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
@@ -635,9 +620,9 @@ mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
         {
             let mut sink = sink_for(&mut state);
             let ctx = make_context(&mut sink, None, by(P2));
-            assert!(ids(&cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&rider));
+            assert!(ids(cards_in_scope(&ctx, &json_as(json!({ "side": "enemy" })))).contains(&rider));
             assert_eq!(
-                ids(&cards_in_scope(
+                ids(cards_in_scope(
                     &ctx,
                     &json_as(json!({ "side": "enemy", "rows": ["backrow"] }))
                 )),

@@ -48,6 +48,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const TECH: &str = "meditative-050";
     const LEADER: &str = "core-001"; // Big D-fender, a deckable non-token card.
     const FILLER: &str = "core-005";
@@ -70,7 +72,6 @@ mod tests {
     /// p1 holds CN Tech (base unless `radiant_face`); both sides keep cards in hand so no turn
     /// auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -336,7 +337,6 @@ mod tests {
         #[test]
         fn a_full_hand_burns_the_card() {
             register_win_rates(table(vec![(LEADER, 30, 40)]));
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "cn-tech-burn",
                 "p1": {

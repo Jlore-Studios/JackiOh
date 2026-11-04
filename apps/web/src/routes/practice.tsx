@@ -24,7 +24,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -61,16 +60,10 @@ import {
   PRACTICE_SEED_BYTES,
   PRACTICE_SEED_MAX_LENGTH,
   PRACTICE_SETUP_KEY,
-  PRACTICE_SHOWCASE_HOLD_MAX_MS,
-  PRACTICE_VOICE_HOLD_MAX_MS,
   type PracticePacing,
 } from "../practice/config.ts";
-import {
-  PRACTICE_IDLE_STATE,
-  createPracticeController,
-  type PracticeController,
-  type PracticeControllerState,
-} from "../practice/controller.ts";
+import { useBoardBusy, useControllerState, useShowcaseHold, useVoiceHold } from "../practice/aiTable.ts";
+import { createPracticeController, type PracticeController } from "../practice/controller.ts";
 import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue } from "../practice/decks.ts";
 import { earningText, seedRequestOf, type PracticeEarning } from "../practice/earning.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
@@ -81,13 +74,13 @@ import { ModifierList } from "../game/ModifierList.tsx";
 import { SANDBOX_HOLD, sandboxAction } from "../practice/sandbox.ts";
 import { SandboxPanel } from "../practice/SandboxPanel.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
-import { OUTCOME_TITLE, PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
+import { PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
 import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../practice/PracticeSetup.tsx";
 import { practiceTestid } from "../practice/testids.ts";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
 import { dailyDealConfig } from "../practice/todaysDeal.ts";
-import { DIFFICULTY_LABEL, TierCrest } from "../practice/Tier.tsx";
+import { DIFFICULTY_LABEL } from "../practice/Tier.tsx";
 import { talliesPractice } from "../practice/tally.ts";
 import "../auth/tavern.css";
 import "../practice/practice.css";
@@ -395,26 +388,6 @@ function useLobbyCatalog(
 }
 
 /**
- * Tell the controller whether the board is still animating, so the AI's next step waits for the player to
- * see the last one. An element carries `data-animating` for as long as the runner holds a view back (BUILD
- * M5-T4), which is also what `cy.settled()` waits on.
- */
-function useBoardBusy(root: HTMLElement | null, controller: PracticeController | null): void {
-  useEffect(() => {
-    if (controller === null || root === null || typeof MutationObserver !== "function") return;
-    const report = (): void => {
-      controller.setBoardBusy(root.querySelector("[data-animating]") !== null);
-    };
-    const observer = new MutationObserver(report);
-    observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-animating"] });
-    report();
-    return () => {
-      observer.disconnect();
-    };
-  }, [root, controller]);
-}
-
-/**
  * Whether the board under `root` carries `data-animating`. A voice line (`data-speaking`) is left
  * out on purpose, so the victory line never holds the result dialog back.
  */
@@ -433,69 +406,6 @@ export function useBoardAnimating(root: HTMLElement | null): boolean {
     };
   }, [root]);
   return animating;
-}
-
-/**
- * Hold the AI's next step while an element anywhere in the page carries `attribute` (SPEC §9.9: AI turns
- * are paced so the player can follow them), for at most `maxMs` per mark, so a stuck mark can slow a turn
- * but never stop the game; it is ignored from then on until the page drops it.
- */
-function useMarkHold(controller: PracticeController | null, reason: string, attribute: string, maxMs: number): void {
-  useEffect(() => {
-    if (controller === null || typeof MutationObserver !== "function") return;
-    const root = document.documentElement;
-    const selector = `[${attribute}]`;
-    let cap: ReturnType<typeof setTimeout> | null = null;
-    /** The cap ran out on this mark; it is ignored until the page drops it. */
-    let expired = false;
-    const release = (): void => {
-      if (cap !== null) clearTimeout(cap);
-      cap = null;
-      controller.setHold(reason, false);
-    };
-    const report = (): void => {
-      const marked = root.matches(selector) || root.querySelector(selector) !== null;
-      if (!marked) {
-        expired = false;
-        release();
-        return;
-      }
-      if (expired || cap !== null) return;
-      controller.setHold(reason, true);
-      cap = setTimeout(() => {
-        expired = true;
-        release();
-      }, maxMs);
-    };
-    const observer = new MutationObserver(report);
-    observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: [attribute] });
-    report();
-    return () => {
-      observer.disconnect();
-      release();
-    };
-  }, [controller, reason, attribute, maxMs]);
-}
-
-/** Hold the AI's next step while a voice line plays (`data-speaking`, polish task 2). */
-function useVoiceHold(controller: PracticeController | null): void {
-  useMarkHold(controller, "voice", "data-speaking", PRACTICE_VOICE_HOLD_MAX_MS);
-}
-
-/** Hold the AI's next step while its last card is held up (`data-showcase`), so it never plays over it. */
-function useShowcaseHold(controller: PracticeController | null): void {
-  useMarkHold(controller, "showcase", "data-showcase", PRACTICE_SHOWCASE_HOLD_MAX_MS);
-}
-
-const noSubscribe = (): (() => void) => () => {};
-const idleState = (): PracticeControllerState => PRACTICE_IDLE_STATE;
-
-function useControllerState(controller: PracticeController | null): PracticeControllerState {
-  return useSyncExternalStore(
-    controller === null ? noSubscribe : controller.subscribe,
-    controller === null ? idleState : controller.getState,
-    controller === null ? idleState : controller.getState,
-  );
 }
 
 // the route
@@ -946,6 +856,8 @@ function PracticeScreen({
 
   /** The game whose result dialog the player closed to read the final board; null shows it. */
   const [resultClosedFor, setResultClosedFor] = useState<PracticeStartConfig | null>(null);
+  /** R2379000's "won't earn" toast, acked per game; the toast is the board's notice until dismissed. */
+  const [unearnedAckedFor, setUnearnedAckedFor] = useState<PracticeStartConfig | null>(null);
   /**
    * The game whose result dialog may open: it waits out the board's own game-over sequence rather
    * than cover it, and with no effects to watch (reduced motion, effects off, e2e pacing) opens at once.
@@ -1207,6 +1119,45 @@ function PracticeScreen({
     );
   }
 
+  const result = snapshot.view.result;
+  const outcome = result === null ? null : outcomeOf(result, snapshot.view.viewer);
+  // A game in progress is one tap from gone, so leaving it asks first; a finished one does not.
+  const menuButtons = (
+    <>
+      <button
+        type="button"
+        className="control control-practice-new"
+        data-testid={practiceTestid.newGame}
+        aria-haspopup={result === null ? "dialog" : undefined}
+        onClick={result === null ? onAskNewGame : onNewGame}
+      >
+        {t("New game")}
+      </button>
+      <button
+        type="button"
+        className="control control-practice-menu"
+        data-testid={practiceTestid.menu}
+        aria-haspopup={result === null ? "dialog" : undefined}
+        aria-label={t("Main menu")}
+        title={t("Main menu")}
+        onClick={result === null ? onAskMenu : onMenu}
+      >
+        {t("Menu")}
+      </button>
+    </>
+  );
+  // The enemy hero's seat names the AI and the difficulty, composed from translated words
+  // alone so no new dictionary entry is needed (R711000: every t() key needs a zh-CN entry).
+  const enemyLabel =
+    config.sandbox === true
+      ? `${t("AI")} · ${t("Sandbox")}`
+      : `${t("AI")} · ${t(DIFFICULTY_LABEL[config.difficulty])}`;
+  const modifierCount = (snapshot.view.you.modifiers?.length ?? 0) + (snapshot.view.opponent.modifiers?.length ?? 0);
+  const showStatus = state.thinking || modifierCount > 0;
+  const unearned =
+    earning !== null && earning.game === game && earning.earning.kind === "unearned" && unearnedAckedFor !== game
+      ? earning.earning
+      : null;
   const board = (
     // The result panel is practice's own dialog (PracticeResult), so the board keeps to its chip.
     // R345: a lesson keeps R82's automatic turn end on, since its coach is written around it, and its
@@ -1229,11 +1180,33 @@ function PracticeScreen({
         {...(config.lesson === undefined ? {} : { autoEndTurn: true, lesson: true })}
         // R2291000: in every game against the AI (R2102000), unless the Lethal hint setting is off.
         lethalHint={lethalHintOn && snapshot.lethal === true}
+        enemyLabel={config.lesson === undefined ? enemyLabel : undefined}
+        controlExtras={config.lesson === undefined ? menuButtons : undefined}
+        matchStatus={
+          config.lesson === undefined && showStatus ? (
+            <>
+              <ModifierList view={snapshot.view} opponentLabel={t("AI")} />
+              <ThinkIndicator thinking={state.thinking} />
+            </>
+          ) : undefined
+        }
+        boardNotice={
+          config.lesson === undefined && unearned !== null ? (
+            <p className="notice practice-unearned" data-testid={practiceTestid.unearned} role="status">
+              <span>{earningText(unearned)}</span>
+              <button type="button" aria-label={t("Dismiss")} onClick={() => setUnearnedAckedFor(game)}>
+                {t("Dismiss")}
+              </button>
+            </p>
+          ) : undefined
+        }
+        onOpenResult={config.lesson === undefined ? onShowResult : undefined}
+        openResultTestId={practiceTestid.outcome}
+        // §9.9, R188: the AI declines every draw offer at once, so a practice game draws no Offer draw.
+        showOfferDraw={false}
       />
     </FullArtAllowed>
   );
-  const result = snapshot.view.result;
-  const outcome = result === null ? null : outcomeOf(result, snapshot.view.viewer);
   // The controller's config, so a screen that just asked for the next lesson labels the one it shows.
   const playing = config.lesson === undefined ? undefined : lessonById(config.lesson);
   const coached = playing !== undefined && tracker !== null ? { lesson: playing, tracker } : null;
@@ -1260,66 +1233,6 @@ function PracticeScreen({
           onShowResult={onShowResult}
           onExit={result === null ? onAskExitLesson : onNewGame}
         />
-      ) : (
-        <header
-          className="practice-hud"
-          data-testid={practiceTestid.hud}
-          data-difficulty={config.difficulty}
-          data-human-seat={config.humanSeat}
-          data-ai-seat={state.aiSeat ?? ""}
-          data-thinking={state.thinking ? "true" : "false"}
-        >
-          <span className="practice-hud__tier">
-            <TierCrest tier={config.difficulty} size="sm" />
-            <span className="practice-hud__label">
-              <span className="practice-hud__mode">{config.sandbox === true ? t("Sandbox") : t("Practice")}</span>
-              <strong>{t(DIFFICULTY_LABEL[config.difficulty])}</strong>
-            </span>
-          </span>
-          {/* SPEC §2.1 step 5: p1 takes the first turn. */}
-          <span className="practice-hud__seat">{config.humanSeat === "p1" ? t("You go first") : t("You go second")}</span>
-          <span className="practice-hud__status">
-            <ModifierList view={snapshot.view} opponentLabel={t("AI")} />
-            <ThinkIndicator thinking={state.thinking} />
-            {outcome === null ? null : (
-              <button
-                type="button"
-                className="practice-hud__outcome"
-                data-testid={practiceTestid.outcome}
-                data-outcome={outcome}
-                onClick={onShowResult}
-              >
-                {t(OUTCOME_TITLE[outcome])}
-              </button>
-            )}
-          </span>
-          {/* A game in progress is one tap from gone, so leaving it asks first; a finished one does not. */}
-          <button
-            type="button"
-            className="practice-hud__new"
-            data-testid={practiceTestid.newGame}
-            aria-haspopup={result === null ? "dialog" : undefined}
-            onClick={result === null ? onAskNewGame : onNewGame}
-          >
-            {t("New game")}
-          </button>
-          <button
-            type="button"
-            className="practice-hud__menu"
-            data-testid={practiceTestid.menu}
-            aria-haspopup={result === null ? "dialog" : undefined}
-            aria-label={t("Main menu")}
-            title={t("Main menu")}
-            onClick={result === null ? onAskMenu : onMenu}
-          >
-            {t("Menu")}
-          </button>
-        </header>
-      )}
-      {earning !== null && earning.game === game && earning.earning.kind === "unearned" ? (
-        <p className="notice practice-unearned" data-testid={practiceTestid.unearned} role="status">
-          {earningText(earning.earning)}
-        </p>
       ) : null}
       {/* A lesson's coach comes between the HUD and the board: on a phone it is a panel in the page
           there, and the board takes the height that is left (tutorial/Coach.tsx); elsewhere it

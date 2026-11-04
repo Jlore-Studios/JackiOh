@@ -66,9 +66,12 @@ import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
 import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
+import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
+import { questClaim } from "../fx/systemMoments.ts";
+import { starshipClaim } from "../fx/starship.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
@@ -78,6 +81,8 @@ import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
+import type { GameSideline } from "../sideline/useSideline.ts";
 
 /** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
 function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
@@ -112,6 +117,14 @@ export type GameProps = {
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
   resultForm?: ResultForm;
+  /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
+  enemyLabel?: string;
+  /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */
+  controlExtras?: ReactNode;
+  /** The route's way back to its own result dialog from the board's result chip (practice). */
+  onOpenResult?: () => void;
+  /** The chip's `practice-outcome` button that opens the route's result dialog. */
+  openResultTestId?: string;
   /** R345: pins the R82 preference this board sends; the tutorial's lessons are written around R82. */
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
@@ -120,12 +133,21 @@ export type GameProps = {
   matchStatus?: ReactNode;
   /** Route navigation and match-series information, mounted in the board rail. */
   boardRail?: ReactNode;
+  /**
+   * #2932: on a phone held upright the rail rides the top strip, beside the turn banner, in a row that
+   * already exists, so it takes no height from the field; the control bar keeps End turn, the log, the
+   * menu and settings. Off, or on any other layout, the rail stays in the control bar. A route with a
+   * back link and a rank line (a match, a replay, a watch) opts in; the Duos board keeps its own bar.
+   */
+  phoneRailTop?: boolean;
   /** DR14 (#2706): route chrome drawn beside each hero, as `boardRail` is in the rail (a dungeon run's relics). */
   heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
   /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
   emotes?: GameEmotes;
+  /** R2990004: the watchers' emotes, a networked route's `useSideline`. Absent, no sideline strip. */
+  sideline?: GameSideline;
   /** R639: log this game in the device's statistics when it ends; not a lesson's or hotseat's. */
   trackStats?: boolean;
   /** R1295000: the viewer's own cards wear the device's card cosmetics; a replay's never do. */
@@ -155,6 +177,8 @@ export type GameProps = {
   lethalHint?: boolean;
   /** R1838000: the board's own Trade bar; the Duos board turns it off and puts Trade in its card bar. */
   tradeBar?: boolean;
+  /** §9.9, R188: the board's Offer draw (Board's `showOfferDraw`); the practice route turns it off, its AI declining every offer. */
+  showOfferDraw?: boolean;
   /**
    * R2095000: no audio, effects layer or showcase, for the Duos teammate's read-only board: they anchor
    * on the whole page, so a second board would play the other duel's cues on the own board.
@@ -192,13 +216,19 @@ export default function Game({
   error,
   resultActions,
   resultForm = "panel",
+  enemyLabel,
+  controlExtras,
+  onOpenResult,
+  openResultTestId,
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   matchStatus,
   boardRail,
+  phoneRailTop = false,
   heroAside,
   boardNotice,
   emotes,
+  sideline,
   trackStats = false,
   wearCosmetics = false,
   deckCosmetics = null,
@@ -210,6 +240,7 @@ export default function Game({
   lesson = false,
   lethalHint = false,
   tradeBar = true,
+  showOfferDraw = true,
   silent = false,
   setPieceOf,
 }: GameProps): ReactElement {
@@ -217,6 +248,10 @@ export default function Game({
   // R2118000: no command menu over a board.
   useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
+  // #2924: the shown turn, active seat and viewer the selection was built on. The turn clock
+  // (§10.10) can end the turn mid-choice, so a half-built play or attack is dropped when the
+  // shown view moves to another turn, seat or viewer, as Escape already drops it.
+  const [selectionKey, setSelectionKey] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
   // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -270,6 +305,9 @@ export default function Game({
   const queue = useRef<AnimationQueue | null>(null);
   // #258: the OS preference is followed live, as the queue below follows the setting.
   const osReducesMotion = useOsReducedMotion();
+  // #2932: the rail rides the top strip on a phone held upright, when the route asks for it and has one.
+  const portrait = usePhonePortrait();
+  const railTop = phoneRailTop && portrait && boardRail !== undefined && boardRail !== null;
   const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
   const hitStopTimer = useRef<number | null>(null);
   const triggerHitStopMs = useCallback((durationMs: number): void => {
@@ -362,8 +400,10 @@ export default function Game({
       // R2785000: the Duos teammate's silent board plays no set piece (R2095000).
       setPieces: !silent,
       // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
+      // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
+      // R2801000: and a Starship's launch after both.
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry),
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -564,6 +604,16 @@ export default function Game({
   if (emoteMenu !== null && (interaction !== IDLE || emoteMenu.viewer !== shown.viewer)) {
     setEmoteMenu(null);
   }
+  // #2924: drop a half-built play or attack when the shown view's turn, active seat or viewer
+  // changes (React's "adjust state while rendering" pattern, as the concede dialog above does).
+  // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
+  // board back, `shown` is old and `view` is new, and comparing them would drop the selection
+  // mid-animation on every animated turn change.
+  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  if (selectionKey !== shownKey) {
+    setSelectionKey(shownKey);
+    if (interaction.stage !== "idle") setInteraction(IDLE);
+  }
   useEffect(() => {
     if (shown.result !== null) setEmoteMenu(null);
   }, [shown.result]);
@@ -655,6 +705,7 @@ export default function Game({
       className="game"
       ref={attach}
       data-testid="game"
+      data-rail-top={railTop ? "true" : undefined}
       data-replay={replay ? "true" : undefined}
       data-lethal-hint={lethalShown ? "true" : undefined}
       data-viewer={shown.viewer}
@@ -689,6 +740,8 @@ export default function Game({
       {inFlight === null ? null : (
         <span data-testid="animation-queue" data-animating={inFlight.type} hidden aria-hidden="true" />
       )}
+      {/* #2932: the rail in the top strip, with the turn banner beside it (board.css); the board gets none. */}
+      {railTop ? <div className="board-rail board-rail--top">{boardRail}</div> : null}
       {banner !== null ? (
         <div
           className="turn-banner"
@@ -708,11 +761,14 @@ export default function Game({
         highlight={highlight}
         animating={animating}
         animated={animated}
+        enemyLabel={enemyLabel}
+        controlExtras={controlExtras}
         turnClock={turnClock}
         matchStatus={matchStatus}
-        boardRail={boardRail}
+        boardRail={railTop ? undefined : boardRail}
         heroAside={heroAside}
         market={replay ? undefined : { legal, onAction: dispatch }}
+        showOfferDraw={showOfferDraw}
         boardNotices={
           <>
             {error != null && error !== "" ? (
@@ -797,6 +853,7 @@ export default function Game({
       )}
 
       {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {sideline === undefined ? null : <SidelineStrip sideline={sideline} />}
 
       {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}
       {shown.result !== null ? (
@@ -808,6 +865,8 @@ export default function Game({
             actions={resultActions}
             animating={animating.get(testid.result)}
             theirHand={theirHandOf(shown)}
+            onOpenResult={onOpenResult}
+            openResultTestId={openResultTestId}
           />
         </WearerProvider>
       ) : null}

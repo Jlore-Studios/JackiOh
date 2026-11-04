@@ -94,6 +94,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -120,7 +122,6 @@ mod tests {
         p1_library: usize,
         p2_library: usize,
     ) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {

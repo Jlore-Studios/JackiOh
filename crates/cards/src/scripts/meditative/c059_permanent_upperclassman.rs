@@ -69,13 +69,14 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const UPPERCLASSMAN: &str = "meditative-059";
     const FILLER: &str = "core-005";
 
     /// p1 holds the Upperclassman (base unless `radiant_face`); both sides keep cards in hand, and p1
     /// the mana to play its spare one once the (4) is paid, so no turn auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {

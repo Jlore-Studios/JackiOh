@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 69 tables of migrations 0001-0077 ==='
+\echo '=== CHECK 2: the 70 tables of migrations 0001-0079 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -85,12 +85,12 @@ declare
   -- stats-import --totals-only folded, game_record_batches (0060, R1976000), the account's
   -- per-card picks, card_cosmetic_picks (0061, R1834000), each patch's whole games,
   -- game_totals (0063, R1994000), a saved deck's earlier versions, deck_versions (0066,
-  -- R2100000), a spend's idempotency_keys (0067, R2124000), and a news entry's claims, news_claims
-  -- (0077, R2875000).
+  -- R2100000), a spend's idempotency_keys (0067, R2124000), a news entry's claims, news_claims
+  -- (0077, R2875000), and the practice claims' practice_claim_counts (0078, #2884).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
-  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075 and
-  -- 0076 add no table.
+  -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
+  -- 0076 and 0079 add no table.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -106,7 +106,7 @@ declare
     'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
     'news_claims', 'player_settings',
-    'player_stats', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
+    'player_stats', 'practice_claim_counts', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
     'replay_shares', 'results',
     'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',
     'trios', 'tutorial_progress', 'wallets'];
@@ -1050,7 +1050,7 @@ begin
   delete from public.cards
    where id in ('check18-probe', 'check18-probe-quest', 'check18-probe-swarm', 'check18-probe-token');
 
-  -- A row as `seed-catalog` writes Training Grounds #41 Legacy: Bigot, a Human Legacy Unit, is
+  -- A row as `seed-catalog` writes Training Grounds #41 Legacy: Speciesist, a Human Legacy Unit, is
   -- admitted (R2511000).
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,

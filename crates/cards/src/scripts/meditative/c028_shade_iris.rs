@@ -3,7 +3,7 @@
 //! Base and Radiant: "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
 //! Engine: `shuffle_into({ defId: "meditative-028-1", count: param("curses"), player: opponent })`
 //! (§6.3 Shuffle into, R80's library cap, a public `shuffledIn`), the same shape as Core #90
-//! CN-Viral Injection. The curses belong to the deck's owner and are Created cards (ME-CREATED).
+//! Super-Virus Injection. The curses belong to the deck's owner and are Created cards (ME-CREATED).
 
 use jackioh_engine::prelude::*;
 
@@ -40,6 +40,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -55,7 +57,6 @@ mod tests {
 
     /// p1 plays Shade-iris (base unless `radiant_face`) at `seed`.
     fn played(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -107,7 +108,6 @@ mod tests {
 
             #[test]
             fn r80_a_full_deck_refuses_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "iris-library-cap",
                     "p1": { "hand": [IRIS, FILLER], "library": filler(3) },
@@ -125,7 +125,6 @@ mod tests {
 
             #[test]
             fn curses_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "iris-param",
                     "p1": { "hand": [IRIS, FILLER], "library": filler(3) },

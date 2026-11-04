@@ -91,6 +91,8 @@ const PINNED: &[(&str, &str)] = &[
     ("0075_animated_art.sql", "63987d15"),
     ("0076_constructed_and_random_ladders.sql", "9ebc6b71"),
     ("0077_news_claims.sql", "928d4201"),
+    ("0078_practice_claim_counts.sql", "c945c6ac"),
+    ("0079_card_versions.sql", "27b09e20"),
 ];
 
 /// `PINNED[name]`.
@@ -184,5 +186,73 @@ mod migrations_are_append_only {
                 "{name}: the embedded text's checksum"
             );
         }
+    }
+}
+
+/// The fast path of a boot with nothing pending (#2926): the pure check on what one read of the
+/// ledger answers. The database half is `postgres.rs`'s `migrate_on_a_wake`.
+mod fully_applied_ {
+    use super::*;
+    use jackioh_server::db::migrate::{fully_applied, rewritten};
+
+    /// What a database that applied every migration holds: each file with its own checksum.
+    fn ledger() -> Vec<(String, String)> {
+        MIGRATIONS
+            .iter()
+            .map(|(name, text)| (name.to_string(), checksum(text)))
+            .collect()
+    }
+
+    #[test]
+    fn a_ledger_holding_every_file_with_its_checksum_is_fully_applied() {
+        assert!(fully_applied(&ledger()));
+    }
+
+    #[test]
+    fn a_ledger_missing_any_one_file_is_not_fully_applied() {
+        for missing in 0..MIGRATIONS.len() {
+            let mut held = ledger();
+            let (name, _) = held.remove(missing);
+            assert!(!fully_applied(&held), "a ledger without {name}");
+        }
+        assert!(!fully_applied(&[]), "an empty ledger");
+    }
+
+    #[test]
+    fn a_ledger_with_an_edited_checksum_is_not_fully_applied() {
+        for edited in 0..MIGRATIONS.len() {
+            let mut held = ledger();
+            held[edited].1 = "deadbeef".to_string();
+            assert!(!fully_applied(&held), "{} edited", held[edited].0);
+        }
+    }
+
+    #[test]
+    fn a_rewritten_files_earlier_checksum_is_accepted() {
+        for (name, earlier) in REWRITTEN {
+            for sum in *earlier {
+                let mut held = ledger();
+                let row = held
+                    .iter_mut()
+                    .find(|(file, _)| file == name)
+                    .expect("a rewritten file is a migration");
+                row.1 = sum.to_string();
+                assert!(fully_applied(&held), "{name} at {sum}");
+            }
+        }
+        assert!(
+            !rewritten("0013_retention_purge.sql").is_empty(),
+            "the cases above cover 0013's first version"
+        );
+    }
+
+    #[test]
+    fn rows_for_files_the_binary_does_not_list_are_ignored() {
+        let mut held = ledger();
+        held.push((
+            "9999_a_newer_binarys_file.sql".to_string(),
+            "00000000".to_string(),
+        ));
+        assert!(fully_applied(&held));
     }
 }

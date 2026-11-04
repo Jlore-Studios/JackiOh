@@ -110,7 +110,7 @@ describe("R279 the names a text links", () => {
     it("R279 with no catalog to read, a name is plain text", () => {
     const { container } = render(<CardFace face={face("core-090", false)} layout="full" />);
     expect(container.querySelector(".cf-ref")).toBeNull();
-    expect(container.querySelector(".card-text")).toHaveTextContent("Shuffle a CN-Virus into your opponent's deck.");
+    expect(container.querySelector(".card-text")).toHaveTextContent("Shuffle a Super-Virus into your opponent's deck.");
   });
 });
 
@@ -135,14 +135,14 @@ describe("R279 a reference that is a control opens the card it names", () => {
     expect(tooltip).toHaveAttribute("role", "tooltip");
     expect(tooltip).toHaveAttribute("data-ref", "core-090-1");
     expect(tooltip).toHaveAttribute("data-ref-face", "base");
-    expect(within(tooltip).getByText("CN-Virus")).toBeInTheDocument();
+    expect(within(tooltip).getByText("Super-Virus")).toBeInTheDocument();
     expect(ref).toHaveAttribute("aria-describedby", tooltip.id);
     act(() => ref?.blur());
     expect(screen.queryByTestId(REF_TOOLTIP_TESTID)).toBeNull();
     expect(ref).not.toHaveAttribute("aria-describedby");
   });
 
-  it("R279 a name the text calls Radiant opens the Radiant face (#90's Radiant CN-Virus)", () => {
+  it("R279 a name the text calls Radiant opens the Radiant face (#90's Radiant Super-Virus)", () => {
     const { container } = renderInteractive("core-090", true);
     const ref = container.querySelector<HTMLElement>('.cf-ref[data-ref="core-090-1"]');
     expect(ref).toHaveAttribute("data-ref-face", "radiant");

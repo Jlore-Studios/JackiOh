@@ -49,6 +49,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const ECHO: &str = "classic-057";
     const WILDFIRE: &str = "classic-055"; // (1) Spell: Deal {damage} damage (4, Radiant 8), a declared target.
     const GRAND: &str = "classic-072"; // Trap: counters the opponent's non-Unit plays.
@@ -58,7 +60,7 @@ mod tests {
     const ADAPTIVE: &str = "core-074"; // (X) Spell: Deal X to a target; heal X; draw X; an X/X Ghoul.
     const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
     const DREAM: &str = "core-023"; // (1) Spell: … End of turn: Return this to your hand.
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const PILE_ON: &str = "classic-060"; // (5) Spell: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
@@ -119,7 +121,6 @@ mod tests {
 
             #[test]
             fn r399_with_no_spell_played_yet_it_has_no_text_no_choices_it_resolves_to_nothing_and_records_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ECHO, VANILLA] } }));
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
                 assert!(card.get("copies").is_none());
@@ -142,7 +143,6 @@ mod tests {
 
             #[test]
             fn r399_it_has_the_text_of_the_last_spell_either_player_played_the_opponents_spell() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ECHO, VANILLA], "library": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [STOCKPILE, VANILLA], "library": [VANILLA, VANILLA] },
@@ -167,10 +167,9 @@ mod tests {
 
             #[test]
             fn r399_r2179002_a_spell_cast_on_draw_is_no_play_so_never_the_last_spell() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, ECHO], "library": [CN_VIRUS, VANILLA, VANILLA] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, ECHO], "library": [SUPER_VIRUS, VANILLA, VANILLA] } }));
                 s.play(STOCKPILE, json!({}));
-                // Through v0.5.2 the CN-Virus its draw cast was the last Spell (R70).
+                // Through v0.5.2 the Super-Virus its draw cast was the last Spell (R70).
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": STOCKPILE, "radiant": false }));
                 assert_eq!(
                     own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),
@@ -180,7 +179,6 @@ mod tests {
 
             #[test]
             fn r399_a_countered_spell_was_never_played_and_is_never_the_last_spell() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, ECHO], "backrow": [GRAND] },
                     "p2": { "hand": [STOCKPILE, VANILLA] },
@@ -194,7 +192,6 @@ mod tests {
 
             #[test]
             fn r399_a_field_spell_is_never_a_spell_playing_one_leaves_the_record_as_it_was() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ARMOR, ECHO], "library": [VANILLA], "mana": 9 } }));
                 s.play(WILDFIRE, json!({ "targets": at_p2() }));
                 s.play(ARMOR, json!({}));
@@ -203,7 +200,6 @@ mod tests {
 
             #[test]
             fn r399_r243_in_its_owners_hand_its_view_carries_that_spells_face_and_numbers_under_echos_name_and_cost() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, ECHO] } }));
                 s.play(WILDFIRE, json!({ "targets": at_p2() }));
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
@@ -216,7 +212,6 @@ mod tests {
 
             #[test]
             fn r97_hidden_from_the_opponent_like_any_hand_card_their_view_never_names_it_nor_what_it_copies() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ECHO] } }));
                 s.play(WILDFIRE, json!({ "targets": at_p2() }));
                 let theirs = js(&s.view(PlayerId::P2));
@@ -227,7 +222,6 @@ mod tests {
 
             #[test]
             fn r399_played_it_declares_the_copied_spells_choices_legalactions_offers_exactly_the_copied_spells_targets() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ECHO, WILDFIRE] }, "p2": { "field": [MENACE] } }));
                 let wildfires: Vec<String> =
                     s.hand(PlayerId::P1).iter().filter(|card| card.def_id == WILDFIRE).map(|card| card.id.clone()).collect();
@@ -253,7 +247,6 @@ mod tests {
 
             #[test]
             fn r399_r386_it_resolves_the_copied_script_on_the_face_recorded_with_that_faces_declared_number() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, ECHO] }, "p2": { "field": [MENACE] } }));
                 s.play(WILDFIRE, json!({ "targets": at_p2() }));
                 let menace = s.card(MENACE).id.clone();
@@ -265,7 +258,6 @@ mod tests {
 
             #[test]
             fn r399_a_played_echo_records_the_spell_it_copied_never_itself_so_a_second_echo_copies_the_same_spell() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ECHO, ECHO, VANILLA], "mana": 9 }, "p2": { "hand": [VANILLA] } }));
                 let echoes: Vec<String> =
                     s.hand(PlayerId::P1).iter().filter(|card| card.def_id == ECHO).map(|card| card.id.clone()).collect();
@@ -282,7 +274,6 @@ mod tests {
 
             #[test]
             fn r546_it_keeps_its_own_name_cost_type_and_tags_and_copying_a_book_makes_no_book_play() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ECHO, VANILLA] },
@@ -311,7 +302,6 @@ mod tests {
 
             #[test]
             fn r545_an_x_cost_text_x_is_chosen_with_the_play_from_1_up_to_the_mana_left_once_echos_1_is_paid() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ADAPTIVE, ECHO], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 } }));
                 s.play(ADAPTIVE, json!({ "x": 1, "targets": at_p2() }));
                 s.state_mut().players.p1.mana.current = 4;
@@ -338,7 +328,6 @@ mod tests {
 
             #[test]
             fn r545_with_nothing_left_once_echos_1_is_paid_an_x_cost_text_cannot_be_played_absent_and_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [ADAPTIVE, ECHO], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 } }));
                 s.play(ADAPTIVE, json!({ "x": 1, "targets": at_p2() }));
                 s.state_mut().players.p1.mana.current = 1;
@@ -352,7 +341,6 @@ mod tests {
 
             #[test]
             fn r546_a_prompt_in_the_copied_text_continues_the_copied_script_this_is_echo_exiled_where_reminisce_says_so() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REMINISCE, ECHO], "graveyard": [MENACE, VANILLA] } }));
                 s.play(REMINISCE, json!({}));
                 s.answer(json!(MENACE));
@@ -388,10 +376,9 @@ mod tests {
 
             #[test]
             fn r547_an_echo_drawn_while_the_last_spell_casts_on_draw_is_cast_and_the_draw_repeats() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VANILLA], "library": [ECHO, MENACE, VANILLA] } }));
-                // A cast on draw is no play (R2179002), so the record a CN-Virus played from hand leaves.
-                s.state_mut().last_spell = Some(PlayRecord { def_id: CN_VIRUS.to_string(), radiant: false });
+                // A cast on draw is no play (R2179002), so the record a Super-Virus played from hand leaves.
+                s.state_mut().last_spell = Some(PlayRecord { def_id: SUPER_VIRUS.to_string(), radiant: false });
                 s.start_turn();
                 assert_eq!(hits(s.last_events(), "hero-p1"), vec![1]);
                 s.expect_in_zone(ECHO, "graveyard");
@@ -401,7 +388,6 @@ mod tests {
 
             #[test]
             fn r547_the_copied_end_of_turn_return_is_not_had_an_echo_copying_reoccurring_dream_stays_in_the_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DREAM, ECHO, VANILLA] }, "p2": { "hand": [VANILLA] } }));
                 s.play(DREAM, json!({}));
                 s.play(ECHO, json!({}));
@@ -412,7 +398,6 @@ mod tests {
 
             #[test]
             fn r547_the_copied_faces_yellow_glow_answers_for_echo_in_hand_and_its_combo_resolves_for_echos_play() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID, RAPID, RAPID, ECHO], "library": [MENACE, MENACE, MENACE, MENACE] } }));
                 let rapids: Vec<String> =
                     s.hand(PlayerId::P1).iter().filter(|held| held.def_id == RAPID).map(|held| held.id.clone()).collect();
@@ -468,7 +453,6 @@ mod tests {
 
             #[test]
             fn s6_2_echo_1_the_copied_text_resolves_once_more_asking_a_fresh_pick_for_the_repeat() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] },
                     "p2": { "field": [MENACE], "hand": [VANILLA] },
@@ -484,7 +468,6 @@ mod tests {
 
             #[test]
             fn r399_a_radiant_echo_after_a_played_echo_copies_the_spell_that_echo_copied_never_echo_echo_1_repeats_that_text() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, ECHO, { "def": ECHO, "radiant": true }, VANILLA], "mana": 9 },
                     "p2": { "hand": [VANILLA] },
@@ -507,7 +490,6 @@ mod tests {
 
             #[test]
             fn r386_its_echo_is_a_numbered_keyword_upgrade_moves_as_an_x_one_step_more_is_one_more_repeat() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] }, "p2": { "hand": [VANILLA] } }));
                 let id = s.card(ECHO).id.clone();
                 let echo = find_instance_mut(s.state_mut(), &id).expect("the Echo is in p1's hand");
@@ -522,7 +504,6 @@ mod tests {
 
             #[test]
             fn r399_with_nothing_to_copy_it_does_nothing_and_its_echo_repeats_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": ECHO, "radiant": true }, VANILLA] } }));
                 s.play(ECHO, json!({}));
                 assert!(s.state().pending.is_none());

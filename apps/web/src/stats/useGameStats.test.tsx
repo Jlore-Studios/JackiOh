@@ -3,17 +3,23 @@
 
 import { renderHook } from "@testing-library/react";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { baseView, card, emptySide, resetIds, unit } from "../test/fixtures.ts";
 import { PLAYER_STATS_KEY } from "./config.ts";
 import { dropPlayerStatsCache, readPlayerStats } from "./store.ts";
+import * as syncModule from "./sync.ts";
 import { useGameStats } from "./useGameStats.ts";
 
 beforeEach(() => {
   resetIds();
   window.localStorage.clear();
   dropPlayerStatsCache();
+  vi.spyOn(syncModule, "syncPlayerStats");
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 function play(defId: string, player: "p1" | "p2" = "p1"): GameEvent {
@@ -84,6 +90,30 @@ describe("R639 useGameStats", () => {
     rerender({ view: viewWith([], { result: { winner: "p1", reason: "hero-death" } }) });
     expect(readPlayerStats().games).toBe(0);
     expect(window.localStorage.getItem(PLAYER_STATS_KEY)).toBeNull();
+  });
+
+  it("R639 a remount on the finished view counts nothing and syncs nothing", () => {
+    const live = viewWith([]);
+    const over = viewWith([], { result: { winner: "p1", reason: "hero-death" } });
+    const first = renderHook(({ view }) => useGameStats(view, true), { initialProps: { view: live } });
+    first.rerender({ view: over });
+    expect(readPlayerStats().games).toBe(1);
+    expect(syncModule.syncPlayerStats).toHaveBeenCalledTimes(1);
+
+    // The replay unmounts Game and Back mounts it again on the finished view.
+    first.unmount();
+    renderHook(({ view }) => useGameStats(view, true), { initialProps: { view: over } });
+    expect(readPlayerStats().games).toBe(1);
+    expect(syncModule.syncPlayerStats).toHaveBeenCalledTimes(1);
+  });
+
+  it("R639 live, finished, live, finished on one mount counts two", () => {
+    const { rerender } = renderHook(({ view }) => useGameStats(view, true), { initialProps: { view: viewWith([]) } });
+    rerender({ view: viewWith([], { result: { winner: "p1", reason: "hero-death" } }) });
+    expect(readPlayerStats().games).toBe(1);
+    rerender({ view: viewWith([]) });
+    rerender({ view: viewWith([], { result: { winner: "p2", reason: "hero-death" } }) });
+    expect(readPlayerStats()).toMatchObject({ games: 2, wins: 1, losses: 1 });
   });
 
   it("R639 a new game on the same board starts a log of its own", () => {

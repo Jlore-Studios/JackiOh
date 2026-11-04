@@ -273,6 +273,10 @@ export type HeroAside = { own?: ReactNode; enemy?: ReactNode };
 export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
+  /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
+  enemyLabel?: string;
+  /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */
+  controlExtras?: ReactNode;
   animating?: AnimatingMap;
   /**
    * The animation entries the runner has started since the board last caught up (M5-T4), each one
@@ -295,6 +299,8 @@ export type BoardProps = {
   boardNotices?: ReactNode;
   /** R1853003: the Marketplace's shop, drawn in the control bar (#2645); absent (a replay), none. */
   market?: { legal: readonly ActionBody[]; onAction: (body: ActionBody) => void };
+  /** §9.9, R188: Offer draw, in the bar or ⋯'s menu (#2645); absent or true, it is drawn. Practice turns it off (#2883). */
+  showOfferDraw?: boolean;
   /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
   sandDisabled?: boolean;
   onClick?: (target: ClickTarget) => void;

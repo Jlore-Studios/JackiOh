@@ -14,8 +14,24 @@ import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { firstReveal, isFaceDownSet } from "./entrance.ts";
-import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, wipeAt, type Pile, type PlayTracker, type Sweep, type Wipe, type ZoneImpact } from "./runs.ts";
-import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
+import {
+  createPlayTracker,
+  fuseRunAt,
+  launchAt,
+  pileOf,
+  pileRunAt,
+  sweepAt,
+  volleyAt,
+  wipeAt,
+  type Pile,
+  type PlayTracker,
+  type StarshipFuse,
+  type StarshipLaunch,
+  type Sweep,
+  type Wipe,
+  type ZoneImpact,
+} from "./runs.ts";
+import { FX_FLAVOR_LIVE, FX_STARSHIP_FUSE_STAGGER_MS } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
 import { prefersReducedMotion } from "../settings/motion.ts";
 
@@ -821,8 +837,9 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     target: (e, view) => locateInstance(view, e.instanceId),
   },
   // R1852003: the Starship launches where it stands, its Dormant badge gone and its name on its face.
+  // R2801000: its set piece holds the countdown and the ignition; then it lifts off and lands.
   starshipLaunched: {
-    animation: "jk-radiant-pulse",
+    animation: "jk-starship-launch",
     durationMs: 600,
     testid: "card-<instanceId>",
     fx: { recipe: "brand" },
@@ -936,6 +953,18 @@ export const ZONE_IMPACT_MS = 700;
 export const SWEEP_MS = 600;
 /** R2800000: a set-piece card's run of removals, played as one entry its set piece draws (after its hold). */
 export const WIPE_MS = 600;
+/** R2801000: one piece's bolt-on into its Dormant Starship, the `starshipFused` row's time. */
+export const STARSHIP_FUSE_MS = ANIMATIONS.starshipFused.durationMs;
+/** R2801000: a fuse run staggers this many pieces at most; any more land with the last of them. */
+export const STARSHIP_FUSE_STAGGERED_MAX = 6;
+
+/**
+ * R2801000: how long a run of `n` pieces fusing into one Starship plays: one bolt-on, and each later
+ * piece `FX_STARSHIP_FUSE_STAGGER_MS` after the one before, up to `STARSHIP_FUSE_STAGGERED_MAX`.
+ */
+export function starshipFuseMs(n: number): number {
+  return STARSHIP_FUSE_MS + (Math.min(Math.max(n, 1), STARSHIP_FUSE_STAGGERED_MAX) - 1) * FX_STARSHIP_FUSE_STAGGER_MS;
+}
 
 /**
  * One unit of motion: usually one event, two for the collapsed `cardPlayed` + `summoned` pair, which BUILD
@@ -963,6 +992,10 @@ export type AnimationEntry = {
   sweep?: Sweep;
   /** R2800000: a set-piece card's hook removed these cards in one run, which its set piece claims. */
   wipe?: Wipe;
+  /** R2801000: Starship Pieces fused, one after another, into one Dormant Starship (`fuseRunAt`). */
+  fuse?: StarshipFuse;
+  /** R2801000: a Starship launched, which the Starship's set piece claims (`starshipClaim`). */
+  launch?: StarshipLaunch;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
   /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
@@ -1057,6 +1090,9 @@ export const SET_PIECES_PER_ACTION = 1;
 export const SET_PIECE_SKIP_HINT_MS = 500;
 /** R2785000: the key of a Mythic's takeover (R2722001), the first set piece. */
 export const TAKEOVER_SET_PIECE = "takeover";
+/** R2801000: the key of a Starship's launch, and the beat it asks for at speed 1 (the cap still bounds it). */
+export const STARSHIP_SET_PIECE = "starship";
+export const STARSHIP_LAUNCH_HOLD_MS = 2_400;
 
 /**
  * R2785000: an entry's set piece. `holdMs` is its beat as held, inside the entry's `durationMs` and
@@ -1304,6 +1340,38 @@ export function planEntries(
         wipe: wiped.wipe,
       });
       i += wiped.length;
+      continue;
+    }
+
+    // R2801000: pieces fusing one after another into one Starship play as one fuse run.
+    const fusing = fuseRunAt(events, i, view);
+    if (fusing !== null) {
+      const run = take(i, fusing.length);
+      out.push({
+        events: run,
+        type: "starshipFused",
+        durationMs: timed(starshipFuseMs(fusing.fuse.pieces.length)),
+        frames: frameMap(run.map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        fuse: fusing.fuse,
+      });
+      i += fusing.length;
+      continue;
+    }
+
+    // R2801000: a Starship's launch, which its set piece claims.
+    const launch = launchAt(events, i, view);
+    if (launch !== null) {
+      take(i, 1);
+      out.push({
+        events: [event],
+        type: event.type,
+        durationMs: durationFor(event.type, reducedMotion),
+        frames: frameMap([[frameFor(event, view, plays), event.type]]),
+        view,
+        launch,
+      });
+      i += 1;
       continue;
     }
 

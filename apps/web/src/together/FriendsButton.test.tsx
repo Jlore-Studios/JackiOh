@@ -511,6 +511,26 @@ describe("#1831 the panel", () => {
   );
 
   it(
+    "R2881000 a co-op friend's Watch opens the co-op watch",
+    async () => {
+      signIn("tok-watch");
+      const dee = friend("f-dee", "Dee#5", "inMatch", { matchId: "dm-dee", watchable: true, duos: true });
+      serve(world({ friends: [dee] }));
+      shell();
+      const panel = await openPanel();
+      await within(panel).findByText(wholeText("Dee#5"), undefined, SLOW);
+      const watch = within(panel).getByTestId(togetherTestid.watch);
+      expect(watch.getAttribute("data-route")).toContain("coop=1");
+      fireEvent.click(watch);
+      expect(window.location.pathname).toBe("/watch/dm-dee");
+      const search = new URLSearchParams(window.location.search);
+      expect(search.get("friend")).toBe("f-dee");
+      expect(search.get("coop")).toBe("1");
+    },
+    TEST_MS,
+  );
+
+  it(
     "#1831 All of Play together closes the panel and goes to /together",
     async () => {
       signIn("tok-all");

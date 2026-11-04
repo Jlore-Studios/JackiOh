@@ -52,7 +52,6 @@ mod tests {
     const SEEDS: u32 = 400;
 
     fn setup(seed: &str, hand: Value, misses: Option<i32>) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": hand, "library": [FILLER, FILLER, FILLER] },

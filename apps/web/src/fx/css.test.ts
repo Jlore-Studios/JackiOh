@@ -184,6 +184,7 @@ const DOM_KINDS = {
   zone: "fx-zone-wave",
   takeover: "fx-takeover-in",
   setPiece: "fx-set-piece-in",
+  launch: "fx-launch-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
@@ -320,6 +321,16 @@ describe("B40 — fx.css", () => {
   it("B40 the splat is a clip-path starburst and the rays a repeating conic gradient", () => {
     expect(fx.text).toMatch(/clip-path\s*:/);
     expect(fx.text).toMatch(/repeating-conic-gradient\(/);
+  });
+
+  it("Issue #2790 an absorb splat paints grey steel, not a damage, heal or loss color", () => {
+    const absorb = declsFor(fx, '.fx-splat[data-tone="absorb"]');
+    const color = normValue(absorb.get("--fx-splat-color") ?? "");
+    expect(color).not.toBe("");
+    expect(color).not.toContain("var(--fx-damage)");
+    expect(color).not.toContain("var(--fx-heal)");
+    expect(color).not.toContain("var(--fx-loss)");
+    expect(color).toBe("var(--fx-steel)");
   });
 
   it("B40 the Divine Shield cocoon hangs off the card root's ::after with a radial gradient and a slow pulse", () => {

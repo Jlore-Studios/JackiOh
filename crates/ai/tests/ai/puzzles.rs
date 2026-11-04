@@ -207,6 +207,32 @@ mod tactics_b18 {
         expect_survives_all_out(&run);
     }
 
+    /// #2976, R2976000: p1 at 7 holds the 4-mana 7/7 (Armor 7) and five 1-cost Units, with 3 mana,
+    /// against five more 7/7s. No enemy 7/7 beats p1's, so its switch is no stand-down, and its plays
+    /// and attacks fill the width: today it swings, plays three cards, ends its turn and dies. In Defense
+    /// Position it binds every attacker and takes nothing.
+    #[test]
+    fn r2976000_facing_lethal_the_7_7_goes_to_defense_and_p1_survives_the_swing_back() {
+        let run = puzzle(
+            "wall-switch-facing-lethal",
+            json!({
+                "p1": { "health": 7, "field": ["core-025"], "hand": ["core-008", "core-008", "core-011", "core-015", "core-008"], "mana": 3 },
+                "p2": { "field": ["core-025", "core-025", "core-025", "core-025", "core-025"] },
+            }),
+        );
+        expect_survives_all_out(&run);
+        let big = active_units_of(&run.end, AI)
+            .into_iter()
+            .find(|unit| unit.def_id == "core-025")
+            .expect("the 7/7 stands");
+        assert_eq!(
+            unit_view(&run.end, big).position,
+            Position::Def,
+            "{}",
+            trace(&run.turn)
+        );
+    }
+
     #[test]
     fn b18_p12_with_4_mana_on_empty_boards_the_ai_plays_the_4_mana_7_7_not_the_1_drop() {
         let run = puzzle(

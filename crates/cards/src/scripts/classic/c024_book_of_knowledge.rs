@@ -62,12 +62,14 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classic-024";
     const PALANTIR: &str = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
-    const VIRUS: &str = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
+    const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
     const FILLER: &str = "core-005";
     const A: &str = "core-019";
     const B: &str = "core-011";
@@ -91,7 +93,6 @@ mod tests {
     fn counts(radiant: bool, seeds: usize) -> IndexMap<usize, usize> {
         let mut seen: IndexMap<usize, usize> = IndexMap::new();
         for n in 0..seeds {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": format!("c024-roll-{radiant}-{n}"),
                 "p1": { "hand": [{ "def": BOOK, "radiant": radiant }], "library": [A, B, C, D, E, F, G] },
@@ -116,7 +117,6 @@ mod tests {
 
             #[test]
             fn set_to_3_it_draws_3_from_the_top_one_draw_each() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C, D] }, "p2": { "hand": [FILLER] } }));
                 fixed(&mut s, 3);
 
@@ -128,8 +128,7 @@ mod tests {
             }
 
             #[test]
-            fn r58_each_draw_has_its_own_cast_on_draw_chain_a_cn_virus_casts_and_its_draw_repeats() {
-                crate::register_all();
+            fn r58_each_draw_has_its_own_cast_on_draw_chain_a_super_virus_casts_and_its_draw_repeats() {
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK], "library": [VIRUS, A, B, C, D] }, "p2": { "hand": [FILLER] } }));
                 fixed(&mut s, 3);
 
@@ -142,7 +141,6 @@ mod tests {
 
             #[test]
             fn s2_4_an_empty_deck_fatigues_one_card_then_fatigue_1_and_2() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK], "library": [A] }, "p2": { "hand": [FILLER] } }));
                 fixed(&mut s, 3);
 
@@ -155,7 +153,6 @@ mod tests {
 
             #[test]
             fn r4_r317_a_full_hand_burns_the_overflow_into_the_graveyard_which_both_players_read() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [BOOK, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
@@ -180,7 +177,6 @@ mod tests {
 
             #[test]
             fn r831001_palantir_s_base_face_steals_the_book_with_no_prompt_and_its_3_draws_are_the_opponent_s() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK], "library": [A, B, C] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [D, E, F] },
@@ -201,7 +197,6 @@ mod tests {
 
             #[test]
             fn r97_the_drawn_cards_are_never_named_in_the_opponent_s_view() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C] }, "p2": { "hand": [FILLER] } }));
                 fixed(&mut s, 3);
 
@@ -248,7 +243,6 @@ mod tests {
 
             #[test]
             fn a_nerf_that_crossed_the_ends_rolls_between_them() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "c024-crossed",
                     "p1": { "hand": [BOOK], "library": [A, B, C, D, E] },
@@ -291,7 +285,6 @@ mod tests {
 
             #[test]
             fn s2_4_six_draws_from_a_deck_of_four_four_cards_then_fatigue_1_and_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOOK, "radiant": true }], "library": [A, B, C, D] },
                     "p2": { "hand": [FILLER] },
@@ -306,7 +299,6 @@ mod tests {
 
             #[test]
             fn r386_its_ends_read_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOOK, "radiant": true }], "library": [A, B, C, D, E, F, G] },
                     "p2": { "hand": [FILLER] },

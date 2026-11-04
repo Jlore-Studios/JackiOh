@@ -61,7 +61,6 @@ mod tests {
 
         #[test]
         fn adds_a_frostbolt_arcane_missiles_and_flame_strike_in_that_order() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [MAGIC, FILLER] }, "p2": { "hand": [FILLER] } }));
 
             s.play(MAGIC, json!({}));
@@ -100,7 +99,6 @@ mod tests {
 
         #[test]
         fn adds_all_three_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": MAGIC, "radiant": true }, FILLER] },
                 "p2": { "hand": [FILLER] },

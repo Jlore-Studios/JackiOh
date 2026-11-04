@@ -76,7 +76,7 @@ describe("R277 a Radiant face's gold marks", () => {
 });
 
 describe("R279 a reference opens the card it names", () => {
-  it("R279 in the detail view, focusing CN-Viral Injection's CN-Virus shows the CN-Virus face in a tooltip", () => {
+  it("R279 in the detail view, focusing Super-Virus Injection's Super-Virus shows the Super-Virus face in a tooltip", () => {
     cy.viewport(1280, 900);
     cy.mount(
       <CardDefsProvider defs={CATALOG}>
@@ -89,7 +89,7 @@ describe("R279 a reference opens the card it names", () => {
       .and("have.attr", "data-ref", "core-090-1")
       .and("have.attr", "data-ref-face", "radiant")
       .within(() => {
-        cy.get(".card-name").should("have.text", "CN-Virus");
+        cy.get(".card-name").should("have.text", "Super-Virus");
         cy.get(".card-text").should("contain.text", "Take 2 damage");
       });
     cy.get('[data-testid="card-ref-tooltip"]').should(($tip) => {

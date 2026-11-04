@@ -54,6 +54,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -79,7 +81,6 @@ mod tests {
 
     /// The M10 row's game: Economic Anxiety behind two Units, facing two enemies.
     fn anxiety_game() -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "field": [FELINOR, SCARAB], "backrow": [ID] },
             "p2": { "field": [VANILLA, BIG] },
@@ -89,7 +90,6 @@ mod tests {
     /// R940's game: a Human and an untagged Scarab behind Economic Anxiety, facing M #25 (lane 1)
     /// and a big Felinor (lane 2) that holds no immunity. Neither attacker shares a tag with either.
     fn white_felinor_game(radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [VANILLA, SCARAB], "backrow": [ID] },
             "p2": { "field": [WHITE_FELINOR, BIG] },
@@ -148,7 +148,6 @@ mod tests {
 
     #[test]
     fn r1120_trample_excess_carries_the_bonus() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [GOLIATH], "backrow": [ID] },
             "p2": { "field": [VANILLA] },
@@ -163,7 +162,6 @@ mod tests {
 
     #[test]
     fn r1120_a_cleave_splash_carries_the_bonus() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": CLEAVER, "lane": 2 }], "backrow": [ID] },
             "p2": { "field": [{ "def": BIG, "lane": 1 }, { "def": VANILLA, "lane": 2 }] },

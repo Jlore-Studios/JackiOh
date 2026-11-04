@@ -49,6 +49,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
@@ -63,7 +65,6 @@ mod tests {
     const FELINOR: &str = "core-012";
 
     fn spirit(seed: &str, radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": p1_field, "library": [FILLER, FILLER] },

@@ -87,6 +87,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const ECHOES: &str = "core-040"; // Field Spell, 2
@@ -104,7 +106,6 @@ mod tests {
 
     /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

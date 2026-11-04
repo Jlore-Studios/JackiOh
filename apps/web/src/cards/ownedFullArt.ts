@@ -13,21 +13,26 @@ import { getOwnedCosmetics, type OwnedCosmeticsResponse } from "../net/api.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { AccountCosmeticsOwned, CARD_SLOT_KINDS, type OwnedByCard } from "./cosmetics.ts";
 import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "./fullArt.ts";
+import { impliedBy, isOfferedId, offeredOn } from "./versions.ts";
 
-/** The kinds a card carries; the account's kinds are no card's. */
-const PER_CARD_KINDS: ReadonlySet<string> = new Set([...CARD_SLOT_KINDS, "fullArt"]);
+/** The kinds a card carries (R2725000: a version and an augment too); the account's kinds are no card's. */
+const PER_CARD_KINDS: ReadonlySet<string> = new Set([...CARD_SLOT_KINDS, "fullArt", "version", "augment"]);
 
 /**
  * The per-card cosmetics `owned` holds, by card: a row naming a cosmetic the registry does not know,
- * an account cosmetic, or a cosmetic made for another card is not one.
+ * an account cosmetic, a cosmetic made for another card, or a version or augment the card is not offered
+ * (R2725001) is not one. R2725002: a retired full art's row also holds what it implies on its card, the
+ * client's one place of that implication.
  */
 export function ownedCardCosmetics(owned: OwnedCosmeticsResponse): OwnedByCard {
   const byCard = new Map<string, Set<string>>();
   for (const { cardId, cosmeticId } of owned.cards) {
     const found = COSMETICS.find((cosmetic) => cosmetic.id === cosmeticId);
     if (found === undefined || !PER_CARD_KINDS.has(found.kind) || ("card" in found && found.card !== cardId)) continue;
+    if (isOfferedId(cosmeticId) && !offeredOn(cosmeticId, cardId)) continue;
     const ids = byCard.get(cardId) ?? new Set<string>();
     ids.add(cosmeticId);
+    for (const implied of impliedBy(cosmeticId)) ids.add(implied);
     byCard.set(cardId, ids);
   }
   return byCard;

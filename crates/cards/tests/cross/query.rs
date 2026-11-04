@@ -13,7 +13,7 @@ fn q(literal: Value) -> CardQuery {
 }
 
 /// Results are compared by catalog id: an index names a card only within its set (B2.2).
-fn ids<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
+fn ids_of_defs<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
     defs.into_iter().map(|def| def.id.clone()).collect()
 }
 
@@ -102,13 +102,13 @@ mod tokens_are_out_of_every_pool_unless_the_card_names_the_token_pool_5_1 {
         register();
         let all = query(&q(json!({})));
 
-        assert_eq!(ids(all.iter().copied()), ids(non_token()));
+        assert_eq!(ids_of_defs(all.iter().copied()), ids_of_defs(non_token()));
         assert_eq!(all.iter().filter(|def| def.token).count(), 0);
         assert_eq!(all.iter().filter(|def| def.tags.contains(&Tag::Token)).count(), 0);
         assert_eq!(all.iter().filter(|def| def.rarity == Rarity::Token).count(), 0);
         // And named outright: BUILD M4-T4 row 51.1 wants #51.1 "absent from every random pool":
         assert!(!token_ids().is_empty());
-        let all_ids = ids(all.iter().copied());
+        let all_ids = ids_of_defs(all.iter().copied());
         for id in token_ids() {
             assert!(!all_ids.contains(&id), "{id}");
         }
@@ -118,7 +118,7 @@ mod tokens_are_out_of_every_pool_unless_the_card_names_the_token_pool_5_1 {
     fn s5_1_query_tags_token_does_return_them_the_card_named_the_pool_itself() {
         register();
         assert_eq!(
-            sorted(ids(query(&q(json!({ "tags": ["Token"] }))))),
+            sorted(ids_of_defs(query(&q(json!({ "tags": ["Token"] }))))),
             sorted(token_ids())
         );
     }
@@ -127,17 +127,17 @@ mod tokens_are_out_of_every_pool_unless_the_card_names_the_token_pool_5_1 {
     fn s5_1_token_true_and_a_pool_named_by_id_reach_tokens_too_token_false_forbids_them() {
         register();
         assert_eq!(
-            sorted(ids(query(&q(json!({ "token": true }))))),
+            sorted(ids_of_defs(query(&q(json!({ "token": true }))))),
             sorted(token_ids())
         );
         assert_eq!(
-            sorted(ids(query(&q(
+            sorted(ids_of_defs(query(&q(
                 json!({ "defId": ["core-t-rush", "core-t-sheep"] })
             )))),
             strings(&["core-t-rush", "core-t-sheep"])
         );
         assert_eq!(
-            ids(query(&q(json!({ "token": false, "tags": ["Token"] })))),
+            ids_of_defs(query(&q(json!({ "token": false, "tags": ["Token"] })))),
             Vec::<String>::new()
         );
     }
@@ -146,11 +146,11 @@ mod tokens_are_out_of_every_pool_unless_the_card_names_the_token_pool_5_1 {
     fn r380_a_pool_that_names_a_set_keeps_to_it_core_82_ky_s_trial_97_zephyrs() {
         register();
         assert_eq!(
-            ids(query(&q(json!({ "set": "Core" })))),
-            ids(non_token().into_iter().filter(|def| def.set == SetName::Core))
+            ids_of_defs(query(&q(json!({ "set": "Core" })))),
+            ids_of_defs(non_token().into_iter().filter(|def| def.set == SetName::Core))
         );
         assert_eq!(
-            ids(query(&q(json!({ "set": "Classic", "tags": ["Book"] })))),
+            ids_of_defs(query(&q(json!({ "set": "Classic", "tags": ["Book"] })))),
             strings(&[
                 "classic-003",
                 "classic-012",
@@ -181,7 +181,7 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
         );
         // By id, never by index: Classic+ #57 Book of Stats is not Core #57, and stays in its pools.
         assert!(
-            ids(query(&q(json!({ "tags": ["Book"], "excludeDefId": "core-057" }))))
+            ids_of_defs(query(&q(json!({ "tags": ["Book"], "excludeDefId": "core-057" }))))
                 .contains(&"classicplus-057".to_string())
         );
     }
@@ -207,7 +207,7 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             strings(&["41", "60", "71", "85", "96"])
         );
         assert!(
-            !ids(query(&q(
+            !ids_of_defs(query(&q(
                 json!({ "rarity": "Mythic", "excludeDefId": "core-096" })
             )))
             .contains(&"core-096".to_string())
@@ -217,7 +217,7 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
         // ships, #1187): M+ #25 KY's Intuition (§8.9) is a (1) KY card too. C+ #62 KY's Papaya costs (2)
         // since #1704.
         assert_eq!(
-            ids(query(&q(
+            ids_of_defs(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
             ))),
             strings(&[
@@ -299,8 +299,8 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
         for (own_id, args) in cases {
             let mut by_hand = args.clone();
             by_hand["excludeDefId"] = json!(own_id);
-            let pooled = ids(pool(own_id, &q(args)));
-            assert_eq!(pooled, ids(query(&q(by_hand))), "pool({own_id:?}, …)");
+            let pooled = ids_of_defs(pool(own_id, &q(args)));
+            assert_eq!(pooled, ids_of_defs(query(&q(by_hand))), "pool({own_id:?}, …)");
             assert!(!pooled.is_empty(), "pool({own_id:?}, …) is empty");
             assert!(
                 !pooled.contains(&own_id.to_string()),
@@ -338,11 +338,11 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
     fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_fourteen_defs() {
         register();
         assert_eq!(
-            ids(query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
+            ids_of_defs(query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
             strings(KY_POOL)
         );
         assert_eq!(
-            ids(pool("core-057", &q(json!({ "tags": ["KY"] })))),
+            ids_of_defs(pool("core-057", &q(json!({ "tags": ["KY"] })))),
             strings(KY_POOL)
         );
     }
@@ -386,7 +386,7 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
         assert!(prime.tags.contains(&Tag::Ky) && prime.token);
         let kenny = card_def_by_index(SetName::MeditativePlus, "20.1");
         assert!(kenny.tags.contains(&Tag::Ky) && kenny.token);
-        let pool_ids = ids(pool("core-057", &q(json!({ "tags": ["KY"] }))));
+        let pool_ids = ids_of_defs(pool("core-057", &q(json!({ "tags": ["KY"] }))));
         assert!(!pool_ids.contains(&"core-051-1".to_string()));
         assert!(!pool_ids.contains(&"classicplus-042-1".to_string()));
         assert!(!pool_ids.contains(&"meditative-045-1".to_string()));
@@ -449,9 +449,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     #[test]
     fn build_row_67_the_query_a_card_script_writes_returns_exactly_those_defs() {
         register();
-        assert_eq!(ids(trap_query()), strings(TRAP_POOL));
+        assert_eq!(ids_of_defs(trap_query()), strings(TRAP_POOL));
         assert_eq!(
-            ids(pool("core-067", &q(json!({ "type": TRAP_TYPES })))),
+            ids_of_defs(pool("core-067", &q(json!({ "type": TRAP_TYPES })))),
             strings(TRAP_POOL)
         );
     }
@@ -464,7 +464,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         // (2) since #2179. The Stinkyscape set's (1) Cost ones join them from its release (#1884), and the
         // Training Grounds set's from its own (#2204).
         assert_eq!(
-            ids(query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
+            ids_of_defs(query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
                 "core-018",
                 "core-041",
@@ -490,8 +490,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     fn s5_1_the_pool_mixes_both_types_core_18_71_classic_5_38_88_classic_plus_74_and_meditative_68_are_field_traps()
      {
         register();
-        let by_type =
-            |kind: CardType| -> Vec<String> { ids(trap_query().into_iter().filter(|def| def.type_ == kind)) };
+        let by_type = |kind: CardType| -> Vec<String> {
+            ids_of_defs(trap_query().into_iter().filter(|def| def.type_ == kind))
+        };
 
         assert_eq!(
             by_type(CardType::FieldTrap),
@@ -522,7 +523,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
             .filter(|id| CATALOG.get(**id).is_some_and(|def| def.type_ == CardType::Trap))
             .map(|id| (*id).to_string())
             .collect();
-        assert_eq!(ids(query(&q(json!({ "type": "Trap" })))), expected);
+        assert_eq!(ids_of_defs(query(&q(json!({ "type": "Trap" })))), expected);
         assert_eq!(
             core_indices(query(&q(json!({ "type": "Trap" })))),
             strings(&["41", "60", "85", "96"])
@@ -623,13 +624,13 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     fn r35_the_filter_a_card_script_writes_returns_exactly_that_list() {
         register();
         assert_eq!(
-            ids(query(&q(
+            ids_of_defs(query(&q(
                 json!({ "rarity": "Legendary", "excludeDefId": "core-083" })
             ))),
             strings(R35_POOL)
         );
         assert_eq!(
-            ids(pool("core-083", &q(json!({ "rarity": "Legendary" })))),
+            ids_of_defs(pool("core-083", &q(json!({ "rarity": "Legendary" })))),
             strings(R35_POOL)
         );
     }
@@ -642,7 +643,7 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
             strings(&["52", "83", "85", "87", "92", "93", "95"])
         );
         let legendary = pool("core-083", &q(json!({ "rarity": "Legendary" })));
-        assert!(!ids(legendary.iter().copied()).contains(&"core-083".to_string()));
+        assert!(!ids_of_defs(legendary.iter().copied()).contains(&"core-083".to_string()));
         assert!(legendary.iter().all(|def| def.rarity == Rarity::Legendary));
         assert!(legendary.iter().all(|def| !def.token));
     }
@@ -653,7 +654,7 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         // Core #85 and Classic #9 (Legendary, issue #44) are the Legendary traps, so a board trap is replaced
         // by one of them, Trap or Field Trap.
         assert_eq!(
-            ids(pool(
+            ids_of_defs(pool(
                 "core-083",
                 &q(json!({ "rarity": "Legendary", "type": TRAP_TYPES }))
             )),
@@ -689,12 +690,14 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
             "stinkyscape-099",
         ]);
         assert_eq!(
-            ids(query(&q(json!({})))
-                .into_iter()
-                .filter(|def| def.cost == CardCost::X)),
+            ids_of_defs(
+                query(&q(json!({})))
+                    .into_iter()
+                    .filter(|def| def.cost == CardCost::X)
+            ),
             x_cards
         );
-        let cost0 = ids(query(&q(json!({ "cost": 0 }))));
+        let cost0 = ids_of_defs(query(&q(json!({ "cost": 0 }))));
         for id in &x_cards {
             assert_eq!(query_cost(&CATALOG[id.as_str()]), 0, "{id}");
             assert!(cost0.contains(id), "{id}");
@@ -711,11 +714,11 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
             assert_eq!(def.cost, CardCost::Embiggen { base: 2, embiggen: 4 }, "{id}");
             assert_eq!(query_cost(def), 2, "{id}");
             assert!(
-                ids(query(&q(json!({ "cost": 2 })))).contains(&id.to_string()),
+                ids_of_defs(query(&q(json!({ "cost": 2 })))).contains(&id.to_string()),
                 "{id}"
             );
             assert!(
-                !ids(query(&q(json!({ "cost": 4 })))).contains(&id.to_string()),
+                !ids_of_defs(query(&q(json!({ "cost": 4 })))).contains(&id.to_string()),
                 "{id}"
             );
         }
@@ -727,13 +730,17 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
         // #7 Jewelosco Scarab's "2-cost" Discover and #51's 0-1 / 2 / 3 / 4+ brackets share this read.
         let bracket0to1 = query(&q(json!({ "costRange": { "min": 0, "max": 1 } })));
         assert_eq!(
-            ids(bracket0to1.iter().copied()),
-            ids(query(&q(json!({})))
-                .into_iter()
-                .filter(|def| query_cost(def) <= 1))
+            ids_of_defs(bracket0to1.iter().copied()),
+            ids_of_defs(
+                query(&q(json!({})))
+                    .into_iter()
+                    .filter(|def| query_cost(def) <= 1)
+            )
         );
-        assert!(ids(bracket0to1.iter().copied()).contains(&"core-024".to_string())); // an X card reads as 0
-        assert!(!ids(query(&q(json!({ "costRange": { "min": 4 } })))).contains(&"core-046".to_string())); // an embiggen card reads as 2
+        assert!(ids_of_defs(bracket0to1.iter().copied()).contains(&"core-024".to_string())); // an X card reads as 0
+        assert!(
+            !ids_of_defs(query(&q(json!({ "costRange": { "min": 4 } })))).contains(&"core-046".to_string())
+        ); // an embiggen card reads as 2
     }
 }
 
@@ -746,7 +753,10 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         let first = query(&q(json!({ "type": "Unit", "costRange": { "min": 2, "max": 3 } })));
         let second = query(&q(json!({ "type": "Unit", "costRange": { "min": 2, "max": 3 } })));
 
-        assert_eq!(ids(first.iter().copied()), ids(second.iter().copied()));
+        assert_eq!(
+            ids_of_defs(first.iter().copied()),
+            ids_of_defs(second.iter().copied())
+        );
         assert!(first.len() > 1);
     }
 
@@ -783,12 +793,12 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         });
         assert_eq!(keys, in_order);
         assert_eq!(
-            ids(query(&q(json!({ "rarity": "Legendary" }))))
+            ids_of_defs(query(&q(json!({ "rarity": "Legendary" }))))
                 .first()
                 .map(String::as_str),
             Some("core-052")
         );
-        let unit_ids = ids(units.iter().copied());
+        let unit_ids = ids_of_defs(units.iter().copied());
         let position = |id: &str| unit_ids.iter().position(|unit| unit == id);
         assert!(position("classic-002") > position("core-100"));
     }
@@ -796,10 +806,10 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
     #[test]
     fn s9_3_the_order_does_not_depend_on_the_order_the_registry_handed_the_defs_over() {
         register();
-        let forward = ids(query(&q(json!({}))));
+        let forward = ids_of_defs(query(&q(json!({}))));
 
         register_catalog(reversed_catalog());
-        let reversed = ids(query(&q(json!({}))));
+        let reversed = ids_of_defs(query(&q(json!({}))));
         let ky = core_indices(query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" }))));
         register_catalog((*CATALOG).clone());
 
@@ -813,10 +823,10 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
     #[test]
     fn s9_3_the_token_pool_s_order_is_insertion_independent() {
         register();
-        let forward = ids(query(&q(json!({ "tags": ["Token"] }))));
+        let forward = ids_of_defs(query(&q(json!({ "tags": ["Token"] }))));
 
         register_catalog(reversed_catalog());
-        let reversed = ids(query(&q(json!({ "tags": ["Token"] }))));
+        let reversed = ids_of_defs(query(&q(json!({ "tags": ["Token"] }))));
         register_catalog((*CATALOG).clone());
 
         assert_eq!(reversed, forward);
@@ -848,7 +858,7 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
             .filter(|id| id != "classicplus-058")
             .collect();
         assert_eq!(
-            ids(pool("classicplus-058", &q(json!({ "tags": ["Fruit"] })))),
+            ids_of_defs(pool("classicplus-058", &q(json!({ "tags": ["Fruit"] })))),
             expected
         );
         let tokens: Vec<String> = expected
@@ -857,7 +867,7 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
             .cloned()
             .collect();
         assert_eq!(tokens, strings(GRAPES));
-        assert!(ids(query(&q(json!({ "tags": ["Fruit"] })))).contains(&"core-047".to_string()));
+        assert!(ids_of_defs(query(&q(json!({ "tags": ["Fruit"] })))).contains(&"core-047".to_string()));
     }
 
     #[test]
@@ -870,7 +880,7 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
             json!({ "cost": 1 }),
             json!({ "tags": ["KY"] }),
         ] {
-            let got = ids(query(&q(args.clone())));
+            let got = ids_of_defs(query(&q(args.clone())));
             let reached: Vec<&str> = GRAPES
                 .iter()
                 .copied()
@@ -883,7 +893,7 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     #[test]
     fn r382_classic_plus_23_dropshipping_s_pool_takes_every_card_and_every_token_of_every_set_but_itself() {
         register();
-        let every = ids(pool("classicplus-023", &q(json!({ "withTokens": true }))));
+        let every = ids_of_defs(pool("classicplus-023", &q(json!({ "withTokens": true }))));
         // R674: Glitch is the one token no pool takes, and R1857001's Dormant Starship the one card;
         // R1420: a set that has not shipped is in none.
         let open = CATALOG.values().filter(|def| set_is_open(def.set)).count();
@@ -921,7 +931,7 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         // The query a card script writes, `query::luck_based()`, names no set (R1420). It holds the earlier
         // sets' eight, §8.8's Meditative #36 CN Peptides and #86 Mayor Medinamogger (Lucky 1 on their Radiant
         // faces) and #102 Catboy Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands. #65
-        // Keymaster Keenus (R1084, R781004) and Core #42 Eugenics (R831014) print no Lucky 1.
+        // Keymaster Keenus (R1084, R781004) and Core #42 Selective Breeding (R831014) print no Lucky 1.
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
         let mut pool = strings(&[
             "core-004",
@@ -952,11 +962,16 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         // Re-pinned for the Training Grounds release (#2204): its #49 Reoccurring Dream, the snapshot
         // of Core #23 (Lucky 1).
         pool.extend(landed(&["traininggrounds-049"]));
-        assert_eq!(ids(query(&luck_based())), pool);
-        let expected: Vec<String> = ids(CATALOG
-            .values()
-            .filter(|def| set_is_open(def.set) && reads_as_luck_based(def)));
-        assert_eq!(sorted(ids(query(&luck_based()))), sorted(expected.clone()));
+        assert_eq!(ids_of_defs(query(&luck_based())), pool);
+        let expected: Vec<String> = ids_of_defs(
+            CATALOG
+                .values()
+                .filter(|def| set_is_open(def.set) && reads_as_luck_based(def)),
+        );
+        assert_eq!(
+            sorted(ids_of_defs(query(&luck_based()))),
+            sorted(expected.clone())
+        );
         // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gives Luck and
         // makes no roll; #101 Gachaholic gives Lucky and prints none.
         assert!(expected.contains(&"meditative-036".to_string()));
@@ -1019,7 +1034,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         expected.extend(landed(&[CATBOY_MAID]));
         expected.extend(strings(STINKYSCAPE_ONE_ONES));
         assert_eq!(
-            ids(query(&q(json!({
+            ids_of_defs(query(&q(json!({
                 "type": "Unit",
                 "stats": { "attack": 1, "health": 1 },
                 "withTokens": true,
@@ -1042,7 +1057,10 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
             "stats": { "attack": 1, "health": 1 },
             "withTokens": true,
         })));
-        assert_eq!(ids(ones.into_iter().filter(|def| set_ships(def.set))), expected);
+        assert_eq!(
+            ids_of_defs(ones.into_iter().filter(|def| set_ships(def.set))),
+            expected
+        );
     }
 }
 
@@ -1070,12 +1088,14 @@ mod r1178001_the_embiggen_pool_meditative_plus_23_enormous_elderberry {
             "meditative-081",
         ]);
         if !set_ships(SetName::MeditativePlus) {
-            assert_eq!(ids(query(&embiggen_cards())), shipped);
+            assert_eq!(ids_of_defs(query(&embiggen_cards())), shipped);
         }
-        let expected: Vec<String> = ids(CATALOG
-            .values()
-            .filter(|def| set_is_open(def.set) && !def.token && is_embiggen_card(def)));
-        assert_eq!(sorted(ids(query(&embiggen_cards()))), sorted(expected));
+        let expected: Vec<String> = ids_of_defs(
+            CATALOG
+                .values()
+                .filter(|def| set_is_open(def.set) && !def.token && is_embiggen_card(def)),
+        );
+        assert_eq!(sorted(ids_of_defs(query(&embiggen_cards()))), sorted(expected));
         let others = query(&q(json!({ "embiggen": false })));
         assert!(others.iter().all(|def| !is_embiggen_card(def)));
         assert_eq!(
@@ -1109,13 +1129,13 @@ mod r1878000_the_starship_piece_pool_stinkyscape_124_jlockeeds_shipbuilding_gran
         .iter()
         .map(|n| format!("stinkyscape-{n:03}"))
         .collect();
-        assert_eq!(ids(query(&starship_pieces())), expected);
-        let printing: Vec<String> = ids(CATALOG.values().filter(|def| {
+        assert_eq!(ids_of_defs(query(&starship_pieces())), expected);
+        let printing: Vec<String> = ids_of_defs(CATALOG.values().filter(|def| {
             def.set == SetName::Stinkyscape
                 && !def.token
                 && has_keyword(&def.base.keywords, KeywordKind::StarshipPiece)
         }));
-        assert_eq!(sorted(ids(query(&starship_pieces()))), sorted(printing));
-        assert!(!ids(query(&starship_pieces())).contains(&DORMANT_STARSHIP_DEF_ID.to_string()));
+        assert_eq!(sorted(ids_of_defs(query(&starship_pieces()))), sorted(printing));
+        assert!(!ids_of_defs(query(&starship_pieces())).contains(&DORMANT_STARSHIP_DEF_ID.to_string()));
     }
 }

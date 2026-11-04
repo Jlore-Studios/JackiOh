@@ -514,12 +514,13 @@ describe("B31 the phone layouts fit the height and hide the log", () => {
     cy.get(ts("log")).should("not.be.visible");
   });
 
-  it("B31 at 390x844 the board is at most 820 px tall and the log is hidden", () => {
+  it("B31 at 390x844 the board is at most 832 px tall and the log is hidden", () => {
     cy.viewport(390, 844);
     mountGame(fullBoardView());
 
     cy.get(BOARD).should(($board) => {
-      expect(rectOf($board[0] as Element).height).to.be.at.most(820);
+      // Nothing is drawn above the board (#2917), so B46's vertical shell padding leaves 832px of 844 for it.
+      expect(rectOf($board[0] as Element).height).to.be.at.most(832);
     });
     cy.get(ts("log")).should("not.be.visible");
   });
@@ -930,6 +931,19 @@ describe("B46 the game screen, route bar included, fits the viewport", () => {
       expectScreenFits(screen.width, screen.height, where);
     });
   }
+
+  it("B46 the match bar keeps to one line at phone, Safari's visible viewport 390x664", () => {
+    cy.viewport(390, 664);
+    mountMatch(fullBoardView(), ONLY_END_TURN);
+    cy.get(".match-bar .clock").should(($clock) => {
+      const clock = $clock[0];
+      if (clock === undefined) throw new Error("the clock is mounted");
+      const range = clock.ownerDocument.createRange();
+      range.selectNodeContents(clock);
+      // One line box, never wrapped word by word into several.
+      expect(range.getClientRects().length, "the clock keeps its words on one line").to.eq(1);
+    });
+  });
 
   it("B46 a tablet held landscape gets the desktop board: the controls in a sidebar right of the field", () => {
     cy.viewport(1024, 768);

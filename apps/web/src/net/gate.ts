@@ -3,7 +3,7 @@
 // re-reads a tab-owned session after storage or back/forward-cache changes. R2630000: a new screen's
 // gate starts from the page's last answer for an active account that owes nothing and reads again.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   AUTH_SESSION_REFRESH_MARGIN_SECONDS,
@@ -381,8 +381,9 @@ export function useAccount(): Account {
 
   useRenewalBeforeExpiry(account, reread);
 
-  // R2630000: each answer is kept for the next screen's gate, by account, in the tab's memory.
-  useEffect(() => {
+  // R2630000: each answer is kept for the next screen's gate, by account, in the tab's memory. Kept
+  // in the commit that draws it, so a change announced once it shows is never undone by a late effect.
+  useLayoutEffect(() => {
     if (account.kind === "ready") rememberRead(account.token, ME_PATH, account.me);
   }, [account]);
 

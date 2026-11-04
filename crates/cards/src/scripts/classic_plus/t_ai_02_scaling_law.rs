@@ -56,6 +56,8 @@ mod tests {
     use jackioh_engine::effects::{CastNewArgs, CastNewDef, cast_new};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const SCALING: &str = "classicplus-t-ai-02";
     const HALLUCINATION: &str = "classicplus-t-ai-03"; // (0) Spell, AI.
     const ASSISTANT: &str = "classicplus-t-ai-01"; // (1) Unit, AI.
@@ -88,7 +90,6 @@ mod tests {
             /// Hallucination; played, it is 2/2 plus 2.
             #[test]
             fn r2476000_in_hand_it_previews_the_ai_cards_its_play_would_count() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [SCALING, HALLUCINATION, FILLER] }, "p2": { "hand": [FILLER] } }));
                 let scaling = s.card(SCALING).id.clone();
                 let label = "for each AI generated card you've played this game".to_string();
@@ -103,7 +104,6 @@ mod tests {
 
             #[test]
             fn s10_4_it_counts_itself_once_played_3_3_as_the_games_first_ai_card() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [SCALING, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(SCALING, json!({ "zone": 1 }));
                 assert_eq!(played_this_game_with_tag(s.state(), P1, Tag::Ai), 1);
@@ -113,7 +113,6 @@ mod tests {
 
             #[test]
             fn plus_1_plus_1_for_each_ai_generated_card_played_after_it_and_the_count_outlives_the_cards() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [SCALING, HALLUCINATION, HALLUCINATION, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -129,7 +128,6 @@ mod tests {
 
             #[test]
             fn counts_the_ai_cards_played_before_it_arrived() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HALLUCINATION, ASSISTANT, SCALING, FILLER], "mana": 10 },
                     "p2": { "hand": [FILLER] },
@@ -143,7 +141,6 @@ mod tests {
 
             #[test]
             fn r70_a_cast_ai_card_counts() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [SCALING, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(SCALING, json!({ "zone": 1 }));
                 direct(&mut s, |sink| {
@@ -173,7 +170,6 @@ mod tests {
 
             #[test]
             fn the_opponents_ai_cards_dont_count() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [FILLER], "field": [SCALING] },
@@ -188,7 +184,6 @@ mod tests {
 
             #[test]
             fn an_ai_slop_fusion_of_two_ai_cards_counts_once_s10_5_step_4_counts_each_tag_of_a_play_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [SCALING, HALLUCINATION, HALLUCINATION, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -220,7 +215,6 @@ mod tests {
 
             #[test]
             fn a_4_4_with_plus_2_plus_2_for_each_6_6_as_the_games_first_8_8_after_one_more() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SCALING, "radiant": true }, HALLUCINATION, FILLER] },
                     "p2": { "hand": [FILLER] },

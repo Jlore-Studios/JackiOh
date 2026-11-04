@@ -67,3 +67,49 @@ byte for byte the still one. The Animated art, the Legendary and the Mythic wear
 faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
 version, so delivering a full-art card's file means delivering its motion too, or the card stops
 moving.
+
+## Pictures (R2949000)
+
+A look with a picture of its own, the Signature look today, draws the card's own painter re-seeded:
+`pictures.ts`'s `artSeedOf` joins the card's id and the picture's name. The Stinkyscape and Training
+Grounds painters keep the card's subject and grow the rest from that seed (backdrop, drift, layout,
+particles); the procedural painter keeps what the card's name, tags and type pick (its theme,
+composition and motif) and grows its figure, backdrop and particles from it. Either way the picture is
+still a pure function of the card's id, name, tags and type. The cache keys the seed in the card id's place, so a look's picture is never
+served for another's. The normal picture's seed is the card's id alone, so every still picture and
+golden hash stands. The Signature look moves by `SIGNATURE_MOTION`, which no Animated motion is. A later
+version with a picture of its own (#2940's Alt full art) adds its own name to `ArtPicture`, so it draws
+apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+
+## The versions' pictures (R2940001)
+
+Alt art and Alt full art draw the picture `"alt"`, seeded apart by `artSeedOf` as the Signature
+look's is, so the two versions share one picture and neither is the normal one or Signature's. The
+Sketch (`"sketch"`) draws no picture of its own: `sketchSvg` lays the normal picture, whichever
+painter drew it (a Legacy card's and a Starship's too), under one SVG filter, its greys dodged into
+line work, hatched in slate ink where it is dark and grained, on slate paper; a Radiant face washes
+its painted picture back over the pencil. Its strokes are seeded by the card's id, and the cache keys
+it apart (`|sketch`), so the plain picture keeps its key and bytes. The filter's constants
+(`SKETCH_*`) were tuned by eye on the component spec's screenshot (`card-versions-part-2`). A
+delivered file is the normal picture's, so Alt art and the Sketch draw the painter's picture until an
+artist delivers theirs.
+
+## Part 3's pictures (R2942001)
+
+Extended art draws the card's normal picture, a delivered file included, at the full-art shape: the
+picture runs past its window across the face, and the face's frame and rules box lie over it,
+translucent (cards.css). Pixel (`"pixel"`) and Comic (`"comic"`) draw no picture of their own: as
+the Sketch does, each lays the normal picture, whichever painter drew it (a Legacy card's and a
+Starship's too), under one SVG filter (`restyledSvg`). `pixelSvg` samples it once in the middle of
+every `PIXEL_CELL` square and grows each sample by half a cell, a little past its cell, over the
+picture blurred by half a cell: a browser grows a sample by whole pixels, so on a small face the
+blur fills whatever seam is left between cells. On a base face it cuts every colour channel to its
+nearest of `PIXEL_LEVELS`, 27 colours whose hues are multiples of 30°, none in Radiant's gold, and a
+Radiant face keeps its painted colours. `comicSvg` smooths and brightens the picture
+(`COMIC_SMOOTH`, `COMIC_LIFT`), pushes its colour (`COMIC_SATURATE`), flattens it to `COMIC_LEVELS`,
+lays halftone dots of `COMIC_INK` over its lighter parts and inks every edge between its flat
+colours; a Radiant face washes its painted picture back over it. Neither takes a seed, and the cache
+keys each apart (`|pixel`, `|comic`), so the plain picture and the Sketch keep their keys and bytes.
+A delivered file is the normal picture's, so Pixel and Comic draw the painter's picture until an
+artist delivers theirs. The constants were set by eye on the component spec's screenshot
+(`card-versions-part-3`).

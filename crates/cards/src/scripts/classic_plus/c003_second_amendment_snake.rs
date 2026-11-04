@@ -44,6 +44,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const SNAKE: &str = "classicplus-003";
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -252,7 +254,6 @@ mod tests {
 
         #[test]
         fn dies_in_combat_too_the_death_fires_off_the_tokens_it_had() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [FILLER], "field": [{ "def": SNAKE, "counters": { "plague": 2 } }] },

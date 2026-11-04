@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
+import type { EmojiEmoteId } from "@jackioh/shared";
 import { PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
 
 import { economyField, type GameEconomy } from "../economy/xp.ts";
@@ -37,6 +38,7 @@ import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { readSession } from "../net/session.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
+import { isSpectatorHand, spectatorEmoteOf } from "../sideline/wire.ts";
 import { isRecord } from "../wire/json.ts";
 import { DUOS_PINGS_KEPT } from "./config.ts";
 import { isDuosSeat, isPingKind, parsePingTarget } from "./pings.ts";
@@ -77,7 +79,13 @@ export type DuosServerFrame =
   | { type: "error"; code: string; message: string; nonce?: string }
   | ({ type: "clock" } & DuosClockFrame)
   | { type: "teammate"; connected: boolean; aiPlaying: boolean }
-  | { type: "ping"; from: DuosSeat; ping: PingKind; target: PingTarget };
+  | { type: "ping"; from: DuosSeat; ping: PingKind; target: PingTarget }
+  /** R2881000: how many friends watch the game, as a 1v1 match's `watchers` frame says it (B51). */
+  | { type: "watchers"; count: number }
+  /** R2990001: a co-op watch socket's own emote hand (together/WatchRoute.tsx reads it); a seat is dealt none. */
+  | { type: "spectatorHand"; emotes: readonly EmojiEmoteId[] }
+  /** R2990000: a watcher's emote, relayed live to both people's seats and to the game's other watchers. */
+  | { type: "spectatorEmote"; watcher: string; emote: EmojiEmoteId };
 
 const isTimeOrNull = (value: unknown): value is number | null => value === null || typeof value === "number";
 
@@ -137,6 +145,17 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
       if (!isDuosSeat(parsed.from) || !isPingKind(parsed.ping) || target === null) return null;
       return { type: "ping", from: parsed.from, ping: parsed.ping, target };
     }
+    case "watchers": {
+      const count = parsed.count;
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return null;
+      return { type: "watchers", count };
+    }
+    case "spectatorHand":
+      return isSpectatorHand(parsed.emotes) ? { type: "spectatorHand", emotes: parsed.emotes } : null;
+    case "spectatorEmote": {
+      const relayed = spectatorEmoteOf(parsed);
+      return relayed === null ? null : { type: "spectatorEmote", ...relayed };
+    }
     default:
       return null;
   }
@@ -163,6 +182,10 @@ export type DuosSnapshot = {
   teammate: { connected: boolean; aiPlaying: boolean } | null;
   /** The pings to mark, the seat's own and the teammate's, newest last (B64). */
   pings: readonly ReceivedPing[];
+  /** R2881000: the last `watchers` frame's count; 0 until one arrives. */
+  watchers: number;
+  /** R2990000: the last watcher's emote relayed to this seat; `seq` makes repeats notify. */
+  spectatorEmote: { watcher: string; emote: EmojiEmoteId; seq: number } | null;
 };
 
 export type DuosClient = {
@@ -210,6 +233,8 @@ const INITIAL: DuosSnapshot = {
   clock: null,
   teammate: null,
   pings: [],
+  watchers: 0,
+  spectatorEmote: null,
 };
 
 function sessionToken(): string | null {
@@ -257,6 +282,8 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   let given: string | null = null;
   /** R1115000: the token a 4401 refused while the client stays refused for it; null otherwise. */
   let refusedToken: string | null = null;
+  /** R2990000: repeated watcher emotes still notify. */
+  let spectatorSeq = 0;
 
   function patch(next: Partial<DuosSnapshot>): void {
     snapshot = { ...snapshot, ...next };
@@ -304,6 +331,16 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
         return;
       case "ping":
         patch({ pings: withPing({ from: frame.from, ping: frame.ping, target: frame.target, at: now() }) });
+        return;
+      case "watchers":
+        patch({ watchers: frame.count });
+        return;
+      case "spectatorEmote":
+        spectatorSeq += 1;
+        patch({ spectatorEmote: { watcher: frame.watcher, emote: frame.emote, seq: spectatorSeq } });
+        return;
+      case "spectatorHand":
+        // R2990001: a watch socket's alone; a seat is dealt none.
         return;
     }
   }

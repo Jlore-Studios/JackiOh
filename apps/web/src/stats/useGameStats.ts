@@ -35,7 +35,9 @@ export function useGameStats(view: PlayerView, enabled: boolean): void {
     const fresh = before === null || before.viewer !== view.viewer ? [] : newEventsSince(before.events, view.events);
     log.current = observe(log.current, view, fresh, before);
 
-    if (outcome !== null && !recorded.current) {
+    // A mount whose first view is already over (a remount after a replay, a reload on the result
+    // screen) records nothing: it either counted already or has an empty log.
+    if (outcome !== null && !recorded.current && before !== null && outcomeOfView(before) === null) {
       recorded.current = true;
       recordGame(log.current, outcome);
       void syncPlayerStats();

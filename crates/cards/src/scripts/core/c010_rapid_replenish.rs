@@ -53,6 +53,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const LIBRARY: [&str; 8] = [
         "core-020", "core-020", "core-020", "core-011", "core-011", "core-011", "core-016", "core-016",
     ];
@@ -70,7 +72,6 @@ mod tests {
 
         #[test]
         fn r40_two_prior_plays_draw_nothing_and_the_spell_still_counts_as_played_r70() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-010-boundary",
                 "p1": { "hand": ["core-011", "core-011", "core-010", "core-010"], "mana": 10, "library": LIBRARY },
@@ -96,7 +97,6 @@ mod tests {
 
         #[test]
         fn three_prior_plays_draw_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-010-combo",
                 "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },
@@ -126,7 +126,6 @@ mod tests {
 
         #[test]
         fn radiant_draws_6_at_combo_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-010-radiant",
                 // #26 Glowy Jelly Bean makes the spell Radiant in hand, and counts as one of the plays.
@@ -149,7 +148,6 @@ mod tests {
 
         #[test]
         fn the_play_is_legal_at_0_mana_with_no_prior_plays_and_draws_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-010-always-playable",
                 "p1": { "hand": ["core-010", "core-011"], "mana": 0, "library": LIBRARY },
@@ -167,7 +165,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_meets_combo_2_and_a_degrade_needs_combo_4() {
             for (upgrade, combo, drawn) in [(true, 2, 3), (false, 4, 0)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "core-010-tuned",
                     "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },
@@ -193,7 +190,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_draws_4_and_a_degrade_2() {
             for (upgrade, count) in [(true, 4), (false, 2)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "core-010-tuned",
                     "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },

@@ -4,7 +4,7 @@
 //
 // The bot may not change `bot/`, `.harness/`, `.squishy/` or `.github/` (the path guard puts such a
 // change back, and deliver refuses to push one), holds no secret it was not given, and has no
-// dashboard: GitHub's settings and secrets, Vercel, Render, Supabase and Cloudflare are a person's.
+// dashboard: GitHub's settings and secrets, Supabase and Cloudflare are a person's.
 // No run can finish an item that needs one of those, and asking the same question run after run
 // spends a run each time (#760 spent two). So the bot hands it over: its own labels come off
 // (`LETS_GO`: `bot:blocked`, the queue and the stages), it unassigns itself and assigns the people

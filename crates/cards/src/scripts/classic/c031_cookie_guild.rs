@@ -43,6 +43,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -83,7 +85,6 @@ mod tests {
 
             #[test]
             fn recruits_the_first_2_cost_or_less_unit_from_the_top_passing_over_bigger_units_spells_and_other_permanents() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [MENACE, STOCKPILE, ARMOR, FELINORS, TEMPO] },
                     "p2": { "hand": [ANCHOR] },
@@ -97,7 +98,6 @@ mod tests {
 
             #[test]
             fn r1_the_recruited_unit_is_summoned_without_a_cry_a_duplicating_felinors_makes_no_copy() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [GUILD, ANCHOR], "library": [FELINORS] }, "p2": { "hand": [ANCHOR] } }));
 
                 s.play(GUILD, json!({}));
@@ -111,7 +111,6 @@ mod tests {
 
             #[test]
             fn r64_it_lands_in_your_leftmost_open_zone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [TEMPO], "field": [{ "def": MENACE, "lane": 2 }] },
                     "p2": { "hand": [ANCHOR] },
@@ -124,7 +123,6 @@ mod tests {
 
             #[test]
             fn r65_the_cost_is_the_card_s_own_in_the_deck_a_3_unit_made_to_cost_1_less_is_recruited_a_1_unit_made_to_cost_2_more_is_not() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [GUILD, ANCHOR],
@@ -141,7 +139,6 @@ mod tests {
 
             #[test]
             fn r690_an_x_unit_is_skipped_when_a_non_x_match_sits_further_down_it_recruits_that_one_instead() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [MENACE, BUFF_BILLY, TEMPO] },
                     "p2": { "hand": [ANCHOR] },
@@ -156,7 +153,6 @@ mod tests {
 
             #[test]
             fn r396_r690_an_x_unit_costs_0_in_the_deck_so_it_is_recruited_when_it_is_the_only_valid_target() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [GUILD, ANCHOR], "library": [MENACE, BUFF_BILLY] }, "p2": { "hand": [ANCHOR] } }));
 
                 s.play(GUILD, json!({}));
@@ -167,7 +163,6 @@ mod tests {
 
             #[test]
             fn with_no_match_in_the_deck_nothing_happens_and_the_deck_keeps_its_order() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [MENACE, STOCKPILE, ARMOR] },
                     "p2": { "hand": [ANCHOR] },
@@ -181,7 +176,6 @@ mod tests {
 
             #[test]
             fn with_a_full_unit_row_nothing_is_summoned_and_the_unit_stays_in_the_deck() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [TEMPO], "field": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR] },
@@ -198,7 +192,6 @@ mod tests {
 
             #[test]
             fn no_event_carries_a_library_position_and_the_opponent_reads_only_the_summon() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [MENACE, TEMPO, BIG_D] },
                     "p2": { "hand": [ANCHOR] },
@@ -215,7 +208,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_units_makes_two_scans_of_the_cost_limit_a_3_unit_qualifies() {
-                crate::register_all();
                 let mut units = scenario(json!({
                     "p1": { "hand": [GUILD, ANCHOR], "library": [TEMPO, VANILLA, BIG_D] },
                     "p2": { "hand": [ANCHOR] },
@@ -232,7 +224,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_the_cost_limit_to_1_passes_a_2_unit_over() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [GUILD, ANCHOR], "library": [FELINORS, TEMPO] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(s.card_mut(GUILD), "costLimit", -1);
 
@@ -248,7 +239,6 @@ mod tests {
 
             #[test]
             fn makes_two_top_down_scans_each_taking_the_next_match() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": GUILD, "radiant": true }, ANCHOR],
@@ -268,7 +258,6 @@ mod tests {
 
             #[test]
             fn fewer_matches_than_two_it_recruits_what_there_is() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GUILD, "radiant": true }, ANCHOR], "library": [MENACE, TEMPO] },
                     "p2": { "hand": [ANCHOR] },
@@ -281,7 +270,6 @@ mod tests {
 
             #[test]
             fn stops_when_the_row_fills_the_second_match_stays_in_the_deck() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": GUILD, "radiant": true }, ANCHOR],
@@ -302,7 +290,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_units_makes_one_scan() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GUILD, "radiant": true }, ANCHOR], "library": [TEMPO, VANILLA, BIG_D] },
                     "p2": { "hand": [ANCHOR] },

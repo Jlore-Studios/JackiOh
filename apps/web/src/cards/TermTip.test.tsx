@@ -25,22 +25,22 @@ import { useInspectTrigger } from "./inspect/useInspectTrigger.tsx";
 import { standInCopy } from "../fx/dom.ts";
 import { must } from "../test/stubServer.ts";
 
-/** Bigot (core-002): "Cry: Destroy an enemy non-Human Unit." */
-const BIGOT = "core-002";
+/** Speciesist (core-002): "Cry: Destroy an enemy non-Human Unit." */
+const SPECIESIST = "core-002";
 /** Shorter than any long-press: a tap. */
 const TAP_MS = 50;
 /** Longer than any hover or long-press delay, so "nothing opened" is not "not yet". */
 const PAST_ANY_DELAY_MS = 2_000;
 const TOUCH = { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10, button: 0 };
 
-function bigotFace(): FaceModel {
-  return faceModel({ defId: BIGOT, def: must(CATALOG[BIGOT], "Bigot in the catalog"), radiant: false });
+function speciesistFace(): FaceModel {
+  return faceModel({ defId: SPECIESIST, def: must(CATALOG[SPECIESIST], "Speciesist in the catalog"), radiant: false });
 }
 
-/** Bigot's Cry term inside `root`. */
+/** Speciesist's Cry term inside `root`. */
 function cry(root: ParentNode): HTMLElement {
   const found = root.querySelector<HTMLElement>('.cf-term[data-term="Cry"]');
-  return must(found, "Bigot's Cry term");
+  return must(found, "Speciesist's Cry term");
 }
 
 function advance(ms: number): void {
@@ -51,12 +51,12 @@ function advance(ms: number): void {
 
 /** A card with an inspect trigger, as the board's Card root carries both. */
 function Host({ onClick }: { onClick?: () => void }): ReactElement {
-  const inspect = useInspectTrigger({ key: "term-host", face: bigotFace() });
+  const inspect = useInspectTrigger({ key: "term-host", face: speciesistFace() });
   return (
     <>
       <div data-testid="host" {...inspect.handlers} onClick={onClick}>
         <TermTips>
-          <CardFace face={bigotFace()} layout="full" />
+          <CardFace face={speciesistFace()} layout="full" />
         </TermTips>
       </div>
       {inspect.overlay}
@@ -190,11 +190,11 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
     const trees = [
       <CardDefsProvider key="refs" defs={CATALOG}>
         <RefsInteractive>
-          <CardFace face={bigotFace()} layout="full" />
+          <CardFace face={speciesistFace()} layout="full" />
         </RefsInteractive>
       </CardDefsProvider>,
       <TermTips key="tips" focusable>
-        <CardFace face={bigotFace()} layout="full" />
+        <CardFace face={speciesistFace()} layout="full" />
       </TermTips>,
     ];
     for (const tree of trees) {
@@ -232,7 +232,7 @@ describe("R2098000 a term in a card's text shows its glossary line", () => {
 
   it("R2098000 a face outside TermTips and any control surface prints its terms plain", () => {
     vi.useFakeTimers();
-    const { container } = render(<CardFace face={bigotFace()} layout="full" />);
+    const { container } = render(<CardFace face={speciesistFace()} layout="full" />);
     const term = cry(container);
     expect(term).not.toHaveAttribute("data-tip");
     expect(term).not.toHaveAttribute("tabindex");

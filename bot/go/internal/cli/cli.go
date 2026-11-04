@@ -41,6 +41,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/quiet"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/resolve"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
@@ -1548,6 +1549,8 @@ func Main(argv []string /* = None */) (code int) {
 			return titles.Main(argv[1:])
 		case "pr-title": // pr-title.yml's check
 			return prTitle(argv[1:])
+		case "mergiraf": // bot-cache.yml's build of it, and the model jobs' restore (#2948)
+			return mergirafCmd(argv[1:])
 		}
 	}
 	args, exit, ok := Parser().ParseArgs(argv)
@@ -1563,6 +1566,40 @@ func Main(argv []string /* = None */) (code int) {
 		return 1
 	}
 	return result
+}
+
+// mergirafCmd is the pinned Mergiraf for the workflows (#2948, `resolve.Mergiraf`): its version and
+// the directory the machine user's cache keeps it in (`resolve.CacheDir`), as `version=` and `dir=`
+// lines a step appends to GITHUB_OUTPUT, the cache entry's key and path. With `--install` it then
+// finds the binary there, or builds it from its pinned source, and exits 1 when it can do neither:
+// bot-cache.yml builds it once from main, and the model jobs only restore it, so nothing a model ran
+// reaches a later job through the cache.
+func mergirafCmd(argv []string) int {
+	p := newParser("harness mergiraf", "")
+	p.flag("--install", "find or build the pinned release in the cache directory")
+	ns, exit := p.parse(argv)
+	if exit != nil {
+		io.WriteString(Stdout, exit.stdout)
+		io.WriteString(Stderr, exit.stderr)
+		return exit.code
+	}
+	env := config.ChildEnv(nil, nil)
+	cache := resolve.CacheDir(env, os.TempDir())
+	say("version=" + resolve.MergirafVersion)
+	say("dir=" + cache)
+	if ns["install"] != true {
+		return 0
+	}
+	bin, missing := resolve.FindMergiraf(env, cache)
+	if bin == "" {
+		var why string
+		if bin, why = resolve.InstallMergiraf(env, cache, resolve.MergirafInstallMinutes*60); bin == "" {
+			sayErr(fmt.Sprintf("error: %s; and it could not be built: %s", missing, why))
+			return 1
+		}
+	}
+	say("bin=" + bin)
+	return 0
 }
 
 // prTitle is pr-title.yml's check (#187): a pull request's title becomes its squash commit's

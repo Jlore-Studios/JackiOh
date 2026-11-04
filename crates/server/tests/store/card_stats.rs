@@ -10,12 +10,14 @@ use jackioh_server::cli::card_stats::{
     CardStatsOptions, card_stats_report, card_stats_window, parse_card_stats_args, render_card_stats,
 };
 use jackioh_server::cli::export_records::{
-    ExportOptions, export_records, parse_export_args, read_records, render_records,
+    ExportOptions, export_records, parse_export_args, read_claim_counts, read_records, render_claim_counts,
+    render_records,
 };
 use jackioh_server::cli::import_dev_records::{
     batch_of, import_dev_records, import_dev_records_totals_only, run_file_path,
 };
 use jackioh_server::db::store::Db;
+use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal};
 
 /// `{ ...base, ...partial }` on two JSON objects.
 fn spread(mut base: Value, partial: Value) -> Value {
@@ -863,6 +865,59 @@ mod stats_export {
             .expect_err("the file cannot be written")
             .to_string();
         assert!(error.contains("no-such-directory"));
+        std::fs::remove_dir_all(&dir).expect("the scratch directory goes");
+    }
+
+    /// #2884: `--claims` writes every day's practice claim counts, one `{ day, outcome, count }` per
+    /// line and nothing of an account, and takes none of the records' filters.
+    #[tokio::test]
+    async fn claims_writes_the_daily_claim_counts_and_nothing_of_an_account() {
+        assert!(options(&["--claims", "--out=claims.jsonl"]).claims);
+        assert!(!options(&["--out=records.jsonl"]).claims);
+        for filter in ["--source=dev", "--mode=bo1", "--patch=v0.2.3"] {
+            assert!(
+                refusal(&["--claims", "--out=a.jsonl", filter]).contains("--claims writes every day"),
+                "{filter}"
+            );
+        }
+
+        let day = 86_400_000_i64;
+        let db = Db::fake();
+        let mut tx = db.begin(None).await.expect("a transaction");
+        for (bucket, at) in [
+            (ClaimBucket::Paid, 10 * day),
+            (ClaimBucket::Paid, 11 * day - 1),
+            (ClaimBucket::Refused(ClaimRefusal::DoesNotFold), 10 * day + 1),
+            (ClaimBucket::Refused(ClaimRefusal::Expired), 11 * day),
+        ] {
+            tx.economy_practice_claim_count(bucket, at)
+                .await
+                .expect("the claim is counted");
+        }
+        tx.commit().await.expect("the counts commit");
+
+        let dir = std::env::temp_dir().join(format!("jackioh-export-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("a scratch directory");
+        let out = dir.join("claims.jsonl");
+        let written = export_records(&db, &options(&["--claims", &format!("--out={}", out.display())]))
+            .await
+            .expect("the counts are exported");
+        assert_eq!(written, 3);
+        let text = std::fs::read_to_string(&out).expect("the file exists");
+        let lines: Vec<Value> = text
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("a line is JSON"))
+            .collect();
+        assert_eq!(
+            lines,
+            vec![
+                json!({ "day": "1970-01-11", "outcome": "does_not_fold", "count": 1 }),
+                json!({ "day": "1970-01-11", "outcome": "paid", "count": 2 }),
+                json!({ "day": "1970-01-12", "outcome": "expired", "count": 1 }),
+            ]
+        );
+        let counts = read_claim_counts(&db).await.expect("the counts are read");
+        assert_eq!(render_claim_counts(&counts).expect("the counts render"), text);
         std::fs::remove_dir_all(&dir).expect("the scratch directory goes");
     }
 }

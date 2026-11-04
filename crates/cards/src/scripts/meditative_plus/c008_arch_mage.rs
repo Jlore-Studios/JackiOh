@@ -40,7 +40,6 @@ mod tests {
 
     #[test]
     fn s4_4_step_0_your_spell_deals_3_more_per_hit() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [MAGE] }, "p2": { "hand": [FILLER] } }));
         s.play(LUNAR_ECLIPSE, at_hero());
         s.expect_health(P2, HERO_HEALTH - 6);
@@ -48,7 +47,6 @@ mod tests {
 
     #[test]
     fn never_a_field_spells_hit() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [MAGE], "backrow": [ECHOES], "exile": [FILLER, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
@@ -85,7 +83,6 @@ mod tests {
 
     #[test]
     fn r1180000_never_a_traps_hit() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [MAGE], "backrow": [{ "def": TRAP, "faceUp": true }] },
             "p2": { "hand": [FILLER] },
@@ -96,7 +93,6 @@ mod tests {
 
     #[test]
     fn r1180000_radiant_never_a_traps_hit() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [FILLER],
@@ -111,7 +107,6 @@ mod tests {
 
     #[test]
     fn never_the_opponents_spells() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "field": [MAGE] },
@@ -123,7 +118,6 @@ mod tests {
 
     #[test]
     fn stops_once_it_has_left_the_field() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [TRUE_STRIKE, LUNAR_ECLIPSE, FILLER], "field": [MAGE] },
             "p2": { "hand": [FILLER] },
@@ -138,7 +132,6 @@ mod tests {
 
     #[test]
     fn r386_a_nerf_moves_its_spell_damage() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [MAGE] }, "p2": { "hand": [FILLER] } }));
         let id = s.card(MAGE).id.clone();
         find_instance_mut(s.state_mut(), &id).expect("the mage on the field").tuning =
@@ -150,7 +143,6 @@ mod tests {
 
     #[test]
     fn radiant_spell_damage_6() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [{ "def": MAGE, "radiant": true }] },
             "p2": { "hand": [FILLER] },

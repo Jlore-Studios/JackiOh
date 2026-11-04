@@ -16,7 +16,7 @@ use crate::rules::fixtures::scripts::scripts as fixture_scripts;
 /// The build's catalog version, and the one the games below record.
 const BUILD: &str = "v-replay";
 
-fn input(seed: &str, decks: &(Vec<String>, Vec<String>), log: Vec<Action>) -> ReplayInput {
+fn replay_input(seed: &str, decks: &(Vec<String>, Vec<String>), log: Vec<Action>) -> ReplayInput {
     ReplayInput {
         seed: seed.to_string(),
         decks: decks.clone(),
@@ -61,7 +61,7 @@ fn r768_every_step_is_view_for_after_a_fresh_fold_of_its_prefix() {
         let live = play_random_game(seed, None);
         setup_catalog();
         let (steps, checkpoints) = opened(
-            &input(seed, &live.decks, live.log.clone()),
+            &replay_input(seed, &live.decks, live.log.clone()),
             &hash_state(&live.state),
         );
         assert_eq!(steps, live.log.len() + 1, "{seed}");
@@ -77,7 +77,7 @@ fn r768_every_step_is_view_for_after_a_fresh_fold_of_its_prefix() {
         }
         // One fresh fold per prefix, held to both seats' steps: a fold per seat is too slow (#2090).
         for k in 0..steps {
-            let folded = fold(&input(seed, &live.decks, live.log[..k].to_vec()));
+            let folded = fold(&replay_input(seed, &live.decks, live.log[..k].to_vec()));
             assert!(folded.errors.is_empty(), "{seed} step {k}");
             for (seat, seat_steps) in &shown {
                 let step = &seat_steps[k];
@@ -99,7 +99,7 @@ fn r768_a_step_or_a_page_costs_at_most_the_checkpoint_spacing() {
     let live = play_random_game(seed, None);
     setup_catalog();
     let (steps, checkpoints) = opened(
-        &input(seed, &live.decks, live.log.clone()),
+        &replay_input(seed, &live.decks, live.log.clone()),
         &hash_state(&live.state),
     );
     assert!(
@@ -157,7 +157,7 @@ fn r768_a_rejected_action_is_not_a_step() {
     let hash = hash_state(&live.state);
 
     // The game's log with an action the reducer refuses before every fifth entry and after the last.
-    let mut state = fold(&input(seed, &live.decks, Vec::new())).state;
+    let mut state = fold(&replay_input(seed, &live.decks, Vec::new())).state;
     let mut junked: Vec<Action> = Vec::new();
     let mut junk = 0;
     for (i, action) in live.log.iter().enumerate() {
@@ -172,14 +172,14 @@ fn r768_a_rejected_action_is_not_a_step() {
     junk += 1;
     assert_eq!(hash_state(&state), hash, "the replayed game is the live one");
 
-    let folded = fold(&input(seed, &live.decks, junked.clone()));
+    let folded = fold(&replay_input(seed, &live.decks, junked.clone()));
     assert_eq!(folded.errors.len(), junk);
 
-    let (steps, checkpoints) = opened(&input(seed, &live.decks, junked), &hash);
+    let (steps, checkpoints) = opened(&replay_input(seed, &live.decks, junked), &hash);
     assert_eq!(steps, live.log.len() + 1);
     assert_eq!(checkpoints.accepted, live.log);
 
-    let (clean_steps, clean) = opened(&input(seed, &live.decks, live.log.clone()), &hash);
+    let (clean_steps, clean) = opened(&replay_input(seed, &live.decks, live.log.clone()), &hash);
     assert_eq!(clean_steps, steps);
     for seat in PLAYER_IDS {
         assert_eq!(all_steps(&checkpoints, seat), all_steps(&clean, seat), "{seat}");
@@ -199,7 +199,7 @@ fn r768_another_catalog_version_or_a_wrong_hash_is_refused_with_no_steps() {
     let live = play_random_game(seed, None);
     setup_catalog();
     let hash = hash_state(&live.state);
-    let game = input(seed, &live.decks, live.log.clone());
+    let game = replay_input(seed, &live.decks, live.log.clone());
 
     let earlier = ReplayRecord {
         catalog_version: "v-earlier".to_string(),
@@ -223,7 +223,7 @@ fn r768_another_catalog_version_or_a_wrong_hash_is_refused_with_no_steps() {
         replay_open(&game, &record("00000000"), BUILD),
         refused(ReplayRefusal::RulesChanged)
     );
-    let short = input(seed, &live.decks, live.log[..live.log.len() - 1].to_vec());
+    let short = replay_input(seed, &live.decks, live.log[..live.log.len() - 1].to_vec());
     assert_eq!(
         replay_open(&short, &record(&hash), BUILD),
         refused(ReplayRefusal::RulesChanged)
@@ -259,7 +259,7 @@ fn played_on_old(seed: &str, old: &'static ShippedCatalog) -> (RandomGame, Vec<[
         let live = play_random_game(seed, None);
         let views = (0..=live.log.len())
             .map(|k| {
-                let folded = fold(&input(seed, &live.decks, live.log[..k].to_vec()));
+                let folded = fold(&replay_input(seed, &live.decks, live.log[..k].to_vec()));
                 assert!(folded.errors.is_empty(), "{seed} step {k}");
                 PLAYER_IDS.map(|seat| view_for(&folded.state, seat))
             })
@@ -278,7 +278,7 @@ fn on_old(hash: &str) -> ReplayRecord {
 fn assert_replays_under_old(seed: &str, old: &'static ShippedCatalog) {
     let (live, views) = played_on_old(seed, old);
     let hash = hash_state(&live.state);
-    let game = input(seed, &live.decks, live.log.clone());
+    let game = replay_input(seed, &live.decks, live.log.clone());
     let ReplayOpen::Ready { steps, checkpoints } = replay_open(&game, &on_old(&hash), BUILD) else {
         panic!("{seed}: a game on a carried version was refused");
     };
@@ -333,7 +333,7 @@ fn r767000_an_uncarried_version_is_earlier_patch_and_a_missed_hash_rules_changed
     let refused = |reason| ReplayOpen::Refused { reason };
     let (live, _) = played_on_old("replay-versions-3", old);
     let hash = hash_state(&live.state);
-    let game = input("replay-versions-3", &live.decks, live.log.clone());
+    let game = replay_input("replay-versions-3", &live.decks, live.log.clone());
 
     assert_eq!(
         catalog_for(OLD, BUILD).map(|found| found.map(ShippedCatalog::version)),
@@ -369,7 +369,7 @@ fn r767000_a_page_of_checkpoints_on_an_uncarried_version_has_no_step() {
     setup_catalog();
     let old = old_catalog(IndexMap::new());
     let (live, _) = played_on_old("replay-versions-4", old);
-    let game = input("replay-versions-4", &live.decks, live.log.clone());
+    let game = replay_input("replay-versions-4", &live.decks, live.log.clone());
     let ReplayOpen::Ready { mut checkpoints, .. } =
         replay_open(&game, &on_old(&hash_state(&live.state)), BUILD)
     else {
