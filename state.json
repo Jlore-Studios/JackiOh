@@ -15533,15 +15533,8 @@
       "verdict_rounds": 1
     },
     "2942": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41742035597",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-04T00:25:36Z",
-        "until": "2026-11-04T00:55:36Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15553,10 +15546,9 @@
         "reason": "planned on opus",
         "trail": "is_offered()\\\\|\u2026\n- Bash: {\"command\": \"grep -rn \\\"proven_in\\\" crates/tools/src --include=*.rs | head -20\", \"description\": \"Find spec check's proven_in rule\"}\n- Bash: {\"command\": \"grep -rn \\\"var(--cf-edge)\\\\|var(--cf-bezel)\\\" apps/web/src --include=*.css | head -20; grep -n \\\"\\\\.cf-art--full\\\\|\\\\.cf-art {\\\" -A6 apps/web/src/cards/art/art.css | head -30\", \"descript\u2026\n- Bash: {\"command\": \"sed -n 150,180p apps/web/src/cards/cosmetics.css; grep -n \\\"data-frame=\\\\\\\"border-\\\" apps/web/src/cards/cosmetics.css | head -5\", \"description\": \"See how borders use --cf-edge\"}\n- Bash: {\"command\": \"grep -n \\\"not offered on that card\\\\|is not a chase\\\\|chase cosmetic\\\\|fn chase\\\" crates/server/src/economy/cosmetic_packs.rs crates/server/src/api/*.rs | head -10; grep -n \\\"not offered\u2026\n- Bash: {\"command\": \"sed -n 486,560p crates/server/src/economy/cosmetic_packs.rs\", \"description\": \"Read the chase purchase code\"}\n- Bash: {\"command\": \"grep -n \\\"offeredOn\\\" apps/web/src/cards/fullArt.ts apps/web/src/cards/cosmetics.ts apps/web/src/collection/*.tsx apps/web/src/collection/*.ts | head\", \"description\": \"Check client offer\u2026\n- Bash: {\"command\": \"grep -n \\\"data-finish.*\\\\.cf-scale\\\\b\\\\|data-finish=\\\\\\\"[a-z-]*\\\\\\\"\\\\] \\\\.cf-scale {\\\" apps/web/src/cards/cosmetics.css | head; sed -n 285,300p apps/web/src/cards/cosmetics.css\", \"descri\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2942/apps/web/src/cards/cosmetics.css\", \"offset\": 296, \"limit\": 135}\n- Bash: {\"command\": \"grep -rn 'data-full-art=\\\\\\\\\\\"true\\\\\\\\\\\"\\\\]\\\\[data-finish\\\\|data-full-art=\\\"true\\\"\\\\]\\\\[data-finish\\\\|R2720000' apps/web/src --include=*.test.* | head -10\", \"description\": \"Find tests th\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2942/apps/web/src/cards/cosmetics.test.tsx\", \"offset\": 1155, \"limit\": 70}\n- Bash: {\"command\": \"sed -n 979,1040p apps/web/src/cards/cards.css; grep -n \\\"^\\\\.cf \\\\.cf-stats\\\\|^\\\\.cf \\\\.cf-tags\\\\|^\\\\.cf \\\\.cf-tag \\\" -A12 apps/web/src/cards/cards.css | head -40\", \"description\": \"Read \u2026\n- Bash: {\"command\": \"grep -rn \\\"ART_MANIFEST\\\\b\\\" apps/web/src/cards/art/*.ts | head -3; ls apps/web/public/art 2>/dev/null | head; grep -n \\\"classic-056\\\\|meditative-042\\\\|stinkyscape-080\\\\|meditativeplus-0\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json,re\\nd=json.load(open('crates/cards/catalog.json'))\\nfor k,c in d.items():\\n if re.search(r'[^\\\\x20-\\\\x7e]', c['name']): print(k, c['name'], c.get('token'))\\\u2026\n- Bash: {\"command\": \"grep -rn \\\"RADIANT_GOLD_CLEARANCE\\\\|GOLD_CLEARANCE\\\" apps/web/src crates spec | head; sed -n 80,100p apps/web/src/cards/constants.ts; sed -n 130,160p apps/web/src/cards/cosmetics.test.ts\u2026\n- Bash: {\"command\": \"grep -n \\\"Part 2 adds three versions\\\\|So are the Alt art, Sketch and Alt full art versions\\\" spec/14-economy.md | cut -c1-80; cat spec/pending/2940.md | cut -c1-200; ls spec/pending/ | \u2026\n- Bash: {\"command\": \"grep -n \\\"visual\\\" crates/tools/src/patches*.rs crates/tools/src/main.rs 2>/dev/null | head -10; ls crates/tools/src | head -40\", \"description\": \"Check the patches command's visual flag\"}\n- Bash: {\"command\": \"sed -n 30,110p e2e/cypress/component/card-versions.cy.tsx; grep -n \\\"^const\\\\|^function\\\\|^ it(\\\\|^describe\\\\|^ for (const width\\\" e2e/cypress/component/card-versions.cy.tsx\", \"descripti\u2026\n- Bash: {\"command\": \"grep -n \\\"GLITCH_ID\\\\|export function isGlitch\\\" -A3 apps/web/src/cards/glitch.ts | head; python3 -I /tmp/plan2942/which.py classic-090 2>/dev/null | head -2\", \"description\": \"Check the \u2026\n- Bash: {\"command\": \"grep -rn \\\"GLITCH_DEF_ID =\\\" apps/web/src/cards/ | head -2\", \"description\": \"Find the Glitch card id\"}\n- Bash: {\"command\": \"grep -rn \\\"GLITCH_DEF_ID\\\" apps/web/src packages 2>/dev/null | grep -v \\\"isGlitch\\\\|import\\\" | head -3\", \"description\": \"Find where the Glitch id is defined\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nprint([ (k,c['type'],c['rarity'],c['token']) for k,c in d.items() if c['name']=='Glitch'])\\\"; \", \"descripti\u2026\n- Bash: {\"command\": \"grep -n \\\"include\\\\|exclude\\\" apps/web/vite.config.ts apps/web/vitest.config.ts vitest.config.ts vitest.workspace.ts 2>/dev/null | head\", \"description\": \"Check vitest include patterns\"}\n- Bash: {\"command\": \"grep -n \\\"test:component\\\\|\\\\\\\"cy:\\\" e2e/package.json; cat .bot-plan.md | head -5\", \"description\": \"Check the component test script\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2942/apps/web/src/collection/collection.test.tsx\", \"offset\": 780, \"limit\": 25}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Findings so far (planner, 2026-11-04)\\n- Offers computed with /tmp script (FNV hash verified against generated sketch offer):\\n extended: [{types:[Spell\u2026\n- Bash: {\"command\": \"grep -rn \\\"cosmetics.len()\\\\|COSMETICS.length\\\\|toHaveLength(1[0-9][0-9])\\\" crates/server/tests apps/web/src --include=*.rs --include=*.ts --include=*.tsx | head -10\", \"description\": \"Lo\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2942/.bot-plan.md\", \"content\": \"## Goal\\n\\nShip part 3 of #2725's versions, built the way #2940 (commit c95f4c3ea, PR #2967) shipped part 2, file for \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2942/.bot-plan.md\", \"content\": \"## Goal\\n\\nShip part 3 of #2725's versions, built the way #2940 (commit c95f4c3ea) shipped part 2, file for file. That\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count plan words\"}\n- Bash: {\"command\": \"grep -rln 'data-layout=\\\"minion\\\"\\\\|layout=\\\"minion\\\"\\\\|\\\"minion\\\"' apps/web/src --include=*.tsx | head -5; grep -rn \\\"data-version\\\" apps/web/src --include=*.tsx | grep -v test | head\",\u2026\n- said: ## Goal Ship part 3 of #2725's versions, built the way #2940 (commit c95f4c3ea) shipped part 2, file for file. That means three **Epic** registry entries: **Extended art** (`version-extended-art`), **Pixel** (`version-pixel`) and **Comic** (`version-comic`). - Each entry's `offer` is a seeded share\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-03T23:48:29Z",
       "owner_why": "it plans it",
@@ -15569,9 +15561,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-03T15:59:30Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41742035597",
+      "run_id": "pending:374758b0-1793752070",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T23:48:29Z",
+      "started_at": "2026-11-04T00:28:14Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16614,9 +16606,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T00:27:35Z",
+    "at": "2026-11-04T00:28:14Z",
     "url": "",
-    "what": "review #2969 on muse"
+    "what": "build #2942 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-04T00:12:09Z",
