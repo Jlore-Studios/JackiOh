@@ -17256,8 +17256,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-3",
-      "owner_since": "2026-11-04T06:24:35Z",
-      "owner_why": "handed off from `claude-6`: `claude-6` 5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-04T10:20:00Z; it can start again only in 2h 35m, more than the 120 minutes an item waits for its owner",
+      "owner_since": "2026-11-04T08:54:16Z",
+      "owner_why": "its turn came (#2970, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-04T05:05:46Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -17909,12 +17909,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2990,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-11-04T08:08:42Z",
+      "queued_at": "2026-11-04T08:54:16Z",
       "run_id": "41797421265",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17935,9 +17935,17 @@
         "provider": "claude-3",
         "run": "41785334181"
       },
+      "source": "conflict",
       "started_at": "2026-11-04T08:10:01Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-04T08:54:16Z",
+        "until": "2026-11-04T09:24:16Z",
+        "why": "#2970, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -17957,17 +17965,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          2970
-        ],
-        "ends": "2026-11-04T10:30:33Z",
-        "from_run": "41797421265",
-        "head": "40a6ff96878d8d3da5b3f12922ff26cb1b41e08f",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-04T08:30:33Z"
       }
     },
     "3011": {
