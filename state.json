@@ -16894,6 +16894,7 @@
       "planned_at": "2026-11-04T03:18:32Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-4",
+      "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-4",
       "queued_at": "2026-11-04T01:59:19Z",
