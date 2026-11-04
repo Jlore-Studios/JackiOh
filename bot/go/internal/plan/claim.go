@@ -131,6 +131,12 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			"previous_findings", py.Or(record.Get("last_findings"), []any{}),
 			"previous_question", py.Or(record.Get("question"), ""),
 		)
+		if decision := queue.DecisionOf(record); queue.WentAhead(decision) != "" {
+			// Nobody answered its question in time (#2986): this build goes ahead on its default.
+			planned.Set("on_default", decision)
+			planned.Set("previous_question", "")
+			planned.Set("default_note", DefaultNote(decision))
+		}
 		written := issueplan.PlanOf(py.OrStr(thread.Get("body"), ""))
 		if written != "" && assignment.Action == "build" {
 			// A person may have edited the plan in the description: the builder starts from that.
@@ -290,6 +296,13 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 					feedback += "\n\n" + CILocalNote(rerunsLeft)
 				}
 			}
+			decision := queue.DecisionOf(record)
+			if queue.WentAhead(decision) == "" {
+				decision = nil
+			} else {
+				// Nobody answered its question in time (#2986): this revision goes ahead on its default.
+				feedback += "\n\n" + DefaultNote(decision)
+			}
 			if source == "cross-review" && record.Truthy("last_findings") {
 				var lines []string
 				for _, f := range pyjson.List(record.Get("last_findings")) {
@@ -315,6 +328,9 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			)
 			message = fmt.Sprintf("Starting a revision now%s, because of: %s. %s",
 				RunLink(cfg), source, startMessage(assignment, cfg, chains))
+			if decision != nil {
+				planned.Set("on_default", decision)
+			}
 			if rerunsLeft >= 0 {
 				// The fix run runs the failing check first (#2948): a pass re-runs CI with no
 				// commit while the head has re-runs left (`ci_reruns`).
@@ -358,11 +374,11 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 	if record.Truthy("handoff") {
 		planned.Set("handoff", record.Get("handoff"))
 	}
-	if record.Truthy("session") && !candidate.OwnReview && !candidate.TurnNext {
+	if record.Truthy("session") && !candidate.OwnReview && !candidate.TurnNext && !planned.Has("on_default") {
 		// The Claude session the item's last run kept, which a run on its subscription resumes
 		// (#2748): the record only; the work job fetches the sealed file itself. Not an own review
 		// run's: it reviews and fixes in fresh sessions, never its build's (#2903); nor a turn's
-		// resolution, a fresh session too (#2948).
+		// resolution, a fresh session too (#2948); nor a go-ahead on a question's default (#2986).
 		planned.Set("session", record.Get("session"))
 	}
 	// Every earlier run on the item, for the work job to put in its worktree (#342).

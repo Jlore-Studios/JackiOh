@@ -24,6 +24,10 @@
 //     or the hold runs out (`hold_minutes`), so the next run takes it;
 //   - a pull request waiting its turn (#2948, `plan.SyncTurns`) whose turn came: each it waited
 //     behind has closed, or its wait ran out (`hold_minutes`); it is taken up again on its lane;
+//   - an item stopped on a question or handed over (#2986, `plan.SyncDecisions`): `needs decision`
+//     comes off once it closes, and a question with a default that no trusted person answered within
+//     `decision_wait_hours` goes ahead on it, on the lane that asked; the first sweep also labels
+//     the items that stopped on a question before #2986 (`plan.OlderQuestions`), with no deadline;
 //   - a pull request a person merges (`ready for merge`, `person merges`) whose head the reviews
 //     cleared and CI passed (#2948): its merge owner gives up its claim on it (`PersonMerges`);
 //   - an issue the bot has planned, and a pull request it opened, that carries no `difficulty:*` label
@@ -122,7 +126,7 @@ func Sweep(ctx *hctx.Context) []string {
 	parts := []part{
 		{"labels", Labels}, {"comments", comments}, {"reviews", reviews},
 		{"assignments", assignments}, {"early_ci", earlyCI}, {"failed_ci", failedCI}, {"needs_plan", needsPlan}, {"holds", holds},
-		{"turns", turns}, {"green_heads", GreenHeads}, {"person_merges", PersonMerges}, {"trees", Trees},
+		{"turns", turns}, {"decisions", decisions}, {"green_heads", GreenHeads}, {"person_merges", PersonMerges}, {"trees", Trees},
 		{"deliveries", Deliveries},
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
 		{"issue_types", issueTypes}, {"difficulty_labels", difficultyLabels},
@@ -332,6 +336,13 @@ func holds(ctx *hctx.Context, since time.Time) []string {
 // turns takes up the pull requests waiting their turn whose turn came (#2948, `plan.SyncTurns`).
 func turns(ctx *hctx.Context, since time.Time) []string {
 	return plan.SyncTurns(ctx, 0)
+}
+
+// decisions keeps the stops for a decision (#2986, `plan.SyncDecisions`): `needs decision` off a
+// closed thread, a question past its end gone ahead on its default; and, the first time, labels the
+// items stopped on a question before #2986 (`plan.OlderQuestions`).
+func decisions(ctx *hctx.Context, since time.Time) []string {
+	return append(plan.OlderQuestions(ctx), plan.SyncDecisions(ctx)...)
 }
 
 // PersonMerges: a pull request a person merges (`ready for merge`, `person merges`, #2948) waits for

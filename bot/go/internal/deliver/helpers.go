@@ -167,6 +167,10 @@ func (x *Deliverer) pullBody(number int, approved bool, chained bool) string {
 	review := pyjson.Obj(x.Result.Get("review"))
 	report := py.OrStr(x.Result.Get("report"), "_The builder wrote no description._")
 	parts := []string{fmt.Sprintf("Closes #%d", number), "", py.SliceTo(report, ReportChars), ""}
+	if built := x.defaultMd(number); built != "" {
+		// Nobody answered its question in time (#2986): it says so, ahead of its review.
+		parts = append(parts, "### Built on its default\n\n"+built, "")
+	}
 	if approved {
 		parts = append(parts, fmt.Sprintf("### Adversarial review\n\nApproved on round %d of "+
 			"%d.", len(cycles), x.CyclesCap()))

@@ -242,9 +242,9 @@ func (x *Deliverer) OwnReview(number int, status string) {
 				"`%s revise <notes>` (or `@%s <notes>`) queues the rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
-		x.GH.CreateComment(number, "Its own review run needs a decision before it can fix this.\n\n"+question)
-		x.remember(number, pyjson.New("question", question))
+		x.askDecision(number, "revise", "Its own review run needs a decision before it can fix this.", "", question,
+			fmt.Sprintf("answer here with `%s revise <your answer>` (or `@%s <your answer>`), which queues it again",
+				config.Slash, x.Cfg.BotLogin))
 		return
 	}
 	approved := status == "approved"

@@ -446,6 +446,20 @@ func turnSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Seat) *
 	return seat
 }
 
+// defaultSeat is the seat a go-ahead on a question's default runs on (#2986): the model that asked
+// (`queue.Candidate.DefaultModel`), on `builder`'s subscription when that is its owner, and only at
+// the item's tier; nil otherwise (handed off, or a model it no longer runs).
+func defaultSeat(cfg *config.Config, c *queue.Candidate, builder *providers.Seat) *providers.Seat {
+	if !c.OnDefault || c.DefaultModel == "" || builder.Provider.ID != c.Owner {
+		return nil
+	}
+	seat := cfg.Pool.Seat(c.Owner, c.DefaultModel)
+	if seat == nil || !providers.TierAtLeast(seat.Tier, config.MinTier[config.AsDifficulty(c.Difficulty)]) {
+		return nil
+	}
+	return seat
+}
+
 // RunReviewer is a build or revise run's own adversarial reviewer: its strongest seat of at
 // least medium, or None, and the change goes to a review run. (`difficulty` does not change it:
 // a hard item's builder is strong, so its own reviewer is too.)
@@ -586,6 +600,11 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 		// Its turn came (#2948): the model that approved it merges `main` and resolves it.
 		note = py.Strip(fmt.Sprintf("%s its turn came: %s, the model that approved it, merges `main` and "+
 			"resolves it.", note, seat.Describe()))
+		builder = seat
+	} else if seat := defaultSeat(ctx.Cfg, candidate, builder); seat != nil {
+		// Nobody answered its question in time (#2986): the model that asked goes ahead on its default.
+		note = py.Strip(fmt.Sprintf("%s nobody answered its question in time: %s, the model that asked, "+
+			"goes ahead on its default.", note, seat.Describe()))
 		builder = seat
 	}
 	var notes []string
