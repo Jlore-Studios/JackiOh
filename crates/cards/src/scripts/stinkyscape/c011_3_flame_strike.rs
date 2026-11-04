@@ -46,7 +46,6 @@ mod tests {
 
         #[test]
         fn deals_5_to_each_enemy_unit_none_to_the_hero_or_to_your_own() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [STRIKE, FILLER], "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [MENACE, MENACE] },
@@ -66,7 +65,6 @@ mod tests {
 
         #[test]
         fn a_divine_shield_stops_its_hit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [STRIKE, FILLER] },
                 "p2": { "hand": [FILLER], "field": [SHIELDED, VANILLA] },
@@ -82,7 +80,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_makes_each_hit_6() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [STRIKE, FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -101,7 +98,6 @@ mod tests {
 
         #[test]
         fn deals_10_to_each_enemy_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": STRIKE, "radiant": true }, FILLER], "field": [MENACE] },
                 "p2": { "hand": [FILLER], "field": [MENACE, MENACE] },

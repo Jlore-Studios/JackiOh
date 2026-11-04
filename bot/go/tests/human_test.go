@@ -172,11 +172,11 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 	h.gh.Labels.Set(config.LabelHumanRequired, pyjson.New("name", config.LabelHumanRequired, "color", "ededed",
 		"description", ""))
 	_, result := h.night(workFake(map[string]runner.Handler{
-		"build": workBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.",
+		"build": workBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Cloudflare's project settings.",
 			true)),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "human_required")}, []any{"blocked", true})
-	assertIn(t, "Set `VITE_SUPABASE_URL` in Vercel's project settings.",
+	assertIn(t, "Set `VITE_SUPABASE_URL` in Cloudflare's project settings.",
 		humanHandedToPeople(t, h, 12))
 	entry := pyjson.List(config.Labels.Get(config.LabelHumanRequired))
 	color, description := entry[0], entry[1]
@@ -223,7 +223,8 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 			true)),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, dig(t, result, "status"), "blocked")
-	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired)) // `bot:pr` stays
+	// `bot:pr` stays, and `needs decision` goes on beside `human required` (#2986).
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired, config.LabelNeedsDecision))
 	said := lastOf(t, h.gh.BotComments(40))
 	assertTrue(t, strings.HasPrefix(said, humanPeople+" this needs a person: I cannot revise this"))
 	assertIn(t, "`/harness revise <notes>`", said)

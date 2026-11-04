@@ -18,7 +18,7 @@ const ARCHIVIST: &str = "core-030";
 const PREM_PANTHER: &str = "core-032";
 const RENO: &str = "core-053";
 const SILLY_SILAS: &str = "core-052";
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const TWISTED_SORCERER: &str = "core-068";
 const HEROIC_POWER: &str = "core-098";
 const CALL_TO_CHAOS: &str = "core-095";
@@ -152,16 +152,16 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
     use super::*;
 
     #[test]
-    fn r102_a_crafted_bigot_twisted_sorcerer_destroys_bigot_s_target_and_deals_the_sorcerer_s_4_to_the_sorcerer_s_own_target_r90()
+    fn r102_a_crafted_speciesist_twisted_sorcerer_destroys_speciesist_s_target_and_deals_the_sorcerer_s_4_to_the_sorcerer_s_own_target_r90()
      {
         register_all();
         let mut g = scenario(json!({
             "p1": { "hand": [RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [PREM_PANTHER] },
         }));
-        // Craft a Card's result for Bigot and Twisted Sorcerer, made directly (R77): the test is about the
+        // Craft a Card's result for Speciesist and Twisted Sorcerer, made directly (R77): the test is about the
         // fused card, not about which two Discover offers the pools of every set (R380) make.
-        craft_fused(&mut g, P1, &[BIGOT, TWISTED_SORCERER]);
+        craft_fused(&mut g, P1, &[SPECIESIST, TWISTED_SORCERER]);
         let crafted = must(
             g.hand(P1)
                 .iter()

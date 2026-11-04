@@ -96,6 +96,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -246,7 +248,6 @@ mod tests {
 
         #[test]
         fn r74_r831004_the_chosen_card_of_the_chosen_set_arrives_in_your_hand_radiant() {
-            crate::register_all();
             let mut s = trial_scenario(false, "Classic");
             let chosen = take_first(&mut s, "Classic");
 
@@ -259,7 +260,6 @@ mod tests {
 
         #[test]
         fn base_the_card_arrives_at_its_printed_cost_only_the_radiant_face_makes_it_free_r65() {
-            crate::register_all();
             let mut s = trial_scenario(false, "Meditative");
             let chosen = take_first(&mut s, "Meditative");
 
@@ -273,7 +273,6 @@ mod tests {
 
         #[test]
         fn r113_r831004_paused_at_the_numbers_the_set_survives_json_and_the_copy_answers_to_the_same_hash() {
-            crate::register_all();
             let s = trial_scenario(false, "Classic+");
             let copy: GameState = serde_json::from_value(js(s.state())).expect("the state round-trips");
             assert_eq!(&copy, s.state());
@@ -306,7 +305,6 @@ mod tests {
 
         #[test]
         fn it_costs_0_r65_the_card_the_discover_adds_is_radiant_and_carries_a_0_cost_override() {
-            crate::register_all();
             let mut s = trial_scenario(true, "Classic");
             let chosen = take_first(&mut s, "Classic");
 
@@ -319,7 +317,6 @@ mod tests {
 
         #[test]
         fn r386_a_degrade_makes_the_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "kys-trial", "p1": { "hand": [{ "def": TRIAL, "radiant": true }] } }));
             assert!(!crate::can_upgrade_number(&s, TRIAL, "setCost"));
             assert_eq!(crate::degrade_number(&mut s, TRIAL, "setCost"), 1);
@@ -337,7 +334,6 @@ mod tests {
 
         #[test]
         fn r247_offers_three_numbers_each_option_is_a_card_s_index_labeled_with_it_and_keyed_by_it() {
-            crate::register_all();
             let s = trial_scenario(false, "Core");
             let options = s.state().pending.as_ref().map(|p| p.options.clone()).unwrap_or_default();
 
@@ -354,7 +350,6 @@ mod tests {
 
         #[test]
         fn r247_r2739000_the_chooser_s_view_shows_the_numbers_and_names_no_card_the_other_seat_sees_how_many() {
-            crate::register_all();
             let s = trial_scenario(false, "Classic");
             let chooser = s.view(Some(P1)).pending;
             let watcher = s.view(Some(P2)).pending;
@@ -380,7 +375,6 @@ mod tests {
 
         #[test]
         fn r247_legalactions_offers_one_answer_per_number_and_the_answer_adds_the_radiant_card_with_that_index() {
-            crate::register_all();
             let mut s = trial_scenario(true, "Meditative");
             let choice_id = s.state().pending.as_ref().map(|p| p.id.clone()).unwrap_or_default();
             let answers: Vec<Vec<Selection>> = legal_actions(s.state(), P1)

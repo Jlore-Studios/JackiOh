@@ -78,6 +78,8 @@ mod tests {
     use jackioh_engine::subsystems::craft::{compile_crafted_def, craft_id};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -91,7 +93,6 @@ mod tests {
     }
 
     fn coding(cost: i32, radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }], "mana": 10, "library": [VANILLA] },
             "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
@@ -137,7 +138,6 @@ mod tests {
 
         #[test]
         fn r1182002_opens_m17s_cost_prompt_then_the_craft_prompt_with_the_from_scratch_flag() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [ID], "mana": 10 },
                 "p2": { "hand": [VANILLA] },

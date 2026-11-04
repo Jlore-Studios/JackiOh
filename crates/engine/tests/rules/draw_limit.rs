@@ -11,7 +11,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    Bench, act, act_ok, events_json, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
+    Bench, act, act_ok, events_json, ids, in_hand, matches_object, new_game, put, set_library, setup_catalog,
+    slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, anti_greed, cast_spell, cast_unit, draw_two, log_card, notes, palantir, plain,
@@ -49,10 +50,6 @@ fn playing(seed: &str) -> GameState {
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     state
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn def_ids(cards: &[CardInstance]) -> Vec<String> {
@@ -350,7 +347,7 @@ mod r457_b5_e3_draw_limits {
             slot(PlayerId::P1, Row::Backrow, 1),
             Default::default(),
         );
-        let library = ids(&set_library(
+        let library = ids(set_library(
             &mut state,
             PlayerId::P2,
             &strings(&["fx-25", "fx-26"]),

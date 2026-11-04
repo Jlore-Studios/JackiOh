@@ -89,6 +89,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use crate::ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -109,10 +110,6 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": library() },
             "p2": { "hand": theirs, "library": library() },
         }))
-    }
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
     }
 
     /// The cards the one delayed entry watches.

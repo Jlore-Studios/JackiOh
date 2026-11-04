@@ -97,6 +97,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const TECH: &str = "classic-040";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
@@ -136,7 +138,6 @@ mod tests {
 
             #[test]
             fn r60_with_4_enemy_permanents_it_steals_one_at_random_which_is_now_yours() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
@@ -153,7 +154,6 @@ mod tests {
 
             #[test]
             fn r15_a_stolen_unit_lands_in_the_same_lane_of_your_row_when_it_is_free() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -169,7 +169,6 @@ mod tests {
 
             #[test]
             fn r15_with_no_free_zone_in_your_row_the_pick_stays_with_them_and_nothing_is_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -193,7 +192,6 @@ mod tests {
 
             #[test]
             fn c3_or_fewer_enemy_permanents_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE], "backrow": [FIELD_SPELL] },
@@ -208,7 +206,6 @@ mod tests {
 
             #[test]
             fn r13_a_card_dormant_under_a_stack_pile_does_not_count_a_face_down_trap_does() {
-                crate::register_all();
                 let mut dormant = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, { "def": FIENDER, "stack": true }, MENACE, TEMPO] },
@@ -230,7 +227,6 @@ mod tests {
 
             #[test]
             fn r171_the_steal_is_an_entry_a_stolen_unit_without_rush_or_charge_cant_attack_this_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -246,7 +242,6 @@ mod tests {
 
             #[test]
             fn r33_a_stolen_face_down_trap_stays_face_down_and_is_read_by_you_from_then_on_not_by_them() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TECH, ANCHOR] }, "p2": { "hand": [ANCHOR], "backrow": face_down_traps() } }));
 
                 s.play(TECH, json!({ "zone": 5 }));
@@ -264,7 +259,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_the_threshold_to_5_stops_4_permanents_an_upgrade_to_3_lets_3_be_enough() {
-                crate::register_all();
                 let mut harder = scenario(json!({
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA] },
@@ -288,7 +282,6 @@ mod tests {
 
             #[test]
             fn is_a_6_6_that_with_4_enemy_permanents_asks_which_one_to_steal_and_steals_that_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
@@ -309,7 +302,6 @@ mod tests {
 
             #[test]
             fn r13_the_prompt_offers_the_top_of_a_stack_pile_and_never_the_card_beneath_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": {
@@ -334,7 +326,6 @@ mod tests {
 
             #[test]
             fn r15_with_your_unit_row_full_the_prompt_still_opens_and_a_unit_you_pick_stays_with_them() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR], "field": [MENACE, MENACE, MENACE, MENACE] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -351,7 +342,6 @@ mod tests {
 
             #[test]
             fn c3_or_fewer_no_prompt_opens_and_nothing_is_stolen() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
@@ -365,7 +355,6 @@ mod tests {
 
             #[test]
             fn r177_a_face_down_option_carries_only_its_id_your_view_of_the_prompt_never_names_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "backrow": face_down_traps() },
@@ -382,7 +371,6 @@ mod tests {
 
             #[test]
             fn r33_the_trap_you_pick_is_read_by_you_once_it_is_yours() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "backrow": face_down_traps() },
@@ -398,7 +386,6 @@ mod tests {
 
             #[test]
             fn r113_the_paused_pick_survives_a_json_round_trip_and_resumes_through_reduce() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
@@ -431,7 +418,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_the_threshold_to_5_stops_4_permanents_asking() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
@@ -449,7 +435,6 @@ mod tests {
     /// are not the four the Cry needs.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_counts_once() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [TECH, ANCHOR] },
             "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },

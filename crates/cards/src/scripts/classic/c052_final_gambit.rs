@@ -103,6 +103,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const GAMBIT: &str = "classic-052";
     const ARGUSLAND: &str = "classic-075";
     const VITAL_KILL: &str = "classic-029"; // C #29 Book of Vital Kill: set a hero's health to 13.
@@ -169,7 +171,6 @@ mod tests {
 
             #[test]
             fn r33_it_is_set_face_down_the_opponents_view_shows_its_back_and_never_names_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [GAMBIT, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(GAMBIT, json!({}));
                 let card = s.card(GAMBIT);
@@ -216,7 +217,6 @@ mod tests {
             }
             #[test]
             fn r44_lethal_is_this_hit_alone_a_4_at_5_health_leaves_it_set_and_the_3_that_follows_at_1_fires_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK, "health": 5 },
                     "p2": { "hand": [LUNAR, FILLER], "field": [VANILLA], "library": DECK },
@@ -264,7 +264,6 @@ mod tests {
 
             #[test]
             fn r125_fatigue_is_damage_and_counts_and_it_fires_on_its_controllers_own_turn() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 1 },
                     "p2": { "hand": [FILLER], "library": DECK },
@@ -279,7 +278,6 @@ mod tests {
 
             #[test]
             fn r18_losing_health_never_opens_it_the_jelly_beans_5_at_5_health_ends_the_game_with_the_trap_still_set() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, FILLER],
@@ -297,7 +295,6 @@ mod tests {
 
             #[test]
             fn set_health_never_opens_it_c_29_sets_your_hero_to_13_and_the_trap_stays_set() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK },
                     "p2": { "hand": [VITAL_KILL, FILLER] },
@@ -311,7 +308,6 @@ mod tests {
 
             #[test]
             fn a_hit_on_a_unit_never_opens_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
@@ -344,7 +340,6 @@ mod tests {
 
             #[test]
             fn r1704001_fused_field_trap_cancels_one_hit_a_turn_the_next_lands() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FORWARD, FILLER], "health": 4 },
                     "p2": { "hand": [RAPID, GAMBIT, TRUE_STRIKE], "library": DECK, "health": 40 },
@@ -404,7 +399,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_heals_12_and_draws_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK, "health": 4 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -420,7 +414,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_heals_8_and_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK, "health": 4 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -440,7 +433,6 @@ mod tests {
 
             #[test]
             fn r33_it_is_set_face_down_like_the_base_face() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GAMBIT, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -504,7 +496,6 @@ mod tests {
 
             #[test]
             fn r18_losing_health_never_opens_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, FILLER],
@@ -521,7 +512,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_heals_18() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
@@ -617,7 +607,6 @@ mod tests {
             #[test]
             fn s2_5_a_draw_if_both_heroes_are_at_0_the_re_aimed_fatigue_kills_the_opponent_and_the_next_one_in_the_same_draw_kills_you() {
                 kept(|| {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "p1": { "hand": [FILLER], "field": [PANTHER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 1 },
                         "p2": { "hand": [FILLER], "field": [GARY], "health": 1 },
@@ -635,7 +624,6 @@ mod tests {
             #[test]
             fn r216_the_game_ends_at_that_state_check_so_nothing_after_it_happens_the_follow_up_neither_heals_nor_draws() {
                 kept(|| {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK, "health": 1 },
                         "p2": { "hand": [LUNAR, FILLER], "health": 3 },
@@ -652,7 +640,6 @@ mod tests {
             #[test]
             fn r216_fused_into_a_field_trap_that_stays_c_74_it_re_aims_its_own_fatigue_only_until_the_enemy_hero_falls_and_the_follow_ups_owed_after_that_do_nothing() {
                 kept(|| {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "p1": { "hand": [FORWARD, FILLER], "health": 4 },
                         "p2": { "hand": [RAPID, GAMBIT, TRUE_STRIKE], "library": DECK, "health": 40 },

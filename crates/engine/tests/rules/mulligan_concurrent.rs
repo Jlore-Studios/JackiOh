@@ -16,14 +16,10 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::{add_to_hand, discard_random};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{act, new_game, setup_catalog};
-use crate::rules::fixtures::scripts::{cn_virus, hinder};
+use crate::rules::fixtures::harness::{act, ids, input, new_game, setup_catalog};
+use crate::rules::fixtures::scripts::{hinder, super_virus};
 
 const SEATS: [PlayerId; 2] = [P1, P2];
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
 
 /// A random subset of the seat's offered cards, drawn from the test's own stream.
 fn some_keep(state: &GameState, player: PlayerId, pick: &mut Rng) -> Vec<String> {
@@ -61,10 +57,6 @@ fn answer_in(begun: &GameState, order: &[PlayerId], keep: &PerPlayer<Vec<String>
         log.push(action);
     }
     Answered { state, log }
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 mod r265_the_mulligans_are_open_at_once {
@@ -109,8 +101,8 @@ mod r265_the_mulligans_are_open_at_once {
     #[test]
     fn r265_the_order_does_not_matter_with_cast_on_draw_replacements_and_a_handicapped_seat_either() {
         setup_catalog();
-        // Hinder and CN-Virus are cast when drawn, so replacement draws cast, draw the match rng and
-        // touch both seats (§2.4, R70); a Hard seat mulligans four cards as p1 (R182). CN-Virus is a
+        // Hinder and Super-Virus are cast when drawn, so replacement draws cast, draw the match rng and
+        // touch both seats (§2.4, R70); a Hard seat mulligans four cards as p1 (R182). Super-Virus is a
         // token, so it joins each library after the decks are checked.
         let hard = AI_DIFFICULTY.hard;
         let handicaps = PerPlayerOpt {
@@ -130,7 +122,7 @@ mod r265_the_mulligans_are_open_at_once {
                 ..CreateGameOptions::default()
             });
             for seat in SEATS {
-                let virus = new_instance(&mut game, &cn_virus().id, seat, Zone::Library { player: seat });
+                let virus = new_instance(&mut game, &super_virus().id, seat, Zone::Library { player: seat });
                 game.players[seat].library.push(virus);
             }
             let begun = begin_game(&game).state;
@@ -148,7 +140,7 @@ mod r265_the_mulligans_are_open_at_once {
                 .collect();
             if played
                 .iter()
-                .any(|card| card.def_id == hinder().id || card.def_id == cn_virus().id)
+                .any(|card| card.def_id == hinder().id || card.def_id == super_virus().id)
             {
                 casts += 1;
             }

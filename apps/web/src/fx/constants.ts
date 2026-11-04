@@ -191,7 +191,18 @@ export const FX_MOTIF_TRAUMA = {
   deal: 0,
   seal: 0.2,
   recall: 0,
+  hex: 0.15,
 } as const;
+// R2797000: Stinkyscape's three Flourishes (fx/cards/stinkyscape/). Olivian Expanse's rift shakes as it
+// gives up its card; Imitated Instrumentality's three boots leave FX_MAGI_STAGGER of D apart, at most
+// FX_MAGI_BOOTS of them staggered, the first shaking the board; Drone Core X's Battleship warps in from
+// FX_WARP_FROM of the board (its top edge) and shakes as it lands.
+export const FX_TERMINUS_TRAUMA = 0.5;
+export const FX_MAGI_STAGGER = 0.05;
+export const FX_MAGI_BOOTS = 3;
+export const FX_MAGI_TRAUMA = 0.3;
+export const FX_WARP_TRAUMA = 0.6;
+export const FX_WARP_FROM = { x: 0.5, y: 0 } as const;
 /** R2784000: `tithe` glints by count on hidden backs, at most this many (R202). */
 export const FX_MOTIF_TITHE_MAX = 5;
 export const FX_MOTIF_DEAL_MAX = 5; // deal: the cards one entry deals
@@ -318,6 +329,24 @@ export const FX_QUEST_HOLD_MS = 1_500;
 // R2785000: a quest's set piece lands this hard; a system's Signature this hard.
 export const FX_QUEST_TRAUMA = 0.5;
 export const FX_SYSTEM_TRAUMA = 0.3;
+// R2801000: the Starship (fx/starship.ts). A fuse run's pieces fly in this far apart, each landing at
+// FX_STARSHIP_FUSE_LAND_AT of its share and bolting on this hard.
+export const FX_STARSHIP_FUSE_STAGGER_MS = 250;
+export const FX_STARSHIP_FUSE_LAND_AT = 0.6;
+export const FX_STARSHIP_FUSE_TRAUMA = 0.25;
+// R2801000: the launch's countdown, as fractions of its hold, the count shown being the counts left
+// (3, 2, 1); its engines ignite at FX_STARSHIP_IGNITE_AT of the hold.
+export const FX_STARSHIP_COUNT_AT = [0, 0.25, 0.5] as const;
+export const FX_STARSHIP_IGNITE_AT = 0.75;
+// R2801000: after the hold, as fractions of the launch's own motion: the contrail's flight up, and the landing.
+export const FX_STARSHIP_LIFT_AT = 0.45;
+export const FX_STARSHIP_LAND_AT = 0.8;
+// R2801000: where on the Starship its Dormant badge burns away as it lifts off (the seal's moon, DormantSeal.tsx).
+export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
+// R2801000: the launch cue outlasts its entry by this much (inside FX_MAX_TAIL_MS, R200); under Reduce
+// Motion its still frame stands this long and holds nothing.
+export const FX_STARSHIP_TAIL_MS = 400;
+export const FX_STARSHIP_STILL_MS = 1_600;
 // R961: the jade tally grows this much per step, at most this big.
 export const FX_JADE_SCALE_STEP = 0.15;
 export const FX_JADE_SCALE_MAX = 2;

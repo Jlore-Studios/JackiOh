@@ -28,6 +28,11 @@
 #   infra              `rust (checks, fuzz 200)`'s terraform steps over infra/ (#1708): fmt, init
 #                      without the backend, validate, and the lock file
 #
+# ci.yml's `changes` job runs `main`'s copy of this script, the base's, not a pull request's own
+# (#2986): an edit here scopes the pull requests after it lands, never the one that makes it, which
+# runs every job (this script changed) and any line only its copy declares in `LINES=`, as `true`
+# (read, never run). Keep `LINES=` one line of names.
+#
 # ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
 # for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
 # job-level `if:` cannot see `matrix`, a first step that turns the entry's other steps off. Each
@@ -296,7 +301,7 @@ for file in $files; do
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
-    scripts/browse.sh | scripts/promote-production.sh | scripts/worktree.sh) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done

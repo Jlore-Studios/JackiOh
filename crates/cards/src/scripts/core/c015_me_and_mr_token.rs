@@ -38,6 +38,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const RUSH_TOKEN: &str = "core-t-rush";
 
     /// Makes the hand copy radiant, then plays it.
@@ -63,7 +65,7 @@ mod tests {
     }
 
     /// `["core-015", RUSH_TOKEN, null, …]` as the row's Rust shape.
-    fn ids(row: &[Option<&str>]) -> Vec<Option<String>> {
+    fn row_ids(row: &[Option<&str>]) -> Vec<Option<String>> {
         row.iter().map(|id| id.map(str::to_string)).collect()
     }
 
@@ -75,14 +77,13 @@ mod tests {
 
             #[test]
             fn summons_one_rush_token_into_the_next_free_zone_r64() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["core-015", "core-005"], "library": ["core-005"] } }));
 
                 s.play("core-015", json!({}));
 
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-015"), Some(RUSH_TOKEN), None, None, None])
+                    row_ids(&[Some("core-015"), Some(RUSH_TOKEN), None, None, None])
                 );
                 s.expect_stats("core-015", json!({ "attack": 1, "health": 1 }));
                 let token = s.card(RUSH_TOKEN).clone();
@@ -91,7 +92,6 @@ mod tests {
 
             #[test]
             fn summons_nothing_extra_when_the_unit_itself_takes_the_last_zone_r64() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "field": ["core-008", "core-008", "core-008", "core-008"],
@@ -104,7 +104,7 @@ mod tests {
 
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("core-015")])
+                    row_ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-008"), Some("core-015")])
                 );
                 assert_eq!(token_count(&s, PlayerId::P1), 0);
             }
@@ -115,14 +115,13 @@ mod tests {
 
             #[test]
             fn summons_3_rush_tokens() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": ["core-015", "core-005"], "library": ["core-005"] } }));
 
                 play_radiant(&mut s, "core-015");
 
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-015"), Some(RUSH_TOKEN), Some(RUSH_TOKEN), Some(RUSH_TOKEN), None])
+                    row_ids(&[Some("core-015"), Some(RUSH_TOKEN), Some(RUSH_TOKEN), Some(RUSH_TOKEN), None])
                 );
                 s.expect_stats("core-015", json!({ "attack": 2, "health": 2 }));
                 assert_eq!(token_count(&s, PlayerId::P1), 3);
@@ -130,7 +129,6 @@ mod tests {
 
             #[test]
             fn r64_makes_fewer_tokens_when_the_board_is_nearly_full_and_the_extras_fizzle_silently() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "field": ["core-008", "core-008", "core-008"],
@@ -144,7 +142,7 @@ mod tests {
                 // One zone was left after the unit landed, so one token; the other two summons did nothing.
                 assert_eq!(
                     row(&s, PlayerId::P1),
-                    ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-015"), Some(RUSH_TOKEN)])
+                    row_ids(&[Some("core-008"), Some("core-008"), Some("core-008"), Some("core-015"), Some(RUSH_TOKEN)])
                 );
                 assert_eq!(token_count(&s, PlayerId::P1), 1);
             }
@@ -152,7 +150,6 @@ mod tests {
             #[test]
             fn r386_an_upgrade_summons_4_tokens_and_a_degrade_2() {
                 for (upgrade, tokens) in [(true, 4), (false, 2)] {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "p1": { "hand": [{ "def": "core-015", "radiant": true }, "core-005"], "library": ["core-005"] }
                     }));
@@ -170,7 +167,6 @@ mod tests {
 
         #[test]
         fn r749_the_base_face_s_one_token_is_never_tuned() {
-            crate::register_all();
             let s = scenario(json!({ "p1": { "hand": ["core-015"] } }));
             assert!(!crate::can_upgrade_number(&s, "core-015", "tokens"));
             assert!(!crate::can_degrade_number(&s, "core-015", "tokens"));

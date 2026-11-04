@@ -19,7 +19,7 @@ use jackioh_engine::zones::{
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act_ok, events_of_type, in_hand, json_of, matches_object, new_game, put, setup_catalog, slot,
+    act_ok, events_of_type, ids, in_hand, json_of, matches_object, new_game, put, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, contract, contract_ask, contract_end, doom, doom_all, hurrah, later, log_card,
@@ -31,10 +31,6 @@ fn register() {
     let mut scripts = registered_scripts().clone();
     scripts.extend(TURN_SCRIPTS.clone());
     register_scripts(scripts);
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn playing(seed: &str) -> GameState {

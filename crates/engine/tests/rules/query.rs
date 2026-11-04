@@ -14,7 +14,9 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{act, in_hand, live, new_game, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    act, ids, in_hand, input, live, new_game, put, set_library, sink_for, slot,
+};
 use crate::rules::fixtures::scripts::stockpile;
 
 /// A state in the main phase with nothing dealt, so every pile below is exactly what a test built.
@@ -24,10 +26,6 @@ fn board(seed: &str) -> GameState {
     state.active = P1;
     state.phase = Phase::Main;
     state
-}
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 /// Past the mulligans, in the main phase of turn 1, so `play` is a legal action.
@@ -56,10 +54,6 @@ fn play_into(state: &GameState, card: &CardInstance, lane: i32) -> GameState {
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": lane }, "playerId": "p1" }),
         ),
     )
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn def_ids(cards: &[CardInstance]) -> Vec<String> {
@@ -142,7 +136,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         draw_one(&mut sink_for(&mut state), P1, None);
 
         assert_eq!(
-            ids(&zone_cards(&state, P1, OffFieldZone::Hand)),
+            ids(zone_cards(&state, P1, OffFieldZone::Hand)),
             vec![top.id.clone()]
         );
         assert_eq!(
@@ -171,7 +165,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         move_to_zone(&mut state, &mut now, OffFieldZone::Graveyard, Default::default());
         assert_eq!(zone_count(&state, P1, OffFieldZone::Graveyard), 1);
         assert_eq!(
-            ids(&zone_cards(&state, P1, OffFieldZone::Graveyard)),
+            ids(zone_cards(&state, P1, OffFieldZone::Graveyard)),
             vec![unit.id.clone()]
         );
 
@@ -209,7 +203,7 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         cards.remove(0);
 
         assert_eq!(zone_count(&state, P1, OffFieldZone::Library), 2);
-        assert_eq!(ids(&zone_cards(&state, P1, OffFieldZone::Library)), ids(&library));
+        assert_eq!(ids(zone_cards(&state, P1, OffFieldZone::Library)), ids(&library));
         assert_eq!(zone_count(&state, P1, OffFieldZone::Hand), 1);
     }
 

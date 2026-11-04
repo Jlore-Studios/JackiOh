@@ -102,7 +102,6 @@ mod tests {
 
         #[test]
         fn r1867005_destroys_a_unit_with_3_attack_or_less_a_0_attack_one_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [PAIN, PAIN, FILLER] },
                 "p2": {
@@ -129,7 +128,6 @@ mod tests {
         /// so a target raised from 3 Attack to 5 between the two still dies.
         #[test]
         fn r1867005_a_target_raised_past_the_limit_after_the_pick_still_dies() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [PAIN, FILLER], "mana": 9 },
                 "p2": {
@@ -151,7 +149,6 @@ mod tests {
 
         #[test]
         fn r1867005_a_4_attack_unit_cannot_be_chosen_the_play_is_refused() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [PAIN, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -163,7 +160,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_of_the_ceiling_to_4_admits_a_4_attack_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [PAIN, FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -182,7 +178,6 @@ mod tests {
 
         #[test]
         fn r1867005_the_neighbours_die_too_a_9_attack_one_included() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": PAIN, "radiant": true }, FILLER] },
                 "p2": {

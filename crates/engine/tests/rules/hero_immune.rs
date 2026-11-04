@@ -8,19 +8,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{grunt, playing, recorder};
-use crate::rules::fixtures::harness::{act, put, sink_for, slot};
-
-/// An `ActionInput` written as `json!` (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{act, by, input, put, sink_for, slot};
 
 fn immune(state: &mut GameState, player: PlayerId) {
     let mut sink = sink_for(state);

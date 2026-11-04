@@ -266,16 +266,15 @@ func TestSweep_AReviewTheBotAlreadyAnsweredIsNotRedone(t *testing.T) {
 	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
-func TestSweep_AFailedCIRunNothingAnsweredIsRerunThenFixed(t *testing.T) {
+// A failed CI run nothing answered gets its CI fix from the sweep, with no re-run first (#2948).
+func TestSweep_AFailedCIRunNothingAnsweredIsFixed(t *testing.T) {
 	w := newSweepBase(t)
 	w.gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR}, SHA: "s1"})
 	w.gh.Runs.Set("99", pyjson.New("id", 99, "name", "CI", "head_sha", "s1", "head_branch", "bot/issue-5",
 		"status", "completed", "conclusion", "failure", "run_attempt", 1,
 		"created_at", sweepAnHourAgo, "html_url", "u", "pull_requests", []any{}))
 	sweep.Sweep(w.ctx)
-	assertEqual(t, w.gh.Reruns, []any{99})
-	w.gh.Runs.Obj("99").Set("run_attempt", 2)
-	sweep.Sweep(w.ctx)
+	assertEqual(t, w.gh.Reruns, []any{})
 	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
 	assertEqual(t, sweep.Sweep(w.ctx), []string{}) // queued: nothing more to do
 }

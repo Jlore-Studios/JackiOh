@@ -33,7 +33,6 @@ mod tests {
 
     #[test]
     fn ranged_takes_no_strike_back_from_a_defender_without_ranged() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [PARAGON, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
@@ -50,7 +49,6 @@ mod tests {
 
     #[test]
     fn its_death_fuses_nothing_it_is_no_starship_piece() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [PARAGON], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -66,7 +64,6 @@ mod tests {
 
     #[test]
     fn radiant_pierce_ignores_armor() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": PARAGON, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "field": [ARMORED], "library": filler(4) },

@@ -2,10 +2,14 @@
 // and the augments layered on it (`augment-…`: Animated, Signature), each owned card by card like a foil. R2725001:
 // each is offered on the cards `COSMETIC_OFFERS` lists, the server's own reading of the entry's offer, and on no
 // other. R2725002: a retired full art (R2655000, R2715000) counts as owning what it combines (`impliedBy`), and a
-// card pick written before #2725 looks as it did (`lookOf`). Presentation only: nothing here reaches the engine,
-// an action, `PlayerView` or the log (CLAUDE.md rule 7).
+// card pick written before #2725 looks as it did (`lookOf`). R2949000: Signature is worn only beside the Full art
+// version and Animated (`signatureFits`), and a face wearing it shows the Signature look. R2940000: #2940 adds the Alt
+// art, Sketch and Alt full art versions; R2940001: the full bleed of Full art and Alt full art (`isFullBleed`) and the
+// picture each version draws (`artPictureOf`). Presentation only: nothing here reaches the engine, an action,
+// `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import type { ArtPicture } from "./art/pictures.ts";
 
 /** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
 export const ANIMATED_ART_ID_PREFIX = "animated-";
@@ -25,7 +29,30 @@ export const AUGMENT_ANIMATED_ID = "augment-animated";
 /** R2725000: the Signature augment, Mythic: the card's name signed across its art. */
 export const AUGMENT_SIGNATURE_ID = "augment-signature";
 
-/** R2725000: what a face wears: its version (null for the normal face) and the augments layered on it. */
+/** R2940000: the Alt art version, Rare: a new picture of the card's subject in the normal frame. */
+export const VERSION_ALT_ART_ID = "version-alt-art";
+
+/** R2940000: the Sketch version, Rare: the card's picture in pencil and ink on paper, its frame a pencilled outline. */
+export const VERSION_SKETCH_ID = "version-sketch";
+
+/** R2940000: the Alt full art version, Legendary: Alt art's picture across the whole face. */
+export const VERSION_ALT_FULL_ART_ID = "version-alt-full-art";
+
+/** R2940001: whether a face wearing `version` lays its art across the whole face: Full art and Alt full art. */
+export function isFullBleed(version: string | null): boolean {
+  return version === VERSION_FULL_ART_ID || version === VERSION_ALT_FULL_ART_ID;
+}
+
+/** R2940001: the picture a face wearing `version` draws (pictures.ts): Alt art's for Alt art and Alt full art, the Sketch for Sketch. */
+export function artPictureOf(version: string | null): ArtPicture {
+  if (version === VERSION_ALT_ART_ID || version === VERSION_ALT_FULL_ART_ID) return "alt";
+  return version === VERSION_SKETCH_ID ? "sketch" : "normal";
+}
+
+/**
+ * R2725000: what a face wears: its version (null for the normal face) and the augments layered on it. R2949000:
+ * `signed` holds only beside the Full art version and `animated`.
+ */
 export type CardLook = { readonly version: string | null; readonly animated: boolean; readonly signed: boolean };
 
 /** R2725000: the normal face, with no augment. */
@@ -78,17 +105,33 @@ function lookOfId(id: string): CardLook | null {
   };
 }
 
+/** The look `fullArt` names on its own, before any augment: the normal face where it names none. */
+function baseLookOf(fullArt: boolean | string | null | undefined): CardLook {
+  const base = fullArt === true ? { version: VERSION_FULL_ART_ID, animated: false, signed: false } : typeof fullArt === "string" ? lookOfId(fullArt) : null;
+  return base ?? NORMAL_LOOK;
+}
+
+/**
+ * R2949000: whether a pick of `fullArt` and `augments` wears the Full art version and Animated, as Signature needs, as
+ * the server's `cosmetics::signature_fits` reads it: `fullArt` the version, `true` or a retired full art that implies
+ * it, and Animated listed or implied by it. Reads no ownership and no offer.
+ */
+export function signatureFits(fullArt: boolean | string | null | undefined, augments: readonly string[] | undefined = []): boolean {
+  const base = baseLookOf(fullArt);
+  return base.version === VERSION_FULL_ART_ID && (base.animated || augments.includes(AUGMENT_ANIMATED_ID));
+}
+
 /**
  * R2725000, R2725002: the look a card's pick names: `fullArt` false or absent is the normal face, `true` the Full art
  * version (a full-art card's still Epic), an id the version or retired full art it names, which a Legendary makes
  * animated and a Mythic animated and signed, as they printed before #2725; then each of `augments` layers on it. An
- * id this client does not know names the normal face, and an augment it does not know adds nothing.
+ * id this client does not know names the normal face, and an augment it does not know adds nothing. R2949000:
+ * Signature layers only where the pick fits it (`signatureFits`).
  */
 export function lookOf(fullArt: boolean | string | null | undefined, augments: readonly string[] | undefined = []): CardLook {
-  const base = fullArt === true ? { version: VERSION_FULL_ART_ID, animated: false, signed: false } : typeof fullArt === "string" ? lookOfId(fullArt) : null;
-  const look = base ?? NORMAL_LOOK;
+  const look = baseLookOf(fullArt);
   const animated = look.animated || augments.includes(AUGMENT_ANIMATED_ID);
-  const signed = look.signed || augments.includes(AUGMENT_SIGNATURE_ID);
+  const signed = look.signed || (augments.includes(AUGMENT_SIGNATURE_ID) && signatureFits(fullArt, augments));
   return animated === look.animated && signed === look.signed ? look : { ...look, animated, signed };
 }
 

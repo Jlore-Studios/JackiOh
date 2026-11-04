@@ -4,7 +4,7 @@
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
-//! The rules tests take these helpers from here rather than a copy (#1777, #1997, #2024, #2160;
+//! The rules tests take these helpers from here rather than a copy (#1777, #1997, #2024, #2160, #2930;
 //! crates/tools/tests/acceptance.rs refuses a copy, a local `static NONCE` and a local struct of just
 //! `events` and `rng`); a file that calls one `run` or `playing` imports it under that name.
 
@@ -141,6 +141,11 @@ pub fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
+/// The ids of the cards `cards` yields, owned or borrowed, in order (#2930).
+pub fn ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
+    cards.into_iter().map(|card| card.borrow().id.clone()).collect()
+}
+
 pub fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
@@ -185,6 +190,11 @@ pub fn next_nonce() -> String {
 /// included; a nonce it carries is replaced.
 pub fn next_action(body: impl Serialize) -> Action {
     json_as::<ActionInput>(json_of(body)).with_nonce(next_nonce())
+}
+
+/// An `ActionInput` from its JSON object (SURFACE §8; #2930).
+pub fn input(body: Value) -> ActionInput {
+    json_as(body)
 }
 
 pub fn act_result(state: &GameState, body: impl Serialize) -> ReduceResult {
@@ -265,6 +275,14 @@ pub fn run_effect(state: &mut GameState, effect: Effect, controller: PlayerId) -
 /// back; its events.
 pub fn run_as_p1(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, PlayerId::P1)
+}
+
+/// Hook options with `player` as the controller (#2930).
+pub fn by(player: PlayerId) -> HookOptions {
+    HookOptions {
+        controller: Some(player),
+        ..Default::default()
+    }
 }
 
 /// One effect applied straight through its `apply` under `options`, with no card of its own and no

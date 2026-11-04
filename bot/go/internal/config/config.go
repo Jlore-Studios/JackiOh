@@ -87,12 +87,6 @@ var StateBranch = Identity.StateBranch
 // StateFile is STATE_FILE = "state.json".
 var StateFile string = "state.json"
 
-// NoDeploy is the files an orphan branch the bot writes to starts with beside its own: Vercel
-// counts a deployment for every push to every branch and reads its settings from the commit
-// pushed, so a branch with no `vercel.json` of its own deploys on every write
-// (docs/architecture.md, §4.2).
-var NoDeploy = map[string]string{"vercel.json": "{ \"git\": { \"deploymentEnabled\": false } }\n"}
-
 // NightWorkflow is NIGHT_WORKFLOW = IDENTITY.workflow.
 var NightWorkflow = Identity.Workflow
 
@@ -159,6 +153,7 @@ var own = []labelDef{
 	{"building", "fbca04", "The night bot is building this now"},
 	{"revising", "fbca04", "The night bot is revising this pull request now"},
 	{"fixing-ci", "fbca04", "The night bot is fixing this pull request's red CI or merge queue build now"},
+	{"resolving", "fbca04", "The night bot is resolving this pull request's merge conflict now"},
 	{"reviewing", "fbca04", "The night bot is reviewing this pull request now"},
 	{"reconciling", "fbca04", "The night bot is reconciling this tree's parts into one pull request now"},
 	{"pr-open", "0e8a16", "The night bot opened a PR for this"},
@@ -172,6 +167,7 @@ var own = []labelDef{
 	{"stuck", "d93f0b", "It failed every review round it had: a comment says why, for a person to review"},
 	{"merging", "0e8a16", "Approved, with auto-merge on: the night bot's pull request is in CI or the merge queue"},
 	{"waiting", "c5def5", "The night bot holds it for the subscription that owns it until that can start again: see its comment"},
+	{"waiting-turn", "c2e0c6", "Approved: the night bot's draft waits for an overlapping pull request ahead of it to merge first"},
 }
 
 // modeLabelDefs is _MODE_LABELS: the labels of the modes (`identity.MODES`), for a bot that has
@@ -193,6 +189,8 @@ var saidModeLabels = []string{"fullsend", "tree"}
 // creates them.
 var shared = []labelDef{
 	{"ready for merge", "0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"},
+	// #2986: a stop only a person can unblock, a question or a hand-over, beside `bot:blocked`.
+	{"needs decision", "d73a4a", "A bot stopped on a question or on what only a person can do: its comment says what, and until when"},
 	{"human", "ededed", "People do this: the night bot never queues, plans, builds or labels it"},
 	{"human required", "e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"},
 	{"person merges", "1d76db", "The bot builds it, but a person reviews and merges its pull request"},
@@ -307,7 +305,8 @@ var LabelBuild = LabelPrefix + "build"
 // kind (`bot:building`, #2748): while a run holds an item it carries exactly one of them, put on
 // by the claim (`plan.Claim`, from `LiveRun`) and taken off as the run is delivered. They replace
 // `bot:working` (`LabelWorking`), which said only that some run held it.
-var LiveRuns = []string{"planning", "splitting", "building", "revising", "fixing-ci", "reviewing", "reconciling"}
+var LiveRuns = []string{"planning", "splitting", "building", "revising", "fixing-ci", "resolving", "reviewing",
+	"reconciling"}
 
 // LiveLabels are the live labels, in `LiveRuns`' order.
 var LiveLabels = liveLabels()
@@ -335,6 +334,11 @@ var LabelRevising = LabelPrefix + "revising"
 
 // LabelFixingCI is a revision's whose cause is a red CI run or the merge queue (`source` "ci").
 var LabelFixingCI = LabelPrefix + "fixing-ci"
+
+// LabelResolving is a revision's whose cause is a merge conflict (`source` "conflict", #2948): it
+// merges `main` and resolves it, the harness first (`resolve`), on the lane that owns the pull
+// request.
+var LabelResolving = LabelPrefix + "resolving"
 
 // LabelReviewing is a review run's.
 var LabelReviewing = LabelPrefix + "reviewing"
@@ -374,8 +378,9 @@ func LiveLabel(run string) string {
 // LiveRun is the kind of run (`LiveRuns`) that holds an item: `kind` is the item's (`build`,
 // `revise`, `review`; "" reads as a build, or a revision when `pr`), `action` the run's (`plan` for
 // a planning run), `mode` how a build is made (`queue.ModeOf`: `fullsend`, Squishy's `split`,
-// …), `source` what queued a revision (`ci`, from a red CI run or the merge queue, is a CI fix),
-// and `reconcile` whether a fullsend build merges parts already split (its tree has them).
+// …), `source` what queued a revision (`ci`, from a red CI run or the merge queue, is a CI fix;
+// `conflict`, a merge conflict, is a resolution, #2948), and `reconcile` whether a fullsend build
+// merges parts already split (its tree has them).
 func LiveRun(kind, action, mode, source string, reconcile, pr bool) string {
 	if kind == "" {
 		kind = "build"
@@ -388,6 +393,8 @@ func LiveRun(kind, action, mode, source string, reconcile, pr bool) string {
 		return "reviewing"
 	case kind == "revise" && source == "ci":
 		return "fixing-ci"
+	case kind == "revise" && source == "conflict":
+		return "resolving"
 	case kind == "revise":
 		return "revising"
 	case action == "plan":
@@ -415,6 +422,14 @@ var LabelMerging = LabelPrefix + "merging"
 // label when the item leaves the queue (`queue.SetStateLabel`) or a person hands it off
 // (`plan.Handoff`).
 var LabelWaiting = LabelPrefix + "waiting"
+
+// LabelWaitingTurn is an approved draft that waits for an overlapping pull request ahead of it to
+// merge before it goes ready (#2948, section 2): its own review run approved it, but its test-merge
+// after a pull request approved earlier, and conflict-free, conflicted. It is a state label
+// (`queue.StateLabels`): the lane keeps it (`waiting_turn`), and when that pull request merges, or
+// the wait runs out (`hold_minutes`), it is taken up again as a conflict revision on the same
+// subscription and model (`plan.TakeTurn`).
+var LabelWaitingTurn = LabelPrefix + "waiting-turn"
 
 // LabelTracking is the type label of a tracker, the production countdown and the status issues
 // (#2748): the bot may comment on one and rewrite its own, but never queues, plans, builds or
@@ -615,12 +630,15 @@ func NewGate(name, run string, timeoutMinutes int) *Gate {
 	return &Gate{Name: name, Run: run, TimeoutMinutes: timeoutMinutes, Machine: true}
 }
 
-// ResolverTakes is the one side a `take` resolver takes: the version the merge brought in.
-var ResolverTakes = []string{"main"}
+// ResolverTakes is what a `take` resolver takes: the version the merge brought in (`main`), or
+// both sides' lines (`union`, as git's union merge does, #2948): only for a file that is truly an
+// append-only list, since union keeps both sides of an edited line too.
+var ResolverTakes = []string{"main", "union"}
 
 // Resolver is a file whose merge conflict the harness resolves itself, with no model
-// (`resolve.py`): `take` the version `main` brought in, or `run` a command that rewrites the file
-// from the merged tree. One of the two, never both. From `resolvers` in `.harness/config.json`.
+// (`resolve.py`): `take` the version `main` brought in or both sides' lines, or `run` a command that
+// rewrites the file from the merged tree. One of the two, never both. From `resolvers` in
+// `.harness/config.json`.
 type Resolver struct {
 	Path           string
 	Take           string // default: ""
@@ -673,7 +691,7 @@ type Config struct {
 	MergeMethod        string
 	CIWorkflow         string
 	RequiredChecks     []string
-	CIReruns           int
+	CIReruns           int // `ci_reruns`: CI runs again on a head with no commit at most this often (#2948)
 	SuggestionsEnabled bool
 	SuggestionsMaxOpen int
 	// SuggestionsIdleMinutes: a survey is due once a free lane has had nothing to start for this
@@ -684,9 +702,18 @@ type Config struct {
 	Quiet                *Quiet
 	ForbiddenPaths       []string
 	ReviewPaths          []string
-	UploadTranscripts    bool
-	Install              *Gate
-	Gates                []*Gate
+	// MigrationPaths and LockFiles are the paths that merge themselves on a condition (#2986,
+	// `merge.go`): a migration with no data-losing or access-changing statement that changes no
+	// migration `main` has, and a lock that gains no package. The config's `migration_paths` and
+	// `lock_files`; none when left out.
+	MigrationPaths []string // default: ()
+	LockFiles      []string // default: ()
+	// DecisionWaitHours: how long a question with a default waits for a trusted answer before the
+	// lane that asked builds its default (#2986, `decision.go`); 0, when left out, never goes ahead.
+	DecisionWaitHours int // default: 0
+	UploadTranscripts bool
+	Install           *Gate
+	Gates             []*Gate
 	// ResumeSessions: a run on a Claude account keeps its own session and the next run of the
 	// item on the same account resumes it (`internal/sessions`, #2748). The config's
 	// `resume_sessions`; off when it is left out.

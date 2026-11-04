@@ -10,7 +10,7 @@
 //! Military and Healthcare are E38's buffs and grants over your field (tops of piles), hand and deck,
 //! carried onto the field as a card enters, silent where a card is hidden (R440). Education's Books are
 //! non-token Books of every set (R380), repeats allowed (R60), each Radiant and enchanted (E39), R80's
-//! cap turning the rest away. Culture is `radiantChance`'s roll per card, #42 Eugenics's reading
+//! cap turning the rest away. Culture is `radiantChance`'s roll per card, #42 Selective Breeding's reading
 //! (R177, R581): every card is rolled, a Radiant one too, so neither the draws nor the cues count the
 //! hidden Radiant cards; a library card made Radiant is listed as it went in (R311). Tunes: none beyond X.
 

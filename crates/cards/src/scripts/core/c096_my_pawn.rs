@@ -98,6 +98,8 @@ mod tests {
     use crate::events_json;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -256,7 +258,6 @@ mod tests {
 
         #[test]
         fn r44_counts_the_radiant_anti_oneshot_cap_of_3() {
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "my-pawn-cap-3",
                 "active": "p2",
@@ -297,7 +298,6 @@ mod tests {
 
         #[test]
         fn s8_5_the_opponent_declares_it_never_answers_its_own_controller_s_attack() {
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "my-pawn-own",
                 "active": "p1",
@@ -318,7 +318,6 @@ mod tests {
 
         #[test]
         fn r44_lethal_to_your_hero_the_hero_the_projection_reaches_is_the_one_that_matters() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "my-pawn-other-hero",
                 "active": "p2",

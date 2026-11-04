@@ -285,6 +285,14 @@
     0 1px 3px rgb(0 0 0 / 0.55);
 }
 
+/* R2940001: the Sketch version's base frame is a pencilled outline: its edge hatched in graphite on paper and its
+   bezel graphite, the palette's slates and no gold. A Radiant face keeps its gold-foil frame, and R2940002 a worn
+   border (cosmetics.css) its own edge and bezel; the art window's pencil ring is cosmetics.css's. */
+.cf[data-version="version-sketch"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-slate-700);
+  --cf-edge: repeating-linear-gradient(135deg, var(--pal-slate-700) 0 1px, var(--pal-slate-100) 1px 3px);
+}
+
 .cf-scale {
   position: absolute;
   inset: 1.2% 1.7%;
@@ -1563,8 +1571,8 @@
 }
 
 /* One chip per keyword, each in its own color, so "RU" and "LS" read apart at a glance. */
-.cf .keyword,
-.cf .cf-kw-more {
+:is(.cf, .field-badges) .keyword,
+:is(.cf, .field-badges) .cf-kw-more {
   --kw: #3a3f52;
 
   display: block;
@@ -1584,47 +1592,47 @@
   white-space: nowrap;
 }
 
-.cf .keyword[data-chip="hidden"] {
+:is(.cf, .field-badges) .keyword[data-chip="hidden"] {
   display: none;
 }
 
-.cf .cf-kw-more {
+:is(.cf, .field-badges) .cf-kw-more {
   --kw: #20242f;
 }
 
-.cf .keyword[data-keyword="Taunt"] { --kw: #6b7488; }
-.cf .keyword[data-keyword="Rush"] { --kw: #c2610c; }
-.cf .keyword[data-keyword="Charge"] { --kw: #c0262d; }
-.cf .keyword[data-keyword="First Strike"] { --kw: #b58a0c; }
-.cf .keyword[data-keyword="Poisonous"] { --kw: #2f8f3a; }
-.cf .keyword[data-keyword="Lifesteal"] { --kw: #a3173f; }
-.cf .keyword[data-keyword="Reborn"] { --kw: #1f8fb8; }
-.cf .keyword[data-keyword="Divine Shield"] { --kw: #c79a1c; }
-.cf .keyword[data-keyword="Trample"] { --kw: #8a4b1c; }
-.cf .keyword[data-keyword="Cleave"] { --kw: #7240c9; }
-.cf .keyword[data-keyword="Pierce"] { --kw: #0f7f86; }
-.cf .keyword[data-keyword="Windfury"] { --kw: #2b86c5; }
-.cf .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
-.cf .keyword[data-keyword="Deft"] { --kw: #b03a8c; }
-.cf .keyword[data-keyword="Untributable"] { --kw: #6b5a3e; }
-.cf .keyword[data-keyword="Equip"] { --kw: #c2372f; }
-.cf .keyword[data-keyword="Ranged"] { --kw: #7a5a1f; }
-.cf .keyword[data-keyword="Flying"] { --kw: #4f7fb8; }
-.cf .keyword[data-keyword="Cloaked"] { --kw: #5b4a7a; }
-.cf .keyword[data-keyword="Crater"] { --kw: #7a4a2a; }
-.cf .keyword[data-keyword="Flashback"] { --kw: #c46a1a; }
-.cf .keyword[data-keyword="Tradable"] { --kw: #2f7a6a; }
-.cf .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
-.cf .keyword[data-keyword="Immutable"] { --kw: #52607a; }
-.cf .keyword[data-keyword="Stack"] { --kw: #2f55c2; }
-.cf .keyword[data-keyword="Can't attack"] { --kw: #4a4a55; }
-.cf .keyword[data-keyword="Armor"] { --kw: #5d6d8a; }
-.cf .keyword[data-keyword="Lucky"] { --kw: #108a5e; }
-.cf .keyword[data-keyword="Animated"] { --kw: #9a6a12; }
-.cf .keyword[data-keyword="Animated on your turn"] { --kw: #7d5a1e; }
-.cf .keyword[data-keyword="Brittle"] { --kw: #5b7c96; }
-.cf .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
-.cf .keyword[data-keyword="Immune to Spells"] { --kw: #6a3fb0; }
+:is(.cf, .field-badges) .keyword[data-keyword="Taunt"] { --kw: #6b7488; }
+:is(.cf, .field-badges) .keyword[data-keyword="Rush"] { --kw: #c2610c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Charge"] { --kw: #c0262d; }
+:is(.cf, .field-badges) .keyword[data-keyword="First Strike"] { --kw: #b58a0c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Poisonous"] { --kw: #2f8f3a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Lifesteal"] { --kw: #a3173f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Reborn"] { --kw: #1f8fb8; }
+:is(.cf, .field-badges) .keyword[data-keyword="Divine Shield"] { --kw: #c79a1c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Trample"] { --kw: #8a4b1c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Cleave"] { --kw: #7240c9; }
+:is(.cf, .field-badges) .keyword[data-keyword="Pierce"] { --kw: #0f7f86; }
+:is(.cf, .field-badges) .keyword[data-keyword="Windfury"] { --kw: #2b86c5; }
+:is(.cf, .field-badges) .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Deft"] { --kw: #b03a8c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Untributable"] { --kw: #6b5a3e; }
+:is(.cf, .field-badges) .keyword[data-keyword="Equip"] { --kw: #c2372f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Ranged"] { --kw: #7a5a1f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Flying"] { --kw: #4f7fb8; }
+:is(.cf, .field-badges) .keyword[data-keyword="Cloaked"] { --kw: #5b4a7a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Crater"] { --kw: #7a4a2a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Flashback"] { --kw: #c46a1a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Tradable"] { --kw: #2f7a6a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
+:is(.cf, .field-badges) .keyword[data-keyword="Immutable"] { --kw: #52607a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Stack"] { --kw: #2f55c2; }
+:is(.cf, .field-badges) .keyword[data-keyword="Can't attack"] { --kw: #4a4a55; }
+:is(.cf, .field-badges) .keyword[data-keyword="Armor"] { --kw: #5d6d8a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Lucky"] { --kw: #108a5e; }
+:is(.cf, .field-badges) .keyword[data-keyword="Animated"] { --kw: #9a6a12; }
+:is(.cf, .field-badges) .keyword[data-keyword="Animated on your turn"] { --kw: #7d5a1e; }
+:is(.cf, .field-badges) .keyword[data-keyword="Brittle"] { --kw: #5b7c96; }
+:is(.cf, .field-badges) .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
+:is(.cf, .field-badges) .keyword[data-keyword="Immune to Spells"] { --kw: #6a3fb0; }
 
 /* Divine Shield: a golden bubble over the portrait, and under the name plate its rim would
    otherwise cross (R438: no keyword's treatment covers the name, the attack or the health). */

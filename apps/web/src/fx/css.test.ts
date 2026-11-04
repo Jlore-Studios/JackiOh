@@ -184,6 +184,7 @@ const DOM_KINDS = {
   zone: "fx-zone-wave",
   takeover: "fx-takeover-in",
   setPiece: "fx-set-piece-in",
+  launch: "fx-launch-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');

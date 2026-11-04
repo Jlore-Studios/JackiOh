@@ -40,6 +40,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -60,7 +62,6 @@ mod tests {
 
     /// The bomb on top of its owner's library, so the next draw casts it.
     fn bombed_top(radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": if radiant_face { "bomb-radiant" } else { "bomb-drawn" },
             "p1": {
@@ -122,7 +123,6 @@ mod tests {
 
             #[test]
             fn played_from_hand_for_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "bomb-played",
                     "p1": { "hand": [BOMB, FILLER], "library": filler(3) },
@@ -139,7 +139,6 @@ mod tests {
 
             #[test]
             fn heal_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "bomb-param",
                     "p1": { "hand": [FILLER], "library": [BOMB, FILLER, FILLER, FILLER] },

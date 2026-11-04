@@ -55,6 +55,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -70,7 +72,6 @@ mod tests {
     /// Honeypot. p1 holds Gaokao (base unless `radiant_face`); both sides keep cards in hand so no
     /// turn auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -136,7 +137,6 @@ mod tests {
 
             #[test]
             fn r923_a_granted_cn_unit_survives_and_is_buffed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "gaokao-granted",
                     "p1": {
@@ -162,7 +162,6 @@ mod tests {
 
             #[test]
             fn r1176000_a_translated_unit_survives_and_is_buffed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "gaokao-translated",
                     "p1": {
@@ -212,7 +211,6 @@ mod tests {
             #[test]
             fn indestructible_spell_immune_and_m25_survive() {
                 const FELINOR: &str = "meditative-025"; // Immune to tribal tag based hate.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "gaokao-survivors",
                     "p1": {
@@ -260,7 +258,6 @@ mod tests {
             fn r440_a_buff_on_a_face_down_card_is_reported_hidden() {
                 // p2's face-down Trap carries a granted CN tag (M 35's): Gaokao Buffs it, and p1, who
                 // cannot read it, is cued with the card hidden.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "gaokao-hidden",
                     "p1": { "hand": [{ "def": GAOKAO }, FILLER], "library": filler(4) },

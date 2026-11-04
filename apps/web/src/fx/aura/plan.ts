@@ -91,8 +91,10 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
 /**
  * Reads `events` in order into `memory` and records, for each modifier added, the readable play
  * resolving as it was added: none for a hidden play (R202) or for one inside which a trap fired, since
- * the trap may be what added it. A removal keeps its record, so the aura ends when the shown view drops
- * the modifier, not when the newest view does; a later add overwrites it.
+ * the trap may be what added it, and none for a hook running inside or after it (R2797000: a Death, a
+ * trigger, an Activate or a Trap's firing), whose card is no play. A removal keeps its record, so the
+ * aura ends when the shown view drops the modifier, not when the newest view does; a later add
+ * overwrites it.
  */
 export function attributeModifiers(events: readonly GameEvent[], memory: FxMemory, sources: AuraSources): void {
   for (const event of events) {
@@ -101,7 +103,7 @@ export function attributeModifiers(events: readonly GameEvent[], memory: FxMemor
     const key = sourceKey(event.player, event.modifierId);
     const play = memory.resolving();
     sources.delete(key);
-    if (play === undefined || play.defId === HIDDEN_ID || play.instanceId === HIDDEN_ID || (play.seen.trapFired ?? 0) > 0) continue;
+    if (play === undefined || play.hook !== undefined || play.defId === HIDDEN_ID || play.instanceId === HIDDEN_ID || (play.seen.trapFired ?? 0) > 0) continue;
     sources.set(key, { defId: play.defId, instanceId: play.instanceId });
     while (sources.size > AURA_SOURCES_LIMIT) {
       const oldest = sources.keys().next();

@@ -100,6 +100,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const NUKE: &str = "classic-043";
     const STATE: &str = "classic-041"; // State of the Game: 3/3 Indestructible.
     const VOIDWALKER: &str = "classic-050"; // Aura: cards that would go to a graveyard are exiled instead.
@@ -159,7 +161,6 @@ mod tests {
 
             #[test]
             fn destroys_all_units_on_both_sides_then_gains_1_mana_per_plague_counter_that_was_on_them() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [NUKE, ANCHOR], "field": [plagued(VANILLA, 2)] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(MENACE, 3), VANILLA] },
@@ -174,7 +175,6 @@ mod tests {
 
             #[test]
             fn s4_5_one_state_check_every_death_comes_first_and_the_mana_after_them() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [NUKE, ANCHOR], "field": [plagued(VANILLA, 1)] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(MENACE, 1), VANILLA] },
@@ -195,7 +195,6 @@ mod tests {
 
             #[test]
             fn no_tokens_on_the_board_it_destroys_all_and_gives_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [NUKE, ANCHOR], "field": [VANILLA] }, "p2": { "hand": [ANCHOR], "field": [MENACE] } }));
 
                 s.play(NUKE, json!({}));
@@ -207,7 +206,6 @@ mod tests {
 
             #[test]
             fn r46_an_indestructible_unit_survives_and_its_tokens_count_all_the_same() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [NUKE, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(STATE, 2), plagued(VANILLA, 1)] },
@@ -222,7 +220,6 @@ mod tests {
 
             #[test]
             fn r13_a_card_dormant_under_a_stack_pile_is_not_a_unit_on_the_field_its_tokens_dont_count_and_it_resumes_and_survives() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [NUKE, ANCHOR] },
                     "p2": {
@@ -240,7 +237,6 @@ mod tests {
 
             #[test]
             fn the_base_face_summons_nothing_back() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [NUKE, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 1)] } }));
 
                 s.play(NUKE, json!({}));
@@ -251,7 +247,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_gives_2_mana_per_token() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [NUKE, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 2)] } }));
                 step_param(s.card_mut(NUKE), "mana", 1);
 
@@ -266,7 +261,6 @@ mod tests {
 
             #[test]
             fn summons_each_unit_that_had_a_token_from_its_owners_graveyard_under_your_control_owner_unchanged_in_lane_order() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR], "field": [plagued(VANILLA, 1)] },
                     "p2": { "hand": [ANCHOR], "field": [MENACE, plagued(MENACE, 2)] },
@@ -290,7 +284,6 @@ mod tests {
 
             #[test]
             fn r1_r78_a_summoned_unit_returns_reset_and_fires_no_cry_a_duplicating_felinors_makes_no_copy_and_its_tokens_are_gone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(FELINORS, 1)] },
@@ -304,7 +297,6 @@ mod tests {
 
             #[test]
             fn r64_r83_a_reborn_unit_the_check_already_put_back_is_not_summoned_again() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(DEFENDER, 1)] },
@@ -320,7 +312,6 @@ mod tests {
 
             #[test]
             fn r11_a_token_that_had_a_token_is_gone_not_summoned() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(RUSH_TOKEN, 2)] },
@@ -336,7 +327,6 @@ mod tests {
 
             #[test]
             fn an_indestructible_survivor_with_tokens_stays_where_it_is_with_its_controller() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(STATE, 1)] },
@@ -350,7 +340,6 @@ mod tests {
 
             #[test]
             fn r13_only_the_piles_top_was_hit_the_stack_top_that_had_a_token_is_summoned_and_the_card_beneath_stays_with_its_owner() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": {
@@ -368,7 +357,6 @@ mod tests {
 
             #[test]
             fn a_full_board_leaves_the_rest_in_the_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR], "field": [STATE, STATE, STATE, STATE] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 1), plagued(MENACE, 1)] },
@@ -408,7 +396,6 @@ mod tests {
 
             #[test]
             fn r398_r463_a_voidwalker_the_nuke_kills_leaves_with_the_others_and_exiles_none_the_unit_is_summoned() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 1), VOIDWALKER] },

@@ -1,4 +1,4 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Build issue #$number
 
 You are the builder for issue #$number of `$repo`, on branch `$branch` (base `$base`).
@@ -38,19 +38,28 @@ The very first line must be a single HTML comment carrying JSON, with nothing be
 
     <!-- bot: {"status": "done", "title": "Pull request title, as docs/issues-and-patches.md (Titles) sets it"} -->
 
-or, when you could not build it:
+or, when you could not build it without a person's decision:
 
-    <!-- bot: {"status": "blocked", "question": "The one question a person must answer, with the options you see"} -->
+    <!-- bot: {"status": "blocked", "question": "The one question a person must answer", "options": ["One answer, in a sentence", "Another answer"], "default": 1, "gives_up": "What the default gives up"} -->
+
+`options` lists every answer you see, and `default` is the number (from 1) of the one that stays
+inside the issue's own stated limits, with `gives_up` saying what choosing it gives up. Name one
+whenever an option keeps within those limits: if no trusted person answers in time, the same
+subscription and model take the issue up again in a fresh session and build the default, and each
+other option becomes an issue of its own for a person to approve. Leave `default` out only when no
+option keeps within the issue's limits; then it waits for a person.
 
 or, when nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or
 `bot/`, which the harness puts back; a secret or a token; a setting in a dashboard, such as
-GitHub's, Vercel's, Render's, Supabase's or Cloudflare's; an account), the same line with
+GitHub's, Supabase's or Cloudflare's; an account), the same line with
 `"human_required": true` and, in `question`, exactly what a person must do:
 
     <!-- bot: {"status": "blocked", "human_required": true, "question": "What a person must do, and where"} -->
 
 The harness then hands the issue to the people: it takes the bot's labels off, assigns them,
-labels it `human required` and names them in a comment, and the bot no longer touches it.
+labels it `human required` and names them in a comment, and the bot no longer touches it. Such a
+stop has no default and never goes ahead by itself: money, an account, a secret, a dashboard or a
+path the bot may not change is always a person's.
 
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
 the issue's own title (`Patch: …`, or an older `Patch v0.3.X: …`, `CI: …` or `Architecture: …`

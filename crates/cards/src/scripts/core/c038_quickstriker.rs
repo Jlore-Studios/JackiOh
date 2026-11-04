@@ -49,6 +49,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const QUICKSTRIKER: &str = "core-038";
     /// Three plays whose own texts never touch a hero's health, so the damage read is Quickstriker's.
     const RAPID_REPLENISH: &str = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play
@@ -64,7 +66,6 @@ mod tests {
 
     /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 

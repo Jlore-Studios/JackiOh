@@ -27,10 +27,10 @@
 //!      zones, never from `view_for`'s rules (R763, R764; a Glitch's reset or boards, R676, R678).
 //!   I7 no orphaned work (§9.3, §10.3, R113): a live game with no prompt open (§10.6, R265) has `work` empty;
 //!      a game over keeps its debt (I5; Classic #52 Final Gambit, #56 Spell Tyrant).
-//!   I8 every attack, switch and activation `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192), as
-//!      the server reduces without `legal_actions`. Not probed: R345, R923000, R79, `play` and a well-formed
-//!      `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694). Under a Mayor (R1200) a
-//!      target is refused.
+//!   I8 every attack, switch, activation and play `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2,
+//!      §10.5; #1192, #2978), as the server reduces without `legal_actions`. Not probed: R345, R923000,
+//!      R79 and a well-formed `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694).
+//!      Under a Mayor (R1200) a target is refused.
 //!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
 //!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
 //!      is `mana` (§2.3).
@@ -50,7 +50,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
-use crate::config::{FATIGUE_DAMAGE, MIN_PLAGUE_PAYMENT, WINDFURY_ATTACKS};
+use crate::config::{
+    BACKROW_ZONES, FATIGUE_DAMAGE, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES, WINDFURY_ATTACKS,
+};
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
 use crate::play_choices::PlayAction;
@@ -1034,8 +1036,22 @@ fn forged_activations(
     out
 }
 
-/// I8 for one seat: every `switchPosition`, `attack`, `activate` and `activatePower` built from the board
-/// alone that `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2). Empty when clean.
+/// One zone group's identity in `unlisted_accepted`: a listed play's card, X, embiggen, Equip,
+/// Tributes and face-down — everything a re-sent play keeps but its zone.
+type PlayZoneGroup = (
+    String,
+    Option<i32>,
+    Option<bool>,
+    Option<bool>,
+    Option<Vec<String>>,
+    Option<RevealAt>,
+);
+
+/// I8 for one seat: every `switchPosition`, `attack`, `activate`, `activatePower` and `play` that
+/// `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2, §10.5; #2978). Switches,
+/// attacks and activations are built from the board alone; plays are forged at the card level (a
+/// playable hand or graveyard card no listed play names) and at the zone level (a real lane no listed
+/// play of an otherwise listed card names). Empty when clean.
 pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
@@ -1097,6 +1113,115 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
                     name_of(card),
                     state.turn
                 ));
+            }
+        }
+    }
+    // I8's forged plays (§10.2, §10.5; #2978): a `play` `reduce` accepts that `legal` never lists.
+    // R90's bound drops choice combinations only, never a zone or a card, so forging at the card and
+    // the zone level is exact. No play is acceptable with a prompt or a mulligan open or the game
+    // over, so forging there would only burn reduces.
+    if state.pending.is_none() && state.mulligan.is_none() && state.result.is_none() {
+        let listed_plays: Vec<PlayAction> = legal.iter().filter_map(PlayAction::from_body).collect();
+        let listed_ids: IndexSet<&str> = listed_plays
+            .iter()
+            .map(|play| play.instance_id.as_str())
+            .collect();
+        // Card level: each hand card, and each graveyard card a permission admits, that no listed
+        // play names, sent with the default zone, the smallest X and no other choices. A card whose
+        // combinations R90's bound cut is skipped: its absence from the list proves nothing.
+        let side = &state.players[player];
+        let mut playable: Vec<&CardInstance> = side.hand.iter().collect();
+        playable.extend(
+            side.graveyard
+                .iter()
+                .filter(|card| crate::graveyard_play::playable_from_graveyard(state, card)),
+        );
+        for card in playable {
+            if listed_ids.contains(card.id.as_str()) {
+                continue;
+            }
+            if crate::play_choices::hand_play_choices_truncated(state, player, card) {
+                continue;
+            }
+            let forged = PlayAction {
+                instance_id: card.id.clone(),
+                zone: None,
+                x: crate::play_choices::chooses_x(state, card).then_some(MIN_CHOSEN_X),
+                embiggen: None,
+                equip: None,
+                tributes: None,
+                targets: None,
+                modes: None,
+                plague: None,
+                face_down: None,
+            };
+            let forged = forged.into_body();
+            if accepts(forged.clone()) {
+                found.push(format!(
+                    "I8 unlisted play accepted: {player} may play {} for {} on turn {}, though \
+                     legalActions does not list it (§10.2, §10.5)",
+                    serde_json::to_string(&forged).unwrap_or_default(),
+                    name_of(card),
+                    state.turn
+                ));
+            }
+        }
+        // Zone level: one listed play per group sharing its card, X, embiggen, Equip, Tributes and
+        // face-down, re-sent into each unit or backrow lane the group never lists. Refusals (taken,
+        // Locked, the wrong row, Equip-only, face-down-only) are silent; only an acceptance the list
+        // left out is a finding. A group that takes no zone is skipped, and zone `None` is never
+        // forged: where the card has listed plays the reducer's default-zone pick is listed behavior.
+        let mut groups: IndexMap<PlayZoneGroup, (PlayAction, Vec<ZoneChoice>)> = IndexMap::new();
+        for play in &listed_plays {
+            let entry = groups
+                .entry((
+                    play.instance_id.clone(),
+                    play.x,
+                    play.embiggen,
+                    play.equip,
+                    play.tributes.clone(),
+                    play.face_down,
+                ))
+                .or_insert_with(|| (play.clone(), Vec::new()));
+            if let Some(zone) = play.zone
+                && !entry.1.contains(&zone)
+            {
+                entry.1.push(zone);
+            }
+        }
+        for (template, zones) in groups.values() {
+            if template.zone.is_none() {
+                continue;
+            }
+            let card = find_instance(state, &template.instance_id);
+            let lanes = (1..=UNIT_ZONES)
+                .map(|lane| ZoneChoice {
+                    row: Row::Units,
+                    lane,
+                })
+                .chain((1..=BACKROW_ZONES).map(|lane| ZoneChoice {
+                    row: Row::Backrow,
+                    lane,
+                }));
+            for lane in lanes {
+                if zones.contains(&lane) {
+                    continue;
+                }
+                let forged = PlayAction {
+                    zone: Some(lane),
+                    ..template.clone()
+                };
+                let forged = forged.into_body();
+                if accepts(forged.clone()) {
+                    let name = card.map(name_of).unwrap_or_else(|| template.instance_id.clone());
+                    found.push(format!(
+                        "I8 unlisted play accepted: {player} may play {} for {} on turn {}, though \
+                         legalActions does not list it (§10.2, §10.5)",
+                        serde_json::to_string(&forged).unwrap_or_default(),
+                        name,
+                        state.turn
+                    ));
+                }
             }
         }
     }
@@ -2566,8 +2691,8 @@ impl InvariantMonitor {
         found
     }
 
-    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch and
-    /// activation `reduce` accepts. Empty when clean.
+    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch,
+    /// activation and play `reduce` accepts. Empty when clean.
     pub fn unlisted(&self, state: &GameState) -> Vec<String> {
         let Some(player) = crate::reduce::seat_to_act(state) else {
             return Vec::new();

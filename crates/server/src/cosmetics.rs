@@ -26,6 +26,14 @@
 //! `offer` takes ([`offered`], R2725001). #2725 appends three: Full art (`version-full-art`, Legendary), Animated
 //! (Epic) and Signature (Mythic). The 84 full arts before it are retired: kept with their owners, dropped by nothing,
 //! and each counts as owning the version and augments it combines ([`implied_by`], [`row_owns`], R2725002).
+//!
+//! R2949000: Signature is worn only beside the Full art version and Animated ([`signature_fits`]). R2949001: an
+//! offer clause may take a seeded share of its cards ([`OfferSample`]), so Full art lands on some cards and not
+//! others, and Signature's offer lies inside Full art's and Animated's.
+//!
+//! R2940000: #2940 appends three versions, Alt art ([`VERSION_ALT_ART_ID`], Rare), Sketch ([`VERSION_SKETCH_ID`],
+//! Rare) and Alt full art ([`VERSION_ALT_FULL_ART_ID`], Legendary), each offered on a seeded share of its own, so no
+//! two versions take the same cards. Signature fits none of them ([`signature_fits`]).
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -33,10 +41,13 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
+use jackioh_engine::replay::fnv1a32_utf16_u32;
 use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId};
 use jackioh_engine::{CardDef, CardDefs, CardType, Rarity, SetName};
 
-use crate::config::{GLOBAL_COSMETIC_FLOOR_RARITY, PLAYER_SETTINGS_TEXT_MAX_LENGTH};
+use crate::config::{
+    GLOBAL_COSMETIC_FLOOR_RARITY, OFFER_SAMPLE_PERCENT_SCALE, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
+};
 use crate::economy::store::{FullArtPick, OwnedCosmetics};
 
 /// The registry's text, compiled in.
@@ -245,6 +256,10 @@ pub struct OfferClause {
     /// show, as the Animated augment on a Legacy card, whose picture never moves (R2724000).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub except: Vec<String>,
+    /// R2949001: when set, the clause takes only a seeded share of the cards its other fields take, so two
+    /// entries with the same fields and different seeds land on different cards.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sample: Option<OfferSample>,
 }
 
 impl OfferClause {
@@ -255,6 +270,24 @@ impl OfferClause {
             && (self.sets.is_empty() || self.sets.contains(&def.set))
             && (self.cards.is_empty() || self.cards.iter().any(|card| card == id))
             && !self.except.iter().any(|card| card == id)
+            && self.sample.as_ref().is_none_or(|sample| sample.takes(id))
+    }
+}
+
+/// R2949001: a seeded share of the cards a clause's other fields take: a card is in it when the FNV-1a hash of
+/// `<seed>/<card id>`, modulo `OFFER_SAMPLE_PERCENT_SCALE`, falls below `percent`. The registry's check holds
+/// `percent` to some and not all, and `seed` to a slug.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OfferSample {
+    pub seed: String,
+    pub percent: u32,
+}
+
+impl OfferSample {
+    /// Whether the sample takes the card `card`.
+    pub fn takes(&self, card: &str) -> bool {
+        fnv1a32_utf16_u32(&format!("{}/{card}", self.seed)) % OFFER_SAMPLE_PERCENT_SCALE < self.percent
     }
 }
 
@@ -320,6 +353,23 @@ pub fn row_owns(held: &str, id: &str) -> bool {
                 .iter()
                 .find(|cosmetic| cosmetic.id == held)
                 .is_some_and(|cosmetic| implied_by(cosmetic).contains(&id)))
+}
+
+/// R2949000: whether a pick of `full_art` and `augments` wears the Full art version and Animated, as Signature
+/// needs: `full_art` names the version, `true` (a full-art card's still Epic) or a retired full art implying it
+/// (R2725002), and Animated is listed or implied by that full art. Reads no ownership and no offer.
+pub fn signature_fits(full_art: Option<&FullArtPick>, augments: &[String]) -> bool {
+    let worn: &[&str] = match full_art {
+        Some(FullArtPick::On(true)) => &[VERSION_FULL_ART_ID],
+        Some(FullArtPick::Id(id)) if id == VERSION_FULL_ART_ID => &[VERSION_FULL_ART_ID],
+        Some(FullArtPick::Id(id)) => registry()
+            .iter()
+            .find(|cosmetic| cosmetic.id == *id)
+            .map_or(&[], implied_by),
+        Some(FullArtPick::On(false)) | None => &[],
+    };
+    worn.contains(&VERSION_FULL_ART_ID)
+        && (worn.contains(&AUGMENT_ANIMATED_ID) || augments.iter().any(|id| id == AUGMENT_ANIMATED_ID))
 }
 
 #[derive(Deserialize)]
@@ -408,6 +458,21 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
             if !shipped_defs().get(card).is_some_and(|def| !def.is_token()) {
                 out.push(format!(
                     "the offer of {id:?} names {card:?}, which is no card of the catalog"
+                ));
+            }
+        }
+        // R2949001: a sample takes some of its clause's cards and not all, by a slug's seed.
+        for sample in cosmetic.offer.iter().filter_map(|clause| clause.sample.as_ref()) {
+            if sample.percent == 0 || sample.percent >= OFFER_SAMPLE_PERCENT_SCALE {
+                out.push(format!(
+                    "the offer of {id:?} samples {} in {OFFER_SAMPLE_PERCENT_SCALE} of its cards, which must be some and not all",
+                    sample.percent
+                ));
+            }
+            if !is_slug(&sample.seed) {
+                out.push(format!(
+                    "the offer of {id:?} samples by the seed {:?}, which is not a lower-case slug",
+                    sample.seed
                 ));
             }
         }
@@ -685,6 +750,15 @@ pub const AUGMENT_ANIMATED_ID: &str = "augment-animated";
 /// R2725000: the Signature augment, Mythic: the card's name signed across its art.
 pub const AUGMENT_SIGNATURE_ID: &str = "augment-signature";
 
+/// R2940000: the Alt art version, Rare: a new picture of the card's subject in the normal frame.
+pub const VERSION_ALT_ART_ID: &str = "version-alt-art";
+
+/// R2940000: the Sketch version, Rare: the card's picture in pencil and ink on paper, its frame a pencilled outline.
+pub const VERSION_SKETCH_ID: &str = "version-sketch";
+
+/// R2940000: the Alt full art version, Legendary: Alt art's picture across the whole face.
+pub const VERSION_ALT_FULL_ART_ID: &str = "version-alt-full-art";
+
 /// R2755000: the card back a rated game grants each person it leaves Jlorious, and nothing else
 /// grants (`Cosmetic::jlorious`).
 pub const JLORIOUS_CARD_BACK: &str = "card-back-jlorious";
@@ -865,10 +939,22 @@ mod tests {
         ),
     ];
 
-    /// The shipped registry before #1833: every entry but #2725's three, #2715's 21 before them, #2755's
-    /// one before those, #2655's 57 before it and #1833's 36 before those (R1833000).
+    /// R2940000: the three versions #2940 appends after #2725's three, last in the registry.
+    const R2940000_NEW: [(&str, CosmeticKind, CosmeticRarity); 3] = [
+        (VERSION_ALT_ART_ID, CosmeticKind::Version, CosmeticRarity::Rare),
+        (VERSION_SKETCH_ID, CosmeticKind::Version, CosmeticRarity::Rare),
+        (
+            VERSION_ALT_FULL_ART_ID,
+            CosmeticKind::Version,
+            CosmeticRarity::Legendary,
+        ),
+    ];
+
+    /// The shipped registry before #1833: every entry but #2940's three, #2725's three before them, #2715's 21
+    /// before those, #2755's one before those, #2655's 57 before it and #1833's 36 before those (R1833000).
     fn before_r1833000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
         &cosmetics[..cosmetics.len()
+            - R2940000_NEW.len()
             - R2725000_NEW.len()
             - R2715000_NEW
             - R2755000_NEW
@@ -876,21 +962,28 @@ mod tests {
             - R1833000_NEW.len()]
     }
 
-    /// The 57 #2655 appends, last in the registry but for #2755's one, #2715's 21 and #2725's three (R2655000).
+    /// The 57 #2655 appends, last in the registry but for #2755's one, #2715's 21, #2725's three and #2940's
+    /// three (R2655000).
     fn r2655000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        let end = cosmetics.len() - R2725000_NEW.len() - R2715000_NEW - R2755000_NEW;
+        let end = cosmetics.len() - R2940000_NEW.len() - R2725000_NEW.len() - R2715000_NEW - R2755000_NEW;
         &cosmetics[end - R2655000_NEW..end]
     }
 
-    /// The 21 #2715 appends, last in the registry but for #2725's three (R2715000).
+    /// The 21 #2715 appends, last in the registry but for #2725's three and #2940's three (R2715000).
     fn r2715000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        let end = cosmetics.len() - R2725000_NEW.len();
+        let end = cosmetics.len() - R2940000_NEW.len() - R2725000_NEW.len();
         &cosmetics[end - R2715000_NEW..end]
     }
 
-    /// The three #2725 appends, last in the registry (R2725000).
+    /// The three #2725 appends, last in the registry but for #2940's three (R2725000).
     fn r2725000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        &cosmetics[cosmetics.len() - R2725000_NEW.len()..]
+        let end = cosmetics.len() - R2940000_NEW.len();
+        &cosmetics[end - R2725000_NEW.len()..end]
+    }
+
+    /// The three #2940 appends, last in the registry (R2940000).
+    fn r2940000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[cosmetics.len() - R2940000_NEW.len()..]
     }
 
     /// R2655001: the 21 full-art cards (six portrait cards, R1017001, and #2655's fifteen) and their slugs.
@@ -1255,9 +1348,9 @@ mod tests {
             );
             assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
         }
-        // Nothing before them is a version or an augment, or has an offer.
+        // Nothing before them is a version or an augment, or has an offer; only #2940's three come after them.
         assert!(
-            cosmetics[..cosmetics.len() - R2725000_NEW.len()]
+            cosmetics[..cosmetics.len() - R2940000_NEW.len() - R2725000_NEW.len()]
                 .iter()
                 .all(|cosmetic| !cosmetic.kind.is_offered() && cosmetic.offer.is_empty())
         );
@@ -1371,7 +1464,8 @@ mod tests {
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_offered())
             .collect();
-        assert_eq!(offered_kinds.len(), R2725000_NEW.len());
+        // R2940000: #2725's three and #2940's three.
+        assert_eq!(offered_kinds.len(), R2725000_NEW.len() + R2940000_NEW.len());
         for cosmetic in offered_kinds {
             let on: Vec<&str> = defs
                 .keys()
@@ -1399,16 +1493,21 @@ mod tests {
                 "{}",
                 cosmetic.id
             );
+            // Nowhere for no card or an id the catalog does not hold.
+            assert!(!offered(cosmetic, None) && !offered(cosmetic, Some("core-999")));
+            // What follows is #2725's three's alone: #2940's three imply nothing a retired full art held, and
+            // their own offers are R2940000's test's.
+            if !R2725000_NEW.iter().any(|(id, _, _)| *id == cosmetic.id) {
+                continue;
+            }
             for (card, _) in R2655001_CARDS {
                 assert!(on.contains(&card), "{} on {card}", cosmetic.id);
             }
-            // Nowhere for no card or an id the catalog does not hold.
-            assert!(!offered(cosmetic, None) && !offered(cosmetic, Some("core-999")));
-            // R2725003: Animated never on a Legacy card, whose picture never moves (R2724000); the version and
-            // Signature there as on any Rare Unit.
+            // R2725003: Animated never on a Legacy card, whose picture never moves (R2724000); the version there
+            // as on any Rare Unit its sample takes, and R2949000: Signature, which needs Animated, not.
             assert_eq!(
                 offered(cosmetic, Some(LEGACY_DUPLICATING_FELINORS)),
-                cosmetic.id != AUGMENT_ANIMATED_ID,
+                cosmetic.id == VERSION_FULL_ART_ID,
                 "{}",
                 cosmetic.id
             );
@@ -1554,6 +1653,300 @@ mod tests {
                 .count(),
             21 * 4
         );
+    }
+
+    #[test]
+    fn r2949000_signature_fits_only_beside_the_full_art_version_and_animated() {
+        let pick = |id: &str| Some(FullArtPick::Id(id.to_owned()));
+        let list = |ids: &[&str]| ids.iter().map(|id| (*id).to_owned()).collect::<Vec<String>>();
+        let both = list(&[AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+        let animated = list(&[AUGMENT_ANIMATED_ID]);
+        // The version, `true` (a full-art card's still Epic) or a retired full art implying it, with Animated
+        // listed or implied.
+        for (full_art, augments) in [
+            (pick(VERSION_FULL_ART_ID), both.clone()),
+            (Some(FullArtPick::On(true)), animated.clone()),
+            (pick("full-art-mr-vanilla-animated"), Vec::new()),
+            (pick("full-art-mr-vanilla-signed"), Vec::new()),
+            (pick("full-art-mr-vanilla"), animated.clone()),
+        ] {
+            assert!(
+                signature_fits(full_art.as_ref(), &augments),
+                "{full_art:?} {augments:?}"
+            );
+        }
+        // Without Animated, without the version, or with a version this build does not know.
+        for (full_art, augments) in [
+            (pick(VERSION_FULL_ART_ID), list(&[AUGMENT_SIGNATURE_ID])),
+            (pick("full-art-mr-vanilla"), Vec::new()),
+            (pick("animated-mr-vanilla"), animated.clone()),
+            (Some(FullArtPick::On(false)), both.clone()),
+            (None, both.clone()),
+            (pick("version-from-a-newer-client"), both.clone()),
+        ] {
+            assert!(
+                !signature_fits(full_art.as_ref(), &augments),
+                "{full_art:?} {augments:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn r2949001_a_sample_takes_a_card_by_its_seed_and_percent_and_the_check_holds_it_to_some_not_all() {
+        let defs = shipped_defs();
+        let sample = |seed: &str, percent: u32| OfferSample {
+            seed: seed.to_owned(),
+            percent,
+        };
+        let taken = |sample: &OfferSample| -> BTreeSet<&str> {
+            defs.keys()
+                .map(String::as_str)
+                .filter(|card| sample.takes(card))
+                .collect()
+        };
+        let half = sample("version-full-art", 50);
+        for card in defs.keys() {
+            assert_eq!(
+                half.takes(card),
+                fnv1a32_utf16_u32(&format!("version-full-art/{card}")) % OFFER_SAMPLE_PERCENT_SCALE < 50,
+                "{card}"
+            );
+        }
+        // The same seed and percent take the same cards, a larger percent more of them, another seed others.
+        assert_eq!(taken(&half), taken(&sample("version-full-art", 50)));
+        assert!(taken(&half).is_subset(&taken(&sample("version-full-art", 60))));
+        assert!(taken(&half).len() < taken(&sample("version-full-art", 60)).len());
+        assert_ne!(taken(&half), taken(&sample("version-alt-full-art", 50)));
+        assert!(!taken(&half).is_empty() && taken(&half).len() < defs.len());
+        // A clause with a sample takes what its fields take and its sample does.
+        let rares = OfferClause {
+            rarities: vec![Rarity::Rare],
+            ..OfferClause::default()
+        };
+        let sampled = OfferClause {
+            sample: Some(half.clone()),
+            ..rares.clone()
+        };
+        for (card, def) in defs {
+            assert_eq!(
+                sampled.takes(card, def),
+                rares.takes(card, def) && half.takes(card),
+                "{card}"
+            );
+        }
+
+        // The check refuses none or all of the cards, and a seed that is not a slug.
+        let entry_with = |sample: OfferSample| Cosmetic {
+            starter: false,
+            offer: vec![OfferClause {
+                sample: Some(sample),
+                ..rares.clone()
+            }],
+            ..entry("version-a", CosmeticKind::Version, false)
+        };
+        let checked = |sample: OfferSample| {
+            let mut cosmetics = defaults();
+            cosmetics.push(entry_with(sample));
+            problems(&cosmetics)
+        };
+        assert!(checked(half.clone()).is_empty());
+        assert!(checked(sample("version-full-art", OFFER_SAMPLE_PERCENT_SCALE - 1)).is_empty());
+        for percent in [0, OFFER_SAMPLE_PERCENT_SCALE] {
+            assert_eq!(
+                checked(sample("version-full-art", percent)),
+                vec![format!(
+                    "the offer of \"version-a\" samples {percent} in {OFFER_SAMPLE_PERCENT_SCALE} of its cards, which must be some and not all"
+                )]
+            );
+        }
+        assert_eq!(
+            checked(sample("Bad Seed", 50)),
+            vec![
+                "the offer of \"version-a\" samples by the seed \"Bad Seed\", which is not a lower-case slug"
+                    .to_owned()
+            ]
+        );
+        let unknown = r#"{"cosmetics":[{"id":"version-a","kind":"version","name":"A","rarity":"Rare","default":false,"offer":[{"sample":{"seed":"a","percent":5,"salt":1}}]}]}"#;
+        assert!(parse(unknown).is_err_and(|error| error.contains("unknown field")));
+    }
+
+    #[test]
+    fn r2949001_full_art_is_a_seeded_share_holding_the_21_and_signature_lies_inside_full_art_and_animated() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let by_id = |id: &str| {
+            cosmetics
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} ships"))
+        };
+        let on = |cosmetic: &Cosmetic| -> BTreeSet<&str> {
+            shipped_defs()
+                .keys()
+                .map(String::as_str)
+                .filter(|card| offered(cosmetic, Some(card)))
+                .collect()
+        };
+        let full_art = by_id(VERSION_FULL_ART_ID);
+        let animated = by_id(AUGMENT_ANIMATED_ID);
+        let signature = by_id(AUGMENT_SIGNATURE_ID);
+        // Full art samples its clauses: strictly fewer cards than they take whole, and not Animated's cards.
+        let unsampled = Cosmetic {
+            offer: full_art
+                .offer
+                .iter()
+                .map(|clause| OfferClause {
+                    sample: None,
+                    ..clause.clone()
+                })
+                .collect(),
+            ..full_art.clone()
+        };
+        assert!(full_art.offer.iter().any(|clause| clause.sample.is_some()));
+        assert!(on(full_art).is_subset(&on(&unsampled)));
+        assert!(on(full_art).len() < on(&unsampled).len());
+        assert_ne!(on(full_art), on(animated));
+        // The 21 with retired full arts always among them, so every pick worn today stays worn.
+        for (card, _) in R2655001_CARDS {
+            assert!(on(full_art).contains(card), "{card}");
+        }
+        // Signature exactly where both are offered.
+        let both: BTreeSet<&str> = on(full_art).intersection(&on(animated)).copied().collect();
+        assert_eq!(on(signature), both);
+    }
+
+    #[test]
+    fn r2940000_part_two_appends_alt_art_sketch_and_alt_full_art() {
+        use crate::economy::store::CardCosmetic;
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let new = r2940000_new(&cosmetics);
+        assert_eq!(
+            new.iter()
+                .map(|cosmetic| (cosmetic.id.as_str(), cosmetic.kind, cosmetic.rarity))
+                .collect::<Vec<_>>(),
+            R2940000_NEW
+        );
+        for cosmetic in new {
+            // Earned, per card, offered, naming no card; a chase exactly at Legendary.
+            assert!(
+                !cosmetic.default && !cosmetic.starter && !cosmetic.jlorious,
+                "{}",
+                cosmetic.id
+            );
+            assert!(
+                cosmetic.kind.is_per_card() && cosmetic.kind.is_offered(),
+                "{}",
+                cosmetic.id
+            );
+            assert!(
+                cosmetic.card.is_none() && !cosmetic.offer.is_empty(),
+                "{}",
+                cosmetic.id
+            );
+            assert_eq!(cosmetic.chase, cosmetic.rarity.is_chase(), "{}", cosmetic.id);
+            // R2949001: every clause samples by the version's own id, so it lands on cards of its own.
+            assert!(
+                cosmetic.offer.iter().all(|clause| clause
+                    .sample
+                    .as_ref()
+                    .is_some_and(|sample| sample.seed == cosmetic.id)),
+                "{}",
+                cosmetic.id
+            );
+        }
+
+        let defs = shipped_defs();
+        let by_id = |id: &str| {
+            cosmetics
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} ships"))
+        };
+        let on = |id: &str| -> BTreeSet<&str> {
+            defs.keys()
+                .map(String::as_str)
+                .filter(|card| offered(by_id(id), Some(card)))
+                .collect()
+        };
+        let non_tokens: BTreeSet<&str> = defs
+            .iter()
+            .filter(|(_, def)| !def.is_token())
+            .map(|(id, _)| id.as_str())
+            .collect();
+        // Each version on a set of cards of its own: no two of the four alike, none on every card.
+        let versions = [
+            VERSION_FULL_ART_ID,
+            VERSION_ALT_ART_ID,
+            VERSION_SKETCH_ID,
+            VERSION_ALT_FULL_ART_ID,
+        ];
+        for (at, a) in versions.iter().enumerate() {
+            assert!(on(a).len() < non_tokens.len(), "{a}");
+            for b in &versions[at + 1..] {
+                assert_ne!(on(a), on(b), "{a} and {b}");
+            }
+        }
+        // Alt art the widest of the three.
+        assert!(on(VERSION_ALT_ART_ID).len() > on(VERSION_SKETCH_ID).len());
+        assert!(on(VERSION_ALT_ART_ID).len() > on(VERSION_ALT_FULL_ART_ID).len());
+        // R2940001: never Alt art or Alt full art on a Legacy card (R2511000), whose one picture is its Core card's.
+        let legacy: Vec<&str> = defs
+            .iter()
+            .filter(|(_, def)| def.name.starts_with("Legacy: "))
+            .map(|(id, _)| id.as_str())
+            .collect();
+        assert_eq!(legacy.len(), 20);
+        for card in &legacy {
+            assert!(!offered(by_id(VERSION_ALT_ART_ID), Some(card)), "{card}");
+            assert!(!offered(by_id(VERSION_ALT_FULL_ART_ID), Some(card)), "{card}");
+        }
+
+        // R2949000: Signature fits none of them, Animated listed or not.
+        for (id, _, _) in R2940000_NEW {
+            let augments = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID].map(str::to_owned);
+            assert!(
+                !signature_fits(Some(&FullArtPick::Id(id.to_owned())), &augments),
+                "{id}"
+            );
+        }
+
+        // check_pick refuses each where it is not offered, owned or not, and takes it where it is offered and owned.
+        const BARE: &str = "core-002";
+        const ALL_SIX: &str = "core-083";
+        let owned = OwnedCosmetics {
+            cards: R2940000_NEW
+                .iter()
+                .flat_map(|(id, _, _)| [BARE, ALL_SIX].map(|card| (card, *id)))
+                .map(|(card, id)| CardCosmetic {
+                    card_id: card.to_owned(),
+                    cosmetic_id: id.to_owned(),
+                })
+                .collect(),
+            account: Vec::new(),
+        };
+        for (id, kind, _) in R2940000_NEW {
+            assert!(on(id).contains(ALL_SIX) && !on(id).contains(BARE), "{id}");
+            assert_eq!(
+                check_pick(&cosmetics, &owned, kind, id, Some(BARE)),
+                Err(PickRefusal::NotOffered),
+                "{id}"
+            );
+            assert_eq!(
+                check_pick(&cosmetics, &owned, kind, id, Some(ALL_SIX)),
+                Ok(()),
+                "{id}"
+            );
+            assert_eq!(
+                full_art_picked(&cosmetics, ALL_SIX, &FullArtPick::Id(id.to_owned()))
+                    .map(|cosmetic| cosmetic.id.as_str()),
+                Some(id)
+            );
+            assert_eq!(
+                full_art_picked(&cosmetics, BARE, &FullArtPick::Id(id.to_owned())),
+                None
+            );
+            // No retired full art implies one: owning a part 1 look never owns a part 2 one.
+            assert!(implying("core-008", id).next().is_none(), "{id}");
+        }
     }
 
     #[test]
@@ -1844,16 +2237,16 @@ mod tests {
 
         // The shipped chases: two Legendary starters every account owns, #1833's fifteen (R1833000),
         // then #2655's 42 full arts, a Legendary and a Mythic on each of 21 cards (R2655000), then #2725's
-        // Full art version and Signature augment (R2725000).
+        // Full art version and Signature augment (R2725000), then #2940's Alt full art version (R2940000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let chases: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.chase).collect();
-        assert_eq!(chases.len(), 17 + 42 + 2);
+        assert_eq!(chases.len(), 17 + 42 + 3);
         assert_eq!(
             chases[17 + 42..]
                 .iter()
                 .map(|cosmetic| cosmetic.id.as_str())
                 .collect::<Vec<_>>(),
-            [VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID]
+            [VERSION_FULL_ART_ID, AUGMENT_SIGNATURE_ID, VERSION_ALT_FULL_ART_ID]
         );
         let full_art_chases: Vec<&str> = r2655000_new(&cosmetics)
             .iter()
@@ -1957,7 +2350,7 @@ mod tests {
                 .all(|cosmetic| cosmetic.rarity == CosmeticRarity::Epic)
         );
         // A duplicate drops #1833's 18 per-card ones, then #2725's version and augments (R2725000), which
-        // retire every full art: those six, #2655's 57 and #2715's 21.
+        // retire every full art: those six, #2655's 57 and #2715's 21; then #2940's three versions (R2940000).
         let mut dropped: Vec<Cosmetic> = cosmetics[earlier.len()..earlier.len() + R1833000_NEW.len()]
             .iter()
             .filter(|cosmetic| cosmetic.kind.is_per_card())
@@ -1965,7 +2358,8 @@ mod tests {
             .collect();
         assert_eq!(dropped.len(), 18);
         dropped.extend(r2725000_new(&cosmetics).iter().cloned());
-        assert_eq!(dropped.len(), 18 + R2725000_NEW.len());
+        dropped.extend(r2940000_new(&cosmetics).iter().cloned());
+        assert_eq!(dropped.len(), 18 + R2725000_NEW.len() + R2940000_NEW.len());
         assert_eq!(pack_cosmetics(&cosmetics), dropped);
         let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
         let file: RegistryFile = serde_json::from_str(unmarked).unwrap_or_else(|error| panic!("{error}"));
@@ -2122,11 +2516,11 @@ mod tests {
      {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
-        // #1833's 72, #2655's 57 after them (R2655000), #2755's one (R2755000), #2715's 21 (R2715000)
-        // and #2725's three last (R2725000).
+        // #1833's 72, #2655's 57 after them (R2655000), #2755's one (R2755000), #2715's 21 (R2715000),
+        // #2725's three (R2725000) and #2940's three last (R2940000).
         assert_eq!(
             cosmetics.len(),
-            72 + R2655000_NEW + R2755000_NEW + R2715000_NEW + R2725000_NEW.len()
+            72 + R2655000_NEW + R2755000_NEW + R2715000_NEW + R2725000_NEW.len() + R2940000_NEW.len()
         );
         // Appended after every earlier entry, the portraits last among those, so none moves.
         let earlier = before_r1833000(&cosmetics);
@@ -2355,9 +2749,10 @@ mod tests {
     #[test]
     fn r2755000_the_jlorious_card_back_ships_after_the_full_arts_mythic_and_no_pool_offers_it() {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
-        // Appended after #2655's full arts, with only #2715's Animated arts (R2715000) and #2725's three
-        // (R2725000) after it.
-        let back = &cosmetics[cosmetics.len() - R2725000_NEW.len() - R2715000_NEW - R2755000_NEW];
+        // Appended after #2655's full arts, with only #2715's Animated arts (R2715000), #2725's three
+        // (R2725000) and #2940's three (R2940000) after it.
+        let back = &cosmetics
+            [cosmetics.len() - R2940000_NEW.len() - R2725000_NEW.len() - R2715000_NEW - R2755000_NEW];
         assert_eq!(back.id, JLORIOUS_CARD_BACK);
         assert_eq!(back.kind, CosmeticKind::CardBack);
         assert_eq!(back.rarity, CosmeticRarity::Mythic);

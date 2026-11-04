@@ -65,6 +65,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -76,7 +78,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage; your next Spell this turn costs (1) less.
     const DIVIDEND: &str = "core-024"; // (X) Spell
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const FILLER: &str = "core-010"; // (0) Spell
@@ -114,7 +116,6 @@ mod tests {
 
             #[test]
             fn every_3_cost_card_in_either_players_hand_costs_1_more_spells_and_units_alike() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, NETHER], "field": [LOBBYIST] },
                     "p2": { "hand": [FIG, MENACE] },
@@ -127,7 +128,6 @@ mod tests {
 
             #[test]
             fn a_play_pays_the_surcharge() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [LOBBYIST] },
                     "p2": { "field": [VANILLA] },
@@ -138,7 +138,6 @@ mod tests {
 
             #[test]
             fn r65_legal_actions_agrees_with_the_refusal_at_3_mana_a_3_cost_card_now_4_is_not_offered_and_is_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [LOBBYIST], "mana": 3 },
                     "p2": { "field": [VANILLA] },
@@ -153,7 +152,6 @@ mod tests {
 
             #[test]
             fn r65_a_play_from_a_graveyard_c_28_second_wind_permits_pays_the_surcharge_too() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": {
                         "hand": [FILLER],
@@ -181,7 +179,6 @@ mod tests {
 
             #[test]
             fn r363_a_2_cost_card_is_not_lifted_into_range_the_threshold_reads_the_cost_before_its_own_1() {
-                crate::register_all();
                 let s = scenario(json!({ "p1": { "hand": [ARMOR, VANILLA], "field": [LOBBYIST] } }));
                 assert_eq!(hand_cost(&s, P1, ARMOR), Some(2));
                 assert_eq!(hand_cost(&s, P1, VANILLA), Some(1));
@@ -189,7 +186,6 @@ mod tests {
 
             #[test]
             fn r363_r65_a_3_cost_card_a_discount_has_brought_to_2_is_out_of_range_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ECLIPSE, HIT_JOB, FILLER], "field": [LOBBYIST], "mana": 9 },
                 }));
@@ -199,7 +195,6 @@ mod tests {
 
             #[test]
             fn r65_an_x_cost_card_is_untouched_x_of_3_costs_3() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DIVIDEND, FILLER], "field": [LOBBYIST] } }));
                 s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": [{ "pick": "hero", "player": "p2" }] }))
                     .expect_mana(P1, 1);
@@ -207,24 +202,22 @@ mod tests {
 
             #[test]
             fn r70_a_cast_pays_nothing_a_cast_on_draw_card_priced_at_3_is_cast_for_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [LOBBYIST] },
-                    "p2": { "hand": [FILLER], "library": [{ "def": CN_VIRUS, "costMod": 2 }, VANILLA] },
+                    "p2": { "hand": [FILLER], "library": [{ "def": SUPER_VIRUS, "costMod": 2 }, VANILLA] },
                 }));
                 s.end_turn();
                 let cast = s
                     .last_events()
                     .iter()
                     .map(js)
-                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS)
+                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS)
                     .expect("the Cast on draw card's cardPlayed");
                 assert!(matches_object(&cast, &json!({ "player": "p2", "costPaid": 0 })));
             }
 
             #[test]
             fn gone_when_it_leaves_destroyed_a_3_cost_card_costs_3_again() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FIG], "field": [LOBBYIST], "mana": 9 } }));
                 let lobbyist = s.card(LOBBYIST).id.clone();
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": lobbyist }] }));
@@ -234,7 +227,6 @@ mod tests {
 
             #[test]
             fn r177_a_hidden_hand_cards_cost_changed_shows_1_and_the_sentinel_to_the_other_player() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [REMINISCE, FILLER], "field": [LOBBYIST], "graveyard": [NETHER] },
                 }));
@@ -262,7 +254,6 @@ mod tests {
 
             #[test]
             fn r386_its_surcharge_is_declared_an_upgrades_step_makes_3_cost_cards_cost_2_more() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB], "field": [LOBBYIST] } }));
                 step_param(s.card_mut(LOBBYIST), "surcharge", 1);
                 assert_eq!(hand_cost(&s, P1, HIT_JOB), Some(5));
@@ -270,7 +261,6 @@ mod tests {
 
             #[test]
             fn r386_its_threshold_is_declared_and_a_degrade_moves_it_toward_harder_4_so_a_3_card_is_spared() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, NETHER], "field": [LOBBYIST] } }));
                 step_param(s.card_mut(LOBBYIST), "threshold", 1);
                 assert_eq!(hand_cost(&s, P1, HIT_JOB), Some(3));
@@ -283,7 +273,6 @@ mod tests {
 
             #[test]
             fn r65_the_opponent_cant_play_a_3_cost_card_absent_from_their_legal_actions_and_refused() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
                     "p2": { "hand": [HIT_JOB, FIG, ARMOR, FILLER], "field": [VANILLA] },
@@ -302,7 +291,6 @@ mod tests {
 
             #[test]
             fn r65_an_x_card_is_banned_for_an_x_of_3_or_more_only_x_of_1_and_2_are_offered() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
                     "p2": { "hand": [DIVIDEND, FILLER] },
@@ -324,7 +312,6 @@ mod tests {
 
             #[test]
             fn r65_checked_last_on_the_finished_price_a_4_cost_card_discounted_to_2_may_be_played() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
                     "p2": { "hand": [{ "def": NETHER, "costMod": -2 }, FILLER] },
@@ -337,7 +324,6 @@ mod tests {
 
             #[test]
             fn r65_the_ban_reaches_a_graveyard_c_28_second_wind_lets_the_opponent_play_from_a_3_there_is_not_offered() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
                     "p2": {
@@ -356,7 +342,6 @@ mod tests {
 
             #[test]
             fn your_plays_are_free_of_it_its_controller_plays_a_3_cost_card_at_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
                     "p2": { "field": [VANILLA] },
@@ -368,24 +353,22 @@ mod tests {
 
             #[test]
             fn r70_casts_still_happen_the_opponents_cast_on_draw_card_priced_at_3_is_cast() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }] },
-                    "p2": { "hand": [FILLER], "library": [{ "def": CN_VIRUS, "costMod": 2 }, VANILLA] },
+                    "p2": { "hand": [FILLER], "library": [{ "def": SUPER_VIRUS, "costMod": 2 }, VANILLA] },
                 }));
                 s.end_turn();
                 let cast = s
                     .last_events()
                     .iter()
                     .map(js)
-                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS)
+                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS)
                     .expect("the Cast on draw card's cardPlayed");
                 assert!(matches_object(&cast, &json!({ "player": "p2" })));
             }
 
             #[test]
             fn r386_its_declared_threshold_moves_toward_harder_on_a_degrade_4_so_the_opponent_may_play_a_3() {
-                crate::register_all();
                 let mut sp = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": LOBBYIST, "radiant": true }, VANILLA] },
                     "p2": { "hand": [HIT_JOB, NETHER, FILLER] },

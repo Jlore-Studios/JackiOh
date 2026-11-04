@@ -122,8 +122,8 @@ A face whose Discover or Choose one, opened as it resolves, offers choices read 
 types its library holds, the numbers on a hand card) sets `secret_option_counts: true`, so the other seat is not told how many
 it offers (R2739000).
 
-**Tests**, at the bottom of the same file (in the shape of C+ #6's; printed cost and stats need no test, `tests/cross/catalog.rs` proves them). Build every game with the testkit's `scenario()`
-after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):
+**Tests**, at the bottom of the same file (in the shape of C+ #6's; printed cost and stats need no test, `tests/cross/catalog.rs` proves them). Build every game with the crate's `scenario()`
+(`use crate::scenario;`), which registers the shipped cards first, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):
 
 ```rust
 #[cfg(test)]
@@ -131,9 +131,10 @@ mod tests {
     use super::ID;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     #[test]
     fn radiant_enters_the_field_when_played() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [{ "def": ID, "radiant": true }] } }));
         s.play(ID, json!({}));
         s.expect_in_zone(ID, "field");
@@ -147,11 +148,11 @@ mod tests {
 with `use crate::<name>;`; use them rather than a copy: `scenario` (the shipped cards registered, then the testkit's),
 `js` (an engine value as JSON, never `serde_json::to_value(…).expect(…)`), `merged` (TS `{ ...base, ...over }`: a
 side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(count)` (`count` Stockpiles, Core #5,
-for a library), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
+for a library), `ids` (the cards' ids), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
 `stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces
 given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
 `can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…` and `must` the same way;
-`crates/tools/tests/acceptance.rs` refuses a copy (#1826, #2023). Keep a local helper only when its body differs.
+`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Keep a local helper only when its body differs.
 
 ## 3. The patch, and its order
 
@@ -226,7 +227,7 @@ A plain wave deals any one card in fewer than one seed in ten, so for card work 
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
-- **Seed-pinned tests** ("the first Discover offers Bigot, the second Twisted Sorcerer"): `crates/cards/tests/cross/` pins no
+- **Seed-pinned tests** ("the first Discover offers Speciesist, the second Twisted Sorcerer"): `crates/cards/tests/cross/` pins no
   pool's roll (#848). A test that needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or
   `cursor_where(seed, accept)` (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), and
   a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a

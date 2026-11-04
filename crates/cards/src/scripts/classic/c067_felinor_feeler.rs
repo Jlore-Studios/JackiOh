@@ -46,6 +46,8 @@ mod tests {
     use super::ID;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -88,7 +90,6 @@ mod tests {
 
             #[test]
             fn r20_cry_every_enemy_unit_switches_to_defense_position_as_an_effect_spending_no_exertion_yours_stay() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FEELER, STOCKPILE], "field": [TIMMY], "library": spare()["library"].clone() },
                     "p2": with_spare(json!({ "field": [VANILLA, TIMMY] })),
@@ -105,7 +106,6 @@ mod tests {
 
             #[test]
             fn r91_a_unit_already_in_defense_position_stays_with_no_switch_reported() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FEELER, STOCKPILE], "library": spare()["library"].clone() },
                     "p2": with_spare(json!({ "field": [{ "def": VANILLA, "position": "DEF" }, TIMMY] })),
@@ -126,7 +126,6 @@ mod tests {
 
             #[test]
             fn s4_1_spikey_pillow_which_cant_be_in_defense_position_stays_in_attack() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FEELER, STOCKPILE], "library": spare()["library"].clone() },
                     "p2": with_spare(json!({ "field": [PILLOW, VANILLA] })),
@@ -138,7 +137,6 @@ mod tests {
 
             #[test]
             fn r346_pierce_its_hits_skip_armor() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": with_spare(json!({ "field": [FEELER] })),
                     "p2": with_spare(json!({ "field": [ARMORED] })),
@@ -166,7 +164,6 @@ mod tests {
 
             #[test]
             fn s8_6_nor_a_felinor_count_felinor_fienders_stats_are_the_same_beside_it() {
-                crate::register_all();
                 let alone = scenario(json!({ "p1": { "field": [FIENDER] } }));
                 let beside = scenario(json!({ "p1": { "field": [FIENDER, FEELER] } }));
                 assert_eq!(beside.stats(FIENDER).attack, alone.stats(FIENDER).attack);
@@ -175,7 +172,6 @@ mod tests {
 
             #[test]
             fn r13_a_card_dormant_under_an_enemy_stack_pile_is_not_on_the_field_and_keeps_its_position() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FEELER, STOCKPILE], "library": spare()["library"].clone() },
                     "p2": with_spare(json!({ "field": [VANILLA, { "def": FIENDER, "stack": true }] })),
@@ -191,7 +187,6 @@ mod tests {
 
             #[test]
             fn s8_6_a_2_4_with_pierce_and_no_rush_it_cannot_attack_the_turn_it_enters() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FEELER, STOCKPILE], "library": spare()["library"].clone() },
                     "p2": with_spare(json!({ "field": [VANILLA] })),
@@ -207,7 +202,6 @@ mod tests {
 
             #[test]
             fn s8_6_4_8_pierce_rush_the_same_cry_and_it_may_attack_a_unit_the_turn_it_enters() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FEELER, "radiant": true }, STOCKPILE], "library": spare()["library"].clone() },
                     "p2": with_spare(json!({ "field": [VANILLA, PILLOW] })),

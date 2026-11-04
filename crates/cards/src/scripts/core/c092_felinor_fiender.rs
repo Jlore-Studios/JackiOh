@@ -80,6 +80,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const FIENDER: &str = "core-092";
@@ -108,7 +110,6 @@ mod tests {
 
         #[test]
         fn r39_with_no_felinors_it_is_exactly_its_printed_5_7_the_never_below_printed_floor() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-alone",
                 "p1": { "field": [FIENDER], "hand": ["core-005"] },
@@ -121,7 +122,6 @@ mod tests {
 
         #[test]
         fn r39_printed_plus_one_big_felinor_s_3_10_is_8_17() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-one-felinor",
                 "p1": { "field": [FIENDER, BIG_FELINOR], "hand": ["core-005"] },
@@ -134,7 +134,6 @@ mod tests {
 
         #[test]
         fn r39_the_sum_is_over_all_your_felinors_3_10_plus_1_1_makes_it_9_18() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-two-felinors",
                 "p1": { "field": [FIENDER, BIG_FELINOR, FELINOR_TOKEN], "hand": ["core-005"] },
@@ -146,7 +145,6 @@ mod tests {
 
         #[test]
         fn r923_a_granted_felinor_counts() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-granted",
                 "p1": { "field": [FIENDER, "core-008"], "hand": ["core-005"] },
@@ -162,7 +160,6 @@ mod tests {
 
         #[test]
         fn your_felinors_the_enemy_s_felinors_are_not_counted() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-enemy-felinors",
                 "p1": { "field": [FIENDER], "hand": ["core-005"] },
@@ -174,7 +171,6 @@ mod tests {
 
         #[test]
         fn s8_tags_it_human_so_a_second_fiender_adds_nothing_to_either_of_them() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-two-fienders",
                 "p1": { "field": [FIENDER, FIENDER], "hand": ["core-005"] },
@@ -197,7 +193,6 @@ mod tests {
 
         #[test]
         fn s10_4_layer_4_is_max_health_so_a_damaged_felinor_contributes_its_full_10() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-damaged-felinor",
                 "p1": { "field": [FIENDER, { "def": BIG_FELINOR, "damage": 7 }], "hand": ["core-005"] },
@@ -225,7 +220,6 @@ mod tests {
 
         #[test]
         fn the_set_stat_layer_is_recomputed_continuously_a_felinor_leaving_drops_the_bonus_at_once() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-recompute",
                 "p1": { "field": [FIENDER, FELINOR_TOKEN], "hand": [TRUE_STRIKE, "core-005"] },
@@ -247,7 +241,6 @@ mod tests {
 
         #[test]
         fn the_bonus_follows_a_felinor_arriving_mid_turn_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-arrival",
                 "p1": { "field": [FIENDER], "hand": [FELINOR_TOKEN, "core-005"] },
@@ -268,7 +261,6 @@ mod tests {
 
         #[test]
         fn s3_2_stack_it_plays_onto_an_occupied_unit_zone_and_becomes_the_top_of_the_pile() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-stack-play",
                 "p1": { "field": [BIG_FELINOR], "hand": [FIENDER, "core-005"] },
@@ -285,7 +277,6 @@ mod tests {
 
         #[test]
         fn r13_a_felinor_dormant_under_the_stack_still_counts_the_one_dormancy_exception() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-stack-count",
                 "p1": { "field": [BIG_FELINOR], "hand": [FIENDER, "core-005"] },
@@ -302,7 +293,6 @@ mod tests {
         /// and counts as one dormant in a unit zone does.
         #[test]
         fn r1081000_a_felinor_dormant_beneath_a_backrow_pile_still_counts() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-backrow-pile",
                 "p1": { "field": [BIG_FELINOR], "hand": [FIENDER, "core-005"] },
@@ -321,7 +311,6 @@ mod tests {
 
         #[test]
         fn r92_the_dormant_card_under_the_stack_has_no_position_and_cannot_be_switched() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-stack-position",
                 "p1": { "field": [BIG_FELINOR], "hand": [FIENDER, "core-005"] },
@@ -340,7 +329,6 @@ mod tests {
 
         #[test]
         fn r13_the_card_beneath_is_dormant_still_on_the_field_keeping_its_damage_and_not_acting() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-stack-dormant",
                 "p1": { "field": [{ "def": BIG_FELINOR, "damage": 4 }], "hand": [FIENDER, "core-005"] },
@@ -370,7 +358,6 @@ mod tests {
 
         #[test]
         fn s8_radiant_prints_10_14_and_with_no_felinors_is_exactly_that_r39() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-radiant-alone",
                 "p1": { "field": [{ "def": FIENDER, "radiant": true }], "hand": ["core-005"] },
@@ -382,7 +369,6 @@ mod tests {
 
         #[test]
         fn r362_the_radiant_face_adds_twice_the_sum_10_14_2_3_10_1_1_is_18_36() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-radiant-sum",
                 "p1": {
@@ -398,7 +384,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_the_radiant_keyword_list_is_stack_alone_so_a_played_radiant_fiender_cannot_attack_that_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-radiant-keywords",
                 "p1": { "field": [BIG_FELINOR], "hand": [{ "def": FIENDER, "radiant": true }, "core-005"] },
@@ -414,7 +399,6 @@ mod tests {
 
         #[test]
         fn radiant_keeps_the_enemy_felinor_exclusion_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-radiant-enemy",
                 "p1": { "field": [{ "def": FIENDER, "radiant": true }], "hand": ["core-005"] },
@@ -426,7 +410,6 @@ mod tests {
 
         #[test]
         fn r13_r362_radiant_counts_dormant_felinors_twice_as_well() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-092-radiant-stack",
                 "p1": { "field": [BIG_FELINOR], "hand": [{ "def": FIENDER, "radiant": true }, "core-005"] },

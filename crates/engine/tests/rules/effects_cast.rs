@@ -7,7 +7,7 @@ use jackioh_engine::effects::{cast, cast_new, cast_random, cast_random_at, damag
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    act, act_result, both, events_of_type, in_hand, put, round_trip, slot,
+    act, act_result, both, events_of_type, ids, in_hand, put, round_trip, slot,
 };
 use crate::rules::fixtures::play_pipeline_b::{
     DISCOVER_POOL, RANDOM_POOL, ask_target, cast_field, cast_trap, discover_spell, grave_spell, in_graveyard,
@@ -226,10 +226,6 @@ fn answer_hero(state: &GameState, player: PlayerId, hero: PlayerId) -> ActionBod
 
 fn last_n<T: Clone>(items: &[T], n: usize) -> Vec<T> {
     items[items.len().saturating_sub(n)..].to_vec()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn option_selections(state: &GameState) -> Vec<Selection> {

@@ -71,6 +71,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const LEGION: &str = "classicplus-012-7";
     const TOKENS: &str = "core-015"; // (1) Unit 1/1, Cry: summon a Rush Token
     const MENACE: &str = "core-019"; // (3) Unit
@@ -182,7 +184,6 @@ mod tests {
 
         #[test]
         fn r129_an_empty_deck_does_nothing_and_draws_nothing_from_the_rng() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LEGION, STOCKPILE], "library": [], "mana": 8 },
                 "p2": { "hand": [STOCKPILE] },
@@ -213,7 +214,6 @@ mod tests {
 
         #[test]
         fn r386_the_card_count_reads_through_param_a_degrade_exiles_4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LEGION, STOCKPILE], "library": [LUNAR, LUNAR, LUNAR, LUNAR, LUNAR, LUNAR], "mana": 8 },
                 "p2": { "hand": [STOCKPILE] },

@@ -73,7 +73,6 @@ mod tests {
 
     #[test]
     fn r1179000_one_hit_on_every_unit_of_both_sides_and_none_on_a_hero() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [LASH, FILLER], "field": [{ "def": BODY, "lane": 2 }] },
             "p2": { "hand": [FILLER], "field": [{ "def": BODY, "lane": 1 }, { "def": BODY, "lane": 3 }] },
@@ -91,7 +90,6 @@ mod tests {
 
     #[test]
     fn a_divine_shield_is_popped() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [LASH, FILLER] },
             "p2": { "hand": [FILLER], "field": [SHIELDED] },
@@ -104,7 +102,6 @@ mod tests {
 
     #[test]
     fn the_normal_version_does_not_pierce_armor() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [LASH, FILLER] },
             "p2": { "hand": [FILLER], "field": [ARMORED] },
@@ -116,7 +113,6 @@ mod tests {
 
     #[test]
     fn r1179000_embiggened_each_hit_ignores_armor_and_heals_your_hero_by_the_damage_dealt() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "health": 20, "hand": [LASH, FILLER], "field": [BODY] },
             "p2": { "hand": [FILLER], "field": [ARMORED] },
@@ -133,7 +129,6 @@ mod tests {
 
     #[test]
     fn r386_damage_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [LASH, FILLER] },
             "p2": { "hand": [FILLER], "field": [BODY] },
@@ -146,7 +141,6 @@ mod tests {
 
     #[test]
     fn radiant_echo_1_hits_every_unit_twice() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": LASH, "radiant": true }, FILLER], "field": [BODY] },
             "p2": { "hand": [FILLER], "field": [BODY] },
@@ -162,7 +156,6 @@ mod tests {
 
     #[test]
     fn r1179000_radiant_an_embiggened_play_repeats_embiggened() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "health": 20, "hand": [{ "def": LASH, "radiant": true }, FILLER], "field": [BODY] },
             "p2": { "hand": [FILLER], "field": [ARMORED] },

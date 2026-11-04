@@ -37,11 +37,13 @@ import { createPracticeController, type PracticeController } from "../../practic
 import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
+import { guardLeaving } from "../../net/navigate.ts";
 import "../../practice/practice.css";
 import { useSetting } from "../../settings/store.ts";
 import { runFightSetup } from "../../wasm/index.ts";
 import type { Dungeon } from "../store.ts";
 import { ArtifactTray, type TrayItem } from "./ArtifactTray.tsx";
+import ConfirmLeaveFight from "./ConfirmLeaveFight.tsx";
 import { FIGHT_DIFFICULTY } from "./config.ts";
 import { RunTimer } from "./RunTimer.tsx";
 import { fightTestid } from "./testids.ts";
@@ -176,6 +178,29 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     [controller],
   );
 
+  const snapshot = state.snapshot;
+
+  // R2972000: while the fight is live, every in-app move off it asks first (R1754000), as every
+  // way off a live online match does (R2479000). These hooks sit before the screens below: a
+  // live-to-failed transition re-renders this same screen, and hooks after a return would change
+  // the hook count. The stopped screen holds nothing: Try again deals the same fight again from
+  // its seed, so there is no live fight to keep. The cleanup releases the guard when the store
+  // moves screens on its own (Continue sends the report and unmounts this screen), and `!over`
+  // releases it once the fight has its result.
+  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
+  const atStake =
+    setup !== null && controller !== null && snapshot !== null && !over && state.phase !== "failed";
+  useEffect(() => {
+    if (!atStake) return;
+    const release = guardLeaving((leave) => {
+      setLeaving({ leave });
+    });
+    return () => {
+      release();
+      setLeaving(null);
+    };
+  }, [atStake]);
+
   if (setup === null) {
     return (
       <Shell variant="lobby">
@@ -204,7 +229,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     );
   }
 
-  const snapshot = state.snapshot;
   if (controller === null || snapshot === null) {
     return (
       <Shell variant="lobby">
@@ -300,6 +324,14 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       <div className="practice-board practice-table" ref={setBoardRoot} data-thinking={state.thinking ? "true" : "false"}>
         {lookup === null ? board : <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider>}
       </div>
+      {leaving === null ? null : (
+        <ConfirmLeaveFight
+          onStay={() => {
+            setLeaving(null);
+          }}
+          onLeave={leaving.leave}
+        />
+      )}
     </Shell>
   );
 }

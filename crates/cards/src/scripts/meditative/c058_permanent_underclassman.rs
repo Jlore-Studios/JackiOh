@@ -69,6 +69,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const UNDERCLASSMAN: &str = "meditative-058";
     const FILLER: &str = "core-005";
     /// (1) 4/4 Unit with no text: what fills the board.
@@ -77,7 +79,6 @@ mod tests {
     /// p1 holds the Underclassman (base unless `radiant_face`); both sides keep cards in hand so no
     /// turn auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -222,7 +223,6 @@ mod tests {
 
         #[test]
         fn a_cast_underclassman_runs_its_cry_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "underclassman-cast",
                 "p1": { "hand": [FILLER], "library": filler(4) },
@@ -366,7 +366,6 @@ mod tests {
 
         #[test]
         fn a_full_board_summons_nothing_and_grants_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "underclassman-full",
                 "p1": {

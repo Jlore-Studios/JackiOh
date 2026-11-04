@@ -17,13 +17,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::copied_text::{CT, with_copied_text};
 use crate::rules::fixtures::harness::{
-    Bench, act_ok, act_result, events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip,
-    set_library, slot,
+    Bench, act_ok, act_result, events_of_type, ids, in_hand, json_of, matches_object, new_game, put,
+    round_trip, set_library, slot,
 };
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
 
 fn game(seed: &str, mana: i32) -> GameState {
     let mut ready = begin_game(&with_copied_text(new_game(seed, None))).state;

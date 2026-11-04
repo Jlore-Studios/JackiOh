@@ -359,7 +359,7 @@ pub fn add_lane_watch(
     )
 }
 
-/// R1863000: Great Replacement Theory's watcher — a `never` modifier on `player` that answers the first
+/// R1863000: Great Paperclip Theory's watcher — a `never` modifier on `player` that answers the first
 /// resolved play of theirs of each of `def_ids` (Stinkyscape #44).
 pub fn add_play_watch(
     sink: &mut EngineSink<'_>,

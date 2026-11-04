@@ -48,7 +48,6 @@ mod tests {
     #[test]
     fn declares_one_target_and_runs_one_script_on_both_faces() {
         // One target is declared: played with none, the play is refused.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -63,7 +62,6 @@ mod tests {
 
     #[test]
     fn deals_2_to_a_declared_unit_or_hero() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, ID, FILLER], "field": [{ "def": MENACE, "lane": 1 }] },
             "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "lane": 2 }] },
@@ -79,7 +77,6 @@ mod tests {
 
     #[test]
     fn radiant_deals_4() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER], "field": [{ "def": MENACE, "lane": 1 }] },
             "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "lane": 2 }] },

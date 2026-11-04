@@ -39,6 +39,8 @@ mod tests {
 
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const UNAN: &str = "meditative-092";
@@ -72,7 +74,6 @@ mod tests {
 
             #[test]
             fn r1204_a_lethal_hit_on_an_ally_reaches_the_guard_through_its_armor() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, ALLY] },
                     "p2": { "hand": [FILLER], "field": [STRIKER] },
@@ -91,7 +92,6 @@ mod tests {
 
             #[test]
             fn r1204_a_survivable_hit_is_not_caught() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, ALLY] },
                     "p2": { "hand": [BURN, FILLER] },
@@ -108,7 +108,6 @@ mod tests {
 
             #[test]
             fn r1204_enemy_units_are_not_guarded() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, STRIKER] },
                     "p2": { "hand": [FILLER], "field": [ALLY] },
@@ -120,7 +119,6 @@ mod tests {
 
             #[test]
             fn r1204_the_hero_is_guarded() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN] },
                     // The Radiant face, which leaves the turn going.
@@ -137,7 +135,6 @@ mod tests {
             }
             #[test]
             fn r1204_ten_damage_aimed_at_a_4_health_unit_reaches_unan_as_7() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, VANILLA] },
                     "p2": { "hand": [FILLER], "field": [GOLEM] },
@@ -150,7 +147,6 @@ mod tests {
 
             #[test]
             fn r1204_a_divine_shield_is_read_first() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, GHOST] },
                     "p2": { "hand": [FILLER], "field": [STRIKER] },
@@ -170,7 +166,6 @@ mod tests {
 
             #[test]
             fn r1204_indestructible_is_read_first() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, BASTION] },
                     "p2": { "hand": [FILLER], "field": [STRIKER] },
@@ -184,7 +179,6 @@ mod tests {
 
             #[test]
             fn r1204_a_hit_lethal_to_unan_kills_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": UNAN, "damage": 10 }, ALLY] },
                     "p2": { "hand": [FILLER], "field": [STRIKER] },
@@ -199,7 +193,6 @@ mod tests {
 
             #[test]
             fn r1204_a_second_unan_catches_what_the_first_passes_on() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": UNAN, "damage": 10 }, UNAN, ALLY] },
                     "p2": { "hand": [FILLER], "field": [STRIKER] },
@@ -220,7 +213,6 @@ mod tests {
             #[test]
             fn r1204_lose_health_is_not_caught() {
                 // At 5 health Rotten Grape's loss is lethal, and no damage for Unan to catch.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "health": 5, "hand": [GRAPE, FILLER], "field": [UNAN] },
                     "p2": { "hand": [FILLER] },
@@ -234,7 +226,6 @@ mod tests {
             #[test]
             fn r1204_poisonous_is_not_caught() {
                 // A Poisonous 1: survivable by amount, so no window opens, and the poison kills.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, VANILLA] },
                     "p2": { "hand": [FILLER], "field": [POISONOUS] },
@@ -250,7 +241,6 @@ mod tests {
             #[test]
             fn r1204_each_hit_of_a_sweep_is_judged_alone() {
                 // Whirlwind deals 1 to every Unit: lethal to the 1/1 Scarab alone, survivable for the 4/4.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, SCARAB, VANILLA] },
                     "p2": { "hand": [WHIRLWIND, FILLER] },

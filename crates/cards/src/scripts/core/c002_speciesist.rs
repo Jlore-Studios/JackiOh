@@ -1,4 +1,4 @@
-//! SPEC §8.1 #2 Bigot — 4/1 → 8/2 Unit, Human, cost 2.
+//! SPEC §8.1 #2 Speciesist — 4/1 → 8/2 Unit, Human, cost 2.
 //! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
 //! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
 //! the radiant form declares no target at all.
@@ -41,12 +41,13 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    mod n2_bigot {
+    use crate::scenario;
+
+    mod n2_speciesist {
         use super::*;
 
         #[test]
         fn destroys_the_chosen_enemy_non_human_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-025", "core-008"] }
@@ -60,7 +61,6 @@ mod tests {
 
         #[test]
         fn r90_a_human_is_not_targetable_the_play_is_refused() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-008"] }
@@ -74,8 +74,7 @@ mod tests {
         }
 
         #[test]
-        fn medina_enforcer_is_human_so_bigot_cannot_target_it() {
-            crate::register_all();
+        fn medina_enforcer_is_human_so_speciesist_cannot_target_it() {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["meditative-083"] }
@@ -90,7 +89,6 @@ mod tests {
 
         #[test]
         fn r90_no_legal_target_the_play_is_still_legal_the_unit_enters_and_the_cry_fizzles() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-008"] }
@@ -102,7 +100,6 @@ mod tests {
 
         #[test]
         fn radiant_clears_every_enemy_non_human_while_the_humans_survive() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-002", "radiant": true }] },
                 "p2": { "field": ["core-025", "core-008", "core-012", "core-020"] }
@@ -117,7 +114,6 @@ mod tests {
 
         #[test]
         fn radiant_needs_no_target_and_destroys_nothing_when_every_enemy_unit_is_human() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-002", "radiant": true }] },
                 "p2": { "field": ["core-008", "core-020"] }

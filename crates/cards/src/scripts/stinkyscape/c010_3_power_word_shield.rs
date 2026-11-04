@@ -54,7 +54,6 @@ mod tests {
 
         #[test]
         fn gives_2_health_current_and_max_and_draws_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SHIELD, FILLER], "field": [VANILLA], "library": [FILLER, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -69,7 +68,6 @@ mod tests {
 
         #[test]
         fn an_enemy_unit_may_be_chosen() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SHIELD, FILLER], "library": [FILLER] },
                 "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -84,7 +82,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_of_health_and_draw_moves_both() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SHIELD, FILLER], "field": [VANILLA], "library": [FILLER, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -105,7 +102,6 @@ mod tests {
 
         #[test]
         fn gives_4_health_and_draws_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [{ "def": SHIELD, "radiant": true }, FILLER],

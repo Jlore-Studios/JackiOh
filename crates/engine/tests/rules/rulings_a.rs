@@ -16,7 +16,7 @@ use jackioh_engine::subsystems::scorer::{ScorerOptions, ZEPHYRS_INDEX, candidate
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    both, events_json, in_hand, json_of, new_game, put, set_library, sink_for, slot, spread,
+    both, events_json, ids, in_hand, json_of, new_game, put, set_library, sink_for, slot, spread,
 };
 use super::fixtures::scripts::infinite_reserves;
 
@@ -73,7 +73,7 @@ const SHEEP: &str = "ra-sheep";
 const BREAD: &str = "ra-bread";
 /// A Spell with a Cry, for R1's cast.
 const BOLT: &str = "ra-bolt";
-/// #21 Hinder / #90.1 CN-Virus: cast on draw (R40).
+/// #21 Hinder / #90.1 Super-Virus: cast on draw (R40).
 const CAST_ON_DRAW_SPELL: &str = "ra-cast-on-draw";
 /// R2179002: a Field Spell that answers its controller's plays and their resolutions, by two
 /// different hits on the enemy hero, so a test can tell which of the two answered.
@@ -562,7 +562,7 @@ fn controlled(controller: PlayerId) -> HookOptions {
     }
 }
 
-fn by(controller: PlayerId) -> RunOptions {
+fn run_by(controller: PlayerId) -> RunOptions {
     RunOptions {
         hook: controlled(controller),
         ..RunOptions::default()
@@ -663,10 +663,6 @@ fn says(text: &str) -> Option<String> {
     Some(text.to_string())
 }
 
-fn ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
-    cards.into_iter().map(|card| card.borrow().id.clone()).collect()
-}
-
 fn def_ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
     cards
         .into_iter()
@@ -733,7 +729,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::summon(json_as(json!({ "defId": CRIER }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 1)), "summoned crier").def_id,
@@ -742,7 +738,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
         set_library(&mut state, P1, &[CRIER]);
-        run(&mut state, effects::recruit(json_as(json!({}))), by(P1));
+        run(&mut state, effects::recruit(json_as(json!({}))), run_by(P1));
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 2)), "recruited crier").def_id,
             CRIER
@@ -753,7 +749,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::transform(json_as(json!({ "instanceId": victim.id, "defId": CRIER }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 3)), "transformed crier").def_id,
@@ -1059,7 +1055,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::steal(json_as(json!({ "instanceId": victim.id }))),
-            by(P1),
+            run_by(P1),
         );
         let stolen = instance_in(&state, &victim.id);
         assert_eq!(stolen.controller, P1);
@@ -1197,7 +1193,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::steal(json_as(json!({ "instanceId": same_lane.id }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 3)), "same-lane steal").id,
@@ -1209,7 +1205,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::steal(json_as(json!({ "instanceId": displaced.id }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 2)), "first free steal").id,
@@ -1223,7 +1219,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::steal(json_as(json!({ "instanceId": stays.id }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P2, UNITS, 2)), "unstolen unit").id,
@@ -1293,7 +1289,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut random,
             effects::discard_random(json_as(json!({ "count": 1 }))),
-            by(P1),
+            run_by(P1),
         );
         assert!(random.pending.is_none());
         assert_eq!(random.players.p1.hand.len(), 2);
@@ -1525,7 +1521,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let events = run(
             &mut state,
             effects::set_radiant(json_as(json!({ "instanceId": unit.id }))),
-            by(P1),
+            run_by(P1),
         );
         let now = instance_in(&state, &unit.id);
         assert!(now.radiant);
@@ -1554,7 +1550,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             run(
                 &mut state,
                 effects::set_radiant(json_as(json!({ "instanceId": saintess.id }))),
-                by(P1)
+                run_by(P1)
             )
             .is_empty()
         );
@@ -1569,14 +1565,14 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::vanilla(json_as(json!({ "instanceId": warded.id }))),
-            by(P1),
+            run_by(P1),
         );
         assert!(!instance_in(&state, &warded.id).vanilla);
 
         run(
             &mut state,
             effects::transform(json_as(json!({ "instanceId": warded.id, "defId": BODY }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 1)), "immutable unit").def_id,
@@ -1602,7 +1598,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::set_radiant(json_as(json!({ "instanceId": warded.id }))),
-            by(P1),
+            run_by(P1),
         );
         assert!(instance_in(&state, &warded.id).radiant);
     }
@@ -1622,7 +1618,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut tie,
             effects::recruit(json_as(json!({ "filter": { "cost": 2 } }))),
-            by(P1),
+            run_by(P1),
         );
         // The library is scanned top down, so the tie goes to the card nearest the top.
         assert_eq!(
@@ -1635,7 +1631,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut costs,
             effects::recruit(json_as(json!({ "filter": { "cost": 0 } }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&costs, slot(P1, UNITS, 1)), "x-cost card").def_id,
@@ -1644,7 +1640,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut costs,
             effects::recruit(json_as(json!({ "filter": { "cost": 2 } }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&costs, slot(P1, UNITS, 2)), "embiggen card").def_id,
@@ -1675,7 +1671,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::exile_matching(json_as(json!({ "zones": ["hand"], "parity": "odd" }))),
-            by(P1),
+            run_by(P1),
         );
 
         assert_eq!(ids(&state.players.p1.exile), vec![odd.id.clone()]);
@@ -1796,7 +1792,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             run(
                 &mut state,
                 effects::add_to_hand(json_as(json!({ "defId": REMINISCE }))),
-                by(P1),
+                run_by(P1),
             );
         }
         assert_eq!(
@@ -1864,7 +1860,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::steal(json_as(json!({ "instanceId": hidden.id }))),
-            by(P1),
+            run_by(P1),
         );
         let stolen = instance_in(&state, &hidden.id);
         assert_eq!(stolen.controller, P1);
@@ -1903,14 +1899,14 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::shuffle_into(json_as(json!({ "defId": UNIT_TOKEN, "count": 3 }))),
-            by(P1),
+            run_by(P1),
         );
         run(
             &mut state,
             effects::shuffle_into(json_as(
                 json!({ "defId": SPELL_TOKEN, "count": 1, "radiant": true }),
             )),
-            by(P1),
+            run_by(P1),
         );
 
         let library = &state.players.p1.library;
@@ -1934,7 +1930,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::transform(json_as(json!({ "instanceId": unit.id, "defId": OTHER_BODY }))),
-            by(P1),
+            run_by(P1),
         );
         let replacement = must(card_at(&state, slot(P1, UNITS, 2)), "replacement").clone();
         assert_eq!(replacement.def_id, OTHER_BODY);
@@ -1950,7 +1946,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::transform(json_as(
                 json!({ "instanceId": replacement.id, "defId": PLAIN_SPELL }),
             )),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, UNITS, 2)), "unchanged unit").def_id,
@@ -1962,7 +1958,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut state,
             effects::transform(json_as(json!({ "instanceId": armed.id, "defId": FIELD_TRAP }))),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(
             must(card_at(&state, slot(P1, BACKROW, 1)), "replaced trap").def_id,
@@ -1976,7 +1972,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::transform(json_as(
                 json!({ "instanceId": hand_card.id, "defId": OTHER_BODY }),
             )),
-            by(P1),
+            run_by(P1),
         );
         assert_eq!(def_ids(&state.players.p1.hand), vec![OTHER_BODY]);
     }
@@ -2026,7 +2022,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::summon(json_as(
                 json!({ "defId": BREAD, "statsOverride": { "attack": 4, "health": 4 } }),
             )),
-            by(P1),
+            run_by(P1),
         );
 
         let token = must(card_at(&state, slot(P1, UNITS, 1)), "bread token").clone();
@@ -2254,7 +2250,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         run(
             &mut copies,
             effects::summon(json_as(json!({ "defId": TRAP, "radiant": true }))),
-            by(P1),
+            run_by(P1),
         );
         assert!(must(card_at(&copies, slot(P1, BACKROW, 1)), "radiant copy").radiant);
         run(
@@ -2262,7 +2258,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::summon(json_as(
                 json!({ "defId": BODY, "statsOverride": { "attack": 7, "health": 7 } }),
             )),
-            by(P1),
+            run_by(P1),
         );
         let stat_copy = must(card_at(&copies, slot(P1, UNITS, 1)), "stat copy").clone();
         assert_eq!(

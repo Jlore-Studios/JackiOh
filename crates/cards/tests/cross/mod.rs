@@ -1,8 +1,8 @@
 //! The cross-card tests (SURFACE §1): those that are not a card's own (each card's are the `mod tests`
 //! of its script).
 //! The helpers the files share live here, beside `scenario`: `register_fixture_script`, `fixture`,
-//! `in_hand`, `targets_of`, `tributes_of` (#1826; crates/tools/tests/acceptance.rs refuses a copy)
-//! and `sidecar`.
+//! `in_hand`, `targets_of`, `tributes_of`, `ids` (#1826, #2930; crates/tools/tests/acceptance.rs refuses
+//! a copy) and `sidecar`.
 
 use indexmap::IndexMap;
 use jackioh_engine::testkit::{
@@ -35,6 +35,11 @@ pub fn sidecar(json: &str, file: &str) -> IndexMap<String, Map<String, Value>> {
 pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
     jackioh_cards::register_all();
     jackioh_engine::testkit::scenario(setup)
+}
+
+/// The cards' ids, in order (#2930).
+pub fn ids(cards: &[CardInstance]) -> Vec<String> {
+    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// §8 #99 Craft a Card's result, made the way the card makes it (R77) without its two Discovers: the

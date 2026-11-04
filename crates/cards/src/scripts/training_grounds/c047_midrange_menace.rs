@@ -47,6 +47,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -69,7 +71,6 @@ mod tests {
 
         #[test]
         fn is_a_printed_9_9_with_taunt_and_without_immutable() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": ["traininggrounds-047"] }, "p2": { "field": ["core-012"] } }));
 
             s.expect_stats("traininggrounds-047", json!({ "attack": 9, "health": 9, "maxHealth": 9 }));
@@ -79,7 +80,6 @@ mod tests {
 
         #[test]
         fn s4_2_step_3_taunt_is_enforced_the_enemy_hero_cannot_be_attacked_while_it_stands() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": ["core-011"] }, "p2": { "field": ["traininggrounds-047"] } }));
 
             s.expect_refused_with(|s| s.attack("core-011", "hero"), "Taunt");
@@ -93,7 +93,6 @@ mod tests {
 
         #[test]
         fn heals_to_full_at_its_own_end_of_turn_removing_all_damage() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "traininggrounds-047", "damage": 5 }], "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] },
@@ -108,7 +107,6 @@ mod tests {
 
         #[test]
         fn s6_2_does_not_heal_at_the_opponent_s_end_of_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "traininggrounds-047", "damage": 5 }], "library": ["core-010"] },
@@ -122,7 +120,6 @@ mod tests {
 
         #[test]
         fn heals_nothing_when_it_is_undamaged_and_never_raises_max_health() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": ["traininggrounds-047"], "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] },
@@ -139,7 +136,6 @@ mod tests {
 
         #[test]
         fn r23_is_a_printed_18_18_with_taunt_and_immutable_the_keyword_that_refuses_sheepish() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "traininggrounds-047", "radiant": true }] },
                 "p2": { "field": ["core-012"] },
@@ -182,7 +178,6 @@ mod tests {
 
         #[test]
         fn s4_2_step_3_the_radiant_face_still_walls_the_hero_off() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": ["core-011"] },
                 "p2": { "field": [{ "def": "traininggrounds-047", "radiant": true }] },
@@ -194,7 +189,6 @@ mod tests {
 
         #[test]
         fn same_the_radiant_face_heals_to_full_at_its_own_end_of_turn_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": "traininggrounds-047", "radiant": true, "damage": 10 }], "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] },
@@ -208,7 +202,6 @@ mod tests {
 
         #[test]
         fn s6_2_the_radiant_face_does_not_heal_at_the_opponent_s_end_of_turn_either() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "traininggrounds-047", "radiant": true, "damage": 10 }], "library": ["core-010"] },
@@ -264,7 +257,6 @@ mod tests {
 
         #[test]
         fn r781001_its_own_controllers_spell_cannot_target_it_either() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": "traininggrounds-047", "radiant": true }], "library": [FILLER], "mana": 10 },
                 "p2": { "library": [FILLER] },
@@ -285,7 +277,6 @@ mod tests {
 
         #[test]
         fn r781001_a_random_pick_still_reaches_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SOUL_SHOT, FILLER], "library": [FILLER, FILLER], "mana": 10 },
                 "p2": { "field": [{ "def": "traininggrounds-047", "radiant": true }], "library": [FILLER, FILLER] },

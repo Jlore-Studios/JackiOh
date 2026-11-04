@@ -7,7 +7,7 @@ use jackioh_engine::mana::{cost_now, effective_cost, play_cost};
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{Bench, act, act_result, events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{Bench, act, act_result, events_of_type, ids, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     cast_trap, embiggen_field, five_unit, forever, grave_spell, in_graveyard, lobbyist, monkey, only,
     pb_playing, plays_of, tax, three_spell, toe_cracker, trickster, two_field, x_spell, x_unit, zero_spell,
@@ -92,10 +92,6 @@ fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
                 .map(str::to_string)
         })
         .collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn is_cost_rule(modifier: &PlayerModifier) -> bool {

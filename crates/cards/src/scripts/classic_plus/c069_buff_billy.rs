@@ -37,6 +37,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const BILLY: &str = "classicplus-069";
@@ -111,7 +113,6 @@ mod tests {
 
         #[test]
         fn r348_x_is_chosen_with_the_play_1_up_to_your_mana_and_x_0_is_refused() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [BILLY, FILLER] }, "p2": { "hand": [FILLER] } }));
             let card = s.card(BILLY).id.clone();
             let mut xs: Vec<i64> = legal_actions(s.state(), P1)
@@ -211,7 +212,6 @@ mod tests {
 
         #[test]
         fn b2_7_a_recruit_has_no_x_it_arrives_0_0_and_dies_at_the_state_check() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [FILLER], "library": [BILLY] }, "p2": { "hand": [FILLER] } }));
             run(&mut s, vec![jackioh_engine::effects::recruit(json_as(json!({ "filter": { "defId": BILLY } })))]);
             s.expect_in_zone(BILLY, "graveyard");

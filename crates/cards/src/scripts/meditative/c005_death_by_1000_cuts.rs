@@ -47,6 +47,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -95,7 +97,6 @@ mod tests {
 
         #[test]
         fn r802_at_1_max_mana_it_hits_3_times() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-005-turn-1",
                 "turn": 1,
@@ -113,7 +114,6 @@ mod tests {
 
         #[test]
         fn r802_at_4_max_mana_it_hits_9_times() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-005-turn-4",
                 "p1": { "hand": [CUTS, FILLER], "field": [MENACE] },
@@ -131,7 +131,6 @@ mod tests {
 
         #[test]
         fn r802_a_random_cast_uses_its_casters_max_mana() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-005-random-cast",
                 "p1": { "hand": [FILLER], "field": [MENACE] },
@@ -166,7 +165,6 @@ mod tests {
 
         #[test]
         fn r802_a_twinspell_adds_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-005-twinspell",
                 "turn": 1,
@@ -186,7 +184,6 @@ mod tests {
 
         #[test]
         fn r802_a_repeat_with_no_unit_fizzles() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-005-fizzle",
                 "turn": 1,
@@ -204,7 +201,6 @@ mod tests {
 
         #[test]
         fn r386_echo_and_damage_read_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-005-tuned",
                 "turn": 1,
@@ -227,7 +223,6 @@ mod tests {
 
             #[test]
             fn radiant_hits_17_times_at_4_and_each_hit_heals_the_caster() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "meditative-005-radiant",
                     "p1": { "health": 10, "hand": [{ "def": CUTS, "radiant": true }, FILLER], "field": [MENACE] },

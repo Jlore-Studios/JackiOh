@@ -220,6 +220,29 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect([...folded.children].map((child) => child.className)).toEqual(["fx-setPiece-edges", "fx-setPiece-light"]);
     expect(mountDomEffect(root, fold, {})).toBeNull();
   });
+
+  it("R2801000 launch mounts its counts, flame and trail; still when asked", () => {
+    const launch: FxDomCue = { kind: "launch", at: anchor, tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 1800, delayMs: 0, durationMs: 3400 };
+    const el = expectMounted(mountDomEffect(root, launch, { at: AT }), launch);
+    expect(el.getAttribute("data-size")).toBe("large");
+    expect(el.hasAttribute("data-still")).toBe(false);
+    expect(cssVar(el, "--fx-ignite")).toBe("1800ms");
+    expect(cssVar(el, "--fx-tint-glow")).toBe(TINT.glow);
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-launch-count", "fx-launch-count", "fx-launch-count", "fx-launch-flame", "fx-launch-trail"]);
+    // The countdown, 3-2-1, each count at its time; the digits are CSS's (`attr(data-text)`), never a text node.
+    const counts = [...el.querySelectorAll<HTMLElement>(".fx-launch-count")];
+    expect(counts.map((count) => count.getAttribute("data-text"))).toEqual(["3", "2", "1"]);
+    expect(counts.map((count) => cssVar(count, "--fx-count-at"))).toEqual(["0ms", "600ms", "1200ms"]);
+    // It names no card (R202).
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+
+    const still: FxDomCue = { ...launch, countsMs: [], igniteMs: 0, still: true };
+    const frame = expectMounted(mountDomEffect(root, still, { at: AT }), still);
+    expect(frame.getAttribute("data-still")).toBe("true");
+    expect([...frame.children].map((child) => child.className)).toEqual(["fx-launch-flame", "fx-launch-trail"]);
+    expect(mountDomEffect(root, still, {})).toBeNull();
+  });
 });
 
 /* What it refuses, and what it never does */

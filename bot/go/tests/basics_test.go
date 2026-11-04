@@ -573,15 +573,23 @@ func TestBasics_ForbiddenAndReviewPaths(t *testing.T) {
 		".harness/trust.txt", ".claude/settings.json", ".mcp.json", ".vscode/tasks.json", ".github"} {
 		assertTrue(t, git.Matches(path, forbidden), path)
 	}
-	for _, path := range []string{"package.json", "apps/web/package.json", "pnpm-lock.yaml",
-		"Cargo.toml", "crates/engine/Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
-		"rustfmt.toml", "crates/engine/clippy.toml", "crates/cards/build.rs",
-		".cargo/config.toml", "vitest.config.ts", "apps/web/tsconfig.json",
-		"eslint.config.js", "scripts/build-wasm.sh", "wrangler.jsonc", "apps/edge/src/index.ts",
-		"apps/web/public/_headers",
-		"crates/server/Dockerfile", "crates/server/migrations/0005_x.sql",
-		"e2e/cypress.config.ts"} {
+	for _, path := range []string{"pnpm-workspace.yaml", ".npmrc", ".nvmrc", "rust-toolchain.toml",
+		"rustfmt.toml", "crates/engine/clippy.toml", ".cargo/config.toml", "vitest.config.ts",
+		"apps/web/vitest.config.ts", "apps/web/tsconfig.json", "eslint.config.js", "wrangler.jsonc",
+		"apps/edge/src/index.ts", "apps/web/public/_headers", "e2e/cypress.config.ts",
+		"scripts/promote-production.sh", "scripts/vercel-ignore.sh"} {
 		assertTrue(t, git.Matches(path, review), path)
+	}
+	// #2986: these merge themselves, a migration and a lock on a condition (`migration_paths`,
+	// `lock_files`, tests/mergegate_test.go).
+	for _, path := range []string{"package.json", "apps/web/package.json", "pnpm-lock.yaml", "Cargo.toml",
+		"crates/engine/Cargo.toml", "Cargo.lock", "crates/cards/build.rs", "crates/server/Dockerfile",
+		"scripts/build-wasm.sh", "scripts/ci-scope.sh", "crates/server/migrations/0005_x.sql"} {
+		assertFalse(t, git.Matches(path, review), path)
+	}
+	assertTrue(t, git.Matches("crates/server/migrations/0005_x.sql", cfg.MigrationPaths))
+	for _, path := range []string{"Cargo.lock", "pnpm-lock.yaml"} {
+		assertTrue(t, git.Matches(path, cfg.LockFiles), path)
 	}
 	for _, path := range []string{"apps/web/src/game/Game.tsx", "crates/cards/src/scripts/core/c002_bigot.rs",
 		"SPEC.md", "bots/x", "docs/scripts.md", "crates/engine/tests/rules/combat.rs"} {

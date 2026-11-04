@@ -59,6 +59,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use crate::ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -85,10 +86,6 @@ mod tests {
         }))
     }
 
-    fn ids(cards: Vec<CardInstance>) -> Vec<String> {
-        cards.into_iter().map(|card| card.id).collect()
-    }
-
     /// The position of the first event `matches` accepts, in the events of the last step.
     fn position(s: &Scenario, matches: impl Fn(&GameEvent) -> bool) -> usize {
         match s.last_events().iter().position(matches) {
@@ -110,16 +107,16 @@ mod tests {
         #[test]
         fn each_opponent_play_exiles_the_top_3_of_your_deck() {
             let mut s = board(false, 5);
-            let deck = ids(s.pile(P1, "library"));
+            let deck = ids(&s.pile(P1, "library"));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(ids(s.pile(P1, "exile")).len(), 3);
-            assert_eq!(ids(s.pile(P1, "exile")), deck[..3].to_vec());
-            assert_eq!(ids(s.pile(P1, "library")), deck[3..].to_vec());
+            assert_eq!(ids(&s.pile(P1, "exile")).len(), 3);
+            assert_eq!(ids(&s.pile(P1, "exile")), deck[..3].to_vec());
+            assert_eq!(ids(&s.pile(P1, "library")), deck[3..].to_vec());
             // The opponent's own deck is not touched by it: only its Stockpile's draw.
             assert!(s.pile(P2, "exile").is_empty());
             // The second play exiles the next two, the deck's last cards.
             s.play(STOCKPILE, json!({}));
-            assert_eq!(ids(s.pile(P1, "exile")).len(), 5);
+            assert_eq!(ids(&s.pile(P1, "exile")).len(), 5);
             assert!(s.pile(P1, "library").is_empty());
         }
 

@@ -1,7 +1,8 @@
 // R502, R670, R2784000: every recipe a `{ bespoke }` entry of a set's effects table may name: the card
 // recipes that claim events of their play (cardFx.ts) and the marquee entrances (entrances.ts). R2795000:
 // Classic+'s Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
-// R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes.
+// R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
+// Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -16,9 +17,12 @@ import { rollbackSweep } from "./classicplus/rollback.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
+import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
+import { magiBoot } from "./stinkyscape/magiBoot.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
+import { terminusRift } from "./stinkyscape/terminusRift.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
 import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
@@ -39,6 +43,9 @@ export const CARD_RECIPES = {
   jadeCrack,
   cnSweep,
   harmonyWave,
+  terminusRift,
+  magiBoot,
+  battleshipWarp,
   duoBond,
   flashFreeze,
   stratosSwarm,

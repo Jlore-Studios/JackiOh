@@ -2,7 +2,7 @@
 //! are tuning defaults: tests pin rankings and puzzle outcomes, never these values. Each constant
 //! object is a `const` of a struct named after it (SURFACE §4.2).
 
-use jackioh_engine::config::{CN_TECH_MIN_GAMES, MARKETPLACE_CREDITS_PER_MANA};
+use jackioh_engine::config::{CN_TECH_MIN_GAMES, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +21,24 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
 /// ones; a miss is one of the wrong answers. Drawn from the AI's own stream, never the match's.
 pub const AI_KY_COMPETITION_ACCURACY: f64 = 0.85;
 pub const AI_KY_COMPETITION_RADIANT_ACCURACY: f64 = 0.93;
+
+/// R1563005 (#2929): the right answers the search expects of the AI's own KY's Competition sequence
+/// (`simulate::worked_step`), base face and Radiant: the mean streak `AI_KY_COMPETITION_ACCURACY` and
+/// `AI_KY_COMPETITION_RADIANT_ACCURACY` give under `KY_COMPETITION_MAX`, p(1 − p³⁰)/(1 − p), 5.6 and
+/// 11.8, rounded. Hard-coded, so a simulation draws nothing; change each with its accuracy.
+pub const AI_KY_COMPETITION_EXPECTED_STREAK: i32 = 6;
+pub const AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK: i32 = 12;
+const _: () =
+    assert!(AI_KY_COMPETITION_EXPECTED_STREAK > 0 && AI_KY_COMPETITION_EXPECTED_STREAK < KY_COMPETITION_MAX);
+const _: () = assert!(
+    AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK > 0
+        && AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK < KY_COMPETITION_MAX
+);
+
+/// R1563005 (#2929): the chance, in [0, 1], that the AI answers C+ #42 KY's Test's Easy problem (a
+/// four-digit sum or difference) right: the base face's rate, the nearest the designer named. Drawn
+/// from the AI's own stream.
+pub const AI_KY_TEST_ACCURACY: f64 = AI_KY_COMPETITION_ACCURACY;
 
 /// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays the skill miss
 /// (`skill::skill_miss_action`, R2214000) at every decision, 1.0 follows the AI at every decision.
@@ -124,7 +142,9 @@ pub struct AiSearch {
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
     /// endTurn: switches are the move order's last tier, so below the root a full board cut every one. A
-    /// switch back to Attack is kept only where the width holds it.
+    /// switch back to Attack is kept only where the width holds it. #2976, R2976000: while the opponent's
+    /// board threatens lethal, as many switches to Defense that lower that threat (`wall_switches`) are
+    /// kept after them.
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
@@ -865,16 +885,20 @@ pub struct AiMulligan {
     pub keep_max_cost: i32,
 }
 
+/// The mulligan's bound for a seat with no mana bonus: `mulligan_keep_curved` raises it by the seat's
+/// bonus, within its mana cap (`mulligan_keep_bound`, R2977000).
 pub const AI_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 
-/// The greedy baseline's mulligan, frozen with GREEDY_EVAL for the same reason.
+/// The greedy baseline's mulligan, frozen with GREEDY_EVAL for the same reason. No mana bonus raises it
+/// (R2977000).
 pub const GREEDY_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 
 /// `AI_MULLIGAN_CURVE`'s shape (#993).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiMulliganCurve {
-    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` exactly.
+    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` at the seat's bound
+    /// (`mulligan_keep_bound`, R2977000).
     pub on: bool,
     /// A card costing at most this is a first-turn play. The mana bonus (R181) does not raise it: the
     /// cap is on the cheapest bodies, so a Hard seat's two-drops are not capped.

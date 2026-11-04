@@ -62,6 +62,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -205,7 +207,6 @@ mod tests {
 
         #[test]
         fn s3_2_r13_a_felinor_dormant_under_a_stack_pile_gets_no_aura_the_one_on_top_does() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FLAG, FILLER], "field": [DUPE, { "def": DUPE, "stack": true }], "mana": 10 },
                 "p2": { "hand": [FILLER] },
@@ -352,7 +353,6 @@ mod tests {
 
     #[test]
     fn r1081000_a_felinor_standing_in_the_backrow_keeps_the_aura() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [FLAG, DUPE], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },

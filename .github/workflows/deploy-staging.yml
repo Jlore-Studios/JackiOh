@@ -13,16 +13,31 @@
 #                      Staging's server shares production's database for now (docs/deploy-cloudflare.md)
 #                      and migrates it as it boots, so nothing that has not merged and passed runs there.
 #
-# One deploy at a time, and a newer one cancels the one running: the newest green commit wins. The
-# concurrency group is the job's, so a CI run that wakes nothing (red, or a pull request's) never
-# cancels a deploy. The job's `environment: staging` records each deploy as a GitHub deployment.
+# One deploy at a time, and the one running finishes: GitHub keeps one more waiting, the newest, and
+# cancels any older one still waiting, so the newest green commit still wins without throwing away a
+# build half done. (A newer run cancelled the one running until 2026-11-03: main ships often enough
+# that 8 deploys a day were cancelled, 112 minutes of builds.) The concurrency group is the job's, so a
+# CI run that wakes nothing (red, or a pull request's) never queues a deploy. The job's
+# `environment: staging` records each deploy as a GitHub deployment.
+#
+# What each deploy builds, as little as it can:
+#   - the server's image: scripts/server-image.sh names it by its inputs and pushes it to Cloudflare's
+#     registry once (`jackioh-server`, the repository production's deploy reads too), so a commit
+#     that changes nothing the image is built from builds and pushes nothing. A new image comes from
+#     the CI run's `deploy-image` artifact, which `db (deploy image)` built from the same Dockerfile;
+#     only without it is it built, on CI's layer cache. After a checked deploy, `prune` drops the
+#     registry's tags past the newest few.
+#   - the WASM modules: the production build of both (`JACKIOH_WASM_PREVIEW=0`, as apps/web's
+#     `prebuild:staging`), kept in GitHub's cache under a key of everything they are built from
+#     (WASM_CACHE), so a commit that changes nothing under crates/ skips the Luau module's five
+#     minutes. CI's own modules carry the `preview` feature a player's bundle must not, so they are
+#     not used.
 #
 # Needs CLOUDFLARE_API_TOKEN, the secret production's deploy uses, and for the live check an Access
 # service token that Cloudflare Access lets through to staging.jackioh.com, in CF_ACCESS_CLIENT_ID and
 # CF_ACCESS_CLIENT_SECRET: without them the check is skipped with a notice, since Access refuses
-# everyone else. wrangler builds the server's image with this runner's Docker (the deploy job's
-# timeout in promote-production.yml says why it takes an hour at most). The server's own secrets are
-# the Worker's (`wrangler secret put --env staging`, apps/edge/README.md), never this repository's.
+# everyone else. The server's own secrets are the Worker's (`wrangler secret put --env staging`,
+# apps/edge/README.md), never this repository's.
 name: deploy staging
 
 on:
@@ -45,6 +60,11 @@ env:
   SITE: https://staging.jackioh.com
   # How long the live check waits for the server to report the deployed commit, as production's.
   LIVE_SECONDS: "900"
+  # The cache key's prefix for the production build of the WASM modules, shared with
+  # promote-production.yml's deploy job (the same modules), and the layer cache CI's deploy image
+  # jobs write, which a server image built here reads.
+  WASM_CACHE: wasm-player-v1
+  IMAGE_CACHE_FROM: type=gha,scope=deploy-rehearsal
 
 permissions:
   contents: read
@@ -59,12 +79,13 @@ jobs:
       || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     concurrency:
       group: deploy-staging
-      cancel-in-progress: true
+      cancel-in-progress: false
     environment:
       name: staging
       url: ${{ env.SITE }}
     runs-on: ubuntu-latest
-    # A cold release build of the server's image, as production's deploy job (its comment says more).
+    # A cold release build of the server's image when neither the registry nor CI has it, as
+    # production's deploy job (its comment says more).
     timeout-minutes: 60
     env:
       # The install covers the whole workspace, e2e/ included; no browser is needed here.
@@ -115,14 +136,51 @@ jobs:
         with:
           ref: ${{ steps.sha.outputs.sha }}
 
-      # As production's deploy job: the build's prebuild runs scripts/build-wasm.sh, which needs the
-      # Rust half, and the Node half installs apps/edge's wrangler.
+      # The production build of both WASM modules, when nothing they are built from changed.
+      - name: the WASM modules, if cached
+        id: wasm
+        uses: actions/cache@v4
+        with:
+          path: apps/web/src/wasm/pkg
+          key: ${{ env.WASM_CACHE }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'crates/**', 'scripts/build-wasm.sh') }}
+
+      # As production's deploy job: the Node half installs apps/edge's wrangler, and the Rust half is
+      # for the WASM build, which a cached pair skips.
       - uses: ./.github/actions/setup
+        with:
+          rust: ${{ steps.wasm.outputs.cache-hit == 'true' && 'false' || 'true' }}
+
+      # Before anything writes to the checkout: scripts/server-image.sh refuses inputs that differ
+      # from HEAD. buildx and the cache service's URL and token are for a build on CI's layer cache,
+      # when neither the registry nor the CI run has the image. The script is this workflow's
+      # commit's, not the deployed one's, which may predate it.
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@v3
+      - name: the server's image
+        id: image
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          IMAGE_COMMIT: ${{ steps.sha.outputs.sha }}
+        run: |
+          set -euo pipefail
+          git fetch -q --depth 1 origin "$GITHUB_SHA"
+          git show FETCH_HEAD:scripts/server-image.sh > "$RUNNER_TEMP/server-image.sh"
+          bash "$RUNNER_TEMP/server-image.sh" use jackioh-staging-server
 
       # From apps/web/.env.staging alone: the publishable key a repository variable may hold is
       # production's (promote-production.yml), and staging's Supabase project need not stay the same.
+      # With the modules cached, `build:staging` runs without `prebuild:staging`, the WASM build.
       - name: build the web app for staging
-        run: pnpm --filter @jackioh/web build:staging
+        env:
+          WASM_CACHED: ${{ steps.wasm.outputs.cache-hit }}
+        run: |
+          if [ "$WASM_CACHED" = true ]; then
+            cd apps/web && node --env-file=.env.staging node_modules/vite/bin/vite.js build
+          else
+            pnpm --filter @jackioh/web build:staging
+          fi
 
       - name: refuse a bundle that cannot sign in or reach the server
         run: node apps/web/scripts/check-production-bundle.mjs --staging
@@ -161,6 +219,15 @@ jobs:
           seconds: ${{ env.LIVE_SECONDS }}
           access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+      # Only after a deploy whose server reported its commit, and never failing one that did.
+      - name: drop the registry's older images
+        if: steps.access.outputs.set == 'true'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TAG: ${{ steps.image.outputs.tag }}
+        run: bash "$RUNNER_TEMP/server-image.sh" prune "$TAG"
 
       - name: say so
         env:

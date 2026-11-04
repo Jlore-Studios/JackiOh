@@ -33,6 +33,8 @@ mod tests {
 
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -52,7 +54,6 @@ mod tests {
 
             #[test]
             fn r1203_joiners_attack_first_in_lane_order_then_the_prime() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-joiners",
                     "p1": { "hand": [UNIT, OTHER, FILLER], "library": [], "field": [PRIME] },
@@ -104,7 +105,6 @@ mod tests {
             }
             #[test]
             fn rush_and_windfury_it_attacks_twice_the_turn_it_is_played() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-windfury",
                     "p1": { "hand": [PRIME, FILLER], "library": [] },
@@ -123,7 +123,6 @@ mod tests {
             #[test]
             fn r1203_two_different_units_from_hand_and_deck_together_join_with_no_cry() {
                 // Jewelosco Scarab's Cry would Discover; summoned as a joiner it runs nothing.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-no-cry",
                     "p1": { "hand": [SCARAB, FILLER], "library": [OTHER], "field": [PRIME] },
@@ -141,7 +140,6 @@ mod tests {
 
             #[test]
             fn r1203_a_forced_attack_brings_its_joiners_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-forced",
                     "p1": { "hand": [UNIT, FILLER], "library": [OTHER], "field": [PRIME] },
@@ -169,7 +167,6 @@ mod tests {
             fn r1203_with_the_target_gone_the_remaining_attacks_are_canceled_exertion_spent() {
                 // The first joiner kills the 1/1 Scarab: the second joiner and the Prime find no
                 // target and are canceled, the Prime's exertion spent.
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-gone",
                     "p1": { "hand": [UNIT, FILLER], "library": [OTHER], "field": [PRIME] },
@@ -201,7 +198,6 @@ mod tests {
 
             #[test]
             fn r1203_joiners_stay() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-stay",
                     "p1": { "hand": [UNIT, FILLER], "library": [OTHER, FILLER, FILLER], "field": [PRIME] },
@@ -218,7 +214,6 @@ mod tests {
 
             #[test]
             fn r1203_fewer_units_fewer_joiners() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-one-unit",
                     "p1": { "hand": [UNIT, FILLER], "library": [], "field": [PRIME] },
@@ -236,7 +231,6 @@ mod tests {
 
             #[test]
             fn r1203_joiners_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "prime-tuned",
                     "p1": { "hand": [UNIT, OTHER, FILLER], "library": [UNIT], "field": [PRIME] },
@@ -289,7 +283,6 @@ mod tests {
 
             #[test]
             fn radiant_is_10_20_with_first_strike() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "field": [{ "def": PRIME, "radiant": true }] },
                 }));

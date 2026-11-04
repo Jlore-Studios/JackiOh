@@ -1,6 +1,6 @@
-//! #90 CN-Viral Injection (SPEC §8.5, §7, R11, R12, R57, R58, R80).
+//! #90 Super-Virus Injection (SPEC §8.5, §7, R11, R12, R57, R58, R80).
 //!
-//! Base: "Shuffle a CN-Virus into the opponent's library". Radiant: "A Radiant CN-Virus".
+//! Base: "Shuffle a Super-Virus into the opponent's library". Radiant: "A Radiant Super-Virus".
 //! Engine cell: "The opponent owns the token, so its cast-on-draw chain runs on their draws; a full
 //! library refuses the shuffle (R80)."
 //!
@@ -16,7 +16,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-090";
 
-/// #90.1 CN-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry (SURFACE §7.4).
+/// #90.1 Super-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry (SURFACE §7.4).
 const VIRUS: &str = "core-090-1";
 
 /// `radiantVirus` is the whole of the radiant text.
@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #90 CN-Viral Injection and #90.1 CN-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
+// #90 Super-Virus Injection and #90.1 Super-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
 // R11, R12, R57, R58, R63, R70, R80, R316, R350).
 //
 // Both are tested here because #90 hands #90.1 to the OTHER player (R12). R275 scales the radiant
@@ -53,6 +53,8 @@ mod tests {
     use crate::def_ids;
     use crate::filler;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -114,14 +116,13 @@ mod tests {
         s.state().players[player].library.clone()
     }
 
-    // #90 CN-Viral Injection — base
+    // #90 Super-Virus Injection — base
 
-    mod n90_cn_viral_injection_base {
+    mod n90_super_virus_injection_base {
         use super::*;
 
         #[test]
-        fn shuffles_one_cn_virus_into_the_opponent_s_library_and_nothing_into_yours() {
-            crate::register_all();
+        fn shuffles_one_super_virus_into_the_opponent_s_library_and_nothing_into_yours() {
             let mut s = scenario(json!({
                 "seed": "core-090-enemy-library",
                 "p1": { "hand": [INJECTION, "core-005"], "library": filler(3) },
@@ -139,7 +140,6 @@ mod tests {
 
         #[test]
         fn r12_the_opponent_owns_the_virus_so_it_feeds_their_draws_and_not_yours() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-ownership",
                 "p1": { "hand": [INJECTION, "core-005"], "library": filler(3) },
@@ -161,7 +161,6 @@ mod tests {
 
         #[test]
         fn the_base_face_shuffles_a_non_radiant_virus_s8_only_the_radiant_cell_adds_the_flag() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-not-radiant",
                 "p1": { "hand": [INJECTION, "core-005"], "library": filler(3) },
@@ -176,7 +175,6 @@ mod tests {
 
         #[test]
         fn s3_2_the_spell_itself_reaches_the_graveyard_and_counts_as_played() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-graveyard",
                 "p1": { "hand": [INJECTION, "core-005"], "library": filler(3) },
@@ -215,14 +213,13 @@ mod tests {
         }
     }
 
-    // #90 CN-Viral Injection — radiant
+    // #90 Super-Virus Injection — radiant
 
-    mod n90_cn_viral_injection_radiant {
+    mod n90_super_virus_injection_radiant {
         use super::*;
 
         #[test]
-        fn a_radiant_cn_virus_the_flag_is_set_and_everything_else_is_kept_s8_conventions() {
-            crate::register_all();
+        fn a_radiant_super_virus_the_flag_is_set_and_everything_else_is_kept_s8_conventions() {
             let mut s = scenario(json!({
                 "seed": "core-090-radiant",
                 "p1": { "hand": [{ "def": INJECTION, "radiant": true }, "core-005"], "library": filler(3) },
@@ -272,7 +269,6 @@ mod tests {
 
         #[test]
         fn r311_the_victim_s_list_names_the_virus_the_opponent_s_injection_shuffled_in_radiant_on_the_radiant_face() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-r311",
                 "p1": { "hand": [{ "def": INJECTION, "radiant": true }, "core-005"], "library": filler(3) },
@@ -287,8 +283,8 @@ mod tests {
                 js(&s.view(Some(P2)).you.own_library),
                 json!({
                     "cards": [
-                        { "defId": VIRUS, "radiant": true, "count": 1, "created": true },
                         { "defId": "core-005", "radiant": false, "count": 4 },
+                        { "defId": VIRUS, "radiant": true, "count": 1, "created": true },
                     ],
                     "unknown": 0,
                 })
@@ -300,7 +296,6 @@ mod tests {
 
         #[test]
         fn r311_a_virus_s_own_copies_are_listed_as_their_owner_saw_them_go_in() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-r311",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3) },
@@ -318,14 +313,14 @@ mod tests {
         }
     }
 
-    // #90.1 CN-Virus — base, played from hand (the `cry` with no draw around it)
+    // #90.1 Super-Virus — base, played from hand (the `cry` with no draw around it)
 
-    /// The delayed effects a CN-Virus has armed and not yet run (R350).
+    /// The delayed effects a Super-Virus has armed and not yet run (R350).
     fn armed_copies(s: &Scenario) -> usize {
         s.state().delayed.iter().filter(|entry| entry.resume.def_id == VIRUS).count()
     }
 
-    /// The `shuffledIn` events of `player` that put a CN-Virus in.
+    /// The `shuffledIn` events of `player` that put a Super-Virus in.
     fn viruses_in(s: &Scenario, player: PlayerId) -> usize {
         shuffled_in(s, Some(player)).iter().filter(|event| event.def_id == VIRUS).count()
     }
@@ -335,7 +330,6 @@ mod tests {
         // Upgrade and Degrade are the virus's controller's — the player who draws it — so a Degrade
         // (Withering Storm's, on the deck it was shuffled into) makes it worse for them.
         for (radiant, upgrade, damage, copies) in [(false, false, 2, 3), (true, true, 1, 2)] {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-tuned",
                 "p1": { "hand": [{ "def": VIRUS, "radiant": radiant }, "core-005"], "library": filler(3) },
@@ -356,17 +350,15 @@ mod tests {
             assert_eq!(viruses_in(&s, P1), copies as usize);
         }
         // A base virus's 1 damage is the least it deals: no Upgrade lowers it.
-        crate::register_all();
         let s = scenario(json!({ "p1": { "hand": [VIRUS] } }));
         assert!(!crate::can_upgrade_number(&s, VIRUS, "damage"));
     }
 
-    mod n90_1_cn_virus_base {
+    mod n90_1_super_virus_base {
         use super::*;
 
         #[test]
         fn r350_1_damage_to_its_own_hero_at_once_and_the_2_copies_wait_for_the_end_of_the_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-cry",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3) },
@@ -393,7 +385,6 @@ mod tests {
 
         #[test]
         fn r350_the_copies_go_in_at_s2_2_s_end_of_turn_delayed_effect_point_after_the_turn_ends_before_the_next_begins() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-order",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3) },
@@ -407,7 +398,6 @@ mod tests {
 
         #[test]
         fn r350_each_cast_arms_its_own_shuffle_two_viruses_played_in_one_turn_shuffle_in_4_at_its_end() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-two",
                 "p1": { "hand": [VIRUS, VIRUS, "core-005"], "library": filler(3) },
@@ -428,7 +418,6 @@ mod tests {
 
         #[test]
         fn r11_a_spell_token_reaches_the_graveyard_it_never_ceases_to_exist() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-graveyard",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3) },
@@ -448,7 +437,6 @@ mod tests {
 
         #[test]
         fn r57_the_copies_of_a_non_radiant_virus_are_non_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-copies-plain",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3) },
@@ -485,7 +473,6 @@ mod tests {
 
         #[test]
         fn r80_r316_the_copies_stop_at_the_library_cap_the_second_is_never_created_and_the_refusal_is_reported() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-library-cap",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(LIBRARY_CAP - 1) },
@@ -518,7 +505,7 @@ mod tests {
             crate::register_all();
             // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's #32 Prem Panther
             // (5/4) attack it; the Panther destroys it and survives, so p1 draws 2 on p2's turn (R426): the
-            // CN-Virus on top of p1's library is cast there, and "the end of the turn" is p2's.
+            // Super-Virus on top of p1's library is cast there, and "the end of the turn" is p2's.
             let mut s = scenario(json!({
                 "seed": "core-090-1-their-turn",
                 "p1": { "field": ["core-032"], "library": [VIRUS, "core-005", "core-005"], "hand": ["core-005"] },
@@ -555,14 +542,13 @@ mod tests {
         }
     }
 
-    // #90.1 CN-Virus — cast on draw and R58's chain
+    // #90.1 Super-Virus — cast on draw and R58's chain
 
-    mod n90_1_cn_virus_cast_on_draw_r58_r70 {
+    mod n90_1_super_virus_cast_on_draw_r58_r70 {
         use super::*;
 
         #[test]
         fn r350_a_drawn_virus_casts_at_once_and_the_draw_repeats_through_the_library_never_its_own_copies() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-chain",
                 "p1": { "library": [VIRUS, VIRUS, "core-005"], "hand": [] },
@@ -584,7 +570,6 @@ mod tests {
 
         #[test]
         fn r350_a_lone_virus_no_longer_feeds_its_own_chain_the_repeated_draw_finds_the_library_empty() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-lone",
                 "p1": { "library": [VIRUS], "hand": [] },
@@ -600,7 +585,6 @@ mod tests {
 
         #[test]
         fn r58_the_chain_stops_at_the_cap_and_the_next_virus_sits_in_hand_uncast() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-chain-cap",
                 "p1": { "library": vec![VIRUS; CHAIN_CAP + 2], "hand": [] },
@@ -619,7 +603,6 @@ mod tests {
 
         #[test]
         fn r70_r2179002_no_cast_on_draw_counts_as_a_card_played_so_the_turn_log_sees_none_of_the_chain() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-chain-played",
                 "p1": { "library": vec![VIRUS; CHAIN_CAP + 1], "hand": [] },
@@ -636,7 +619,6 @@ mod tests {
 
         #[test]
         fn every_cast_virus_ends_in_the_graveyard_r11_none_of_them_gone_and_each_one_s_copies_go_in_at_the_end() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-chain-graveyard",
                 "p1": { "library": vec![VIRUS; CHAIN_CAP + 1], "hand": [] },
@@ -656,12 +638,11 @@ mod tests {
         }
     }
 
-    mod n90_1_cn_virus_radiant {
+    mod n90_1_super_virus_radiant {
         use super::*;
 
         #[test]
         fn r275_take_2_damage_3_copies_both_numbers_scale_on_the_radiant_face() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-radiant-cry",
                 "p1": { "hand": [{ "def": VIRUS, "radiant": true }, "core-005"], "library": filler(3) },
@@ -681,7 +662,6 @@ mod tests {
 
         #[test]
         fn s4_4_the_radiant_2_is_one_damage_instance_its_pierce_goes_through_armor_1_and_the_copies_still_land() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-radiant-armor",
                 "p1": { "hand": [{ "def": VIRUS, "radiant": true }, "core-005"], "library": filler(3), "armor": 1 },
@@ -700,7 +680,6 @@ mod tests {
 
         #[test]
         fn r57_a_radiant_virus_breeds_radiant_viruses_and_they_cast_the_radiant_face_when_drawn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-radiant-chain",
                 "p1": { "hand": [{ "def": VIRUS, "radiant": true }, "core-005"], "library": [], "health": 50 },
@@ -722,7 +701,6 @@ mod tests {
 
         #[test]
         fn s2_5_r59_a_radiant_chain_on_a_30_health_hero_is_lethal_before_r58_s_cap_15_casts_of_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-radiant-lethal",
                 "p1": { "library": vec![json!({ "def": VIRUS, "radiant": true }); 16], "hand": [] },
@@ -746,7 +724,7 @@ mod tests {
             .collect()
     }
 
-    mod n90_1_cn_virus_s5_1_pools {
+    mod n90_1_super_virus_s5_1_pools {
         use super::*;
 
         #[test]

@@ -1671,6 +1671,18 @@
   padding: 6px 14px;
 }
 
+/* Once the game is over the board folds to its chip, which stands in flow under it (animations.css).
+   A phone has no height for the "won't earn" row above the controls as well: at 390x844 the board's
+   content spilled 46px over the chip, and at 390x664 the cards were already at their 44px floor, so the
+   control bar sat under the chip. The result dialog the chip's Result button reopens carries the same
+   line (practice-result-earning), so the board's own copy steps aside. Phones held upright only: a
+   tablet and a phone on its side fit with it. */
+@media (max-width: 600px) {
+  .practice-table > .game:has(> [data-testid="result-overlay"][data-form="chip"]) .board-notices:has(> .practice-unearned) {
+    display: none;
+  }
+}
+
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .app-shell.practice--game:has(.practice-table > .game) {
     gap: 6px;

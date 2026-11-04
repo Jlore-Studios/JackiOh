@@ -35,6 +35,7 @@ import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
+import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
 import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
@@ -50,6 +51,11 @@ export type MinionFaceProps = {
   className?: string;
   /** R1295000: the viewer's own unit in a game wears the device's cosmetics (cosmetics.ts). */
   worn?: boolean;
+  /**
+   * #2932: the keyword marks are drawn elsewhere (`game/FieldBadges.tsx`, hanging off a phone's field
+   * card), so the face keeps its whole width for the name, art, cost, attack and health.
+   */
+  keywordsOffFace?: boolean;
 };
 
 /** The states the minion's keyword treatments already draw (Brittle's cracks, the Animated cog). */
@@ -74,7 +80,8 @@ export function keywordChips(keywords: readonly Keyword[], armor: number): { sho
   return { shown: chips.slice(0, room), folded: chips.slice(room) };
 }
 
-function KeywordIcons({ keywords, armor, chinese }: { keywords: readonly Keyword[]; armor: number; chinese: boolean }): ReactElement | null {
+/** The keyword marks of a unit (`.keywords > .keyword-icon`, with their "+n" fold); #2932: a phone draws them off the face (`game/FieldBadges.tsx`). */
+export function KeywordIcons({ keywords, armor, chinese }: { keywords: readonly Keyword[]; armor: number; chinese: boolean }): ReactElement | null {
   if (keywords.length === 0) return null;
   const { shown, folded } = keywordChips(keywords, armor);
   // R1301: a Chinese unit's keywords are named in the table's words.
@@ -109,7 +116,7 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className, worn = false }: MinionFaceProps): ReactElement {
+export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
@@ -208,10 +215,13 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
           )}
         </span>
 
-        <KeywordIcons keywords={unit.keywords} armor={unit.armor} chinese={face.chinese === true} />
+        {keywordsOffFace ? null : <KeywordIcons keywords={unit.keywords} armor={unit.armor} chinese={face.chinese === true} />}
 
         {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
         {dormant === undefined ? null : <DormantSeal />}
+
+        {/* R2801000: a Dormant Starship's hull, a plate bolted on for each piece fused into it. */}
+        {face.starship != null && !face.starship.launched ? <StarshipHull pieces={face.starship.pieces} /> : null}
 
         <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 

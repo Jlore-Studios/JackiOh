@@ -173,6 +173,8 @@ pub const PUBLIC_ENV_VARS: &[&str] = &[
     "VITE_CATALOG_VERSION",
     // R666: which OAuth providers the sign-in screen offers, by name only (no client id, no secret).
     "VITE_AUTH_OAUTH_PROVIDERS",
+    // R2983000: Google's web client ID for its own button; public, never its client secret.
+    "VITE_GOOGLE_CLIENT_ID",
 ];
 
 /// The server-only half: every variable `load_env` below reads. A lint or test can assert this

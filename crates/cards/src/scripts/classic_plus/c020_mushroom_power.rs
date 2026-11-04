@@ -39,6 +39,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -68,7 +70,6 @@ mod tests {
 
             #[test]
             fn s3_1_gives_both_neighbours_2_2_and_leaves_lanes_further_off_the_other_side_and_the_backrow_alone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [MUSHROOM, FILLER],
@@ -93,7 +94,6 @@ mod tests {
 
             #[test]
             fn s3_1_in_lane_1_it_has_one_neighbour_lane_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MUSHROOM, FILLER], "field": [{ "def": BODY, "lane": 2 }] },
                     "p2": { "hand": [FILLER] },
@@ -105,7 +105,6 @@ mod tests {
 
             #[test]
             fn s3_1_in_lane_5_it_has_one_neighbour_lane_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MUSHROOM, FILLER], "field": [{ "def": BODY, "lane": 4 }] },
                     "p2": { "hand": [FILLER] },
@@ -117,7 +116,6 @@ mod tests {
 
             #[test]
             fn with_both_neighbouring_zones_empty_nothing_is_buffed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MUSHROOM, FILLER], "field": [{ "def": BODY, "lane": 1 }] },
                     "p2": { "hand": [FILLER] },
@@ -128,7 +126,6 @@ mod tests {
 
             #[test]
             fn s3_2_only_the_top_of_a_stack_pile_is_a_neighbour_the_dormant_card_beneath_is_not_buffed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [MUSHROOM, FILLER],
@@ -151,7 +148,6 @@ mod tests {
 
             #[test]
             fn s10_4_the_buffs_are_permanent_they_stay_after_mushroom_power_leaves_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MUSHROOM, FILLER], "field": [{ "def": BODY, "lane": 2 }] },
                     "p2": { "hand": ["core-016", FILLER], "field": [] },
@@ -168,7 +164,6 @@ mod tests {
 
             #[test]
             fn r386_the_buff_reads_through_param_an_upgrade_makes_it_3_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MUSHROOM, FILLER], "field": [{ "def": BODY, "lane": 2 }] },
                     "p2": { "hand": [FILLER] },
@@ -185,7 +180,6 @@ mod tests {
 
             #[test]
             fn is_4_4_and_gives_each_neighbour_4_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": MUSHROOM, "radiant": true }, FILLER],

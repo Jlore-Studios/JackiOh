@@ -1,6 +1,7 @@
 // R2249000: a Starship's face in play (#2249) wears the Starship's own art, drawn from its pieces and its
 // launch, whatever definition its fusions gave it; its rules box prints only the Starship term and the
-// pieces fused into it, each a reference that opens the piece's card.
+// pieces fused into it, each a reference that opens the piece's card. R2801000: a Dormant one bolts on
+// a hull plate for each piece fused into it.
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -15,6 +16,9 @@ import { CardFace } from "./CardFace.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { STARSHIP_PIECES_TESTID } from "./StarshipPieces.tsx";
+import { STARSHIP_HULL_PLATES_MAX } from "./StarshipHull.tsx";
+import { renderBoard } from "../test/board.tsx";
+import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
 
 afterEach(cleanup);
 
@@ -87,6 +91,34 @@ describe("R2249000: a Starship's face", () => {
     expect([...list.querySelectorAll("[data-piece]")].map((node) => node.getAttribute("data-piece"))).toEqual([SHIELD, CAPSULE]);
     // The Starship's printed text is nowhere on the face.
     expect(container.textContent).not.toContain("launch this");
+  });
+
+  it("R2801000 a Dormant hull shows min(pieces, STARSHIP_HULL_PLATES_MAX) plates; a launched one none", () => {
+    const platesOf = (pieces: number, launched = false): number | null => {
+      const list = Array.from({ length: pieces }, () => SHIELD);
+      const ship = launched
+        ? unit("p1", { instanceId: "ship", defId: HULL, starship: { pieces: list.map((defId) => ({ defId })), name: "Ember of Departure", launched: 1 } })
+        : dormantStarship("p1", list, { instanceId: "ship" });
+      const container = renderBoard(baseView({ you: emptySide("p1", { units: [null, null, ship, null, null] }) }));
+      const hull = container.querySelector('[data-testid="card-ship"] .cf-starship-hull');
+      const plates = hull === null ? null : hull.querySelectorAll(".cf-starship-plate").length;
+      if (hull !== null && plates !== null) {
+        expect(hull.getAttribute("data-plates")).toBe(String(plates));
+        expect(hull.getAttribute("aria-hidden")).toBe("true");
+        // Port and starboard in turn, as the art's modules are.
+        expect(hull.querySelectorAll('[data-flank="port"] .cf-starship-plate')).toHaveLength(Math.ceil(plates / 2));
+        expect(hull.querySelectorAll('[data-flank="starboard"] .cf-starship-plate')).toHaveLength(Math.floor(plates / 2));
+      }
+      cleanup();
+      return plates;
+    };
+    // One plate a piece, the fuse's bolt-on, up to the most a face bolts on.
+    expect(platesOf(1)).toBe(1);
+    expect(platesOf(3)).toBe(3);
+    expect(platesOf(STARSHIP_HULL_PLATES_MAX + 4)).toBe(STARSHIP_HULL_PLATES_MAX);
+    // No pieces yet, or launched: none.
+    expect(platesOf(0)).toBeNull();
+    expect(platesOf(3, true)).toBeNull();
   });
 
   it("R2249000 out of play, in the collection, the Dormant Starship prints its short text", () => {

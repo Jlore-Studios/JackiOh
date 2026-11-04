@@ -55,19 +55,20 @@ pub fn script_v0_5_9f() -> CardScripts {
 }
 
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4 (the Cry draws 1, radiant 2, R275).
-// The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`): a `field` setup fires no
+// The 12-damage hit is a radiant core-002 Speciesist set to 12/2 (`statsOverride`): a `field` setup fires no
 // Cry (R1), so the attack is a bare 12-damage instance. R18's "lose health bypasses the cap" is the
 // engine's rule (`crates/engine/tests/rules/damage.rs`), since the card adds nothing to it.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     fn setup(opts: Value) -> Scenario {
-        crate::register_all();
         scenario(opts)
     }
 
@@ -98,10 +99,10 @@ mod tests {
                 "p1": { "backrow": ["core-073"], "hand": ["core-005"] },
                 "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
-            let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
-            s.expect_stats(&bigot, json!({ "attack": 12 }));
+            let speciesist = s.unit(P2, 1).expect("setup: a radiant Speciesist in p2's lane 1");
+            s.expect_stats(&speciesist, json!({ "attack": 12 }));
 
-            s.attack(&bigot, "hero");
+            s.attack(&speciesist, "hero");
 
             s.expect_health(P1, 26);
             assert_eq!(damage_to(&s, "hero-p1"), [4]);
@@ -121,8 +122,8 @@ mod tests {
                     "hand": ["core-005"],
                 },
             }));
-            let first = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
-            let second = s.unit(P2, 2).expect("setup: a radiant Bigot in p2's lane 2");
+            let first = s.unit(P2, 1).expect("setup: a radiant Speciesist in p2's lane 1");
+            let second = s.unit(P2, 2).expect("setup: a radiant Speciesist in p2's lane 2");
 
             s.attack(&first, "hero").attack(&second, "hero");
 
@@ -140,9 +141,9 @@ mod tests {
                 "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
             let menace = s.unit(P1, 1).expect("setup: Midrange Menace in p1's lane 1");
-            let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
+            let speciesist = s.unit(P2, 1).expect("setup: a radiant Speciesist in p2's lane 1");
 
-            s.attack(&bigot, &menace);
+            s.attack(&speciesist, &menace);
 
             // A capped 4 would have left a 9-health unit alive; the full 12 kills it.
             assert_eq!(damage_to(&s, &menace.id), [12]);
@@ -157,9 +158,9 @@ mod tests {
                 "p1": { "backrow": ["core-073"], "hand": ["core-005"], "armor": 10 },
                 "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
-            let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
+            let speciesist = s.unit(P2, 1).expect("setup: a radiant Speciesist in p2's lane 1");
 
-            s.attack(&bigot, "hero");
+            s.attack(&speciesist, "hero");
 
             // 12 − 10 armor = 2, and min(2, 4) is 2 — not the cap's 4.
             s.expect_health(P1, 28);
@@ -222,10 +223,10 @@ mod tests {
                 "p1": { "backrow": [{ "def": "core-073", "radiant": true }], "hand": ["core-005"] },
                 "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
-            let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
+            let speciesist = s.unit(P2, 1).expect("setup: a radiant Speciesist in p2's lane 1");
             assert_eq!(s.backrow(P1, 1).map(|card| card.radiant), Some(true));
 
-            s.attack(&bigot, "hero");
+            s.attack(&speciesist, "hero");
 
             s.expect_health(P1, 27);
             assert_eq!(damage_to(&s, "hero-p1"), [3]);
@@ -246,8 +247,8 @@ mod tests {
                 },
             }));
             let menace = s.unit(P1, 1).expect("setup: Midrange Menace in p1's lane 1");
-            let first = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
-            let second = s.unit(P2, 2).expect("setup: a radiant Bigot in p2's lane 2");
+            let first = s.unit(P2, 1).expect("setup: a radiant Speciesist in p2's lane 1");
+            let second = s.unit(P2, 2).expect("setup: a radiant Speciesist in p2's lane 2");
 
             s.attack(&first, &menace);
             assert_eq!(damage_to(&s, &menace.id), [12]);

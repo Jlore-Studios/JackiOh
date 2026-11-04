@@ -591,7 +591,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
 mod delayed_effects_10_1_r62_r68 {
     use super::*;
 
-    fn ids(effects: Vec<DelayedEffect>) -> Vec<String> {
+    fn effect_ids(effects: Vec<DelayedEffect>) -> Vec<String> {
         effects.into_iter().map(|effect| effect.id).collect()
     }
 
@@ -645,22 +645,22 @@ mod delayed_effects_10_1_r62_r68 {
         sink.state.delayed.reverse();
 
         assert_eq!(
-            ids(due_delayed(sink.state, Phase::Start, P1)),
+            effect_ids(due_delayed(sink.state, Phase::Start, P1)),
             vec![start_a.id.clone(), start_d.id.clone()]
         );
         assert_eq!(
-            ids(due_delayed(sink.state, Phase::End, P1)),
+            effect_ids(due_delayed(sink.state, Phase::End, P1)),
             vec![end_b.id.clone()]
         );
         assert_eq!(
-            ids(due_delayed(sink.state, Phase::Start, P2)),
+            effect_ids(due_delayed(sink.state, Phase::Start, P2)),
             vec![start_c.id.clone()]
         );
         assert!(due_delayed(sink.state, Phase::End, P2).is_empty());
 
         drop_delayed(sink.state, &start_a.id);
         assert_eq!(
-            ids(due_delayed(sink.state, Phase::Start, P1)),
+            effect_ids(due_delayed(sink.state, Phase::Start, P1)),
             vec![start_d.id.clone()]
         );
     }

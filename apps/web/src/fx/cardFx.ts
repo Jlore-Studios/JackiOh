@@ -3,7 +3,8 @@
 // R670: marquee Legendary and Mythic Units replace a row entrance when their `summoned` has a `defId`.
 // R2784000: a card's entry in its set's effects table (fx/cards/tables.ts) names its bespoke recipe
 // (fx/cards/<set>/) or a shared motif per hook (fx/motifs/); `cast` and `cry` play by the readable
-// play resolving now, and `death`, `trigger` and `activate` wait for #2783's `hookResolving`. A set
+// play resolving now, and R2797000: `death`, `trigger` and `activate` by the hook entry its
+// `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). A set
 // piece (R2800000, setPieces.ts) keeps its card's bespoke entrance (`entranceKeyOf`).
 // R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
 
@@ -92,9 +93,10 @@ export type MotifResult = { cues: FxCue[]; replaces: ReadonlySet<GameEvent> };
 
 /**
  * R2784000: the motif of the readable play resolving now, on its `cry` (a Unit) or `cast` (any other
- * card). A hidden play, a card with no hooks, a motif not drawn yet and a run over a whole pile plan
- * nothing here, so the event rows play alone; `death`, `trigger` and `activate` wait for #2783's
- * `hookResolving` marker.
+ * card); R2797000: of the readable hook running now, on the hook its entry is (`FxPlay.hook`: a
+ * `death`, a `trigger`, an `activate`, or a Trap's firing's `cast`). A hidden play or hook, a card with
+ * no hooks, a motif not drawn yet and a run over a whole pile plan nothing here, so the event rows
+ * play alone.
  */
 export function planCardMotif(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult | null {
   if (entry.zone !== undefined) return null;
@@ -103,7 +105,7 @@ export function planCardMotif(entry: AnimationEntry, view: PlayerView, env: FxPl
   const card = table.get(play.defId);
   if (card?.kind !== "hooks") return null;
   const type = (CATALOG[play.defId] ?? view.defs?.[play.defId])?.type;
-  const hook = card.hooks[type === "Unit" ? "cry" : "cast"];
+  const hook = card.hooks[play.hook ?? (type === "Unit" ? "cry" : "cast")];
   if (hook === undefined || !isDrawnMotif(hook.motif)) return null;
   const look = (hook.palette !== undefined ? paletteLook(hook.palette) : undefined) ?? flavorLookOf(play.defId, play.instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK];
   const spec: MotifSpec = { motif: hook.motif, look, scale: motifScale(play.defId, view, env.intensity), row: hook.row ?? "replace" };

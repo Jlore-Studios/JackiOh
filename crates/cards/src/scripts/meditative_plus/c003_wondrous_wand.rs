@@ -100,7 +100,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit
     const STOCKPILE: &str = "core-073"; // (2) Field Spell
     const MENACE: &str = "core-019"; // (3) Unit
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
 
     use crate::scenario;
 
@@ -116,7 +116,6 @@ mod tests {
 
     #[test]
     fn draws_1_and_the_drawn_card_costs_1() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
         s.play(WAND, json!({}));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 1);
@@ -144,12 +143,11 @@ mod tests {
 
     #[test]
     fn r58_a_card_cast_on_draw_is_not_discounted_and_the_draw_repeats() {
-        crate::register_all();
-        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [CN_VIRUS, MENACE, FILLER] } }));
+        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [SUPER_VIRUS, MENACE, FILLER] } }));
         s.play(WAND, json!({}));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
-        s.expect_in_zone(CN_VIRUS, "graveyard").expect_in_zone(MENACE, "hand");
-        assert_eq!(s.card(CN_VIRUS).cost_override, None);
+        s.expect_in_zone(SUPER_VIRUS, "graveyard").expect_in_zone(MENACE, "hand");
+        assert_eq!(s.card(SUPER_VIRUS).cost_override, None);
         assert_eq!(s.card(MENACE).cost_override, Some(1));
     }
 
@@ -168,7 +166,6 @@ mod tests {
 
     #[test]
     fn a_card_already_in_your_hand_keeps_its_cost() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, STOCKPILE], "library": [FILLER, FILLER] } }));
         let held = s.card(STOCKPILE).clone();
         s.play(WAND, json!({}));
@@ -178,13 +175,11 @@ mod tests {
 
     #[test]
     fn r386_both_counts_read_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
         step_param(s.card_mut(WAND), "draw", 1);
         s.play(WAND, json!({}));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
 
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER, FILLER], "mana": 10 } }));
         step_param(s.card_mut(WAND), "embiggenedDraw", 1);
         s.play(WAND, json!({ "embiggen": true }));
@@ -193,7 +188,6 @@ mod tests {
 
     #[test]
     fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
         // A Nerf makes the drawn card cost (2) on the base face; a Buff (0), its floor (#2179's (1)).
         assert_eq!(crate::degrade_number(&mut s, WAND, "setCost"), 2);
@@ -219,7 +213,6 @@ mod tests {
 
     #[test]
     fn radiant_draws_2_each_costing_0() {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [{ "def": WAND, "radiant": true }, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
         s.play(WAND, json!({}));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
@@ -233,7 +226,6 @@ mod tests {
 
     #[test]
     fn radiant_embiggened_draws_4_each_costing_0() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": WAND, "radiant": true }, VANILLA],

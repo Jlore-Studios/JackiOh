@@ -40,6 +40,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const EARS: &str = "meditative-067";
@@ -61,7 +63,6 @@ mod tests {
 
             #[test]
             fn played_into_an_empty_zone_it_is_a_plain_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "ears-plain",
                     "p1": { "hand": [EARS, FILLER], "library": filler(3) },
@@ -76,7 +77,6 @@ mod tests {
 
             #[test]
             fn r1086_onto_your_unit_fuses_felinor_and_the_line() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "ears-equip",
                     "p1": {
@@ -116,7 +116,6 @@ mod tests {
             /// R1081000: a Unit standing in the backrow is one of your acting Units: a host where it stands.
             #[test]
             fn r1081000_onto_your_unit_standing_in_the_backrow_it_fuses_there() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "ears-standing",
                     "p1": { "hand": [EARS, FILLER], "field": [VANILLA], "library": filler(3) },
@@ -152,7 +151,6 @@ mod tests {
 
             #[test]
             fn end_of_turn_shuffles_one_love_bomb() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "ears-bomb",
                     "p1": { "hand": [EARS, FILLER], "library": filler(3) },
@@ -169,7 +167,6 @@ mod tests {
 
             #[test]
             fn bombs_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "ears-param",
                     "p1": { "hand": [EARS, FILLER], "library": filler(3) },
@@ -191,7 +188,6 @@ mod tests {
 
             #[test]
             fn end_of_turn_shuffles_two_love_bombs() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "ears-radiant",
                     "p1": {

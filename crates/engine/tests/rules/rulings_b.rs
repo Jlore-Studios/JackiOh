@@ -21,7 +21,7 @@ use jackioh_engine::subsystems::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    act, act_result, both, events_json, in_hand, json_of, new_game, play_random_game, put, set_library,
+    act, act_result, both, events_json, ids, in_hand, json_of, new_game, play_random_game, put, set_library,
     sink_for, slot, spread,
 };
 
@@ -692,10 +692,6 @@ fn refusal<T>(result: Result<T, EngineError>) -> Option<String> {
 
 fn says(text: &str) -> Option<String> {
     Some(text.to_string())
-}
-
-fn ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
-    cards.into_iter().map(|card| card.borrow().id.clone()).collect()
 }
 
 fn def_ids<C: Borrow<CardInstance>>(cards: impl IntoIterator<Item = C>) -> Vec<String> {
@@ -2080,7 +2076,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let felinor: Tag = Tag::Felinor;
         assert!(def_of(Some(&state), FUSE_B).tags.contains(&felinor));
 
-        // A token index of the "N.1" form addresses a card (#90.1 CN-Virus).
+        // A token index of the "N.1" form addresses a card (#90.1 Super-Virus).
         assert_eq!(
             def_by_index(SetName::Core, "51.1").map(|def| def.id.clone()),
             Some(DOTTED.to_string())

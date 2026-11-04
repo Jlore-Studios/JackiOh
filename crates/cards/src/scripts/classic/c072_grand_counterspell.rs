@@ -79,7 +79,7 @@ mod tests {
     const HONEYPOT: &str = "core-060"; // (1) Trap
     const BREAD: &str = "core-018"; // (1) Field Trap
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const FILLER: &str = "core-010"; // (0) Spell
 
     use crate::scenario;
@@ -231,20 +231,20 @@ mod tests {
         fn r70_a_cast_is_a_play_the_opponents_spell_cast_on_draw_is_countered() {
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "backrow": [GRAND] },
-                "p2": { "hand": [FILLER], "library": [CN_VIRUS, VANILLA] },
+                "p2": { "hand": [FILLER], "library": [SUPER_VIRUS, VANILLA] },
             }));
             s.end_turn();
             assert!(
                 s.events()
                     .iter()
-                    .any(|event| matches!(event, GameEvent::Countered { def_id, .. } if def_id == CN_VIRUS))
+                    .any(|event| matches!(event, GameEvent::Countered { def_id, .. } if def_id == SUPER_VIRUS))
             );
             assert!(
                 !s.events()
                     .iter()
                     .any(|event| matches!(event, GameEvent::Damage { target_id, .. } if target_id == "hero-p2"))
             );
-            s.expect_in_zone(CN_VIRUS, "graveyard");
+            s.expect_in_zone(SUPER_VIRUS, "graveyard");
         }
 
         /// B5 E1 beside C #17 Counterspell one counter cancels the Spell and the other stays set

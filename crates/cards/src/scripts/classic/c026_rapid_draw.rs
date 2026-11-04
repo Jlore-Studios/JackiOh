@@ -55,13 +55,15 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const RAPID: &str = "classic-026";
     const PALANTIR: &str = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
     const FILLER: &str = "core-005"; // Stockpile
-    const VIRUS: &str = "core-090-1"; // CN-Virus: Cast on draw: take 1 damage.
+    const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
     const A: &str = "core-019";
     const B: &str = "core-011";
     const C: &str = "core-001";
@@ -107,7 +109,6 @@ mod tests {
 
             #[test]
             fn draws_4_then_r682_discards_4_at_random_with_no_prompt() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER, FILLER], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
@@ -137,7 +138,6 @@ mod tests {
 
             #[test]
             fn r682_with_4_or_fewer_cards_in_hand_it_discards_all_of_them_and_asks_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
@@ -149,7 +149,6 @@ mod tests {
 
             #[test]
             fn r58_each_draw_has_its_own_cast_on_draw_chain_and_the_discard_then_reads_the_hand_the_draws_left() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER], "library": [VIRUS, A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
@@ -168,7 +167,6 @@ mod tests {
 
             #[test]
             fn s2_4_fatigue_a_deck_of_2_draws_2_and_fatigues_twice_and_the_2_cards_in_hand_are_discarded() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
@@ -180,7 +178,6 @@ mod tests {
 
             #[test]
             fn r4_r317_a_full_hand_burns_the_overflow_then_the_discard_takes_4_at_random() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [RAPID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
@@ -200,7 +197,6 @@ mod tests {
 
             #[test]
             fn s2_4_b5_e3_a_draw_limit_stops_the_rest_under_the_opponent_s_palantir_it_draws_1_and_the_discard_takes_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RAPID], "library": [A, B, C, D] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": PALANTIR, "faceUp": true }] },
@@ -216,7 +212,6 @@ mod tests {
 
             #[test]
             fn r97_the_card_left_in_hand_stays_hidden_from_the_opponent_while_the_discards_are_public() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER], "library": [A, B, C, D] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
@@ -236,7 +231,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_draws_5_a_degrade_of_discard_takes_5_an_upgrade_of_it_3() {
-                crate::register_all();
                 let mut draw_up = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E, F] }, "p2": { "hand": [FILLER] } }));
                 step_param(draw_up.card_mut(RAPID), "draw", 1);
                 draw_up.play(RAPID, json!({}));
@@ -264,7 +258,6 @@ mod tests {
 
             #[test]
             fn draws_5_then_discards_4_at_random() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RAPID, "radiant": true }], "library": [A, B, C, D, E, F] },
                     "p2": { "hand": [FILLER] },
@@ -279,7 +272,6 @@ mod tests {
 
             #[test]
             fn r682_a_deck_of_3_leaves_3_in_hand_all_discarded_without_a_prompt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RAPID, "radiant": true }], "library": [A, B, C] },
                     "p2": { "hand": [FILLER] },

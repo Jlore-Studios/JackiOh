@@ -9,14 +9,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{grunt, pawn, playing};
 use crate::rules::fixtures::generation::{immutable, register_generation};
-use crate::rules::fixtures::harness::{events_json, put, set_library, sink_for, slot};
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{by, events_json, put, set_library, sink_for, slot};
 
 fn enemy_field() -> Value {
     json!({ "side": "enemy", "zones": ["field"] })

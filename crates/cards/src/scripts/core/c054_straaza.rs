@@ -74,6 +74,8 @@ pub fn script_v0_4_0f() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     /// §5.1's pool for this card, which is what the script passes to the effect: the legal answers.
@@ -132,7 +134,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_makes_the_cards_cost_0_and_a_degrade_2_and_a_radiant_upgrade_finds_0_its_floor() {
         for (upgrade, cost) in [(true, 0), (false, 2)] {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "straaza-tuned", "p1": { "hand": ["core-054"] } }));
             let moved = if upgrade {
                 crate::upgrade_number(&mut s, "core-054", "setCost")
@@ -178,7 +179,6 @@ mod tests {
 
         #[test]
         fn costs_3_units_only_adds_2_random_3_cost_units_to_your_hand() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "straaza-base", "p1": { "hand": ["core-054"] } }));
 
             s.play("core-054", json!({}));
@@ -197,7 +197,6 @@ mod tests {
 
         #[test]
         fn r65_r78_they_cost_1_a_cost_override_on_each_created_instance_kept_in_every_zone() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "straaza-base", "p1": { "hand": ["core-054"] } }));
 
             s.play("core-054", json!({}));

@@ -561,7 +561,7 @@ pub struct Effect {
 `crates/cards/src/scripts/<set>/<file>.rs` holds the card's script and, at the bottom, its tests:
 
 ```rust
-//! SPEC §8.1 #2 Bigot. <the TS file's header comment, kept>
+//! SPEC §8.1 #2 Speciesist. <the TS file's header comment, kept>
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{destroy, destroy_all};

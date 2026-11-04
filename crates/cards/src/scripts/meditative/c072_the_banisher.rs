@@ -40,6 +40,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -48,7 +50,6 @@ mod tests {
     const MENACE: &str = "core-019";
 
     fn banisher_game() -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "field": [ID, ID] },
             "p2": { "field": [MENACE, BIG] },
@@ -96,7 +97,6 @@ mod tests {
     fn shield_or_indestructible_not_exiled() {
         // A hit Divine Shield stops, and one an Indestructible takes, deal no damage — so neither
         // is marked, and both stay on the field.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID, ID] },
             "p2": { "field": ["classic-089", "classic-041"] },
@@ -114,7 +114,6 @@ mod tests {
     #[test]
     fn r1124_an_exiled_unit_has_no_death_and_no_destroyed() {
         // Radiant Saintess: "Death: Make your other Units Radiant." Exiled, it never dies.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": ["core-005"] },
             "p2": { "field": ["core-081", "core-008"], "hand": ["core-005"] },
@@ -136,7 +135,6 @@ mod tests {
     fn r1124_an_exiled_reborn_unit_does_not_come_back() {
         // Right-house defender (1/1 Divine Shield, Reborn): the first Banisher pops the Shield, the
         // second exiles it, and Reborn never brings it back.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID, ID], "hand": ["core-005"] },
             "p2": { "field": ["core-003"], "hand": ["core-005"] },
@@ -162,7 +160,6 @@ mod tests {
 
     #[test]
     fn r1124_an_exiled_token_ceases_to_exist() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": ["core-005"] },
             "p2": { "field": ["core-t-rush"], "hand": ["core-005"] },
@@ -177,7 +174,6 @@ mod tests {
     #[test]
     fn zero_damage_exiles_nothing() {
         // The 7/7 with Armor 7 takes 2 − 7 = 0 damage: no mark, no exile.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": ["core-005"] },
             "p2": { "field": ["core-025"], "hand": ["core-005"] },
@@ -193,7 +189,6 @@ mod tests {
     #[test]
     fn r1124_a_unit_hit_for_lethal_is_exiled_not_destroyed() {
         // Its 2 on a 1/1 Scarab is lethal: the exile comes ahead of the death.
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": ["core-005"] },
             "p2": { "field": ["core-007"], "hand": ["core-005"] },
@@ -209,7 +204,6 @@ mod tests {
 
     #[test]
     fn its_own_death_still_happens() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [ID], "hand": ["core-005"] },
             "p2": { "field": [MENACE], "hand": ["core-005"] },
@@ -225,7 +219,6 @@ mod tests {
 
     #[test]
     fn radiant_cleave_exiles() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": ID, "radiant": true }] },
             "p2": { "field": ["core-007", "core-007", "core-007"] },

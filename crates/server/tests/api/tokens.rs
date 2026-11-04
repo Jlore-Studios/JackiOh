@@ -16,7 +16,7 @@ use jackioh_server::config::{
 };
 use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
-    VERSION_FULL_ART_ID,
+    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_SKETCH_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -1253,7 +1253,7 @@ async fn r2378000_a_redemption_sent_past_the_waiting_ones_is_refused_at_once_and
 #[tokio::test]
 async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_art() {
     let (app, token) = setup().await;
-    // League of Losers, a Legendary Spell, is offered the versions and augments; Bigot, a Common Unit, is not.
+    // League of Losers, a Legendary Spell, is offered the versions and augments; Speciesist, a Common Unit, is not.
     let card = "classicplus-019".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;
@@ -1362,4 +1362,57 @@ async fn r2715000_r2725002_an_epic_token_buys_the_animated_augment_unless_a_reti
         redeem(json!({ "token": "Epic", "cosmeticId": AUGMENT_ANIMATED_ID, "cardId": other })).await;
     assert_eq!(status, 409, "{answer}");
     assert_eq!(everything(&app).await, before);
+}
+
+#[tokio::test]
+async fn r2940000_a_token_refuses_a_version_not_offered() {
+    let (app, token) = setup().await;
+    // Transmogulate, a Legendary Spell, is offered all three of #2940's versions; Speciesist, a Common Unit, none.
+    let card = "core-083".to_string();
+    let bare = "core-002".to_string();
+    own(&app, &[card.clone(), bare.clone()]).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 2).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 1).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // Each on the card it is not offered, with a token of its tier: a 400, and nothing written or spent.
+    let before = everything(&app).await;
+    for (cosmetic, tier) in [
+        (VERSION_ALT_ART_ID, "Rare"),
+        (VERSION_SKETCH_ID, "Rare"),
+        (VERSION_ALT_FULL_ART_ID, "Legendary"),
+    ] {
+        let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    // On the card it is offered, a Rare token buys the Sketch, and a Legendary token Alt full art, a Legendary
+    // chase (R2728000).
+    for (cosmetic, tier) in [
+        (VERSION_SKETCH_ID, "Rare"),
+        (VERSION_ALT_FULL_ART_ID, "Legendary"),
+    ] {
+        let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 200, "{cosmetic}: {answer}");
+        assert!(
+            ledger(&app)
+                .await
+                .cosmetics
+                .iter()
+                .any(|row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == cosmetic),
+            "{cosmetic}"
+        );
+    }
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 0);
 }

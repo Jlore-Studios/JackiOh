@@ -45,6 +45,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::effects::{TuneDirection, applicable_changes};
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use std::collections::BTreeSet;
 
     const P1: PlayerId = PlayerId::P1;
@@ -54,7 +56,7 @@ mod tests {
     const GARY: &str = "core-004"; // 1/1, Cry: flip 5 coins, +1 attack per heads, +1 health per tails.
     const MR_TOKEN: &str = "core-015"; // 1/1, Cry: summon a Rush Token.
     const DUPLICATING: &str = "core-012"; // 3/4, Cry: summon a copy of this.
-    const BIGOT: &str = "core-002"; // 6/1 Human, Cry: destroy target enemy non-Human Unit.
+    const SPECIESIST: &str = "core-002"; // 6/1 Human, Cry: destroy target enemy non-Human Unit.
     const SORCERER: &str = "core-068"; // 5/5, Cry: deal 4 damage to a target (8 under 10 health).
     const VANILLA: &str = "core-008"; // 4/4, no text.
     const MENACE: &str = "core-019"; // 9/9 Taunt.
@@ -111,7 +113,6 @@ mod tests {
 
             #[test]
             fn on_the_field_the_cry_runs_with_that_unit_as_itself_gary_flips_its_coins_and_buffs_itself() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [GARY] }, "p2": { "hand": [FILLER] } }));
                 let gary = s.card(GARY).clone();
                 s.play(REWIND, json!({ "targets": pick::id(&gary.id) }));
@@ -122,7 +123,6 @@ mod tests {
 
             #[test]
             fn in_your_graveyard_the_cry_runs_under_your_control_me_and_mr_token_summons_a_rush_token_for_you() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "graveyard": [MR_TOKEN] }, "p2": { "hand": [FILLER] } }));
                 let mr_token = s.card(MR_TOKEN).id.clone();
                 s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
@@ -132,7 +132,6 @@ mod tests {
 
             #[test]
             fn a_cry_that_acts_on_this_finds_nothing_in_a_graveyard_gary_buffs_nothing_duplicating_felinors_copies_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [REWIND, REWIND, FILLER], "graveyard": [GARY, DUPLICATING] },
                     "p2": { "hand": [FILLER] },
@@ -150,14 +149,13 @@ mod tests {
             }
 
             #[test]
-            fn r70_its_choices_are_yours_as_prompts_bigot_asks_you_which_enemy_non_human_unit_to_destroy() {
-                crate::register_all();
+            fn r70_its_choices_are_yours_as_prompts_speciesist_asks_you_which_enemy_non_human_unit_to_destroy() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [REWIND, FILLER], "field": [BIGOT] },
+                    "p1": { "hand": [REWIND, FILLER], "field": [SPECIESIST] },
                     "p2": { "hand": [FILLER], "field": [VANILLA, DUPLICATING, MENACE] },
                 }));
-                let bigot = s.card(BIGOT).id.clone();
-                s.play(REWIND, json!({ "targets": pick::id(&bigot) }));
+                let speciesist = s.card(SPECIESIST).id.clone();
+                s.play(REWIND, json!({ "targets": pick::id(&speciesist) }));
                 let pending = js(&s.state().pending);
                 assert_eq!(pending["playerId"], "p1");
                 let selections: Vec<Value> = pending["options"]
@@ -179,7 +177,6 @@ mod tests {
 
             #[test]
             fn running_a_cry_is_not_a_play_of_that_unit_only_rewind_counts_as_played() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [MR_TOKEN] }, "p2": { "hand": [FILLER] } }));
                 let mr_token = s.card(MR_TOKEN).id.clone();
                 s.play(REWIND, json!({ "targets": pick::id(&mr_token) }));
@@ -197,7 +194,6 @@ mod tests {
 
             #[test]
             fn r90_with_no_unit_that_has_a_cry_it_is_still_played_fizzles_and_counts_as_played() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [REWIND, FILLER], "field": [VANILLA], "graveyard": [LUNAR] },
                     "p2": { "hand": [FILLER], "field": [GARY] },
@@ -218,25 +214,23 @@ mod tests {
 
             #[test]
             fn r90_only_your_units_are_offered_an_enemy_unit_and_the_enemy_graveyard_are_refused_and_legalactions_agrees() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [REWIND, FILLER], "field": [GARY], "graveyard": [MR_TOKEN] },
-                    "p2": { "hand": [FILLER], "field": [SORCERER], "graveyard": [BIGOT] },
+                    "p2": { "hand": [FILLER], "field": [SORCERER], "graveyard": [SPECIESIST] },
                 }));
                 assert_eq!(
                     offered(&s, P1).into_iter().collect::<BTreeSet<String>>(),
                     BTreeSet::from([s.card(GARY).id.clone(), s.card(MR_TOKEN).id.clone()]),
                 );
                 let sorcerer = s.card(SORCERER).id.clone();
-                let bigot = s.card(BIGOT).id.clone();
+                let speciesist = s.card(SPECIESIST).id.clone();
                 s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&sorcerer) })));
-                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&bigot) })));
+                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&speciesist) })));
                 s.expect_in_zone(REWIND, "hand");
             }
 
             #[test]
             fn a_unit_with_no_cry_a_spell_in_the_graveyard_and_a_card_dormant_under_a_stack_pile_are_never_offered_r13() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [REWIND, FILLER], "field": [VANILLA, GARY, { "def": FIENDER, "stack": true }], "graveyard": [LUNAR] },
                     "p2": { "hand": [FILLER] },
@@ -248,10 +242,9 @@ mod tests {
 
             #[test]
             fn a_paused_triggered_cry_survives_a_round_trip_the_frozen_state_answers_to_the_same_game() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [BIGOT] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-                let bigot = s.card(BIGOT).id.clone();
-                s.play(REWIND, json!({ "targets": pick::id(&bigot) }));
+                let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [SPECIESIST] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
+                let speciesist = s.card(SPECIESIST).id.clone();
+                s.play(REWIND, json!({ "targets": pick::id(&speciesist) }));
                 let pending = s.state().pending.clone();
                 assert!(pending.is_some());
                 let thawed = round_trip(s.state());
@@ -276,7 +269,6 @@ mod tests {
 
             #[test]
             fn r749_the_base_faces_repeats_is_not_tunable_an_upgrades_menu_offers_no_number_and_a_recorded_step_still_triggers_once() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "graveyard": [MR_TOKEN] }, "p2": { "hand": [FILLER] } }));
                 assert!(!changes(&s, REWIND, TuneDirection::Upgrade).contains(&json!("number")));
                 assert!(!changes(&s, REWIND, TuneDirection::Degrade).contains(&json!("number")));
@@ -292,7 +284,6 @@ mod tests {
 
             #[test]
             fn reaches_an_enemy_unit_on_the_field_its_cry_runs_under_your_control_the_rush_tokens_are_yours_twice() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": REWIND, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "field": [MR_TOKEN] },
@@ -305,7 +296,6 @@ mod tests {
 
             #[test]
             fn reaches_either_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": REWIND, "radiant": true }, FILLER], "graveyard": [GARY] },
                     "p2": { "hand": [FILLER], "graveyard": [MR_TOKEN] },
@@ -321,7 +311,6 @@ mod tests {
 
             #[test]
             fn runs_the_cry_twice_each_run_with_its_own_choices_asked_of_you_one_after_the_other() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": REWIND, "radiant": true }, FILLER], "field": [SORCERER] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -339,7 +328,6 @@ mod tests {
 
             #[test]
             fn a_pause_between_the_two_runs_survives_a_round_trip() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": REWIND, "radiant": true }, FILLER], "field": [SORCERER] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
@@ -367,7 +355,6 @@ mod tests {
 
             #[test]
             fn a_unit_with_no_cry_is_never_offered() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [{ "def": REWIND, "radiant": true }, FILLER], "field": [VANILLA] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
@@ -377,7 +364,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_triggers_the_cry_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": REWIND, "radiant": true }, FILLER], "graveyard": [MR_TOKEN] },
                     "p2": { "hand": [FILLER] },

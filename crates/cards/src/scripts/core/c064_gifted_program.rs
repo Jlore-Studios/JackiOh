@@ -37,6 +37,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const GIFTED: &str = "core-064"; // Field Spell, 2
@@ -60,7 +62,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_reaches_a_2_cost_card_and_a_radiant_degrade_stops_at_1() {
         for (radiant, upgrade, limit, made_radiant) in [(false, true, 2, true), (true, false, 1, false)] {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [{ "def": GIFTED, "radiant": radiant }], "hand": [POINTMASTER, MENACE], "mana": 4 }
             }));
@@ -73,7 +74,6 @@ mod tests {
             s.play(POINTMASTER, json!({}));
             assert_eq!(s.card(POINTMASTER).radiant, made_radiant);
         }
-        crate::register_all();
         let s = scenario(json!({ "p1": { "backrow": [GIFTED] } }));
         assert!(!crate::can_degrade_number(&s, GIFTED, "giftLimit"));
     }
@@ -83,7 +83,6 @@ mod tests {
 
         #[test]
         fn it_enters_the_backrow_and_never_makes_its_own_play_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GIFTED], "mana": 4 } }));
 
             s.play(GIFTED, json!({}));
@@ -96,7 +95,6 @@ mod tests {
 
         #[test]
         fn r56_a_card_the_opponent_plays_is_never_made_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GIFTED], "field": [MENACE] },
@@ -113,7 +111,6 @@ mod tests {
 
         #[test]
         fn r56_the_first_card_costing_1_or_less_becomes_radiant_before_it_resolves() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "backrow": [GIFTED], "hand": [FRIEND], "field": [TIMMY], "mana": 4 } }));
             let timmy = s.card(TIMMY).clone();
 
@@ -128,7 +125,6 @@ mod tests {
 
         #[test]
         fn r56_the_second_cheap_card_of_the_same_turn_is_not_made_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [GIFTED], "hand": [SURGERY, FRIEND], "field": [TIMMY], "mana": 4 },
             }));
@@ -149,7 +145,6 @@ mod tests {
 
         #[test]
         fn r56_a_card_above_the_threshold_is_left_alone() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "backrow": [GIFTED], "hand": [POINTMASTER], "mana": 4 }, "p2": {} }));
 
             s.play(POINTMASTER, json!({}));
@@ -161,7 +156,6 @@ mod tests {
 
         #[test]
         fn r56_radiant_s_threshold_of_2_catches_a_2_cost_card_the_base_one_does_not() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "backrow": [{ "def": GIFTED, "radiant": true }], "hand": [POINTMASTER], "mana": 4 },
                 "p2": {},
@@ -175,7 +169,6 @@ mod tests {
 
         #[test]
         fn r56_the_count_starts_again_each_turn_so_the_next_turn_s_first_cheap_card_is_radiant_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "backrow": [GIFTED],
@@ -209,7 +202,6 @@ mod tests {
 
         #[test]
         fn r662_base_the_1_cost_card_glows_and_the_2_cost_one_does_not_and_the_glowing_one_is_played_radiant() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": "r662-064-base", "p1": { "backrow": [GIFTED], "hand": [FRIEND, POINTMASTER, MENACE] } }));
             assert!(glows_in_hand(&s, FRIEND));
             assert!(!glows_in_hand(&s, POINTMASTER));
@@ -220,7 +212,6 @@ mod tests {
 
         #[test]
         fn r662_radiant_the_2_cost_card_glows_too_and_once_one_cheap_card_is_played_nothing_does() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "r662-064-radiant",
                 "p1": { "backrow": [{ "def": GIFTED, "radiant": true }], "hand": [FRIEND, POINTMASTER, MENACE] },
@@ -236,7 +227,6 @@ mod tests {
 
         #[test]
         fn r662_a_card_already_radiant_gains_nothing_so_it_does_not_glow() {
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "r662-064-already",
                 "p1": { "backrow": [GIFTED], "hand": [{ "def": FRIEND, "radiant": true }, MENACE] },
@@ -246,7 +236,6 @@ mod tests {
 
         #[test]
         fn r662_without_it_on_the_field_or_on_the_opponent_s_side_nothing_glows() {
-            crate::register_all();
             let s = scenario(json!({
                 "seed": "r662-064-none",
                 "p1": { "hand": [FRIEND, MENACE] },

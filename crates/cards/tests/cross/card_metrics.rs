@@ -17,7 +17,7 @@ use jackioh_engine::{
     code_lines_of, is_busted, is_complicated, with_shipped,
 };
 
-fn ids<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
+fn ids_of_defs<'a>(defs: impl IntoIterator<Item = &'a CardDef>) -> Vec<String> {
     defs.into_iter().map(|def| def.id.clone()).collect()
 }
 
@@ -145,16 +145,16 @@ fn r1846000_the_query_draws_each_list_from_the_sets_that_ship() {
         };
         // §5.1: a token joins only a pool that takes tokens, and Glitch none (R674).
         assert_eq!(
-            sorted(ids(query(&ask))),
-            sorted(ids(listed().filter(|def| !def.token)))
+            sorted(ids_of_defs(query(&ask))),
+            sorted(ids_of_defs(listed().filter(|def| !def.token)))
         );
         let with_tokens = CardQuery {
             with_tokens: Some(true),
             ..ask.clone()
         };
         assert_eq!(
-            sorted(ids(query(&with_tokens))),
-            sorted(ids(listed().filter(|def| def.id != GLITCH_DEF_ID)))
+            sorted(ids_of_defs(query(&with_tokens))),
+            sorted(ids_of_defs(listed().filter(|def| def.id != GLITCH_DEF_ID)))
         );
         assert!(!query(&ask).is_empty(), "the pool holds cards");
     }
@@ -172,7 +172,7 @@ fn r1846001_every_set_adds_nothing_until_a_single_player_set_holds_a_card() {
         every_set: Some(true),
         ..busted.clone()
     };
-    assert_eq!(ids(query(&every)), ids(query(&busted)));
+    assert_eq!(ids_of_defs(query(&every)), ids_of_defs(query(&busted)));
 }
 
 #[test]
