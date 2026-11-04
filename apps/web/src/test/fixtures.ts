@@ -62,6 +62,18 @@ export function unit(owner: PlayerId, over: Partial<UnitView> = {}): UnitView {
   };
 }
 
+/** R2801000: a Dormant Starship (R1852000) holding a copy of each of `pieces`, in the order they fused. */
+export function dormantStarship(owner: PlayerId, pieces: readonly string[], over: Partial<UnitView> = {}): UnitView {
+  return unit(owner, {
+    defId: "stinkyscape-t-dormant-starship",
+    attack: 0,
+    slumber: {},
+    starship: { pieces: pieces.map((defId) => ({ defId })) },
+    canAct: false,
+    ...over,
+  });
+}
+
 export function faceUpBackrow(
   owner: PlayerId = "p1",
   over: Partial<Extract<BackrowView, { faceDown: false }>> = {},

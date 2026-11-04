@@ -80,3 +80,16 @@ served for another's. The normal picture's seed is the card's id alone, so every
 golden hash stands. The Signature look moves by `SIGNATURE_MOTION`, which no Animated motion is. A later
 version with a picture of its own (#2940's Alt full art) adds its own name to `ArtPicture`, so it draws
 apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+
+## The versions' pictures (R2940001)
+
+Alt art and Alt full art draw the picture `"alt"`, seeded apart by `artSeedOf` as the Signature
+look's is, so the two versions share one picture and neither is the normal one or Signature's. The
+Sketch (`"sketch"`) draws no picture of its own: `sketchSvg` lays the normal picture, whichever
+painter drew it (a Legacy card's and a Starship's too), under one SVG filter, its greys dodged into
+line work, hatched in slate ink where it is dark and grained, on slate paper; a Radiant face washes
+its painted picture back over the pencil. Its strokes are seeded by the card's id, and the cache keys
+it apart (`|sketch`), so the plain picture keeps its key and bytes. The filter's constants
+(`SKETCH_*`) were tuned by eye on the component spec's screenshot (`card-versions-part-2`). A
+delivered file is the normal picture's, so Alt art and the Sketch draw the painter's picture until an
+artist delivers theirs.
