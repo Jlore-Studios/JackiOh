@@ -648,7 +648,6 @@
 .landing .landing-news-panel li {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .landing .landing-quests-panel .account-quests__title,
@@ -665,8 +664,8 @@
   font-size: 13px;
 }
 
-.landing .landing-quests-panel p,
-.landing .landing-news-panel p {
+.landing .landing-quests-panel .account-quests > p,
+.landing .landing-news-panel .account-quests > p {
   margin-top: 8px;
 }
 
@@ -696,10 +695,6 @@
   font-size: var(--type-xs);
   line-height: 18px;
   text-align: center;
-}
-
-.landing .landing-news-panel .news-panel__summary {
-  margin-top: 0;
 }
 
 /* --- section headings ------------------------------------------------------------------------ */
