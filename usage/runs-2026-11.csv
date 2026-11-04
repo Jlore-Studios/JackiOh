@@ -489,3 +489,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-04T00:31:41Z,41732125204,claude-6,opus,review,2965,hard,approved,,5.6,61,20030,3612238,2.1042,50,4,,,33.3,claude-6,none,,1
 2026-11-04T00:58:09Z,41732241954,claude-3,opus,revise,2920,hard,approved,,39.4,151,41204,8807278,4.6049,6,5,,,1.2,claude-4,fresh,other,2
 2026-11-04T01:26:43Z,41743201771,claude-7,sonnet+opus,revise,2955,medium,built,,39.7,271,135034,26779134,5.1883,3,17,,,0.9,claude-7,fresh,,1
+2026-11-04T01:33:21Z,41753695909,muse,muse-spark-1.3-contributor,plan,2803,medium,planned,,5.1,0,0,0,,0,0,80,80,2655.2,,none,,1
+2026-11-04T01:43:43Z,41747054930,claude-1,opus,build,2942,hard,built,,47.8,336,184322,43340667,15.5667,0,30,,,508.7,claude-1,fresh,,1
+2026-11-04T01:47:24Z,41752667443,claude-3,opus,suggest,,,suggested,,31.1,37,43678,2771364,42.6187,6,95,,,,,none,,1
+2026-11-04T01:56:30Z,41748368091,claude-6,opus,revise,2965,hard,approved,,51.2,72,18585,3508872,3.0488,4,10,,,0.4,claude-6,resumed,,2
