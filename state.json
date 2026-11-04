@@ -19037,17 +19037,6 @@
       "total": 8153968640
     },
     {
-      "at": "2026-11-03T09:58:55Z",
-      "box": "b2",
-      "high_swap": 520749056,
-      "low_available": 5408280576,
-      "runner": "night-vm-muse-3-b2",
-      "stall_full": 129.4,
-      "stall_some": 563.5,
-      "swapped": 14847601,
-      "total": 8153968640
-    },
-    {
       "at": "2026-11-03T10:12:08Z",
       "high_swap": 974295040,
       "low_available": 6738903040,
@@ -19662,6 +19651,16 @@
       "stall_full": 13.0,
       "stall_some": 21.5,
       "swapped": 1032294,
+      "total": 8153976832
+    },
+    {
+      "at": "2026-11-04T10:49:57Z",
+      "high_swap": 696406016,
+      "low_available": 6625415168,
+      "runner": "night-vm-muse",
+      "stall_full": 15.6,
+      "stall_some": 25.1,
+      "swapped": 1237897,
       "total": 8153976832
     }
   ],
