@@ -425,6 +425,29 @@ func TestSquishyCases_ItHasNoFinalCheckButHasItsLabels(t *testing.T) {
 	assertEqual(t, config.LabelWaitingTurn, "squishy:waiting-turn")
 }
 
+// Squishy's red CI stops early too (#2948): it has no status loop of its own, and its sweep, which
+// the night bot's loop runs for it each tick, looks at the CI runs going on its own branches, never
+// the night bot's. Its fix is `squishy:revise`, and the completed event of the run it cancelled is
+// ignored.
+func TestSquishyCases_ItStopsRedCIEarlyOnItsOwnPullRequests(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t, testsupport.Day)
+	world.gh.AddPull(9, "squishy/issue-5", fakes.Pull{Labels: []string{"squishy:pr"}, SHA: "s1"})
+	world.gh.AddPull(10, "bot/issue-6", fakes.Pull{Labels: []string{"bot:pr"}, SHA: "s2"})
+	now := world.ctx.Now()
+	ciEarlyRun(world.gh, 900, "squishy/issue-5", "s1", 9, ciEarlyRed(1, "web (unit 2/4)", now))
+	ciEarlyRun(world.gh, 901, "bot/issue-6", "s2", 10, ciEarlyRed(2, "web (unit 2/4)", now))
+	sweep.Sweep(world.ctx) // the first sweep only starts the count
+	assertIn(t, "#9: `web (unit 2/4)` red in CI run 900; stopped the rest of it; queued a CI fix",
+		strings.Join(sweep.Sweep(world.ctx), "\n"))
+	assertEqual(t, world.gh.Cancels, []any{900})
+	assertEqual(t, world.gh.LabelNames(9), setOf("squishy:pr", "squishy:revise"))
+	assertEqual(t, world.gh.LabelNames(10), setOf("bot:pr"))
+	assertEqual(t, dig(t, world.ctx.Store.Load(), "items", "9", "ci_early"), true)
+	assertEqual(t, events.Handle(world.ctx, "workflow_run", ciEarlyCompleted(world.gh, 900)),
+		[]string{"ignored: the bot stopped run 900 itself, once a required job had failed"})
+}
+
 // One lane and one model from plan to own review (#2903) are the night bot's alone: Squishy chains
 // nothing (`own_review_run` off) and holds nothing (`hold_minutes` 0), so no plan of its takes a lane
 // of its own, even with a planning lane, nor keeps one for a build, and its build records no
