@@ -14213,6 +14213,7 @@
     "3000": {
       "action": "build",
       "asks": [],
+      "closeout": false,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -14232,6 +14233,24 @@
       "started_at": "2026-11-04T13:14:40Z",
       "stop_requested": false,
       "taken_asks": [],
+      "tree": {
+        "at": "2026-11-04T13:51:35Z",
+        "children": [
+          3038,
+          3039,
+          3040,
+          3041,
+          3042,
+          3043,
+          3044,
+          3045,
+          3046,
+          3047,
+          3048
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-3000"
+      },
       "verdict_rounds": 0,
       "waiting_comment": 6624496987
     },
