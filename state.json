@@ -12685,6 +12685,13 @@
     "2944": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41825985572",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-04T12:35:37Z",
+        "until": "2026-11-04T13:05:37Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
