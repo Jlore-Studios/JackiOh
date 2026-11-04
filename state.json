@@ -29904,18 +29904,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-04T17:27:35Z,claude-4,ping,before,41877437560,73,2026-11-04T18:20:00Z,,,allowed,70,,",
-      "2026-11-04T17:27:41Z,claude-4,ping,before,41877351744,73,2026-11-04T18:20:00Z,,,allowed,70,,",
-      "2026-11-04T17:18:36Z,claude-7,ping,before,41876004543,1,2026-11-04T21:10:00Z,,,allowed,50,,",
-      "2026-11-04T17:20:42Z,claude-7,stream,call,41876004543,2,2026-11-04T21:10:00Z,,,allowed,50,,"
-    ],
-    "runs": [
-      "2026-11-04T17:27:35Z,41877437560,claude-4,opus,build,3049,hard,interrupted,5-hour cap,0,0,0,0,,73,73,,,186.8,claude-4,none,,0",
-      "2026-11-04T17:27:41Z,41877351744,claude-4,opus,revise,3050,hard,interrupted,5-hour cap,0,0,0,0,,73,73,,,0.8,claude-4,none,,0",
-      "2026-11-04T17:23:50Z,41876004543,claude-7,sonnet,review,2984,medium,approved,,5.1,16,3946,427555,0.2539,1,2,,,1.1,claude-7,none,,1"
-    ]
-  },
   "version": 1
 }
