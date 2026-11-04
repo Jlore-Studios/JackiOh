@@ -57,8 +57,9 @@ the same rng. The caller reads `options.rng.cursor()` back afterwards.
 
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188). It
 answers its mulligan as soon as the mulligans open (R265, R266): `mulligan_keep_curved` sends back
-every card costing more than `AI_MULLIGAN.keep_max_cost` except the one proven four-drop the shaped
-keep holds, and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
+every card costing more than `mulligan_keep_bound`, `AI_MULLIGAN.keep_max_cost` plus the seat's mana
+bonus within its mana cap (R2977000), except the one proven card one dearer the shaped keep holds,
+and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
 the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
 going second, The Coin). Nothing here reads a difficulty, and a handicap only as the seat's mana (the
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's

@@ -3,20 +3,23 @@
 //!
 //! B16: one candidate is played without searching (no node, no draw from the AI's rng), and a seat
 //! that owes nothing gets null. B20: the mulligan returns the cards costing more than
-//! AI_MULLIGAN.keepMaxCost, keeping at most the one proven four-drop the shaped keep allows, and
-//! keeps the cheap ones to AI_MULLIGAN_CURVE's curve (#993).
+//! AI_MULLIGAN.keepMaxCost plus the seat's mana bonus within its cap (R2977000), keeping at most the
+//! one proven card one dearer the shaped keep allows, and keeps the cheap ones to AI_MULLIGAN_CURVE's
+//! curve (#993).
 //! B21 and R188: the AI answers an unanswered draw offer at once with a
 //! decline, and never concedes, offers a draw or accepts one.
 
 use jackioh_ai::{
-    AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_MULLIGAN_CURVE, AiMulliganCurve, AiOptions, Decision,
-    DecisionReason, MatchHooks, Matchup, SeatController, ai_to_act, decide, game_config,
-    mulligan_keep_curved, mulligan_keep_shaped, play_match, unanswered_draw_offer,
+    AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_MULLIGAN_CURVE, AiMulliganCurve, AiOptions, DEAL_MULLIGAN_KEEP,
+    Decision, DecisionReason, GREEDY_MULLIGAN, MatchHooks, Matchup, SeatController, ai_to_act, decide,
+    game_config, mulligan_keep, mulligan_keep_bound, mulligan_keep_curved, mulligan_keep_shaped, play_match,
+    shaped_weight, unanswered_draw_offer,
 };
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, Action, ActionBody, ActionType, CreateGameOptions, DECK_SIZE, GameEvent, GameState,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, begin_game, create_game, create_rng, def_of, json,
-    legal_actions, mulligan_prompt_for, query_cost, reduce, seat_to_act, subsystems,
+    AI_DIFFICULTY, AI_TUTORIAL, Action, ActionBody, ActionType, CreateGameOptions, DECK_SIZE, GameEvent,
+    GameState, HUMAN_HANDICAP, Handicap, MAX_MANA, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, begin_game,
+    create_game, create_rng, def_of, json, legal_actions, mulligan_prompt_for, query_cost, reduce,
+    seat_to_act, subsystems,
 };
 
 use super::support::{
@@ -662,6 +665,168 @@ mod the_mulligans_curve {
             hand_at(&state, PlayerId::P1, 0..=AI_MULLIGAN_CURVE.keep_without_early)
         );
         act(&state, PlayerId::P1, &decision.action);
+    }
+
+    // R2977000: the bound moves up by the seat's mana bonus, within its mana cap.
+
+    const PROVEN_THREE: &str = "core-013"; // Jlockeed Shredder-10, 3, shaped weight about 9.7
+    const FOUR: &str = "core-034"; // Collateral Damage, 4, shaped weight about 0.03
+    const FIVE: &str = "classicplus-064"; // Mulch Muncher, 5, shaped weight about 1.4
+    const SIX: &str = "core-029"; // GIGA Glowy Jelly Bean, 6, shaped weight about 0.5
+
+    /// `costs_hold`, and the dearer cards' costs and shaped weights the R2977000 tests assume: only
+    /// PROVEN_THREE reaches DEAL_MULLIGAN_KEEP, so no shaped exception keeps FOUR, FIVE or SIX.
+    fn dearer_costs_hold() {
+        costs_hold();
+        assert_eq!(query_cost(def_of(None, PROVEN_THREE)), AI_MULLIGAN.keep_max_cost);
+        assert!(shaped_weight(PROVEN_THREE) >= DEAL_MULLIGAN_KEEP);
+        for (id, cost) in [(FOUR, 4), (FIVE, 5), (SIX, 6)] {
+            assert_eq!(query_cost(def_of(None, id)), cost, "{id}");
+            assert!(shaped_weight(id) < DEAL_MULLIGAN_KEEP, "{id}");
+        }
+    }
+
+    /// A human's resources but for the crystals.
+    fn mana(mana_bonus: i32, mana_cap: i32) -> Handicap {
+        Handicap {
+            mana_bonus,
+            mana_cap,
+            ..HUMAN_HANDICAP
+        }
+    }
+
+    /// A dungeon run's enemy with `bonus` extra crystals: a run raises its bonus and its cap together
+    /// (R2922001).
+    fn run_enemy(bonus: i32) -> Handicap {
+        mana(bonus, MAX_MANA + bonus)
+    }
+
+    /// `state` with p2's handicap replaced (`None` is Easy's, a human's, which no game stores).
+    fn on(state: &GameState, handicap: Option<Handicap>) -> GameState {
+        let mut state = state.clone();
+        state.players[PlayerId::P2].handicap = handicap;
+        state
+    }
+
+    /// p2's sorted keep, at the bound `decide` passes.
+    fn curved(state: &GameState) -> Vec<String> {
+        sorted(mulligan_keep_curved(
+            state,
+            PlayerId::P2,
+            AI_MULLIGAN.keep_max_cost,
+            &AI_MULLIGAN_CURVE,
+        ))
+    }
+
+    #[test]
+    fn r2977000_a_hard_seat_keeps_a_four_cost_card_from_an_opening_where_an_easy_seat_sends_it_back() {
+        dearer_costs_hold();
+        let seed = "decide-r2977000-hard";
+        let hard = hard_p2_mulligan_with(seed, &[FOUR, FOUR, TWO, ONE, SIX]);
+        // Hard's crystals are a turn ahead (R181), so its fours are its turn-3 play; the six goes back.
+        let decision = must_decide(&hard, PlayerId::P2, seed);
+        assert_eq!(decision.reason, DecisionReason::Mulligan);
+        assert_eq!(kept(&decision), hand_at(&hard, PlayerId::P2, 0..4));
+        act(&hard, PlayerId::P2, &decision.action);
+        // The same hand on Easy's resources: the fours go back with the six.
+        let easy = on(&hard, None);
+        let decision = must_decide(&easy, PlayerId::P2, seed);
+        assert_eq!(kept(&decision), hand_at(&easy, PlayerId::P2, 2..4));
+        // The greedy baseline's frozen mulligan reads no bonus.
+        assert_eq!(
+            sorted(mulligan_keep(&hard, PlayerId::P2, GREEDY_MULLIGAN.keep_max_cost)),
+            hand_at(&hard, PlayerId::P2, 2..4)
+        );
+    }
+
+    #[test]
+    fn r2977000_the_bound_is_keep_max_cost_plus_the_mana_bonus_within_the_cap_and_never_below_zero() {
+        costs_hold();
+        let state = dealt_game("decide-r2977000-bound");
+        let rows: [(Option<Handicap>, i32); 11] = [
+            (None, 3),
+            (Some(AI_DIFFICULTY.easy), 3),
+            (Some(AI_DIFFICULTY.medium), 4),
+            (Some(AI_DIFFICULTY.hard), 4),
+            (Some(AI_TUTORIAL), 3),
+            (Some(run_enemy(2)), 5),
+            (Some(run_enemy(3)), 6),
+            (Some(mana(3, MAX_MANA)), MAX_MANA),
+            (Some(mana(1, 2)), 2),
+            // A handicap the engine refuses (`validate_handicap`, R180), built by hand to show the floor.
+            (Some(mana(-5, MAX_MANA)), 0),
+            (Some(mana(i32::MAX, i32::MAX)), i32::MAX),
+        ];
+        for (handicap, bound) in rows {
+            assert_eq!(
+                mulligan_keep_bound(&on(&state, handicap), PlayerId::P2, AI_MULLIGAN.keep_max_cost),
+                bound,
+                "{handicap:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn r2977000_a_seat_with_any_bonus_keeps_cards_up_to_three_plus_that_bonus() {
+        dearer_costs_hold();
+        for (probe, cost) in [(THREE, 3), (FOUR, 4), (FIVE, 5), (SIX, 6)] {
+            let dealt = hard_p2_mulligan_with(
+                &format!("decide-r2977000-bonus-{cost}"),
+                &[ONE, TWO, probe, probe, probe],
+            );
+            for bonus in 0..=3 {
+                let expected = if cost <= AI_MULLIGAN.keep_max_cost + bonus {
+                    hand_at(&dealt, PlayerId::P2, 0..5)
+                } else {
+                    hand_at(&dealt, PlayerId::P2, 0..2)
+                };
+                assert_eq!(
+                    curved(&on(&dealt, Some(run_enemy(bonus)))),
+                    expected,
+                    "bonus {bonus}, cost {cost}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r2977000_the_shaped_exception_moves_with_the_bound_and_never_passes_the_cap() {
+        dearer_costs_hold();
+        let fours = hard_p2_mulligan_with(
+            "decide-r2977000-shaped",
+            &[ONE, TWO, PROVEN_FOUR, PROVEN_FOUR, PROVEN_FOUR],
+        );
+        // No bonus: the bound is 3, and the exception holds the first proven four.
+        assert_eq!(curved(&on(&fours, None)), hand_at(&fours, PlayerId::P2, 0..3));
+        // One crystal more: every four is a plain keep.
+        assert_eq!(
+            curved(&on(&fours, Some(run_enemy(1)))),
+            hand_at(&fours, PlayerId::P2, 0..5)
+        );
+        // A cap of 3 holds the bound at 3, and a four is past what the seat can ever pay.
+        assert_eq!(
+            curved(&on(&fours, Some(mana(1, 3)))),
+            hand_at(&fours, PlayerId::P2, 0..2)
+        );
+        // A hand-built bound of 2 (a negative bonus no game holds, R180): the exception looks at threes.
+        let threes = hard_p2_mulligan_with(
+            "decide-r2977000-shaped-threes",
+            &[ONE, TWO, PROVEN_THREE, PROVEN_THREE, PROVEN_THREE],
+        );
+        assert_eq!(
+            curved(&on(&threes, Some(mana(-1, MAX_MANA)))),
+            hand_at(&threes, PlayerId::P2, 0..3)
+        );
+    }
+
+    #[test]
+    fn r2977000_the_largest_bonus_and_cap_overflow_nothing() {
+        dearer_costs_hold();
+        let state = hard_p2_mulligan_with("decide-r2977000-overflow", &[ONE, TWO, SIX, SIX, SIX]);
+        assert_eq!(
+            curved(&on(&state, Some(mana(i32::MAX, i32::MAX)))),
+            hand_at(&state, PlayerId::P2, 0..5)
+        );
     }
 }
 
