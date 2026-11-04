@@ -29144,6 +29144,7 @@
         "every": 5,
         "head": "a6c69931321abfecdfaef3a986cfdfe77d296666",
         "issue": 2803,
+        "last_why": "stopped: #2992 was closed",
         "merged_at": "2026-11-04T11:55:32Z",
         "n": 50,
         "pr": 2992,
@@ -29154,12 +29155,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:426a2962-1793793746",
+        "run_id": "",
         "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
         "started_at": "2026-11-04T12:02:50Z",
         "status": "queued",
         "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 51
