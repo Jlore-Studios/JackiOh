@@ -15347,6 +15347,13 @@
     "3061": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T23:30:14Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule 1: it changes how the engine's view and listing (`crates/engine/src/subsystems/activate.rs`) decide `usable` and `reason`, and adds a fuzz-monitor check; the issue itself asks for the hard label."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
