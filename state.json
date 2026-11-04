@@ -13204,9 +13204,7 @@
     },
     "2882": {
       "action": "build",
-      "asks": [
-        "c:6626192852"
-      ],
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-03T04:13:51Z",
@@ -13229,6 +13227,10 @@
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
+      "live": "building",
+      "owner": "claude-8",
+      "owner_since": "2026-11-04T08:32:40Z",
+      "owner_why": "it planned it",
       "pending_request": false,
       "planned_at": "2026-11-03T04:13:54Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -13238,12 +13240,14 @@
       "question": "Acceptance criterion 3 of #2882 says a finished daily game claims earning exactly like a normal practice game. That can't be built inside the issue's own limits (no server, engine or catalog change). Please decide one of two things. (A) Accept today's deal as a no-earning practice option. The change on this branch already does that, so reword criterion 3 to the replay half only, and the PR can merge as it is. (B) Want earning too? Then open a separate hard issue for a server-issued daily seed per account plus a migration, and merge this PR first or hold it for that issue. The seat rule is a smaller open choice: odd day of the month is p1, even day is p2. Say if you'd rather have always p1 or another rule.",
       "queued_at": "2026-11-04T08:27:05Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41576978744",
+      "run_id": "pending:88468e9d-1793781126",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-03T04:14:43Z",
+      "started_at": "2026-11-04T08:32:40Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6626192852"
+      ]
     },
     "2883": {
       "action": "build",
@@ -18040,9 +18044,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T08:31:51Z",
+    "at": "2026-11-04T08:32:40Z",
     "url": "",
-    "what": "revise #2992 on muse"
+    "what": "build #2882 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T08:17:42Z",
