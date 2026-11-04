@@ -14897,10 +14897,12 @@
     "what": "plan #2944 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-04T11:53:28Z",
+    "at": "2026-11-04T12:00:49Z",
     "notes": [
-      "#2992: approved and green, so its strikes are cleared",
-      "#2992: closed, so `bot:merging` is off"
+      "delivered review #3034 on claude-3 (run 41822428978): approved",
+      "started review #2992 on claude-6 (run 41825897976)",
+      "started plan #2944 on claude-4 (run 41825985572)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15606,7 +15608,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T11:53:28Z",
+  "loop_tick": "2026-11-04T12:00:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
