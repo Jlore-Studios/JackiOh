@@ -18176,7 +18176,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-04T06:46:07Z",
-      "run_id": "pending:d80ac977-1793774860",
+      "run_id": "41787954157",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
