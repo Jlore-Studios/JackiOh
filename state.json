@@ -251,11 +251,8 @@
     "what": "build #3029 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-04T10:59:38Z",
-    "notes": [
-      "#3029 needs a plan",
-      "started a night run, as a lane was free: #3029 (hard) is queued to build, for `claude-squishy`: plan on `claude-squishy` (claude, `opus`, strong); build on `claude-squishy` (claude, `opus`, strong); review on `claude-squishy` (claude, `opus`, strong)"
-    ],
+    "at": "2026-11-04T11:17:56Z",
+    "notes": [],
     "since": "2026-10-06T07:15:07Z"
   },
   "needs_decision_synced": "d4c5f9 A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it",
