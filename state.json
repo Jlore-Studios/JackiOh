@@ -17067,6 +17067,13 @@
     "2983": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41765197606",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-04T03:29:49Z",
+        "until": "2026-11-04T03:59:49Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
