@@ -153,7 +153,12 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/patch-notes", () => {
-          checkPublic(at("/patch-notes"), "/patch-notes", patchTestid.screen);
+          cy.visit("/patch-notes");
+          cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          // The screen shows at once; the legend (R3012000) and the entries only once the history has loaded:
+          // checked with them on the page, never against the skeleton that comes first.
+          cy.get(ts(patchTestid.legend), { timeout: timeouts.view }).should("be.visible");
+          expectNoBlockingViolations(at("/patch-notes"));
         });
 
         it("/stats", () => {
