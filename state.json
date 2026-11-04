@@ -13258,23 +13258,6 @@
       "requested_by": "jgoetzmann",
       "run_id": "41809616368",
       "runs_on": "night-vm-muse-fill",
-      "session": {
-        "action": "build",
-        "artifact": 13310418946,
-        "artifact_bytes": 235065,
-        "artifact_name": "work",
-        "at": "2026-11-04T09:41:32Z",
-        "bytes": 286724,
-        "cwd": "/home/runner/work/_temp/work/item-2882",
-        "ended": "infra: the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-2882:refs/heads/bot/issue-2882 failed (1): remote: Internal Server Error        \nremote: Request ID 181C:1E4AD:221618E:2D0C186:6AEAFDAD        \nremote: Time 2026-11-04T09:41:02Z\nT",
-        "head": "c298056a3653836308a777c4f1a1b220aa16e168",
-        "id": "c474d5da-6d2b-4bd7-b08b-3e30253b8784",
-        "kind": "build",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-2882",
-        "provider": "claude-8",
-        "run": "41800322253"
-      },
       "started_at": "2026-11-04T09:44:24Z",
       "stop_requested": false,
       "strike_log": [
