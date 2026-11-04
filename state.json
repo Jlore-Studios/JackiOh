@@ -18034,15 +18034,8 @@
       }
     },
     "3011": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41802935615",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-04T09:39:29Z",
-        "until": "2026-11-04T10:09:29Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18054,10 +18047,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "es. Before\u2026\n- ## Steps\n- 1. In `apps/web/src/routes/stats.tsx`, delete in order: the `artsOf` function (~line 108) with its doc comment; the `artPick` function (~line 115) with its comment; the `DrillDownArt` type (~line 159); the `ART_LABELS` record (~line 162); the `drillDownArt` state and its comment (~lines 334-336); t\u2026\n- 2. In the same file's drill-down body (~line 1656), change `<FullArtShown defId={fullArtSource(drillDownDef.id)} pick={artPick(drillDownDef.id, shownArt)}>` to `<FullArtShown defId={fullArtSource(drillDownDef.id)} pick={fullArtSetting}>`. Rationale to keep, not simplify away: `true` names the still\u2026\n- 3. Delete the art button group (~lines 1675-1689: the `div.stats-drilldown-actions` with `data-testid={statsTestid.drillDownArt}`, `role=\"group\"`, `aria-label={t(\"Full art\")}`). Leave the second `stats-drilldown-actions` group (Show Radiant, View in Almanac) exactly as it is.\n- 4. In `apps/web/src/stats/testids.ts`, delete the `drillDownArt` entry and its R2756000 comment. In `apps/web/src/i18n/zh-CN.json`, delete only the `\"No full art\"` entry; keep `\"Animated\"`, `\"Epic\"`, `\"Legendary\"`, `\"Mythic\"`, `\"Full art\"` (all have other callers: the dungeon start screen, rank, an\u2026\n- 5. Rewrite the tests in `apps/web/src/routes/stats.test.tsx`: delete the picker tests (`R2756000` offers/prints/persists at ~1414, ~1451, ~1472, and `R2715000` Animated at ~1486); update the focus-order test (~1297) to Tab through `[radiant, almanac, retry, close]` with no arts and no `FULL_ART_TIE\u2026\n- 6. Write `spec/rulings/R3011000.md` (R3011000 is the first free number of issue #3011's block; nothing R3011xxx exists and the highest ruling is R2983000). Front matter: `id: R3011000`; title `/stats's card breakdown drops the art picker: every full-art face prints the setting's still Epic or the n\u2026\n- 7. Edit `spec/rulings/R2756000.md`: title becomes `... (issue #2756; amended by R2715000 and R3011000)`; append an `Amended by [[R3011000]] (#3011): ...` line in R1313000's style; add R3011000 to `cards`. Keep `proven_in: apps/web/src/routes/stats.test.tsx` (the retirement test added in step 5 prov\u2026\n- 8. Fix the now-false picker clauses: in `R2715000` \"Where it is picked\", delete the `/stats ... offers it as Animated ...` sentence; in `R2725000`, change \"(the Stats drill-down's art buttons give a pick alone, [[R2756000]])\" to \"(the Stats drill-down gives the setting's pick alone, [[R3011000]])\";\u2026\n- 9. Write `spec/pending/3011.md` holding only the \u00a711 paragraph: `**[[R3011000]] ... (issue #3011, 2026-11-04)**: ...` in the surrounding paragraphs' style. Never append to `spec/11-rulings.md` or `spec/INDEX.md`, and never run `spec index` (the daily fold owns them).\n- ## Tests\n- - `it(\"R3011000 a full-art card's breakdown prints the setting's still Epic, base and Radiant, and offers no art choice\")`: at `/stats?card=core-004` (Gary the Gambler), `queryByTestId(\"stats-drill-down-art\")` (literal: the testid is deleted) is null; the single face has `data-full-art-tier=\"Epic\"`\u2026\n- - `it(\"R3011000 with the Full-art cards setting off the breakdown prints the normal face, base and Radiant, and a token listed under a full-art card prints its parent's Epic\")`: `writeCardSettings({ fullArt: false })`, open `core-004`, face has no `data-full-art` attribute, Radiant on keeps both no\u2026\n- - `it(\"R3011000 a card without full art draws its breakdown as before\")`: open `?card=core-003`, no art testid, faces render, Show Radiant still toggles the Radiant face.\n- - `it(\"R2756000 the art choice stays retired: no breakdown offers art buttons\")`: open `core-004`, assert `queryByTestId(\"stats-drill-down-art\")` is null. Exists so R2756000 keeps a running namesake test (`spec check` rule 2).\n- - Commands: `pnpm --dir apps/web test src/routes/stats.test.tsx`, `pnpm --dir apps/web test src/i18n/i18n.test.ts` (zh-CN entry deleted), `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web e2e`, `cargo jackioh spec check`, `cargo jackioh classify --base origin/main --claims` (obey its verd\u2026\n- ## Done when\n- - [ ] `/stats` breakdown of `core-004` and of `core-t-bread` shows no art buttons and faces follow the start rule (setting on: Epic; off: normal; Radiant same under Show Radiant); `core-003` unchanged.\n- - [ ] No reference to `drillDownArt`, `DrillDownArt`, `ART_LABELS`, `artsOf`, `artPick`, or the deleted testid remains in `apps/web/src/` or `e2e/`.\n- - [ ] R3011000 note, `pending/3011.md`, R2756000 amended-by plus kept proof, R2715000/R2725000/R1313000/\u00a710.10 clause fixes, `fullArt.ts` comment, zh-CN deletion all in place.\n- - [ ] Web tests, typecheck, eslint, `spec check`, and `classify` all pass.\n- ## Risks\n- - Omitting `pick` instead of passing the setting would leak the viewer's stored Collection pick into a public page via `useCardPicks`; the explicit boolean in step 2 avoids this.\n- - The deleted-testid assertion must use the literal `\"stats-drill-down-art\"` string, since `statsTestid.drillDownArt` no longer exists; using the constant would not compile.\n- - `spec check` fails if R2756000 loses its last running namesake test or if `pending/` gains a misnamed file; steps 5 and 9 guard both. Cited R-numbers in edited comments require their notes to exist; all cited notes exist or are created here.\n- - Classification: verified in `crates/tools/src/classify.rs` that `apps/web/**` maps to `Area::App` while tests and `*.md` map to `Internal`, and only the Cards kind drives patch fragments \u2014 so the finished change should classify as App with no fragment. Comment-only edits are classify-neutral (`co\u2026\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3011 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3011/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-04T08:53:04Z",
       "owner_why": "it plans it",
@@ -18070,9 +18062,9 @@
       "provider": "muse",
       "queued_at": "2026-11-04T08:52:44Z",
       "requested_by": "squishy-squooby",
-      "run_id": "41802935615",
+      "run_id": "pending:dbfa4141-1793785359",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-04T08:53:04Z",
+      "started_at": "2026-11-04T09:43:21Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18237,9 +18229,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T09:30:01Z",
+    "at": "2026-11-04T09:43:21Z",
     "url": "",
-    "what": "build #3013 on claude-8"
+    "what": "build #3011 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T09:22:44Z",
