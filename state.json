@@ -16479,9 +16479,10 @@
     "what": "revise #2965 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-04T00:53:07Z",
+    "at": "2026-11-04T01:04:25Z",
     "notes": [
-      "CI on #2964: #2964: queued a CI fix"
+      "CI on #2964: #2964: queued a CI fix",
+      "delivered revise #2920 on claude-3 (run 41732241954): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17185,7 +17186,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T00:53:07Z",
+  "loop_tick": "2026-11-04T01:04:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
