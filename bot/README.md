@@ -1827,9 +1827,11 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 - **Some merge themselves only on a condition** (#2986, the owner's decision of 2026-11-04, amended
   the same day; `deliver/mergegate.go`, `internal/mergegate`). A database migration
   (`migration_paths`) merges itself unless it loses data (a statement that drops a table, schema
-  or column, or runs `TRUNCATE` or `DELETE FROM`, read outside SQL comments, a function's body
-  included; any other `DROP` but of a function, trigger, index, view or constraint, and any
-  `DROP … CASCADE`, counts as one), changes who may read or write what (a policy created, altered or
+  or column, runs `TRUNCATE` or `DELETE FROM`, or rewrites every row of a table, an `UPDATE … SET`
+  with no `WHERE` of its own, `UPDATE … FROM` included (#3009: a subquery's `WHERE` is not its own),
+  read outside SQL comments, a function's body included; any other `DROP` but of a function,
+  trigger, index, view or constraint, and any `DROP … CASCADE`, counts as one; an `UPDATE` with a
+  `WHERE` merges itself), changes who may read or write what (a policy created, altered or
   dropped, row-level security turned on, off or forced, a `GRANT`, `REVOKE` or `ALTER DEFAULT
   PRIVILEGES`, a `SECURITY DEFINER` function, the `auth` or `storage` schemas: production promotes
   itself daily since #2959), or edits or deletes a migration `main` already has. A manifest or lock

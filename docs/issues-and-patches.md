@@ -56,7 +56,7 @@ The bots put these on for a person to act on; both bots share them (no `squishy:
 
 | Label | For |
 |---|---|
-| `ready for merge` | A bot pull request its reviews approved that waits for a person to merge it: a path only a person reviews (`review_paths`), a migration that loses data or changes access, a new package, `main`'s protection, or GitHub refusing auto-merge; its comment names why (#2986) |
+| `ready for merge` | A bot pull request its reviews approved that waits for a person to merge it: a path only a person reviews (`review_paths`), a migration that loses data (an `UPDATE` with no `WHERE` counts, #3009) or changes access, a new package, `main`'s protection, or GitHub refusing auto-merge; its comment names why (#2986) |
 | `person merges` | The bot builds and reviews it, but a person merges its pull request |
 | `needs decision` | A bot stopped on what only a person can unblock (#2986): a question (beside `bot:blocked`), whose comment lists the options and the default and says when the bot goes ahead on the default (`decision_wait_hours`, 24 hours; a question with no default never does), or a hand-over (beside `human required`), which never goes ahead. It comes off when a trusted person answers and queues it again (`/harness build`, `/harness revise <answer>` or a mention), when the bot goes ahead on the default (it files each other option as an issue for a person to approve), and when the item closes. The status issue (#148) lists each at its top |
 | `human required` | The bot found it cannot do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account): people do it, and taking the label off hands it back |
