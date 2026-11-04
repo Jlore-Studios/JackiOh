@@ -17964,16 +17964,17 @@
     "what": "build #2990 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-04T05:54:21Z",
+    "at": "2026-11-04T06:13:23Z",
     "notes": [
       "CI on #2964: #2964: queued a CI fix",
-      "delivered revise #2955 on claude-7 (run 41775286560): approved",
-      "delivered review #2989 on muse (run 41770009773): approved",
-      "started plan #2977 on claude-1 (run 41782794010)",
-      "started review #2996 on claude-3 (run 41782940395)",
-      "started build #3000 on claude-7 (run 41783084124)",
+      "delivered review #2996 on claude-3 (run 41782940395): reviewed",
+      "delivered plan #2977 on claude-1 (run 41782794010): planned",
+      "delivered build #2990 on claude-6 (run 41778910875): interrupted",
+      "delivered review #2997 on muse (run 41778811622): approved",
+      "started build #2977 on claude-1 (run 41785177272)",
+      "started build #2990 on claude-3 (run 41785334181)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18677,7 +18678,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T05:54:21Z",
+  "loop_tick": "2026-11-04T06:13:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
