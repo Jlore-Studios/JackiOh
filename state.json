@@ -17846,7 +17846,7 @@
       "asks": [],
       "failures": 0,
       "forced": false,
-      "interruptions": 1,
+      "interruptions": 2,
       "kind": "build",
       "last_findings": [],
       "live": "splitting",
