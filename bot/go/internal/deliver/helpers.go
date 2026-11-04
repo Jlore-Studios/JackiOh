@@ -24,20 +24,11 @@ func (x *Deliverer) try(action func()) string {
 
 // What the branch changes against the default branch, as it now stands on GitHub.
 func (x *Deliverer) changed(branch string) []string {
-	defaultBranch := x.Cfg.DefaultBranch
-	x.fetch(defaultBranch, false)
-	local := "deliver/" + branch
-	ref := "origin/" + branch
-	if x.Repo.Rev(local) != "" {
-		ref = local
+	ref := x.branchRef(branch)
+	if ref == "" {
+		return []string{}
 	}
-	if x.Repo.Rev(ref) == "" {
-		x.fetch(branch, false)
-		if x.Repo.Rev(ref) == "" {
-			return []string{}
-		}
-	}
-	return x.Repo.ChangedPaths("origin/"+defaultBranch, ref)
+	return x.Repo.ChangedPaths("origin/"+x.Cfg.DefaultBranch, ref)
 }
 
 // The review rule approved the head but auto-merge cannot take it: label it `ready for
@@ -79,6 +70,15 @@ func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" *
 		shown := ticked(headN(review, 8))
 		return x.handToAPerson(pull, fmt.Sprintf("the change touches %s, which a person reviews", shown))
 	}
+	// The paths that merge themselves on a condition (#2986): what they hold may keep it for a person.
+	person, gated := x.mergeGates(branch)
+	if person != "" {
+		return x.handToAPerson(pull, person)
+	}
+	conditions := ""
+	if len(gated) > 0 {
+		conditions = " It merges by itself though it changes " + strings.Join(gated, "; ") + "."
+	}
 	var required map[string]bool
 	if exc, ok := herr.Catch[*herr.GitHubError](func() {
 		required = x.GH.RequiredChecks(x.Cfg.DefaultBranch)
@@ -107,7 +107,7 @@ func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" *
 		if number := py.MustInt(py.Or(pull.Get("number"), 0)); number != 0 {
 			queue.Merging(x.Ctx, number, queue.LabelNames(pull)) // while CI and the merge queue run (#2748)
 		}
-		return "Auto-merge is on: it merges when every required check passes."
+		return "Auto-merge is on: it merges when every required check passes." + conditions
 	}
 	if strings.Contains(strings.ToLower(refused), "clean status") {
 		// Every required check has already passed, so GitHub will not wait; merge it now.
@@ -115,7 +115,7 @@ func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" *
 			x.GH.MergePull(py.MustInt(pull.Get("number")), x.Cfg.MergeMethod, headline)
 		})
 		if merged == "" {
-			return "Every required check had already passed, so I merged it."
+			return "Every required check had already passed, so I merged it." + conditions
 		}
 	}
 	return x.handToAPerson(pull, fmt.Sprintf("GitHub refused it (%s)", refused))

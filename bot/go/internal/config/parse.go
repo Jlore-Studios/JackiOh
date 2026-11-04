@@ -392,6 +392,12 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.Quiet = quiet(raw.Get("quiet"))
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))
 	c.ReviewPaths = mustStrs(raw.Get("review_paths"))
+	c.MigrationPaths = mustStrs(raw.GetOr("migration_paths", optional.Get("migration_paths")))
+	c.LockFiles = mustStrs(raw.GetOr("lock_files", optional.Get("lock_files")))
+	c.DecisionWaitHours = py.MustInt(raw.GetOr("decision_wait_hours", optional.Get("decision_wait_hours")))
+	if c.DecisionWaitHours < 0 {
+		raiseConfig("decision_wait_hours: must be 0 (never goes ahead) or more")
+	}
 	c.UploadTranscripts = pyjson.Truthy(raw.Get("upload_transcripts"))
 	c.ResumeSessions = pyjson.Truthy(raw.GetOr("resume_sessions", optional.Get("resume_sessions")))
 	c.HoldMinutes = py.MustInt(raw.GetOr("hold_minutes", optional.Get("hold_minutes")))

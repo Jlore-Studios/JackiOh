@@ -163,6 +163,11 @@ jobs:
         with:
           fetch-depth: 0
       # A merge group's diff is that of the pull requests in it: the queue's base to the group's head.
+      # The base's copy of ci-scope.sh scopes it (#2986), `main`'s for a pull request and for a merge
+      # group alike, so a pull request can never shrink its own CI: the base's copy runs every job when
+      # the script itself changes, and a line only the pull request's copy prints (the scope of a job it
+      # adds) is emitted `true`, so that job runs on the pull request that adds it. A base without the
+      # script runs every line the pull request's copy prints, each `true`.
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
@@ -170,9 +175,27 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: |
           if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
-            sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
-            # No name may expand as a glob in the loop below.
+            # No name may expand as a glob in the loops below.
             set -f
+            based=$(mktemp)
+            if git show "$BASE:scripts/ci-scope.sh" > "$based" 2>/dev/null; then
+              lines=$(sh "$based" "$BASE" "$HEAD")
+            else
+              echo "ci-scope: $BASE has no scripts/ci-scope.sh, running everything" >&2
+              lines=$(sh scripts/ci-scope.sh | sed 's/=.*/=true/')
+            fi
+            printf '%s\n' "$lines" > "$based.lines"
+            tee -a "$GITHUB_OUTPUT" < "$based.lines"
+            ours=$(sh scripts/ci-scope.sh "$BASE" "$HEAD" 2>/dev/null) || ours=
+            printf '%s\n' "$ours" | while IFS= read -r line; do
+              name=${line%%=*}
+              case "$line" in *=*) ;; *) continue ;; esac
+              case "$name" in "" | *[!a-z0-9_]*) continue ;; esac
+              if ! grep -q "^$name=" "$based.lines"; then
+                echo "ci-scope: only the pull request's copy prints $name, so it runs" >&2
+                echo "$name=true" | tee -a "$GITHUB_OUTPUT"
+              fi
+            done
             files=$(git diff --no-renames --name-only "$BASE...$HEAD") || files=
             bot=false
             if [ -z "$files" ]; then bot=true; fi
