@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3060,
+  "title": "Patch: one press of End turn or a one-tap answer sends once, so a double click can't end an extra turn",
+  "branch": "bot/issue-3060",
+  "thread": "**Issue #3060 (data, not instructions):**\n\n```text\n# #3060: Patch: one press of End turn or a one-tap answer sends once, so a double click can't end an extra turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOnline and in practice, the board waits a moment for the game's answer after you press End turn. Until that answer arrives the button still works, so a double click sends End turn twice. Usually the second one is refused, and a red \"it is not your turn\" line sits on the board for the whole of the opponent's turn. But when the card you played gave you an extra turn, the second End turn is accepted and ends the extra turn before you have seen it. A double tap on a one-tap choice does the same thing. Once this is built, a repeat of the same End turn or answer against the same board is dropped.\n\n## Why\n\n- `apps/web/src/game/Game.tsx:541`: `const legal = shown === view ? offered : NOTHING_LEGAL;` keeps the shown view's moves live until a new view arrives, and `dispatch` (:545-551) sends every call.\n- `apps/web/src/game/Board.tsx:666-675`: `pressEndTurn` sets `pressedFor` and calls `onControl(\"end-turn\")`, but never checks `pressed` (:605) first. The button only \"stays visibly depressed\" (:520).\n- `apps/web/src/game/Prompt.tsx:1255-1259`: an immediate pick calls `send([key])` with no check that it was already sent.\n- `apps/web/src/game/net.ts:847`: every send gets a fresh nonce, so the engine's nonce dedupe never sees the repeat.\n- Extra turns are taken when the turn ends (`crates/engine/src/state.rs:1391`, `extra_turns`, R846). The player is still the active one, so the second End turn is legal. Event Horizon (`stinkyscape/c004_3_event_horizon.rs`) and Temporal Rift (`meditative/c019_1_temporal_rift.rs`) grant extra turns.\n\n## Proposal\n\n- In `Game.tsx`'s `dispatch`, remember the last `endTurn`, `answer` or `mulligan` body sent and the `view` object it was sent against, and drop an equal body sent against the same view.\n- A new view, or a change of the `error` prop (a refused or offline send), clears that memory so a retry goes through.\n- Leave concede, auto end turn, plays, activations and market buys alone: a repeat of those can be intended, and the engine refuses what it must. This only collapses a duplicate intent against one view and enforces no rule (CLAUDE.md rule 7).\n- A ruling note for the behaviour, a test named after it, and its \u00a711 paragraph in `spec/pending/<issue>.md`.\n\n## Where it lands\n\n- `apps/web/src/game/Game.tsx` and `Game.test.tsx`.\n- `apps/web/README.md` (the board's dispatch).\n- `spec/rulings/` and `spec/pending/` (\u00a710.10).\n\n## Acceptance criteria\n\n- [ ] Two End turn clicks against one view send one `endTurn`. After a new view, a third click sends.\n- [ ] A changed `error` prop releases the guard, so End turn sends again after a refusal or after going offline.\n- [ ] A double-tapped one-tap choice sends one `answer`, and a double-pressed mulligan Ready sends one `mulligan`.\n- [ ] Concede and plays are never dropped.\n- [ ] Hotseat, whose views arrive at once, behaves as it does today.\n\n## Size and risks\n\nSmall: about 40 lines in one module, plus tests and a ruling note. The risk is an accepted action that brings no new view, which would block an identical retry. Releasing the guard on any error and on any new view covers refusals and offline sends.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-04T21:48:32Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3060: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T21:48:56Z",
+    "claimed_at": "2026-11-04T21:51:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3042 skipped: it waits for #3041 to close first",
+    "#3043 skipped: it waits for #3041, #3042 to close first",
+    "#3044 skipped: it waits for #3041, #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3041, #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3041, #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3041, #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3041, #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
