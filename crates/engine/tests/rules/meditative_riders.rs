@@ -95,7 +95,8 @@ fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
     }
 }
 
-/// R1100 (MD-D1), R3049001: the leader is the highest lower bound, then more games, then the catalog id.
+/// R1100 (MD-D1): the leader is the best exact rate, then more games, then the catalog id, as a table
+/// a game handed no snapshot reads ranks it.
 #[test]
 fn r1100_leader_by_exact_rate_then_games_then_id() {
     register();
@@ -106,11 +107,11 @@ fn r1100_leader_by_exact_rate_then_games_then_id() {
         (&ear.id, 15, 30),
         (&bearer.id, 10, 20),
     ]));
-    // 30/40 beats every .5 row on the bound; 3/4 never qualifies (fewer than 20 games).
-    let leader = |exclude: &str| leader_of(registered_win_rates(), &[exclude]);
+    // 30/40 beats every .5 row on the exact rate; 3/4 never qualifies (fewer than 20 games).
+    let leader = |exclude: &str| leader_of(registered_win_rates(), WinRateRanking::Rate, &[exclude]);
     assert_eq!(leader("meditative-050"), Some(open_mic.id.clone()));
-    // Without the leader, the two 15/30 rows tie on the bound and games, above 10/20's wider
-    // interval: the catalog id decides.
+    // Without the leader, the .5 rows tie on rate; the two of 30 games beat 10/20 and tie on games:
+    // the catalog id decides.
     assert_eq!(leader(&open_mic.id), Some(ear.id.clone()));
 }
 
@@ -128,7 +129,12 @@ fn r1100_tokens_missing_and_thin_rows_never_lead() {
         (&closed_mic.id, 19, 19),
         (&book.id, 5, 10),
     ]));
-    assert_eq!(leader_of(registered_win_rates(), &["meditative-050"]), None);
+    for ranking in [WinRateRanking::Rate, WinRateRanking::Bound] {
+        assert_eq!(
+            leader_of(registered_win_rates(), ranking, &["meditative-050"]),
+            None
+        );
+    }
 }
 
 /// R1100 (MD-D1): an empty table names no leader (a new patch, before any game is counted).
@@ -136,7 +142,12 @@ fn r1100_tokens_missing_and_thin_rows_never_lead() {
 fn r1100_empty_table_no_leader() {
     register();
     register_win_rates(table(vec![]));
-    assert_eq!(leader_of(registered_win_rates(), &["meditative-050"]), None);
+    for ranking in [WinRateRanking::Rate, WinRateRanking::Bound] {
+        assert_eq!(
+            leader_of(registered_win_rates(), ranking, &["meditative-050"]),
+            None
+        );
+    }
 }
 
 /// R1102 (MD-D6): De-Radiant clears the flag — the face swaps back while damage, buffs and tuning

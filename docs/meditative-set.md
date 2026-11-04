@@ -2526,8 +2526,9 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
   **Since #3049 (R3049000, R3049001):** no table is compiled in or refreshed. The server hands each
   game a snapshot of its cached `/api/stats/cards` figures as the match starts; the game and its record
   keep it, so a game's `(seed, log)` and snapshot replay anywhere. A game handed none (practice, the
-  hotseat) reads its version's frozen table, else none, and falls back to Lunar Eclipse (R2521007). The
-  pick ranks by the lower Wilson bound, not the exact rate.
+  hotseat) reads its version's frozen table, else none, and falls back to Lunar Eclipse (R2521007). A
+  snapshot's pick ranks by the lower Wilson bound, not the exact rate; a frozen table keeps the exact
+  rate it shipped with, so an old record picks its card again.
 - **Numbers:** none.
 - **Class:** C (ME-STATS).
 

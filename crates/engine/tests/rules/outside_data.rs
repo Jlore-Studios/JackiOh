@@ -36,13 +36,14 @@ fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
     }
 }
 
-/// The leader and the trailer of the table a state handed no snapshot reads.
+/// The leader and the trailer of the table a state handed no snapshot reads, ranked as it ranks it:
+/// by the exact rate (R1100, R1183000).
 fn leader(exclude_def_ids: &[&str]) -> Option<String> {
-    leader_of(registered_win_rates(), exclude_def_ids)
+    leader_of(registered_win_rates(), WinRateRanking::Rate, exclude_def_ids)
 }
 
 fn trailer(exclude_def_ids: &[&str]) -> Option<String> {
-    trailer_of(registered_win_rates(), exclude_def_ids)
+    trailer_of(registered_win_rates(), WinRateRanking::Rate, exclude_def_ids)
 }
 
 /// The events of one type in the scenario's log.
@@ -72,11 +73,10 @@ mod r1183000_the_lowest_win_rate {
     }
 
     #[test]
-    fn r1183000_r3049001_ties_on_the_bound_go_to_more_games_then_the_catalog_id() {
+    fn r1183000_ties_go_to_more_games_then_the_catalog_id() {
         register_outside_data();
-        // Every win in 20 games and in 40 has the same upper bound, one whole: more games, as
-        // R1100's leader breaks it.
-        register_win_rates(table(vec![("fx-5", 20, 20), ("fx-6", 40, 40)]));
+        register_win_rates(table(vec![("fx-1", 30, 40), ("fx-5", 5, 20), ("fx-6", 10, 40)]));
+        // 5/20 and 10/40 tie on the rate: more games, as R1100's leader breaks it.
         assert_eq!(trailer(&[]), Some("fx-6".to_string()));
         register_win_rates(table(vec![("fx-1", 30, 40), ("fx-7", 10, 40), ("fx-6", 10, 40)]));
         assert_eq!(trailer(&[]), Some("fx-6".to_string()));
@@ -240,19 +240,20 @@ mod r3049000_the_games_snapshot {
                 }
             }
         }
+        let bound = WinRateRanking::Bound;
         for skipped in &excludes {
             assert_eq!(
-                leader_of(&kept, skipped),
-                leader_of(&full, skipped),
+                leader_of(&kept, bound, skipped),
+                leader_of(&full, bound, skipped),
                 "{skipped:?}"
             );
             assert_eq!(
-                trailer_of(&kept, skipped),
-                trailer_of(&full, skipped),
+                trailer_of(&kept, bound, skipped),
+                trailer_of(&full, bound, skipped),
                 "{skipped:?}"
             );
         }
-        assert!(leader_of(&full, &[]).is_some() && trailer_of(&full, &[]).is_some());
+        assert!(leader_of(&full, bound, &[]).is_some() && trailer_of(&full, bound, &[]).is_some());
         // The game holds the kept rows alone.
         let state = create_game(&options("r3049000-keep", Some(full.clone())));
         assert_eq!(state.win_rates, Some(kept));
@@ -307,6 +308,17 @@ mod r3049000_the_games_snapshot {
 mod r3049001_the_bounds {
     use super::*;
 
+    /// fx-1 has the best rate (78%) in few games and fx-3 the worst (10%); fx-2 and fx-4 have the
+    /// surer figures.
+    fn thin_and_sure() -> WinRateTable {
+        table(vec![
+            ("fx-1", 25, 32),
+            ("fx-2", 300, 450),
+            ("fx-3", 2, 20),
+            ("fx-4", 50, 250),
+        ])
+    }
+
     #[test]
     fn r3049001_the_bounds_are_wilsons_to_a_millionth() {
         let scale = WIN_RATE_BOUND_SCALE as f64;
@@ -343,18 +355,61 @@ mod r3049001_the_bounds {
     #[test]
     fn r3049001_the_leader_is_the_highest_lower_bound_and_the_trailer_the_lowest_upper_bound() {
         register_outside_data();
-        // fx-1 has the best rate (78%) in few games and fx-3 the worst (10%): neither is an end.
-        let rows = table(vec![
-            ("fx-1", 25, 32),
-            ("fx-2", 300, 450),
-            ("fx-3", 2, 20),
-            ("fx-4", 50, 250),
-        ]);
-        assert_eq!(leader_of(&rows, &[]), Some("fx-2".to_string()));
-        assert_eq!(trailer_of(&rows, &[]), Some("fx-4".to_string()));
+        // Ranked by the bound, neither the best rate nor the worst is an end.
+        let (rows, bound) = (thin_and_sure(), WinRateRanking::Bound);
+        assert_eq!(leader_of(&rows, bound, &[]), Some("fx-2".to_string()));
+        assert_eq!(trailer_of(&rows, bound, &[]), Some("fx-4".to_string()));
         // Passed over, each end gives way to the next bound.
-        assert_eq!(leader_of(&rows, &["fx-2"]), Some("fx-1".to_string()));
-        assert_eq!(trailer_of(&rows, &["fx-4"]), Some("fx-3".to_string()));
+        assert_eq!(leader_of(&rows, bound, &["fx-2"]), Some("fx-1".to_string()));
+        assert_eq!(trailer_of(&rows, bound, &["fx-4"]), Some("fx-3".to_string()));
+        clear_overrides();
+    }
+
+    #[test]
+    fn r3049001_ties_on_the_bound_go_to_more_games_then_the_catalog_id() {
+        register_outside_data();
+        let bound = WinRateRanking::Bound;
+        // Every win in 20 games and in 40 has the same upper bound, one whole: more games, as
+        // R1100's leader breaks it; no win in either has the same lower bound, nothing.
+        let rows = table(vec![("fx-5", 20, 20), ("fx-6", 40, 40)]);
+        assert_eq!(trailer_of(&rows, bound, &[]), Some("fx-6".to_string()));
+        let rows = table(vec![("fx-5", 0, 20), ("fx-6", 0, 40)]);
+        assert_eq!(leader_of(&rows, bound, &[]), Some("fx-6".to_string()));
+        let rows = table(vec![("fx-1", 30, 40), ("fx-7", 10, 40), ("fx-6", 10, 40)]);
+        assert_eq!(trailer_of(&rows, bound, &[]), Some("fx-6".to_string()));
+        clear_overrides();
+    }
+
+    #[test]
+    fn r3049001_r1266000_only_a_games_snapshot_ranks_by_the_bound_a_table_read_with_none_by_the_rate() {
+        register_outside_data();
+        let ends = |state: &GameState| (win_rate_leader(state, ""), win_rate_trailer(state, &[]));
+        let fx = |id: &str| Some(id.to_string());
+        let handed = |win_rates: Option<&WinRateTable>| {
+            scenario(json!({
+                "p1": { "hand": [FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+                "winRates": win_rates,
+            }))
+        };
+        // Handed as the game's snapshot, the surer figures are the ends.
+        let own = handed(Some(&thin_and_sure()));
+        assert_eq!(ends(own.state()), (fx("fx-2"), fx("fx-4")));
+        // The same rows as the frozen table a game handed none folds against, or the testkit's, rank
+        // by the exact rate, as the version that shipped them did: a record from before #3049 picks
+        // the card it picked.
+        let none = handed(None);
+        let frozen: &'static ShippedCatalog = Box::leak(Box::new(
+            ShippedCatalog::new("v-rate", registered_catalog().clone(), IndexMap::new())
+                .with_win_rates(thin_and_sure()),
+        ));
+        assert_eq!(
+            with_shipped(Some(frozen), || ends(none.state())),
+            (fx("fx-1"), fx("fx-3"))
+        );
+        register_win_rates(thin_and_sure());
+        assert_eq!(ends(none.state()), (fx("fx-1"), fx("fx-3")));
+        assert_eq!(ends(own.state()), (fx("fx-2"), fx("fx-4")));
         clear_overrides();
     }
 }

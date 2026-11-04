@@ -6,7 +6,8 @@
 //! cached card stats as the match started (R3049000; R377's in-deck wins and games per card id), read
 //! through `win_rate_leader`: the highest Wilson lower bound (R3049001), never CN Tech itself (R387).
 //! A game handed no snapshot (practice, hotseat, the Sandbox, the run) reads its shipped catalog's
-//! frozen table, which a replay of a game recorded before #3049 folds against (R1266000), else none.
+//! frozen table, which a replay of a game recorded before #3049 folds against (R1266000), else none,
+//! and ranks it by the exact rate, as its version did (R1100).
 //!
 //! The fallback (#2521, R2521007): when no row qualifies it adds `FALLBACK_LEADER`, Core #35 Lunar
 //! Eclipse, the leader of the table every version since v0.4.0 has shipped (v0.4.0's provisional run,
@@ -198,15 +199,31 @@ mod tests {
             assert!(!added[0].radiant);
         }
 
-        /// The def CN Tech added to p1's hand under `rows`.
-        fn picked(rows: Vec<(&str, i32, i32)>, seed: &str) -> String {
-            register_win_rates(table(rows));
-            let mut s = casting(seed, false);
+        /// The def CN Tech added to p1's hand in `s`.
+        fn added_by(mut s: Scenario) -> String {
             let before = s.hand(PlayerId::P1).len();
             s.play(TECH, json!({}));
             let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
             assert_eq!(added.len(), 1);
             added[0].def_id.clone()
+        }
+
+        /// The def CN Tech added to p1's hand in a game handed no snapshot, with `rows` the table such
+        /// a game reads (a shipped version's frozen table, R1266000), ranked by the exact rate (R1100).
+        fn picked(rows: Vec<(&str, i32, i32)>, seed: &str) -> String {
+            register_win_rates(table(rows));
+            added_by(casting(seed, false))
+        }
+
+        /// The def CN Tech added to p1's hand in a game handed `rows` as its snapshot (R3049000),
+        /// ranked by the Wilson bounds (R3049001).
+        fn picked_handed(rows: Vec<(&str, i32, i32)>, seed: &str) -> String {
+            added_by(scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [{ "def": TECH }, FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+                "winRates": table(rows),
+            })))
         }
 
         #[test]
@@ -249,23 +266,55 @@ mod tests {
         #[test]
         fn r3049001_the_highest_lower_bound_leads_not_the_highest_rate() {
             // 25 wins in 32 games is the better rate, 300 in 450 the surer one.
-            assert_eq!(
-                picked(vec![("core-008", 25, 32), (LEADER, 300, 450)], "cn-tech-bound"),
-                LEADER
-            );
+            let rows = || vec![("core-008", 25, 32), (LEADER, 300, 450)];
+            assert_eq!(picked_handed(rows(), "cn-tech-bound"), LEADER);
+            // A game handed none ranks the table it reads by the rate, as its version did (R1100).
+            assert_eq!(picked(rows(), "cn-tech-bound"), "core-008");
+            clear_overrides();
         }
 
         #[test]
-        fn r1100_r3049001_a_tie_on_the_bound_goes_to_more_games_then_to_the_catalog_id() {
-            // No win in 20 games and none in 40 share a lower bound of nothing.
+        fn r1100_a_tie_goes_to_more_games_then_to_the_catalog_id() {
             assert_eq!(
-                picked(vec![("core-008", 0, 20), (LEADER, 0, 40)], "cn-tech-tie-games"),
+                picked(vec![("core-008", 10, 20), (LEADER, 20, 40)], "cn-tech-tie-games"),
                 LEADER
             );
             assert_eq!(
                 picked(vec![("core-008", 10, 20), ("core-002", 10, 20)], "cn-tech-tie-id"),
                 "core-002"
             );
+        }
+
+        #[test]
+        fn r3049001_a_tie_on_the_bound_goes_to_more_games_then_to_the_catalog_id() {
+            // No win in 20 games and none in 40 share a lower bound of nothing.
+            assert_eq!(
+                picked_handed(vec![("core-008", 0, 20), (LEADER, 0, 40)], "cn-tech-tie-games"),
+                LEADER
+            );
+            assert_eq!(
+                picked_handed(vec![("core-008", 10, 20), ("core-002", 10, 20)], "cn-tech-tie-id"),
+                "core-002"
+            );
+        }
+
+        #[test]
+        fn r1266000_r3049001_a_game_on_v0_4_0_still_adds_its_frozen_tables_leader_by_the_rate() {
+            crate::register_all();
+            clear_overrides();
+            let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let s = casting("cn-tech-v0-4-0", false);
+                assert_eq!(s.state().win_rates, None, "a game recorded before #3049");
+                // Lunar Eclipse leads v0.4.0's table at 33 wins in 48 games; ranked by the bound,
+                // Fig of Life's 92 in 146 would, so this tells the two rankings apart.
+                assert_eq!(
+                    leader_of(shipped.win_rates(), WinRateRanking::Bound, &[TECH]).as_deref(),
+                    Some("core-047")
+                );
+                assert_eq!(win_rate_leader(s.state(), TECH).as_deref(), Some("core-035"));
+                assert_eq!(added_by(s), "core-035");
+            });
         }
 
         #[test]

@@ -7,7 +7,8 @@
 //! Engine: M #50 CN Tech's table, the game's win-rate snapshot (R3049000), read from both ends — the
 //! leader (`win_rate_leader`, R1100: the highest Wilson lower bound, R3049001) and the trailer
 //! (`win_rate_trailer`, R1183000: the same floor and tie-breaks, the lowest upper bound, never the
-//! leader), neither ever NA Tech itself (R387) — fused trailer first into one
+//! leader); a game handed none ranks its version's frozen table by the exact rate (R1266000). Neither
+//! is ever NA Tech itself (R387); they are fused trailer first into one
 //! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at a `costOverride` of
 //! setCost (R1183001). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes:
 //! setCost 2 ↓ (Radiant 0).
@@ -188,8 +189,7 @@ mod tests {
         }
 
         #[test]
-        fn r1183000_r3049001_the_lowest_passes_over_thin_rows_and_trails_by_the_surer_bound() {
-            // 5/20 and 10/40 share a rate; 10/40's narrower interval has the lower upper bound.
+        fn r1183000_the_lowest_passes_over_thin_rows_and_breaks_ties_as_r1100() {
             register_win_rates(table(vec![
                 (LEADER, 30, 40),
                 ("core-008", 0, 19),
@@ -365,12 +365,51 @@ mod tests {
 
         #[test]
         fn r3049001_the_lowest_upper_bound_trails() {
+            crate::register_all();
             // 2 wins in 20 games is the worse rate, 50 in 250 the surer one.
-            register_win_rates(table(vec![(LEADER, 30, 40), (MIDDLE, 2, 20), (TRAILER, 50, 250)]));
+            let rows = || table(vec![(LEADER, 30, 40), (MIDDLE, 2, 20), (TRAILER, 50, 250)]);
+            let mut s = scenario(json!({
+                "seed": "na-tech-bound",
+                "p1": { "hand": [{ "def": ID }, FILLER], "library": [FILLER, FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+                "winRates": rows(),
+            }));
+            let card = fused(&mut s);
+            let made: Vec<String> = ingredients(&s, &card).into_iter().map(|(id, _)| id).collect();
+            assert_eq!(made, vec![TRAILER.to_string(), LEADER.to_string()]);
+            // A game handed none ranks the table it reads by the rate, as its version did (R1183000).
+            register_win_rates(rows());
             let mut s = casting("na-tech-bound", false, 1);
             let card = fused(&mut s);
-            assert_eq!(ingredients(&s, &card)[0].0, TRAILER);
-            assert_eq!(ingredients(&s, &card)[1].0, LEADER);
+            assert_eq!(ingredients(&s, &card)[0].0, MIDDLE);
+            clear_overrides();
+        }
+
+        #[test]
+        fn r1266000_r3049001_a_game_on_v0_4_0_still_fuses_its_frozen_tables_ends_by_the_rate() {
+            crate::register_all();
+            clear_overrides();
+            let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let mut s = casting("na-tech-v0-4-0", false, 1);
+                assert_eq!(s.state().win_rates, None, "a game recorded before #3049");
+                // v0.4.0's table, ranked by the rate: Lunar Eclipse (33/48) leads and Infinite
+                // Reserves (7/43) trails. Ranked by the bound, Fig of Life's 92 in 146 would lead.
+                assert_eq!(
+                    leader_of(shipped.win_rates(), WinRateRanking::Bound, &[ID]).as_deref(),
+                    Some("core-047")
+                );
+                assert_eq!(win_rate_leader(s.state(), ID).as_deref(), Some(FALLBACK_LEADER));
+                assert_eq!(
+                    win_rate_trailer(s.state(), &[ID, FALLBACK_LEADER]).as_deref(),
+                    Some(FALLBACK_TRAILER)
+                );
+                let card = fused(&mut s);
+                assert_eq!(
+                    ingredients(&s, &card),
+                    vec![(FALLBACK_TRAILER.to_string(), false), (FALLBACK_LEADER.to_string(), false)]
+                );
+            });
         }
 
         #[test]
