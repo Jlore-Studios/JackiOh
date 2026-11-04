@@ -17868,6 +17868,13 @@
       "asks": [],
       "failures": 0,
       "forced": false,
+      "hold": {
+        "ends": "2026-11-04T08:44:00Z",
+        "owner": "claude-7",
+        "since": "2026-11-04T06:44:00Z",
+        "until": "2026-11-04T07:00:00Z",
+        "why": "5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
+      },
       "interruptions": 1,
       "kind": "build",
       "last_findings": [],
