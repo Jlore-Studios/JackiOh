@@ -295,7 +295,10 @@ puts `.env.staging` in the build's environment (`node --env-file`), where Vite n
 variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,
 `public/_headers` sends the security headers, and the build fills its CSP's `connect-src` with its
 own hosts (`static-pages.ts` `connectSources`): `'self'`, its `VITE_SUPABASE_URL` and `wss://` on
-its own host, since the server shares the site's origin. `scripts/check-production-bundle.mjs`
+its own host, since the server shares the site's origin. Beyond those the CSP lets in only Google
+Identity Services, Google's own sign-in button on `/login` (R2983000): its script
+(`https://accounts.google.com/gsi/client`) and, under `https://accounts.google.com/gsi/`, its frames,
+styles and requests (`connect-src` names it beside Supabase). `scripts/check-production-bundle.mjs`
 (`--staging` for staging's) refuses a bundle that would deploy without its settings or that CSP.
 
 The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`matchMedia`,

@@ -10,6 +10,7 @@ import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
 import { connectSources } from "../../static-pages.ts";
+import { GOOGLE_CLIENT_ID_PATTERN } from "./auth.ts";
 import { originOf } from "./navigate.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +27,12 @@ const PUBLIC = [
   "VITE_CATALOG_VERSION",
   // R666: provider names only; set once a provider is set up in the Supabase dashboard.
   "VITE_AUTH_OAUTH_PROVIDERS",
+  // R2983000: Google's web client ID, which Google's own button ships to every page; never its secret.
+  "VITE_GOOGLE_CLIENT_ID",
 ];
+
+/** What a secret looks like: Supabase's secret key, a service role, a database URL, a key file, Google's client secret. */
+const SECRET = /sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN|GOCSPX-/u;
 
 /**
  * Each build's file, the address it is served from, its Supabase project and the wrangler.jsonc
@@ -57,7 +63,7 @@ for (const { file, site, supabase } of BUILDS) {
     it("holds only public VITE_ settings, and nothing shaped like a secret", () => {
       for (const [key, value] of entries(file)) {
         expect(PUBLIC, key).toContain(key);
-        expect(value, key).not.toMatch(/sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN/u);
+        expect(value, key).not.toMatch(SECRET);
       }
       // The server's own list (PUBLIC_ENV_VARS in the Rust env parser) says the same names are public.
       const server = readFileSync(join(ROOT, "crates/server/src/env.rs"), "utf8");
@@ -88,6 +94,29 @@ for (const { file, site, supabase } of BUILDS) {
     });
   });
 }
+
+describe("R2983000 the builds' Google client ID", () => {
+  const CLIENT_ID = "1234567890-abcdefghijklmnop.apps.googleusercontent.com";
+
+  it("R2983000 each build names one, empty or shaped like a Google client ID", () => {
+    for (const { file } of BUILDS) {
+      const values = Object.fromEntries(entries(file));
+      expect(Object.keys(values), file).toContain("VITE_GOOGLE_CLIENT_ID");
+      const value = values["VITE_GOOGLE_CLIENT_ID"] ?? "";
+      // Empty until a person fills it in from issue #2983: R666's redirect signs in meanwhile.
+      if (value !== "") expect(value, file).toMatch(GOOGLE_CLIENT_ID_PATTERN);
+    }
+  });
+
+  it("R2983000 refuses anything shaped like a secret", () => {
+    for (const secret of ["GOCSPX-abcdefghijklmnop", "sb_secret_abc", `${CLIENT_ID} GOCSPX-abc`, `${CLIENT_ID}x=1`, " "]) {
+      expect(GOOGLE_CLIENT_ID_PATTERN.test(secret), secret).toBe(false);
+    }
+    expect("GOCSPX-abcdefghijklmnop").toMatch(SECRET);
+    expect(GOOGLE_CLIENT_ID_PATTERN.test(CLIENT_ID)).toBe(true);
+    expect(CLIENT_ID).not.toMatch(SECRET);
+  });
+});
 
 describe("the two builds' Supabase projects", () => {
   it("are two, so nothing staging writes reaches a player's account", () => {

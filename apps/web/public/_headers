@@ -1,10 +1,13 @@
 # The headers Cloudflare sends with every file it serves from the build (wrangler.jsonc `assets`;
 # the server's /api/* and /ws/* answers, which reach the Worker first, are not files). The CSP's
 # `connect-src` names the build's own hosts, so the build fills its placeholder in (static-pages.ts
-# `connectSources`): 'self', the build's VITE_SUPABASE_URL and wss:// on the build's own host. It
-# fails on a placeholder it leaves. apps/web/src/net/cloudflare-config.test.ts holds this file.
+# `connectSources`): 'self', the build's VITE_SUPABASE_URL with Google Identity Services' requests
+# (R2983000, below), and wss:// on the build's own host. It fails on a placeholder it leaves.
+# apps/web/src/net/cloudflare-config.test.ts holds this file.
+# R2983000: Google's own sign-in button (Google Identity Services, on /login) needs its script, its
+# frames, its styles and its requests (static-pages.ts `GOOGLE_IDENTITY_SOURCE`), and nothing else.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src %CONNECT_SRC%; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; worker-src 'self'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src %CONNECT_SRC%; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

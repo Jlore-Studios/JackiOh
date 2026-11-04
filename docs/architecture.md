@@ -238,7 +238,8 @@ things in it are not obvious:
   from `apps/web/dist`, served without running any Worker code (`assets.run_worker_first`). Those two
   prefixes reach `apps/edge`'s Worker, which hands them to one container running
   `crates/server/Dockerfile`'s image, so `VITE_SERVER_HTTP_URL` is the site's own origin and the
-  CSP's `connect-src` names only the site, its socket and Supabase.
+  CSP's `connect-src` names only the site, its socket, Supabase and Google's own sign-in button
+  (`https://accounts.google.com/gsi/`, R2983000).
 - **One container, which sleeps.** The server holds every live match in memory (§4.1), so every
   request reaches the same instance (`max_instances: 1`), placed in eastern North America beside
   Supabase. After ten minutes with no request and no open socket it stops, and the next request
@@ -513,6 +514,7 @@ public by construction; anything without that prefix must never appear in a clie
 | `VITE_SERVER_WS_URL` | `wss://jackioh.com/ws/match` | same host, WebSocket path |
 | `VITE_SITE_ORIGIN` | `https://jackioh.com` | #696: the host the bundle is served from, named by its canonical links, sitemap and robots.txt; `apps/web/.env.production` for production, `apps/web/.env.staging` for staging; unset, `SITE_ORIGIN` |
 | `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
+| `VITE_GOOGLE_CLIENT_ID` | optional, `<digits>-<id>.apps.googleusercontent.com` | R2983000: the Google web client ID listed under Client IDs in the Supabase project's Google provider. Set, with `google` in `VITE_AUTH_OAUTH_PROVIDERS`, `/login` draws Google's own button, which signs in on the site's origin by ID token; unset (or when Google's script is blocked), Google signs in through R666's redirect. Public; its `GOCSPX-…` secret stays in Supabase (§10, step 2) |
 
 The client's catalog version is not a variable: the bundle reads it from
 `crates/cards/patches/patches.json` when it is built, as the server compiles it in.
@@ -671,6 +673,14 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
+   - **Google's own button (R2983000).** So that Google's sign-in screen names the site
+     (`jackioh.com`, `staging.jackioh.com`) rather than `<ref>.supabase.co`: on the Google Cloud OAuth
+     client each project already uses for Google, add the site's address (`https://jackioh.com`,
+     `https://staging.jackioh.com`) to **Authorized JavaScript origins**; in the project's Auth →
+     Sign In / Providers → Google, keep that web client ID in **Client IDs** and **Skip nonce check**
+     off; then put the client ID (public) in `VITE_GOOGLE_CLIENT_ID` in `apps/web/.env.production`
+     (and `apps/web/.env.staging` for staging) and let the web app rebuild. Until it is set, Google
+     signs in through R666's redirect.
 3. **Fill the server environment.** `cp crates/server/.env.example crates/server/.env` and set
    `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER` (`openssl rand -base64 48`),
    `PUBLIC_ORIGINS` and `CATALOG_VERSION` (`cargo jackioh catalog-version`). The binary reads only its
