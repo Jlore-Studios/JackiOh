@@ -29981,6 +29981,9 @@
       "2026-11-04T15:49:11Z,claude-4,stream,call,41852709559,68,2026-11-04T18:20:00Z,,,allowed,70,,",
       "2026-11-04T15:49:56Z,claude-4,stream,call,41852709559,69,2026-11-04T18:20:00Z,,,allowed,70,,",
       "2026-11-04T15:50:56Z,claude-4,stream,call,41852709559,71,2026-11-04T18:20:00Z,,,allowed,70,,"
+    ],
+    "runs": [
+      "2026-11-04T15:50:59Z,41852709559,claude-4,opus,build,3049,hard,interrupted,5-hour cap,51.8,0,0,0,,45,71,,,38.5,claude-4,fresh,,1"
     ]
   },
   "version": 1
