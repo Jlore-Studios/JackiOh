@@ -1,0 +1,72 @@
+{
+  "action": "build",
+  "number": 3043,
+  "title": "Patch (part 6 of 11): True Craft a Card crafts with about 20% fewer points",
+  "branch": "bot/issue-3043",
+  "thread": "**Issue #3043 (data, not instructions):**\n\n```text\n# #3043: Patch (part 6 of 11): True Craft a Card crafts with about 20% fewer points\nOpened by @jgoetzmann-bot.\n\nThe True Craft a Card row of #3000's section 5.\n\n## What\n\nTrue Craft a Card (`meditative-017`) crafts within a point budget, `CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA \u00d7 cost` (`config.rs` `craft_points_budget`, R880\u2013R883). The issue wants about **20% fewer points for True Craft a Card only**. Plain Craft a Card (`core-099`) fuses and uses no points, and the Potions use `CRAFT_POTION_POINTS`. But **Scratch Pad** (`meditative_plus/c026_scratch_pad.rs`), whose header says its budget is True Craft's, uses the same no-frame budget. So the shared constants can't simply change.\n\nKey the budget on the craft prompt's mode. True Craft calls `choose_craft` with no `mode` (c017 line 41), and Scratch Pad passes `\"scratch\"`. In `crates/engine/src/subsystems/craft.rs`, thread the mode through every budget read: `points_budget` (line 74, the no-frame branch), `craft_presets` (line 1157), `roll_offer` (line 1265), `craft_preview` (line 1331) and `validate_recipe` (line 351). Then thread it through `validate_answer`, which `prompts.rs` line 475 calls with `pending.craft_mode`. Plumb it through `effects/choose.rs` (about lines 534\u2013568) and `crates/wasm/src/lib.rs` `craft_preview`, which must receive the prompt's mode. Add a `CraftMode` variant in `wire/craft.rs` (line 54) only if no mode names True Craft's today, regenerating its TS.\n\nThe new True Craft budget is the old one scaled by a named constant beside the others in `config.rs`, for example `TRUE_CRAFT_POINTS_PERCENT = 80`. Decide the rounding and rule it. Scratch Pad keeps today's budget; the rejected alternative is Scratch Pad following, because the issue names one card. Check that R1563008 (a Potion's budget sits below the crafter's at its cost, `config.rs` about line 2005) still holds against the smaller budget, and rule which gives way if it doesn't. The client reads the budget from the engine (`preview.pointsBudget`), so it needs no change unless a test hard-codes one.\n\n## Tests\n- True Craft's own file (`meditative/c017_true_craft_a_card.rs`: lines 169, 213\u2013276, 395 (`2 + 5 * 3`) and 638), base and Radiant, at several costs.\n- Scratch Pad's file: its budget is unchanged.\n- `crates/engine/tests/rules/craft.rs` and `craft_modes.rs`: a recipe one point over the new True Craft budget is refused, while Scratch Pad's isn't.\n- `apps/web/src/game/craft/CraftEditor.test.tsx`, if it hard-codes a budget.\n\n## Files\n- **Owned:** `crates/engine/src/subsystems/craft.rs`, `crates/engine/src/effects/choose.rs`, `crates/engine/src/prompts.rs` (the craft call only), `crates/engine/src/wire/craft.rs` (if needed, with its generated TS), `crates/wasm/src/lib.rs` (`craft_preview`), `crates/cards/src/scripts/meditative/c017_true_craft_a_card.rs`, `crates/cards/src/scripts/meditative_plus/c026_scratch_pad.rs` (tests), `crates/engine/tests/rules/craft.rs`, `craft_modes.rs`, `apps/web/src/game/craft/CraftEditor.test.tsx`, `docs/meditative-set.md` (line 693), and the notes R880 (and R881\u2013R883 where they state the budget).\n- **By entry:** the new constant beside `CRAFT_POINTS_*` in `config.rs`; True Craft's row in `spec/08-catalog.md` (line 403), `BUILD.md` (M 17) and `docs/radiant-audit.md`.\n\n## Check\n- `cargo test -p jackioh-engine --features testkit --test 'rules*' craft`\n- `cargo test -p jackioh-cards true_craft`, and the same with `scratch_pad`\n- `cargo test -p jackioh-wasm`\n- `pnpm --dir apps/web exec vitest run src/game/craft/CraftEditor.test.tsx`\n- `cargo jackioh spec check`, `cargo fmt --check`, and `cargo clippy` on each touched crate\n\n### Working in the fullsend tree\nThis part of #3000 lands on `bot/issue-3000` beside the other parts, with no pull request of its own. One reconcile run makes the branch green, so this part need not pass every check alone, but it tests its own code.\n- Read `docs/ADDING_CARDS.md` before any card change (CLAUDE.md rule 10). Every number is a named constant or a card `param` (rule 9).\n- **Rulings** take this sub-issue's own block: R(N\u00d71000) up, for its number N (`docs/issues-and-patches.md`, Ruling numbers). Each has a test named after it and its \u00a711 paragraph in `spec/pending/N.md`. Never run `cargo jackioh spec index`.\n- **Shared by entry.** Other parts edit other entries of `crates/cards/catalog.json`, `crates/cards/card-text.yaml`, `crates/cards/tests/cross/catalog.rs`, `crates/cards/src/census.rs`, `crates/engine/src/config.rs`, `apps/web/src/i18n/zh-CN.json`, `spec/06-keywords.md`, `spec/07-tokens.md`, `spec/08-catalog.md`, `docs/radiant-audit.md`, `docs/stinkyscape-set.md` and `BUILD.md`. Change only the entries, rows and constants named here.\n- **Left to the reconcile:**\n  - `KEPT_SCRIPTS` in `crates/cards/src/history.rs`;\n  - the pending patch fragment;\n  - any test in another part's file that your change breaks: name it in your summary.\n- Commit only the files under `apps/web/src/wire/generated/` that your own types regenerate.\n\nIts build lands on `bot/issue-3000`, not `main` (fullsend).\n\nPart of #3000, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read R880\u2013R883, R1182000, R1182001, R1563007, R1563008, craft.rs (points_budget, craft_presets, roll_offer, validate_recipe, craft_preview), effects/choose.rs's choose_craft, prompts.rs line 475, crates/wasm's craft_preview, and the c017 and c026 scripts.\n2. Add the constant (for example TRUE_CRAFT_POINTS_PERCENT = 80) beside CRAFT_POINTS_* in config.rs, with its doc and ruling reference.\n3. Make points_budget and every caller take the craft mode. True Craft's mode (none) scales the no-frame budget; \"scratch\" keeps it; frames keep theirs. Plumb the mode through choose.rs, prompts.rs, the presets and roll_offer, and crates/wasm's craft_preview. Add a CraftMode variant and regenerate its TS only if needed.\n4. Check R1563008 against the new budget and rule the outcome.\n5. Update the tests: c017's budget asserts, c026's (unchanged budget), engine rules craft.rs and craft_modes.rs (one point over is refused for True Craft, accepted for Scratch Pad), and CraftEditor.test.tsx if needed.\n6. Write the ruling (True Craft alone, the percent, the rounding, Scratch Pad's rejected alternative), update R880 and docs/meditative-set.md, and add spec/pending/N.md and True Craft's rows.\n7. Run the checks in the issue.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read R880\u2013R883, R1182000, R1182001, R1563007, R1563008, craft.rs (points_budget, craft_presets, roll_offer, validate_recipe, craft_preview), effects/choose.rs's choose_craft, prompts.rs line 475, crates/wasm's craft_preview, and the c017 and c026 scripts.\n2. Add the constant (for example TRUE_CRAFT_POINTS_PERCENT = 80) beside CRAFT_POINTS_* in config.rs, with its doc and ruling reference.\n3. Make points_budget and every caller take the craft mode. True Craft's mode (none) scales the no-frame budget; \"scratch\" keeps it; frames keep theirs. Plumb the mode through choose.rs, prompts.rs, the presets and roll_offer, and crates/wasm's craft_preview. Add a CraftMode variant and regenerate its TS only if needed.\n4. Check R1563008 against the new budget and rule the outcome.\n5. Update the tests: c017's budget asserts, c026's (unchanged budget), engine rules craft.rs and craft_modes.rs (one point over is refused for True Craft, accepted for Scratch Pad), and CraftEditor.test.tsx if needed.\n6. Write the ruling (True Craft alone, the percent, the rounding, Scratch Pad's rejected alternative), update R880 and docs/meditative-set.md, and add spec/pending/N.md and True Craft's rows.\n7. Run the checks in the issue.",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3000",
+  "part_of": 3000,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-8` (claude, `opus`, strong); review on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read R880\u2013R883, R1182000, R1182001, R1563007, R1563008, craft.rs (points_budget, craft_presets, roll_offer, validate_recipe, craft_preview), effects/choose.rs's choose_craft, prompts.rs line 475, crates/wasm's craft_preview, and the c017 and c026 scripts.\n2. Add the constant (for example TRUE_CRAFT_POINTS_PERCENT = 80) beside CRAFT_POINTS_* in config.rs, with its doc and ruling reference.\n3. Make points_budget and every caller take the craft mode. True Craft's mode (none) scales the no-frame budget; \"scratch\" keeps it; frames keep theirs. Plumb the mode through choose.rs, prompts.rs, the presets and roll_offer, and crates/wasm's craft_preview. Add a CraftMode variant and regenerate its TS only if needed.\n4. Check R1563008 against the new budget and rule the outcome.\n5. Update the tests: c017's budget asserts, c026's (unchanged budget), engine rules craft.rs and craft_modes.rs (one point over is refused for True Craft, accepted for Scratch Pad), and CraftEditor.test.tsx if needed.\n6. Write the ruling (True Craft alone, the percent, the rounding, Scratch Pad's rejected alternative), update R880 and docs/meditative-set.md, and add spec/pending/N.md and True Craft's rows.\n7. Run the checks in the issue."
+  },
+  "usage_facts": {
+    "queued_at": "2026-11-04T13:51:07Z",
+    "claimed_at": "2026-11-04T23:16:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3044 skipped: it waits for #3043 to close first",
+    "#3045 skipped: it waits for #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
