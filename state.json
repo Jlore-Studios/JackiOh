@@ -15052,6 +15052,10 @@
         "sha": "c1703d2105645503bfb348ce46c2aba350dcde83",
         "tiers": {}
       }
+    },
+    "3038": {
+      "onto": "bot/issue-3000",
+      "part_of": 3000
     }
   },
   "labels_synced": "fce3910f5abefcbe",
