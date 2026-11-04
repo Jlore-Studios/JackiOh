@@ -30857,6 +30857,12 @@
         "number": 2880,
         "title": "Patch: the fuzz deals leaned All Random decks the way the server does",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-04T01:57:30Z",
+        "number": 2971,
+        "title": "Patch: a rematch offer can't seat two players once one has blocked the other",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-11-04T01:55:49Z",
