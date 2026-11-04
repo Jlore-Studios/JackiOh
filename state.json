@@ -14902,7 +14902,8 @@
         "reviews": [],
         "sha": "8dbcf094f844d548955f02ebd4cf2ac6377a6c09",
         "tiers": {}
-      }
+      },
+      "waiting_comment": 6632041731
     },
     "3037": {
       "action": "review",
