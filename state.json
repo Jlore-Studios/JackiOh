@@ -16346,7 +16346,7 @@
       }
     },
     "2965": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_reruns": {
@@ -16372,22 +16372,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2953,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-04T02:04:49Z",
       "round_tier": "strong",
-      "run_id": "41758417926",
+      "run_id": "pending:b8102f30-1793765368",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 35,
-      "started_at": "2026-11-04T02:05:17Z",
+      "started_at": "2026-11-04T04:10:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17371,9 +17372,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T04:09:12Z",
+    "at": "2026-11-04T04:10:09Z",
     "url": "",
-    "what": "revise #2984 on muse"
+    "what": "spot-check #2965 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-04T03:47:13Z",
@@ -31356,7 +31357,15 @@
         "n": 35,
         "pr": 2965,
         "queued_at": "2026-11-04T03:27:40Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:b8102f30-1793765368",
         "sha": "ed35dcedf54153a081e84ed58e126bc6d7c44a4d",
+        "started_at": "2026-11-04T04:10:09Z",
         "status": "queued",
         "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
         "tries": 0
