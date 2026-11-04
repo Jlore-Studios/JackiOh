@@ -16772,6 +16772,13 @@
     "2975": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T02:27:12Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "it changes the play-choice listing/refusal rules in crates/engine/src/, which the rating rule names as hard"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
