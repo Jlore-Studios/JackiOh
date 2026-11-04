@@ -13204,9 +13204,7 @@
     },
     "2882": {
       "action": "build",
-      "asks": [
-        "c:6626192852"
-      ],
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-03T04:13:51Z",
@@ -13230,20 +13228,20 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-8",
-      "owner_since": "2026-11-04T08:32:40Z",
-      "owner_why": "it planned it",
+      "owner": "muse",
+      "owner_since": "2026-11-04T09:44:24Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` its last run could not work (the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-2882:r); it is left alone until 2026-11-04T10:31:03Z",
       "pending_request": false,
       "planned_at": "2026-11-03T04:13:54Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "muse",
       "question": "Acceptance criterion 3 of #2882 says a finished daily game claims earning exactly like a normal practice game. That can't be built inside the issue's own limits (no server, engine or catalog change). Please decide one of two things. (A) Accept today's deal as a no-earning practice option. The change on this branch already does that, so reword criterion 3 to the replay half only, and the PR can merge as it is. (B) Want earning too? Then open a separate hard issue for a server-issued daily seed per account plus a migration, and merge this PR first or hold it for that issue. The seat rule is a smaller open choice: odd day of the month is p1, even day is p2. Say if you'd rather have always p1 or another rule.",
       "queued_at": "2026-11-04T09:41:02Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41800322253",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:32594010-1793785426",
+      "runs_on": "night-vm-muse-fill",
       "session": {
         "action": "build",
         "artifact": 13310418946,
@@ -13261,14 +13259,16 @@
         "provider": "claude-8",
         "run": "41800322253"
       },
-      "started_at": "2026-11-04T08:32:40Z",
+      "started_at": "2026-11-04T09:44:24Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-2882:refs/heads/bot/issue-2882 failed (1): remote: Internal Server Error  "
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6626192852"
+      ]
     },
     "2883": {
       "action": "build",
@@ -18229,9 +18229,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T09:43:21Z",
+    "at": "2026-11-04T09:44:24Z",
     "url": "",
-    "what": "build #3011 on muse"
+    "what": "build #2882 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T09:22:44Z",
