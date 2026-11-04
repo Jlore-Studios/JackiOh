@@ -16847,17 +16847,8 @@
       "verdict_rounds": 0
     },
     "2977": {
-      "action": "plan",
-      "asks": [
-        "c:6620484215"
-      ],
-      "build_next": {
-        "from_run": "41782794010",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-04T06:17:50Z",
-        "until": "2026-11-04T06:47:50Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T06:17:26Z",
         "difficulty": "hard",
@@ -16876,10 +16867,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git log --oneline -1; git status --porcelain | head; tail -20 .bot-plan.md; ls /tmp/scratch.diff /tmp/r2977000_tests.rs 2>&1\", \"description\": \"Check branch state, draft tail and scratch \u2026\n- tool error: Exit code 2 63f83e3ac1 Patch: a bot pull request settles its merge conflicts before it goes ready, resolves the mechanical ones itself, and stops red CI early (#2987) change (no new tests): EXIT 0, e\u2026\n- Bash: {\"command\": \"git log --oneline 594a73925948f57ab274c9643e5ae8e25e38acc0..HEAD | wc -l; git diff --stat 594a73925948f57ab274c9643e5ae8e25e38acc0 HEAD -- crates/ai crates/tools/src/gate.rs spec/09-arch\u2026\n- Bash: {\"command\": \"git log --oneline 594a73925948f57ab274c9643e5ae8e25e38acc0..HEAD; git diff --stat 594a73925948f57ab274c9643e5ae8e25e38acc0 HEAD -- crates/cards/catalog.json crates/ai/src | tail -3\", \"de\u2026\n- Bash: {\"command\": \"git diff 594a73925948f57ab274c9643e5ae8e25e38acc0 HEAD -- crates/cards/catalog.json | grep \\\"^[-+]\\\" | grep -v \\\"^+++\\\\|^---\\\" | cut -c1-120 | head -30; python3 -I - <<'EOF'\\nimport json\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Resumed run (claude-1, after usage limit)\\n- Branch now at main 63f83e3ac1. Since 594a73925: catalog renames (#2965), web, bot only; no file the plan\\n \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2977/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule line 2, the AI: it changes the AI's mulligan decision in crates/a\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2977/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"cp .bot-plan.md /tmp/bot-plan-notes.bak 2>/dev/null; echo ok\", \"description\": \"Back up the draft notes before rewriting\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2977/.bot-plan.md\", \"content\": \"<!-- Final plan, written by the resumed planner run (claude-1). Verification notes from the earlier part of\\nthis run \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule line 2, the AI: it changes the AI's mulligan decision in crates/ai/src/mulligan.rs and moves a daily AI gate smoke\"} --> ## Goal The AI's mulligan currently keeps cards costing up to `AI_MULLIGAN.keep_max_cost` (3). After this change it keeps up to that\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-04T03:08:58Z",
       "owner_why": "handed off from `claude-8`: `claude-8` is busy: its lanes are all taken",
@@ -16892,12 +16882,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-04T01:59:54Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41782794010",
+      "run_id": "pending:4d39d558-1793773324",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T06:01:12Z",
+      "started_at": "2026-11-04T06:23:12Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6620484215"
+      ],
       "waiting_comment": 6622286844
     },
     "2978": {
@@ -17962,9 +17954,9 @@
   },
   "labels_synced": "bd8537011bb62232",
   "last_run": {
-    "at": "2026-11-04T06:03:56Z",
+    "at": "2026-11-04T06:23:12Z",
     "url": "",
-    "what": "build #3000 on claude-7"
+    "what": "build #2977 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-04T05:54:21Z",
