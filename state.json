@@ -17444,6 +17444,12 @@
     "2992": {
       "action": "review",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-04T07:24:55Z",
+        "kind": "revise",
+        "provider": "muse",
+        "question": "Pass 2 folded the 4 under-floor motifs and trimmed the heavy layers, but the gallery shift capture is still red with an unproven root cause and the docs/report/ruling rewrite is not done. Pass 3 should: finish the shift diagnosis (notes in .bot-notes.md), re-run phone+gallery on a quiet box, rewrite docs/ruling/report/pending, then verify. Details below."
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T01:47:27Z",
@@ -17461,6 +17467,7 @@
       "live": "reviewing",
       "pending_request": false,
       "provider": "muse",
+      "question": "Pass 2 folded the 4 under-floor motifs and trimmed the heavy layers, but the gallery shift capture is still red with an unproven root cause and the docs/report/ruling rewrite is not done. Pass 3 should: finish the shift diagnosis (notes in .bot-notes.md), re-run phone+gallery on a quiet box, rewrite docs/ruling/report/pending, then verify. Details below.",
       "queued_at": "2026-11-04T04:27:46Z",
       "run_id": "41773707535",
       "runs_on": "night-vm-muse",
