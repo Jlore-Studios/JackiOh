@@ -35,8 +35,10 @@ import {
   VERSION_COMIC_ID,
   VERSION_EXTENDED_ART_ID,
   VERSION_FULL_ART_ID,
+  VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
+  VERSION_PRISMATIC_ID,
   VERSION_SET_SHOWCASE_ID,
   VERSION_SKETCH_ID,
   offeredOn,
@@ -789,9 +791,9 @@ describe("R1655000 a card in context", () => {
       cardStrip(defId, () => true)
         .find((group) => group.kind === "version")
         ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // Transmogulate is offered all four versions (and R2942000 Comic, R2943000 Set showcase); Carnivorous Cube Alt art
-    // alone of the three, Big D-fender the Sketch alone; Call to Chaos (Classic+ Edition) the three and not Full art (and
-    // R2942000 Pixel and Comic, R2943000 Set showcase); Speciesist none.
+    // Transmogulate is offered all four versions (and R2942000 Comic, R2943000 Set showcase, R2944000 Immersive);
+    // Carnivorous Cube Alt art alone of the three, Big D-fender the Sketch alone; Call to Chaos (Classic+ Edition) the
+    // three and not Full art (and R2942000 Pixel and Comic, R2943000 Set showcase, R2944000 Immersive); Speciesist none.
     const ALL = "core-083";
     const NOT_FULL = "classicplus-073";
     expect(versions(ALL)).toEqual([
@@ -802,6 +804,7 @@ describe("R1655000 a card in context", () => {
       [VERSION_ALT_FULL_ART_ID, "Legendary"],
       [VERSION_COMIC_ID, "Epic"],
       [VERSION_SET_SHOWCASE_ID, "Legendary"],
+      [VERSION_IMMERSIVE_ID, "Mythic"],
     ]);
     expect(versions(CUBE).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID]);
     expect(versions(BIG_D).map(([id]) => id)).toEqual([NO_FULL_ART_ID, VERSION_FULL_ART_ID, VERSION_SKETCH_ID]);
@@ -813,6 +816,7 @@ describe("R1655000 a card in context", () => {
       VERSION_PIXEL_ID,
       VERSION_COMIC_ID,
       VERSION_SET_SHOWCASE_ID,
+      VERSION_IMMERSIVE_ID,
     ]);
     expect(versions(PLAIN)).toEqual([]);
     // Whatever the strip lists is offered there, and nothing offered is left out.
@@ -852,8 +856,9 @@ describe("R1655000 a card in context", () => {
       cardStrip(defId, () => true)
         .find((group) => group.kind === "version")
         ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art; Scratch Pad, a Mythic Spell,
-    // Full art, Alt full art and all three; Carnivorous Cube and Big D-fender none of the three; Speciesist nothing.
+    // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art (and R2944000 Prismatic); Scratch
+    // Pad, a Mythic Spell, Full art, Alt full art and all three (and R2944000 Immersive and Prismatic); Carnivorous Cube
+    // and Big D-fender none of the three; Speciesist nothing.
     const TYRANT = "classic-056";
     const PAD = "meditativeplus-026";
     expect(versions(TYRANT)).toEqual([
@@ -862,6 +867,7 @@ describe("R1655000 a card in context", () => {
       [VERSION_EXTENDED_ART_ID, "Epic"],
       [VERSION_PIXEL_ID, "Epic"],
       [VERSION_COMIC_ID, "Epic"],
+      [VERSION_PRISMATIC_ID, "Mythic"],
     ]);
     expect(versions(PAD).map(([id]) => id)).toEqual([
       NO_FULL_ART_ID,
@@ -870,6 +876,8 @@ describe("R1655000 a card in context", () => {
       VERSION_EXTENDED_ART_ID,
       VERSION_PIXEL_ID,
       VERSION_COMIC_ID,
+      VERSION_IMMERSIVE_ID,
+      VERSION_PRISMATIC_ID,
     ]);
     expect(versions(PLAIN)).toEqual([]);
     // Whatever the strip lists is offered there, and nothing offered is left out.
@@ -910,8 +918,9 @@ describe("R1655000 a card in context", () => {
       cardStrip(defId, () => true)
         .find((group) => group.kind === "version")
         ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
-    // BOOM! Big Max, a Legendary Unit, is offered both, beside Full art, Alt art, Alt full art and Pixel; Transmogulate,
-    // a Legendary Spell, Set showcase alone of the two; Carnivorous Cube, Big D-fender and Speciesist neither.
+    // BOOM! Big Max, a Legendary Unit, is offered both, beside Full art, Alt art, Alt full art and Pixel (and R2944000
+    // Immersive); Transmogulate, a Legendary Spell, Set showcase alone of the two; Carnivorous Cube, Big D-fender and
+    // Speciesist neither.
     const MAX = "classic-080";
     expect(versions(MAX)).toEqual([
       [NO_FULL_ART_ID, "Common"],
@@ -921,6 +930,7 @@ describe("R1655000 a card in context", () => {
       [VERSION_PIXEL_ID, "Epic"],
       [VERSION_SET_SHOWCASE_ID, "Legendary"],
       [VERSION_OUT_OF_FRAME_ID, "Legendary"],
+      [VERSION_IMMERSIVE_ID, "Mythic"],
     ]);
     expect(versions(PLAIN)).toEqual([]);
     // Whatever the strip lists is offered there, and nothing offered is left out.
@@ -959,6 +969,67 @@ describe("R1655000 a card in context", () => {
     expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
     fireEvent.click(item(AUGMENT_SIGNATURE_ID));
     expect(readCardPicks(MAX)).toEqual({ fullArt: VERSION_OUT_OF_FRAME_ID, augments: [AUGMENT_ANIMATED_ID] });
+    expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R2944000 the strip lists each part 5 version only where it is offered, each drawing its own look", () => {
+    const versions = (defId: string) =>
+      cardStrip(defId, () => true)
+        .find((group) => group.kind === "version")
+        ?.items.map((entry) => [entry.id, entry.rarity]) ?? [];
+    // Ceaseless Void, a Mythic Unit, is offered both, last, beside Full art, the Sketch, Alt full art, Extended art, Set
+    // showcase and Out of frame; Spell Tyrant, a Legendary Unit, Prismatic alone of the two, and BOOM! Big Max Immersive
+    // alone; Carnivorous Cube, Big D-fender and Speciesist neither.
+    const VOID = "core-100";
+    expect(versions(VOID)).toEqual([
+      [NO_FULL_ART_ID, "Common"],
+      [VERSION_FULL_ART_ID, "Legendary"],
+      [VERSION_SKETCH_ID, "Rare"],
+      [VERSION_ALT_FULL_ART_ID, "Legendary"],
+      [VERSION_EXTENDED_ART_ID, "Epic"],
+      [VERSION_SET_SHOWCASE_ID, "Legendary"],
+      [VERSION_OUT_OF_FRAME_ID, "Legendary"],
+      [VERSION_IMMERSIVE_ID, "Mythic"],
+      [VERSION_PRISMATIC_ID, "Mythic"],
+    ]);
+    expect(versions(PLAIN)).toEqual([]);
+    // Whatever the strip lists is offered there, and nothing offered is left out.
+    for (const defId of [VOID, "classic-056", "classic-080", "core-083", "classicplus-073", "meditativeplus-026", CUBE, BIG_D, PLAIN]) {
+      for (const id of [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID]) {
+        expect(versions(defId).some(([listed]) => listed === id), `${id} on ${defId}`).toBe(offeredOn(id, defId));
+      }
+    }
+
+    // Each tile draws its look: Immersive the whole picture hazed, Prismatic in chrome.
+    const voidDef = defOf(VOID);
+    render(<OwnedCards collection={collectionOwning([VOID])} defs={[voidDef]} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    fireEvent.click(screen.getByTestId(T.card(VOID)));
+    const art = (id: string): Element | null => item(id).querySelector(".cf-art");
+    expect(art(VERSION_IMMERSIVE_ID)?.getAttribute("data-art-picture")).toBe("depth");
+    expect(art(VERSION_IMMERSIVE_ID)?.getAttribute("data-art-part")).toBeNull();
+    expect(art(VERSION_PRISMATIC_ID)?.getAttribute("data-art-picture")).toBe("prismatic");
+    // Choosing Immersive lays the subject on its near layer over the hazed backdrop, its words kept.
+    fireEvent.click(item(VERSION_IMMERSIVE_ID));
+    expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_IMMERSIVE_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_IMMERSIVE_ID);
+    expect(large().getAttribute("data-full-art")).toBeNull();
+    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().querySelector(".cf-art-frame > .cf-art")?.getAttribute("data-art-part")).toBe("backdrop");
+    expect(large().querySelector(".cf-art-frame > .cf-immersive > .cf-art--near")?.getAttribute("data-art-part")).toBe("subject");
+    // Choosing Prismatic draws it in chrome, its words kept.
+    fireEvent.click(item(VERSION_PRISMATIC_ID));
+    expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
+    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("prismatic");
+    expect(large().querySelector(".cf-immersive")).toBeNull();
+    // R2944002, R2949000: with Animated on beside it, Signature still waits, and a click equips nothing.
+    fireEvent.click(item(AUGMENT_ANIMATED_ID));
+    expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID, augments: [AUGMENT_ANIMATED_ID] });
+    expect(item(AUGMENT_SIGNATURE_ID)).toHaveAttribute("data-waits", "true");
+    fireEvent.click(item(AUGMENT_SIGNATURE_ID));
+    expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID, augments: [AUGMENT_ANIMATED_ID] });
     expect(large().querySelector(".cf-signature")).toBeNull();
   });
 });

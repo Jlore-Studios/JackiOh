@@ -1006,6 +1006,93 @@ async fn r2943000_r2943002_a_version_not_offered_or_signature_beside_one_is_400_
     assert_eq!((status, body), (200, worn));
 }
 
+/// R2944000: a card offered both of #2944's versions, Animated and Signature: Ceaseless Void, a Mythic Unit.
+const PART_FIVE: &str = "core-100";
+
+#[tokio::test]
+async fn r2944000_r2944002_a_version_not_offered_or_signature_beside_one_is_400_and_writes_nothing() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    let nothing = json!({ "cards": [] });
+    // Owned on Speciesist by a grant no shop makes, neither of #2944's versions is offered there.
+    for id in ["version-immersive", "version-prismatic"] {
+        own(&app, &profile, BARE, id).await;
+    }
+    for id in ["version-immersive", "augment-animated", "augment-signature"] {
+        own(&app, &profile, PART_FIVE, id).await;
+    }
+    let calls = record_store_calls(&app).await;
+    for (body, message) in [
+        (
+            json!({ "cardId": BARE, "fullArt": "version-immersive" }),
+            "\"fullArt\" is not offered on this card",
+        ),
+        (
+            json!({ "cardId": BARE, "fullArt": "version-prismatic" }),
+            "\"fullArt\" is not offered on this card",
+        ),
+        // Offered, but not owned there.
+        (
+            json!({ "cardId": PART_FIVE, "fullArt": "version-prismatic" }),
+            "\"fullArt\" is a cosmetic this account does not own",
+        ),
+        // R2944002, R2949000: Signature fits neither of them, Animated beside it or not, though the card is
+        // offered Signature and its account owns it there.
+        (
+            json!({ "cardId": PART_FIVE, "fullArt": "version-immersive", "augments": ["augment-animated", "augment-signature"] }),
+            "\"augments\" lists Signature, which needs the Full art version and Animated on this card",
+        ),
+        (
+            json!({ "cardId": PART_FIVE, "fullArt": "version-immersive", "augments": ["augment-signature"] }),
+            "\"augments\" lists Signature, which needs the Full art version and Animated on this card",
+        ),
+    ] {
+        assert_eq!(refusal(put(&app, TOKEN, body.clone()).await), message, "{body}");
+        assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing.clone()), "{body}");
+    }
+    assert!(
+        economy_calls(&calls)
+            .iter()
+            .all(|call| call != "economy.cardPicks.put"),
+        "{:?}",
+        economy_calls(&calls)
+    );
+    // R2944002: where it is offered and owned, Immersive and Animated round-trip; a later Signature is refused and
+    // leaves them as they were.
+    let worn = json!({ "cards": [{
+        "cardId": PART_FIVE,
+        "fullArt": "version-immersive",
+        "augments": ["augment-animated"],
+    }] });
+    let (status, body) = put(
+        &app,
+        TOKEN,
+        json!({ "cardId": PART_FIVE, "fullArt": "version-immersive", "augments": ["augment-animated"] }),
+    )
+    .await;
+    assert_eq!((status, body), (200, worn.clone()));
+    assert_eq!(
+        refusal(
+            put(
+                &app,
+                TOKEN,
+                json!({ "cardId": PART_FIVE, "augments": ["augment-animated", "augment-signature"] })
+            )
+            .await
+        ),
+        "\"augments\" lists Signature, which needs the Full art version and Animated on this card"
+    );
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, worn.clone()));
+    // An upload leaves an unoffered version out, and with it the entry that held only that.
+    let (status, body) = upload(
+        &app,
+        TOKEN,
+        json!([{ "cardId": BARE, "fullArt": "version-prismatic" }]),
+    )
+    .await;
+    assert_eq!((status, body), (200, worn));
+}
+
 #[tokio::test]
 async fn r2725002_a_signed_full_art_owner_picks_full_art_with_both_augments() {
     let app = test_app().await;
