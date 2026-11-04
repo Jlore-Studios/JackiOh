@@ -16591,13 +16591,13 @@
     "what": "review #2955 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-04T01:21:37Z",
+    "at": "2026-11-04T01:30:10Z",
     "notes": [
       "CI on #2964: #2964: queued a CI fix",
-      "#2803 needs a plan",
-      "started plan #2803 on muse (run 41753695909)",
+      "delivered revise #2955 on claude-7 (run 41743201771): built",
+      "started review #2955 on claude-7 (run 41754753719)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17301,7 +17301,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T01:21:37Z",
+  "loop_tick": "2026-11-04T01:30:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
