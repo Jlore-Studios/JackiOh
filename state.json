@@ -16479,15 +16479,6 @@
       "failures": 0,
       "feedback_since": "2026-11-04T00:28:14Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-04T03:56:28Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Notes for #2942 / PR #2970\n\n## State\nPass 2: one blocking finding (Pixel's bitmap name unreadable on long names and in small faces). It holds.\nFix plan:\n- pixelName.ts: PIXEL_NAME_MAX_GLYPHS = 16 and PIXEL_NAME_CELL_MIN_PX = 1; pixelNameSvg returns null past the max (normal face).\n- cards.css: Pixel name padding 1.1cqh 2cqw (content 5.4cqh x 90cqw), so at the smallest full face (150px) a cell >= 1px\n  for any name of <= 16 glyphs; inside the small-face container query, a Pixel name prints in the normal face (white, outline).\n- tests: pixelName.test.ts (long names null), versionLooks3.test.tsx (cell floor computed from cards.css, tight at 16; the\n  small-face rule present), component spec maybe a hand-size check.\n- R2942001 text + ART.md + CardFace header updated.\nDecision: 33\u219231 of Pixel's 95 cards print normal names under 16 (vs a sub-pixel bitmap). Rejected: no cap (unreadable), cap\nonly in hand (full face still sub-pixel at 40 chars).\n\n## Log\n- pass 2 start: read finding, CSS, pixelName.ts; measured Pixel offer name lengths (31 of 95 over 16 chars).\n",
-        "provider": "claude-1",
-        "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-04T05:20:00Z",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 2942,
       "kind": "review",
