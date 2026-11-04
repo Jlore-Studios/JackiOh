@@ -154,7 +154,27 @@
       "feedback_since": "2026-11-04T02:38:02Z",
       "issue": 2981,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "built_by": "claude-squishy",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-squishy",
+            "run": "41761924717",
+            "tier": "strong"
+          }
+        ],
+        "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "ee3c24ee6fb60725",
