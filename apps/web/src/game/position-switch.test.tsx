@@ -162,7 +162,7 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(phone).toMatch(/\.game\[data-rail-top="true"\]\s*>\s*:is\(\[data-testid="result-overlay"\], \.trade-bar\)\s*\{[^}]*grid-row:\s*3;/);
     expect(phone).toMatch(/\.hero\s*\{[^}]*--hero-h:\s*44px;/);
     // The thinner seat leaves a pile's 44px band over your hand's top strip: the band stays above it (B29).
-    expect(phone).toMatch(/\.seat\s+\.pile--browsable\s*\{[^}]*z-index:\s*1;/);
+    expect(phone).toMatch(/\.seat\s+\.pile--browsable\s*\{[^}]*z-index:\s*var\(--z-content\);/);
   });
 });
 

@@ -3104,7 +3104,7 @@ button.modifier-badge[data-open="true"] {
      wrapper is none either, activate.css). */
   .field-badges .keywords {
     display: contents;
-    font-size: 8px;
+    font-size: var(--type-3xs);
     line-height: 1;
     pointer-events: none;
   }
@@ -3156,7 +3156,7 @@ button.modifier-badge[data-open="true"] {
      bottom into your hand's top strip, the room a lifted card rises into and a tap of its own to
      nothing: the pile's band is above that strip, so a tap 20px below the pill still reaches it. */
   .seat .pile--browsable {
-    z-index: 1;
+    z-index: var(--z-content);
   }
 
   .hero-tray .modifier-badge,
