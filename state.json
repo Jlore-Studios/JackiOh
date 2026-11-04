@@ -13964,24 +13964,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "41807786256",
-            "tier": "medium"
-          }
-        ],
-        "sha": "5f397e6f0717e82c7bb2d28909d07f0f7db34df3",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "a6c69931321abfecdfaef3a986cfdfe77d296666",
+        "tiers": {}
       }
     },
     "2994": {
