@@ -14900,11 +14900,6 @@
       "owner_since": "2026-11-04T14:15:58Z",
       "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 3000,
-      "paused": {
-        "at": "2026-11-04T14:14:06Z",
-        "interrupt": "usage",
-        "provider": "muse"
-      },
       "pending_request": false,
       "provider": "claude-6",
       "round_tier": "",
