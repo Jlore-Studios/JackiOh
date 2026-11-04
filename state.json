@@ -17463,7 +17463,16 @@
       "feedback_since": "2026-11-04T01:47:27Z",
       "issue": 2803,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "0ac23d8b68d04843ea47622e8eb3696ff8962ba2",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
