@@ -15850,6 +15850,18 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "at": "2026-11-04T04:28:51Z",
+        "built_by": "claude-7",
+        "by": "`claude` (medium)",
+        "sha": "5f5102b14d273f27e205ed10146e4d412bd45f33"
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -15870,6 +15882,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
