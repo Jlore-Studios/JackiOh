@@ -3862,6 +3862,7 @@
   "Lost: you conceded": "失败：你认输了",
   "Leave the match?": "离开在线对局？",
   "It goes on without you. Come back within {seconds} seconds or it counts as a loss.": "对局会在没有你的情况下继续。{seconds} 秒内回来，否则算作失败。",
+  "Your teammate plays on without you. After {seconds} seconds the AI plays your seat until you come back.": "你的队友会继续战斗。{seconds} 秒后，AI 将替你出战，直到你回来。",
   "Stay": "留下",
   "Reward {letter}": "奖励{letter}",
   "Use this ability.": "使用这个能力。",
