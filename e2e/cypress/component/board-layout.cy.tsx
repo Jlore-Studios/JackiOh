@@ -496,18 +496,21 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
   const PLATE_MAX_SHARE = 0.8;
 
   /**
-   * Current `main`'s numbers, measured at commit 4fc70e59d on this file's board (`fullBoardView()` with
-   * no rail), the pixels before #2932 moved any of them: each seat's height at every phone, and at
-   * 390x664 an ATK unit's drawn box and its row. They are constants because `main` cannot be mounted
-   * beside this change.
+   * The numbers before this change, measured in this very harness (this file's board, `fullBoardView()`
+   * with no rail, mounted in `.app-shell--wide`, in Cypress's browser) with the stylesheets of the
+   * commit in question swapped in: `board.css`, `activate.css` and `cards.css` of `main` (c95f4c3ea),
+   * and of the commit before #2900 (67fa9e5d3^). They are constants because those stylesheets cannot be
+   * mounted beside this change. Main's seats at every phone, and at 390x664 an ATK unit's drawn box and
+   * its row (the zone's height); before #2900, the same unit's box.
    */
   const MAIN: Readonly<Record<string, { you: number; opponent: number }>> = {
     "390x844": { you: 103.2, opponent: 103.2 },
     "390x664": { you: 103.2, opponent: 103.2 },
-    "360x780": { you: 103.2, opponent: 124.4 },
+    "360x780": { you: 103.2, opponent: 103.2 },
     "430x932": { you: 103.2, opponent: 103.2 },
   };
-  const MAIN_ATK_390X664 = { width: 63.6, height: 53.9, row: 56.9 };
+  const MAIN_ATK_390X664 = { width: 63.6, height: 59.1, row: 62.1 };
+  const BEFORE_2900_ATK_390X664 = { width: 41.3, height: 54.3 };
 
   /** A zone's inside: its border box less its borders (a zone has no padding). */
   function insideOf(zone: HTMLElement): { width: number; height: number } {
@@ -717,6 +720,10 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
             if (box.width === 0 || box.height === 0) continue;
             const name = button.dataset.testid ?? button.className;
             if (box.width >= TOUCH_PX - SLACK_PX && box.height >= TOUCH_PX - SLACK_PX) continue;
+            // The tray's chips were never 44px targets: an ellipsis needs `overflow: hidden`, which clips the
+            // band, and the opponent's chips lie under the pills' own 44px band (inspectable.css). Both hold on
+            // `main` (18.5px chips, the same clipped band), so they are not this change's to measure here.
+            if (button.classList.contains("modifier-badge")) continue;
             // A smaller button takes its tap across a 44px band round its center (index.css, R2122000).
             const reach = TOUCH_PX / 2 - 2;
             for (const [x, y] of [
@@ -731,7 +738,7 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
       });
     });
 
-    it(`#2932 the rail and Back share the top strip with the turn banner, above the opponent's seat, and nothing sits below End turn, at ${where}`, () => {
+    it(`#2932 the rail and Back share one top strip above the opponent's seat, and nothing sits below End turn, at ${where}`, () => {
       cy.viewport(size.width, size.height);
       mountTopRail();
       cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
@@ -752,12 +759,13 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
         if (rail === null || back === null || ranks === null || banner === null || seat === null || endTurn === null) return;
         const [backBox, ranksBox, bannerBox, seatBox, endBox] = [back, ranks, banner, seat, endTurn].map((element) => element.getBoundingClientRect());
         if (backBox === undefined || ranksBox === undefined || bannerBox === undefined || seatBox === undefined || endBox === undefined) return;
-        // One strip: the three overlap vertically, all above the opponent's seat.
-        for (const [name, box] of [["the ranks", ranksBox], ["the banner", bannerBox]] as const) {
-          expect(box.top < backBox.bottom && backBox.top < box.bottom, `${name} and Back share a row at ${where}`).to.eq(true);
-          expect(box.bottom, `${name} sits above the opponent's seat at ${where}`).to.be.at.most(seatBox.top + SLACK_PX);
-        }
+        // One strip: Back and the ranks overlap vertically, both above the opponent's seat.
+        expect(ranksBox.top < backBox.bottom && backBox.top < ranksBox.bottom, `the ranks and Back share a row at ${where}`).to.eq(true);
+        expect(ranksBox.bottom, `the ranks sit above the opponent's seat at ${where}`).to.be.at.most(seatBox.top + SLACK_PX);
         expect(backBox.bottom, `Back sits above the opponent's seat at ${where}`).to.be.at.most(seatBox.top + SLACK_PX);
+        // The shell's turn banner is the visually-hidden live region (board.css, #2917): no pill is
+        // drawn, so the strip is the rail's alone and the banner takes no room in it.
+        expect(Math.max(bannerBox.width, bannerBox.height), `the turn banner stays a hidden live region at ${where}`).to.be.at.most(1 + SLACK_PX);
         // One line: the rank line's visible parts share a row.
         const parts = [...ranks.querySelectorAll<HTMLElement>(".match-ranks__short > :not(.match-ranks__label):not(.match-ranks__tier)")];
         expect(parts.length, "the rank line has its names and crests").to.be.greaterThan(2);
@@ -850,6 +858,95 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
         });
       });
     });
+
+    it(`#2932 a unit's badges clear the switch of the zone beside it: its press never lands on the neighbour's ⟳, and the stack stays in its zone, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      const base = fullBoardView();
+      // Lane 2 carries the Activate control and two marks; lane 1, its left neighbour, keeps its live switch.
+      const second = base.you.units[1];
+      if (second === null || second === undefined) throw new Error("fullBoardView has a unit in lane 2");
+      const badged = {
+        ...second,
+        keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
+        activations: [{ ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true }],
+      };
+      const view = { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 1 ? badged : each)) } };
+      const switches = view.you.units.flatMap((each) => (each === null ? [] : [{ type: "switchPosition" as const, instanceId: each.instanceId }]));
+
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={view} legal={switches} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      cy.document({ log: false }).should((doc) => {
+        const zoneOf = (lane: number): HTMLElement => {
+          const zone = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="${lane}"]`);
+          expect(zone, `your lane ${lane} unit zone is mounted`).to.not.eq(null);
+          return zone as HTMLElement;
+        };
+        const zone = zoneOf(2);
+        const stack = zone.querySelector<HTMLElement>(":scope > .field-badges");
+        const control = stack?.querySelector<HTMLElement>(".activate-control") ?? null;
+        const neighbour = zoneOf(1).querySelector<HTMLButtonElement>(":scope > .switch-button");
+        expect(stack, "lane 2 holds its badge stack").to.not.eq(null);
+        expect(control, "the stack holds the Activate control").to.not.eq(null);
+        expect(neighbour, "lane 1 holds its switch").to.not.eq(null);
+        expect(neighbour?.disabled, "lane 1's switch is live").to.eq(false);
+        if (stack === null || control === null || neighbour === null) return;
+        const zoneBox = zone.getBoundingClientRect();
+        const stackBoxes = [...stack.querySelectorAll<HTMLElement>(".activate-control, .keyword-icon:not([data-chip=\"hidden\"]), .cf-kw-more")].map((each) =>
+          each.getBoundingClientRect(),
+        );
+        const targetBox = neighbour.getBoundingClientRect();
+        const glyphBox = (neighbour.querySelector(".switch-glyph") ?? neighbour).getBoundingClientRect();
+        expect(stackBoxes.length, "the control and the marks are drawn").to.be.at.least(3);
+
+        // The stack starts below the neighbour's whole switch target, so nothing it draws covers the ⟳.
+        for (const box of stackBoxes) {
+          expect(box.top, `a badge starts at or under the neighbour's switch target at ${where}`).to.be.at.least(targetBox.bottom - SLACK_PX / 2);
+          expect(overlaps(box, targetBox), `a badge overlaps the neighbour's switch target at ${where}`).to.eq(false);
+          // ... and stays in its own zone, never over the row above or below.
+          expect(box.top, `a badge is under the zone's top at ${where}`).to.be.at.least(zoneBox.top - SLACK_PX / 2);
+          expect(box.bottom, `a badge is above the zone's bottom at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX / 2);
+        }
+
+        // The marks in the control's column sit flush with its right edge, against the card.
+        const controlBox = control.getBoundingClientRect();
+        for (const box of stackBoxes) {
+          if (box.left < controlBox.right && box.right > controlBox.left) {
+            expect(box.right, `a mark in the control's column is flush with it at ${where}`).to.be.closeTo(controlBox.right, 0.5);
+          }
+        }
+
+        // The Activate control's press band (its ::before) reaches down from it, never up, and no further than the zone.
+        const band = getComputedStyle(control, "::before");
+        // The band is positioned from the control's padding box: past its border.
+        const bandTop = controlBox.top + parseFloat(getComputedStyle(control).borderTopWidth) + parseFloat(band.top);
+        const bandBottom = bandTop + parseFloat(band.height);
+        expect(bandTop, `the band starts at the control, not above it, at ${where}`).to.be.at.least(controlBox.top - SLACK_PX / 2);
+        expect(bandTop, `the band is clear of the neighbour's switch target at ${where}`).to.be.at.least(targetBox.bottom - SLACK_PX / 2);
+        expect(bandBottom, `the band stays in its zone at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX / 2);
+        expect(bandBottom - bandTop, `the band is no taller than a touch target at ${where}`).to.be.at.most(TOUCH_PX + SLACK_PX / 2);
+        expect(bandBottom - bandTop, `the band is at least as tall as the control at ${where}`).to.be.at.least(controlBox.height - SLACK_PX / 2);
+
+        // The point a finger lands on: every point of the neighbour's switch target, its glyph's middle included, is the switch.
+        const owner = (x: number, y: number): Element | null => doc.elementFromPoint(x, y)?.closest(".switch-button, .activate-control") ?? null;
+        expect(owner(glyphBox.left + glyphBox.width / 2, glyphBox.top + glyphBox.height / 2), `the neighbour's ⟳ takes a press on its glyph at ${where}`).to.eq(neighbour);
+        for (const fx of [0.1, 0.5, 0.9]) {
+          for (const fy of [0.1, 0.5, 0.9]) {
+            const x = targetBox.left + targetBox.width * fx;
+            const y = targetBox.top + targetBox.height * fy;
+            expect(owner(x, y), `the neighbour's switch target takes a press at ${fx},${fy} at ${where}`).to.eq(neighbour);
+          }
+        }
+        // And the control still takes a press on itself.
+        expect(
+          owner(controlBox.left + controlBox.width / 2, controlBox.top + controlBox.height / 2),
+          `the Activate control takes a press on its own box at ${where}`,
+        ).to.eq(control);
+      });
+    });
   }
 
   it("#2932 an ATK unit's drawn area at 390x664 is larger than before #2900, and its height beats main's row", () => {
@@ -863,12 +960,7 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
       const board = doc.querySelector<HTMLElement>(BOARD);
       expect(board, "the board is mounted").to.not.eq(null);
       if (board === null) return;
-      // Before #2900 a field card was `0.72 × --card-h` wide and `--card-h` tall, `--card-h` coming off the
-      // board's height as `clamp(44px, (100cqh - 312px) / 5.24, 90px)`.
-      const cqh = probePx(board, "100cqh");
-      expect(cqh, "the board's height resolves to pixels").to.be.greaterThan(0);
-      const beforeH = Math.min(90, Math.max(44, (cqh - 312) / 5.24));
-      const beforeArea = 0.72 * beforeH * beforeH;
+      const beforeArea = BEFORE_2900_ATK_390X664.width * BEFORE_2900_ATK_390X664.height;
       const mainArea = MAIN_ATK_390X664.width * MAIN_ATK_390X664.height;
       const card = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-row="units"] > .card[data-position="ATK"]`);
       expect(card, "an ATK unit is on the field").to.not.eq(null);
@@ -882,6 +974,7 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
         mainArea: Math.round(mainArea),
         newArea: Math.round(newArea),
         newOverBefore: Number((newArea / beforeArea).toFixed(2)),
+        newOverMain: Number((newArea / mainArea).toFixed(2)),
         reached1_5x: newArea >= 1.5 * beforeArea,
       };
     });

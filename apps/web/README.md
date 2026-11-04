@@ -274,7 +274,11 @@ between `--field-ratio-min` 0.72 and `--field-ratio-max` 0.86) and grows by heig
 fixed, thinner size (`--hero-h`, `--tray-chip-h` and `--tray-channel`), and that height is the field's.
 A face-up field card's Activate control and keyword marks leave its face for `game/FieldBadges.tsx`, a
 stack hung off the card's top-left corner as a sibling of the card, as the switch is, so DEF's rotation
-never turns it; the Activate control keeps its 44px tap band, the marks let a tap through.
+never turns it. The zone left of it holds its own switch (⟳) at that corner, so the stack starts below
+that switch's target (`--badges-top`, the target's own height) and what does not fit its zone's height
+wraps into a column to its left: a press on a neighbour's ⟳ is never this unit's Activate, and the stack
+never reaches the row below. The Activate control's tap band (up to 44px) reaches down from the control
+only, never up over that switch; the marks let a tap through.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root

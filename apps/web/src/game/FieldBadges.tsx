@@ -4,7 +4,8 @@
 //
 // The stack is a sibling of the card root, as the switch (`SwitchButton`, Card.tsx) is, so DEF's
 // rotation never turns or moves it: its corner is still the card's own top-left (board.css works it
-// out from the card's size; the zone centres the card). It draws view data only (CLAUDE.md rule 7):
+// out from the card's size; the zone centres the card), though it starts below the target of the
+// switch of the zone to its left, which sits at that very corner (board.css, `--badges-top`). It draws view data only (CLAUDE.md rule 7):
 // the control is `ActivateControls`, which decides nothing, and the marks are `KeywordIcons`, the
 // face's own, with the same "+n" fold. Card.tsx renders it only for a field card on the phone layout
 // (`usePhonePortrait`); every other card keeps both on its face.

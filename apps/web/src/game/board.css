@@ -3066,32 +3066,44 @@ button.modifier-badge[data-open="true"] {
      card, as the switch is, so DEF's rotation never turns or moves it; its corner is the card's own,
      worked out from the card's size below (the zone centres the card, so the card's top-left is the
      zone's middle less half the card). It overlaps the card by 2px, clear of the name box (which
-     starts about 4px in), and the zone left of it is under it by what hangs out. Marks stack down
-     the edge and fold into the face's own "+n". */
+     starts about 4px in), and the zone left of it is under it by what hangs out.
+     That zone's own switch (⟳) sits at its top-right, exactly where this stack hangs (the zones are
+     4px apart), so the stack starts below the switch's target (`--badges-top`, the target's own
+     height) and never over it: a press on the neighbour's ⟳ is never this unit's Activate. The
+     Activate control comes first, the marks under it; what does not fit the zone's height wraps into
+     a column to its left (every item is a flex item of the stack), so the stack never reaches the
+     row below. */
   .board .zone > .field-badges {
     /* The card's own size, repeated here so `cqw`/`cqh` read this stack's container (its zone, as
        the card's do): a custom property set on the zone would read the lane instead. */
     --field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));
     --field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));
+    /* The switch's own target (`.zone > .switch-button`, above): at most 44px, and never past the
+       zone's middle less the clear it keeps, which is the height its top-right target takes. */
+    --switch-target: 44px;
+    --switch-clear: 6px;
+    --badges-top: max(calc((100cqh - var(--field-card-h)) / 2), min(var(--switch-target), calc(50cqh - var(--switch-clear))));
     position: absolute;
-    top: calc((100cqh - var(--field-card-h)) / 2);
+    top: var(--badges-top);
     right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);
     z-index: var(--z-popover);
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    /* `wrap-reverse` swaps the cross axis, so its start is the right edge: `flex-start` keeps every
+       mark flush with the card's edge, and a column that wraps goes to the left of the first. */
+    flex-wrap: wrap-reverse;
+    align-items: flex-start;
+    max-height: calc(100cqh - var(--badges-top));
     gap: 2px;
-    /* The stack hangs over the zone beside it, whose own switch sits at that corner: only the
-       Activate control takes a press (activate.css), the marks and the gaps let it through. */
+    /* The stack hangs over the zone beside it: only the Activate control takes a press
+       (activate.css), the marks and the gaps let it through. */
     pointer-events: none;
   }
 
+  /* The marks' wrapper is no box: each mark is a flex item of the stack (the Activate control's
+     wrapper is none either, activate.css). */
   .field-badges .keywords {
-    display: flex;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: flex-end;
-    gap: 1px;
+    display: contents;
     font-size: 8px;
     line-height: 1;
     pointer-events: none;
@@ -3138,6 +3150,13 @@ button.modifier-badge[data-open="true"] {
   .pile::before {
     width: 11px;
     height: 11px;
+  }
+
+  /* The thinner seat leaves a pile's 44px tap band (inspectable.css, B29) reaching past the seat's
+     bottom into your hand's top strip, the room a lifted card rises into and a tap of its own to
+     nothing: the pile's band is above that strip, so a tap 20px below the pill still reaches it. */
+  .seat .pile--browsable {
+    z-index: 1;
   }
 
   .hero-tray .modifier-badge,
