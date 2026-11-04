@@ -362,7 +362,7 @@
   padding: 12px 20px;
   border-radius: 12px;
   background: var(--bg-raised);
-  font-size: 15px;
+  font-size: var(--type-lg);
   font-weight: 650;
 }
 
