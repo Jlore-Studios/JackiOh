@@ -13685,13 +13685,13 @@
       "queued_at": "2026-11-04T17:15:26Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "41882137668",
+      "run_id": "pending:03e7996c-1793815754",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
       "spot_check": true,
       "spot_check_n": 55,
-      "started_at": "2026-11-04T17:57:24Z",
+      "started_at": "2026-11-04T18:09:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -15058,7 +15058,7 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T17:57:24Z",
+    "at": "2026-11-04T18:09:34Z",
     "url": "",
     "what": "spot-check #2984 on claude-6"
   },
@@ -29501,9 +29501,9 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:03e7996c-1793815754",
         "sha": "20de1ce4c8c5b5925f0563b907dd641e27cf0537",
-        "started_at": "2026-11-04T17:57:24Z",
+        "started_at": "2026-11-04T18:09:34Z",
         "status": "queued",
         "title": "Patch: seeded random walks play whole dungeon runs and check that every fight starts and every count stays in bounds",
         "tries": 1
