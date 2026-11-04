@@ -17095,6 +17095,12 @@
         "by": "`muse` (medium)",
         "sha": "4f4326d73dea56a4fef628d5d4e6289350a2ed05"
       },
+      "decision": {
+        "asked_at": "2026-11-04T05:16:31Z",
+        "human_required": false,
+        "older": true,
+        "question": "placeholder (waiting on test run, will continue)"
+      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
