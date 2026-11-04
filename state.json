@@ -32307,6 +32307,7 @@
         "every": 5,
         "head": "8375cea0f9d9e93683bef0a6f0c79b76f6a4aa66",
         "issue": 2976,
+        "last_why": "stopped: #2998 was closed",
         "merged_at": "2026-11-04T06:32:06Z",
         "n": 40,
         "pr": 2998,
@@ -32317,12 +32318,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:77df8107-1793774905",
+        "run_id": "",
         "sha": "e485107852599734d92622e1291c13742a3313a2",
         "started_at": "2026-11-04T06:48:56Z",
         "status": "queued",
         "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 40
