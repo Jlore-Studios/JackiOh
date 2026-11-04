@@ -635,7 +635,7 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
     }
 }
 
-// radiantChance (#42 Eugenics)
+// radiantChance (#42 Selective Breeding)
 
 /// The library cards that came out Radiant, by index in the library as it was set up.
 fn radiant_at(state: &GameState, cards: &[CardInstance]) -> Vec<usize> {

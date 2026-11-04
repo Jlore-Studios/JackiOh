@@ -73,7 +73,7 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell
     const STOCKPILE: &str = "core-005";
     const MENACE: &str = "core-019";
-    const CN_VIRUS: &str = "core-090-1"; // Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw
     const HINDER: &str = "core-021"; // Cast on draw: … Discard 1 at random (R682: no prompt).
 
     use crate::js;
@@ -161,7 +161,7 @@ mod tests {
             #[test]
             fn r58_a_card_cast_on_draw_adds_no_card_and_ends_it() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [FAVOR], "library": [CN_VIRUS, MENACE, MENACE, MENACE] },
+                    "p1": { "hand": [FAVOR], "library": [SUPER_VIRUS, MENACE, MENACE, MENACE] },
                     "p2": { "hand": many(4, STOCKPILE) },
                 }));
                 s.play(FAVOR, json!({}));
@@ -169,7 +169,7 @@ mod tests {
                     .last_events()
                     .iter()
                     .map(js)
-                    .any(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS));
+                    .any(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS));
                 // The draw's chain repeats into one card (§2.4), and the draws stop there.
                 assert_eq!(s.hand(PlayerId::P1).len(), 1);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 2);

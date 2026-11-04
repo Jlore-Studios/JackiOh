@@ -6,7 +6,7 @@
 //! determinized world shows the seat exactly the view the true state shows it; and every card the
 //! seat can read comes through a determinization untouched.
 //!
-//! The fixed pair (B9, B11) is the one the design names: p2's hand #2 Bigot and #11 Tempo Timmy
+//! The fixed pair (B9, B11) is the one the design names: p2's hand #2 Speciesist and #11 Tempo Timmy
 //! against #53 Reno and #20 Pointmaster, a face-down #41 Sheepish against a face-down #60 Bear
 //! Honeypot. The mutation property generalises it to random mutations of random real games: with no
 //! property-test crate in the workspace (SURFACE §2), its 150 cases run from a seeded `Rng`.
@@ -1331,15 +1331,15 @@ mod r2691000_own_library_as_its_owner_was_shown {
         assert_eq!(kept.known_as.as_ref().map(|known| known.radiant), Some(true));
     }
 
-    /// R2691000: after Eugenics (#42) resolves, the AI's decision on a fixed seed is the same whatever
+    /// R2691000: after Selective Breeding (#42) resolves, the AI's decision on a fixed seed is the same whatever
     /// its rolls made Radiant in the AI's own library.
     #[test]
-    fn r2691000_after_eugenics_the_ais_decision_is_the_same_whatever_its_rolls_made_radiant() {
+    fn r2691000_after_selective_breeding_the_ais_decision_is_the_same_whatever_its_rolls_made_radiant() {
         jackioh_cards::register_all();
-        // #25 costs 4, so Eugenics exiles none of them; Stockpile's draws then read their faces.
+        // #25 costs 4, so Selective Breeding exiles none of them; Stockpile's draws then read their faces.
         let library = vec!["core-025"; 20];
         let mut s = scenario(json!({
-            "seed": "observe-r2691000-eugenics",
+            "seed": "observe-r2691000-selective-breeding",
             "p1": { "hand": ["core-042", "core-005"], "library": library },
             "p2": { "hand": ["core-005"] },
         }));
@@ -1363,10 +1363,18 @@ mod r2691000_own_library_as_its_owner_was_shown {
         );
         assert_ne!(hash_state(&none), hash_state(&all));
         assert_eq!(hash_state(&redact(&none, AI)), hash_state(&redact(&all, AI)));
-        let from_none = decide(&none, AI, &mut ai_options("observe-r2691000-eugenics", AI_BUDGET));
+        let from_none = decide(
+            &none,
+            AI,
+            &mut ai_options("observe-r2691000-selective-breeding", AI_BUDGET),
+        );
         assert!(from_none.is_some());
         assert_eq!(
-            decide(&all, AI, &mut ai_options("observe-r2691000-eugenics", AI_BUDGET)),
+            decide(
+                &all,
+                AI,
+                &mut ai_options("observe-r2691000-selective-breeding", AI_BUDGET)
+            ),
             from_none
         );
     }

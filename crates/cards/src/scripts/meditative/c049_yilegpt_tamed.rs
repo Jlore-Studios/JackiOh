@@ -88,7 +88,7 @@ mod tests {
     const TAMED: &str = "meditative-049";
     const VIRUS: &str = "meditative-049-2";
     const PRIME: &str = "meditative-049-1";
-    const BIGOT: &str = "core-002"; // 6/1, the killer.
+    const SPECIESIST: &str = "core-002"; // 6/1, the killer.
     const OCCUPIER: &str = "core-012"; // 3/4, holding the zone across.
     const FILLER: &str = "core-005";
 
@@ -114,7 +114,7 @@ mod tests {
     /// p2's 6/1 kills the Tamed standing in lane 1 of p1's field.
     fn kill_tamed(s: &mut Scenario) {
         s.end_turn();
-        s.attack(BIGOT, TAMED);
+        s.attack(SPECIESIST, TAMED);
     }
 
     mod m49_yilegpt_tamed {
@@ -164,8 +164,8 @@ mod tests {
                         "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
                     },
                     "p2": {
-                        // Bigot at its old 6/1 (it prints 4/1 since patch v0.3.10).
-                        "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
+                        // Speciesist at its old 6/1 (it prints 4/1 since patch v0.3.10).
+                        "field": [{ "def": SPECIESIST, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                         "hand": [FILLER],
                         "library": [FILLER, FILLER],
                     },
@@ -201,7 +201,7 @@ mod tests {
                             "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
                         },
                         "p2": {
-                            "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
+                            "field": [{ "def": SPECIESIST, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                             "hand": [FILLER],
                             "library": [FILLER, FILLER],
                         },
@@ -224,7 +224,7 @@ mod tests {
                 assert_eq!(virus.def_id, VIRUS);
                 assert!(virus.radiant);
 
-                // The Radiant Tamed is 4/12: a Radiant Bigot set to 12/2 (it prints 8/2) kills it
+                // The Radiant Tamed is 4/12: a Radiant Speciesist set to 12/2 (it prints 8/2) kills it
                 // where a 6/1 would not.
                 let mut s = scenario(json!({
                     "seed": "tamed-radiant-death",
@@ -233,7 +233,7 @@ mod tests {
                         "library": [FILLER, FILLER],
                     },
                     "p2": {
-                        "field": [{ "def": BIGOT, "radiant": true, "lane": 1, "statsOverride": { "attack": 12, "health": 2 } }],
+                        "field": [{ "def": SPECIESIST, "radiant": true, "lane": 1, "statsOverride": { "attack": 12, "health": 2 } }],
                         "hand": [FILLER],
                         "library": [FILLER, FILLER],
                     },

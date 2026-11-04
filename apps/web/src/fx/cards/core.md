@@ -20,7 +20,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | Card | Name | Type | Entry | Scale | Census | Why |
 | --- | --- | --- | --- | --- | --- | --- |
 | `core-001` | Big D-fender | Unit | none: its Aura is standing Armor, with no moment to draw | — | none: vanilla | the census agrees: its Aura changes nothing as it plays |
-| `core-002` | Bigot | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
+| `core-002` | Speciesist | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
 | `core-003` | Right-house defender | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
 | `core-004` | Gary the Gambler | Unit | cry bless Hustle/cash | 1.08 | none: no motif reads questCompleted | cry: the census leaves out the events on the card itself, its buffed, upgraded and keywordGranted, which bless reads |
 | `core-005` | Stockpile | Spell | cast flight | 1.08 | bolt | cast: the census's suggestion is noise in its window (fatigue, other cards' events); its own effect is drawn, which flight reads |
@@ -60,7 +60,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-039` | Recycling Initiative | Spell | cast vanish; trigger send | 1.25 | none: vanilla | cast: the census leaves out the events on the card itself, its exiled and bounced, which vanish reads; trigger: the census never saw this hook fire; send reads its addedToHand and shuffledIn |
 | `core-040` | Echoes of the Forgotten | Field Spell | cast conjure; trigger bolt; aura void zone | 1.28 | vanish | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census's vanish is its exile of a deck card, which the board does not show, while its hero damage shows, which bolt draws |
 | `core-041` | Sheepish | Trap | cast snap Beast/wool | 1.35 | bolt | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
-| `core-042` | Eugenics | Spell | cast vanish | 1.16 | vanish | cast: the census agrees (vanish) |
+| `core-042` | Selective Breeding | Spell | cast vanish | 1.16 | vanish | cast: the census agrees (vanish) |
 | `core-043` | Big Felinor | Unit | cry wipe Beast/felinor | 1.45 | wipe | cry: the census agrees (wipe) |
 | `core-044` | True Strike | Spell | cast bolt | 1.08 | bolt | cast: the census agrees (bolt) |
 | `core-045` | Deft Duelist | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
@@ -110,8 +110,8 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-087` | Pocket Chaos | Spell | cast shift | 1.85 | vanish | cast: the census's vanish is the cards a board swap moved; its swap is `swapped`, which shift reads |
 | `core-088` | Twisting Nether | Spell | setPiece nether | 1.65 | wipe | kept: #2800's `nether` set piece (R2800000), which part F builds; the census's wipe is its removals |
 | `core-089` | Corpse Eater | Unit | none: it grows in hand, with no board change to draw | — | none: vanilla | the census agrees |
-| `core-090` | CN-Viral Injection | Spell | cast send | 1.19 | none: no motif reads shuffledIn | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
-| `core-090-1` | CN-Virus | Spell | cast bolt | 0.97 | bolt | cast: the census agrees (bolt) |
+| `core-090` | Super-Virus Injection | Spell | cast send | 1.19 | none: no motif reads shuffledIn | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
+| `core-090-1` | Super-Virus | Spell | cast bolt | 0.97 | bolt | cast: the census agrees (bolt) |
 | `core-091` | Fed Fauci | Unit | trigger mana | 1.28 | none: vanilla | trigger: the census leaves out the events on the card itself; its start-of-turn mana (manaChanged), its one trigger's payoff, mana reads |
 | `core-092` | Felinor Fiender | Unit | none: no hook; its Legendary entrance plays | — | none: vanilla | the census agrees: no hook, and its Legendary entrance plays (R2722001) |
 | `core-093` | Combo-Index | Field Spell | cast conjure; trigger tally; aura storm zone | 1.74 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census leaves out the events on the card itself, its counterChanged and questProgressed, which tally reads |
@@ -169,6 +169,6 @@ Three events no motif read come up on three or more Core cards each, so each got
 
 | Motif | Reads | Core cards |
 |---|---|---|
-| `send` | addedToHand, shuffledIn | #7 Jewelosco Scarab (`cry`), #33 Unstable Clone Machine (`trigger`), #37 Gravedigger (`trigger`), #39 Recycling Initiative (`trigger`), #51 KY's Private Tutor, #51.1 KY's Empty Notebook, #54 Straaza (`cry`), #57 Conjure KY, #59 Unbiased Immigration (`trigger`), #72 Reminisce, #76 Field of Dreams, #82 KY's Trial, #90 CN-Viral Injection |
+| `send` | addedToHand, shuffledIn | #7 Jewelosco Scarab (`cry`), #33 Unstable Clone Machine (`trigger`), #37 Gravedigger (`trigger`), #39 Recycling Initiative (`trigger`), #51 KY's Private Tutor, #51.1 KY's Empty Notebook, #54 Straaza (`cry`), #57 Conjure KY, #59 Unbiased Immigration (`trigger`), #72 Reminisce, #76 Field of Dreams, #82 KY's Trial, #90 Super-Virus Injection |
 | `radiance` | radiantSet | #23 Reoccurring Dream, #26 Glowy Jelly Bean, #28 Knockoff Temu Glowy Jelly Bean, #29 GIGA Glowy Jelly Bean, #64 Gifted Program (`trigger`), #81 Radiant Saintess (`death`) |
 | `mend` | healed | #19 Midrange Menace (`trigger`), #47 Fig of Life, #53 Reno (`cry`) |

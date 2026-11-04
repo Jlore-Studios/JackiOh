@@ -112,7 +112,7 @@ const RECRUIT_WORDS: readonly (readonly [string, string])[] = [
   ["tutorial", "master"],
   ["trigor", "three"],
   ["occidental", "west"],
-  ["oriental", "east"],
+  ["easterner", "east"],
 ];
 
 function wordIn(lower: string, table: readonly (readonly [string, string])[], fallback: string): string {

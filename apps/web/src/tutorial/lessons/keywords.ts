@@ -21,7 +21,7 @@ export const lesson: TutorialLesson = {
     "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-023", // Quadrupling Felinors, Rare
     "traininggrounds-017", // Flaming Felinor, Rare
-    "traininggrounds-041", // Legacy: Bigot, Common
+    "traininggrounds-041", // Legacy: Speciesist, Common
     "traininggrounds-033", // Guerilla Felinor, Epic
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-007", // Chosen by the Moon, Common

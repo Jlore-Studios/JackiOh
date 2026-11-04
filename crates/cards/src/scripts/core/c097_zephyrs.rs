@@ -494,7 +494,7 @@ mod tests {
         fn r222_the_cards_n97_offers_do_not_depend_on_which_face_down_trap_the_opponent_holds_s9_1_s10_8_r33() {
             crate::register_all();
             // Two games p1 cannot tell apart: p2's one face-down trap is a My Pawn in one, a Sheepish in
-            // the other. Played on the real state, the Sheepish turns Big Felinor and Bigot into Sheep
+            // the other. Played on the real state, the Sheepish turns Big Felinor and Speciesist into Sheep
             // before their Cries: the offers name the trap.
             let offers_with = |trap: &str| -> Vec<String> {
                 let mut g = scenario(json!({

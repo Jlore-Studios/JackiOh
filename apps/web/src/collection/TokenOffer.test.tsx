@@ -552,7 +552,7 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
     fireEvent.click(await within(preview).findByTestId(T.tokenOffer("core-002")));
 
     const dialog = screen.getByTestId(T.tokenOfferDialog("core-002"));
-    expect(screen.getByRole("alertdialog", { name: "Unlock Bigot? This spends 1 card token." })).toBe(dialog);
+    expect(screen.getByRole("alertdialog", { name: "Unlock Speciesist? This spends 1 card token." })).toBe(dialog);
     expect(screen.getByTestId(T.tokenOfferCancel("core-002"))).toHaveFocus();
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(0);
 

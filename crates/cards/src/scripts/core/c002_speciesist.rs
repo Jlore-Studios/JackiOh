@@ -1,4 +1,4 @@
-//! SPEC §8.1 #2 Bigot — 4/1 → 8/2 Unit, Human, cost 2.
+//! SPEC §8.1 #2 Speciesist — 4/1 → 8/2 Unit, Human, cost 2.
 //! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
 //! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
 //! the radiant form declares no target at all.
@@ -43,7 +43,7 @@ mod tests {
 
     use crate::scenario;
 
-    mod n2_bigot {
+    mod n2_speciesist {
         use super::*;
 
         #[test]
@@ -74,7 +74,7 @@ mod tests {
         }
 
         #[test]
-        fn medina_enforcer_is_human_so_bigot_cannot_target_it() {
+        fn medina_enforcer_is_human_so_speciesist_cannot_target_it() {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["meditative-083"] }

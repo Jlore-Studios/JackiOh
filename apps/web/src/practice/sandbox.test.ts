@@ -27,11 +27,11 @@ describe("R923001 the sandbox's card search", () => {
   });
 
   it("R923001 a word matches part of the name, either text, the id, the set, the type or the rarity, ignoring case", () => {
-    const bigot = pool.find((def) => def.name === "Bigot");
-    expect(bigot, "the catalog has Bigot").toBeDefined();
-    if (bigot === undefined) return;
-    expect(searchCards(pool, "BIGO", pool.length)).toContain(bigot);
-    expect(searchCards(pool, bigot.id, pool.length)).toEqual([bigot]);
+    const speciesist = pool.find((def) => def.name === "Speciesist");
+    expect(speciesist, "the catalog has Speciesist").toBeDefined();
+    if (speciesist === undefined) return;
+    expect(searchCards(pool, "SPECIE", pool.length)).toContain(speciesist);
+    expect(searchCards(pool, speciesist.id, pool.length)).toEqual([speciesist]);
 
     const spells = searchCards(pool, "spell", pool.length);
     expect(spells.length).toBeGreaterThan(0);
