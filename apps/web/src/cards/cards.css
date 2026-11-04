@@ -1056,8 +1056,11 @@
   background: var(--cf-frame);
 }
 
+/* The pixel face's box, the banner less 1.1cqh above and below and 2cqw at each end (no chevron to clear): 5.4cqh by
+   90cqw, so on the smallest full face (150px) a name of PIXEL_NAME_MAX_GLYPHS keeps every cell at
+   PIXEL_NAME_CELL_MIN_PX (pixelName.ts, held by versionLooks3.test.tsx). */
 .cf[data-version="version-pixel"] .card-name[data-pixel-name="true"] {
-  padding: 1.5cqh 6cqw;
+  padding: 1.1cqh 2cqw;
   color: transparent;
   text-shadow: none;
   background: var(--cf-pixel-name) center / contain no-repeat content-box, var(--cf-frame);
@@ -1353,6 +1356,14 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  /* R2942001: a Pixel face's name in the normal face, on two lines as above: the pixel face, one line of bitmap cells,
+     would draw them under a pixel here. */
+  .cf[data-version="version-pixel"]:not([data-layout="minion"]) .card-name[data-pixel-name="true"] {
+    color: var(--pal-white);
+    text-shadow: var(--cf-outline);
+    background: var(--cf-frame);
   }
 
   .cf:not([data-layout="minion"]) .cf-gem,

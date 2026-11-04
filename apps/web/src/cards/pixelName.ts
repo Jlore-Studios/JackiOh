@@ -1,7 +1,8 @@
 // R2942001 (#2942): the Pixel version's name, set in a pixel face: a 5×7 bitmap face built in (`PIXEL_GLYPHS`), each
 // name drawn in capitals as one small SVG of unit squares, white over a black drop shadow, that the name banner wears
 // as its background (CardFace, cards.css). The banner's own text stays in the DOM, unseen, so a screen reader and a
-// finder by name read it as ever. A name with a character the face lacks (a Chinese name) prints in the normal face.
+// finder by name read it as ever. A name with a character the face lacks (a Chinese name), or longer than the banner
+// holds at a readable size (`PIXEL_NAME_MAX_GLYPHS`), prints in the normal face, as a small face's name does (cards.css).
 // No `<text>`, `<title>` or `href`: the picture is squares alone. Presentation only (CLAUDE.md rule 7).
 
 /** R2942001: a glyph's width in the face's cells. */
@@ -12,6 +13,17 @@ export const PIXEL_GLYPH_ROWS = 7;
 export const PIXEL_GLYPH_GAP = 1;
 /** R2942001: how far the drop shadow lies right of and below the name, in cells. */
 export const PIXEL_NAME_SHADOW_OFFSET = 1;
+/**
+ * R2942001: the least a pixel name's cell may measure, in CSS pixels, on the smallest full face (FACE_TEXT_MIN_HEIGHT_PX
+ * tall): below it the bitmap's cells blur together and the name cannot be read.
+ */
+export const PIXEL_NAME_CELL_MIN_PX = 1;
+/**
+ * R2942001: the most glyphs a pixel name may have: the most that, side by side across the name banner's content box
+ * (cards.css), keep every cell at `PIXEL_NAME_CELL_MIN_PX` or more on the smallest full face. A longer name prints in
+ * the normal face, which shrinks it to fit (fit.ts).
+ */
+export const PIXEL_NAME_MAX_GLYPHS = 15;
 /** R2942001: the name's ink, palette.css's `--pal-white`, as the normal name banner's. */
 export const PIXEL_NAME_INK = "#ffffff";
 /** R2942001: the name's drop shadow, palette.css's `--pal-black`, as the normal name's outline. */
@@ -100,7 +112,7 @@ function cellsPath(glyphs: readonly (readonly string[])[], shift: number): strin
 
 /**
  * R2942001: `name` in the pixel face, in capitals: one `<svg>` of unit squares, its drop shadow under its ink, or null
- * for an empty name or one with a character the face has no glyph for.
+ * for an empty name, one with a character the face has no glyph for, or one longer than `PIXEL_NAME_MAX_GLYPHS`.
  */
 export function pixelNameSvg(name: string): string | null {
   const glyphs: (readonly string[])[] = [];
@@ -109,7 +121,7 @@ export function pixelNameSvg(name: string): string | null {
     if (glyph === undefined) return null;
     glyphs.push(glyph);
   }
-  if (glyphs.length === 0) return null;
+  if (glyphs.length === 0 || glyphs.length > PIXEL_NAME_MAX_GLYPHS) return null;
   const width = glyphs.length * (PIXEL_GLYPH_COLS + PIXEL_GLYPH_GAP) - PIXEL_GLYPH_GAP + PIXEL_NAME_SHADOW_OFFSET;
   const height = PIXEL_GLYPH_ROWS + PIXEL_NAME_SHADOW_OFFSET;
   return (

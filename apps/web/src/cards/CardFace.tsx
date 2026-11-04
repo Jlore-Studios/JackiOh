@@ -352,7 +352,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const artMoves = look.animated;
   const artMotion = useArtMotion(artMoves && settings.animatedFoil && !lazyArt);
   // R2942001: Extended art's picture runs past its window across the face; Pixel sets the name in its pixel face, when
-  // the face has every character of it.
+  // the face has every character of it and it is short enough to read (`PIXEL_NAME_MAX_GLYPHS`; a small face prints
+  // it in the normal face, cards.css).
   const extended = look.version === VERSION_EXTENDED_ART_ID;
   const pixelName = look.version === VERSION_PIXEL_ID ? pixelNameUri(face.name) : null;
 

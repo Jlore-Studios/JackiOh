@@ -18,10 +18,19 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 
 import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { CardFace } from "./CardFace.tsx";
-import { EXTENDED_ART_BOX_PCT, EXTENDED_ART_FRAME_OPACITY, EXTENDED_ART_PICTURE_PCT } from "./constants.ts";
+import { EXTENDED_ART_BOX_PCT, EXTENDED_ART_FRAME_OPACITY, EXTENDED_ART_PICTURE_PCT, FACE_TEXT_MIN_HEIGHT_PX } from "./constants.ts";
 import { resetCosmeticsForTests, writeCardPick, writeCardVersion } from "./cosmetics.ts";
 import { faceModel } from "./model.ts";
-import { pixelNameUri } from "./pixelName.ts";
+import {
+  PIXEL_GLYPH_COLS,
+  PIXEL_GLYPH_GAP,
+  PIXEL_GLYPH_ROWS,
+  PIXEL_NAME_CELL_MIN_PX,
+  PIXEL_NAME_MAX_GLYPHS,
+  PIXEL_NAME_SHADOW_OFFSET,
+  pixelNameSvg,
+  pixelNameUri,
+} from "./pixelName.ts";
 import { WATERMARK_INK, WATERMARK_OPACITY } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
@@ -230,6 +239,104 @@ describe("R2942001 Extended art's rules box", () => {
     const filling = rulesOf(VERSION_EXTENDED_ART_ID).filter((rule) => rule.selector.endsWith(".cf-art-frame") && rule.body.includes("inset: 0;"));
     // The full face, and a small face's in its container query.
     expect(filling.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("R2942001 Pixel's name face stays readable", () => {
+  /** The declarations of the one rule of `css` whose selector is exactly `selector`. */
+  function bodyOf(css: string, selector: string): string {
+    const bodies = [...css.matchAll(/([^{}]*)\{([^}]*)\}/g)].filter((match) => match[1]?.replace(/\/\*[^]*?\*\//g, "").trim() === selector);
+    expect(bodies, selector).toHaveLength(1);
+    return bodies[0]?.[2] ?? "";
+  }
+
+  /** The number before `unit` that `property` is set to in `body`, the first of a shorthand's. */
+  function lengthOf(body: string, property: string, unit: string, at = 0): number {
+    const value = new RegExp(`(?:^|[;\\s])${property}:([^;]*);`).exec(body)?.[1] ?? "";
+    const lengths = [...value.matchAll(new RegExp(`(-?[\\d.]+)${unit}`, "g"))].map((match) => Number(match[1]));
+    expect(lengths[at], `${property} in ${unit}`).toBeDefined();
+    return lengths[at] ?? Number.NaN;
+  }
+
+  const FULL = '.cf[data-version="version-pixel"] .card-name[data-pixel-name="true"]';
+  const SMALL = '.cf[data-version="version-pixel"]:not([data-layout="minion"]) .card-name[data-pixel-name="true"]';
+
+  /**
+   * The smallest full face's pixel-name box, in CSS pixels: the face (`.cf-scale`, the `cardface` container) is
+   * FACE_TEXT_MIN_HEIGHT_PX tall and as wide as its card's aspect and inset make it; the box is the name banner less the
+   * pixel face's padding.
+   */
+  function smallestBox(): { width: number; height: number } {
+    const card = bodyOf(cardsCss, ".cf");
+    const aspect = /aspect-ratio: (\d+) \/ (\d+);/.exec(card);
+    const inset = /inset: ([\d.]+)% ([\d.]+)%;/.exec(bodyOf(cardsCss, ".cf-scale"));
+    const height = FACE_TEXT_MIN_HEIGHT_PX;
+    const width = (height / (1 - (2 * Number(inset?.[1])) / 100)) * (Number(aspect?.[1]) / Number(aspect?.[2])) * (1 - (2 * Number(inset?.[2])) / 100);
+    const banner = bodyOf(cardsCss, ".cf .card-name");
+    const pixel = bodyOf(cardsCss, FULL);
+    const across = 100 - lengthOf(banner, "left", "cqw") - lengthOf(banner, "right", "cqw") - 2 * lengthOf(pixel, "padding", "cqw");
+    const tall = lengthOf(banner, "height", "cqh") - 2 * lengthOf(pixel, "padding", "cqh");
+    expect(width).toBeGreaterThan(height / 2);
+    return { width: (width * across) / 100, height: (height * tall) / 100 };
+  }
+
+  /** A pixel name's cell, in CSS pixels, its bitmap `cols` by `rows` cells drawn `contain` in `box`. */
+  function cellIn(box: { width: number; height: number }, cols: number, rows: number): number {
+    return Math.min(box.width / cols, box.height / rows);
+  }
+
+  it("R2942001 on the smallest full face every pixel name keeps its cells at PIXEL_NAME_CELL_MIN_PX, and PIXEL_NAME_MAX_GLYPHS is the most that does", () => {
+    const box = smallestBox();
+    const rows = PIXEL_GLYPH_ROWS + PIXEL_NAME_SHADOW_OFFSET;
+    const colsOf = (glyphs: number): number => glyphs * (PIXEL_GLYPH_COLS + PIXEL_GLYPH_GAP) - PIXEL_GLYPH_GAP + PIXEL_NAME_SHADOW_OFFSET;
+    expect(cellIn(box, colsOf(PIXEL_NAME_MAX_GLYPHS), rows)).toBeGreaterThanOrEqual(PIXEL_NAME_CELL_MIN_PX);
+    expect(cellIn(box, colsOf(PIXEL_NAME_MAX_GLYPHS + 1), rows)).toBeLessThan(PIXEL_NAME_CELL_MIN_PX);
+    // Every name Pixel is offered on, the longest first, draws within the floor or prints in the normal face.
+    const names = [...new Set((COSMETIC_OFFERS[VERSION_PIXEL_ID] ?? []).map((id) => CATALOG[id]?.name ?? ""))].sort((a, b) => b.length - a.length);
+    expect(names[0]?.length ?? 0).toBeGreaterThan(PIXEL_NAME_MAX_GLYPHS);
+    let drawn = 0;
+    for (const name of names) {
+      const svg = pixelNameSvg(name);
+      expect(svg === null, name).toBe([...name].length > PIXEL_NAME_MAX_GLYPHS || pixelNameUri(name) === null);
+      if (svg === null) continue;
+      drawn += 1;
+      const view = /viewBox="0 0 (\d+) (\d+)"/.exec(svg);
+      expect(cellIn(box, Number(view?.[1]), Number(view?.[2])), name).toBeGreaterThanOrEqual(PIXEL_NAME_CELL_MIN_PX);
+    }
+    expect(drawn).toBeGreaterThan(names.length / 2);
+  });
+
+  it("R2942001 a name longer than PIXEL_NAME_MAX_GLYPHS prints in the normal face on a Pixel card", () => {
+    // Call to Chaos (Training-Grounds Edition), Pixel's longest name, 40 characters.
+    const id = "traininggrounds-039";
+    expect(offeredOn(VERSION_PIXEL_ID, id)).toBe(true);
+    writeCardVersion(id, VERSION_PIXEL_ID, []);
+    for (const radiant of [false, true]) {
+      const name = faceIn(id, radiant).querySelector<HTMLElement>(".card-name");
+      expect(name?.textContent).toBe(CATALOG[id]?.name);
+      expect(name?.getAttribute("data-pixel-name")).toBeNull();
+      expect(name?.style.getPropertyValue("--cf-pixel-name")).toBe("");
+      cleanup();
+    }
+  });
+
+  it("R2942001 a small face prints a Pixel name in the normal face, on its two lines", () => {
+    // Below FACE_TEXT_MIN_HEIGHT_PX, where a hand card's name wraps onto two lines, one line of bitmap cells would fall
+    // under a pixel: the name's words show again, white with the normal name's outline, on Pixel's flat banner.
+    const opening = `@container cardface (max-height: ${String(FACE_TEXT_MIN_HEIGHT_PX - 1)}px) {`;
+    const from = cardsCss.indexOf(opening);
+    expect(from).toBeGreaterThan(cardsCss.indexOf(FULL));
+    const small = cardsCss.slice(from + opening.length, cardsCss.indexOf("\n}\n", from));
+    const body = bodyOf(small, SMALL);
+    expect(body).toContain("color: var(--pal-white);");
+    expect(body).toContain("text-shadow: var(--cf-outline);");
+    expect(body).toContain("background: var(--cf-frame);");
+    expect(body).not.toContain("--cf-pixel-name");
+    // The normal name's own ink and outline, the white palette.css's `--pal-white`.
+    const banner = bodyOf(cardsCss, ".cf .card-name");
+    expect(banner).toContain("color: #fff;");
+    expect(banner).toContain("text-shadow: var(--cf-outline);");
+    expect(paletteCss).toMatch(/--pal-white:\s*#ffffff;/);
   });
 });
 
