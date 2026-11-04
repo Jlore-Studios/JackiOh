@@ -13967,19 +13967,20 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-04T11:32:52Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "41822903791",
+      "run_id": "pending:426a2962-1793793746",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 50,
-      "started_at": "2026-11-04T11:40:55Z",
+      "started_at": "2026-11-04T12:02:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -14879,9 +14880,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T11:40:55Z",
+    "at": "2026-11-04T12:02:50Z",
     "url": "",
-    "what": "review #2992 on claude-4"
+    "what": "spot-check #2992 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T11:53:28Z",
@@ -29138,7 +29139,15 @@
         "n": 50,
         "pr": 2992,
         "queued_at": "2026-11-04T11:55:32Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:426a2962-1793793746",
         "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
+        "started_at": "2026-11-04T12:02:50Z",
         "status": "queued",
         "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
         "tries": 0
