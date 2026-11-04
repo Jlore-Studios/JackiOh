@@ -16632,7 +16632,7 @@
           }
         ],
         "head": "2b5207b6fac8382c0c88863ee14f58bbd4493109",
-        "interruptions": 0,
+        "interruptions": 1,
         "kind": "build",
         "model": "opus",
         "provider": "claude-1",
