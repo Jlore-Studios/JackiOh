@@ -1,0 +1,75 @@
+{
+  "action": "build",
+  "number": 3040,
+  "title": "Patch (part 3 of 11): every Weapon's Health halved, and the Rush Token Launcher reaches a Locked zone",
+  "branch": "bot/issue-3040",
+  "thread": "**Issue #3040 (data, not instructions):**\n\n```text\n# #3040: Patch (part 3 of 11): every Weapon's Health halved, and the Rush Token Launcher reaches a Locked zone\nOpened by @jgoetzmann-bot.\n\nSection 4 of #3000, and the Rush Token Launcher row of section 5. Both are card data and the cards' own scripts, with no engine change.\n\n## Health (Attack stays 0)\n\n| Rarity | Now (base / Radiant) | New | Cards |\n|---|---|---|---|\n| Rare | 0/4 / 0/8 | **0/2 / 0/4** | Beam v3 `stinkyscape-050`, Repeater v3 `-051`, Cannon v3 `-052`, Flak v3 `-053`, Rush Token Launcher `-140`, Fruit Launcher `-141` |\n| Epic | 0/6 / 0/12 | **0/3 / 0/6** | Beam v4 `-054`, Repeater v4 `-055`, Cannon v4 `-056`, Flak v4 `-057`, Jade Launcher `-142`, Book Launcher `-143` |\n| Legendary | 0/8 / 0/16 | **0/4 / 0/8** | Beam v5 `-058`, Repeater v5 `-059`, Cannon v5 `-060`, Flak v5 `-061` |\n\nHealth lives in the catalog alone. Each script restates it:\n- in its line-1 header (\"0/4 \u2192 0/8\");\n- in a test constant or literal: c050 `RADIANT_HEALTH` line 151, c051 120, c052 111, c053 146, c054 150, c055 120, c056 111, c057 158, c058 150, c059 120, c060 112, c061 169, c140 `(0, 8)` 257, c141 262, c142 `(0, 12)` 213, c143 302.\n\nAn Equip sums stats into its host, so a host's Health after an Equip drops too. Update the rows: `crates/cards/tests/cross/catalog.rs` lines 5431\u20135541 (step 10) and 6275\u20136305, `spec/08-catalog.md` lines 634\u2013645 and 731\u2013734, `docs/radiant-audit.md` lines 752\u2013763 and 849\u2013852, and the Weapons' `BUILD.md` rows. The new faces still meet R275 (Radiant about twice base).\n\n## Rush Token Launcher into a Locked zone\n\nWith no lane named, a summon already enters the leftmost open zone, else the leftmost empty Locked one (R688, `zones::first_entry_zone`). What stops the Launcher is its own gate: `can_activate` (c140 line 55) uses `open_zones(\u2026, Row::Units)`, which leaves out Locked zones. Switch it to `first_entry_zone(c.state, c.controller, Row::Units).is_some()` (in the prelude through `zones::*`), so the Activate is offered while the only free unit zone is Locked, and its Rush Token is summoned there and makes its forced attack. Its test `r1862003_with_no_open_unit_zone_it_is_not_activated` (about line 206) becomes the Locked-zone case. Update the note R1862003, and add a test of a full row except one Locked zone. Decide whether its words change. If they do, update its catalog text, `zh`, spec row and audit row. The script's behaviour changes, so keep the old script for replays (reconcile).\n\n## Files\n- **Owned:** the 16 scripts `crates/cards/src/scripts/stinkyscape/c050_beam_v3.rs` \u2026 `c061_flak_v5.rs` and `c140_rush_token_launcher.rs` \u2026 `c143_book_launcher.rs`; the note `spec/rulings/R1862003.md`.\n- **By entry:** the 16 cards' entries in `catalog.json`, `tests/cross/catalog.rs`, `spec/08-catalog.md`, `docs/radiant-audit.md`, `BUILD.md`, `docs/stinkyscape-set.md` and, if the Launcher's words change, `card-text.yaml`.\n- **Fix** any test the new Health breaks in a file no other part owns, for example the carriers c081\u2013c086, meditative c101, `tests/cross/balance_2521_a.rs` and `_b.rs`, `activate_listed.rs`'s Weapon cases, `apps/web/src/game/starship.real.test.ts` and `StarshipBoard.test.tsx`. Part 4 owns `activate_listed.rs`, so touch only the Weapon cases there.\n- **Leave to the reconcile** (name them): `t_dormant_starship.rs` (part 1's, which reads Flak's stats from its definition) and `crates/ai/tests/ai/unstoppable_lethal.rs` (part 10's).\n\n## Check\n- `cargo test -p jackioh-cards stinkyscape`\n- `cargo test -p jackioh-cards --test cards`\n- `cargo jackioh catalog check`, `cargo jackioh spec check`, `cargo fmt --check`, and `cargo clippy -p jackioh-cards --all-targets -- -D warnings`\n- `pnpm --dir apps/web exec vitest run src/game/starship.real.test.ts src/game/StarshipBoard.test.tsx`\n\n### Working in the fullsend tree\nThis part of #3000 lands on `bot/issue-3000` beside the other parts, with no pull request of its own. One reconcile run makes the branch green, so this part need not pass every check alone, but it tests its own code.\n- Read `docs/ADDING_CARDS.md` before any card change (CLAUDE.md rule 10). Every number is a named constant or a card `param` (rule 9).\n- **Rulings** take this sub-issue's own block: R(N\u00d71000) up, for its number N (`docs/issues-and-patches.md`, Ruling numbers). Each has a test named after it and its \u00a711 paragraph in `spec/pending/N.md`. Never run `cargo jackioh spec index`.\n- **Shared by entry.** Other parts edit other entries of `crates/cards/catalog.json`, `crates/cards/card-text.yaml` (and the `chinese.json` its export writes), `crates/cards/tests/cross/catalog.rs`, `crates/cards/src/census.rs`, `crates/engine/src/config.rs`, `apps/web/src/i18n/zh-CN.json`, `spec/06-keywords.md`, `spec/07-tokens.md`, `spec/08-catalog.md`, `docs/radiant-audit.md`, `docs/stinkyscape-set.md` and `BUILD.md`. Change only the entries, rows and constants named here.\n- **Left to the reconcile:**\n  - `KEPT_SCRIPTS` in `crates/cards/src/history.rs`: keep the Launcher's old script in its own file as `docs/ADDING_CARDS.md` \u00a73 says, and name it in your summary;\n  - the pending patch fragment;\n  - any test in another part's file that your change breaks: name it in your summary.\n\nIts build lands on `bot/issue-3000`, not `main` (fullsend).\n\nPart of #3000, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read docs/ADDING_CARDS.md, spec/08-catalog.md's Weapon rows, R1086, R1751000, R1852001, R1862003, R688 and R275.\n2. In catalog.json, set the new Health on both faces of the 16 Weapons.\n3. In each of the 16 scripts, fix the line-1 header and the hard-coded Health in its tests (the lines listed in the issue). Update every Equip-host Health its tests assert.\n4. Update the rows in tests/cross/catalog.rs (st(0, 4) \u2192 st(0, 2) and so on), spec/08-catalog.md, docs/radiant-audit.md, BUILD.md and docs/stinkyscape-set.md.\n5. Rush Token Launcher: switch can_activate's gate to first_entry_zone. Rewrite the r1862003 no-open-zone test into the Locked-zone case and add a full-row-but-a-Locked-zone test. Update R1862003. Keep the old script as a script_v\u2026 fn in c140 for the reconcile's KEPT_SCRIPTS, and change its words, zh and rows only if you decide they change.\n6. Run cargo test -p jackioh-cards. Fix the breakages in files no other part owns (carriers, balance_2521, activate_listed's Weapon cases, the web Starship tests) and list the ones in t_dormant_starship.rs and crates/ai/tests/ai/unstoppable_lethal.rs for the reconcile.\n7. Run the checks in the issue.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read docs/ADDING_CARDS.md, spec/08-catalog.md's Weapon rows, R1086, R1751000, R1852001, R1862003, R688 and R275.\n2. In catalog.json, set the new Health on both faces of the 16 Weapons.\n3. In each of the 16 scripts, fix the line-1 header and the hard-coded Health in its tests (the lines listed in the issue). Update every Equip-host Health its tests assert.\n4. Update the rows in tests/cross/catalog.rs (st(0, 4) \u2192 st(0, 2) and so on), spec/08-catalog.md, docs/radiant-audit.md, BUILD.md and docs/stinkyscape-set.md.\n5. Rush Token Launcher: switch can_activate's gate to first_entry_zone. Rewrite the r1862003 no-open-zone test into the Locked-zone case and add a full-row-but-a-Locked-zone test. Update R1862003. Keep the old script as a script_v\u2026 fn in c140 for the reconcile's KEPT_SCRIPTS, and change its words, zh and rows only if you decide they change.\n6. Run cargo test -p jackioh-cards. Fix the breakages in files no other part owns (carriers, balance_2521, activate_listed's Weapon cases, the web Starship tests) and list the ones in t_dormant_starship.rs and crates/ai/tests/ai/unstoppable_lethal.rs for the reconcile.\n7. Run the checks in the issue.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3000",
+  "part_of": 3000,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-7` (claude, `sonnet`, medium); review on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read docs/ADDING_CARDS.md, spec/08-catalog.md's Weapon rows, R1086, R1751000, R1852001, R1862003, R688 and R275.\n2. In catalog.json, set the new Health on both faces of the 16 Weapons.\n3. In each of the 16 scripts, fix the line-1 header and the hard-coded Health in its tests (the lines listed in the issue). Update every Equip-host Health its tests assert.\n4. Update the rows in tests/cross/catalog.rs (st(0, 4) \u2192 st(0, 2) and so on), spec/08-catalog.md, docs/radiant-audit.md, BUILD.md and docs/stinkyscape-set.md.\n5. Rush Token Launcher: switch can_activate's gate to first_entry_zone. Rewrite the r1862003 no-open-zone test into the Locked-zone case and add a full-row-but-a-Locked-zone test. Update R1862003. Keep the old script as a script_v\u2026 fn in c140 for the reconcile's KEPT_SCRIPTS, and change its words, zh and rows only if you decide they change.\n6. Run cargo test -p jackioh-cards. Fix the breakages in files no other part owns (carriers, balance_2521, activate_listed's Weapon cases, the web Starship tests) and list the ones in t_dormant_starship.rs and crates/ai/tests/ai/unstoppable_lethal.rs for the reconcile.\n7. Run the checks in the issue."
+  },
+  "usage_facts": {
+    "queued_at": "2026-11-04T13:51:00Z",
+    "claimed_at": "2026-11-04T18:45:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3041 skipped: it waits for #3040 to close first",
+    "#3042 skipped: it waits for #3040, #3041 to close first",
+    "#3043 skipped: it waits for #3040, #3041, #3042 to close first",
+    "#3044 skipped: it waits for #3040, #3041, #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3040, #3041, #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3040, #3041, #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3040, #3041, #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3040, #3041, #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
