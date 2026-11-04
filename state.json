@@ -18317,12 +18317,11 @@
     "what": "review #2984 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-04T09:57:55Z",
+    "at": "2026-11-04T10:11:14Z",
     "notes": [
       "#3012 is held for `claude-1` until 04:20 (it refused a call)",
-      "delivered revise #2984 on muse (run 41800432972): built, but its record was refused (PUT /repos/Jlore-Studios/JackiOh/contents/state.json: HTTP 500: )",
-      "could not start review #2984 on muse: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 502: Server Error",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered revise #3007 on claude-3 (run 41803186993): approved",
+      "delivered revise #2984 on muse (run 41800432972): built"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19028,7 +19027,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T09:57:55Z",
+  "loop_tick": "2026-11-04T10:11:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
