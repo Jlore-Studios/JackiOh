@@ -16611,6 +16611,8 @@
       }
     },
     "2970": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T00:28:14Z",
@@ -16624,8 +16626,11 @@
         "trail": "a)\\\" --claims --json 2>/dev/null | python3 -c \\\"import json,sys; d=json.load(sys.stdin); print\u2026\n- said: `classify --claims` passes: `kind:cards`, `tier:micro`, no problems, and the visual fragment claims the change. Updating the notes, then the full server suite and typecheck:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"## State\\\")\\nj=s.index(\\\"## Log\\\")\\nstate=\\\"\\\"\\\"## State\\n\\nBuild run 1 (opus), 2026-11-04. All 14 plan steps built; t\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web/src/cards apps/web/src/collection/collection.test.tsx e2e/cypress/component/card-versions.cy.tsx 2>&1 | tail -10; \u2026\n- said: Typecheck and ESLint are clean. While the server suite runs, I'm reading over the final web diff:\n- Bash: {\"command\": \"git diff apps/web/src/cards/art/pictures.ts | sed -n 1,200p | grep \\\"^+\\\" | sed -n 30,175p\", \"description\": \"Review the new pictures.ts code\"}\n- said: One doc comment runs past the line width; rewrapping it:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/pictures.ts'\\ns=open(p).read()\\na=\\\"\\\"\\\"/**\\n * R2942001: `picture` (a painter's whole SVG document, 100 units square) as pop art: smoothed (\u2026\n- said: The CSS reads right. One more full changed-files vitest run, since the tuning came after the first:\n- Bash: {\"command\": \"cd apps/web && (timeout 3000 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'\u2026\n- said: The harness excludes `art/convention.test.ts`, but CI runs it, so I'll run it myself:\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/cards/art/convention.test.ts 2>&1 | grep -v \\\"Not implemented\\\" | tail -15\", \"description\": \"Run the art convention test\", \"timeout\": \u2026\n- said: Part 2 also changed `CardCosmeticsView.tsx` and `fullArt.ts`. Checking whether part 3 needs the same:\n- Bash: {\"command\": \"git show c95f4c3ea -- apps/web/src/collection/CardCosmeticsView.tsx | sed -n 8,60p\", \"description\": \"Show Part 2's CardCosmeticsView change\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2942 && git show c95f4c3ea -- apps/web/src/collection/CardCosmeticsView.tsx | sed -n 8,60p\", \"description\": \"Show Part 2's CardCosmeticsView change f\u2026\n- said: The strip preview already draws `artPictureOf(item.id)` at the full shape, so it needs no change for part 3. Checking for other places that list the version ids:\n- Bash: {\"command\": \"grep -rn \\\"VERSION_SKETCH_ID\\\\|version-sketch\\\" --include=*.rs --include=*.ts --include=*.tsx --include=*.sql --include=*.go crates apps e2e bot 2>/dev/null | grep -v \\\"test\\\\|\\\\.cy\\\\.\\\\\u2026\n- said: No other code lists them. Checking on the full server suite:\n- Bash: {\"command\": \"tail -5 /tmp/probe/server-full.log; grep -E \\\"^test result|FAILED|panicked\\\" /tmp/probe/server-full.log | head -20\", \"description\": \"Check full server test progress\"}\n- said: Still compiling. Meanwhile, R2942000 claims `POST /api/dev/fill` grants each version on every card it's offered; checking the fill is generic over offers:\n- Bash: {\"command\": \"grep -rn \\\"fn dev_fill\\\\|is_offered()\\\\|offered(\\\" crates/server/src/api/dev*.rs crates/server/src/economy/dev*.rs 2>/dev/null | head; grep -rln \\\"dev/fill\\\" crates/server/src | head -3\"\u2026\n- Bash: {\"command\": \"sed -n 190,215p crates/server/src/api/dev.rs\", \"description\": \"Read dev fill grant loop\"}\n- said: The fill is generic, so the claim holds. Reviewing the `CardFace.tsx` diff while the suites run:\n- Bash: {\"command\": \"git diff apps/web/src/cards/CardFace.tsx apps/web/src/cards/art/CardArt.tsx | grep \\\"^[-+]\\\" | grep -v \\\"^+++\\\\|^---\\\"\", \"description\": \"Review CardFace and CardArt diffs\"}\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/probe/server-full.log | head -20; tail -2 /tmp/probe/server-full.log | cut -c1-200; grep -E \\\"Test Files|Tests |exit|FAIL\\\" /tmp/probe\u2026\n- said: Both suites are still running. Drafting the PR description in the meantime; I'll finalize it once they report.\n- Bash: {\"command\": \"sleep 240; grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/probe/server-full.log | tail -5; grep -E \\\"Test Files|Tests |^exit|FAIL\\\" /tmp/probe/vitest-changed2.log | head\", \"descript\u2026\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: grep -E \"^test result|FAILED|panicked|^exit\" /tmp/probe/server-full.log tail -5 grep -E \"Test Files|Tests |^exit|FAIL\" /tmp/probe/vitest-changed2.log h\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/probe/server-full.log && grep -q \\\"^exit\\\" /tmp/probe/vitest-changed2.log; do sleep 5; done; echo done\", \"description\": \"Wait for both test runs to finish\", \u2026\n- said: I'll be notified when both the full server suite and the changed-files web suite finish.\n- Bash: {\"command\": \"echo \\\"- waiting on cargo test -p jackioh-server and vitest changed (2nd); everything else green\\\" >> .bot-notes.md; git diff --stat | tail -1\", \"description\": \"Log wait in notes; show d\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/probe/server-full.log && grep -q \\\"^exit\\\" /tmp/probe/vitest-changed2.log; do sleep 5; done; grep -E \\\"^test result|FAILED|panicked|^exit\\\" /tmp/probe/server\u2026\n- said: Both suites are green: the server's 1703 + 670 tests (the one ignored test was already there), and the web changed-files run of 323 files and 6076 tests. Final tidy-up and notes:\n- Bash: {\"command\": \"rm -f /tmp/probe/classify-index; cargo fmt --check && echo fmt-ok; git status --porcelain -- apps/web/src/wire; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"Next\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Extended art, Pixel and Comic card versions\"} --> This adds the three Epic versions from part 3 of #2725: **Extended art**, **Pixel** and **Comic**. Each is offered on its own seeded share of cards, and every check I ran passed; a component screenshot s\u2026"
       },
       "issue": 2942,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T01:46:46Z",
         "from_run": "41747054930",
         "gates": [
           {
@@ -16717,8 +16722,15 @@
         "source": "build",
         "until": "2026-11-04T02:15:40Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-04T01:45:40Z",
+      "run_id": "pending:cae147ac-1793756779",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-04T01:46:46Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16732,9 +16744,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T01:32:27Z",
+    "at": "2026-11-04T01:46:46Z",
     "url": "",
-    "what": "review #2955 on claude-7"
+    "what": "review #2970 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-04T01:30:10Z",
