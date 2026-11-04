@@ -29753,7 +29753,8 @@
       "2026-11-04T11:19:12Z,41814578944,claude-7,sonnet+opus,build,2882,medium,built,,11.6,38,9889,1229850,0.4442,0,1,,,4.8,muse,fresh,cap,1",
       "2026-11-04T11:20:11Z,41809514384,muse,muse-spark-1.3-contributor,build,3011,medium,built,,95.3,0,0,0,,15,32,92,98,50.6,muse,none,,1",
       "2026-11-04T11:19:10Z,41807894103,claude-3,opus,build,2943,hard,built,,59.2,340,151191,44788425,18.2921,31,69,,,1049.4,claude-3,fresh,,1",
-      "2026-11-04T11:44:48Z,41822903791,claude-4,opus+sonnet,review,2992,medium,reviewed,,1.3,21,9528,1115036,0.6165,0,2,,,8.1,muse,none,,1"
+      "2026-11-04T11:44:48Z,41822903791,claude-4,opus+sonnet,review,2992,medium,reviewed,,1.3,21,9528,1115036,0.6165,0,2,,,8.1,muse,none,,1",
+      "2026-11-04T11:40:39Z,41805174249,muse,muse-spark-1.3-contributor,build,3014,medium,stopped,stop,150,0,0,0,,10,0,91,98,17.7,muse,none,,1"
     ]
   },
   "version": 1
