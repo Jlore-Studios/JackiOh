@@ -1,5 +1,6 @@
-// The fake against fakes.py: TestScenario builds the world testdata/scenario.py builds on the
-// Python fake and must dump the same JSON, byte for byte (testdata/scenario.json).
+// The fake against the Python fake it replaced (#2473): TestScenario builds the world the Python
+// harness's tests/fakes.py built and must dump the same JSON, byte for byte (testdata/scenario.json,
+// recorded from the Python before #2473 removed it; a change to the fake's behaviour edits it by hand).
 package fakes_test
 
 import (
