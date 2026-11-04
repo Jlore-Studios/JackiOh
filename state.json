@@ -16843,7 +16843,9 @@
     },
     "2979": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6620505359"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16889,9 +16891,7 @@
       "started_at": "2026-11-04T02:11:17Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6620505359"
-      ]
+      "taken_asks": []
     },
     "2982": {
       "failures": 0,
