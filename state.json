@@ -32229,12 +32229,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:1dc2afb0-1793775408",
+        "run_id": "",
         "sha": "e485107852599734d92622e1291c13742a3313a2",
         "started_at": "2026-11-04T06:57:26Z",
         "status": "queued",
         "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 41
