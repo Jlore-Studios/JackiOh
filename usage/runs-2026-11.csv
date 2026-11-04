@@ -540,3 +540,9 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-04T06:42:13Z,41775377570,claude-8,opus,build,2975,hard,built,,97.4,280,77610,22538062,7.8224,31,55,,,169.5,claude-8,fresh,,1
 2026-11-04T06:51:05Z,41788034647,claude-3,opus,review,2998,hard,stopped,stop,0,0,0,0,,,,,,,,none,,0
 2026-11-04T06:49:57Z,41787872492,claude-8,sonnet,review,3004,medium,approved,,0.6,21,4016,566341,0.3204,55,56,,,2.4,,none,,1
+2026-11-04T07:00:28Z,41788948361,claude-3,opus,review,2998,hard,stopped,stop,0,0,0,0,,,,,,,,none,,0
+2026-11-04T06:57:27Z,41780035603,muse,muse-spark-1.3-contributor,review,2999,medium,approved,,82,0,0,0,,20,0,87,87,2.4,,none,,1
+2026-11-04T07:12:21Z,41790335966,claude-3,opus,review,2998,hard,stopped,stop,0,0,0,0,,,,,,,,none,,0
+2026-11-04T07:14:53Z,41790249223,claude-7,opus,build,3000,hard,interrupted,5-hour cap,4,0,0,0,,50,70,,,88.2,claude-7,none,,1
+2026-11-04T07:18:55Z,41773707535,muse,muse-spark-1.3-contributor,review,2992,medium,blocked,,166.6,0,0,0,,16,0,85,88,3.5,,none,,2
+2026-11-04T07:32:28Z,41773616578,muse,muse-spark-1.3-contributor,review,2991,medium,approved,,140.2,0,0,0,,16,0,85,88,3.9,,none,,3
