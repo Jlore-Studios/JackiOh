@@ -13976,6 +13976,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 50,
       "started_at": "2026-11-04T11:40:55Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -29202,9 +29203,33 @@
         "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-4",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "a6c69931321abfecdfaef3a986cfdfe77d296666",
+        "issue": 2803,
+        "merged_at": "2026-11-04T11:55:32Z",
+        "n": 50,
+        "pr": 2992,
+        "queued_at": "2026-11-04T11:55:32Z",
+        "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
+        "status": "queued",
+        "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
+        "tries": 0
       }
     ],
-    "count": 49
+    "count": 50
   },
   "statistics": {
     "at": "2026-11-04T11:26:03Z"
