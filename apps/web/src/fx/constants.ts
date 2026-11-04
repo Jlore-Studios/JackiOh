@@ -39,8 +39,8 @@ export const FX_SLAM_MAX_TRAUMA = 0.5;
 export const FX_LEGENDARY_TRAUMA = 0.7;
 /** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
 export const FX_TAKEOVER_TAIL_MS = 700;
-/** R2722001: the takeover's shake as its card lands, the hardest the board takes. */
-export const FX_TAKEOVER_TRAUMA = 1;
+/** R2722001: the takeover's shake as its card lands (R2803000: eased for the phone frame budget; the result still thumps hardest). */
+export const FX_TAKEOVER_TRAUMA = 0.6;
 export const FX_TRAP_TRAUMA = 0.4;
 export const FX_RESULT_TRAUMA = 0.9;
 export const FX_LETHAL_LEAD_MAX_MS = 600;     // the killing blow replayed before the result plays in at most this (R200)

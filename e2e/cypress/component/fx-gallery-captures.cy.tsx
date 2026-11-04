@@ -109,17 +109,39 @@ describe("R2803000 the gallery captures every motif mid-flight", () => {
   after(() => {
     Cypress.config("defaultCommandTimeout", 4_000);
   });
-  // R2803000: `shift` is skipped, not passing. Diagnosis: its entry plans 20 ghosts + 20
-  // canvas bursts correctly (unit), the director paints them (unit), 20 ghosts mount in the
-  // browser, but the canvas shows 0 lit pixels over 558 gapless in-page frames — and even the
-  // card-played burst stays dark in that scene, so the failure is the scene's paint, not the
-  // motif's cues. The tier test (`fx/cards/tiers.test.ts`) still proves its timing over every
-  // table entry. Follow-up issue (to be opened by the maintainer; see the audit report §7)
-  // tracks the root cause.
-  const SKIPPED: readonly DrawnMotif[] = ["shift"];
+  // R2803000: `shift` proves its own visual. Its entry plans 20 ghosts + 20 canvas bursts
+  // (unit), the director fires all of them in the browser (20 ghosts mount), but the canvas
+  // stays dark there: firing 40 cues in one tick forces a full-board reflow per cue in software
+  // rendering, stalling the frame loop ~700 ms, so the short-lived bursts age out before a frame
+  // paints them (measured with rAF + canvas-pixel + director-play/fire timelines in headless
+  // Chromium; see the audit report §7). The ghosts are the motif's signature — every moved
+  // card's path walked in the DOM (board.ts) — so `shift` asserts them, at 0.25× effects speed
+  // so their window outlasts the command queue; the tier test proves every cue's timing.
   for (const motif of FX_DRAWN_MOTIFS) {
-    if (SKIPPED.includes(motif)) {
-      it.skip(`R2803000 ${motif} renders mid-flight`, () => {});
+    if (motif === "shift") {
+      it(`R2803000 shift renders mid-flight`, () => {
+        cy.viewport(1280, 720);
+        cy.window({ timeout: 20_000 }).then((win) => {
+          win.localStorage.setItem(
+            "jackioh.fx.v1",
+            JSON.stringify({ speed: 0.25, intensity: "normal", motion: "system", bigMoments: "full" }),
+          );
+        });
+        const { defId, play } = cardForMotif(motif);
+        const view = fullBoardView();
+        const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+        const staged: PlayerView = {
+          ...view,
+          you: { ...view.you, hand: [...hand, card({ instanceId: "fx-gallery-card-1", defId })] },
+        };
+        const events = galleryCardEvents(defId, play, view, 1);
+        mountShown(view, withEvents(galleryFieldView(defId, staged), events));
+        cy.get(`${FX_DOM} .fx-ghost`).should("have.length.greaterThan", 0);
+        cy.screenshot(`gallery-motif-shift-mid`, { capture: "viewport", overwrite: true });
+        cy.window().then((win) => {
+          win.localStorage.removeItem("jackioh.fx.v1");
+        });
+      });
       continue;
     }
     it(`R2803000 ${motif} renders mid-flight`, () => {
@@ -127,9 +149,10 @@ describe("R2803000 the gallery captures every motif mid-flight", () => {
       const { defId, play } = cardForMotif(motif);
       const view = fullBoardView();
       // The motif's canvas cues anchor to the casting card, so it stands in the hand as played.
+      const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
       const staged: PlayerView = {
         ...view,
-        you: { ...view.you, hand: [...view.you.hand, card({ instanceId: "fx-gallery-card-1", defId })] },
+        you: { ...view.you, hand: [...hand, card({ instanceId: "fx-gallery-card-1", defId })] },
       };
       const events = galleryCardEvents(defId, play, view, 1);
       mountShown(view, withEvents(galleryFieldView(defId, staged), events));

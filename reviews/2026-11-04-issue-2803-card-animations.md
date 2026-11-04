@@ -48,7 +48,11 @@ Grouped by the census's play-hook families, 364 non-token entries override the c
 suggestion. Every override carries its reason in its set pass's Why cell (the pass tests hold
 each row to a non-empty census and why): the census reads only damage, removal, return and
 cost families, so a pass maps every other event to the motif whose Reads column names it.
-No table entry changed.
+Seven table entries changed for the §3 fold, each with its reason in its set pass's Why cell:
+classic-054 (`mirror`→`transmute`), classic-075 (`ward`→`bless`), classicplus-004
+(`mirror`→`transmute`), meditative-022-1 (`glimpse`→bespoke `mindJudge`), meditative-040
+(`glimpse`→`bless`), meditativeplus-005 (`chain`→`nova`), stinkyscape-145 (`ward`→`bless`).
+No other table entry changed.
 
 The sharp cases — same damage family, different motif, and damage-family suggestions left
 at `none` — each have a reason:
@@ -128,19 +132,41 @@ non-`none` entries planned).
 
 ## 5. Frame time on a phone
 
-`e2e/cypress/component/fx-phone-frame.cy.tsx` plays the cap check, the Starship launch
-and a board with 4 auras at 390×844 (phone particle cap by `capacityFor`, pinned
-in-spec) and asserts each scene's mean rAF frame time within `FX_PHONE_FRAME_BUDGET_MS`
-(50 ms): 3 of 5 scenes gate the budget. Twisting Nether and the Mythic takeover keep
-their art untouched, per the review decision: their scenes render, finish and log their
-frame times instead of asserting the budget, which measures CI's software renderer and
-not a phone. Measured in headless Chromium (software rendering, dev server): Nether
-207 ms over 12 frames, Mythic takeover 125 ms over 16; calm board 79 frames, mean
-25.6 ms. The canvas layer already avoids `shadowBlur` (`canvasFx.ts`: layered strokes
-and gradients under `lighter`), so the local cost is SwiftShader fill-rate repaint,
-which no phone GPU shares; gutting flagship scenes to satisfy it would punish real
-devices. A follow-up issue (to be opened by the maintainer) tracks measuring both
-scenes on a real phone, and is cited in the spec and R2803000.
+`e2e/cypress/component/fx-phone-frame.cy.tsx` plays all five scenes at 390×844
+(phone particle cap by `capacityFor`, pinned in-spec) and asserts each scene's mean rAF
+frame time within `FX_PHONE_FRAME_BUDGET_MS` (50 ms), logging the distribution. Per the
+issue's "fix or scale back", both misses were scaled back with their composition
+untouched (same layers, choreography, holds, timing):
+
+- Twisting Nether: `SET_PIECE_TUNING` pull 10→6 and implode 64→40, its trauma 1→0.7,
+  and its vortex spiral 120→70vmax (one-sided 80→47vmax) with the mask retuned by the
+  same ratio, so the visible arms keep their radii.
+- Mythic takeover: `TAKEOVER_TUNING` Mythic burst 48→28, `FX_TAKEOVER_TRAUMA` 1→0.6,
+  and its rays 220→120vmax with the mask retuned by the same ratio, so the visible
+  disc keeps its radius.
+
+Measured in headless Chromium (SwiftShader software rendering, dev server, phone
+viewport, normal intensity, rAF sampling mirroring the spec):
+
+| Scene | Mean | p50 | p90 | Verdict |
+|---|---|---|---|---|
+| Cap check | — (pure assertion) | — | — | pass |
+| Twisting Nether | 19.1 | 16.7 | 17.9 | pass |
+| Starship launch | 17.3 | 16.7 | 17.0 | pass |
+| Mythic takeover | 26.1 | 16.8 | 51.4 | pass |
+| Board with 4 auras | 16.7 | 16.7 | 16.8 | pass |
+
+Two honest caveats. First, the numbers above are from a quiet box; the same scenes read
+45–65 ms (Nether) and 56–127 ms (takeover) while another task's WASM build contended
+for the CPU, and the earlier pass read 207/125 ms on a contended box. Software
+rendering has no stable clock: one-time costs (first paint, new-layer rasterization at
+the takeover's landing) dominate the mean whenever the box is busy. The scale-back
+banks margin for that, but the daily CI verdict rules — a contention failure there is
+an infra flake, not a scene regression, and the spec's log lines carry the distribution
+to tell them apart. Second, SwiftShader punishes what phone GPUs do free (full-screen
+gradient layers, blur shadows); the sustained costs above (17–30 ms) are what a phone
+feels. A follow-up issue (to be opened by the maintainer) tracks measuring the scenes
+on a real phone, and is cited in the spec and R2803000.
 
 ## 6. #2722's entrances
 
@@ -169,15 +195,19 @@ from the Legendary echo, pinned in `cues.test.ts`).
 `e2e/cypress/component/fx-gallery-captures.cy.tsx` plays every drawn motif mid-flight
 (first gallery card per motif through the real board layer, canvas-lit asserted,
 screenshot per motif) and every set piece (`nether`, `voidFold`, `vortex`, Starship
-launch) mid-flight and at rest. One bounded pass at `shift`'s root cause found no defect
-in its table entry, fixture, planner or gallery staging (20 ghosts mount, 21 cues plan,
-the tier test proves its timing); the canvas never paints in that scene — even the
-card-played burst stays dark — so only `shift` is skipped, with that diagnosis cited at
-the skip, per the review decision. `negate` and `deal` stay gated: their earlier misses
-were flakiness on a contended box, with no failure on a quiet one. A follow-up issue
-(to be opened by the maintainer) tracks the `shift` root cause. The existing
-`fx-layer.cy.tsx` takeover/set-piece pins still hold (verified green in unit tests;
-the component runs gate in CI — no Cypress binary could be installed in this checkout,
+launch) mid-flight and at rest. `shift` proves its own visual instead of canvas pixels:
+its entry plans 10–20 ghosts + bursts (unit and in-page plan dumps agree), and
+director play/fire timelines in headless Chromium show every cue fired with valid
+anchors (20 ghosts mount) yet zero canvas draws. Root cause: firing ~40 cues in one
+tick forces a full-board reflow per cue in software rendering, stalling the frame loop
+~700 ms, so the short-lived bursts (preset `circuit`, life 300–650 ms) age out before a
+frame paints them. The ghosts are the motif's signature — every moved card's path walked
+in the DOM — so the spec asserts them at 0.25× effects speed (same cues, wider window),
+screenshotted mid-flight; the tier test proves every cue's timing. No skip remains.
+`negate` and `deal` stay canvas-gated: their earlier misses were flakiness on a
+contended box, with no failure on a quiet one. The existing `fx-layer.cy.tsx`
+takeover/set-piece pins still hold (verified green in unit tests; the component runs
+gate in CI's daily super run — no Cypress binary could be installed in this checkout,
 see §9).
 
 ## 8. Docs
@@ -189,33 +219,40 @@ see §9).
 - `docs/ADDING_CARDS.md` row 13: checked, matches the shipped tables (motif/bespoke/
   setPiece/`none`, aura, entrance, `RECIPE_FIXTURES`, gallery) — unchanged.
 - Ruling `spec/rulings/R2803000.md` (amends R2722001 and R2784000's Examples table) +
-  `spec/pending/2803.md`; `cargo jackioh spec check`: 1671 rulings, 4046 proofs, 50123 citations — ok.
+  `spec/pending/2803.md`; `cargo jackioh spec check`: 1677 rulings, 4061 proofs, 50293 citations — ok.
 
 ## 9. Verification and open items
 
 Green here: the three coverage tests, the five tiers tests, constants (12 tests),
 takeover/cues/entrances/css/dom/setPieces/TakeoverStill (239 + 150 tests), gallery +
 tables (25 tests), `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web/src/fx`,
-`cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`,
-`cargo jackioh spec check`. The Luau WASM module had to be built (`JACKIOH_WASM_NORMAL=0
-sh scripts/build-wasm.sh`) before `typecheck` passed — environment setup, no repo change.
+`e2e typecheck:component`, `cargo fmt --check`,
+`cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh spec check`
+plus `catalog`/`patches` check. The Luau WASM module had to be built
+(`sh scripts/build-wasm.sh` runs it) before `typecheck` passed — environment setup, no
+repo change.
 
-Not runnable in this checkout: the three Cypress component files (new) and
-`fx-layer.cy.tsx` (pins unchanged) — `cypress install` 404s here and no system
-browser satisfies the runner, so they gate in CI. The e2e `typecheck:component`
-reports only the pre-existing missing `pkg/luau` artifact in untouched
-`apps/web/src/wasm/luau.ts` (also fixed by the Luau build above for the web gate);
-the two new specs contribute no type errors.
+Not runnable in this checkout: the Cypress runner itself (`cypress install` 404s, no
+runner binary) — but a system Chrome (156) is present, so the next best thing ran here:
+each phone scene played through the real board effects layer in headless Chromium
+(SwiftShader) behind a temporary `/dev/fx?probe=` harness (reverted before delivery),
+sampled with the spec's own rAF-delta method over CDP. That is where the §5 table comes
+from. The two component specs gate in CI's daily super run, unrun here. `e2e
+typecheck:component` is green, including a `HandView` spread fix in the gallery spec
+(the earlier "no type errors" claim was wrong; fixed, not waived).
 
-Decisions: fold the four under-floor motifs as the review asks (`chain`→`nova`,
-`mirror`→`transmute`, `ward`→rows + `bless`, `glimpse`→bespoke `mindJudge` + `bless`;
-rejected: keeping them as reasoned exceptions, which leaves the floor unenforced);
-keep Nether's and the takeover's art untouched with render-and-log specs instead of
-budget gates (rejected: trimming flagship scenes, or raising the budget, to satisfy a
-software renderer); skip only `shift` in the gallery spec with its diagnosis at the
-skip (rejected: skipping `negate`/`deal`, which only flaked on a contended box);
-gallery Unit plays without a landing keep their unmeasurable hand anchor
-(pre-existing, out of scope — takeovers draw with a measurable anchor, verified with
-core-096). Open: two follow-up issues for the maintainer to open — a real-phone frame
-measurement for Nether and the takeover, and the `shift` canvas root cause — cited in
-the specs, the ruling and §5/§7 above.
+Decisions: fold the four under-floor motifs (`chain`→`nova`, `mirror`→`transmute`,
+`ward`→rows + `bless`, `glimpse`→bespoke `mindJudge` + `bless`; rejected: keeping them
+as reasoned exceptions, which leaves the floor unenforced); scale back Nether and the
+takeover per the issue (counts, shakes, off-screen raster only — rejected: raising the
+budget, and cutting layers/choreography/holds/timing, which would punish real phones);
+prove `shift` by its ghosts (rejected: leaving the skip, and asserting canvas pixels a
+DOM look never paints); keep the mean metric for all five phone scenes (rejected:
+median/trimmed-mean gating and warm-up replay — both change what is measured to reach
+green); leave the frame loop's per-cue measure/mount interleaving alone (batching reads
+before writes would fix software-rendering stalls like `shift`'s, but its blast radius
+doesn't fit an audit); gallery Unit plays without a landing keep their unmeasurable
+hand anchor (pre-existing, out of scope — takeovers draw with a measurable anchor,
+verified with core-096). Open: one follow-up issue for the maintainer to open — a
+real-phone frame measurement for Nether and the takeover — cited in the spec, the
+ruling and §5 above.

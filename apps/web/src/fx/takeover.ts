@@ -36,10 +36,10 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   ai: { rim: "#22c55e", core: "#dcfce7", glow: "#4ade80" },
 };
 
-/** Every burst an entrance throws, at intensity "normal" (rule 9). */
+/** Every burst an entrance throws, at intensity "normal" (rule 9). R2803000: the Mythic's eased for the phone frame budget. */
 const TAKEOVER_TUNING = {
   legendaryBurst: { count: 34, power: 1.2 },
-  mythicBurst: { count: 48, power: 1.4 },
+  mythicBurst: { count: 28, power: 1.4 },
 } as const;
 
 /** Where the takeover's two shockwaves cross the board from: the middle of the screen. */

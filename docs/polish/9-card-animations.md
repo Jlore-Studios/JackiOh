@@ -540,20 +540,23 @@ Issue #2803's audit (R2803000) closes the work above and holds it:
   and Fortify Flesh name `bless`), `glimpse` into bespoke `mindJudge` (Fortify Mind keeps its
   judgment's sheen and flare on the hero's badge, shaking `FX_MIND_JUDGE_TRAUMA`) and `bless`
   (Feng Shui).
-- **Frame rate:** at the phone particle cap with a phone viewport, the Starship launch and a
-  board with 4 auras hold their mean frame time within `FX_PHONE_FRAME_BUDGET_MS`
-  (`e2e/cypress/component/fx-phone-frame.cy.tsx`). Twisting Nether and the Mythic takeover keep
-  their art untouched: the spec renders and finishes them and logs their frame times instead of
-  gating them (headless software rendering measures its own fill rate, not a phone's); a
-  follow-up issue tracks measuring them on a real phone.
+- **Frame rate:** at the phone particle cap with a phone viewport, all five scenes hold
+  their mean frame time within `FX_PHONE_FRAME_BUDGET_MS`
+  (`e2e/cypress/component/fx-phone-frame.cy.tsx`): the cap check, Twisting Nether, the
+  Starship launch, a Mythic takeover and a board with 4 auras. The two misses were scaled
+  back with their composition untouched: Nether throws fewer pull/implode particles and
+  shakes softer with a smaller-same-arms vortex spiral, the takeover fewer Mythic-burst
+  particles and a softer shake with same-disc takeover rays; a follow-up issue tracks
+  measuring them on a real phone.
 - **Entrances:** the shared Mythic takeover, the Legendary entrance and the reduced-motion still
   land in the motif language's two-wave landing: a summoned or cast Legendary's ring carries its
   echo, the shared prismatic sweep has its own keyframes, the board recoils in two steps, and the
   still echoes the takeover at rest. The music, the entrances' timing and the one capped hold are
   unchanged (R2722000, R2722001, R2722002).
-- **Captures:** the gallery spec plays every drawn motif mid-flight but `shift` (skipped with
-  its diagnosis at the skip; the tier test proves its timing) and every set piece mid-flight
-  and at rest (`e2e/cypress/component/fx-gallery-captures.cy.tsx`).
+- **Captures:** the gallery spec plays every drawn motif mid-flight — `shift` proving its
+  DOM ghosts at 0.25× speed (its canvas bursts age out in software rendering; the tier
+  test proves their timing) — and every set piece mid-flight and at rest
+  (`e2e/cypress/component/fx-gallery-captures.cy.tsx`).
 
 ## Open
 

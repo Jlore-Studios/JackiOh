@@ -1,9 +1,9 @@
 // R2803000: the audit's phone frame-time spec. At the phone particle cap with a phone viewport,
-// the cap check, the Starship launch and a board with 4 auras hold their mean frame time within
-// FX_PHONE_FRAME_BUDGET_MS. Twisting Nether and the Mythic takeover keep their scenes but assert
-// no absolute budget: CI's software renderer measures its own fill rate, not a phone's, so those
-// two render, finish and log their frame times instead (R2803000; follow-up: measure them on a
-// real phone).
+// every scene holds its mean frame time within FX_PHONE_FRAME_BUDGET_MS: the cap check, Twisting
+// Nether (scaled back for the budget: fewer pull/implode particles, a softer shake, and a smaller
+// vortex spiral with its mask retuned to the same visible arms), the Starship launch, a Mythic
+// takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
+// visible disc), and a board with 4 auras.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -68,7 +68,7 @@ function expectBudget(deltas: readonly number[]): void {
 
 /**
  * R2803000: Nether and the Mythic takeover render and finish, and their frame times are logged
- * for the report instead of gated: headless software rendering cannot verdict a phone.
+ * for the report as well as gated: the log line carries the distribution the report cites.
  */
 function logFrames(label: string): (deltas: readonly number[]) => void {
   return (deltas: readonly number[]): void => {
@@ -81,6 +81,7 @@ function logFrames(label: string): (deltas: readonly number[]) => void {
     cy.then(() => {
       Cypress.log({ name: "frame times", message: line });
     });
+    expectBudget(deltas);
   };
 }
 
@@ -111,7 +112,7 @@ function removals(view: PlayerView, type: "destroyed" | "exiled"): GameEvent[] {
   });
 }
 
-describe("R2803000 the phone scenes render, and the light ones hold the frame budget", () => {
+describe("R2803000 the phone scenes hold the frame budget", () => {
   it("R2803000 the phone viewport draws at the phone particle cap", () => {
     expect(capacityFor(PHONE.width)).to.eq(FX_PARTICLE_CAP_MOBILE);
     cy.viewport(PHONE.width, PHONE.height);
@@ -120,7 +121,7 @@ describe("R2803000 the phone scenes render, and the light ones hold the frame bu
     });
   });
 
-  it("R2803000 Twisting Nether renders and finishes (frame times logged, no budget gate)", () => {
+  it("R2803000 Twisting Nether holds the phone frame budget mid-flight", () => {
     cy.viewport(PHONE.width, PHONE.height);
     const view = fullBoardView();
     const me = view.viewer;
@@ -165,7 +166,7 @@ describe("R2803000 the phone scenes render, and the light ones hold the frame bu
     sampleFrames().then(expectBudget);
   });
 
-  it("R2803000 a Mythic takeover renders and finishes (frame times logged, no budget gate)", () => {
+  it("R2803000 a Mythic takeover holds the phone frame budget mid-flight", () => {
     cy.viewport(PHONE.width, PHONE.height);
     const view = fullBoardView();
     mountScene(view, view, [
