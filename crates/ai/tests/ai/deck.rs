@@ -1388,7 +1388,7 @@ mod r1390_the_ai_decks_soft_gate {
     }
 }
 
-// R750000: a ladder bot's deal leans on the cards that win
+// R750000: a ladder bot's deal leans on the cards that win; R3049002: the table it is handed
 
 mod win_rate_strength {
     use super::*;
@@ -1437,7 +1437,7 @@ mod win_rate_strength {
         sum / deck.len() as f64
     }
 
-    fn deal(seed: &str, strength: Option<f64>) -> Vec<String> {
+    fn deal(seed: &str, strength: Option<f64>, win_rates: Option<&WinRateTable>) -> Vec<String> {
         build_ai_deck(
             &mut create_rng(seed, 0),
             DECK_SIZE,
@@ -1445,6 +1445,7 @@ mod win_rate_strength {
                 banned: Some(vec![]),
                 gated_sets: Some(vec![]),
                 strength,
+                win_rates: win_rates.cloned(),
                 ..AiDeckOptions::default()
             },
         )
@@ -1454,14 +1455,12 @@ mod win_rate_strength {
     fn r750000_strength_deals_a_higher_mean_win_rate() {
         register_cards();
         let rates = table(GAMES);
-        register_win_rates(rates.clone());
         let (mut plain, mut strong) = (0.0, 0.0);
         for n in 1..=SEEDS {
             let seed = format!("r750000:strength:{n}");
-            plain += mean_rate(&deal(&seed, None), &rates);
-            strong += mean_rate(&deal(&seed, Some(1.0)), &rates);
+            plain += mean_rate(&deal(&seed, None, Some(&rates)), &rates);
+            strong += mean_rate(&deal(&seed, Some(1.0), Some(&rates)), &rates);
         }
-        clear_overrides();
         let (plain, strong) = (plain / SEEDS as f64, strong / SEEDS as f64);
         assert!(
             strong - plain >= 0.05,
@@ -1473,28 +1472,58 @@ mod win_rate_strength {
     fn r750000_no_strength_deals_the_deck_the_seed_always_dealt() {
         register_cards();
         let before: Vec<Vec<String>> = (1..=50)
-            .map(|n| deal(&format!("r750000:identity:{n}"), None))
+            .map(|n| deal(&format!("r750000:identity:{n}"), None, None))
             .collect();
-        register_win_rates(table(GAMES));
+        let rates = table(GAMES);
         for (n, deck) in (1..=50).zip(&before) {
             let seed = format!("r750000:identity:{n}");
-            assert_eq!(&deal(&seed, None), deck, "{seed}: none");
-            assert_eq!(&deal(&seed, Some(0.0)), deck, "{seed}: 0.0");
-            assert_eq!(&deal(&seed, Some(-1.0)), deck, "{seed}: below 0 clamps to 0");
-            assert_eq!(&deal(&seed, Some(f64::NAN)), deck, "{seed}: NaN is none");
+            let dealt = |strength: Option<f64>| deal(&seed, strength, Some(&rates));
+            assert_eq!(&dealt(None), deck, "{seed}: none");
+            assert_eq!(&dealt(Some(0.0)), deck, "{seed}: 0.0");
+            assert_eq!(&dealt(Some(-1.0)), deck, "{seed}: below 0 clamps to 0");
+            assert_eq!(&dealt(Some(f64::NAN)), deck, "{seed}: NaN is none");
         }
         // A row under `min_games` games moves nothing, whatever the strength.
-        register_win_rates(table(AI_WIN_RATE.min_games - 1));
+        let thin = table(AI_WIN_RATE.min_games - 1);
         for (n, deck) in (1..=50).zip(&before) {
             let seed = format!("r750000:identity:{n}");
-            assert_eq!(&deal(&seed, Some(1.0)), deck, "{seed}: thin rows");
+            assert_eq!(&deal(&seed, Some(1.0), Some(&thin)), deck, "{seed}: thin rows");
         }
-        clear_overrides();
         assert_eq!(AiDeckOptions::default().strength, None);
         assert_eq!(
             serde_json::to_value(options(json!({ "strength": 0.5 }))).ok(),
             Some(json!({ "strength": 0.5 }))
         );
+    }
+
+    #[test]
+    fn r3049002_a_strong_deal_with_no_table_deals_the_seeds_deck() {
+        register_cards();
+        // The table a state with no snapshot reads is never the deal's: only the one it is handed.
+        register_win_rates(table(GAMES));
+        for n in 1..=50 {
+            let seed = format!("r3049002:none:{n}");
+            assert_eq!(deal(&seed, Some(1.0), None), deal(&seed, Some(0.0), None), "{seed}");
+        }
+        clear_overrides();
+        let rates = table(GAMES);
+        assert!(
+            (1..=50).any(|n| {
+                let seed = format!("r3049002:none:{n}");
+                deal(&seed, Some(1.0), Some(&rates)) != deal(&seed, Some(0.0), Some(&rates))
+            }),
+            "a table handed in moves a strong deal"
+        );
+        // The table crosses as `winRates`, and only when given.
+        let handed = AiDeckOptions {
+            win_rates: Some(WinRateTable::default()),
+            ..AiDeckOptions::default()
+        };
+        assert_eq!(
+            serde_json::to_value(&handed).ok(),
+            Some(json!({ "winRates": { "patch": "", "source": "provisional", "cards": [] } }))
+        );
+        assert_eq!(AiDeckOptions::default().win_rates, None);
     }
 }
 

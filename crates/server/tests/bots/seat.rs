@@ -158,7 +158,7 @@ fn r1452_the_fallback_move_answers_the_mulligan_ends_the_turn_and_never_concedes
         Pinned::default(),
         &create_game(
             Pinned::default(),
-            &create_game_args("seed-fallback", &decks, None, None, None),
+            &create_game_args("seed-fallback", &decks, None, None, None, None),
         ),
     )
     .state;
@@ -333,7 +333,7 @@ fn opened_at(seed: &str, turn: i32) -> GameState {
         Pinned::default(),
         &create_game(
             Pinned::default(),
-            &create_game_args(seed, &decks, None, None, None),
+            &create_game_args(seed, &decks, None, None, None, None),
         ),
     )
     .state;
@@ -577,7 +577,7 @@ fn random_turn_starts(seed: &str) -> Vec<GameState> {
         Pinned::default(),
         &create_game(
             Pinned::default(),
-            &create_game_args(seed, &decks, None, None, None),
+            &create_game_args(seed, &decks, None, None, None, None),
         ),
     )
     .state;

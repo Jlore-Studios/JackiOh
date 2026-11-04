@@ -6,6 +6,8 @@
 //! New bots draw strength (R610), persona (R645), schedule, and username (`bots::names`).
 //! Bo1 decks draw from human decklists and random decks (R750000, R1453), each kept only when legal
 //! and dealt again on a new catalog or deck size (R1705001), then the Conquest trio (R641000, R253).
+//! The random decks lean on the win-rate snapshot the refresh takes of the cached card stats
+//! (R3049002).
 //! Refreshes draw cosmetics (R1834005), kept on the `bots` row and never in the ledger, and manage
 //! top-bot grinding (R1555000). The queue's sweeper runs `release_stale_starts` whatever
 //! `LADDER_BOTS` says, as R1450's open-row sweep would hold a bot too long.
@@ -16,7 +18,7 @@ use std::time::Duration;
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput};
 use jackioh_engine::wire::ListTotal;
-use jackioh_engine::{Rng, pick_portrait_from_seed};
+use jackioh_engine::{Rng, WinRateTable, pick_portrait_from_seed};
 
 use crate::actor::engine::{deal_random_deck_excluding_with_strength, deal_random_deck_with_strength};
 use crate::api::catalog::Catalog;
@@ -271,9 +273,15 @@ fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
 }
 
 /// R1454: draws legal Best-of-1 decks for a bot: human lists first, ranked by strength and the rest
-/// shuffled (R750000), then random decks (R1453) leaning on winning cards by strength, up to
-/// `BOT_DECK_DRAW_ATTEMPTS`. `lists` are live Best-of-1 human decklists (R1044000).
-pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: f64) -> Vec<BotDeck> {
+/// shuffled (R750000), then random decks (R1453) leaning on winning cards by strength, by `win_rates`
+/// (R3049002), up to `BOT_DECK_DRAW_ATTEMPTS`. `lists` are live Best-of-1 human decklists (R1044000).
+pub fn draw_decks(
+    seed: &str,
+    lists: &[ListTotal],
+    catalog: &Catalog,
+    strength: f64,
+    win_rates: Option<&WinRateTable>,
+) -> Vec<BotDeck> {
     jackioh_cards::register_all();
     let mut rng = Rng::new(&format!("{seed}:decks"), 0);
     let wanted = usize::try_from(int_in(
@@ -291,6 +299,7 @@ pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: 
             &format!("{seed}:deck:{index}"),
             None,
             strength,
+            win_rates,
         ));
     }
     let mut input = deck_input(catalog);
@@ -313,9 +322,16 @@ pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: 
 }
 
 /// R641000: draws a Conquest trio from disjoint decks in `own`, filling shortfalls with strength-weighted
-/// random decks excluding used cards (R750000), portraits from seed (R642). Returns `None` if fewer than
-/// 3 valid decks are found or if the trio fails rules (§9.4, R253): no Conquest until next refresh.
-pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) -> Option<FrozenTrio> {
+/// random decks excluding used cards (R750000, by `win_rates`, R3049002), portraits from seed (R642).
+/// Returns `None` if fewer than 3 valid decks are found or if the trio fails rules (§9.4, R253): no
+/// Conquest until next refresh.
+pub fn draw_trio(
+    seed: &str,
+    own: &[BotDeck],
+    catalog: &Catalog,
+    strength: f64,
+    win_rates: Option<&WinRateTable>,
+) -> Option<FrozenTrio> {
     jackioh_cards::register_all();
     let mut input = deck_input(catalog);
     let mut kept: Vec<BotDeck> = Vec::new();
@@ -340,6 +356,7 @@ pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) 
             &format!("{seed}:trio-deck:{attempt}"),
             &excluded,
             strength,
+            win_rates,
         );
         if shares_none(&cards, &used) && deck_is_legal(&mut input, &cards) {
             used.extend(cards.iter().cloned());
@@ -490,12 +507,15 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         tx.stats_decklists(&app.catalog.version).await?
     };
     tx.commit().await?;
+    // R3049002: every deal of this refresh leans on one snapshot of the cached card stats.
+    let win_rates = crate::api::stats::win_rate_snapshot(app).await;
     for bot in &stale {
         let decks = draw_decks(
             &format!("{seed}:{}", bot.profile_id),
             &lists,
             &app.catalog,
             bot_target_strength(bot.strength),
+            Some(&win_rates),
         );
         let mut tx = app.db.begin(None).await?;
         tx.bots_set_decks(&bot.profile_id, &decks, &app.catalog.version)
@@ -517,6 +537,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
             &bot.decks,
             &app.catalog,
             bot_target_strength(bot.strength),
+            Some(&win_rates),
         ) else {
             tracing::warn!(event = "bots.pool.trio_short", botId = %bot.profile_id);
             continue;

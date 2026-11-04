@@ -4,9 +4,10 @@
 //!          it to your hand. It costs ({setCost})."
 //! Radiant: "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win
 //!          rate, and add it to your hand. It costs ({setCost})."
-//! Engine: M #50 CN Tech's compiled table read from both ends — the leader (`win_rate_leader`,
-//! R1100) and the trailer (`win_rate_trailer`, R1183000: the same floor and tie-breaks, the lowest
-//! rate, never the leader), neither ever NA Tech itself (R387) — fused trailer first into one
+//! Engine: M #50 CN Tech's table, the game's win-rate snapshot (R3049000), read from both ends — the
+//! leader (`win_rate_leader`, R1100: the highest Wilson lower bound, R3049001) and the trailer
+//! (`win_rate_trailer`, R1183000: the same floor and tie-breaks, the lowest upper bound, never the
+//! leader), neither ever NA Tech itself (R387) — fused trailer first into one
 //! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at a `costOverride` of
 //! setCost (R1183001). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes:
 //! setCost 2 ↓ (Radiant 0).
@@ -37,10 +38,10 @@ fn fallback(card: &str, other_end: Option<&str>) -> Option<String> {
 fn tech(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let named_leader = win_rate_leader(ID);
+            let named_leader = win_rate_leader(&*ctx.state, ID);
             let mut skipped = vec![ID];
             skipped.extend(named_leader.as_deref());
-            let named_trailer = win_rate_trailer(&skipped);
+            let named_trailer = win_rate_trailer(&*ctx.state, &skipped);
             // R2521007: a missing end is its hard-coded card, unless the other end the table names is it.
             let leader = named_leader
                 .clone()
@@ -187,7 +188,8 @@ mod tests {
         }
 
         #[test]
-        fn r1183000_the_lowest_passes_over_thin_rows_and_breaks_ties_as_r1100() {
+        fn r1183000_r3049001_the_lowest_passes_over_thin_rows_and_trails_by_the_surer_bound() {
+            // 5/20 and 10/40 share a rate; 10/40's narrower interval has the lower upper bound.
             register_win_rates(table(vec![
                 (LEADER, 30, 40),
                 ("core-008", 0, 19),
@@ -343,36 +345,46 @@ mod tests {
         }
 
         #[test]
-        fn r1101_the_compiled_table_names_both_ends() {
+        fn r3049000_fuses_the_ends_of_the_snapshot_the_game_was_handed() {
+            crate::register_all();
+            register_win_rates(table(vec![(MIDDLE, 30, 40), (FILLER, 10, 40)]));
+            let mut s = scenario(json!({
+                "seed": "na-tech-snapshot",
+                "p1": { "hand": [{ "def": ID }, FILLER], "library": [FILLER, FILLER, FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+                "winRates": the_table(),
+            }));
+            let card = fused(&mut s);
+            assert_eq!(
+                ingredients(&s, &card),
+                vec![(TRAILER.to_string(), false), (LEADER.to_string(), false)],
+                "the game's own snapshot, never the table a state with none reads"
+            );
+            clear_overrides();
+        }
+
+        #[test]
+        fn r3049001_the_lowest_upper_bound_trails() {
+            // 2 wins in 20 games is the worse rate, 50 in 250 the surer one.
+            register_win_rates(table(vec![(LEADER, 30, 40), (MIDDLE, 2, 20), (TRAILER, 50, 250)]));
+            let mut s = casting("na-tech-bound", false, 1);
+            let card = fused(&mut s);
+            assert_eq!(ingredients(&s, &card)[0].0, TRAILER);
+            assert_eq!(ingredients(&s, &card)[1].0, LEADER);
+        }
+
+        #[test]
+        fn r1101_r3049000_handed_no_snapshot_it_fuses_infinite_reserves_and_lunar_eclipse() {
             crate::register_all();
             clear_overrides();
-            // R1100's and R1183000's comparison written out: the exact rate, toward the highest or
-            // the lowest, then more games, then the smaller id.
-            let ranks_before = |a: &WinRateRow, b: &WinRateRow, lowest: bool| {
-                let left = i64::from(a.wins) * i64::from(b.games);
-                let right = i64::from(b.wins) * i64::from(a.games);
-                let rate = if lowest { left < right } else { left > right };
-                rate || left == right && (a.games > b.games || a.games == b.games && a.id < b.id)
-            };
-            let end = |skipped: &[&str], lowest: bool| -> String {
-                crate::WIN_RATES
-                    .cards
-                    .iter()
-                    .filter(|row| row.games >= CN_TECH_MIN_GAMES && !skipped.contains(&row.id.as_str()))
-                    .filter(|row| crate::CATALOG.get(&row.id).is_some_and(deckable))
-                    .reduce(|best, row| if ranks_before(row, best, lowest) { row } else { best })
-                    .expect("a qualifying row")
-                    .id
-                    .clone()
-            };
-            let leader = end(&[ID], false);
-            let trailer = end(&[ID, leader.as_str()], true);
-            assert_eq!(win_rate_leader(ID), Some(leader.clone()));
-            assert_eq!(win_rate_trailer(&[ID, leader.as_str()]), Some(trailer.clone()));
-            assert_ne!(leader, trailer);
+            assert!(registered_win_rates().cards.is_empty(), "no table ships with the build");
             let mut s = casting("na-tech-compiled", false, 1);
+            assert_eq!(s.state().win_rates, None, "the scenario was handed none");
             let card = fused(&mut s);
-            assert_eq!(ingredients(&s, &card), vec![(trailer, false), (leader, false)]);
+            assert_eq!(
+                ingredients(&s, &card),
+                vec![(FALLBACK_TRAILER.to_string(), false), (FALLBACK_LEADER.to_string(), false)]
+            );
         }
     }
 }

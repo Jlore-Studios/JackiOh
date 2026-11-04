@@ -20,7 +20,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::IndexMap;
-use jackioh_engine::{CardDef, CardDefs, CardScripts, SHIPPED_SETS, SetName, WinRateTable};
+use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName};
 
 include!(concat!(env!("OUT_DIR"), "/registry.rs"));
 
@@ -142,35 +142,6 @@ pub fn scripts_of() -> IndexMap<String, CardScripts> {
         .collect()
 }
 
-/// ME-STATS (Meditative #50 CN Tech): compiled `data/win_rates.json`.
-pub fn win_rates_json() -> &'static str {
-    include_str!("../data/win_rates.json")
-}
-
-/// ME-STATS: the compiled win-rate table, parsed once, on first use.
-pub static WIN_RATES: LazyLock<WinRateTable> = LazyLock::new(|| {
-    serde_json::from_str(win_rates_json())
-        .unwrap_or_else(|error| panic!("crates/cards/data/win_rates.json: {error}"))
-});
-
-/// R2386000: the shipped sets (`SHIPPED_SETS`, in order) of which `table` holds no row M #50 CN Tech
-/// or M+ #2 NA Tech can pick: a deckable card of the set (never a token) with at least
-/// `CN_TECH_MIN_GAMES` games. The compiled table leaves none (CN Tech's R2386000 test).
-pub fn sets_without_win_rates(table: &WinRateTable) -> Vec<SetName> {
-    use jackioh_engine::config::CN_TECH_MIN_GAMES;
-    SHIPPED_SETS
-        .into_iter()
-        .filter(|set| {
-            !table.cards.iter().any(|row| {
-                row.games >= CN_TECH_MIN_GAMES
-                    && CATALOG
-                        .get(&row.id)
-                        .is_some_and(|def| def.set == *set && jackioh_engine::catalog::deckable(def))
-            })
-        })
-        .collect()
-}
-
 /// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4), and where
 /// the older shipped catalogs a replay folds under are found (R767000): the engine's `OnceLock`s are set
 /// here, once per process. Idempotent. A test that wants fixture cards uses the testkit's thread-local
@@ -178,12 +149,7 @@ pub fn sets_without_win_rates(table: &WinRateTable) -> Vec<SetName> {
 pub fn register_all() {
     static REGISTERED: OnceLock<()> = OnceLock::new();
     REGISTERED.get_or_init(|| {
-        jackioh_engine::catalog::register_catalog(
-            CATALOG.clone(),
-            CATALOG_VERSION,
-            WIN_RATES.clone(),
-            CODE_BLOCKS,
-        );
+        jackioh_engine::catalog::register_catalog(CATALOG.clone(), CATALOG_VERSION, CODE_BLOCKS);
         jackioh_engine::catalog::register_card_metrics(jackioh_engine::CardMetrics {
             code_lines: CODE_LINES,
             busted: BUSTED,

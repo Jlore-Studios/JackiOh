@@ -18,7 +18,7 @@ use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, Handicap,
     LastBoardEntry, LeanPick, Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage,
-    ReplayRecord, ReplayRefusal, Rng, SetName, ShippedCatalog,
+    ReplayRecord, ReplayRefusal, Rng, SetName, ShippedCatalog, WinRateTable,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -91,13 +91,14 @@ pub async fn off_runtime<T: Send + 'static>(
 
 /// The `CreateGameArgs` a match is created with: no catalog override (the caller's `Pinned` sets
 /// the catalog, R767000) and no handicaps (a server match is Easy both, R180), the rest as the
-/// match row froze it.
+/// match row froze it, its win-rate snapshot among them (R3049000).
 pub fn create_game_args(
     seed: &str,
     decks: &(Vec<String>, Vec<String>),
     last_boards: Option<LastBoards>,
     glitch_boards: Option<LastBoards>,
     dealt: Option<Vec<PlayerId>>,
+    win_rates: Option<WinRateTable>,
 ) -> CreateGameArgs {
     CreateGameOptions {
         seed: seed.to_string(),
@@ -113,6 +114,7 @@ pub fn create_game_args(
         custom_cards: None,
         // R2702000: nor deck marks, which only the dungeon run deals.
         deck_marks: None,
+        win_rates,
     }
 }
 
@@ -124,6 +126,7 @@ pub fn fold_args(
     last_boards: Option<LastBoards>,
     glitch_boards: Option<LastBoards>,
     dealt: Option<Vec<PlayerId>>,
+    win_rates: Option<WinRateTable>,
 ) -> FoldArgs {
     FoldArgs {
         seed: seed.to_string(),
@@ -139,6 +142,7 @@ pub fn fold_args(
         sandbox: None,
         custom_cards: None,
         deck_marks: None,
+        win_rates,
     }
 }
 
@@ -266,13 +270,19 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
 /// R1372, R924000: `lean` is the set the deck leans on, at least half from that set (R1370).
 /// Dealt from every set, soft gate (R1390) included.
 pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
-    deal_random_deck_with_strength(seed, lean, 0.0)
+    deal_random_deck_with_strength(seed, lean, 0.0, None)
 }
 
 /// #750 (R1454): `deal_random_deck` leaning on the cards that win, as far as `strength` (0 to 1) says
-/// (`AiDeckOptions::strength`): how the bot pool deals a ladder bot's random decks. At 0.0 it is
-/// `deal_random_deck`'s deal exactly, which is what every player's deal stays.
-pub fn deal_random_deck_with_strength(seed: &str, lean: Option<SetName>, strength: f64) -> Vec<String> {
+/// (`AiDeckOptions::strength`), by `win_rates` (R3049002: the server's snapshot, none leaning on
+/// nothing): how the bot pool deals a ladder bot's random decks. At 0.0 it is `deal_random_deck`'s
+/// deal exactly, which is what every player's deal stays.
+pub fn deal_random_deck_with_strength(
+    seed: &str,
+    lean: Option<SetName>,
+    strength: f64,
+    win_rates: Option<&WinRateTable>,
+) -> Vec<String> {
     registered();
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
     // the AI's own decks, not a player's), and `DECK_SIZE` is the size L2 asks of every deck.
@@ -284,6 +294,7 @@ pub fn deal_random_deck_with_strength(seed: &str, lean: Option<SetName>, strengt
             lean_set: lean,
             gated_sets: Some(vec![]),
             strength: Some(strength),
+            win_rates: win_rates.cloned(),
             ..AiDeckOptions::default()
         },
     )
@@ -307,7 +318,7 @@ pub fn deal_practice_ai_deck(seed: &str, handicap: &Handicap) -> Vec<String> {
 /// R641000: `deal_random_deck`'s deal with no lean and none of `excluded`'s cards in it: how the bot
 /// pool deals a ladder bot's trio a deck that shares no card with the decks it holds already (R253).
 pub fn deal_random_deck_excluding(seed: &str, excluded: &[String]) -> Vec<String> {
-    deal_random_deck_excluding_with_strength(seed, excluded, 0.0)
+    deal_random_deck_excluding_with_strength(seed, excluded, 0.0, None)
 }
 
 /// #750: `deal_random_deck_excluding` leaning on the cards that win, as `deal_random_deck_with_strength`
@@ -316,6 +327,7 @@ pub fn deal_random_deck_excluding_with_strength(
     seed: &str,
     excluded: &[String],
     strength: f64,
+    win_rates: Option<&WinRateTable>,
 ) -> Vec<String> {
     registered();
     build_ai_deck(
@@ -326,6 +338,7 @@ pub fn deal_random_deck_excluding_with_strength(
             lean_set: None,
             gated_sets: Some(vec![]),
             strength: Some(strength),
+            win_rates: win_rates.cloned(),
             ..AiDeckOptions::default()
         },
     )

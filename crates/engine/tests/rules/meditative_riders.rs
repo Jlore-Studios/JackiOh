@@ -95,7 +95,7 @@ fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
     }
 }
 
-/// R1100 (MD-D1): the leader is the best exact rate, then more games, then the catalog id.
+/// R1100 (MD-D1), R3049001: the leader is the highest lower bound, then more games, then the catalog id.
 #[test]
 fn r1100_leader_by_exact_rate_then_games_then_id() {
     register();
@@ -106,10 +106,12 @@ fn r1100_leader_by_exact_rate_then_games_then_id() {
         (&ear.id, 15, 30),
         (&bearer.id, 10, 20),
     ]));
-    // 30/40 beats every .5 row on the exact rate; 3/4 never qualifies (fewer than 20 games).
-    assert_eq!(win_rate_leader("meditative-050"), Some(open_mic.id.clone()));
-    // Without the leader, the .5 rows tie on rate and games: the catalog id decides.
-    assert_eq!(win_rate_leader(&open_mic.id), Some(ear.id.clone()));
+    // 30/40 beats every .5 row on the bound; 3/4 never qualifies (fewer than 20 games).
+    let leader = |exclude: &str| leader_of(registered_win_rates(), &[exclude]);
+    assert_eq!(leader("meditative-050"), Some(open_mic.id.clone()));
+    // Without the leader, the two 15/30 rows tie on the bound and games, above 10/20's wider
+    // interval: the catalog id decides.
+    assert_eq!(leader(&open_mic.id), Some(ear.id.clone()));
 }
 
 /// R1100 (MD-D1): tokens, missing ids and thin rows never lead — even a thin 100% row, even alone.
@@ -126,7 +128,7 @@ fn r1100_tokens_missing_and_thin_rows_never_lead() {
         (&closed_mic.id, 19, 19),
         (&book.id, 5, 10),
     ]));
-    assert_eq!(win_rate_leader("meditative-050"), None);
+    assert_eq!(leader_of(registered_win_rates(), &["meditative-050"]), None);
 }
 
 /// R1100 (MD-D1): an empty table names no leader (a new patch, before any game is counted).
@@ -134,7 +136,7 @@ fn r1100_tokens_missing_and_thin_rows_never_lead() {
 fn r1100_empty_table_no_leader() {
     register();
     register_win_rates(table(vec![]));
-    assert_eq!(win_rate_leader("meditative-050"), None);
+    assert_eq!(leader_of(registered_win_rates(), &["meditative-050"]), None);
 }
 
 /// R1102 (MD-D6): De-Radiant clears the flag — the face swaps back while damage, buffs and tuning

@@ -1716,6 +1716,15 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, String>>", optional))]
     pub generators: IndexMap<String, String>,
+    /// R3049000: the win-rate snapshot the game was handed (`CreateGameOptions.winRates`), as
+    /// `win_rates::kept_for_game` keeps it, which M #50 CN Tech and M+ #2 NA Tech read
+    /// (`win_rates::win_rates_of`). A `create_game` input, frozen with the game, so every pick reads
+    /// the same table however the live figures move. Absent in a game handed none, which hashes as
+    /// it did before this field existed (D14) and reads its shipped catalog's frozen table instead
+    /// (R1266000). Never in a view: the figures are public, but no rule shows them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub win_rates: Option<crate::win_rates::WinRateTable>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -2157,6 +2166,14 @@ pub struct CreateGameOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
+    /// R3049000: the win-rate snapshot M #50 CN Tech and M+ #2 NA Tech read, the server's cached card
+    /// stats as a match starts (`win_rates::win_rates_from_report`). Setup, not an action: the game
+    /// keeps what a pick can name (`GameState.winRates`) and a replay passes the same snapshot
+    /// (`replay::ReplayInput.winRates`). Omitted (practice, hotseat, the Sandbox, the run, the tools),
+    /// the game reads its shipped catalog's frozen table, else none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub win_rates: Option<crate::win_rates::WinRateTable>,
 }
 
 /// SURFACE §6.1's name for `CreateGameOptions`.
@@ -2709,6 +2726,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         held: None,
         marketplace: None,
         generators: IndexMap::new(),
+        win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
@@ -2779,6 +2797,13 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         }
     }
     apply_deck_marks(&mut state, options);
+
+    // R3049000: the rows of the snapshot a pick can name, under the catalog and the hold the game
+    // plays under, frozen with the game.
+    let kept = options.win_rates.as_ref().map(|table| {
+        crate::catalog::with_pool_hold(&state, || crate::win_rates::kept_for_game(table))
+    });
+    state.win_rates = kept;
 
     // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
     state.last_boards =

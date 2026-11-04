@@ -329,6 +329,7 @@ async fn create_rematch(
                     None
                 },
                 seats: seats.clone(),
+                win_rates: None,
             },
         )
         .await;

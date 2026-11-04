@@ -26,6 +26,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use jackioh_engine::WinRateTable;
 use jackioh_engine::wire::{
     Action, ActionType, CustomCard, CustomFrame, EmoteId, GameEventType, GameMode, GameOverReason,
     GameRecord, LeanPick, ListTotal, PerPlayer, PlayerId, PortraitId, SourceFilter, StatsTotals, Winner,
@@ -737,6 +738,12 @@ pub struct MatchRow {
     /// the reaper resolved (R112) and on one not over yet.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub final_hash: Option<String>,
+    /// R3049000: the win-rate snapshot the match was handed as it started, as the game kept it
+    /// (`GameState.winRates`), a `create_game` input frozen on the row (`matches.win_rates`, migration
+    /// 0080) so every rebuild and replay folds the same picks. Absent on every match started before
+    /// it, which folds against its version's frozen table (R1266000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_rates: Option<WinRateTable>,
 }
 
 store_union! {
@@ -1651,6 +1658,11 @@ pub struct StartMatchInput {
     /// R672: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stake: Option<i64>,
+    /// R3049000: the win-rate snapshot to start with, in place of the one the server takes from its
+    /// cached card stats (`api::stats::win_rate_snapshot`). Absent, as every caller leaves it but a
+    /// test, the server takes the cache's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_rates: Option<WinRateTable>,
 }
 
 // The store: Db (a pool or the fake's tables) and Tx (one transaction)

@@ -977,7 +977,15 @@ mod m6_t4_the_match_actor {
         let (last_boards, glitch_boards) = last_boards_of(&row);
         let folded = fold(
             Pinned::default(),
-            &fold_args(&row.seed, &row.decks, log, last_boards, glitch_boards, None),
+            &fold_args(
+                &row.seed,
+                &row.decks,
+                log,
+                last_boards,
+                glitch_boards,
+                None,
+                row.win_rates.clone(),
+            ),
         );
         assert!(folded.errors.is_empty(), "{:?}", folded.errors);
         assert!(folded.state.result.is_some());
@@ -1150,11 +1158,11 @@ mod m6_t4_the_match_actor {
         // And no game the server makes or folds is a sandbox, which the engine would refuse it in too.
         let decks = (vec![], vec![]);
         assert_eq!(
-            jackioh_server::actor::engine::create_game_args("s", &decks, None, None, None).sandbox,
+            jackioh_server::actor::engine::create_game_args("s", &decks, None, None, None, None).sandbox,
             None
         );
         assert_eq!(
-            jackioh_server::actor::engine::fold_args("s", &decks, vec![], None, None, None).sandbox,
+            jackioh_server::actor::engine::fold_args("s", &decks, vec![], None, None, None, None).sandbox,
             None
         );
     }
@@ -5097,7 +5105,7 @@ mod r1834003_the_loadouts_frames {
             Pinned::default(),
             &create_game(
                 Pinned::default(),
-                &create_game_args(SEED, &decks, None, None, None),
+                &create_game_args(SEED, &decks, None, None, None, None),
             ),
         )
         .state;

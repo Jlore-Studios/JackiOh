@@ -959,7 +959,8 @@ pub const AI_SAME_CARD_PLAYS_PER_TURN: usize = 3;
 /// record that ban more; the Meditative and Meditative+ sets keep R732000's half.
 pub const STINKYSCAPE_BAN_CEILING: usize = 35;
 
-/// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the compiled win-rate table.
+/// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the win-rate table it is handed
+/// (`AiDeckOptions::win_rates`, R3049002).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AiWinRate {
     /// The in-deck games a card's row needs before its rate moves its weight (R377's figures).

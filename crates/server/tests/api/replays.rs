@@ -81,7 +81,7 @@ impl Played {
     fn state_at(&self, k: usize) -> GameState {
         let folded = fold(
             Pinned::default(),
-            &fold_args(&self.seed, &self.decks, self.log[..k].to_vec(), None, None, None),
+            &fold_args(&self.seed, &self.decks, self.log[..k].to_vec(), None, None, None, None),
         );
         assert!(folded.errors.is_empty(), "step {k}: {:?}", folded.errors);
         folded.state
@@ -1051,7 +1051,7 @@ mod r767000_the_versions {
             register_catalog_as(patched, "test");
             let refolded = fold(
                 Pinned::default(),
-                &fold_args(&played.seed, &played.decks, played.log.clone(), None, None, None),
+                &fold_args(&played.seed, &played.decks, played.log.clone(), None, None, None, None),
             );
             if hash_state(&refolded.state) != hash_state(&played.last) {
                 return (played, shown);

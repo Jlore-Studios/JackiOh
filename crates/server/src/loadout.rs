@@ -1095,7 +1095,7 @@ mod tests {
             engine::deal_random_deck("loadout-test:p1-deck", None),
             engine::deal_random_deck("loadout-test:p2-deck", None),
         );
-        let args = engine::create_game_args("loadout-test", &decks, None, None, None);
+        let args = engine::create_game_args("loadout-test", &decks, None, None, None, None);
         let state =
             engine::begin_game(Pinned::default(), &engine::create_game(Pinned::default(), &args)).state;
         let dealt = engine::dealt_cards(&state);

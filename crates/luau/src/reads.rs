@@ -547,9 +547,9 @@ pub fn register_ctx(registry: &mut Readers<'_, &'static mut EffectContext<'stati
             to_lua(lua, &Vec::<jackioh_engine::NumberedKeyword>::new())
         }
     });
-    registry.add_method("win_rate_leader", |lua, _, exclude: Option<String>| {
+    registry.add_method("win_rate_leader", |lua, ctx, exclude: Option<String>| {
         let exclude_str = exclude.as_deref().unwrap_or("");
-        to_lua(lua, &win_rate_leader(exclude_str))
+        to_lua(lua, &win_rate_leader(ctx.state, exclude_str))
     });
     registry.add_method("fib", |_, _, n: i32| Ok(fib(n)));
 
@@ -1690,9 +1690,11 @@ macro_rules! shared_readers {
                 }
             },
         );
-        $registry.add_method("win_rate_leader", |lua, _, exclude: Option<String>| {
+        $registry.add_method("win_rate_leader", |lua, ctx, exclude: Option<String>| {
+            let state: &GameState = ctx.shared_state();
+            let _ = ctx;
             let exclude_str = exclude.as_deref().unwrap_or("");
-            to_lua(lua, &win_rate_leader(exclude_str))
+            to_lua(lua, &win_rate_leader(state, exclude_str))
         });
         $registry.add_method("fib", |_, _, n: i32| Ok(fib(n)));
         $registry.add_method("attack_target_of", |lua, ctx, id: String| {

@@ -806,6 +806,9 @@ pub struct ReplayInput {
     /// R2702000: the same deck marks the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck_marks: Option<PerPlayerOpt<Vec<crate::wire::DeckMark>>>,
+    /// R3049000: the same win-rate snapshot the live createGame had, as the game's record keeps it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_rates: Option<crate::win_rates::WinRateTable>,
 }
 
 pub type FoldArgs = ReplayInput;
@@ -862,6 +865,7 @@ fn opening(input: &ReplayInput) -> GameState {
         sandbox: input.sandbox,
         custom_cards: input.custom_cards.clone(),
         deck_marks: input.deck_marks.clone(),
+        win_rates: input.win_rates.clone(),
     });
     crate::reduce::begin_game(&start).state
 }

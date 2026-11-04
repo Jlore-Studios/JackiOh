@@ -2,10 +2,11 @@
 //!
 //! Base:    "Add the highest win rate card to your hand."
 //! Radiant: "Add the highest win rate card to your hand. It is Radiant."
-//! Engine: ME-STATS (docs/meditative-set.md M5, MD-D1, MD-D2) — the compiled table
-//! `crates/cards/data/win_rates.json` (R377's in-deck wins and games per card id) read through
-//! `win_rate_leader`, never CN Tech itself (R387). The table is a development run's (provisional,
-//! R1101), and a replay folds against the table its version shipped with (R1266000).
+//! Engine: ME-STATS (docs/meditative-set.md M5, MD-D1) — the game's win-rate snapshot, the server's
+//! cached card stats as the match started (R3049000; R377's in-deck wins and games per card id), read
+//! through `win_rate_leader`: the highest Wilson lower bound (R3049001), never CN Tech itself (R387).
+//! A game handed no snapshot (practice, hotseat, the Sandbox, the run) reads its shipped catalog's
+//! frozen table, which a replay of a game recorded before #3049 folds against (R1266000), else none.
 //!
 //! The fallback (#2521, R2521007): when no row qualifies it adds `FALLBACK_LEADER`, Core #35 Lunar
 //! Eclipse, the leader of the table every version since v0.4.0 has shipped (v0.4.0's provisional run,
@@ -22,8 +23,8 @@ pub const FALLBACK_LEADER: &str = "core-035";
 
 fn tech(radiant: bool) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
-            let id = win_rate_leader(ID).unwrap_or_else(|| FALLBACK_LEADER.to_string());
+        cry: Some(hook(move |ctx| {
+            let id = win_rate_leader(&*ctx.state, ID).unwrap_or_else(|| FALLBACK_LEADER.to_string());
             vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))]
         })),
         ..Script::default()
@@ -38,7 +39,7 @@ pub fn script() -> CardScripts {
 }
 
 // M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50: "Add the highest win rate card (the
-// compiled table's pick, R377's in-deck rate) to your hand (MD-D1), never itself (R387), the Radiant
+// game's snapshot's pick, R377's in-deck rate) to your hand (MD-D1), never itself (R387), the Radiant
 // face's Radiant (MD-D3); Lunar Eclipse when the table names none (R2521007), no random card, hidden
 // from the opponent (R440), burned by a full hand".
 #[cfg(test)]
@@ -227,9 +228,38 @@ mod tests {
         }
 
         #[test]
-        fn r1100_a_tie_goes_to_more_games_then_to_the_catalog_id() {
+        fn r3049000_adds_the_leader_of_the_snapshot_the_game_was_handed() {
+            register_win_rates(table(vec![("core-008", 30, 40)]));
+            let mut s = scenario(json!({
+                "seed": "cn-tech-snapshot",
+                "p1": { "hand": [{ "def": TECH }, FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+                "winRates": table(vec![(LEADER, 30, 40), ("core-008", 10, 40)]),
+            }));
+            // A table registered after the game was made changes nothing: the game reads its own.
+            register_win_rates(table(vec![("core-008", 40, 40)]));
+            let before = s.hand(PlayerId::P1).len();
+            s.play(TECH, json!({}));
+            let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
+            assert_eq!(added.len(), 1);
+            assert_eq!(added[0].def_id, LEADER);
+            clear_overrides();
+        }
+
+        #[test]
+        fn r3049001_the_highest_lower_bound_leads_not_the_highest_rate() {
+            // 25 wins in 32 games is the better rate, 300 in 450 the surer one.
             assert_eq!(
-                picked(vec![("core-008", 10, 20), (LEADER, 20, 40)], "cn-tech-tie-games"),
+                picked(vec![("core-008", 25, 32), (LEADER, 300, 450)], "cn-tech-bound"),
+                LEADER
+            );
+        }
+
+        #[test]
+        fn r1100_r3049001_a_tie_on_the_bound_goes_to_more_games_then_to_the_catalog_id() {
+            // No win in 20 games and none in 40 share a lower bound of nothing.
+            assert_eq!(
+                picked(vec![("core-008", 0, 20), (LEADER, 0, 40)], "cn-tech-tie-games"),
                 LEADER
             );
             assert_eq!(
@@ -360,107 +390,17 @@ mod tests {
         }
 
         #[test]
-        fn r2386000_the_compiled_table_holds_a_pickable_row_of_every_shipped_set() {
-            assert_eq!(
-                crate::sets_without_win_rates(&crate::WIN_RATES),
-                Vec::<SetName>::new(),
-                "run cargo jackioh stats, then winrates --refresh",
-            );
-        }
-
-        #[test]
-        fn r2386000_a_set_counts_only_with_a_deckable_row_of_cn_tech_min_games() {
-            crate::register_all();
-            let firsts: Vec<String> = SHIPPED_SETS
-                .into_iter()
-                .map(|set| {
-                    crate::CATALOG
-                        .values()
-                        .find(|def| def.set == set && deckable(def))
-                        .map(|def| def.id.clone())
-                        .unwrap_or_else(|| panic!("a deckable {set} card"))
-                })
-                .collect();
-            let rows = |ids: &[String], wins: i32, games: i32| WinRateTable {
-                patch: "v0.2.7".to_string(),
-                source: WinRateSource::Provisional,
-                cards: ids
-                    .iter()
-                    .map(|id| WinRateRow {
-                        id: id.clone(),
-                        wins,
-                        games,
-                    })
-                    .collect(),
-            };
-            // Every set but the first covered: only the first is missing.
-            assert_eq!(
-                crate::sets_without_win_rates(&rows(&firsts[1..], 10, CN_TECH_MIN_GAMES)),
-                vec![SHIPPED_SETS[0]]
-            );
-            // A row under the floor, and a token's row and an unknown id at it, leave the first set missing.
-            let token = crate::CATALOG
-                .values()
-                .find(|def| def.set == SHIPPED_SETS[0] && def.is_token())
-                .map(|def| def.id.clone())
-                .expect("a Core token");
-            let mut table = rows(&firsts[1..], 10, CN_TECH_MIN_GAMES);
-            for (id, games) in [
-                (firsts[0].clone(), CN_TECH_MIN_GAMES - 1),
-                (token, CN_TECH_MIN_GAMES),
-                ("core-999".to_string(), CN_TECH_MIN_GAMES),
-            ] {
-                table.cards.push(WinRateRow { id, wins: 10, games });
-            }
-            assert_eq!(
-                crate::sets_without_win_rates(&table),
-                vec![SHIPPED_SETS[0]]
-            );
-            // Every set's first deckable card at the floor: nothing is missing.
-            assert_eq!(
-                crate::sets_without_win_rates(&rows(&firsts, 10, CN_TECH_MIN_GAMES)),
-                Vec::<SetName>::new()
-            );
-        }
-
-        #[test]
-        fn r1101_engine_reads_compiled_table() {
+        fn r1101_r3049000_no_table_is_compiled_in_so_a_game_handed_none_adds_lunar_eclipse() {
             crate::register_all();
             clear_overrides();
-            // A development run's table (issue #1266): provisional, never live figures.
-            assert_eq!(crate::WIN_RATES.source, WinRateSource::Provisional);
-            let qualifying: Vec<&WinRateRow> = crate::WIN_RATES
-                .cards
-                .iter()
-                .filter(|row| row.games >= CN_TECH_MIN_GAMES && row.id != TECH)
-                .filter(|row| crate::CATALOG.get(&row.id).is_some_and(deckable))
-                .collect();
-            assert!(!qualifying.is_empty(), "the compiled table names a leader");
-            // R1100's comparison written out: the exact rate, then more games, then the smaller id.
-            let beats = |a: &WinRateRow, b: &WinRateRow| {
-                let left = i64::from(a.wins) * i64::from(b.games);
-                let right = i64::from(b.wins) * i64::from(a.games);
-                left > right || left == right && (a.games > b.games || a.games == b.games && a.id < b.id)
-            };
-            let leader = qualifying
-                .iter()
-                .copied()
-                .reduce(|best, row| if beats(row, best) { row } else { best })
-                .expect("a qualifying row");
-            assert!(
-                qualifying
-                    .iter()
-                    .all(|row| row.id == leader.id || beats(leader, row)),
-                "{} leads every other qualifying row",
-                leader.id
-            );
-            assert_eq!(win_rate_leader(TECH).as_deref(), Some(leader.id.as_str()));
+            assert!(registered_win_rates().cards.is_empty(), "no table ships with the build");
             let mut s = casting("cn-tech-compiled", false);
+            assert_eq!(s.state().win_rates, None, "the scenario was handed none");
             let before = s.hand(PlayerId::P1).len();
             s.play(TECH, json!({}));
             let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
             assert_eq!(added.len(), 1);
-            assert_eq!(added[0].def_id, leader.id);
+            assert_eq!(added[0].def_id, FALLBACK_LEADER);
         }
     }
 }

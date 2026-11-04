@@ -128,6 +128,7 @@ pub fn bot_moved_turns(
             last_boards,
             glitch_boards,
             dealt,
+            match_row.win_rates.clone(),
         ),
     )
     .state;

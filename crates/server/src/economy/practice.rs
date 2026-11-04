@@ -160,7 +160,8 @@ fn opening_args(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> CreateGame
         let decks = seat_ordered(human, human_deck, engine::deal_practice_ai_deck(seed, &handicap));
         let boards =
             (!setup.last_board.is_empty()).then(|| seat_ordered(human, setup.last_board.clone(), Vec::new()));
-        let mut args = engine::create_game_args(seed, &decks, boards, None, dealt);
+        // R3049000: a practice game is handed no win-rate snapshot, as the browser's is not.
+        let mut args = engine::create_game_args(seed, &decks, boards, None, dealt, None);
         let (p1, p2) = seat_ordered(human.opponent(), Some(handicap), None);
         args.handicaps = Some(PerPlayerOpt { p1, p2 });
         args
@@ -252,6 +253,7 @@ pub fn verify(
             sandbox: args.sandbox,
             custom_cards: args.custom_cards,
             deck_marks: args.deck_marks,
+            win_rates: args.win_rates,
         },
     );
     Ok(Verified {

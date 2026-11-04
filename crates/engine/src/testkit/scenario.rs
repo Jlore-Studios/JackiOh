@@ -118,7 +118,8 @@ pub fn scripts_override() -> Option<&'static IndexMap<String, CardScripts>> {
     SCRIPTS_OVERRIDE.with(Cell::get)
 }
 
-/// ME-STATS: the win-rate table `catalog::registered_win_rates()` answers first on this thread.
+/// ME-STATS, R3049000: the win-rate table a state handed no snapshot reads on this thread
+/// (`catalog::registered_win_rates()`, after a shipped catalog a fold runs under).
 pub fn register_win_rates(table: crate::win_rates::WinRateTable) {
     let table: &'static crate::win_rates::WinRateTable = Box::leak(Box::new(table));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(Some(table)));
@@ -520,6 +521,10 @@ pub struct ScenarioOptions {
     /// id. Their scripts run only under a host lent with `custom::with_custom_scripts`.
     #[serde(default)]
     pub custom: Option<Vec<crate::wire::CustomCard>>,
+    /// R3049000: the win-rate snapshot the game is handed, the `create_game` input M #50 CN Tech and
+    /// M+ #2 NA Tech read before any other table.
+    #[serde(default)]
+    pub win_rates: Option<crate::win_rates::WinRateTable>,
 }
 
 // Card references
@@ -1085,6 +1090,7 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
         last_boards: opts.last_boards.clone(),
         glitch_boards: opts.glitch_boards.clone(),
         custom_cards: opts.custom.clone(),
+        win_rates: opts.win_rates.clone(),
         ..CreateGameOptions::default()
     });
 
@@ -1990,7 +1996,8 @@ fn match_option(state: &GameState, text: &str, pending: &PendingChoice) -> Resul
 }
 
 /// Build a scenario from its options literal (`json!({ "p1": {…}, "p2": {…}, "seed"?, "turn"?,
-/// "active"?, "lastBoards"?, "glitchBoards"? })`, or `json!({})`); the file header has the defaults.
+/// "active"?, "lastBoards"?, "glitchBoards"?, "winRates"? })`, or `json!({})`); the file header has the
+/// defaults.
 pub fn scenario(opts: Value) -> Scenario {
     let opts: ScenarioOptions = options_of(opts, "scenario");
     Scenario::new(&opts)

@@ -264,9 +264,9 @@ async fn r1454_decks_prefer_human_bo1_lists_legal() {
 
     for k in 0..10 {
         let seed = format!("decks-{k}");
-        let decks = draw_decks(&seed, &lists_of(&records, &patch), &app.catalog, 0.0);
+        let decks = draw_decks(&seed, &lists_of(&records, &patch), &app.catalog, 0.0, None);
         assert_eq!(
-            draw_decks(&seed, &lists_of(&records, &patch), &app.catalog, 0.0),
+            draw_decks(&seed, &lists_of(&records, &patch), &app.catalog, 0.0, None),
             decks,
             "the same seed deals the same decks"
         );
@@ -290,7 +290,7 @@ async fn r1454_decks_prefer_human_bo1_lists_legal() {
 
     // With no human list at all, every deck is one All Random would deal a player (R1453: no shadow
     // ban and no soft gate, which would tell the bot's deck from a person's), and still legal.
-    let decks = draw_decks("decks-none", &[], &app.catalog, 0.0);
+    let decks = draw_decks("decks-none", &[], &app.catalog, 0.0, None);
     assert!((BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()));
     assert!(decks.iter().all(|deck| queueable(&app.catalog, &deck.cards)));
     let dealt: Vec<Vec<String>> = (0..BOT_DECK_DRAW_ATTEMPTS)
@@ -354,6 +354,7 @@ async fn r1454_decks_skip_a_list_no_player_could_queue() {
             &lists_of(&records, &patch),
             &app.catalog,
             0.0,
+            None,
         );
         assert!(
             (BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()),
@@ -506,6 +507,7 @@ async fn r1705001_twenty_card_lists_never_crowd_out_a_bots_decks() {
             &lists_of(&records, &patch),
             &app.catalog,
             0.0,
+            None,
         );
         assert!(
             (BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()),
@@ -691,9 +693,9 @@ async fn r641000_a_trio_takes_the_bot_s_own_disjoint_decks_first() {
 
     for k in 0..10 {
         let seed = format!("trio-{k}");
-        let trio = draw_trio(&seed, &own, &app.catalog, 0.0).expect("a trio");
+        let trio = draw_trio(&seed, &own, &app.catalog, 0.0, None).expect("a trio");
         assert_eq!(
-            draw_trio(&seed, &own, &app.catalog, 0.0),
+            draw_trio(&seed, &own, &app.catalog, 0.0, None),
             Some(trio.clone()),
             "the same seed, the same trio"
         );
@@ -724,7 +726,7 @@ async fn r641000_a_trio_takes_the_bot_s_own_disjoint_decks_first() {
     }
 
     // A bot with no deck of its own is dealt all three.
-    let trio = draw_trio("trio-none", &[], &app.catalog, 0.0).expect("a trio");
+    let trio = draw_trio("trio-none", &[], &app.catalog, 0.0, None).expect("a trio");
     let [first, second, third] = trio_cards(&trio);
     assert!(
         first
@@ -814,6 +816,7 @@ async fn r750000_ranked_lists_deal_in_the_order_of_the_bots_strength() {
                 &lists_of(&records, &patch),
                 &app.catalog,
                 strength,
+                None,
             );
             assert_eq!(&decks[0].cards, first, "strength {strength}, seed {k}");
             assert_eq!(&decks[1].cards, second, "strength {strength}, seed {k}");
@@ -843,6 +846,7 @@ async fn r750000_below_threshold_lists_fall_back_to_the_shuffle() {
             &lists_of(&records, &patch),
             &app.catalog,
             1.0,
+            None,
         );
         assert!(decks[..2].iter().any(|deck| deck.cards == first), "seed {k}");
         assert!(decks[..2].iter().any(|deck| deck.cards == second), "seed {k}");

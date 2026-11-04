@@ -216,6 +216,7 @@ async fn start_live(app: &Arc<App>, match_id: &str, a: &str, b: &str) {
                 ),
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await

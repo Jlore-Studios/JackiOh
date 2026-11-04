@@ -2292,3 +2292,73 @@ mod r2089000_created_card_stats {
         assert_eq!(ids, ["core-t-rush"]);
     }
 }
+
+// R3049000: the win-rate snapshot a match starts with is the cached report `/api/stats/cards` shows.
+mod r3049000_the_win_rate_snapshot {
+    use super::*;
+    use jackioh_engine::WinRateSource;
+    use jackioh_server::api::stats::win_rate_snapshot;
+
+    /// `count` records of `source` with core-001 and core-002 in p1's deck, p1 winning every even one,
+    /// their ids `prefix` and a number.
+    fn records(prefix: &str, source: &'static str, count: usize) -> Vec<Value> {
+        (1..=count)
+            .map(|i| {
+                make_game_record(
+                    &format!("{prefix}-{i}"),
+                    RecordOptions {
+                        source: Some(source),
+                        p1_deck: Some(vec!["core-001", "core-002"]),
+                        winner: Some(if i % 2 == 0 { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r3049000_the_snapshot_is_the_cached_reports_in_deck_figures() {
+        let app = test_app().await;
+        insert_records(&app, records("live", "live", 30)).await;
+        let snapshot = win_rate_snapshot(&app).await;
+        assert_eq!(snapshot.patch, current_patch());
+        let row = snapshot
+            .cards
+            .iter()
+            .find(|row| row.id == "core-001")
+            .expect("core-001's row");
+        assert_eq!((row.wins, row.games), (15, 30));
+        assert!(snapshot.cards.windows(2).all(|pair| pair[0].id < pair[1].id), "sorted by id");
+        assert!(snapshot.cards.iter().all(|row| row.games > 0));
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        let card = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(card["games"], json!(row.games));
+        assert_eq!(card["winRate"], json!(0.5));
+        // The kept report: records written since leave it as it was until the cache lets it go
+        // (`CARD_STATS_CACHE_TTL_SECONDS`).
+        insert_records(&app, records("late", "live", 10)).await;
+        assert_eq!(win_rate_snapshot(&app).await, snapshot);
+    }
+
+    #[tokio::test]
+    async fn r2386000_r3049000_a_snapshot_taken_while_the_window_is_short_counts_development_games() {
+        let app = test_app().await;
+        let mut both = records("live", "live", 30);
+        both.extend(records("dev", "dev", 20));
+        insert_records(&app, both).await;
+        let snapshot = win_rate_snapshot(&app).await;
+        let row = snapshot
+            .cards
+            .iter()
+            .find(|row| row.id == "core-001")
+            .expect("core-001's row");
+        assert_eq!(row.games, 50, "the live games and the development games that pad them");
+        assert_eq!(snapshot.source, WinRateSource::Provisional);
+        let (_, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(data["source"], "provisional");
+        let card = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(card["games"], json!(row.games));
+    }
+}
