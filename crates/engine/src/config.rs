@@ -2204,6 +2204,31 @@ pub const ADJUSTED_WIN_RATE_CENTER: f64 = 0.5;
 /// never drawn keeps under half its swing, and one over a few thousand keeps nearly all.
 pub const ADJUSTED_WIN_RATE_PRIOR_SPREAD: f64 = 0.05;
 
+/// R3022000: the fewest cards a field's centre and spread are read from. Below it the spread, a variance
+/// read across the cards, is too noisy to use, and the adjusted win rate keeps R2777000's centre (a drawn
+/// delta of 0) and prior (`ADJUSTED_WIN_RATE_PRIOR_SPREAD`).
+pub const ADJUSTED_FIELD_MIN_CARDS: usize = 30;
+
+/// R3022000: the least spread of real card lifts a field is read as having, as a fraction (one point). A
+/// measured spread below it is noise in the estimate, and a spread of 0 would read every card as exactly
+/// average with a range of no width.
+pub const ADJUSTED_FIELD_SPREAD_FLOOR: f64 = 0.01;
+
+/// R3022000: the balance band's top. A card whose adjusted win rate is above it, its 95% range wholly
+/// above an even game, is tier S, a nerf candidate.
+pub const TIER_BAND_HIGH: f64 = 0.55;
+
+/// R3022000: the balance band's bottom. A card whose adjusted win rate is below it, its 95% range wholly
+/// below an even game, is tier F, a buff candidate.
+pub const TIER_BAND_LOW: f64 = 0.45;
+
+/// R3022000: tier A's floor, the band's top quarter: halfway from an even game to the band's top.
+pub const TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + TIER_BAND_HIGH) / 2.0;
+
+/// R3022000: tier C's floor, halfway from the band's bottom to an even game. Tier B runs from an even
+/// game (`ADJUSTED_WIN_RATE_CENTER`) to tier A's floor, and tier D is below tier C's.
+pub const TIER_C_FROM: f64 = (TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
+
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
 // ---------------------------------------------------------------------------------------------

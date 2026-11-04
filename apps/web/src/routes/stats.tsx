@@ -30,6 +30,7 @@ import {
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
+import type { CardTier } from "../wire/generated/CardTier.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
@@ -146,6 +147,7 @@ type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
   | "games"
+  | "tier"
   | "adjustedWinRate"
   | "winRate"
   | "drawnWinRate"
@@ -170,6 +172,7 @@ const ART_LABELS: Record<DrillDownArt, string> = {
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
   "games",
+  "tier",
   "adjustedWinRate",
   "winRate",
   "drawnWinRate",
@@ -182,6 +185,7 @@ const SORT_COLUMNS: readonly SortColumn[] = [
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
+  tier: "Tier",
   adjustedWinRate: "Adjusted",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
@@ -209,6 +213,29 @@ function RangeText({ low, high, digits, testid }: { low?: number | null; high?: 
   return (
     <span className="stats-sample-hint stats-range" data-testid={testid}>
       {`${(low * 100).toFixed(digits)}–${(high * 100).toFixed(digits)}%`}
+    </span>
+  );
+}
+
+/** R3022000: the tiers from the top, S (above the band, a nerf candidate) to F (below it, a buff candidate). */
+const TIER_ORDER: readonly CardTier[] = ["S", "A", "B", "C", "D", "F"];
+
+/** R3022000: a tier's place from the bottom, so a descending sort puts S first; -1 for none. */
+function tierRank(tier: CardTier | null | undefined): number {
+  return tier ? TIER_ORDER.length - TIER_ORDER.indexOf(tier) : -1;
+}
+
+/** R3022000: a band edge or a spread as the tiers' note reads it, a percent to a tenth at most ("45%", "52.5%"). */
+function percentText(fraction: number): string {
+  return `${String(Number((fraction * 100).toFixed(1)))}%`;
+}
+
+/** R3022000: a card's tier chip, or "—" below the floor or from a server deployed before tiers. */
+function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid: string }): ReactElement {
+  if (!tier) return <span data-testid={testid}>—</span>;
+  return (
+    <span className="stats-tier" data-tier={tier} data-testid={testid}>
+      {tier}
     </span>
   );
 }
@@ -538,6 +565,8 @@ export default function StatsRoute(): ReactElement {
   }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
+  // R3022000: the field and band the tiers are read against; absent from a server deployed before them.
+  const tiers = cardStatsData?.tiers;
 
   const setsSince = setsData ? previousPatchOf(setsData)?.name : undefined;
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
@@ -589,7 +618,19 @@ export default function StatsRoute(): ReactElement {
     const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
       shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
     list.sort((a, b) => {
-      if (sortCol === "adjustedWinRate") {
+      if (sortCol === "tier") {
+        // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
+        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+        const aRank = tierRank(a.tier);
+        const bRank = tierRank(b.tier);
+        if (aRank >= 0 && bRank < 0) return -1;
+        if (aRank < 0 && bRank >= 0) return 1;
+        if (aRank !== bRank) return (aRank - bRank) * flip;
+        const aRate = a.adjustedWinRate ?? null;
+        const bRate = b.adjustedWinRate ?? null;
+        if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
+      } else if (sortCol === "adjustedWinRate") {
         // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
@@ -1044,6 +1085,10 @@ export default function StatsRoute(): ReactElement {
                         )}
                       </button>
                       <dl className="stats-grid-figures">
+                        <dt>{t("Tier")}</dt>
+                        <dd>
+                          <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
+                        </dd>
                         <dt>{t("Adjusted")}</dt>
                         <dd>
                           {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
@@ -1112,7 +1157,23 @@ export default function StatsRoute(): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
-                        title={t("50% plus how far drawing the card moves its deck's win rate, counted only as far as its games bear out")}
+                        title={t("S needs a nerf and F a buff: S is above the band and sure of it, F below it and sure of it, and A to D are the band's quarters")}
+                        aria-sort={sortCol === "tier" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("tier")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("tier");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Tier")} {sortCol === "tier" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
+                        title={t("50% plus how far drawing the card moves its deck's win rate beyond the average card's, counted only as far as its games bear out")}
                         aria-sort={sortCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("adjustedWinRate")}
                         onKeyDown={(e) => {
@@ -1258,6 +1319,9 @@ export default function StatsRoute(): ReactElement {
                             <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
+                          <td className="stats-td">
+                            <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
+                          </td>
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
                             {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
                             {showRanges && card.hasEnoughGames && (
@@ -1322,6 +1386,28 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </TableScroll>
+            )}
+
+            {/* R3022000: what the tiers mean, and the field the cards are read against */}
+            {tiers && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
+              <div className="stats-sample-hint stats-tiers-note" data-testid={statsTestid.tiersNote}>
+                <p>
+                  {t("Tier S is above {high} with its whole 95% range above 50%: a nerf candidate. Tier F is below {low} with its whole range below 50%: a buff candidate. A, B, C and D split the {low} to {high} band into quarters from the top.", {
+                    high: percentText(tiers.bandHigh),
+                    low: percentText(tiers.bandLow),
+                  })}
+                </p>
+                <p>
+                  {tiers.cards > 0
+                    ? t("Read against {cards} cards: the average card reads 50%, and real cards differ by about {spread} points (one standard deviation).", {
+                        cards: formatNumber(tiers.cards),
+                        spread: (tiers.spread * 100).toFixed(1),
+                      })
+                    : t("Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about {spread} points.", {
+                        spread: (tiers.spread * 100).toFixed(1),
+                      })}
+                </p>
+              </div>
             )}
 
             {/* R2895000: what a range means, while they show */}
