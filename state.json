@@ -31983,7 +31983,8 @@
       "2026-11-04T04:51:10Z,claude-6,stream,call,41773976067,51,2026-11-04T05:00:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-04T04:50:38Z,41775467714,claude-7,opus,review,2965,hard,stopped,stop,0,0,0,0,,0,0,,,,,none,,0"
+      "2026-11-04T04:50:38Z,41775467714,claude-7,opus,review,2965,hard,stopped,stop,0,0,0,0,,0,0,,,,,none,,0",
+      "2026-11-04T04:53:14Z,41773976067,claude-6,opus,plan,2990,hard,planned,,14.1,169,83638,14929846,9.7219,31,51,,,20.4,,fresh,,1"
     ]
   },
   "version": 1
