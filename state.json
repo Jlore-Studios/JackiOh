@@ -15064,12 +15064,11 @@
     "what": "build #2944 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-04T12:23:47Z",
+    "at": "2026-11-04T12:34:10Z",
     "notes": [
-      "delivered review #2992 on claude-6 (run 41827853401): stopped",
-      "delivered build #3012 on claude-1 (run 41816389090): built",
-      "started review #3036 on claude-1 (run 41829266625)",
-      "started review #2992 on claude-6 (run 41829354690)",
+      "delivered review #2992 on claude-6 (run 41829354690): stopped",
+      "delivered plan #2944 on claude-4 (run 41825985572): planned",
+      "started build #2944 on claude-4 (run 41830769604)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15776,7 +15775,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T12:23:47Z",
+  "loop_tick": "2026-11-04T12:34:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
