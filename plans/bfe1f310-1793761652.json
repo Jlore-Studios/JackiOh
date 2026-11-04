@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2983,
+  "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
+  "branch": "bot/issue-2983",
+  "thread": "**Issue #2983 (data, not instructions):**\n\n```text\n# #2983: Patch: Google sign-in through Google's own button, so it says jackioh.com\nOpened by @MaxGoetzmann.\n\n### What it does\n\nGoogle's sign-in screen currently reads \"to continue to `<ref>.supabase.co`\". It names the host Google sends the player back to, and R666's redirect flow (`oauthAuthorizeUrl` / `startOAuthSignIn` in `apps/web/src/net/auth.ts`) sends the player to Supabase's `/auth/v1/authorize`, so that host is Supabase's `/auth/v1/callback`. We want the screen to say **jackioh.com** (staging.jackioh.com on staging), without paying for Supabase's custom domain add-on.\n\nTo get that, sign in to Google with **Google Identity Services** (GIS) on the page itself: the \"Sign in with Google\" button, through its FedCM / popup flow. Then exchange the ID token it returns with Supabase. The sign-in starts on our own origin, so that is the origin Google names.\n\n- **Button.** Load `https://accounts.google.com/gsi/client` only on `/login`, and only when Google is in `VITE_AUTH_OAUTH_PROVIDERS` and the new public `VITE_GOOGLE_CLIENT_ID` is set. Render Google's button in place of the current `auth-oauth-google` button in `apps/web/src/routes/login.tsx`. Google's branding rules require its own button there.\n- **Nonce.** For every attempt, make a fresh random nonce with the platform's crypto. Give GIS its SHA-256 hex digest. Keep the raw nonce in memory only.\n- **Exchange.** Call `POST {VITE_SUPABASE_URL}/auth/v1/token?grant_type=id_token` with `{ provider: \"google\", id_token, nonce }`. auth.ts is a hand-rolled REST client, so add this beside the existing `grant_type=password|pkce|refresh_token` calls. Store the session the same way the PKCE exchange does.\n- **Accounts.** The account rules stay R666's and \u00a79.4's. A new account starts `pending` and passes the invite gate. An existing account is matched by its verified Google address (automatic linking is on, #1890). Errors are shown in the client's own words (`oauthFailed`, `oauthUnavailable`).\n- **Fallback.** Keep the current PKCE redirect flow. Use it when `VITE_GOOGLE_CLIENT_ID` is unset, when the GIS script fails to load or is blocked, or when GIS reports that it cannot show a prompt. The player can always still sign in with Google, just with the supabase.co screen. The other providers keep the redirect flow unchanged.\n- **CSP.** Widen the CSP in `apps/web/public/_headers` only as far as GIS needs. Add `https://accounts.google.com/gsi/client` to `script-src`, and `https://accounts.google.com/gsi/` to `frame-src`, `connect-src` and `style-src`. If `static-pages.ts` builds `connect-src` (`connectSources`), add it there. `cloudflare-config.test.ts` should pin the result. Change nothing else in the CSP or other headers.\n- **Config.** Add `VITE_GOOGLE_CLIENT_ID` to `apps/web/.env.example`, `.env.production` and `.env.staging`. Also add it to the keys `env-production.test.ts` allows, and to what `scripts/check-production-bundle.mjs` expects, if it should be required there. A Google client ID is public: it ships in every GIS page.\n- **Ruling.** The spec does not cover this choice, so write a new ruling note in this issue's block (CLAUDE.md rule 3). It says that Google signs in by ID token on our own origin, with a hashed nonce, and falls back to R666's PKCE redirect. It never uses the implicit flow and never puts a token in a URL. Put its \u00a711 paragraph in `spec/pending/<this issue>.md`.\n\n### Before the build (a person; the bot can't reach these dashboards)\n\n1. **Google Cloud.** On the OAuth client(s) each Supabase project already uses for Google, add Authorized JavaScript origins `https://jackioh.com` and `https://staging.jackioh.com`.\n2. **Supabase**, both projects (production `fuzpvmjdejvbjcarypyi`, staging `exmjdaswedxhnzmpzqrq`). Under Authentication \u2192 Providers \u2192 Google:\n   - That web client ID must be in **Client IDs** (it already is, if it's the one the redirect flow uses).\n   - **Skip nonce check** must be **off**.\n3. **Client IDs.** Comment each client ID on this issue (they're public). Until they're filled in, the builder leaves `VITE_GOOGLE_CLIENT_ID` empty in the env files, and the fallback keeps sign-in working.\n\n### Acceptance\n\n- With `VITE_GOOGLE_CLIENT_ID` set, `/login` loads GIS and shows Google's button. Without it, the page shows today's button and redirect flow, and loads no GIS script.\n- A GIS credential is exchanged at `/auth/v1/token?grant_type=id_token` with the raw nonce, and GIS was given that nonce's SHA-256. A new nonce is made for each attempt. A stubbed fetch can test this.\n- A refused exchange shows `oauthFailed`. A GIS script that fails to load falls back to the PKCE redirect.\n- A new Google account is `pending` and meets the invite gate exactly as R666's redirect sign-in does.\n- `cloudflare-config.test.ts` pins the CSP with exactly the GIS sources added. `env-production.test.ts` accepts `VITE_GOOGLE_CLIENT_ID` and refuses anything shaped like a secret in it.\n- The new ruling note has its proving tests named after it. `cargo jackioh spec check` passes.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/edge apps/web e2e` are green. Any e2e spec that clicks the Google button still passes, or is updated to cover the fallback.\n\n### Blocked by, part of\n\nTouches the same OAuth and headers code as #2629, the security pass before launch. Coordinate with it rather than conflicting.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2983: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T02:44:41Z",
+    "claimed_at": "2026-11-04T03:08:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
