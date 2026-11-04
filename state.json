@@ -17897,17 +17897,15 @@
     "what": "build #2990 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-04T06:13:23Z",
+    "at": "2026-11-04T06:28:24Z",
     "notes": [
+      "created the label `needs decision`",
       "CI on #2964: #2964: queued a CI fix",
-      "delivered review #2996 on claude-3 (run 41782940395): reviewed",
-      "delivered plan #2977 on claude-1 (run 41782794010): planned",
-      "delivered build #2990 on claude-6 (run 41778910875): interrupted",
-      "delivered review #2997 on muse (run 41778811622): approved",
-      "started build #2977 on claude-1 (run 41785177272)",
-      "started build #2990 on claude-3 (run 41785334181)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "#2984 stopped on a question before #2986, so `needs decision`, with no deadline",
+      "#2882 stopped on a question before #2986, so `needs decision`, with no deadline",
+      "#2996: green and waiting for a person to merge it, so `claude-3` gives up its claim on it",
+      "delivered build #3000 on claude-7 (run 41783084124): interrupted",
+      "delivered review #2998 on claude-4 (run 41780189066): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18611,7 +18609,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T06:13:23Z",
+  "loop_tick": "2026-11-04T06:28:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
