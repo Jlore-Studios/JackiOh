@@ -17043,7 +17043,7 @@
       "started_at": "2026-11-04T02:44:47Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2983": {
       "action": "build",
