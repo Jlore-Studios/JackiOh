@@ -765,14 +765,14 @@
 .tavern.app-shell .collection-proficiency__title,
 .tavern.app-shell .collection-proficiency__stamps-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-lg);
   color: var(--tavern-gold-pale);
 }
 
 .tavern.app-shell .collection-proficiency__level,
 .tavern.app-shell .collection-proficiency__plays {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-md);
   color: var(--tavern-parchment);
 }
 
@@ -786,7 +786,7 @@
 .tavern.app-shell button.collection-proficiency__none:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
   min-height: 32px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--type-sm);
   box-shadow: none;
 }
 
@@ -817,7 +817,7 @@
   border-radius: 10px;
   box-shadow: none;
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
   cursor: var(--cursor-glove-point, pointer);
 }
