@@ -17090,6 +17090,7 @@
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "placeholder (waiting on test run, will continue)",
       "queued_at": "2026-11-04T04:00:48Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "41771452805",
