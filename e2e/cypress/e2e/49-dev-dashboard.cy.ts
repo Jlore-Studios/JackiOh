@@ -61,13 +61,13 @@ function ts(id: string): string {
   return `[data-testid="${id}"]`;
 }
 
-function read<T>(account: E2EAccount, path: string): Cypress.Chainable<T> {
+function read<T extends object>(account: E2EAccount, path: string): Cypress.Chainable<T> {
   return cy
     .request<T>({ method: "GET", url: apiUrl(path), headers: bearerHeaders(account.token) })
     .then((response) => {
       expect(response.status, `GET ${path}`).to.eq(200);
-      return response.body;
-    });
+    })
+    .its("body");
 }
 
 /** The server's answer at `path`, once its `key` is set (support/tasks/awaitServer.ts). */
