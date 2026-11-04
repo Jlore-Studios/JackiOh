@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3012,
+  "title": "Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend",
+  "branch": "bot/issue-3012",
+  "thread": "**Issue #3012 (data, not instructions):**\n\n```text\n# #3012: Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend\nOpened by @squishy-squooby.\n\n## What it does\n\nAsked for on 2026-11-04: \"streamline all patch notes so basically on a big patch v0.X you have a giant detailed (non-moving graphic) then on smaller patches you have v0.5.Y you have a release art similar to a large patch, for micropatches they should just be appended under the last patch and shouldn't have patch art. Also add a clickthrough bar / legend on the side of the patch notes.\"\n\n### Today\n\n- Every shipped patch, micros included, gets a 1920\u00d71080 artwork drawn by code (#2681, `apps/web/src/patches/releaseArt.ts`, served at `/release-art/<version>.svg`).\n- A major's artwork is animated, a slow drift of `RELEASE_ART_MAJOR_CYCLE_SECONDS`, with a `-still.svg` companion. The page shows the still form and moves it in CSS (`patches.css`).\n- On the Patch notes page (`apps/web/src/patches/PatchNotes.tsx`, `releases.ts`), patches sit in release lines (R724000), the newest open. Each patch, micros included, is an entry of its own, and snapshots load lazily (R507).\n- `scripts/github-releases.ts` (with `apps/web/src/patches/github.ts`) writes a GitHub release for each patch with its artwork.\n\n### What it should be\n\nEach patch's tier comes from its record's `tier` in `patches.json` (`major`, `patch` or `micro`; R1365000, R1369000). Never parse or compare version strings (R105).\n\n1. **A major (`v0.Z.0`)** gets one large, detailed poster that does not move.\n   - It is richer than a patch's art. For example: the line's set and its headline cards, more of them than `RELEASE_ART_CARD_LIMIT`, and the line's name large.\n   - It has no animation at all: drop the animated form and `RELEASE_ART_MAJOR_CYCLE_SECONDS`, and stop moving the major's art in CSS.\n2. **A patch (`v0.Z.X`)** gets release art in the same style as a major's poster, at a patch's scale. It is a still picture too.\n3. **A micro (the letter after a version, `v0.Z.Xb`)** gets no art.\n   - Its notes are appended under the patch it follows: the nearest `major` or `patch` before it in `patches.json`'s order.\n   - It appears as a compact sub-entry inside that patch's entry, with its version, date and notes, and not as an entry of its own.\n   - A micro after a major goes under the major.\n4. **A legend on the side of the page.**\n   - A sticky navigation bar lists the release lines and, under each, its major and patches. A patch's micros are listed under it and may start collapsed.\n   - Clicking an item scrolls to that entry and opens it: its release line, its patch, and its snapshot loading as R507 does for a patch opened by hand.\n   - The entry in view is marked in the legend (`aria-current`).\n   - It is a `<nav>` with an accessible name and works with the keyboard. On a phone it becomes a collapsible bar or drawer, with no horizontal page scroll.\n   - An address hash, such as `/patch-notes#v0.5.3`, opens and scrolls to that entry, and the legend's links use it.\n\n### Things not to break\n\n- **Old art links (CLAUDE.md rule 13).** Published GitHub releases and the static pages link `/release-art/<version>.svg`, and majors' `-still.svg` too.\n  - Every shipped major and patch keeps a picture at its existing path. A major's `.svg` becomes the new still poster.\n  - Do not stop serving a file for an already-shipped micro without asking: stop with a `needs decision` whose default is \"keep serving the old micros' files, and draw none for new micros\".\n- `scripts/github-releases.ts`: a new micro's release carries no artwork, and a major's links its still poster.\n- The artwork stays a pure function of the record and its snapshots, with no clock or random source (releaseArt.ts's header).\n\n### Rulings\n\nWrite rulings in this issue's block, amending R724000, R507 and R1369000 where this changes them. Put the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n\n## Acceptance\n\n- `releaseArt.ts` draws a major's poster with no animation: no `<animate\u2026>`, no `@keyframes`, no `animation` style. A test runs over every major in `patches.json`.\n- Every `tier: \"patch\"` patch has art, and every `tier: \"micro\"` patch has none. The static build writes no new file for a micro, and the page renders no `patch__art` for one. A test runs over `patches.json`.\n- With fixture patches major \u2192 patch A \u2192 micro \u2192 micro \u2192 patch B, both micros render inside patch A's entry, in order, with their own version, date and notes, and patch B is its own entry.\n- The legend lists every release line, major and patch, and nests micros under their patch. Clicking one opens and scrolls to it (a lazily loaded patch loads its snapshot), and a hash in the address does the same. The entry in view carries `aria-current`.\n- At phone width the legend collapses and the page has no horizontal scroll (a unit or component test).\n- Each shipped major's and patch's existing `/release-art/\u2026` path still serves a picture.\n- `pnpm --dir apps/web test`, `typecheck`, `eslint` and `cargo jackioh spec check` pass, and `cargo jackioh classify --base origin/main --claims` passes.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3012: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T08:53:22Z",
+    "claimed_at": "2026-11-04T08:56:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2944 skipped: it waits for #2943 to close first",
+    "#3015 skipped: it waits for #2943, #2944, #3011 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
