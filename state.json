@@ -15237,17 +15237,8 @@
       "verdict_rounds": 1
     },
     "3059": {
-      "action": "plan",
-      "asks": [
-        "c:6644250721"
-      ],
-      "build_next": {
-        "from_run": "41930335496",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-04T23:11:21Z",
-        "until": "2026-11-04T23:41:21Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T23:11:11Z",
         "difficulty": "medium",
@@ -15266,10 +15257,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the code the issue points at.\n- Bash: {\"command\": \"cat apps/web/src/undo/hold.ts; ls apps/web/src/undo; ls .bot-plan.md 2>&1 | head -1\"}\n- Grep: {\"pattern\": \"useUndoHold|UNDO_WINDOW_MS\", \"path\": \"apps/web/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cat apps/web/src/undo/hold.test.tsx; cat spec/rulings/R2119000.md; ls spec/rulings | grep -E \\\"^R(2119|3059)\\\" ; ls spec/pending | head -30\"}\n- Grep: {\"pattern\": \"\\\\bhold\\\\(|sendNow\\\\(|useUndoHold\", \"path\": \"apps/web/src\", \"output_mode\": \"content\", \"glob\": \"!**/*.test.tsx\"}\n- Bash: {\"command\": \"cd apps/web/src && sed -n 395,470p game/deckbuilder/DeckWorkshop.tsx; echo -----; sed -n 500,560p game/deckbuilder/DeckWorkshop.tsx; echo ------; sed -n 600,760p game/deckbuilder/DeckWor\u2026\n- Bash: {\"command\": \"cd apps/web/src && sed -n 335,470p creator/Creator.tsx; echo ------; sed -n 55,110p together/TogetherRoute.tsx; echo ----; sed -n 195,290p together/TogetherRoute.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3059 && sed -n 335,470p apps/web/src/creator/Creator.tsx\"}\n- Bash: {\"command\": \"sed -n 1,120p apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx\"}\n- Bash: {\"command\": \"sed -n 620,900p apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx\"}\n- Bash: {\"command\": \"sed -n 120,215p apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx; grep -n \\\"manualClock\\\" -A45 apps/web/src/game/deckbuilder/testkit.ts | head -90\"}\n- Bash: {\"command\": \"grep -n \\\"split\\\\|SPLIT\\\\|innerWidth\\\\|matchMedia\\\" apps/web/src/game/deckbuilder/DeckWorkshop.tsx | head -20; grep -n \\\"innerWidth\\\\|matchMedia\\\\|WORKSHOP_SPLIT\\\" apps/web/src/game/deck\u2026\n- Bash: {\"command\": \"sed -n 590,780p apps/web/src/together/TogetherRoute.test.tsx\"}\n- Bash: {\"command\": \"sed -n 225,360p apps/web/src/creator/Creator.test.tsx\"}\n- Bash: {\"command\": \"grep -rln \\\"DECK_DELETE\\\\|TRIO_DELETE\\\\|UNDO_TOAST\\\\|creatorTestid.delete\\\\|deck-delete\\\\|deckDelete\\\" apps/web/src e2e --include=*.ts --include=*.tsx | head -20; grep -n \\\"DECK_DELETE\\\\\u2026\n- Bash: {\"command\": \"cat spec/pending/3070.md | head -30; ls spec/rulings | tail -5; grep -n \\\"Ruling numbers\\\" -A25 docs/issues-and-patches.md | head -50; sed -n 1,80p spec/README.md | grep -n -i \\\"ruling\\\"\u2026\n- Bash: {\"command\": \"git log --oneline -40 --stat --format='--- %h %s' -- apps/web/src/together apps/web/src/undo spec/rulings/R2119000.md | head -60; grep -rn \\\"R2119000\\\" spec --include=*.md -l | head -20;\u2026\n- Bash: {\"command\": \"git show --stat --format='%h %s' 3769a832e7 | head -30; grep -n \\\"R2119000\\\" spec/10-engine-guide.md spec/rulings/R2125000.md spec/rulings/R2379000.md | head; grep -rn \\\"R2119000\\\\|2119\\\u2026\n- Bash: {\"command\": \"ls spec | head -40; grep -rn \\\"Undo\\\\|undo toast\\\" spec/*.md | grep -v \\\"^spec/11-rulings\\\\|INDEX\\\" | cut -c1-300 | head -20\"}\n- Bash: {\"command\": \"head -12 spec/rulings/R3070000.md; grep -rn \\\"UNDO_WINDOW_MS\\\\|useUndoHold\\\\|undo/hold\\\" --include=*.md . 2>/dev/null | grep -v node_modules | grep -v \\\"^./spec/11\\\\|^./spec/INDEX\\\\|^./t\u2026\n- Bash: {\"command\": \"sed -n 558,578p apps/web/README.md | cut -c1-400; sed -n 25,50p spec/rulings/R3070000.md | cut -c1-200; grep -n \\\"FriendRow\\\\b\\\" -A3 apps/web/src/together/FriendRows.tsx | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"function rowOf\\\\|function rows\\\\|async function renderPage\\\\|manualClock\\\\|^import\\\\|function world\\\\|const ANN\\\\|const BOB\\\" apps/web/src/together/TogetherRoute.test.tsx | hea\u2026\n- Bash: {\"command\": \"grep -n \\\"fireEvent.click(screen.getByTestId(\\\\(DECK\\\\|TRIO\\\\)_DELETE\\\\|deleteId\\\\|row.deleteId\\\" apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx; grep -rn \\\"deckDelete\\\\|deck-delete\u2026\n- Bash: {\"command\": \"grep -n \\\"Delete deck\\\\|Remove\\\\b.*friend\\\\|Delete trio\\\\|deleting a deck\\\\|Delete deck\\\" spec/09-architecture.md spec/12-custom-cards.md spec/10-engine-guide.md | cut -c1-260 | head; se\u2026\n- Bash: {\"command\": \"sed -n 54p spec/09-architecture.md | grep -o \\\".\\\\{150\\\\}[Dd]elet.\\\\{250\\\\}\\\"; sed -n 73p spec/09-architecture.md | grep -o \\\".\\\\{100\\\\}emove.\\\\{250\\\\}\\\" | head -3; grep -n \\\"R2119000\\\" \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/.bot-plan.md\", \"content\": \"# Draft plan, issue #3059 (planner notes)\\n\\nRead: apps/web/src/undo/hold.ts + hold.test.tsx, DeckWorkshop.tsx (onDele\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No line of the rule holds: only apps/web and spec/ change, with no engine, AI, migration or cross-crate contract, and about 12 files in all.\"} --> ## Goal `useUndoHold().hold` returns a boolean and refuses a new deletion that arrives within a named `UNDO_R\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-04T23:01:42Z",
       "owner_why": "it plans it",
@@ -15282,12 +15272,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-04T22:55:13Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41930335496",
+      "run_id": "pending:f961b219-1793834037",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T23:01:42Z",
+      "started_at": "2026-11-04T23:14:26Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6644250721"
+      ]
     },
     "3060": {
       "action": "build",
@@ -15725,9 +15717,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T23:03:05Z",
+    "at": "2026-11-04T23:14:26Z",
     "url": "",
-    "what": "plan #3067 on claude-4"
+    "what": "build #3059 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T22:58:40Z",
