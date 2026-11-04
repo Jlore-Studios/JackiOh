@@ -29307,7 +29307,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-04T12:35:02Z",
         "every": 5,
+        "findings": 0,
         "head": "a6c69931321abfecdfaef3a986cfdfe77d296666",
         "issue": 2803,
         "last_why": "stopped: #2992 was closed",
@@ -29315,18 +29317,19 @@
         "n": 50,
         "pr": 2992,
         "queued_at": "2026-11-04T11:55:32Z",
+        "reason": "stopped: #2992 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:7589d1dc-1793795187",
         "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
         "started_at": "2026-11-04T12:26:51Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 51
