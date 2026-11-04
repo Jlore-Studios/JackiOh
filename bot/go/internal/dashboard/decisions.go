@@ -43,9 +43,13 @@ func DecisionRows(ctx *hctx.Context, state *pyjson.Object, issues []*pyjson.Obje
 			if !others {
 				continue
 			}
+			// Not this bot's item: another bot's names it, and one only people can unblock
+			// (`human`, `human required`) says so even when no bot's owning label is on it.
 			whose := "—"
 			if other := queue.Owner(issue); other != nil {
 				whose = other.Name + "'s: its section says"
+			} else if queue.IsHuman(queue.LabelNames(issue)) {
+				whose = NeverPerson
 			}
 			rows = append(rows, fmt.Sprintf("| %s | — | %s |", item, whose))
 			continue
