@@ -170,7 +170,7 @@ button:disabled {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: var(--gap);
 }
 
@@ -195,6 +195,11 @@ table {
   font-size: 0.9rem;
 }
 
+/* A table keeps its columns readable and scrolls sideways in its box on a narrow screen. */
+.scroll table {
+  min-width: 640px;
+}
+
 th,
 td {
   text-align: left;
@@ -203,7 +208,15 @@ td {
   border-bottom: 1px solid var(--line);
 }
 
-td code {
+th,
+td {
+  white-space: nowrap;
+}
+
+/* An audit entry's JSON wraps anywhere; everything else in a table stays on its line. */
+td code.json {
+  display: block;
+  min-width: 160px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

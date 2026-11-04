@@ -56,13 +56,13 @@ export function Audit({ api, revision }: SectionProps): ReactElement {
                     <code>{action.route}</code>
                   </td>
                   <td>
-                    <code>{json(action.request)}</code>
+                    <code className="json">{json(action.request)}</code>
                   </td>
                   <td>
-                    <code>{json(action.before)}</code>
+                    <code className="json">{json(action.before)}</code>
                   </td>
                   <td>
-                    <code>{json(action.after)}</code>
+                    <code className="json">{json(action.after)}</code>
                   </td>
                 </tr>
               ))}
