@@ -20825,5 +20825,33 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11k",
+    "date": "2026-11-03",
+    "title": "Patch: Alt art, Sketch and Alt full art card versions",
+    "source": "#2940",
+    "notes": "Part 2 of #2725's ten new card versions (tracker #2729): three versions that draw the card's subject anew, each per card, granted to no account, and offered on a seeded share of cards of its own (R2940000). Alt art (Rare, 310 cards: half of every card but the Legacy ones) re-seeds the card's painter in the normal frame, keeping its subject; the Sketch (Rare, 145 cards: Units and Legendary and Mythic cards) draws the normal picture in graphite on slate paper, its base frame a pencilled outline; Alt full art (Legendary chase, 84 cards: Epic Units and Legendary and Mythic cards but the Legacy ones) is Alt art's picture across the whole face (R2940001). Animated, a foil, a finish and a border layer on each; Signature on none, by R2949000's rule (R2940002). A Radiant face keeps every Radiant mark, and no sketch colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Alt art, Sketch and Alt full art",
+      "new": [
+        "Alt art: a new picture of the card in its normal frame, offered on about half of all cards.",
+        "Sketch: the card's art as a pencil-and-ink sketch on paper, with a pencilled frame, offered on many Units and Legendary and Mythic cards.",
+        "Alt full art: the Alt art picture across the whole card, a Legendary chase on some Epic Units and Legendary and Mythic cards."
+      ],
+      "balance": [],
+      "changes": [
+        "Each new version goes to its own mix of cards, so cards differ in what they can wear. Animated, foils, finishes and borders work on all three; Signature stays on Full art with Animated."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "c95f4c3ea54434aa69b22ae57b199f7972b9202a"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
