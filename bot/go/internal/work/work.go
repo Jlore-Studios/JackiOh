@@ -435,6 +435,8 @@ type Worker struct {
 	GH gh.Client
 	// ciRead is what the last CI reading found (`ciRed`), for the round's record and the reviewer.
 	ciRead string
+	// final is run 2's final check before it goes ready (#2948, `settle.go`).
+	final finalState
 	// readings is every usage reading this run took, for the usage history (#2749,
 	// `usage.Note`), which its result carries; readingsMu guards it, since a call's watch adds to
 	// it from a goroutine of its own. None is kept without `usage_history`.

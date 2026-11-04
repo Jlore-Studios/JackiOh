@@ -5,9 +5,11 @@ pull requests is split up. It binds people and agents alike. The night bot's own
 in [`bot/README.md`](../bot/README.md#labels), its fullsend mode `bot:fullsend` and a fullsend
 parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and the live labels a run
 puts on the item it holds, one at a time by the kind of run (`bot:planning`, `bot:splitting`,
-`bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling`; they replaced
-the retired working label in #2748), `bot:merging` on a bot pull request whose auto-merge is on, and
-`bot:waiting` on an item held for the subscription that owns it, and Squishy's `squishy:*`
+`bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:resolving` for a merge conflict's resolution
+(#2948), `bot:reviewing`, `bot:reconciling`; they replaced the retired working label in #2748),
+`bot:merging` on a bot pull request whose auto-merge is on, `bot:waiting` on an item held for the
+subscription that owns it, and `bot:waiting-turn` on an approved draft waiting for an overlapping
+pull request ahead of it to merge (#2948), and Squishy's `squishy:*`
 ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and
 `squishy:fullsend`, and a split's parent, `squishy:tree`) in [its section](../bot/README.md#squishy).
 
@@ -56,7 +58,7 @@ patch whose work is all tooling (the codebase pass) is `patch` and `architecture
 it; `hard` is Claude Opus's alone; `easy` was retired in #2748, and the sweep moved it to `medium`), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
 labels (the bot's pickup order) and the `bot:*` labels (the queue's, the live labels of a run
-that holds an item, `bot:merging`, `bot:waiting` and the rest) are separate. Never add `bot:build` while
+that holds an item, `bot:merging`, `bot:waiting`, `bot:waiting-turn` and the rest) are separate. Never add `bot:build` while
 retitling or relabeling, because it queues a build.
 
 Every label, with its color and description, is listed once, in `bot/go/internal/config`'s

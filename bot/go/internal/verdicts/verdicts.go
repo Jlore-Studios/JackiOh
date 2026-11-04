@@ -146,6 +146,9 @@ type BuildReport struct {
 	// SendBack: the parts a fullsend reconcile sends back to their builders (`"send_back"`, with
 	// the status `send_back`, #2748); empty for any other answer.
 	SendBack []SendBack // default: ()
+	// CILocal: a CI fix's builder ran the failing check locally and says how it went
+	// (`"ci_local"`: `passed`, lowercased; #2948), "" when it said nothing.
+	CILocal string // default: ""
 }
 
 // BuildReport_ is verdicts.build_report.
@@ -167,7 +170,8 @@ func BuildReport_(text string) *BuildReport {
 	question := py.SliceTo(py.Strip(py.Str(found.GetOr("question", ""))), 4000)
 	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(py.OrStr(found.Get("next_model"), "")), "`")), 40)
 	human := status == "blocked" && found.Get("human_required") == true
-	return &BuildReport{status, title, question, rest, nextModel, human, sent}
+	local := py.SliceTo(py.Lower(py.Strip(py.OrStr(found.Get("ci_local"), ""))), 20)
+	return &BuildReport{status, title, question, rest, nextModel, human, sent, local}
 }
 
 // Finding is verdicts.Finding.

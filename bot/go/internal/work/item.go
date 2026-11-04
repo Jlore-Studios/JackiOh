@@ -151,7 +151,9 @@ func (x *Worker) prepare(mergeMain bool /* = True */, install bool /* = True */)
 	}
 	x.Step("start", why, pyjson.New("outcome", "at `"+first12(x.Wt.Head())+"`"))
 	if hasRemote && mergeMain {
+		takes := x.mergeDriver(x.BaseRef) // Mergiraf for the files it takes, when they would conflict (#2948)
 		conflicts = x.Wt.Merge(x.BaseRef, x.Who)
+		x.mergirafSettled(takes, conflicts)
 		outcome := "clean"
 		if len(conflicts) > 0 {
 			outcome = fmt.Sprintf("conflicts in %d file(s): ", len(conflicts)) +
@@ -192,8 +194,8 @@ func (x *Worker) Resolve(conflicts []string, commands bool) []string {
 	if len(done) == 0 {
 		return conflicts
 	}
-	x.Resolved = []*resolve.Resolution{}
-	dicts := []any{}
+	// After what Mergiraf settled in the merge itself, if anything (`mergirafSettled`, #2948).
+	dicts := x.Result.List("resolved")
 	for _, r := range done {
 		if r.OK {
 			x.Resolved = append(x.Resolved, r)
@@ -244,8 +246,11 @@ func (x *Worker) resolvedReviewNote() string {
 	}
 	return "The harness resolved these conflicts of the merge of `main` itself, by a rule in " +
 		"its config: a file it took from `main` keeps `main`'s version on purpose (a job on " +
-		"`main` rewrites it), and a file it regenerated is the tool's output from the " +
-		"merged tree. Judge them by that rule, not as a builder's resolution:\n" +
+		"`main` rewrites it), a file it regenerated is the tool's output from the " +
+		"merged tree, and a file it took both sides' lines of (union) is an append-only list. " +
+		"Judge them by that rule, not as a builder's resolution. A file Mergiraf merged is a " +
+		"syntax-aware merge of both sides, which you judge as any resolution: both sides' " +
+		"changes must survive with their meaning:\n" +
 		strings.Join(lines, "\n")
 }
 
@@ -1286,8 +1291,11 @@ func (x *Worker) buildPass(cycle int, role string, prompt string, why string /* 
 // review sends back go to the builder as on any round.
 func (x *Worker) MergeOnly(conflicts []string) bool {
 	plan := x.Plan
+	// A pull request whose turn came (#2948) merges `main` as it is now: a clean merge is the
+	// harness's too, and its reviewer judges it as any.
+	settled := len(x.Resolved) > 0 || plan.Truthy("turn")
 	return plan.Get("action") == "revise" && plan.Get("source") == "conflict" &&
-		len(x.Resolved) > 0 && len(conflicts) == 0 && x.WipUsed == "" &&
+		settled && len(conflicts) == 0 && x.WipUsed == "" &&
 		!plan.Truthy("previous_findings") &&
 		threads.NoFeedback_(py.OrStr(plan.Get("feedback"), ""), py.MustInt(x.planItem("number")))
 }
@@ -1302,18 +1310,11 @@ func (x *Worker) mergePass(cycle int) (*verdicts.BuildReport, *pyjson.Object) {
 		paths = append(paths, r.Path)
 		lines = append(lines, "- `"+r.Path+"`: "+r.How)
 	}
-	message := config.CommitPrefix + ": merge " + x.Cfg.DefaultBranch + " for #" +
-		py.Str(x.planItem("number")) + "; the harness resolved " + strings.Join(paths, ", ")
-	if !x.commit(message) && x.Wt.MergeInProgress() {
-		// The merged tree is the branch's own (`main` brought nothing else): the merge commit
-		// still records `main`, or the pull request would stay in conflict.
-		x.Wt.Run(true, 600, map[string]string{
-			"GIT_AUTHOR_NAME":     x.Who.Name,
-			"GIT_AUTHOR_EMAIL":    x.Who.Email,
-			"GIT_COMMITTER_NAME":  x.Who.Name,
-			"GIT_COMMITTER_EMAIL": x.Who.Email,
-		}, "commit", "--quiet", "--no-verify", "--allow-empty", "-m", message)
+	message := config.CommitPrefix + ": merge " + x.Cfg.DefaultBranch + " for #" + py.Str(x.planItem("number"))
+	if len(paths) > 0 {
+		message += "; the harness resolved " + strings.Join(paths, ", ")
 	}
+	x.commitMerge(message)
 	changed := x.Wt.Head() != before
 	outcome := "changed nothing"
 	if changed {
@@ -1324,6 +1325,11 @@ func (x *Worker) mergePass(cycle int) (*verdicts.BuildReport, *pyjson.Object) {
 	body := "## What changed\n\n`main` moved and the branch no longer merged. The harness " +
 		"merged it and resolved every conflict itself, so no builder ran:\n\n" +
 		strings.Join(lines, "\n")
+	if len(lines) == 0 {
+		// Its turn came (#2948), and `main` merged into it cleanly.
+		body = "## What changed\n\nIts turn came after it waited behind another pull request, and the " +
+			"harness merged `main` into it, cleanly, so no builder ran."
+	}
 	entry := pyjson.New(
 		"n", cycle,
 		"builder", pyjson.New("role", "merge", "ok", true, "turns", 0, "minutes", 0.0,
@@ -1512,6 +1518,7 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 	checkFixes := 0
 	after := "review"
 	cycle := 0
+	var next *finalStep // what run 2's final check asks of the next round (#2948, `settle.go`)
 	for {
 		cycle++
 		x.Check()
@@ -1523,6 +1530,8 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 		builtOn := x.BuildSeat
 		harnessRound := mergeOnly && cycle == 1
 		handedRound := handed && cycle == 1
+		settledRound := next != nil && next.harness
+		next = nil
 		var built *verdicts.BuildReport
 		var entry *pyjson.Object
 		switch {
@@ -1530,6 +1539,8 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 			built, entry = x.mergePass(cycle)
 		case handedRound:
 			built, entry = x.handedPass(cycle)
+		case settledRound:
+			built, entry = x.settledPass(cycle, report)
 		default:
 			var role, prompt, why string
 			if cycle == 1 {
@@ -1544,6 +1555,10 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 		appendTo(x.Result, "cycles", entry)
 		if built == nil {
 			return
+		}
+		if cycle == 1 && !harnessRound && !handedRound && x.ciPassedLocally(built, entry) {
+			report = built // a CI fix whose failing check passed locally: CI runs again (#2948)
+			break
 		}
 		if cycle == 1 && !harnessRound && !handedRound && built.Status == "send_back" && x.reconciles() {
 			// A reconcile that sends parts back to their builders ends here (#2748, `sendBack`).
@@ -1573,7 +1588,7 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 			results = x.checks()
 		}
 		entry.Set("gates", gateDicts(results))
-		if x.SelfCheck && !harnessRound && !handedRound {
+		if x.SelfCheck && !harnessRound && !handedRound && !settledRound {
 			var checked *verdicts.BuildReport
 			checked, results, guard, openSelfCheck = x.selfCheckLoop(cycle, entry, report, results, guard)
 			if checked == nil {
@@ -1645,7 +1660,12 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 		if len(x.Resolved) > 0 {
 			context = x.withEarlier(context, findings, x.resolvedReviewNote())
 		}
-		if x.catchUp() {
+		if x.final.note != "" {
+			context = x.withEarlier(context, findings, x.final.note) // review the final check's merge only
+		}
+		// Run 2 never merges a `main` that merges cleanly (#2948): the merge queue tests the two
+		// together, and a merge would only start CI again. Its final check merges a conflicting one.
+		if !handed && x.catchUp() {
 			// `main` moved and merged cleanly: the checks and the review judge the merged head.
 			results = x.checks()
 			entry.Set("gates", gateDicts(results))
@@ -1670,6 +1690,14 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 		laneVerdicts++
 		x.Result.Set("verdict_rounds", used+laneVerdicts)
 		if review.Approved() && gates.Green(results) && len(guard) == 0 && len(redCI) == 0 {
+			if step := x.finalCheckOf(handed, review.ReviewedSHA); step != nil {
+				// Approved, and its final check before it goes ready asks for one more round: a fix
+				// pass for red CI or the conflicts a merge of `main` left, or the harness's merge.
+				entry.Set("final_check", step.what)
+				next, after = step, "final check"
+				findings, failures = step.findings, step.failures
+				continue
+			}
 			x.ApprovedSHA = review.ReviewedSHA
 			x.Result.Set("status", "approved")
 			x.Result.Set("reason", "the reviewer approved and every check passed")
@@ -1685,7 +1713,7 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 			findings = []*verdicts.Finding{newFinding("blocking", "checks", "Checks this change "+
 				"turned red must pass.", "the harness's gate run")}
 		}
-		if !harnessRound && !handedRound {
+		if !harnessRound && !handedRound && !settledRound {
 			x.sentBack(cycle, builtOn) // a rejected harness merge, or the head handed on, is no builder's round
 		}
 		if laneVerdicts+used >= x.CyclesCap() {

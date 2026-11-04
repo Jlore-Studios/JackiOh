@@ -291,7 +291,10 @@ jobs:
       # it holds that run's own Claude session, sealed (`session.enc`), which this run resumes
       # (#2748, bot/go/internal/sessions). A change's own review run also reads its pull request's
       # CI with it: the CI workflow's runs and jobs for the head it reviews (bot/go/internal/work/
-      # ci.go). Nothing here writes to Actions either.
+      # ci.go), at its start and again before it goes ready. Its final check (#2948, bot/go/internal/
+      # work/settle.go) fetches `main` and the other open pull requests' heads (`refs/pull/<n>/head`)
+      # with `contents: read` and lists them with this token, as anyone may in a public repository;
+      # when it cannot, deliver test-merges them with its own. Nothing here writes to Actions either.
       actions: read
     # The plan job's outputs, or a loop's run's inputs, which the step after the checkout holds to
     # the plan and providers.json before any step is handed a secret (`plan-fetch --check`).
@@ -408,6 +411,21 @@ jobs:
           path: .cache/emsdk
           key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
 
+      # Mergiraf, the merge driver a conflict's merge uses (#2948, bot/go/internal/resolve/
+      # mergiraf.go), as bot-cache.yml builds it from main: restored, never saved, as the Rust cache
+      # is. A miss builds it in the run, only when a merge needs it; the machine keeps each user's
+      # build in that user's cache.
+      - name: The pinned Mergiraf
+        id: mergiraf
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
+        working-directory: bot
+        run: harness mergiraf | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-') && steps.mergiraf.outputs.version != ''
+        with:
+          path: ${{ steps.mergiraf.outputs.dir }}/bin
+          key: mergiraf-${{ runner.os }}-${{ runner.arch }}-${{ steps.mergiraf.outputs.version }}
+
       # Only the CLI of the subscription plan chose, and only on GitHub's runners. The provider
       # and CLI come from plan's outputs, which providers.json decides; the model never sets them.
       - name: Install the claude CLI
@@ -497,7 +515,7 @@ jobs:
       contents: write        # the push (with the Actions token only when no bot token is set)
       issues: write
       pull-requests: write
-      actions: write         # start the next run; re-run failed CI jobs
+      actions: write         # start the next run; run CI again after a CI fix's local pass
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4

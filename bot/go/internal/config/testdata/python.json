@@ -195,7 +195,7 @@
      }
     ],
     {
-     "error": "ConfigError: resolvers[0]: `take` is one of main"
+     "error": "ConfigError: resolvers[0]: `take` is one of main, union"
     }
    ],
    [

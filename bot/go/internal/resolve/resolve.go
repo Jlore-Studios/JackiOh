@@ -11,6 +11,10 @@
 //
 //   - `take: "main"`: the version the merge brought in (`git checkout --theirs`), or its deletion. For
 //     a file a job on `main` rewrites and no branch should touch (`spec/INDEX.md`, the daily spec fold).
+//   - `take: "union"`: both sides' lines, as git's union merge keeps them (#2948): only for a file that
+//     is truly an append-only list, never for prose, where it would keep both sides of an edited
+//     paragraph. A side that deleted the file, or a file git cannot merge as text, is left for the
+//     builder.
 //   - `run: <command>`: a command that rewrites the file from the merged tree (`cargo jackioh golden
 //     bless`). It runs only once nothing else is conflicted, because it builds that tree, only when
 //     both sides kept the file, and only with time left for it and for a review after it. A command
@@ -18,7 +22,9 @@
 //     the file back exactly as git left it, markers and all, so the builder resolves it as before.
 //
 // Every other file stays as git left it. The run's checks then judge the merged head as they judge
-// a builder's work, and its reviewer reviews it (`work.Worker._resolve`).
+// a builder's work, and its reviewer reviews it (`work.Worker._resolve`). Before any of these, a
+// syntax-aware merge driver (Mergiraf, `mergiraf.go`) may already have merged the TypeScript,
+// JavaScript, JSON and YAML files the root `.gitattributes` gives it, during the merge itself.
 package resolve
 
 import (
@@ -85,6 +91,62 @@ func takeMain(wt *git.Git, path string, base string) *Resolution {
 	}
 	wt.Run(true, 600, nil, "rm", "-q", "--", path)
 	return &Resolution{Path: path, How: fmt.Sprintf("took `%s`'s side: it deleted the file", base), OK: true}
+}
+
+// takeUnion is both sides' lines of `path` (`take: union`, #2948), as git's union merge driver keeps
+// them: the three stages of the conflict, byte for byte (`git checkout-index --temp`), merged by
+// `git merge-file --union`, which resolves every conflicting hunk by keeping our lines and then
+// theirs. A side that deleted the file, or one git cannot merge as text, is not resolved.
+func takeUnion(wt *git.Git, path string) *Resolution {
+	how := "kept both sides' lines (union)"
+	fail := func(why string) *Resolution { return &Resolution{Path: path, How: how, OK: false, WhyNot: why} }
+	if !(existsAt(wt, "HEAD", path) && existsAt(wt, "MERGE_HEAD", path)) {
+		return fail("one side deleted the file, which a union does not decide")
+	}
+	proc := wt.Run(false, 600, nil, "checkout-index", "--stage=all", "--temp", "--", path)
+	names, _, _ := strings.Cut(proc.Stdout, "\t")
+	stages := py.Split(names)
+	if proc.Returncode != 0 || len(stages) != 3 || stages[1] == "." || stages[2] == "." {
+		return fail("git could not read the conflict's three sides")
+	}
+	temps := []string{}
+	defer func() {
+		for _, name := range temps {
+			_ = os.Remove(filepath.Join(wt.Cwd, name))
+		}
+	}()
+	for _, name := range stages {
+		if name != "." {
+			temps = append(temps, name)
+		}
+	}
+	base := stages[0]
+	if base == "." {
+		// Both sides added the file: the union of the two against nothing.
+		empty, err := os.CreateTemp(wt.Cwd, ".merge_file_empty_")
+		if err != nil {
+			panic(err)
+		}
+		empty.Close()
+		base = filepath.Base(empty.Name())
+		temps = append(temps, base)
+	}
+	ours, theirs := stages[1], stages[2]
+	merged := wt.Run(false, 600, nil, "merge-file", "--union", "-L", "HEAD", "-L", "base", "-L", "MERGE_HEAD",
+		ours, base, theirs)
+	if merged.Returncode != 0 {
+		return fail(fmt.Sprintf("git could not merge it as text (%s)",
+			py.SliceTo(py.Strip(merged.Stderr+merged.Stdout), 200)))
+	}
+	data, err := os.ReadFile(filepath.Join(wt.Cwd, ours))
+	if err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(filepath.Join(wt.Cwd, path), data, 0o666); err != nil {
+		panic(err)
+	}
+	wt.Run(true, 600, nil, "add", "--", path)
+	return &Resolution{Path: path, How: how, OK: true}
 }
 
 // exists is Path.exists().
@@ -184,7 +246,15 @@ func Resolve(wt *git.Git, conflicts []string, resolvers []*config.Resolver, env 
 	left := append([]string{}, conflicts...)
 	done := []*Resolution{}
 	for _, path := range conflicts {
-		if resolver := byPath[path]; resolver != nil && resolver.Take != "" {
+		resolver := byPath[path]
+		switch {
+		case resolver != nil && resolver.Take == "union":
+			resolution := takeUnion(wt, path)
+			done = append(done, resolution)
+			if resolution.OK {
+				left = remove(left, path)
+			}
+		case resolver != nil && resolver.Take != "":
 			done = append(done, takeMain(wt, path, base))
 			left = remove(left, path)
 		}
