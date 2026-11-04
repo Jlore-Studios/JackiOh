@@ -17750,12 +17750,12 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-04T05:29:38Z",
-      "run_id": "41788034647",
+      "run_id": "pending:1dc2afb0-1793775408",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 40,
-      "started_at": "2026-11-04T06:48:56Z",
+      "started_at": "2026-11-04T06:57:26Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18137,7 +18137,7 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T06:48:56Z",
+    "at": "2026-11-04T06:57:26Z",
     "url": "",
     "what": "spot-check #2998 on claude-3"
   },
@@ -32247,9 +32247,9 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:1dc2afb0-1793775408",
         "sha": "e485107852599734d92622e1291c13742a3313a2",
-        "started_at": "2026-11-04T06:48:56Z",
+        "started_at": "2026-11-04T06:57:26Z",
         "status": "queued",
         "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
         "tries": 1
