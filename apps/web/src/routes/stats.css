@@ -443,21 +443,21 @@
   display: inline-block;
   min-width: 1.6em;
   padding: 1px 6px;
-  border: 1px solid var(--line, #3a3f55);
+  border: 1px solid var(--line);
   border-radius: 4px;
   font-weight: 700;
   text-align: center;
-  color: var(--text, #e6e8f0);
+  color: var(--text);
 }
 
 .stats-tier[data-tier="S"] {
-  border-color: var(--tavern-danger, #e5484d);
-  color: var(--tavern-danger, #e5484d);
+  border-color: var(--tavern-danger);
+  color: var(--tavern-danger);
 }
 
 .stats-tier[data-tier="F"] {
-  border-color: var(--accent, #60a5fa);
-  color: var(--accent, #60a5fa);
+  border-color: var(--pal-sky-400);
+  color: var(--pal-sky-400);
 }
 
 .stats-tiers-note p {
