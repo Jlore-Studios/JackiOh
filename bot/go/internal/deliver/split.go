@@ -610,9 +610,7 @@ func (x *Deliverer) Revise(number int, status string) {
 			return
 		}
 		x.holdAutoMerge(0)
-		x.askDecision(number, "revise", "I need a decision before I can revise this.", "", py.OrStr(question, ""),
-			fmt.Sprintf("answer here with `%s revise <your answer>` (or `@%s <your answer>`), which queues it again",
-				config.Slash, x.Cfg.BotLogin))
+		x.askDecision(number, "revise", "I need a decision before I can revise this.", "", py.OrStr(question, ""))
 		return
 	}
 	// As the run found it: the source and the clearance `_carry` reads are reset below.

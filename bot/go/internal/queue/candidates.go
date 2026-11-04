@@ -140,11 +140,12 @@ type Candidate struct {
 	// (`plan.Pairs`), on the model that approved it (`TurnModel`).
 	TurnNext  bool   // default: False
 	TurnModel string // default: ""
-	// For a build or a revision: nobody answered its question in time, so it goes ahead on its
-	// default (#2986, `WentAhead`), owned by the subscription that asked and on the model that asked
-	// (`DefaultModel`), in a fresh session.
-	OnDefault    bool   // default: False
-	DefaultModel string // default: ""
+	// For a build or a revision taken up again from its question (`Resumes`): "answer", a trusted
+	// person replied and the reply is the decision (#3009), or "default", nobody answered in time and
+	// it goes ahead on its default (#2986); owned by the subscription that asked and on the model that
+	// asked (`AskedModel`), in a fresh session.
+	Resumes    string // default: ""
+	AskedModel string // default: ""
 }
 
 // NewCandidate is Candidate(number, kind, title, forced, queued_at) with its defaults.
@@ -697,8 +698,8 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			if turn := TurnOf(record); kind == "revise" && turn != nil {
 				c.TurnNext, c.TurnModel = true, turn.Str("model")
 			}
-			if decision := DecisionOf(record); (kind == "build" || kind == "revise") && WentAhead(decision) != "" {
-				c.OnDefault, c.DefaultModel = true, decision.Str("model")
+			if decision := DecisionOf(record); (kind == "build" || kind == "revise") && Resumes(decision) != "" {
+				c.Resumes, c.AskedModel = Resumes(decision), decision.Str("model")
 			}
 			found[number] = c
 			order = append(order, number)

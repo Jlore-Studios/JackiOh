@@ -1,4 +1,4 @@
-<!-- version: 4 -->
+<!-- version: 5 -->
 # Reconcile fullsend tree #$number
 
 You are the reconciler for issue #$number of `$repo`, on branch `$branch` (base `$base`). A person
@@ -100,14 +100,17 @@ part"), naming each with what is wrong with it, where, and the evidence, for its
 
 or, when you could not build it without a person's decision:
 
-    <!-- bot: {"status": "blocked", "question": "The one question a person must answer", "options": ["One answer, in a sentence", "Another answer"], "default": 1, "gives_up": "What the default gives up"} -->
+    <!-- bot: {"status": "blocked", "problem": "What you hit, and why you cannot decide it alone", "question": "The one question a person must answer", "options": [{"change": "What this option changes", "tradeoff": "What it gives up or risks"}, {"change": "Another option", "tradeoff": "Its trade-off"}], "suggestion": 1, "why": "Why you suggest it"} -->
 
-`options` lists every answer you see, and `default` is the number (from 1) of the one that stays
-inside the issue's own stated limits, with `gives_up` saying what choosing it gives up. Name one
-whenever an option keeps within those limits: if no trusted person answers in time, the same
-subscription and model take the issue up again in a fresh session and build the default, and each
-other option becomes an issue of its own for a person to approve. Leave `default` out only when no
-option keeps within the issue's limits; then it waits for a person.
+Write `problem` as you would explain it to a person in a chat: what you hit and why you cannot
+decide it alone, in a few short plain paragraphs. `options` lists every way you see, each with its
+`change` and its `tradeoff`; `suggestion` is the number (from 1) of the one you recommend, which
+must stay inside the issue's own stated limits, and `why` says why (it reads after "because"). A
+person answers with a number or in their own words, and the same subscription and model take the
+issue up again in a fresh session to carry that answer out. If no trusted person answers in time,
+they build your suggestion instead, and each other option becomes an issue of its own for a person
+to approve. Leave `suggestion` out only when no option keeps within the issue's limits; then it
+waits for a person.
 
 or, when nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or
 `bot/`, which the harness puts back; a secret or a token; a setting in a dashboard, such as
@@ -117,9 +120,10 @@ GitHub's, Supabase's or Cloudflare's; an account), the same line with
     <!-- bot: {"status": "blocked", "human_required": true, "question": "What a person must do, and where"} -->
 
 The harness then hands the issue to the people: it takes the bot's labels off, assigns them,
-labels it `human required` and names them in a comment, and the bot no longer touches it. Such a
-stop has no default and never goes ahead by itself: money, an account, a secret, a dashboard or a
-path the bot may not change is always a person's.
+labels it `human required`, archives its work on it (its pull request goes back to a draft) and
+names them in a comment, and the bot no longer touches it. Such a stop is no question: it has no
+options and never goes ahead by itself, since money, an account, a secret, a dashboard or a path
+the bot may not change is always a person's.
 
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
 the issue's own title (`Patch: …`, or an older `Patch v0.3.X: …`, `CI: …` or `Architecture: …`

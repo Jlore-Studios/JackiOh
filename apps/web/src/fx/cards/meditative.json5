@@ -34,7 +34,7 @@
   "meditative-020": { cast: { motif: "seal" } }, // Aestheticize the Game
   "meditative-021": { cast: { motif: "tether", palette: "Tech/glitch" }, trigger: { motif: "deal", palette: "Tech/glitch" } }, // API Key Fishing
   "meditative-022": { cast: { motif: "deal" } }, // Mind Games
-  "meditative-022-1": { cast: { motif: "glimpse" } }, // Fortify Mind
+  "meditative-022-1": { bespoke: "mindJudge" }, // Fortify Mind
   "meditative-023": { cry: { motif: "transmute", palette: "Beast/wool" } }, // Golly Bob Howdy
   "meditative-024": { cast: { motif: "transmute", palette: "Beast/wool" } }, // Polymorph
   "meditative-025": { cry: { motif: "offering", palette: "Beast/felinor" } }, // Blue-Eyes White Felinor
@@ -59,7 +59,7 @@
   "meditative-039-3": { cast: { motif: "bolt" } }, // Dud
   "meditative-039-4": { cast: { motif: "conjure", palette: "Hustle/jade" } }, // Red Jade
   "meditative-039-5": "none: no motif reads marked (its brand row draws the Allure)", // Jade Beauty
-  "meditative-040": { cast: { motif: "glimpse" }, aura: { look: "bloom", scope: "board" } }, // Feng Shui
+  "meditative-040": { cast: { motif: "bless" }, aura: { look: "bloom", scope: "board" } }, // Feng Shui
   "meditative-041": { trigger: { motif: "deal", palette: "Hustle/jade" } }, // CN Smuggler
   "meditative-042": { cast: { motif: "deal", palette: "Hustle/cash" } }, // CN Flea Market
   "meditative-043": { cast: { motif: "deal", palette: "Hustle/jade" } }, // CN Jade Market

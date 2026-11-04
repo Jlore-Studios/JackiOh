@@ -398,6 +398,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	if c.DecisionWaitHours < 0 {
 		raiseConfig("decision_wait_hours: must be 0 (never goes ahead) or more")
 	}
+	c.DecisionAssignees = mustStrs(raw.GetOr("decision_assignees", optional.Get("decision_assignees")))
 	c.UploadTranscripts = pyjson.Truthy(raw.Get("upload_transcripts"))
 	c.ResumeSessions = pyjson.Truthy(raw.GetOr("resume_sessions", optional.Get("resume_sessions")))
 	c.HoldMinutes = py.MustInt(raw.GetOr("hold_minutes", optional.Get("hold_minutes")))

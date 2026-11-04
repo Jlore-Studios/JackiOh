@@ -34,7 +34,7 @@ import {
   type CardPicks,
 } from "../cards/cosmetics.ts";
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
-import { AUGMENT_SIGNATURE_ID, artPictureOf, augmentPicksOf, augmentsOf, lookOf, signatureFits, versionPickOf } from "../cards/versions.ts";
+import { AUGMENT_SIGNATURE_ID, artPartOf, artPictureOf, augmentPicksOf, augmentsOf, lookOf, signatureFits, versionPickOf } from "../cards/versions.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
@@ -131,14 +131,23 @@ function signatureWaits(item: StripItem, picks: CardPicks): boolean {
 
 /**
  * One item's small live preview: the card wearing it, or for a version the art across the whole face, R2940001 the
- * picture that version draws.
+ * picture that version draws; R2943001 Set showcase's in the card's set's treatment, and Out of frame's subject alone.
  */
 function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item: StripItem }): ReactElement {
   const { rarityFoil } = useCardSettings();
   if (item.kind === "version" && item.id !== NO_FULL_ART_ID) {
     return (
       <span className="collection-strip__picture collection-strip__picture--full-art">
-        <CardArt defId={def.id} radiant={false} tags={def.tags} type={def.type} name={def.name} shape="full" picture={artPictureOf(item.id)} />
+        <CardArt
+          defId={def.id}
+          radiant={false}
+          tags={def.tags}
+          type={def.type}
+          name={def.name}
+          shape="full"
+          picture={artPictureOf(item.id, def.set)}
+          part={artPartOf(item.id)}
+        />
       </span>
     );
   }

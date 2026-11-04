@@ -24,10 +24,12 @@
 //     or the hold runs out (`hold_minutes`), so the next run takes it;
 //   - a pull request waiting its turn (#2948, `plan.SyncTurns`) whose turn came: each it waited
 //     behind has closed, or its wait ran out (`hold_minutes`); it is taken up again on its lane;
-//   - an item stopped on a question or handed over (#2986, `plan.SyncDecisions`): `needs decision`
-//     comes off once it closes, and a question with a default that no trusted person answered within
-//     `decision_wait_hours` goes ahead on it, on the lane that asked; the first sweep also labels
-//     the items that stopped on a question before #2986 (`plan.OlderQuestions`), with no deadline;
+//   - an item stopped on a question (#2986, #3009, `plan.SyncDecisions`): a trusted person's reply
+//     (no command) queues it again on the lane that asked, with the reply as the decision; a question
+//     with a default that nobody answered within `decision_wait_hours` goes ahead on it, on that lane;
+//     `needs decision` and the people it assigned come off then, and once it closes; the first sweep
+//     also labels the items that stopped on a question before #2986 (`plan.OlderQuestions`), with no
+//     deadline, and every sweep takes `needs decision` off a `human required` item (`plan.HandedOver`);
 //   - a pull request a person merges (`ready for merge`, `person merges`) whose head the reviews
 //     cleared and CI passed (#2948): its merge owner gives up its claim on it (`PersonMerges`);
 //   - an issue the bot has planned, and a pull request it opened, that carries no `difficulty:*` label
@@ -338,11 +340,13 @@ func turns(ctx *hctx.Context, since time.Time) []string {
 	return plan.SyncTurns(ctx, 0)
 }
 
-// decisions keeps the stops for a decision (#2986, `plan.SyncDecisions`): `needs decision` off a
-// closed thread, a question past its end gone ahead on its default; and, the first time, labels the
-// items stopped on a question before #2986 (`plan.OlderQuestions`).
+// decisions keeps the stops for a decision (#2986, #3009, `plan.SyncDecisions`): a question a trusted
+// person answered queued again with the answer, one past its end gone ahead on its default, `needs
+// decision` off a closed thread and off every hand-over (`plan.HandedOver`); and, the first time,
+// labels the items stopped on a question before #2986 (`plan.OlderQuestions`).
 func decisions(ctx *hctx.Context, since time.Time) []string {
-	return append(plan.OlderQuestions(ctx), plan.SyncDecisions(ctx)...)
+	notes := append(plan.OlderQuestions(ctx), plan.HandedOver(ctx)...)
+	return append(notes, plan.SyncDecisions(ctx)...)
 }
 
 // PersonMerges: a pull request a person merges (`ready for merge`, `person merges`, #2948) waits for

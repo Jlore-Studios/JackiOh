@@ -3,6 +3,8 @@
 // TAKEOVER_STILL_MS and is gone. It reads only a card the seat's own event names (Game.tsx asks
 // `entranceEntries`, R202), takes no pointer event, carries no `data-animating` and holds nothing, so
 // the queue, practice's AI and `cy.settled()` never wait for it (R200). The music still plays (R1350).
+// R2803000: the still echoes the reworked takeover at rest: the dark it lands in, a motionless rays
+// disc behind the card and the landing ring around it. Nothing here animates, so it stays still.
 
 import { useContext, useEffect, type ReactElement } from "react";
 
@@ -34,9 +36,11 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   if (face === null) return null;
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} aria-hidden="true">
+      <span className="takeover-still-rays" aria-hidden="true" />
       <span className="takeover-still-card">
         <CardFace face={face} layout="full" />
       </span>
+      <span className="takeover-still-ring" aria-hidden="true" />
     </div>
   );
 }

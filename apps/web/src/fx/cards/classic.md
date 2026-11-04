@@ -76,7 +76,7 @@ gallery plays every entry.
 | `classic-051` | Back Breaker | Unit | death wipe | 1.08 | bolt | death: it destroys every backrow card, which wipe draws; a set-piece candidate |
 | `classic-052` | Final Gambit | Trap | cast flight | 1.45 | bolt | cast: fatigue; it heals and draws, and flight (#2786) reads the draw |
 | `classic-053` | Plague Crawler | Unit | cry tally; trigger flight | 1.08 | none: no motif reads promptAnswered | cry: it places counters, which tally (#2786) reads; trigger: it draws, which flight reads |
-| `classic-054` | Rewind | Spell | cast mirror | 1.08 | none: vanilla | cast: the repeated Cry plays as its own card's, which mirror draws |
+| `classic-054` | Rewind | Spell | cast transmute | 1.08 | none: vanilla | cast: the repeated Cry plays as its own card's, which transmute draws (R2803000: mirror folded into transmute) |
 | `classic-055` | Book of Wildfire | Spell | cast bolt Fire | 1.35 | bolt | cast: the census agrees (bolt); Fire sets it apart from Book of Flame's scorch |
 | `classic-056` | Spell Tyrant | Unit | bespoke tyrantSigil | 1.85 | none: no motif reads promptAnswered | kept: its `tyrantSigil` entrance (R670); its Cry's events are the casts' own |
 | `classic-057` | Echo | Spell | cast bolt | 1.35 | bolt | cast: the census agrees (bolt) |
@@ -97,7 +97,7 @@ gallery plays every entry.
 | `classic-072` | Grand Counterspell | Trap | cast negate | 1.28 | negate | cast: the census agrees (negate) |
 | `classic-073` | Nurse Cleaver | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only, which the keyword beats draw |
 | `classic-074` | Corpse Plantation | Field Spell | cast tally; activate rise; aura bloom zone | 1.45 | bolt | cast: the census's bolt is noise; it places counters, which tally (#2786) reads; activate: it raises a Unit, which rise draws |
-| `classic-075` | Argusland | Field Spell | cast ward; aura holy side | 1.36 | none: vanilla | cast: a standing shield, which ward draws |
+| `classic-075` | Argusland | Field Spell | cast bless; aura holy side | 1.36 | none: vanilla | cast: its standing guard draws in the rows; ward folded into the rows (R2803000), so cast names bless, its nearest motif |
 | `classic-076` | Plague Bringer | Unit | cry tally | 1.28 | bolt | cry: it places counters, which tally (#2786) reads |
 | `classic-077` | Anti-Magic Monkey | Unit | none: vanilla | — | bolt | the census's bolt is one stray damage; its Aura taxes Spells, with no moment to draw |
 | `classic-078` | Mutate Spell | Field Spell | cast vanish; activate vanish; aura arcane zone | 1.19 | vanish | cast and activate: the census agrees (vanish) |
