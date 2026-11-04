@@ -15196,6 +15196,8 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-04T21:16:16Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "41916473759",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
