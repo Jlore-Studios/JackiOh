@@ -10,6 +10,8 @@ import { useState, type ReactElement } from "react";
 import type { RunAction, RunContent, RunState } from "@jackioh/run";
 
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { paths } from "../../net/navigate.ts";
+import { BackLink } from "../../routes/nav.tsx";
 import { runMaxHp, runScore } from "../../wasm/index.ts";
 import { RunTimer } from "../fight/RunTimer.tsx";
 import { runFinished, type Dungeon } from "../store.ts";
@@ -96,6 +98,8 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
   };
   return (
     <div className="app-shell tavern dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
+      {/* R2972000: back to the Play menu; the run stays saved, and the start screen offers Continue. */}
+      <BackLink to={paths.play} />
       <RunHud run={run} content={content} startedAt={dungeon.startedAt} />
       {refusal === null ? null : (
         <p className="notice" role="alert" data-testid={dungeonMapTestid.refusal}>

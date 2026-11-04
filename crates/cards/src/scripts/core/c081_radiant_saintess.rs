@@ -105,9 +105,9 @@ mod tests {
     const SAINTESS: &str = "core-081";
     /// #44 True Strike: 4 damage to any target, which is exactly a 4/4 Saintess.
     const TRUE_STRIKE: &str = "core-044";
-    /// #5 Stockpile and #2 Bigot: two more hand cards to watch the radiant Death reach.
+    /// #5 Stockpile and #2 Speciesist: two more hand cards to watch the radiant Death reach.
     const STOCKPILE: &str = "core-005";
-    const BIGOT: &str = "core-002";
+    const SPECIESIST: &str = "core-002";
     /// #92 Felinor Fiender, the Stack unit: on top of a pile, the card under it lies dormant (§3.2).
     const FIENDER: &str = "core-092";
 
@@ -320,9 +320,9 @@ mod tests {
                 "seed": "saintess-radiant-hand",
                 "p1": {
                     "field": [{ "def": SAINTESS, "radiant": true }, TIMMY],
-                    "hand": [TRUE_STRIKE, TIMMY, STOCKPILE, BIGOT]
+                    "hand": [TRUE_STRIKE, TIMMY, STOCKPILE, SPECIESIST]
                 },
-                "p2": { "field": [TIMMY], "hand": [STOCKPILE, BIGOT] }
+                "p2": { "field": [TIMMY], "hand": [STOCKPILE, SPECIESIST] }
             }));
             strike_saintess(&mut s);
 
@@ -331,7 +331,7 @@ mod tests {
             let timmy = s.unit(P1, 2);
             expect_stats_or(&mut s, timmy, TIMMY, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
             // The hand is no longer hers to change (#2179).
-            assert_eq!(def_ids(&s.hand(P1)), vec![TIMMY, STOCKPILE, BIGOT]);
+            assert_eq!(def_ids(&s.hand(P1)), vec![TIMMY, STOCKPILE, SPECIESIST]);
             assert!(s.hand(P1).iter().all(|card| !card.radiant));
             // "your": the opponent's board and hand are untouched.
             assert_eq!(s.unit(P2, 1).map(|unit| unit.radiant), Some(false));
@@ -376,13 +376,13 @@ mod tests {
                     "seed": "saintess-radiant-hand",
                     "p1": {
                         "field": [{ "def": SAINTESS, "radiant": true }, TIMMY],
-                        "hand": [TRUE_STRIKE, TIMMY, STOCKPILE, BIGOT]
+                        "hand": [TRUE_STRIKE, TIMMY, STOCKPILE, SPECIESIST]
                     },
-                    "p2": { "field": [TIMMY], "hand": [STOCKPILE, BIGOT] }
+                    "p2": { "field": [TIMMY], "hand": [STOCKPILE, SPECIESIST] }
                 }));
                 strike_saintess(&mut s);
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.radiant), Some(true));
-                assert_eq!(def_ids(&s.hand(P1)), vec![TIMMY, STOCKPILE, BIGOT]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![TIMMY, STOCKPILE, SPECIESIST]);
                 assert!(s.hand(P1).iter().all(|card| card.radiant));
                 assert!(!s.hand(P2).iter().any(|card| card.radiant));
             });
@@ -400,9 +400,9 @@ mod tests {
                         "p1": {
                             "field": [{ "def": SAINTESS, "radiant": true }],
                             "hand": [TRUE_STRIKE, { "def": TIMMY, "radiant": timmy_radiant }, STOCKPILE],
-                            "library": [BIGOT]
+                            "library": [SPECIESIST]
                         },
-                        "p2": { "hand": [STOCKPILE], "library": [BIGOT] }
+                        "p2": { "hand": [STOCKPILE], "library": [SPECIESIST] }
                     }));
                     strike_saintess(&mut s);
                     s

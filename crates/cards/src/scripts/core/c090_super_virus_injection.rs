@@ -1,6 +1,6 @@
-//! #90 CN-Viral Injection (SPEC §8.5, §7, R11, R12, R57, R58, R80).
+//! #90 Super-Virus Injection (SPEC §8.5, §7, R11, R12, R57, R58, R80).
 //!
-//! Base: "Shuffle a CN-Virus into the opponent's library". Radiant: "A Radiant CN-Virus".
+//! Base: "Shuffle a Super-Virus into the opponent's library". Radiant: "A Radiant Super-Virus".
 //! Engine cell: "The opponent owns the token, so its cast-on-draw chain runs on their draws; a full
 //! library refuses the shuffle (R80)."
 //!
@@ -16,7 +16,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-090";
 
-/// #90.1 CN-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry (SURFACE §7.4).
+/// #90.1 Super-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry (SURFACE §7.4).
 const VIRUS: &str = "core-090-1";
 
 /// `radiantVirus` is the whole of the radiant text.
@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #90 CN-Viral Injection and #90.1 CN-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
+// #90 Super-Virus Injection and #90.1 Super-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
 // R11, R12, R57, R58, R63, R70, R80, R316, R350).
 //
 // Both are tested here because #90 hands #90.1 to the OTHER player (R12). R275 scales the radiant
@@ -116,13 +116,13 @@ mod tests {
         s.state().players[player].library.clone()
     }
 
-    // #90 CN-Viral Injection — base
+    // #90 Super-Virus Injection — base
 
-    mod n90_cn_viral_injection_base {
+    mod n90_super_virus_injection_base {
         use super::*;
 
         #[test]
-        fn shuffles_one_cn_virus_into_the_opponent_s_library_and_nothing_into_yours() {
+        fn shuffles_one_super_virus_into_the_opponent_s_library_and_nothing_into_yours() {
             let mut s = scenario(json!({
                 "seed": "core-090-enemy-library",
                 "p1": { "hand": [INJECTION, "core-005"], "library": filler(3) },
@@ -213,13 +213,13 @@ mod tests {
         }
     }
 
-    // #90 CN-Viral Injection — radiant
+    // #90 Super-Virus Injection — radiant
 
-    mod n90_cn_viral_injection_radiant {
+    mod n90_super_virus_injection_radiant {
         use super::*;
 
         #[test]
-        fn a_radiant_cn_virus_the_flag_is_set_and_everything_else_is_kept_s8_conventions() {
+        fn a_radiant_super_virus_the_flag_is_set_and_everything_else_is_kept_s8_conventions() {
             let mut s = scenario(json!({
                 "seed": "core-090-radiant",
                 "p1": { "hand": [{ "def": INJECTION, "radiant": true }, "core-005"], "library": filler(3) },
@@ -283,8 +283,8 @@ mod tests {
                 js(&s.view(Some(P2)).you.own_library),
                 json!({
                     "cards": [
-                        { "defId": VIRUS, "radiant": true, "count": 1, "created": true },
                         { "defId": "core-005", "radiant": false, "count": 4 },
+                        { "defId": VIRUS, "radiant": true, "count": 1, "created": true },
                     ],
                     "unknown": 0,
                 })
@@ -313,14 +313,14 @@ mod tests {
         }
     }
 
-    // #90.1 CN-Virus — base, played from hand (the `cry` with no draw around it)
+    // #90.1 Super-Virus — base, played from hand (the `cry` with no draw around it)
 
-    /// The delayed effects a CN-Virus has armed and not yet run (R350).
+    /// The delayed effects a Super-Virus has armed and not yet run (R350).
     fn armed_copies(s: &Scenario) -> usize {
         s.state().delayed.iter().filter(|entry| entry.resume.def_id == VIRUS).count()
     }
 
-    /// The `shuffledIn` events of `player` that put a CN-Virus in.
+    /// The `shuffledIn` events of `player` that put a Super-Virus in.
     fn viruses_in(s: &Scenario, player: PlayerId) -> usize {
         shuffled_in(s, Some(player)).iter().filter(|event| event.def_id == VIRUS).count()
     }
@@ -354,7 +354,7 @@ mod tests {
         assert!(!crate::can_upgrade_number(&s, VIRUS, "damage"));
     }
 
-    mod n90_1_cn_virus_base {
+    mod n90_1_super_virus_base {
         use super::*;
 
         #[test]
@@ -505,7 +505,7 @@ mod tests {
             crate::register_all();
             // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's #32 Prem Panther
             // (5/4) attack it; the Panther destroys it and survives, so p1 draws 2 on p2's turn (R426): the
-            // CN-Virus on top of p1's library is cast there, and "the end of the turn" is p2's.
+            // Super-Virus on top of p1's library is cast there, and "the end of the turn" is p2's.
             let mut s = scenario(json!({
                 "seed": "core-090-1-their-turn",
                 "p1": { "field": ["core-032"], "library": [VIRUS, "core-005", "core-005"], "hand": ["core-005"] },
@@ -542,9 +542,9 @@ mod tests {
         }
     }
 
-    // #90.1 CN-Virus — cast on draw and R58's chain
+    // #90.1 Super-Virus — cast on draw and R58's chain
 
-    mod n90_1_cn_virus_cast_on_draw_r58_r70 {
+    mod n90_1_super_virus_cast_on_draw_r58_r70 {
         use super::*;
 
         #[test]
@@ -638,7 +638,7 @@ mod tests {
         }
     }
 
-    mod n90_1_cn_virus_radiant {
+    mod n90_1_super_virus_radiant {
         use super::*;
 
         #[test]
@@ -724,7 +724,7 @@ mod tests {
             .collect()
     }
 
-    mod n90_1_cn_virus_s5_1_pools {
+    mod n90_1_super_virus_s5_1_pools {
         use super::*;
 
         #[test]

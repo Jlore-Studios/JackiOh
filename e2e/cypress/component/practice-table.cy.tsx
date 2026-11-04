@@ -39,6 +39,12 @@ const EPSILON = 1;
 /** game/phoneBar.ts's query, so the spec branches exactly where the board does. */
 const PHONE_BAR_QUERY = "(max-width: 600px), (orientation: landscape) and (max-height: 500px)";
 
+/** board.css's phone-on-its-side layout. */
+const LANDSCAPE_PHONE_QUERY = "(orientation: landscape) and (max-height: 500px)";
+
+/** How far below the shell's content top the enemy's topmost plate may start. */
+const ENEMY_TOP_MAX_PX = 24;
+
 /** The outcome words the one visible outcome may wear. */
 const OUTCOME_WORDS = /\b(win|loss|victory|defeat|draw)\b/i;
 
@@ -279,14 +285,20 @@ describe("#2878 mid-game: no HUD above the board", () => {
         });
         expect(between, `nothing visible sits above the board at ${where}`).to.deep.eq([]);
 
-        // The opponent's hero starts right under the shell's safe-area padding.
+        // The opponent's hero starts right under the shell's safe-area padding. On a phone held on its side
+        // board.css centers each hero and its piles in their seat's half of the field's height, so there the
+        // seat's plate is what starts at the top.
         const hero = doc.querySelector('[data-testid="hero-opponent"]');
         expect(hero, "hero-opponent is mounted").to.not.eq(null);
-        if (hero === null) return;
+        const seat = doc.querySelector(".seat-opponent");
+        expect(seat, "the opponent's seat is mounted").to.not.eq(null);
+        const win = doc.defaultView;
+        if (hero === null || seat === null || win === null) return;
+        const topmost = win.matchMedia(LANDSCAPE_PHONE_QUERY).matches ? seat : hero;
         expect(
-          hero.getBoundingClientRect().top - contentTop,
-          `hero-opponent starts within 24px of the shell's content top at ${where}`,
-        ).to.be.at.most(24);
+          topmost.getBoundingClientRect().top - contentTop,
+          `${topmost === seat ? "the opponent's seat" : "hero-opponent"} starts within ${String(ENEMY_TOP_MAX_PX)}px of the shell's content top at ${where}`,
+        ).to.be.at.most(ENEMY_TOP_MAX_PX);
 
         // The turn banner stays in the DOM as the live region with no visible box.
         const banner = doc.querySelector('[data-testid="turn-banner"]');
@@ -407,6 +419,8 @@ describe("#2878 game over: one outcome, in the board's chip", () => {
           const style = getComputedStyle(child);
           if (style.display === "none" || style.visibility === "hidden") return;
           if (child.closest("[hidden]") !== null) return;
+          // A modifier badge's rule text ("Combo: draw 1") is not an outcome.
+          if (child.closest('[data-testid^="modifiers-"]') !== null) return;
           const text = child.textContent ?? "";
           if (!OUTCOME_WORDS.test(text)) return;
           // Only the chip's own word element counts: ancestors (the chip, the game, the body)

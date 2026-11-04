@@ -13,7 +13,7 @@
 
 use jackioh_engine::testkit::*;
 
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const RIGHT_HOUSE: &str = "core-003";
 const SEVEN_SEVEN: &str = "core-025";
 const SUPPRESSIVE_AURA: &str = "core-046";
@@ -232,20 +232,21 @@ mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves
     use super::*;
 
     #[test]
-    fn r118_bigot_played_under_suppressive_aura_destroys_its_target_before_it_dies_s10_5_steps_4_5_s4_5() {
+    fn r118_speciesist_played_under_suppressive_aura_destroys_its_target_before_it_dies_s10_5_steps_4_5_s4_5()
+    {
         let mut g = setup(json!({
-            "p1": { "hand": [BIGOT, STOCKPILE], "backrow": [{ "def": SUPPRESSIVE_AURA, "lane": 1 }], "library": LIBRARY },
+            "p1": { "hand": [SPECIESIST, STOCKPILE], "backrow": [{ "def": SUPPRESSIVE_AURA, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": LIBRARY },
         }));
         let prey = g.unit_at("p2", 1);
-        let bigot = g.card(BIGOT).clone();
+        let speciesist = g.card(SPECIESIST).clone();
 
         // No trap answered it and nothing took it off the field at step 4, so step 5 resolves its Cry (R118:
         // the Cry is lost only where a trap has taken the card off the field), and the check after the play
         // collects it (§4.5).
-        g.play(BIGOT, json!({ "targets": pick::instance(&prey) }));
+        g.play(SPECIESIST, json!({ "targets": pick::instance(&prey) }));
         g.expect_in_zone(&prey, "graveyard");
-        g.expect_in_zone(&bigot, "graveyard");
+        g.expect_in_zone(&speciesist, "graveyard");
     }
 }
 

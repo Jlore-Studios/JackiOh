@@ -2898,10 +2898,15 @@ button.modifier-badge[data-open="true"] {
        seats already had. */
     --card-h: clamp(44px, calc((100cqh - 348px) / 5.24), 90px);
     --card-w: calc(var(--card-h) * 0.72);
-    /* #2876: a field card is a tile a little wider than it is tall and fills its zone, as on a
-       phone held sideways (`--card-w: calc(var(--card-h) * 1.25)` there, whose faces already
-       render at this shape): the tile's width-to-height cap (CLAUDE.md rule 9). */
-    --field-tile-max: 1.25;
+    /* #2932: a field card keeps a card shape: its width is never under 0.72 of its height (the
+       phone's card) and never over 0.86 of it (the shape the desktop draws units at, whose faces
+       already hold up), so it grows by getting taller, never wider (CLAUDE.md rule 9). */
+    --field-ratio-min: 0.72;
+    --field-ratio-max: 0.86;
+    /* #2932: the seats' fixed tray channel: a phone chip's height (`--tray-chip-h`, below) and the
+       2px the tray stands off the plate. */
+    --tray-chip-h: 14px;
+    --tray-channel: calc(var(--tray-chip-h) + 2px);
     /* Your hand takes the height a phone held upright still has spare under the controls, so its
        cards read without a tap; B30's strips still hold for a 7- and a 10-card hand. */
     --hand-card-h: calc(var(--card-h) * 1.24);
@@ -2922,23 +2927,27 @@ button.modifier-badge[data-open="true"] {
     grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
   }
 
-  /* #2876: a zone answers its card's size to itself, so the tile below reads the zone's own
+  /* #2876: a zone answers its card's size to itself, so the card below reads the zone's own
      box. Face internals resolve against `.cf-scale`, its own size container, and the pad and
      badges use `%`/`px`/`em`, so nothing else moves. */
   .zone {
     container-type: size;
   }
 
-  /* #2876: a field card is a tile as wide as its zone's inside or the tile cap, at the row's
-     height (`height: 100%` above still holds). `max-width` lifts the `0.72 × --card-h` cap for
-     field cards only: hand cards are no `.zone > .card`. `--def-scale` mirrors the base
-     `.lane` formula with the zone's live dims and the tile's width in place of `--card-w`. */
+  /* #2932: a field card is as wide as its zone's inside, or as wide as the shape cap allows at the
+     row's height, whichever is less, and as tall as the row, or as the shape floor allows at the
+     zone's width: so its width over its height is always between `--field-ratio-min` and
+     `--field-ratio-max`, and the zone centres it. `max-width` lifts the `0.72 × --card-h` cap for
+     field cards only: hand cards are no `.zone > .card`. `--def-scale` fits the card's box on its
+     side into the zone's inside (its height within the zone's width, its width within the zone's
+     height), as the base `.lane` formula does with `--card-w`; `tan(atan2(a, b))` is `a / b` as a
+     number, which `calc()` cannot make of two lengths in every browser yet. */
   .zone > .card {
-    --zone-inside-w: 100cqw;
-    --zone-inside-h: 100cqh;
-    --tile-w: min(100%, calc(100cqh * var(--field-tile-max)));
-    --def-scale: min(1, tan(atan2(var(--zone-inside-w), var(--zone-inside-h))), tan(atan2(var(--zone-inside-h), var(--tile-w))));
-    width: var(--tile-w);
+    --field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));
+    --field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));
+    --def-scale: min(1, tan(atan2(100cqw, var(--field-card-h))), tan(atan2(100cqh, var(--field-card-w))));
+    width: var(--field-card-w);
+    height: var(--field-card-h);
     max-width: 100%;
   }
 
@@ -2953,13 +2962,14 @@ button.modifier-badge[data-open="true"] {
        field's zones pack edge to edge with only the seat's padding and the board's gap between
        them — so the seat reserves a fixed channel for the tray, which never reaches a zone.
        The channel is constant: the plate, the seat and the field never move however many
-       effects the seat carries. */
-    padding-bottom: 22px;
+       effects the seat carries. #2932: the channel is `--tray-channel`, one chip tall (the
+       phone's thinner chips, below) and its 2px offset, so the seat is as thin as the tray lets it. */
+    padding-bottom: var(--tray-channel);
   }
 
   /* #2877: your tray hangs above your plate; your seat reserves its channel the same way. */
   .board > .seat-you {
-    padding-top: 22px;
+    padding-top: var(--tray-channel);
   }
 
   .board > .hand-opponent {
@@ -3079,6 +3089,211 @@ button.modifier-badge[data-open="true"] {
      a unit, your own hero just above the hand) stays in sight and in reach. */
   .hand-you .hand-slot[data-lifted="true"]:has(> .card[data-selected="true"]) {
     transform: translateY(-10px);
+  }
+
+  /* #2932: a field card's Activate control and keyword marks hang off the card's top-left corner,
+     outside the face (game/FieldBadges.tsx), so the face keeps its whole width for the name, art,
+     cost, attack and health: the card is not made wider to fit them. The stack is a sibling of the
+     card, as the switch is, so DEF's rotation never turns or moves it; its corner is the card's own,
+     worked out from the card's size below (the zone centres the card, so the card's top-left is the
+     zone's middle less half the card). It overlaps the card by 2px, clear of the name box (which
+     starts about 4px in), and the zone left of it is under it by what hangs out.
+     That zone's own switch (⟳) sits at its top-right, exactly where this stack hangs (the zones are
+     4px apart), so the stack starts below the switch's target (`--badges-top`, the target's own
+     height) and never over it: a press on the neighbour's ⟳ is never this unit's Activate. The
+     Activate control comes first, the marks under it; what does not fit the zone's height wraps into
+     a column to its left (every item is a flex item of the stack), so the stack never reaches the
+     row below. */
+  .board .zone > .field-badges {
+    /* The card's own size, repeated here so `cqw`/`cqh` read this stack's container (its zone, as
+       the card's do): a custom property set on the zone would read the lane instead. */
+    --field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));
+    --field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));
+    /* The switch's own target (`.zone > .switch-button`, above): at most 44px, and never past the
+       zone's middle less the clear it keeps, which is the height its top-right target takes. */
+    --switch-target: 44px;
+    --switch-clear: 6px;
+    --badges-top: max(calc((100cqh - var(--field-card-h)) / 2), min(var(--switch-target), calc(50cqh - var(--switch-clear))));
+    position: absolute;
+    top: var(--badges-top);
+    right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);
+    z-index: var(--z-popover);
+    display: flex;
+    flex-direction: column;
+    /* `wrap-reverse` swaps the cross axis, so its start is the right edge: `flex-start` keeps every
+       mark flush with the card's edge, and a column that wraps goes to the left of the first. */
+    flex-wrap: wrap-reverse;
+    align-items: flex-start;
+    max-height: calc(100cqh - var(--badges-top));
+    gap: 2px;
+    /* The stack hangs over the zone beside it: only the Activate control takes a press
+       (activate.css), the marks and the gaps let it through. */
+    pointer-events: none;
+  }
+
+  /* Lane 1 has no zone to its left: no switch to keep clear of, so its stack starts at the card's own
+     top, with the zone's whole height to stand in, and no column to its left to wrap into (it would
+     be off the screen), so it never wraps: what could not fit would run down, not out of sight. */
+  .board .zone[data-lane="1"] > .field-badges {
+    --badges-top: calc((100cqh - var(--field-card-h)) / 2);
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+
+  /* The marks' wrapper is no box: each mark is a flex item of the stack (the Activate control's
+     wrapper is none either, activate.css). */
+  .field-badges .keywords {
+    display: contents;
+    font-size: var(--type-3xs);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* #2932: thinner seats, still one fixed size however many effects they carry (#2877). The plate
+     is as tall as its 44px portrait (B29's floor), the padding and the gaps between its rows
+     come down, the mana row is one line of small crystals whatever the mana, and the pills lose
+     the padding round their icon and count: about a quarter off each seat, all of it the field's.
+     The tray's chips are as tall as `--tray-chip-h` (their hit band is `index.css`'s) so the channel
+     the seat holds for them shrinks with them and the plate never grows. */
+  .seat {
+    gap: 1px 6px;
+    padding: 1px 6px;
+  }
+
+  .hero {
+    --hero-h: 44px;
+    padding-block: 0;
+  }
+
+  .crystals {
+    max-width: none;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+
+  .mana-crystal {
+    width: 8px;
+    height: 8px;
+  }
+
+  .mana {
+    gap: 4px;
+    line-height: 1;
+  }
+
+  .pile {
+    gap: 3px;
+    padding: 1px 5px 1px 4px;
+    line-height: 1;
+  }
+
+  .pile::before {
+    width: 11px;
+    height: 11px;
+  }
+
+  /* The thinner seat leaves a pile's 44px tap band (inspectable.css, B29) reaching past the seat's
+     bottom into your hand's top strip, the room a lifted card rises into and a tap of its own to
+     nothing: the pile's band is above that strip, so a tap 20px below the pill still reaches it. */
+  .seat .pile--browsable {
+    z-index: var(--z-content);
+  }
+
+  .hero-tray .modifier-badge,
+  .hero button.modifier-badge {
+    height: var(--tray-chip-h);
+    padding: 0 5px;
+    line-height: calc(var(--tray-chip-h) - 2px);
+  }
+
+  /* #2932: a route's rail (a match's, a replay's, a watch's: Back and the rank line) rides the top
+     strip, in the row the turn banner's pill already takes, so it adds no row and the field has the
+     height the control bar's rail row cost. The game is a two-column grid for it: the rail, then the
+     banner's pill at its end, and the board under both. */
+  .app-shell--wide > .game[data-rail-top="true"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .game[data-rail-top="true"] > .board-rail--top {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .game[data-rail-top="true"] > .turn-banner {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    margin: 0;
+  }
+
+  .game[data-rail-top="true"] > .board {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  /* A finished game's chip form is in-flow under the board (animations.css) while the panel form
+     is fixed, and the Trade bar rides the game root fixed too (TradeControl.tsx): as the grid's
+     children they take a row of their own under the board instead of auto-placing into row 1
+     beside the rail, where the chip would crush the one-line ranks. */
+  .game[data-rail-top="true"] > :is([data-testid="result-overlay"], .trade-bar) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  /* One line: the rank line takes what Back and the pill leave and does not wrap. Its words ("Ranked ·"
+     and each seat's rank name) are visually hidden and the crests lose their pip row (aria-hidden
+     decoration), the shield carrying the rank; the words stay in the page for a screen reader, and a
+     long name gives way at its own ellipsis (username.css). */
+  .game[data-rail-top="true"] .match-ranks {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: var(--type-2xs);
+  }
+
+  .game[data-rail-top="true"] .match-ranks__short {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+
+  .game[data-rail-top="true"] .match-ranks__short > .username {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .game[data-rail-top="true"] .match-ranks__short > :not(.username) {
+    flex: none;
+  }
+
+  .game[data-rail-top="true"] .match-ranks .rank-crest__pips {
+    display: none;
+  }
+
+  .game[data-rail-top="true"] .match-ranks__label,
+  .game[data-rail-top="true"] .match-ranks__tier {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .game[data-rail-top="true"] .board-rail--top :is(.series-banner, .match-watchers, .modifier-list) {
+    flex: none;
   }
 }
 

@@ -276,6 +276,7 @@ export default function ReplayPlayer({
         replayPrompt
         resultForm="chip"
         loadouts={source.loadouts?.() ?? null}
+        phoneRailTop
         boardRail={
           <>
             {back}

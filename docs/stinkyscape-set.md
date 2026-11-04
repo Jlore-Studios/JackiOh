@@ -77,7 +77,7 @@ Most of the list's words are already engine primitives, and the set's cards are 
 | The night market's shop prompt (M #42 CN Flea Market, R1000) | the base for the Marketplace |
 | The engine's judge of the optimal play (ME-PARETO, M #71) and the autopilot (M+ #18, R1183002) | the base for "an AI plays / helps you" |
 | The lethal guard (M #92 Unan, R1204) | the Shield Layer's and Last Word's "fatal damage" |
-| Cards the list names: Book of Buff (C+ #71), University (M #97.6), Fiery Waraxe (M #66), Wardrum (C+ #37), Bigot (Core #2), CN Peptides (M #36), Auspicious Rock (M #39.1), the Jelly Beans (Core #26–#29), Felinor Token, Rush Token, the three Calls to Chaos, Zephrys | the catalog |
+| Cards the list names: Book of Buff (C+ #71), University (M #97.6), Fiery Waraxe (M #66), Wardrum (C+ #37), Speciesist (Core #2), CN Peptides (M #36), Auspicious Rock (M #39.1), the Jelly Beans (Core #26–#29), Felinor Token, Rush Token, the three Calls to Chaos, Zephrys | the catalog |
 | R1390's soft gate (`AI_DECK_GATED_SETS`) | the AI dealing itself none of a set, as Meditative shipped (#732) |
 
 Two words clash with ones the engine uses. **Dormant** is the new keyword's, and the spec's "dormant"
@@ -372,7 +372,7 @@ reconcile is the release (its Done when below). Every S part is blocked by F.
 | S04 | `S04, the Resources and the asteroids` | Reknite, Korrelite, Gellium, Axnit, Narcor, Red Narcor; #39 The Narcor Project, #67 Tractor Beam, #75 Badger, #76 Honey Badger, #84 Power Cell, #84.1 Metal Scraps, #89 Spice, #96 Ocean Tsunami, #97 Asteroid Field, #116 Megabase, #155 Comet Crash, #169 Tiny, #170 Medium, #171 Large, #172 Huge Asteroid, #173 Abandoned Spice Tower | M03, M16 | — | hard |
 | S05 | `S05, the Miners` | #62–#66 Miner v1–v5, #78 Ozark, #79 Orca, #80 Galaxy | M03, M05 | S04 | medium |
 | S06 | `S06, the weapon rack` | #50–#61 Beam, Repeater, Cannon and Flak v3–v5, #81 Radix, #82 Phalanx, #83 Halo, #85 Prototype-X1, #86 Prototype-X2, #140 Rush Token, #141 Fruit, #142 Jade and #143 Book Launcher | M05, L1 | — | hard |
-| S07 | `S07, the drones` | Drone Interceptor, Drone Corvette, the Battleship's three layers; #27–#36 Drone Core I–X, #41 Drone Sympathizer, #42 Core Researcher, #44 Great Replacement Theory, #45 Drone Commander, #168 Drone Hanger | M06 | — | hard |
+| S07 | `S07, the drones` | Drone Interceptor, Drone Corvette, the Battleship's three layers; #27–#36 Drone Core I–X, #41 Drone Sympathizer, #42 Core Researcher, #44 Great Paperclip Theory, #45 Drone Commander, #168 Drone Hanger | M06 | — | hard |
 | S08 | `S08, the trade cards` | #87 Siva 1, #164 The Syndicate, #165 The Trade Union | L2 | — | hard |
 | S09 | `S09, The Greatest Heist and Tylannt` | #6 Tylannt, #7 The Greatest Heist | M07, L1, L2 | S04 | hard |
 | S10 | `S10, Job Application` | #112 Job Application, #112.1 Paycheck | M07, M03 | — | hard |
@@ -488,7 +488,7 @@ Asked and answered on 2026-10-25; the S parts and mechanics are written in these
 | — | "Jellybean" | A Jelly Bean tag on Core #26–#29 |
 | — | Orca's Embiggened version | The offered Miners are Radiant |
 | — | Spacerace Propaganda and The Syndicate | Field Spells, with the tags they lack |
-| — | Great Replacement Theory's name | Kept: it is satire |
+| — | Great Paperclip Theory's name | Kept: it is satire |
 | — | Who builds | First Squishy; then (when the issues opened) a Claude Code session's subagents for what it takes (`human`) and the night bot for the rest (`bot:build`), ST6 |
 
 **KY's Tricknology's coordinates** (the build's choice): a zone is (x, y) with x its lane, 1 to 5, and y
@@ -1505,10 +1505,10 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 - **Check:** The designer's "Heal all allies 2\." escape dropped. R275: stats and heal doubled.
 - **Class:** A
 
-#### Stinkyscape #44 · Great Replacement Theory
+#### Stinkyscape #44 · Great Paperclip Theory
 `stinkyscape-044` · (1) Spell, Quickdraw · Mythic · built by S07 (#1863)
 
-> **Designer:** (1) Great Replacement Theory, Spell, Quickdraw, Mythic, Stinkscape, #44 · Add a Drone Core I to your hand. The first time you play each Drone Core tier add the subsequent tier Drone Core to your hand. ~~~ Add a Radiant Drone Core I to your hand. The first time you play each Drone Core tier add the Radiant Drone Core to your hand.
+> **Designer:** (1) Great Paperclip Theory, Spell, Quickdraw, Mythic, Stinkscape, #44 · Add a Drone Core I to your hand. The first time you play each Drone Core tier add the subsequent tier Drone Core to your hand. ~~~ Add a Radiant Drone Core I to your hand. The first time you play each Drone Core tier add the Radiant Drone Core to your hand.
 
 - **Text:** Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier of Drone Core, add the next tier to your hand.
 - **Radiant:** Add a Radiant Drone Core I to your hand. For the rest of the game, the first time you play each tier of Drone Core, add a Radiant one of the next tier to your hand.
@@ -2093,14 +2093,14 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 #### Stinkyscape #88 · Siva 2
 `stinkyscape-088` · (3) Unit, Human, Acclaimed · Legendary · 4/4 → 8/8 · built by S17 (#1876)
 
-> **Designer:** (3) Siva 2, Unit, Human, Acclaimed, Legendary, Stinkyscape, #88 · 4/4 / Aura: Your Humans have Poisonous. ~~~ 8/8 / Aura: Your Humans have Poisonous. / Cry: Fill your hand with Bigots.
+> **Designer:** (3) Siva 2, Unit, Human, Acclaimed, Legendary, Stinkyscape, #88 · 4/4 / Aura: Your Humans have Poisonous. ~~~ 8/8 / Aura: Your Humans have Poisonous. / Cry: Fill your hand with Speciesists.
 
 - **Text:** Aura: Your Humans have Poisonous.
-- **Radiant:** Aura: Your Humans have Poisonous. / Cry: Fill your hand with Bigots.
-- **Engine:** Aura ([[§10.4]]): every Human Unit its controller has on the field (granted tags read, [[R923]]), this one included, has Poisonous. Radiant: Cry ([[R1]]): Core #2 Bigots added while the hand has room ([[§2.4]], M+ #24's fill, [[R1185004]]).
-- **Rulings:** ST-S17-7: "Your Humans" are your Human Units on the field, this one included. ST-S17-8: "Fill your hand" adds Bigots until the hand is full, none burned. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both need no ruling of their own (the aura's [[R923]], the fill's [[R1185004]]).
+- **Radiant:** Aura: Your Humans have Poisonous. / Cry: Fill your hand with Speciesists.
+- **Engine:** Aura ([[§10.4]]): every Human Unit its controller has on the field (granted tags read, [[R923]]), this one included, has Poisonous. Radiant: Cry ([[R1]]): Core #2 Speciesists added while the hand has room ([[§2.4]], M+ #24's fill, [[R1185004]]).
+- **Rulings:** ST-S17-7: "Your Humans" are your Human Units on the field, this one included. ST-S17-8: "Fill your hand" adds Speciesists until the hand is full, none burned. These are proposals for S17, which takes R-numbers from its own block. No R-number here. Built by S17 (#1876): both need no ruling of their own (the aura's [[R923]], the fill's [[R1185004]]).
 - **Numbers:** none (the fill is the hand's room).
-- **Check:** R275: stats doubled and a hand of Bigots.
+- **Check:** R275: stats doubled and a hand of Speciesists.
 - **Class:** B (an aura and a fill).
 
 #### Stinkyscape #89 · Spice
@@ -3718,7 +3718,7 @@ build uses, and the entry in ST13 says the rest.
 | B3 | Drone Core X (S #36, ST-S07-3) | "Summon the Drone Battleship"; "Radiant Drone Battleships make all layers Radiant" | One layered summon ([[R1842000]]) of the Meltdown, Propagation and Shield Layers, bottom first, into one unit zone; a zone that cannot take the pile takes none of it; the Radiant face makes all three Radiant |
 | B4 | Drone Sympathizer, Core Researcher, Drone Commander (S #41, #42, #45, ST-S07-4) | "random Drone Cores" | The cards tagged Drone Core (#27–#36), each tier as likely, repeats allowed ([[R60]]); the pool names no set, so it is empty while the set is held ([[R1420]]) and opens with the release |
 | B5 | Drone Commander (S #45) | "they cost (1) less" | Each added card carries a `costMod` of −1 ([[R65]]), kept until a graveyard or exile ([[R766]]) |
-| B6 | Great Replacement Theory (S #44, ST-S07-5) | "The first time you play each Drone Core tier add the subsequent tier" | From this cast on, for the rest of the game: the first resolved play (a cast counts, [[R70]]; a countered one does not, [[R1863000]]) of each of Drone Core I to IX adds the next numeral; X adds nothing; a Drone Core played before the cast counts for nothing; each cast keeps its own record, so two stack; the Radiant face adds Radiant ones |
+| B6 | Great Paperclip Theory (S #44, ST-S07-5) | "The first time you play each Drone Core tier add the subsequent tier" | From this cast on, for the rest of the game: the first resolved play (a cast counts, [[R70]]; a countered one does not, [[R1863000]]) of each of Drone Core I to IX adds the next numeral; X adds nothing; a Drone Core played before the cast counts for nothing; each cast keeps its own record, so two stack; the Radiant face adds Radiant ones |
 | B7 | Drone Interceptor, Drone Corvette (ST-S07-6) | "<has 1 random combat keyword>" | Keymaster Keenus's Aura ([[R781004]]): drawn from [[R21]]'s pool as the drone arrives, kept until it leaves, never one it has (so not Ranged or Flying again) |
 | B8 | Drone Battleship (Shield Layer) (ST-S07-7) | "Fatal damage a friendly ally would take is redirected to this" | Unan's lethal guard ([[R1204]]): the hero and the controller's other Units, through the layer's own Armor, only while it tops its pile ([[R1842001]]) |
 | B9 | Drone Battleship (Propagation Layer) (ST-S07-8) | "Activate 2: summon a Drone Interceptor, Activate 1: summon a Drone Corvette" | Two abilities counted apart ([[R1751000]]): up to two Interceptors and one Corvette a turn, offered only while the layer tops its pile ([[R13]]) |
@@ -3807,7 +3807,7 @@ build uses, and the entry in ST13 says the rest.
 | D27 | #70 Z'Zoth | "Death Units" | Unit cards whose own text prints a Death; a Death granted on the field is gone in the graveyard ([[R78]]) |
 | D28 | #71 A'Zoth | "Activate each Cry with random targets" | Trigger a Cry ([[R467]]) on each Unit it summoned, its targets and choices drawn from the match rng, no prompt asked. NEW (S16); the summon itself fires none ([[R1]]) |
 | D29 | #77 Yuma | Lucky 1 (Radiant) | The trade's Discover options are drawn twice, keeping the set better for Yuma's controller (default: the set whose cheapest card costs most, the opponent giving the worst); the comparator is [[R1877001]]'s |
-| D30 | #88 Siva 2 | "Your Humans"; "Fill your hand with Bigots" | Your Human Units on the field, this one included; Bigots (Core #2) until your hand is full, none burned |
+| D30 | #88 Siva 2 | "Your Humans"; "Fill your hand with Speciesists" | Your Human Units on the field, this one included; Speciesists (Core #2) until your hand is full, none burned |
 | D31 | #91, #92 The Propagation's Wasp and Hornet | "After these attacks" | After this attacks, a forced attack included ([[R1849001]]): the copy first, made before it evolves, so the copy lacks Flying |
 | D32 | #94 Tmack Trav | "After this kills a unit" | The Unit it attacked destroyed in that combat (C+ #73.1's reading); a kill while defending does not count; no cap on the attacks it chains |
 | D33 | #104 Reflective Plating | "dealt to the enemy hero" | Dealt again: the Plating still takes it ([[R1849003]]) |

@@ -56,7 +56,7 @@ mod tests {
     const GARY: &str = "core-004"; // 1/1, Cry: flip 5 coins, +1 attack per heads, +1 health per tails.
     const MR_TOKEN: &str = "core-015"; // 1/1, Cry: summon a Rush Token.
     const DUPLICATING: &str = "core-012"; // 3/4, Cry: summon a copy of this.
-    const BIGOT: &str = "core-002"; // 6/1 Human, Cry: destroy target enemy non-Human Unit.
+    const SPECIESIST: &str = "core-002"; // 6/1 Human, Cry: destroy target enemy non-Human Unit.
     const SORCERER: &str = "core-068"; // 5/5, Cry: deal 4 damage to a target (8 under 10 health).
     const VANILLA: &str = "core-008"; // 4/4, no text.
     const MENACE: &str = "core-019"; // 9/9 Taunt.
@@ -149,13 +149,13 @@ mod tests {
             }
 
             #[test]
-            fn r70_its_choices_are_yours_as_prompts_bigot_asks_you_which_enemy_non_human_unit_to_destroy() {
+            fn r70_its_choices_are_yours_as_prompts_speciesist_asks_you_which_enemy_non_human_unit_to_destroy() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [REWIND, FILLER], "field": [BIGOT] },
+                    "p1": { "hand": [REWIND, FILLER], "field": [SPECIESIST] },
                     "p2": { "hand": [FILLER], "field": [VANILLA, DUPLICATING, MENACE] },
                 }));
-                let bigot = s.card(BIGOT).id.clone();
-                s.play(REWIND, json!({ "targets": pick::id(&bigot) }));
+                let speciesist = s.card(SPECIESIST).id.clone();
+                s.play(REWIND, json!({ "targets": pick::id(&speciesist) }));
                 let pending = js(&s.state().pending);
                 assert_eq!(pending["playerId"], "p1");
                 let selections: Vec<Value> = pending["options"]
@@ -216,16 +216,16 @@ mod tests {
             fn r90_only_your_units_are_offered_an_enemy_unit_and_the_enemy_graveyard_are_refused_and_legalactions_agrees() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [REWIND, FILLER], "field": [GARY], "graveyard": [MR_TOKEN] },
-                    "p2": { "hand": [FILLER], "field": [SORCERER], "graveyard": [BIGOT] },
+                    "p2": { "hand": [FILLER], "field": [SORCERER], "graveyard": [SPECIESIST] },
                 }));
                 assert_eq!(
                     offered(&s, P1).into_iter().collect::<BTreeSet<String>>(),
                     BTreeSet::from([s.card(GARY).id.clone(), s.card(MR_TOKEN).id.clone()]),
                 );
                 let sorcerer = s.card(SORCERER).id.clone();
-                let bigot = s.card(BIGOT).id.clone();
+                let speciesist = s.card(SPECIESIST).id.clone();
                 s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&sorcerer) })));
-                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&bigot) })));
+                s.expect_refused(|s| s.play(REWIND, json!({ "targets": pick::id(&speciesist) })));
                 s.expect_in_zone(REWIND, "hand");
             }
 
@@ -242,9 +242,9 @@ mod tests {
 
             #[test]
             fn a_paused_triggered_cry_survives_a_round_trip_the_frozen_state_answers_to_the_same_game() {
-                let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [BIGOT] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-                let bigot = s.card(BIGOT).id.clone();
-                s.play(REWIND, json!({ "targets": pick::id(&bigot) }));
+                let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "field": [SPECIESIST] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
+                let speciesist = s.card(SPECIESIST).id.clone();
+                s.play(REWIND, json!({ "targets": pick::id(&speciesist) }));
                 let pending = s.state().pending.clone();
                 assert!(pending.is_some());
                 let thawed = round_trip(s.state());

@@ -72,6 +72,8 @@ type Client interface {
 	ListCommits(author string, limit int) []*pyjson.Object
 	RunsForSHA(sha string, limit int) []*pyjson.Object
 	RerunFailedJobs(runID any)
+	CancelRun(runID any)
+	RerunRun(runID any)
 	ListJobs(runID any, cached bool) []*pyjson.Object
 	JobLog(jobID any, tailChars int) string
 	ListArtifacts(runID any) []*pyjson.Object

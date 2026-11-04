@@ -60,7 +60,7 @@ mod tests {
     const ADAPTIVE: &str = "core-074"; // (X) Spell: Deal X to a target; heal X; draw X; an X/X Ghoul.
     const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
     const DREAM: &str = "core-023"; // (1) Spell: … End of turn: Return this to your hand.
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const PILE_ON: &str = "classic-060"; // (5) Spell: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
@@ -167,9 +167,9 @@ mod tests {
 
             #[test]
             fn r399_r2179002_a_spell_cast_on_draw_is_no_play_so_never_the_last_spell() {
-                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, ECHO], "library": [CN_VIRUS, VANILLA, VANILLA] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, ECHO], "library": [SUPER_VIRUS, VANILLA, VANILLA] } }));
                 s.play(STOCKPILE, json!({}));
-                // Through v0.5.2 the CN-Virus its draw cast was the last Spell (R70).
+                // Through v0.5.2 the Super-Virus its draw cast was the last Spell (R70).
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": STOCKPILE, "radiant": false }));
                 assert_eq!(
                     own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),
@@ -377,8 +377,8 @@ mod tests {
             #[test]
             fn r547_an_echo_drawn_while_the_last_spell_casts_on_draw_is_cast_and_the_draw_repeats() {
                 let mut s = scenario(json!({ "p1": { "hand": [VANILLA], "library": [ECHO, MENACE, VANILLA] } }));
-                // A cast on draw is no play (R2179002), so the record a CN-Virus played from hand leaves.
-                s.state_mut().last_spell = Some(PlayRecord { def_id: CN_VIRUS.to_string(), radiant: false });
+                // A cast on draw is no play (R2179002), so the record a Super-Virus played from hand leaves.
+                s.state_mut().last_spell = Some(PlayRecord { def_id: SUPER_VIRUS.to_string(), radiant: false });
                 s.start_turn();
                 assert_eq!(hits(s.last_events(), "hero-p1"), vec![1]);
                 s.expect_in_zone(ECHO, "graveyard");

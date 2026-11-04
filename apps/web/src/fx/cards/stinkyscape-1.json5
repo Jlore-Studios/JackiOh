@@ -75,7 +75,7 @@
   "stinkyscape-041": { cast: { motif: "send", palette: "Tech/rocket" } }, // Drone Sympathizer
   "stinkyscape-042": { cry: { motif: "send" } }, // Core Researcher
   "stinkyscape-043": { trigger: { motif: "mend" } }, // Healing Capsule
-  "stinkyscape-044": { cast: { motif: "send" } }, // Great Replacement Theory
+  "stinkyscape-044": { cast: { motif: "send" } }, // Great Paperclip Theory
   "stinkyscape-045": { cry: { motif: "send" } }, // Drone Commander
   "stinkyscape-046": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", scope: "lane" } }, // Circadian Halfcycler
   "stinkyscape-047": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", scope: "side" } }, // Circadian Fullcycler

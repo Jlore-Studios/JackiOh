@@ -108,8 +108,13 @@ describe("B19 the page's screens", () => {
     keepRun([]);
     render(<DungeonPage />);
 
+    // The first press asks instead of abandoning (R2972000).
     fireEvent.click(byId(dungeonTestid.abandonRun));
+    expect(byId(dungeonTestid.abandonAsk)).toHaveTextContent("Abandon this run? It ends here and cannot be undone.");
+    expect(screen.queryByTestId(dungeonTestid.saved)).not.toBeNull();
 
+    // Only Confirm gives the run up.
+    fireEvent.click(byId(dungeonTestid.abandonConfirm));
     expect(screen.queryByTestId(dungeonTestid.saved)).toBeNull();
     expect(byId(dungeonTestid.startRun)).toBeInTheDocument();
     expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();

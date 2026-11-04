@@ -57,8 +57,9 @@ the same rng. The caller reads `options.rng.cursor()` back afterwards.
 
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188). It
 answers its mulligan as soon as the mulligans open (R265, R266): `mulligan_keep_curved` sends back
-every card costing more than `AI_MULLIGAN.keep_max_cost` except the one proven four-drop the shaped
-keep holds, and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
+every card costing more than `mulligan_keep_bound`, `AI_MULLIGAN.keep_max_cost` plus the seat's mana
+bonus within its mana cap (R2977000), except the one proven card one dearer the shaped keep holds,
+and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
 the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
 going second, The Coin). Nothing here reads a difficulty, and a handicap only as the seat's mana (the
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
@@ -154,7 +155,11 @@ neighbours; a lane the reply scores the same as a better one of that play is not
 lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
-kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
+kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the
+opponent's board threatens lethal (`face_threat` reaching the seat's `effective_life`, where the evaluation's
+`lethal_threat` applies), up to `AI_SEARCH.position_switches` more switches to Defense Position that lower that
+threat are kept after them, stand-downs or not (`wall_switches`: each tried on a copy of the state with the unit's
+position set, the least threat left first; #2976, R2976000). An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
 only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer

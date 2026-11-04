@@ -24,7 +24,7 @@ const DINO_SIZE: &str = "traininggrounds-034";
 const SEANCE: &str = "traininggrounds-037";
 /// TG #38 Tutorial Master: a (4) 4/16 Human.
 const TUTORIAL_MASTER: &str = "traininggrounds-038";
-const ORIENTAL: &str = "traininggrounds-029";
+const EASTERNER: &str = "traininggrounds-029";
 const CALL_TO_CHAOS: &str = "traininggrounds-039";
 /// TG #8 Clobberer: a (3) 14/7 Human, the hand card Goliath Situation makes cheap.
 const CLOBBERER: &str = "traininggrounds-008";
@@ -162,11 +162,11 @@ fn r2203001_the_ai_plays_celestial_caller_where_both_its_summons_land() {
     assert_eq!(units, 3, "the Caller and both its summons");
 }
 
-// TG #28 Occidental, #29 Oriental: a Cry that sweeps one lane, itself too if it stands there
+// TG #28 Occidental, #29 Easterner: a Cry that sweeps one lane, itself too if it stands there
 
 #[test]
 fn r2203001_the_ai_plays_occidental_outside_the_lane_it_sweeps() {
-    for (card, swept) in [(OCCIDENTAL, 5), (ORIENTAL, 1)] {
+    for (card, swept) in [(OCCIDENTAL, 5), (EASTERNER, 1)] {
         let seed = format!("ai-tg-sweep-{swept}");
         let state = board(
             &seed,

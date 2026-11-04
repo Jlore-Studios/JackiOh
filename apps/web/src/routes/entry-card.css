@@ -1,0 +1,73 @@
+/* R2982000: the news entries' (routes/NewsPanel.tsx) and the quests' (routes/QuestsPanel.tsx)
+   shared card frame. Unscoped like economy/spend.css, and both panels import it: it reads on the
+   landing's parchment and on /collection's tavern shell, in light and dark, because it only rims
+   in brass and tints with the ink of whatever surface it sits on. */
+
+.account-quests__quest.entry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--tavern-ink) 10%, transparent);
+}
+
+/* A claimed entry fades back so the unclaimed ones stand out. */
+.account-quests__quest.entry-card[data-claimed="true"] {
+  opacity: 0.6;
+}
+
+.entry-card__header,
+.entry-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.entry-card__footer {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.entry-card__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.entry-card__tag {
+  flex: none;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: var(--type-xs);
+  white-space: nowrap;
+}
+
+.entry-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.entry-card__pill {
+  white-space: nowrap;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* The Replace confirm stacks inside the footer's row, outscoring index.css's `.row`. */
+.entry-card__footer .entry-card__confirm {
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}

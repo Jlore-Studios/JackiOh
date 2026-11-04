@@ -478,6 +478,21 @@ describe("the daily promotion", () => {
     expect(daily(issue(w, 1))).toBe("502");
   });
 
+  it("says nothing of a passing run on a commit production already has, even one whose CI has aged out", () => {
+    const w = started();
+    const said = issue(w, 1).comments.length;
+    // The newest passing run may be days old: its commit's CI runs gone from the list, as 52bd29e11fb2's
+    // were on 2026-11-03, when the first run after the daily promotion said it was not promoted.
+    edit(w, (s) => {
+      s.green = s.green.filter((sha) => sha !== w.sha.c1);
+    });
+    mainRun(w, w.sha.c1 as string, 501);
+    expect(ok(run(w, "workflow_run")).output).not.toContain("promoted=true");
+    expect(gh(w).prs).toEqual([]);
+    expect(issue(w, 1).comments).toHaveLength(said);
+    expect(daily(issue(w, 1))).toBe("501");
+  });
+
   it("says why when the commit it tested has not passed CI, and moves nothing", () => {
     const w = started();
     const red = commit(w, "c4", { "app.txt": "four\n" }, false);

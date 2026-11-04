@@ -783,7 +783,7 @@ banned list, and generated in full once on this machine (see Research). Cards wi
 | defId | Card | kind | persona | play / cast line | death line |
 | --- | --- | --- | --- | --- | --- |
 | core-001 | Big D-fender | unit | guard | Stand behind me. Way behind. | Defense... offended. |
-| core-002 | Bigot | unit | snob | Ugh. Not your kind again. | Tolerance wins. Again. |
+| core-002 | Speciesist | unit | snob | Ugh. Not your kind again. | Tolerance wins. Again. |
 | core-003 | Right-house defender | unit | guard | For the right house! | Be right back. |
 | core-004 | Gary the Gambler | unit | hustler | Double or nothing, baby! | House always wins. |
 | core-005 | Stockpile | spell | narrator | Hoarding is self care. |  |
@@ -823,7 +823,7 @@ banned list, and generated in full once on this machine (see Research). Cards wi
 | core-039 | Recycling Initiative | spell | zoomer | Reduce, reuse, replay! |  |
 | core-040 | Echoes of the Forgotten | spell | whisper | Remember us. Remember us. |  |
 | core-041 | Sheepish | trap | sheep | Baa. Surprise. |  |
-| core-042 | Eugenics | spell | prof | Science has gone too far. |  |
+| core-042 | Selective Breeding | spell | prof | Science has gone too far. |  |
 | core-043 | Big Felinor | unit | cat | Big cat. Bigger problems. | Landed on my back? |
 | core-044 | True Strike | spell | hero | Bullseye, baby. |  |
 | core-045 | Deft Duelist | unit | hero | En garde! And also, en garde! | Well played. Ow. |
@@ -873,8 +873,8 @@ banned list, and generated in full once on this machine (see Research). Cards wi
 | core-087 | Pocket Chaos | spell | goof | Chaos! Now pocket sized! |  |
 | core-088 | Twisting Nether | spell | alien | Everybody. Into the void. |  |
 | core-089 | Corpse Eater | unit | alien | Anyone gonna finish that? | Finally... full. |
-| core-090 | CN-Viral Injection | spell | diva | Just a little pinch. |  |
-| core-090-1 | CN-Virus | spell | goof | Achoo! Sorry. Achoo! |  |
+| core-090 | Super-Virus Injection | spell | diva | Just a little pinch. |  |
+| core-090-1 | Super-Virus | spell | goof | Achoo! Sorry. Achoo! |  |
 | core-091 | Fed Fauci | unit | elder | Trust the science. Please. | Wash your hands. |
 | core-092 | Felinor Fiender | unit | crone | Cats. I need more cats. | Who feeds them now? |
 | core-093 | Combo-Index | spell | announcer | Style points! Grade me! |  |
@@ -1197,8 +1197,8 @@ R205 stays unused.
   deaths of equal priority queue two deep and give up after `VOICE_QUEUE_WAIT_MS`. This is by
   design; the priorities make sure the line that is heard is the most important one. The flush
   keeps at most one line.
-- **Taste.** Edgy card names (#2 Bigot, #42 Eugenics, #59 Unbiased Immigration, #61 Prejudiced
-  Postdoc, #90/#90.1 CN-Virus, #91 Fed Fauci) have lines that mock the premise and never a group of
+- **Taste.** Edgy card names (#2 Speciesist, #42 Selective Breeding, #59 Unbiased Immigration, #61 Prejudiced
+  Postdoc, #90/#90.1 Super-Virus, #91 Fed Fauci) have lines that mock the premise and never a group of
   people. A reviewer should read the table before merge.
 - **Performance.** Each SFX cue builds a handful of nodes, capped by `SFX_MAX_VOICES`. The noise
   buffer is built once per context, the lines and manifest (about 30 KB) ride in the `Game` chunk,

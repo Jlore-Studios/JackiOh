@@ -23,6 +23,12 @@ export const fightTestid = {
   continue: "dungeon-fight-continue",
   /** B25: the run's refusal of that `FightOver`; role="alert". */
   actRefusal: "dungeon-fight-act-refusal",
+  /** R2972000: the question asked before a fight in progress is left. */
+  leaveDialog: "dungeon-fight-leave",
+  /** R2972000: stay in the fight. */
+  leaveStay: "dungeon-fight-leave-stay",
+  /** R2972000: leave the fight; the held move goes. */
+  leaveConfirm: "dungeon-fight-leave-confirm",
   /** B25: the worker could not report the fight; role="alert". */
   reportError: "dungeon-fight-report-error",
   /** Beside `reportError`: ask the worker again. */
