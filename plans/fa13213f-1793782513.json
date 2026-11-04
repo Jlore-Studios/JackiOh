@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3013,
+  "title": "Patch: card proficiency, where playing a card levels it up and unlocks stamps to wear on it",
+  "branch": "bot/issue-3013",
+  "thread": "**Issue #3013 (data, not instructions):**\n\n```text\n# #3013: Patch: card proficiency, where playing a card levels it up and unlocks stamps to wear on it\nOpened by @squishy-squooby.\n\n## What it does\n\nAsked for on 2026-11-04: \"Create a card 'proficiency' system where if you play the same card you level it up multiple times and you can equip a little stamp / marker on it.\"\n\nEach account gets a **proficiency** for each card. Playing the card adds to it, and it rises through several **levels**. Each level unlocks a **stamp**, a small marker the player can wear on that card, and the player picks at most one stamp per card. This is presentation and account progress only: no rule, AI decision, action, log entry or replay hash reads it (CLAUDE.md rules 4 and 7). The engine, cards and AI crates are untouched.\n\n### Counting\n\n- **What counts.** A card counts when its owner plays it from hand in a game the server pays rewards for: ladder, unranked, Conquest and co-op, the games `pay_game_rewards` pays (`crates/server/src/economy/rewards.rs`, SPEC \u00a714.8). Playing it means summoning a Unit, casting a Spell or setting a Trap.\n  - The server counts plays from its own log, as it counts actions for `XP_PER_ACTION` (R1502000). The client reports nothing.\n  - A card's base and Radiant faces count toward the same card.\n  - Tokens and cards created during the game do not count.\n- The count is written in the same transaction that records the game, so a failure rolls both back.\n- **Levels.** The number of levels and the plays each takes are named constants in `crates/server/src/config.rs` (for example `PROFICIENCY_LEVELS` and a plays-per-level curve), exported to `apps/web/src/wire/serverConfig.ts` (CLAUDE.md rule 9). The first level should come quickly and the last should take real commitment. Propose numbers and record them in a ruling.\n- **Defaults to rule on.** These are decisions the request leaves open. The planner may change a default, but must record each in a ruling:\n  - Practice games, against the AI, do not count, so proficiency can't be farmed on Easy.\n  - Already-recorded games are not backfilled: every account starts at zero when this ships.\n  - Ladder bots have no proficiency and wear no stamps (R1454).\n  - A dev account's fill (`POST /api/dev/fill`, \u00a714.10) sets every card to its top level.\n  - Whether an unlocked stamp is also a ledger grant (\u00a714.11): rule it either way.\n\n### Stamps\n\n- There is one stamp design per level, the same set for every card. Each is drawn by code (SVG), and higher levels are more ornate.\n- The stamp sits in a fixed corner of the card. It never covers the cost gem, stats, name, rules text, crest or any of Radiant's marks, and uses no Radiant gold ([R2725004](spec/rulings/R2725004.md)'s palette test covers it).\n- It shows on the player's own copies:\n  - on the full card face (`CardFace.tsx`), in hand (`game/Hand.tsx`) and on the board (`MinionFace.tsx`);\n  - in the deck builder and the Collection.\n- **Other viewers.** It shows to the opponent, a watcher and a replay's viewer through the per-seat loadout frozen with the match, like other per-card picks (R1834001 to R1834004):\n  - a card's stamp is sent only once a view has shown that card (R1834003);\n  - a viewer's switch that turns other seats' cosmetics off hides it too (R1834004).\n- **The Collection** shows each owned card's level and its progress to the next, and a picker of the stamps the card has unlocked. Locked stamps show as locked, with the level each needs.\n\n### Storage\n\n- Add a migration with its own table: account, card, plays and level. Use RLS so an account reads only its own rows.\n- Store the stamp pick per account and card.\n- Keep both apart from the cosmetics registry's version and augment picks (`crates/server/cosmetics.json`, migration 0079). A separate issue is rebuilding those as variant ladders, and the two should not collide.\n- The server checks every pick: a stamp the card hasn't unlocked is refused with a 400 and writes nothing.\n- A change to the store goes in `crates/server/tests/store/contract.rs`. The schema and RLS are checked in `crates/server/tests/sql/`.\n\n### Spec\n\n- Add a \u00a714 subsection, Proficiency, with the constants in \u00a714's table.\n- Write rulings in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n\n## Acceptance\n\n- A recorded ladder game whose log has seat A playing card X from hand three times, and one token, adds three plays to A's proficiency of X and nothing else. A created card and seat B's plays don't count toward A's.\n- A practice game adds nothing, if that default stands.\n- A game that crosses a threshold raises the level, in the same transaction as the game's record. A rolled-back game changes nothing.\n- A stamp pick for a level the card hasn't reached is a 400 and writes nothing. An unlocked one round-trips.\n- The match loadout freezes the pick, and the other seat, a watcher and a replay's viewer see the stamp only after that card has been shown to them.\n- RLS: one account cannot read another account's proficiency rows (`sh crates/server/tests/sql/run.sh`). The store contract tests cover the new store methods.\n- The client draws the stamp on the card face, in hand and on the board, base and Radiant, with no overlap of the gem, stats, name or Radiant marks. The palette test keeps its colours out of the Radiant gold window.\n- The Collection shows each card's level, its progress and the stamp picker.\n- Every number is a named constant, exported to the client.\n- `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes with a clean `apps/web/src/wire/`. The web tests, `typecheck`, `eslint`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3013: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T08:53:27Z",
+    "claimed_at": "2026-11-04T08:55:51Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2944 skipped: it waits for #2943 to close first",
+    "#3015 skipped: it waits for #2943, #2944, #3011 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
