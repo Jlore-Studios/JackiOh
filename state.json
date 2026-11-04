@@ -16794,6 +16794,13 @@
     "2977": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T02:25:22Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: it changes an AI decision, the mulligan keep in crates/ai/src/mulligan.rs, for every seat with a mana bonus."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
