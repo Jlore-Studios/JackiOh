@@ -1,24 +1,26 @@
 // R388, R507, R724000: the Patch notes page's body, from fixtures through the context, the empty and
-// failed states, then the real history through the default source.
+// failed states, then the real history through the default source. R3012000, R3012001: micro patches
+// nested under their patch, the legend on the side, and art for a major and a patch only.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { closeInspect } from "../cards/inspect/store.ts";
 import { expectEmptyState } from "../test/empty.ts";
+import { stubPatchLegendPhone } from "../test/phoneBar.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { PATCH_LEGEND_BAND_MARGIN } from "./constants.ts";
 import { PatchSourceProvider } from "./context.tsx";
-import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
+import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, V1, V2, V3, fixtureSource, tieredSource } from "./fixtures.ts";
 import { PatchNotes } from "./PatchNotes.tsx";
 import { countsLine } from "./history.ts";
-import { RELEASE_ART_MAJOR_CYCLE_SECONDS } from "./constants.ts";
 import { releaseArtPath } from "./releaseArt.ts";
-import { RELEASES, majors, releaseGroups, type Release } from "./releases.ts";
+import { RELEASES, majors, releaseGroups, tiers, type Release } from "./releases.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type Patch, type PatchSource, type TechnicalEntry } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -38,6 +40,8 @@ afterEach(() => {
     closeInspect();
   });
   cleanup();
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, "", "/");
 });
 
 function renderPage(source?: PatchSource, releases?: readonly Release[]): void {
@@ -57,9 +61,19 @@ function openEverySet(): void {
   }
 }
 
+/** The entry of a version: a major's or a patch's, or a micro patch nested inside one (R3012000). */
 function patchEntry(version: string): HTMLElement {
-  const found = screen.getAllByTestId(patchTestid.patch).find((element) => element.dataset.version === version);
+  const found = [...screen.queryAllByTestId(patchTestid.patch), ...screen.queryAllByTestId(patchTestid.micro)].find(
+    (element) => element.dataset.version === version,
+  );
   if (found === undefined) throw new Error(`no patch ${version}`);
+  return found;
+}
+
+/** An entry's own control or part: it comes first in the DOM, before those of the micro patches inside it (R3012000). */
+function own(entry: HTMLElement, testId: string): HTMLElement {
+  const found = within(entry).getAllByTestId(testId)[0];
+  if (found === undefined) throw new Error(`no ${testId} in ${entry.dataset.version ?? "the entry"}`);
   return found;
 }
 
@@ -304,8 +318,14 @@ describe("R388 the Patch notes page over the real history", () => {
     openEverySet();
     const entries = screen.getAllByTestId(patchTestid.patch);
     // Newest first is patches.json read backwards (R105, R388) — and promotions only append
-    // (R646), so the page's list is the file's, whatever the newest patch is called today.
-    expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
+    // (R646), so the page's list is the file's, whatever the newest patch is called today. A micro
+    // patch is no entry of its own: it sits inside the entry of the major or patch before it (R3012000).
+    const tierList = tiers(shipped);
+    const hosts = shipped.filter((_patch, at) => tierList[at] !== "micro").map((patch) => patch.version);
+    expect(entries.map((element) => element.dataset.version)).toEqual(hosts.reverse());
+    expect([...entries, ...screen.getAllByTestId(patchTestid.micro)].map((element) => element.dataset.version).sort()).toEqual(
+      shipped.map((patch) => patch.version).sort(),
+    );
     // Only the newest opens on load (R507), so v0.2.0, the frozen patch this test reads, is opened by
     // hand; whichever is newest (R743's names for issues #113, #181 and #218) opens with every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
@@ -324,11 +344,11 @@ describe("R388 the Patch notes page over the real history", () => {
         ...within(patchEntry(newest)).queryAllByTestId(patchTestid.dataOnly),
       ].map((element) => element.dataset.card);
       expect(shownNewest.sort()).toEqual([...changedIds].sort());
-      fireEvent.click(within(patchEntry(newest)).getByTestId(patchTestid.toggle));
+      fireEvent.click(own(patchEntry(newest), patchTestid.toggle));
     }
     const v020 = patchEntry("v0.2.0");
-    if (within(v020).getByTestId(patchTestid.toggle).getAttribute("aria-expanded") === "false") {
-      fireEvent.click(within(v020).getByTestId(patchTestid.toggle));
+    if (own(v020, patchTestid.toggle).getAttribute("aria-expanded") === "false") {
+      fireEvent.click(own(v020, patchTestid.toggle));
     }
     await within(v020).findByTestId(patchTestid.cards, undefined, SLOW);
     // Inside v0.2.0's entry: the newest patch is open too, and a promoted one may change the Mask again (R646).
@@ -470,13 +490,25 @@ describe("R724000 the Patch notes page by release line", () => {
     expect([...firsts].reverse().slice(0, REAL_FIRSTS.length)).toEqual(REAL_FIRSTS);
     expect(versions[0]).toBe(REAL_FIRSTS[0]?.[1]);
     openEverySet();
+    // Entries are the majors and patches, newest first; each micro sits inside the one before it (R3012000).
+    const tierList = tiers(shipped);
+    const hosts = versions.filter((_version, at) => tierList[at] !== "micro");
     const entries = screen.getAllByTestId(patchTestid.patch);
-    expect(entries.map((element) => element.dataset.version)).toEqual([...versions].reverse());
-    for (const entry of entries) {
+    expect(entries.map((element) => element.dataset.version)).toEqual([...hosts].reverse());
+    const micros = screen.getAllByTestId(patchTestid.micro);
+    expect(micros.map((element) => element.dataset.version).sort()).toEqual(versions.filter((_version, at) => tierList[at] === "micro").sort());
+    for (const micro of micros) {
+      const at = versions.indexOf(micro.dataset.version ?? "");
+      const host = versions.slice(0, at).findLast((_version, earlier) => tierList[earlier] !== "micro");
+      expect(micro.closest(`[data-testid="${patchTestid.patch}"]`)?.getAttribute("data-version"), micro.dataset.version).toBe(host);
+    }
+    for (const entry of [...entries, ...micros]) {
       const patch = shipped.find((each) => each.version === entry.dataset.version);
       expect(patch?.player, entry.dataset.version).toBeDefined();
-      expect(within(entry).getByRole("heading", { level: 3 })).toHaveTextContent(`${patch?.version ?? ""} ${patch?.player?.title ?? ""}`);
-      expect(within(entry).getByTestId(patchTestid.note)).toBeInTheDocument();
+      // A major's or patch's title is an h3; a micro patch's, under it, an h4.
+      const level = entry.dataset.testid === patchTestid.micro ? 4 : 3;
+      expect(within(entry).getAllByRole("heading", { level })[0]).toHaveTextContent(`${patch?.version ?? ""} ${patch?.player?.title ?? ""}`);
+      expect(own(entry, patchTestid.note)).toBeInTheDocument();
       expect(entry).not.toHaveTextContent(patch?.source ?? "");
     }
     expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(RELEASES.slice(0, ids.length).filter((release) => release.technical.length > 0).length);
@@ -529,18 +561,10 @@ describe("R1369000 the technical log on the Patch notes page", () => {
 describe("#2681 release artwork on the Patch notes page", () => {
   const HERE = dirname(fileURLToPath(import.meta.url));
 
-  it("#2681 shows generated artwork for every patch and uses CSS-owned still art for majors", async () => {
-    // V1 is a major here (R1369000: its recorded tier), V2 and V3 are micro patches of its line.
-    const patches = FIXTURE_PATCHES.map((patch) => (patch.version === V1 ? { ...patch, tier: "major" as const } : patch));
-    const data = sourceFromData({ patches, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS });
+  it("R3012001 shows a still poster for a major and art for a patch, and none for a micro patch", async () => {
+    // V1 is a major, V2 and V3 patches, M1 and M2 micros under V2 (TIERED_PATCHES).
     const asked: string[] = [];
-    renderPage({
-      ...data,
-      snapshot: (version) => {
-        asked.push(version);
-        return data.snapshot(version);
-      },
-    });
+    renderPage(tieredSource((version) => asked.push(version)));
     await screen.findAllByTestId(patchTestid.patch);
     await screen.findByTestId(patchTestid.cards);
 
@@ -549,7 +573,7 @@ describe("#2681 release artwork on the Patch notes page", () => {
     for (const image of art) {
       const version = image.dataset.version ?? "";
       const major = version === V1;
-      // One decorative, lazy image per patch, inside its entry and right after its heading.
+      // One decorative, lazy image per entry, inside it and right after its heading.
       expect(within(patchEntry(version)).getAllByTestId(patchTestid.releaseArt), version).toEqual([image]);
       expect(image.tagName).toBe("IMG");
       expect(image.getAttribute("alt"), version).toBe("");
@@ -557,20 +581,22 @@ describe("#2681 release artwork on the Patch notes page", () => {
       expect(image.getAttribute("decoding"), version).toBe("async");
       expect(image.getAttribute("draggable"), version).toBe("false");
       expect(image.dataset.major, version).toBe(major ? "true" : "false");
-      // A major loads its still file, for the page's CSS to move; every other patch its one file.
-      expect(image.getAttribute("src"), version).toBe(releaseArtPath(version, major ? "still" : "animated"));
+      // A major and a patch load their one file, a still picture: the major's `.svg` is its poster.
+      expect(image.getAttribute("src"), version).toBe(releaseArtPath(version));
       expect(image.parentElement?.previousElementSibling?.tagName, version).toBe("HEADER");
-      const cycle = image.parentElement?.style.getPropertyValue("--patch-art-cycle");
-      expect(cycle, version).toBe(major ? `${String(RELEASE_ART_MAJOR_CYCLE_SECONDS)}s` : "");
+      expect(image.parentElement?.getAttribute("style"), version).toBeNull();
     }
-    expect(art.map((image) => image.getAttribute("src"))).toEqual([
-      "/release-art/v5-third.svg",
-      "/release-art/v1-second.svg",
-      "/release-art/v9-first-still.svg",
-    ]);
+    expect(art.map((image) => image.getAttribute("src"))).toEqual(["/release-art/v5-third.svg", "/release-art/v1-second.svg", "/release-art/v9-first.svg"]);
+    // No micro patch has any art inside its entry, and none of the page's images is a `-still` file.
+    for (const micro of screen.getAllByTestId(patchTestid.micro)) {
+      expect(within(micro).queryByTestId(patchTestid.releaseArt), micro.dataset.version).toBeNull();
+      expect(micro.querySelector(".patch__art, img")).toBeNull();
+    }
+    expect(art.some((image) => (image.getAttribute("src") ?? "").includes("-still"))).toBe(false);
 
-    // The art asks for no snapshot, and the release line and the patches keep their state (R507, R724000).
-    expect(new Set(asked)).toEqual(new Set([V3, V2]));
+    // The art asks for no snapshot (V3's cards ask for its own and the one before it, a micro's), and the
+    // release line and the patches keep their state (R507, R724000).
+    expect(new Set(asked)).toEqual(new Set([V3, M2]));
     expect(screen.getAllByTestId(patchTestid.toggle).map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(["true", "false", "false"]);
     fireEvent.click(within(releaseSet("core")).getByTestId(patchTestid.setToggle));
     expect(screen.queryAllByTestId(patchTestid.releaseArt)).toEqual([]);
@@ -578,36 +604,391 @@ describe("#2681 release artwork on the Patch notes page", () => {
     expect(screen.getAllByTestId(patchTestid.releaseArt)).toHaveLength(3);
   });
 
-  it("#2681 only a major's artwork moves, and only where the system and the app's Reduce motion allow it", () => {
-    const css = readFileSync(resolve(HERE, "patches.css"), "utf8");
-    const gate = /@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}/u.exec(css);
-    expect(gate).not.toBeNull();
-    const [whole, inside] = gate ?? ["", ""];
-    expect(inside).toContain(':root:not([data-reduce-motion="true"])');
-    expect(inside).toContain('.patch__art-img[data-major="true"]');
-    expect(inside).toMatch(/animation: patch-art-drift var\(--patch-art-cycle\) /u);
-    // Nothing else on the page animates: no other rule of the file sets an animation.
-    expect(css.replace(whole, "")).not.toMatch(/animation\s*:/u);
-    expect(css).toMatch(/@keyframes patch-art-drift/u);
-    expect(css.match(/@keyframes/gu)).toHaveLength(1);
+  it("R3012001 an orphan micro patch, with no major or patch before it in its line, is an entry with no art", async () => {
+    renderPage(fixtureSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    expect(screen.getAllByTestId(patchTestid.patch).map((entry) => entry.dataset.tier)).toEqual(["micro", "micro", "micro"]);
+    expect(screen.queryAllByTestId(patchTestid.releaseArt)).toEqual([]);
+    expect(document.querySelector(".patch__art")).toBeNull();
   });
 
-  it("#2681 every patch of the real history has its artwork, a still one for each major", async () => {
+  it("R3012001 nothing on the page moves: the stylesheet has no keyframes and no animation", () => {
+    const css = readFileSync(resolve(HERE, "patches.css"), "utf8");
+    expect(css).not.toMatch(/@keyframes/u);
+    expect(css).not.toMatch(/animation\s*:/u);
+    expect(css).not.toMatch(/animation-name/u);
+    expect(css).not.toMatch(/data-major/u);
+  });
+
+  it("R3012001 every major and patch of the real history has its art and no micro patch has any, a major's loading its one poster", async () => {
     renderPage();
     const shipped = await realPatchSource.patches();
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
     openEverySet();
-    const flags = majors(shipped);
+    const tierList = tiers(shipped);
     const art = screen.getAllByTestId(patchTestid.releaseArt);
-    expect(art.map((image) => image.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
+    expect(art.map((image) => image.dataset.version)).toEqual(shipped.filter((_patch, at) => tierList[at] !== "micro").map((patch) => patch.version).reverse());
+    expect(screen.getAllByTestId(patchTestid.patch)).toHaveLength(art.length);
     for (const image of art) {
       const at = shipped.findIndex((patch) => patch.version === image.dataset.version);
-      const major = flags[at] === true;
-      expect(image.dataset.major, image.dataset.version).toBe(major ? "true" : "false");
-      expect(image.getAttribute("src"), image.dataset.version).toBe(releaseArtPath(image.dataset.version ?? "", major ? "still" : "animated"));
+      expect(image.dataset.major, image.dataset.version).toBe(tierList[at] === "major" ? "true" : "false");
+      expect(image.getAttribute("src"), image.dataset.version).toBe(releaseArtPath(image.dataset.version ?? ""));
     }
-    expect(art.filter((image) => image.dataset.major === "true").map((image) => image.dataset.version)).toEqual(
-      expect.arrayContaining(["v0.3.0", "v0.4.0"]),
-    );
+    for (const micro of screen.getAllByTestId(patchTestid.micro)) expect(within(micro).queryByTestId(patchTestid.releaseArt)).toBeNull();
+    expect(art.filter((image) => image.dataset.major === "true").map((image) => image.dataset.version)).toEqual(expect.arrayContaining(["v0.3.0", "v0.4.0"]));
   }, 30_000);
+});
+
+describe("R3012000 micro patches nested under their patch", () => {
+  const LINES: readonly Release[] = [
+    { id: "older", name: "Older line", summary: "", technical: [] },
+    { id: "newer", name: "Newer line", summary: "", technical: [] },
+  ];
+
+  it("R3012000 nests micros under the patch they follow, in order, with their own version, date and note", async () => {
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    // Patch B (V3) is its own entry; both micros sit inside patch A's entry (V2), and V1 holds none.
+    const entries = screen.getAllByTestId(patchTestid.patch);
+    expect(entries.map((entry) => entry.dataset.version)).toEqual([V3, V2, V1]);
+    expect(entries.map((entry) => entry.dataset.tier)).toEqual(["patch", "patch", "major"]);
+    const host = patchEntry(V2);
+    const micros = within(host).getAllByTestId(patchTestid.micro);
+    expect(micros.map((micro) => micro.dataset.version)).toEqual([M1, M2]);
+    expect(screen.getAllByTestId(patchTestid.micro)).toHaveLength(2);
+    expect(within(patchEntry(V3)).queryAllByTestId(patchTestid.micro)).toEqual([]);
+    expect(within(patchEntry(V1)).queryAllByTestId(patchTestid.micro)).toEqual([]);
+    expect(within(host).getByRole("list", { name: "Micro patches" })).toBeInTheDocument();
+    const [first, second] = micros;
+    expect(within(first ?? host).getByRole("heading", { level: 4 })).toHaveTextContent(`${M1} Knight wording`);
+    expect(first).toHaveTextContent("2026-02-10");
+    expect(first).toHaveTextContent("Test Knight reads clearer.");
+    expect(first).not.toHaveTextContent("Quiet Golem stays quiet.");
+    expect(within(second ?? host).getByRole("heading", { level: 4 })).toHaveTextContent(`${M2} Golem fix`);
+    expect(second).toHaveTextContent("2026-02-17");
+    expect(second).toHaveTextContent("Quiet Golem stays quiet.");
+    // A micro's note headings sit one level under its title, and its entry is no entry of its own.
+    expect(within(first ?? host).getByRole("heading", { level: 5 })).toHaveTextContent("Card text");
+    expect(micros.every((micro) => micro.closest(`[data-testid="${patchTestid.patch}"]`) === host)).toBe(true);
+  });
+
+  it("R3012000 a micro after a major goes under the major", async () => {
+    const patches = TIERED_PATCHES.filter((patch) => patch.version !== V2);
+    const data = sourceFromData({ patches, index: FIXTURE_INDEX, snapshots: { ...FIXTURE_SNAPSHOTS, [M1]: FIXTURE_SNAPSHOTS[V2] ?? {}, [M2]: FIXTURE_SNAPSHOTS[V2] ?? {} } });
+    renderPage(data);
+    await screen.findAllByTestId(patchTestid.patch);
+    expect(screen.getAllByTestId(patchTestid.patch).map((entry) => entry.dataset.version)).toEqual([V3, V1]);
+    expect(within(patchEntry(V1)).getAllByTestId(patchTestid.micro).map((micro) => micro.dataset.version)).toEqual([M1, M2]);
+  });
+
+  it("R3012000 a micro keeps its own cards control, which loads its snapshot only when opened", async () => {
+    // M1 changed the knight: its snapshot holds the knight as V1 had it, so its cards differ from V2's.
+    const knight = FIXTURE_SNAPSHOTS[V1]?.["core-001"];
+    const withCards: Patch[] = TIERED_PATCHES.map((patch) =>
+      patch.version === M1 ? { ...patch, changes: [{ id: "core-001", name: "Test Knight", kind: "changed", fields: ["cost"] }] } : patch,
+    );
+    const asked: string[] = [];
+    const data = sourceFromData({
+      patches: withCards,
+      index: FIXTURE_INDEX,
+      snapshots: { ...FIXTURE_SNAPSHOTS, [M1]: { ...FIXTURE_SNAPSHOTS[V2], ...(knight === undefined ? {} : { "core-001": knight }) }, [M2]: FIXTURE_SNAPSHOTS[V2] ?? {} },
+    });
+    renderPage({
+      ...data,
+      snapshot: (version) => {
+        asked.push(version);
+        return data.snapshot(version);
+      },
+    });
+    await screen.findByTestId(patchTestid.cards);
+    expect(asked).not.toContain(M1);
+    const micro = patchEntry(M1);
+    const toggle = within(micro).getByTestId(patchTestid.toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(micro).queryByTestId(patchTestid.cards)).toBeNull();
+    fireEvent.click(toggle);
+    expect(await within(micro).findByTestId(patchTestid.cards)).toBeInTheDocument();
+    expect(asked).toContain(M1);
+    // M2 changed no card: a note and no control.
+    expect(within(patchEntry(M2)).queryByTestId(patchTestid.toggle)).toBeNull();
+    expect(patchEntry(M2)).toHaveTextContent("No card changed.");
+  });
+
+  it("R3012000 the legend lists every line, major and patch, with micros nested under their patch", async () => {
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    const legend = screen.getByRole("navigation", { name: "Patch notes legend" });
+    expect(legend).toBe(screen.getByTestId(patchTestid.legend));
+    expect(within(legend).getAllByTestId(patchTestid.legendLine).map((link) => link.dataset.set)).toEqual(["core"]);
+    expect(within(legend).getAllByTestId(patchTestid.legendLine)[0]).toHaveTextContent("Core");
+    const links = within(legend).getAllByTestId(patchTestid.legendLink);
+    expect(links.map((link) => [link.dataset.version, link.dataset.tier])).toEqual([
+      [V3, "patch"],
+      [V2, "patch"],
+      [M1, "micro"],
+      [M2, "micro"],
+      [V1, "major"],
+    ]);
+    for (const link of links) expect(link.getAttribute("href"), link.dataset.version).toBe(`#${encodeURIComponent(link.dataset.version ?? "")}`);
+    // The micros are under V2's item, behind its button, and V3 and V1 hold none.
+    const buttons = within(legend).getAllByTestId(patchTestid.legendMicros);
+    expect(buttons.map((button) => [button.dataset.version, button.textContent])).toEqual([[V2, "2 micro patches"]]);
+    const item = buttons[0]?.closest("li");
+    expect(within(item ?? legend).getAllByTestId(patchTestid.legendLink).map((link) => link.dataset.version)).toEqual([V2, M1, M2]);
+    expect(buttons[0]).toHaveAttribute("aria-expanded", "false");
+    expect(buttons[0]?.getAttribute("aria-controls")).not.toBeNull();
+    expect(document.getElementById(buttons[0]?.getAttribute("aria-controls") ?? "")).not.toBeVisible();
+    fireEvent.click(buttons[0] ?? legend);
+    expect(buttons[0]).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById(buttons[0]?.getAttribute("aria-controls") ?? "")).toBeVisible();
+    // Every link names an entry that is on the page.
+    for (const link of links) expect(document.getElementById(link.dataset.version ?? ""), link.dataset.version).not.toBeNull();
+    expect(legend.getAttribute("aria-current")).toBeNull();
+    expect(links.filter((link) => link.hasAttribute("aria-current"))).toEqual([]);
+  });
+
+  /** The versions the legend marks as in view (`aria-current`). */
+  function marked(): (string | undefined)[] {
+    return within(screen.getByTestId(patchTestid.legend))
+      .getAllByTestId(patchTestid.legendLink)
+      .filter((link) => link.getAttribute("aria-current") === "location")
+      .map((link) => link.dataset.version);
+  }
+
+  /** Records the entries a jump scrolls to, as jsdom has no `scrollIntoView`. */
+  function recordScrolls(): string[] {
+    const targets: string[] = [];
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      writable: true,
+      value(this: Element) {
+        targets.push(this.id);
+      },
+    });
+    return targets;
+  }
+
+  /** The history a click or a hash has to open lines for: V1 and V3 are majors, so V1 and V2 sit in the older line, closed on arrival. */
+  function twoLines(onSnapshot: (version: string) => void): PatchSource {
+    const patches = TIERED_PATCHES.filter((patch) => patch.tier !== "micro").map((patch) => (patch.version === V3 ? { ...patch, tier: "major" as const } : patch));
+    const data = sourceFromData({ patches, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS });
+    return {
+      ...data,
+      snapshot: (version) => {
+        onSnapshot(version);
+        return data.snapshot(version);
+      },
+    };
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  });
+
+  it("R3012000 a legend click opens the entry's line, loads its snapshot as R507 does, scrolls to it and puts it in the address", async () => {
+    const targets = recordScrolls();
+    const asked: string[] = [];
+    renderPage(twoLines((version) => asked.push(version)), LINES);
+    await screen.findByTestId(patchTestid.cards);
+    // V1 is in the older line, shut on arrival, and nothing has read its snapshot.
+    expect(asked).not.toContain(V1);
+    const older = releaseSet("older");
+    expect(within(older).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "false");
+    const legend = screen.getByTestId(patchTestid.legend);
+    const linkTo = (version: string): HTMLElement => within(legend).getAllByTestId(patchTestid.legendLink).find((link) => link.dataset.version === version) ?? legend;
+
+    fireEvent.click(linkTo(V1));
+    expect(within(older).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "true");
+    expect(await within(patchEntry(V1)).findByTestId(patchTestid.cards)).toBeInTheDocument();
+    expect(asked).toContain(V1);
+    expect(targets).toEqual([V1]);
+    expect(window.location.hash).toBe(`#${V1}`);
+    expect(patchEntry(V1)).toHaveFocus();
+    // The entry just jumped to is the one marked in the legend.
+    expect(marked()).toEqual([V1]);
+
+    // Another entry of the same line opens its cards too, and a line's own link opens and scrolls to the line.
+    fireEvent.click(linkTo(V2));
+    expect(await within(patchEntry(V2)).findByTestId(patchTestid.cards)).toBeInTheDocument();
+    expect(targets).toEqual([V1, V2]);
+    expect(marked()).toEqual([V2]);
+    fireEvent.click(within(older).getByTestId(patchTestid.setToggle));
+    expect(within(older).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "false");
+    const line = within(legend).getAllByTestId(patchTestid.legendLine).find((link) => link.dataset.set === "older") ?? legend;
+    fireEvent.click(line);
+    expect(within(older).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "true");
+    expect(targets).toEqual([V1, V2, "line-older"]);
+    expect(window.location.hash).toBe("#line-older");
+    // A click with a modifier key is left to the browser: it opens and scrolls nothing here.
+    fireEvent.click(within(older).getByTestId(patchTestid.setToggle));
+    fireEvent.click(line, { ctrlKey: true });
+    expect(within(older).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "false");
+    expect(targets).toEqual([V1, V2, "line-older"]);
+  });
+
+  it("R3012000 a micro's legend link opens its host's line and scrolls to the micro", async () => {
+    const targets = recordScrolls();
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    fireEvent.click(within(screen.getByTestId(patchTestid.legend)).getAllByTestId(patchTestid.legendLink).find((link) => link.dataset.version === M2) ?? document.body);
+    expect(targets).toEqual([M2]);
+    expect(patchEntry(M2)).toHaveFocus();
+    expect(window.location.hash).toBe(`#${M2}`);
+  });
+
+  it("R3012000 an address hash opens and scrolls to its entry as a click does", async () => {
+    const targets = recordScrolls();
+    const asked: string[] = [];
+    window.history.replaceState(null, "", `/patch-notes#${V1}`);
+    renderPage(twoLines((version) => asked.push(version)), LINES);
+    await screen.findAllByTestId(patchTestid.patch);
+    expect(await within(patchEntry(V1)).findByTestId(patchTestid.cards)).toBeInTheDocument();
+    expect(within(releaseSet("older")).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "true");
+    expect(asked).toContain(V1);
+    expect(targets).toEqual([V1]);
+    expect(marked()).toEqual([V1]);
+    cleanup();
+
+    // A hash that names no entry, or one that is no valid escape, opens nothing and breaks nothing.
+    for (const hash of ["#nobody", "#%E0%A4%A", "#"]) {
+      window.history.replaceState(null, "", `/patch-notes${hash}`);
+      renderPage(twoLines(() => undefined), LINES);
+      await screen.findAllByTestId(patchTestid.patch);
+      expect(within(releaseSet("older")).getByTestId(patchTestid.setToggle), hash).toHaveAttribute("aria-expanded", "false");
+      cleanup();
+    }
+    expect(targets).toEqual([V1]);
+  });
+
+  it("R3012000 a hashchange does the same, and a hash in the address names a micro too", async () => {
+    const targets = recordScrolls();
+    renderPage(twoLines(() => undefined), LINES);
+    await screen.findByTestId(patchTestid.cards);
+    expect(within(releaseSet("older")).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "false");
+    act(() => {
+      window.history.replaceState(null, "", `/patch-notes#${V1}`);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(within(releaseSet("older")).getByTestId(patchTestid.setToggle)).toHaveAttribute("aria-expanded", "true");
+    expect(targets).toEqual([V1]);
+    cleanup();
+
+    targets.length = 0;
+    window.history.replaceState(null, "", `/patch-notes#${M1}`);
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    await waitFor(() => {
+      expect(targets).toEqual([M1]);
+    });
+    expect(patchEntry(M1)).toHaveFocus();
+  });
+
+  /** An IntersectionObserver that records its observers, so a test can say what is in view. */
+  class FakeObserver {
+    static all: FakeObserver[] = [];
+    readonly targets: Element[] = [];
+    readonly root = null;
+    readonly thresholds: readonly number[] = [];
+    constructor(
+      readonly callback: IntersectionObserverCallback,
+      readonly options: IntersectionObserverInit | undefined,
+    ) {
+      FakeObserver.all.push(this);
+    }
+    get rootMargin(): string {
+      return this.options?.rootMargin ?? "";
+    }
+    observe(target: Element): void {
+      this.targets.push(target);
+    }
+    unobserve(): void {}
+    disconnect(): void {
+      this.targets.length = 0;
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+
+  const seen = (target: Element, isIntersecting: boolean): IntersectionObserverEntry => ({ target, isIntersecting }) as IntersectionObserverEntry;
+
+  it("R3012000 the entry in view carries aria-current in the legend, a micro winning over the patch holding it", async () => {
+    FakeObserver.all = [];
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    // The page watches its entries once they are in the document (an effect, after the paint).
+    await waitFor(() => {
+      expect(FakeObserver.all.at(-1)?.targets).toHaveLength(5);
+    });
+    const observer = FakeObserver.all.at(-1);
+    if (observer === undefined) throw new Error("the page watched nothing");
+    expect(observer.rootMargin).toBe(PATCH_LEGEND_BAND_MARGIN);
+    // Every entry is watched, micros included; nothing is marked until one is in view.
+    expect(observer.targets.map((target) => (target as HTMLElement).dataset.entry).sort()).toEqual([V1, V2, V3, M1, M2].sort());
+    expect(marked()).toEqual([]);
+
+    const fire = (...records: IntersectionObserverEntry[]): void => {
+      act(() => {
+        observer.callback(records, observer as unknown as IntersectionObserver);
+      });
+    };
+    fire(seen(patchEntry(V3), true));
+    expect(marked()).toEqual([V3]);
+    // V2 holds M1: both in the band, the micro is the one in view, and V2's micro list shows it.
+    fire(seen(patchEntry(V3), false), seen(patchEntry(V2), true), seen(patchEntry(M1), true));
+    expect(marked()).toEqual([M1]);
+    const link = within(screen.getByTestId(patchTestid.legend)).getAllByTestId(patchTestid.legendLink).find((each) => each.dataset.version === M1);
+    expect(link?.closest("ol")).toBeVisible();
+    // Scrolling on leaves the last mark where it was until another entry is in view.
+    fire(seen(patchEntry(V2), false), seen(patchEntry(M1), false));
+    expect(marked()).toEqual([M1]);
+    fire(seen(patchEntry(V1), true));
+    expect(marked()).toEqual([V1]);
+  });
+
+  it("R3012000 at phone width the legend collapses into a drawer a link closes again", async () => {
+    const restore = stubPatchLegendPhone(true);
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    const legend = screen.getByTestId(patchTestid.legend);
+    const toggle = within(legend).getByTestId(patchTestid.legendToggle);
+    expect(toggle).toHaveTextContent("Jump to a patch");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    const body = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+    expect(body).not.toBeNull();
+    expect(body).not.toBeVisible();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(body).toBeVisible();
+    fireEvent.click(within(legend).getAllByTestId(patchTestid.legendLink).find((link) => link.dataset.version === V1) ?? legend);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(body).not.toBeVisible();
+    restore();
+    cleanup();
+
+    // On a wide screen there is no drawer button, and the legend is always shown.
+    const wide = stubPatchLegendPhone(false);
+    renderPage(tieredSource());
+    await screen.findAllByTestId(patchTestid.patch);
+    expect(within(screen.getByTestId(patchTestid.legend)).queryByTestId(patchTestid.legendToggle)).toBeNull();
+    expect(within(screen.getByTestId(patchTestid.legend)).getAllByTestId(patchTestid.legendLink)[0]).toBeVisible();
+    wide();
+  });
+
+  it("R3012000 the stylesheet keeps the phone page from scrolling sideways, and the legend sticky", () => {
+    const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "patches.css"), "utf8");
+    // The legend sticks to the top of the page on a wide screen.
+    expect(/\.patch-legend \{[^}]*position: sticky;/u.exec(css)).not.toBeNull();
+    // The phone block (the width `PATCH_LEGEND_PHONE_QUERY` names) is one column and wraps every long word.
+    const phone = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}/u.exec(css)?.[1] ?? "";
+    expect(phone).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(phone).toContain("overflow-wrap: anywhere");
+    expect(phone).toContain("max-width: 100%");
+    expect(phone).toMatch(/\.patch-legend \{[^}]*z-index: 3/u);
+    expect(phone).toContain("overflow-y: auto");
+    // Fingers get 44 px targets in the legend (R2122000).
+    const touch = /@media \(pointer: coarse\), \(max-width: 600px\) \{([\s\S]*?)\n\}/gu;
+    expect([...css.matchAll(touch)].some((block) => (block[1] ?? "").includes(".patch-legend__link") && (block[1] ?? "").includes("min-height: 44px"))).toBe(true);
+  });
 });

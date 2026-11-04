@@ -8,7 +8,8 @@ import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { PatchSourceProvider } from "../patches/context.tsx";
 import { fixtureSource } from "../patches/fixtures.ts";
-import { realPatchSource } from "../patches/source.ts";
+import { RELEASES, nestMicros, releaseGroups, tiers } from "../patches/releases.ts";
+import { realPatchSource, type Patch } from "../patches/source.ts";
 import { patchTestid } from "../patches/testids.ts";
 import { at } from "../test/stubServer.ts";
 import LandingRoute from "./landing.tsx";
@@ -20,6 +21,13 @@ const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
 
 /** A lazily-imported route chunk and the real history's first read can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
+
+/** R3012000: the version of the newest entry of the newest line: the last major or patch, which holds the micro patches after it. */
+function newestEntry(patches: readonly Patch[]): string | undefined {
+  const tierList = tiers(patches);
+  const tierOf = new Map(patches.map((patch, at) => [patch.version, tierList[at] ?? "patch"] as const));
+  return nestMicros(releaseGroups(patches, RELEASES)[0]?.patches ?? [], tierOf)[0]?.patch.version;
+}
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -40,9 +48,10 @@ describe("R388 the /patch-notes route", () => {
     render(<App />);
     expect(await screen.findByTestId(patchTestid.screen, undefined, SLOW)).toBeInTheDocument();
     const entries = await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    // The newest patch — patches.json's last entry, whatever a promotion named it (R646) — opens the page.
+    // The newest entry opens the page: patches.json's last major or patch, whatever a promotion named it (R646),
+    // holding the micro patches shipped after it (R3012000).
     const shipped = await realPatchSource.patches();
-    expect(entries[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    expect(entries[0]?.dataset.version).toBe(newestEntry(shipped));
     expect(document.title).toBe("Patch notes · JackiOh");
     // Nothing asked the server who is signed in: the page is not behind the gate.
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/api/auth/me"))).toBe(false);
@@ -56,7 +65,7 @@ describe("R388 the /patch-notes route", () => {
     const toggles = sets.map((set) => within(set).getByTestId(patchTestid.setToggle).getAttribute("aria-expanded"));
     expect(toggles).toEqual(sets.map((_set, at) => (at === 0 ? "true" : "false")));
     expect(sets.length).toBeGreaterThan(1);
-    expect(within(sets[0] ?? document.body).getAllByTestId(patchTestid.patch)[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    expect(within(sets[0] ?? document.body).getAllByTestId(patchTestid.patch)[0]?.dataset.version).toBe(newestEntry(shipped));
     for (const set of sets.slice(1)) expect(within(set).queryAllByTestId(patchTestid.patch)).toEqual([]);
   });
 
