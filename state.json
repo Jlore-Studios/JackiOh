@@ -31345,6 +31345,7 @@
         "every": 5,
         "head": "a569d7120a355c7695ca7656f6a932e8c361f2dc",
         "issue": 2953,
+        "last_why": "stopped: #2965 was closed",
         "merged_at": "2026-11-04T03:27:40Z",
         "n": 35,
         "pr": 2965,
@@ -31355,12 +31356,12 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:b8102f30-1793765368",
+        "run_id": "",
         "sha": "ed35dcedf54153a081e84ed58e126bc6d7c44a4d",
         "started_at": "2026-11-04T04:10:09Z",
         "status": "queued",
         "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 36
