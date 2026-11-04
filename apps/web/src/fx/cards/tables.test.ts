@@ -183,7 +183,7 @@ describe("R2784000 the per-set effects tables", () => {
       "classicplus-021": { kind: "hooks", hooks: { cast: { motif: "nova" } } },
       "classicplus-025": { kind: "hooks", hooks: { cast: { motif: "bolt" } } },
       "meditative-078": { kind: "hooks", hooks: { cast: { motif: "vanish" } } },
-      "meditativeplus-005": { kind: "hooks", hooks: { cast: { motif: "chain" } } },
+      "meditativeplus-005": { kind: "hooks", hooks: { cast: { motif: "nova" } } },
       "stinkyscape-003": { kind: "hooks", hooks: { cast: { motif: "nova" } } },
       "stinkyscape-097": { kind: "hooks", hooks: { cast: { motif: "barrage" } } },
       "traininggrounds-010": { kind: "hooks", hooks: { cast: { motif: "volley" } } },
@@ -244,7 +244,7 @@ describe("R2784000 the per-set effects tables", () => {
     // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
     const hooksOf: Readonly<Record<string, object>> = {
       "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },
-      "classic-075": { cast: { motif: "ward" } },
+      "classic-075": { cast: { motif: "bless" } },
     };
     const files = new Set<string>();
     for (const [defId, aura] of Object.entries(examples)) {

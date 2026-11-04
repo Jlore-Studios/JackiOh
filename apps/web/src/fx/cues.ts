@@ -25,6 +25,8 @@ import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { FLAVOR_LOOKS, flavorLook } from "./flavors.ts";
+import { ringCue, tunedBurst } from "./build.ts";
+import { MOTIF_TUNING } from "./motifs/build.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import type { MotifSpec } from "./motifs/build.ts";
 import { planMotif } from "./motifs/index.ts";
@@ -33,8 +35,9 @@ import { planBeats } from "./motifs/beats.ts";
 import { planSetPiece } from "./setPieces.ts";
 import { planStarship } from "./starship.ts";
 import { shotCue } from "./stage.ts";
-import { entranceCues, entranceLandMs } from "./takeover.ts";
+import { entranceCues, entranceEchoMs, entranceLandMs } from "./takeover.ts";
 import {
+  FX_ARMOR_TRAUMA,
   FX_BANNER_TAIL_MS,
   FX_BURN_AT,
   FX_CAST_SCALE_MAX,
@@ -59,6 +62,7 @@ import {
   FX_LETHAL_LEAD_MAX_MS,
   FX_MAX_TAIL_MS,
   FX_MIND_CONTROL_FLIGHT_FRACTION,
+  FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
@@ -322,7 +326,6 @@ export function sourceAnchor(
 const MOTIF_ROW_LOOK = {
   bless: FLAVOR_LOOKS.Holy,
   curse: FLAVOR_LOOKS.Dark,
-  ward: FLAVOR_LOOKS.Holy,
   flight: FLAVOR_LOOKS.Spirit,
   mana: FLAVOR_LOOKS.Holy,
   snap: FLAVOR_LOOKS.Dark,
@@ -444,8 +447,15 @@ const summon: Recipe = (event, p) => {
   let entrance = 0;
   // R2722001: a Legendary's or a Mythic's entrance is bigger than the rays alone: a ring of its light
   // bursts out where it lands, and the shake is FX_LEGENDARY_TRAUMA's (a Mythic's takeover is takeover.ts's).
+  // R2803000: the Legendary's ring carries its echo, the same wave behind as the takeover's second
+  // shockwave, so a summoned Legendary lands in the shared entrance's language.
   if (facts.rarity === "Legendary") {
-    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"), ring(p.D, "gold", at, landAt));
+    cues.push(
+      rays(p.D, "legendary", at, 0),
+      burst(i, "gold", at, "area", landAt, "summonGold"),
+      ring(p.D, "gold", at, landAt),
+      ring(p.D, "gold", at, entranceEchoMs(p.D, landAt)),
+    );
     entrance = FX_LEGENDARY_TRAUMA;
   } else if (facts.rarity === "Mythic") {
     cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", landAt, "summonPrismatic"), ring(p.D, "prismatic", at, landAt));
@@ -536,10 +546,17 @@ const impact: Recipe = (event, p) => {
   return [...cues, ...impactTail(event, p, p.D, look.particle)];
 };
 
-/** R1363: the Armor took the whole hit (`damageAbsorbed`), drawn as `ward`. */
+/** R1363: the Armor took the whole hit (`damageAbsorbed`). R2803000 folds `ward` into the rows: the full shield in Holy, landing with the hit. */
 const armor: Recipe = (event, p) => {
   if (event.type !== "damageAbsorbed") return [];
-  return motifRow("ward", p);
+  const at = anchor(p.tgt);
+  const land = frac(FX_MOTIF_PHASES.land, p.D);
+  const cues: FxCue[] = [];
+  for (const cue of shieldCues("full", at, p.D, land, p.env.intensity)) {
+    cues.push(cue.kind === "burst" ? { ...cue, colors: FLAVOR_LOOKS.Holy.colors } : cue);
+  }
+  pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
+  return cues;
 };
 
 const drain: Recipe = (event, p) => {
@@ -559,9 +576,17 @@ const heal: Recipe = (event, p) => {
   ];
 };
 
+/** A Divine Shield breaking. R2803000 folds `ward` into the rows: the gold ring and Holy shards, landing with the break. */
 const shieldBreak: Recipe = (event, p) => {
   if (event.type !== "divineShieldLost") return [];
-  return motifRow("ward", p);
+  const at = anchor(p.tgt);
+  const land = frac(FX_MOTIF_PHASES.land, p.D);
+  const cues: FxCue[] = [
+    ringCue(p.D, "gold", at, 0),
+    { ...tunedBurst(p.env.intensity, "shard", at, "ring", land, MOTIF_TUNING.small), colors: FLAVOR_LOOKS.Holy.colors },
+  ];
+  pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
+  return cues;
 };
 
 const death: Recipe = (event, p) => {

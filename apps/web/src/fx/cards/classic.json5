@@ -65,7 +65,7 @@
   "classic-051": { death: { motif: "wipe" } }, // Back Breaker
   "classic-052": { cast: { motif: "flight" } }, // Final Gambit
   "classic-053": { cry: { motif: "tally" }, trigger: { motif: "flight" } }, // Plague Crawler
-  "classic-054": { cast: { motif: "mirror" } }, // Rewind
+  "classic-054": { cast: { motif: "transmute" } }, // Rewind
   "classic-055": { cast: { motif: "bolt", palette: "Fire" } }, // Book of Wildfire
   "classic-056": { bespoke: "tyrantSigil" }, // Spell Tyrant
   "classic-057": { cast: { motif: "bolt" } }, // Echo
@@ -86,7 +86,7 @@
   "classic-072": { cast: { motif: "negate" } }, // Grand Counterspell
   "classic-073": "none: vanilla", // Nurse Cleaver
   "classic-074": { cast: { motif: "tally" }, activate: { motif: "rise" }, aura: { look: "bloom", scope: "zone" } }, // Corpse Plantation
-  "classic-075": { cast: { motif: "ward" }, aura: { look: "holy", scope: "side" } }, // Argusland
+  "classic-075": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // Argusland
   "classic-076": { cry: { motif: "tally" } }, // Plague Bringer
   "classic-077": "none: vanilla", // Anti-Magic Monkey
   "classic-078": { cast: { motif: "vanish" }, activate: { motif: "vanish" }, aura: { look: "arcane", scope: "zone" } }, // Mutate Spell
