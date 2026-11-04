@@ -15014,9 +15014,9 @@
       "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3000",
-      "owner": "muse",
-      "owner_since": "2026-11-04T13:52:32Z",
-      "owner_why": "it took it up",
+      "owner": "claude-6",
+      "owner_since": "2026-11-04T14:15:58Z",
+      "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 3000,
       "paused": {
         "at": "2026-11-04T14:14:06Z",
@@ -15024,11 +15024,11 @@
         "provider": "muse"
       },
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-6",
       "round_tier": "",
-      "run_id": "41842108966",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-04T13:52:32Z",
+      "run_id": "pending:29b5ee1e-1793801728",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-04T14:15:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -15076,9 +15076,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T13:52:32Z",
+    "at": "2026-11-04T14:15:58Z",
     "url": "",
-    "what": "build #3038 on muse"
+    "what": "build #3038 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T13:59:54Z",
