@@ -11664,14 +11664,26 @@
       "verdict_rounds": 1
     },
     "2803": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-04T01:23:09Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-02T05:07:55Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:5971ea07-1793755365",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-04T01:23:09Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2805": {
       "cleared": {
@@ -16462,9 +16474,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T01:14:25Z",
+    "at": "2026-11-04T01:23:09Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "plan #2803 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T01:12:43Z",
