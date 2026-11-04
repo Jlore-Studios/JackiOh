@@ -15877,7 +15877,7 @@
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-11-04T04:44:32Z",
+      "queued_at": "2026-11-04T04:46:32Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
@@ -15901,7 +15901,7 @@
         "provider": "claude-7",
         "run": "41754753719"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-04T04:32:13Z",
       "stop_requested": false,
       "taken_asks": [],
