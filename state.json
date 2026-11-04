@@ -16246,6 +16246,7 @@
         "by": "`muse` (medium)",
         "sha": "512e70406bf732deb50c477ea2c12a9ec5817376"
       },
+      "closed_at": "2026-11-04T09:05:26Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16265,6 +16266,7 @@
       "kind": "revise",
       "live": "fixing-ci",
       "merge_owner": "muse",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "In .github/workflows/ci.yml (bot-forbidden path): 1) directly after the `engine rules 2` matrix entry (lines 273-276, the `-p jackioh-engine ... --test rules_2 ...` block), insert: `- group: engine rules 3` / `scope: engine_rules` / `cache: engine-rules` / `test: -p jackioh-engine --features jackioh-engine/testkit --test rules_3 --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=0` (same indent as the rules 2 entry). 2) in the `engine` group's `binaries:` line (line 289), change `jackioh-engine export_config golden rules rules_2` to `jackioh-engine export_config golden rules rules_2 rules_3`. Then CI's binaries-vs-groups guard passes and the umbrella `rust` job goes green.",
