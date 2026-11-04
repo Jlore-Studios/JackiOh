@@ -16871,17 +16871,8 @@
       ]
     },
     "2976": {
-      "action": "plan",
-      "asks": [
-        "c:6620474421"
-      ],
-      "build_next": {
-        "from_run": "41766468614",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-04T03:50:06Z",
-        "until": "2026-11-04T04:20:06Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T03:49:50Z",
         "difficulty": "hard",
@@ -16900,10 +16891,9 @@
         "reason": "planned on opus",
         "trail": "\n- Bash: {\"command\": \"cd apps/web/src && grep -rlE \\\"@jackioh/ai|aiDecide|ai_decide|createPracticeCore|playLesson|runLesson|decide\\\\(\\\" --include=*.test.ts --include=*.test.tsx . | head -40\", \"description\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2976 && echo \\\"JACKIOH_CACHE_DIR=$JACKIOH_CACHE_DIR\\\"; ls -d .cache ../*/.cache /home/runner/work/JackiOh/JackiOh/.cache 2>/dev/null; ls apps/web/src\u2026\n- Bash: {\"command\": \"sed -n 1,60p scripts/worktree.sh | grep -v \\\"^$\\\" | head -60; ls -d /home/runner/work/JackiOh/JackiOh/node_modules /home/runner/work/JackiOh/JackiOh/apps/web/node_modules 2>&1; ls /home/\u2026\n- Bash: {\"command\": \"cd /tmp/jk2976 && timeout 600 pnpm install --frozen-lockfile --prefer-offline > /tmp/jk2976-pnpm.log 2>&1; echo \\\"exit $?\\\"; tail -5 /tmp/jk2976-pnpm.log; cat /tmp/jk2976-gate.log | tail\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- NEW RISK found: web tests that play the real AI through wasm (CI web job is on for crates/ai/src): src/tutorial/lessons.test.ts, discovery-play.test.ts (le\u2026\n- Bash: {\"command\": \"sed -n 80,200p scripts/build-wasm.sh | grep -n \\\"cargo build\\\\|emsdk_env\\\\|EMSDK\\\\b\\\\|install\\\" | head -20\", \"description\": \"Skim the wasm build steps\"}\n- Bash: {\"command\": \"sleep 100; tail -4 /tmp/jk2976-gate.log\", \"description\": \"Wait briefly for the gate\", \"timeout\": 200000}\n- tool error: <tool_use_error>Blocked: sleep 100 followed by: tail -4 /tmp/jk2976-gate.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command y\u2026\n- Bash: {\"command\": \"tail -8 /tmp/jk2976-gate.log\", \"description\": \"Read the gate result\"}\n- Bash: {\"command\": \"grep -E \\\"^\\\\[gate [a-z-]+\\\\] [0-9]+ wins|FAIL|fail\\\" /tmp/jk2976-gate.log | head\", \"description\": \"Extract gate win lines\"}\n- Bash: {\"command\": \"cd /tmp/jk2976 && (CARGO_TARGET_DIR=/tmp/jk2976-target sh scripts/build-wasm.sh > /tmp/jk2976-wasm.log 2>&1; echo \\\"exit $?\\\" >> /tmp/jk2976-wasm.log)\", \"description\": \"Build the scratch\u2026\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\\|expect(\\\" apps/web/src/tutorial/lessons.test.ts | head -30; grep -n \\\"it(\\\\|describe(\\\" apps/web/src/tutorial/discovery-play.test.ts | head\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|describe(\\\" apps/web/src/tutorial/lessons.test.ts | sed -n 4,30p; grep -n \\\"it(\\\\|describe(\\\" apps/web/src/tutorial/discovery-play.test.ts | sed -n 1,30p | cut -c1-200\", \u2026\n- Bash: {\"command\": \"sed -n 195,216p apps/web/src/tutorial/lessons.test.ts; sed -n 55,92p apps/web/src/tutorial/discovery-play.test.ts\", \"description\": \"Read the lesson play-through tests\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2976/apps/web/src && grep -rl \\\"from \\\\\\\"\\\\.\\\\./harness\\\\|from \\\\\\\"\\\\./harness\\\\|tutorial/harness\\\" --include=*.test.ts --include=*.test.tsx . | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2976 && grep -n \\\"import\\\\|playLesson\\\\|coach\\\" apps/web/src/tutorial/scripts/basics.test.ts | head -15; grep -n \\\"export function\\\\|playLesson\\\" app\u2026\n- Bash: {\"command\": \"tail -3 /tmp/jk2976-wasm.log\", \"description\": \"Check the wasm build\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2976/.bot-plan.md\", \"content\": \"# Plan draft #2976 (opus planner, run 2) \\u2014 see final message; scratch at /tmp/jk2976 (gone after run)\\n\\nVerified\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"cd /tmp && diff -u /home/runner/work/_temp/work/item-2976/crates/ai/src/search.rs /tmp/jk2976/crates/ai/src/search.rs; diff -u /home/runner/work/_temp/work/item-2976/crates/ai/tests/ai/p\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/jk2976-wasm.log; do sleep 5; done; tail -5 /tmp/jk2976-wasm.log\", \"description\": \"Wait for the wasm build to finish\", \"timeout\": 3600000, \"run_in_background\"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2976/.bot-plan.md\", \"content\": \"# Plan draft #2976 (opus planner, run 2)\\n\\nStatus: Rust side fully verified in scratch /tmp/jk2976 (git archive of HE\u2026\n- Bash: {\"command\": \"tail -3 /tmp/jk2976-wasm.log\", \"description\": \"Check wasm build progress\"}\n- Bash: {\"command\": \"cat apps/web/package.json | grep -n \\\"\\\\\\\"test\\\\|\\\\\\\"pretest\\\\|wasm\\\" | head\", \"description\": \"See the web test scripts\"}\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-2976/.bot-plan.md <<'EOF'\\n\\n## Final plan outline (to emit)\\nFiles: candidates.rs (wall_switches after stands_down), search.rs (import, expand, \u2026\n- Bash: {\"command\": \"tail -3 /tmp/jk2976-wasm.log\", \"description\": \"Check wasm build progress\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/jk2976-wasm.log; do sleep 5; done; tail -4 /tmp/jk2976-wasm.log\", \"description\": \"Block until the wasm build finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /tmp/jk2976 && timeout 1500 pnpm --dir apps/web exec vitest run src/tutorial src/practice src/routes/practice.test.tsx src/routes/replays.test.tsx src/replay/sources.test.ts src/game/\u2026\n- Bash: {\"command\": \"grep -E \\\"claim.test|lessons.test|basics.test|discovery-play|skipped\\\" /tmp/jk2976-vitest.log | head; grep -E \\\"Duration\\\" /tmp/jk2976-vitest.log\", \"description\": \"Confirm the key web te\u2026\n- Bash: {\"command\": \"grep -E \\\"\\u2713|src/\\\" /tmp/jk2976-vitest.log | grep -E \\\"claim|lessons|basics|discovery-play|finale\\\" | head\", \"description\": \"List the key web test files in the run\"}\n- Bash: {\"command\": \"head -30 /tmp/jk2976-vitest.log | cut -c1-150\", \"description\": \"Read the head of the vitest log\"}\n- Bash: {\"command\": \"cd /tmp/jk2976 && timeout 600 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts src/tutorial/scripts/basics.test.ts --reporter=verbose 2>&1 | grep -E \\\"\\u2713|\\u00d7|\\u2193|\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2 (the AI): it changes which moves the beam search expands, in crates/ai/src/search.rs and candidates.rs\"} --> ## Goal While the opponent's board threatens lethal (`face_threat` of the opponent reaching the seat's `effective_life`), `expand` in `crates/\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-04T02:08:54Z",
       "owner_why": "it plans it",
@@ -16916,12 +16906,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T01:59:19Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41766468614",
+      "run_id": "pending:50ee7999-1793764514",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T03:20:05Z",
+      "started_at": "2026-11-04T03:55:50Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6620474421"
+      ]
     },
     "2977": {
       "action": "plan",
@@ -17418,9 +17410,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T03:54:58Z",
+    "at": "2026-11-04T03:55:50Z",
     "url": "",
-    "what": "review #2989 on muse"
+    "what": "build #2976 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-04T03:28:11Z",
