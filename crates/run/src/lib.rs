@@ -16,6 +16,8 @@ mod fight;
 mod fight_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod walk_tests;
 
 pub use fight::{RunFightSetup, run_catalog_content, run_fight_report, run_fight_setup};
 

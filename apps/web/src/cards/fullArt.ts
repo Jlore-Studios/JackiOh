@@ -242,7 +242,7 @@ const FullArtShownContext = createContext<{ defId: string; pick: boolean | strin
  * R1834000: the viewer's own copies of `defId` below it print as if its full-art pick were `pick`, without
  * the store holding it: the Collection's preview, which must write no pick (cards/cardPicksSync.ts sends each).
  * R2725000: and as if its augments were `augments`, none when not given: the store's never layer on a shown pick
- * (the Stats drill-down's art buttons give a pick alone, R2756000); with no `pick`, the setting decides the version,
+ * (the Stats drill-down gives the setting's pick alone, R3011000); with no `pick`, the setting decides the version,
  * as with no pick of the card's own.
  */
 export function FullArtShown({

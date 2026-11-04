@@ -3,6 +3,7 @@
 // R1373, R924000: only the player's Random deck can lean toward a set; retain its pick.
 // R915005: a saved deck that names custom cards starts with them (`customCards`); one that names a card
 // the account no longer has says so and does not start.
+// R2882000: Play today's deal starts the UTC day's deal (todaysDeal.ts) on the picked difficulty and lean, whatever the deck.
 
 import { useId, useMemo, useState, type FormEvent, type ReactElement } from "react";
 
@@ -55,6 +56,8 @@ export type PracticeSetupChoice = {
   sandbox?: boolean;
   /** R915006: the custom cards the deck names, which the game carries (R915009: it runs on the Luau module). */
   customCards?: CustomCard[];
+  /** R2882000: today's deal on `difficulty` and `leanSet`; `deck` is only remembered; never a sandbox. */
+  dailyDeal?: true;
 };
 
 /** What the account offers the deck picker, and why when nothing: a signed-in player is never told to sign in. */
@@ -273,6 +276,11 @@ export function PracticeSetup({
     });
   }
 
+  /** R2882000: today's deal, on this setup's difficulty and pick; the deck picked is only remembered. */
+  function startDailyDeal(): void {
+    onStart({ difficulty, deck: choice, leanSet: lean, dailyDeal: true });
+  }
+
   return (
     <form className="practice-setup" data-testid={practiceTestid.setup} onSubmit={submit}>
       <fieldset className="practice-setup__difficulties">
@@ -391,6 +399,21 @@ export function PracticeSetup({
             </span>
           </span>
         </label>
+
+        <div className="practice-setup__daily">
+          <button
+            type="button"
+            className="practice-daily"
+            data-testid={practiceTestid.dailyDeal}
+            aria-describedby={`${baseId}-daily-note`}
+            onClick={startDailyDeal}
+          >
+            {t("Play today's deal")}
+          </button>
+          <span className="practice-setup__sandbox-note" id={`${baseId}-daily-note`}>
+            {t("Everyone gets the same decks today at the same difficulty and “More cards from” pick. A new deal comes at midnight UTC. It earns no Jlore or XP.")}
+          </span>
+        </div>
 
         <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start} disabled={blocked !== null}>
           {t("Start game")}
