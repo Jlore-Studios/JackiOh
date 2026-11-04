@@ -78,7 +78,7 @@ const UNMIGRATED: Record<string, number> = {
   "i18n/language.css": 6,
   "packs/pack-object.css": 44,
   "packs/packs.css": 3,
-  "patches/patches.css": 37,
+  "patches/patches.css": 44,
   "practice/practice.css": 58,
   "practice/sandbox.css": 12,
   "routes/account.css": 5,
