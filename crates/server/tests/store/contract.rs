@@ -11636,7 +11636,7 @@ mod dev_dashboard {
         );
         assert_eq!(
             marked(
-                q!(harness, t => t.ranked_standings_subset(&season.id, Ladder::Constructed, &[dev.id.clone()], i32::MAX))
+                q!(harness, t => t.ranked_standings_subset(&season.id, Ladder::Constructed, std::slice::from_ref(&dev.id), i32::MAX))
             ),
             vec![(dev.id.clone(), true)]
         );
