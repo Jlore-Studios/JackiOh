@@ -15078,19 +15078,27 @@
       "asks": [],
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3000",
       "owner": "muse",
       "owner_since": "2026-11-04T13:52:32Z",
       "owner_why": "it took it up",
       "part_of": 3000,
+      "paused": {
+        "at": "2026-11-04T14:14:06Z",
+        "interrupt": "usage",
+        "provider": "muse"
+      },
       "pending_request": false,
       "provider": "muse",
+      "round_tier": "",
       "run_id": "41842108966",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-04T13:52:32Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3039": {
       "onto": "bot/issue-3000",
