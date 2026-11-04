@@ -109,13 +109,29 @@
       "started_at": "2026-11-04T02:37:04Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2981": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "live": "building",
+      "owner": "claude-squishy",
+      "owner_since": "2026-11-04T02:38:02Z",
+      "owner_why": "it took it up",
+      "pending_request": false,
+      "provider": "claude-squishy",
+      "run_id": "41761924717",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-04T02:38:02Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "ee3c24ee6fb60725",
   "last_run": {
-    "at": "2026-11-04T02:37:04Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/41761805309",
-    "what": "build #2980 on claude-squishy"
+    "at": "2026-11-04T02:38:02Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/41761924717",
+    "what": "build #2981 on claude-squishy"
   },
   "last_sweep": {
     "at": "2026-11-04T02:35:26Z",
