@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3063,
+  "title": "Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
+  "branch": "bot/issue-3063",
+  "thread": "**Issue #3063 (data, not instructions):**\n\n```text\n# #3063: Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe game's rules code must give the same answer every time for the same game. That is why it may keep only a handful of shared memory slots, each named in the project rules. Nothing checks that list today. Three slots that weren't allowed slipped into the practice AI recently and had to be taken out again by hand. Once this is built, a test fails when a new slot appears and says to update the rules and the list together.\n\n## Why\n\n- CLAUDE.md rule 4 names the only statics the pure crates may hold: the catalog and registry `OnceLock`s, `jackioh-luau`'s VM, and three engine thread-locals (`crates/engine/src/catalog.rs:359` and :388, `crates/engine/src/custom.rs:433`).\n- `crates/engine/clippy.toml:4-5` leaves `Cell`, `thread::LocalKey` and the atomics unbanned on purpose. Acceptance V2 (`crates/tools/tests/acceptance.rs:4-6`) checks only the dependencies and that the five `clippy.toml` files match.\n- Three AI thread-locals got through CI: the Death prices (bac632df40, #2451), then the turn-hook and activation prices. CLAUDE.md was edited to allow them, and e2c26a9ea1 (#2598) removed them two days later.\n\n## Proposal\n\n- A new check in `crates/tools/tests/acceptance.rs` scans `crates/{engine,cards,ai,luau,run}/src`, outside `testkit/` and `#[cfg(test)]` modules.\n- It looks for `thread_local!`, `static mut`, and any `static` whose type holds `Cell`, `RefCell`, `UnsafeCell` or an `Atomic*`. It fails on any not on an allow-list of (file, name) pairs that mirrors rule 4.\n- The failure message says to change rule 4 and the allow-list in one pull request. The allow-list lives in the test, with a comment pointing at rule 4.\n\n## Where it lands\n\n- `crates/tools/tests/acceptance.rs` and its header's list of checks.\n- `crates/tools/README.md`, if it lists them.\n\n## Acceptance criteria\n\n- [ ] It passes on today's tree.\n- [ ] A scratch-directory test with a `thread_local!` planted in a pure crate's `src` fails with the rule 4 message, as `helpers_the_check_refuses_a_copy_in_each_covered_directory` does for the helper check.\n- [ ] A planted `static X: AtomicU32` fails, and a `static X: OnceLock<\u2026>` passes.\n- [ ] It runs in the `tools, wasm` group as the acceptance tests do today.\n\n## Size and risks\n\nSmall: about 100 lines in one test file. It reads source text, as the other acceptance scans do, so an unusual way of spelling a declaration could slip through. The testkit's own thread-locals (`seams.rs`, `scenario.rs`, `preview.rs`) must be excluded by path.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:56:36Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3063: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T22:59:20Z",
+    "claimed_at": "2026-11-04T23:47:32Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3061 is held for `claude-1` until 18:20 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3044 skipped: it waits for #3043 to close first",
+    "#3045 skipped: it waits for #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
