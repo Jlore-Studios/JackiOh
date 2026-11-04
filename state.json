@@ -97,6 +97,12 @@
     "2980": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-04T02:57:54Z",
+        "human_required": true,
+        "older": true,
+        "question": "the only dead files this week are under `bot/`, which no bot may change. A person deletes `bot/go/internal/fakes/testdata/scenario.py` and `bot/go/internal/providers/testdata/gen_python.py`, rewords the two Go test comments that cite them (Steps 1\u20133), and ticks the branches at the end of the issue. Outside the forbidden paths nothing is dead or archivable, so the bot builds nothing (the evidence is under **Tests**)."
+      },
       "died": 0,
       "forced": false,
       "handoff": {
