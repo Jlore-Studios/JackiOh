@@ -17299,6 +17299,8 @@
       "stop_requested": false
     },
     "2991": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T02:31:07Z",
@@ -17312,8 +17314,11 @@
         "trail": "- Worktree state is exactly the intended set \u2014 no extras. The test run is still building WASM from scratch, so I'll wait for its result.\n- `cargo fmt --check` passes. The StartScreen test run is still compiling release WASM (genuine progress, just slow on the shared box) \u2014 waiting for its terminal result before running the remaining proofs.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the dungeon run asks before it throws away a run or a fight, and its map has a way back\"} -->\n- What changed:\n- - Abandoning a run asks first: the start screen's first press on \"Abandon the run\" opens an in-place `alertdialog` (\"Abandon this run? It ends here and cannot be undone.\") with Cancel focused. Only Confirm calls `abandon`; Cancel and Escape call nothing and put the Abandon button back with focus. B\u2026\n- - Leaving a fight in progress is held: `FightScreen` registers `guardLeaving` while the fight has no result and renders the new `ConfirmLeaveFight` dialog (\"Leave this fight? / It ends here and the fight starts over from its first turn.\", \"Keep playing\" focused, \"Leave fight\" makes the held move). \u2026\n- - The run map links back: `RunScreen` renders `<BackLink to={paths.play} />` first, exactly as `DungeonStats` does. Following it sends no store verb, so the run stays saved and the start screen offers Continue. No CSS change; the scroll stays in `.dungeon-run-body`, so one nav row cannot push conte\u2026\n- - Ruling note [R2972000](spec/rulings/R2972000.md) with `pending/2972.md` and `[[R2972000]]` links in \u00a715.6/\u00a715.8; four new `zh-CN.json` entries (reused Confirm/Cancel/Keep playing already existed).\n- Files: `spec/rulings/R2972000.md`, `spec/pending/2972.md`, `spec/15-dungeon-run.md`, `dungeon/testids.ts`, `dungeon/fight/testids.ts`, `dungeon/start/StartScreen.tsx`, `dungeon/fight/ConfirmLeaveFight.tsx` (new), `dungeon/fight/FightScreen.tsx`, `dungeon/map/RunScreen.tsx`, their three test files, \u2026\n- How it was tested (all observed, none skipped):\n- - `pnpm --dir apps/web test src/dungeon/start/StartScreen.test.tsx` \u2014 pass, including updated B19 (first click shows question, Confirm calls once) and new R2972000 Cancel/Escape test.\n- - `pnpm --dir apps/web test src/dungeon/fight/FightScreen.test.tsx src/dungeon/map/RunScreen.test.tsx src/i18n/i18n.test.ts` \u2014 3 files, 39 tests, all pass, including held-and-Stay, released-on-result, and Back-link-keeps-run tests.\n- - `pnpm --dir apps/web typecheck` \u2014 pass; `eslint` on the 7 touched source/testid files \u2014 clean; `cargo fmt --check` \u2014 pass.\n- - `cargo jackioh spec check` \u2014 ok (1671 rulings, 4042 proofs, 50090 citations, 21485 links).\n- Decisions not settled by the issue: none \u2014 followed the plan verbatim. Rejected alternatives are recorded in the ruling note (no undo for abandon, no `beforeunload` on reload, no reuse of the online-match grace wording).\n- Reviewer attention: the `atStake` condition in `FightScreen.tsx` (controller/snapshot null during load, so the guard only covers the live board); the `ConfirmLeaveFight` `useBackLayer` push in jsdom leaves a spent history entry, which the tests reset with `at()`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-2972 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-2972/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 2972,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T04:30:26Z",
         "from_run": "41761271781",
         "gates": [
           {
@@ -17372,8 +17377,15 @@
         "source": "build",
         "until": "2026-11-04T04:56:30Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-04T04:26:30Z",
+      "run_id": "pending:3be1ac9a-1793766579",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-04T04:30:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17473,9 +17485,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T04:10:09Z",
+    "at": "2026-11-04T04:30:26Z",
     "url": "",
-    "what": "spot-check #2965 on claude-7"
+    "what": "review #2991 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T04:03:56Z",
