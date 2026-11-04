@@ -4,6 +4,8 @@
 // socket's loadouts dress both seats (R1834004).
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance time.
+// #2974: the watched turn clock counts down from each frame's `clockMs` (fake `performance` and `setInterval`),
+// silently, and a finished game's status line says "Game over" after its socket closes.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registeredCatalog } from "@jackioh/engine";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
+import { setAudioEngineForTests } from "../audio/engine.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf } from "../cards/cosmetics.ts";
 import { duosTestid } from "../duos/testids.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
@@ -102,6 +106,11 @@ async function advance(ms: number): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
   });
+}
+
+/** #2974: the clock reads `performance.now()` and repaints on an interval, so both are faked with the timeouts. */
+function fakeClockTimers(): void {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance"] });
 }
 
 function wakeTab(): void {
@@ -652,6 +661,115 @@ describe("R1834004 the watched board wears both seats' loadouts", () => {
     expect(screen.getByTestId("hand-card-h-2").querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
     expect(document.querySelector('.card[data-owner="p2"] > .cf')?.getAttribute("data-frame")).toBe(theirBorder);
     expect(document.querySelector(".field")?.getAttribute("data-their-table")).toBe(table);
+  });
+});
+
+describe("#2974 the watched turn clock and a finished game's status", () => {
+  let engine: FakeAudioEngine;
+
+  beforeEach(() => {
+    engine = fakeAudioEngine();
+    setAudioEngineForTests(engine);
+  });
+
+  afterEach(() => {
+    setAudioEngineForTests(null);
+    Reflect.deleteProperty(window.navigator, "vibrate");
+  });
+
+  function clockText(): string | null {
+    return screen.getByTestId("watch-clock").textContent;
+  }
+
+  it("#2974 a frame's clockMs counts down from its arrival and a new frame resets it", async () => {
+    fakeClockTimers();
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 60 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("60s");
+
+    await advance(10 * MS_PER_SECOND);
+    expect(clockText()).toBe("50s");
+    expect(screen.getByTestId("watch-clock").getAttribute("data-remaining-ms")).toBe("50000");
+
+    // A new frame resets the countdown, even when its number repeats.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 60 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("60s");
+
+    await advance(MS_PER_SECOND);
+    expect(clockText()).toBe("59s");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 30 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("30s");
+
+    // It floors at zero and never reads a negative number.
+    await advance(40 * MS_PER_SECOND);
+    expect(clockText()).toBe("0s");
+    expect(screen.getByTestId("watch-clock").getAttribute("data-remaining-ms")).toBe("0");
+
+    // A frame with no turn clock shows none.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: null }), legal: [] });
+    expect(screen.queryByTestId("watch-clock")).toBeNull();
+  });
+
+  it("#2974 the watched clock sounds no alarm and buzzes nothing", async () => {
+    fakeClockTimers();
+    const vibrate = vi.fn(() => true);
+    Object.defineProperty(window.navigator, "vibrate", { configurable: true, value: vibrate });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    // Twelve seconds is inside the final thirty, where the player's own clock heartbeats and then ticks.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", clockMs: 12 * MS_PER_SECOND }), legal: [] });
+    expect(clockText()).toBe("12s");
+
+    await advance(15 * MS_PER_SECOND);
+
+    expect(clockText()).toBe("0s");
+    expect(engine.playSfx.mock.calls.filter(([id]) => id === "heartbeat" || id === "clockTick")).toEqual([]);
+    expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it("#2974 a finished game's frame and its socket's close say Game over, never Disconnected", () => {
+    fakeClockTimers();
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1", result: { winner: "p1", reason: "concede" }, clockMs: 5 * MS_PER_SECOND }), legal: [] });
+
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Game over");
+    expect(screen.getByTestId("watch-status")).not.toHaveTextContent("Connected");
+    expect(screen.queryByTestId("watch-clock")).toBeNull();
+
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Game over");
+    expect(screen.getByTestId("watch-status")).not.toHaveTextContent("Disconnected");
+    expect(connection("watch-status")).toBe("closed");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+  });
+
+  it("#2974 R2881000 a co-op watch shows the same ticking clock and a finished co-op game says Game over", async () => {
+    fakeClockTimers();
+    render(<WatchRoute matchId="m-watch" friendId="f-ann" coop />);
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: { ...duosView(1), own: baseView({ clockMs: 60 * MS_PER_SECOND }) }, legal: [] });
+    expect(clockText()).toBe("60s");
+
+    await advance(10 * MS_PER_SECOND);
+    expect(clockText()).toBe("50s");
+
+    socket.frame({ type: "view", view: { ...duosView(2), own: baseView({ clockMs: 30 * MS_PER_SECOND }) }, legal: [] });
+    expect(clockText()).toBe("30s");
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Connected");
+
+    socket.frame({ type: "view", view: duosView(3, { outcome: "win", winner: "a", reason: "concede" }), legal: [] });
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Game over");
+    expect(screen.getByTestId("watch-status")).not.toHaveTextContent("Disconnected");
+    expect(screen.queryByTestId("watch-clock")).toBeNull();
   });
 });
 

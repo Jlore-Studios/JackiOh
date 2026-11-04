@@ -839,6 +839,7 @@ export const WATCH_GONE = "watch-gone";
 export const WATCH_STATUS = "watch-status";
 export const WATCH_BACK = "watch-back";
 export const WATCH_RECONNECT = "watch-reconnect";
+export const WATCH_CLOCK = "watch-clock";
 
 export const SHARE_FRIEND_OPEN = "share-friend-open";
 /** One per friend: `data-profile-id`, `data-shared`. */

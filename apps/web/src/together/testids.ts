@@ -125,6 +125,8 @@ export const watchTestid = {
   back: "watch-back",
   /** #1570: "Reconnect now", once the reopens ran out on a game still running. */
   reconnect: "watch-reconnect",
+  /** The friend's turn clock, counted down from the newest frame's clockMs (#2974). */
+  clock: "watch-clock",
 } as const;
 
 export const shareTestid = {
