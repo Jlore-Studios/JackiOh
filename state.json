@@ -15526,15 +15526,8 @@
       "verdict_rounds": 3
     },
     "2943": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41803049110",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-04T09:25:54Z",
-        "until": "2026-11-04T09:55:54Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15546,10 +15539,9 @@
         "reason": "planned on opus",
         "trail": "/src/cards/art/pictures.test.ts\", \"description\": \"Read the picture tests' imports and helpers\"}\n- Bash: {\"command\": \"sed -n 14,40p apps/web/src/cards/versions.ts; sed -n 70,150p apps/web/src/cards/versions.ts; grep -n \\\"golden\\\\|GOLDEN\\\\|hash\\\" apps/web/src/cards/art/art.test.ts | head -8\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn dev_fill\\\\|is_offered()\\\" crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/cosmetics.rs:.*test\\\" | head -10; grep -n \\\"Set showcase\\\\|Out of frame\\\\|set-show\u2026\n- Bash: {\"command\": \"grep -rln \\\"dev/fill\\\" crates/server/src | head; grep -rn \\\"offered(\\\" crates/server/src/dev*.rs crates/server/src/api/dev*.rs 2>/dev/null | head -5; ls spec/ | head -40; grep -n \\\"#2725\u2026\n- Grep: {\"pattern\": \"[Ss]et showcase|[Oo]ut of frame\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"grep -n -i \\\"set showcase\\\\|out of frame\\\" spec/rulings/R2725000.md spec/08-catalog.md; sed -n 1,40p spec/rulings/R2725000.md\", \"description\": \"Read the spec's mentions of the two versio\u2026\n- Bash: {\"command\": \"cat > /tmp/plan2943/verify.py <<'EOF'\\nimport json,sys,re\\nsys.argv=[sys.argv[0],'crates/cards/catalog.json']\\nexec(open('/tmp/plan2943/offers.py').read().split(\\\"offers=json.loads\\\")[0]\u2026\n- Bash: {\"command\": \"cat > /tmp/plan2943/tune.py <<'EOF'\\nimport json,sys,re,collections\\nsys.argv=[sys.argv[0],'crates/cards/catalog.json']\\nexec(open('/tmp/plan2943/offers.py').read().split(\\\"offers=json.l\u2026\n- Bash: {\"command\": \"grep -rln \\\"useCardLook\\\\|artPictureOf\\\" apps/web/src --include=*.tsx --include=*.ts | grep -v test; grep -n \\\"Part 2\\\\|Part 3\\\\|R2942\\\\|R2940\\\" apps/web/src/cards/art/ART.md | head; gre\u2026\n- Bash: {\"command\": \"grep -n \\\"artPictureOf\\\\|useCardLook\\\\|VERSION_\\\" apps/web/src/collection/CardCosmeticsView.tsx | head -20\", \"description\": \"See how the collection view uses versions\"}\n- Bash: {\"command\": \"sed -n 120,150p apps/web/src/collection/CardCosmeticsView.tsx; grep -n \\\"set:\\\" apps/web/src/cards/model.ts | head -5\", \"description\": \"Read the collection strip tile rendering\"}\n- Bash: {\"command\": \"grep -n \\\"cf-art-frame > .cf-art\\\\|\\\\.cf-art--full\\\" apps/web/src/cards/cosmetics.css apps/web/src/cards/art/art.css apps/web/src/cards/cards.css | head -20\", \"description\": \"Find window\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\-\\\\-visual\\\" crates/tools/README.md | head -5; grep -rn \\\"fn r2942\\\" crates/server/src/cosmetics.rs | head; grep -n \\\"proven_in\\\\|token\\\" crates/tools/src/spec*.rs 2>/dev/nul\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/spec.rs\", \"description\": \"Read the spec check's rules\"}\n- Bash: {\"command\": \"grep -n \\\"function offScale\\\" -A25 apps/web/src/typescale.test.ts | head -40; python3 -I -c \\\"\\nimport re,json\\ngen=open('apps/web/src/wire/generated/cosmetics.ts').read()\\nm=re.search(r\u2026\n- Bash: {\"command\": \"grep -n \\\"const FAMILIES\\\" -A3 apps/web/src/typescale.test.ts\", \"description\": \"Read the allowed font families list\"}\n- Bash: {\"command\": \"grep -n \\\"AA_TEXT_CONTRAST\\\\|function contrast\\\\|function luminance\\\" apps/web/src/cards/versionLooks3.test.tsx apps/web/src/cards/cosmetics.test.tsx | head; grep -n \\\"function colorsOf\\\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2943/.bot-plan.md\", \"content\": \"## Goal\\n\\nShip Part 4 of #2725's versions: two Legendary chase versions, **Set showcase** (`version-set-showcase`), t\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; grep -n \\\"fn r2755000\\\\|cosmetics\\\\[..cosmetics.len() - R2942000\\\" crates/server/src/cosmetics.rs | head; ls crates/server/tests/export_cosmetics.rs\", \"description\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2943/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd Part 4's two Legendary chase versions:\\n\\n- **Set showcase** (`version-set-showcase`) restyles the card\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-2943/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\" - Add `#[test] fn r2943000_part_four_appends_set_showcase_and_o\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2943/.bot-plan.md\", \"limit\": 70}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2943/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"Add Part 4's two Legendary chase versions:\\n\\n- **Set showcase** (`version-\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2943/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"## Done when\\n\\n- [ ] Both entries ship as Legendary chases, with offers he\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport re\\ns=open('/home/runner/work/_temp/work/item-2943/.bot-plan.md').read()\\nt=s.split()\\nprint(len(t), sum(1 for w in t if re.search(r'[A-Za-z0-9]',w)))\\n\\\"\", \"des\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json,sys,re\\nsys.argv=[sys.argv[0],'crates/cards/catalog.json']\\nexec(open('/tmp/plan2943/offers.py').read().split(\\\"offers=json.loads\\\")[0])\\ngen=open('apps\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2943/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"take `stinkyscape-080` (Galaxy, offered both)\\\", \\\"take `classic-080` (BOOM! Bi\u2026\n- Bash: {\"command\": \"grep -rn \\\"COSMETICS.length\\\\|COSMETICS).length\\\\|cosmetics.len()\\\" apps/web/src crates/server/tests --include=*.ts --include=*.tsx --include=*.rs | head; grep -rln \\\"version-alt-full-ar\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2943/.bot-plan.md\", \"limit\": 60}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-2943/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"neither has a card no other version takes, so assert no such card.\\\", \\\"neither\u2026\n- said: ## Goal Ship two new Legendary chase versions: - **Set showcase** (`version-set-showcase`): the card in its set's own frame, art treatment and lettering. - **Out of frame** (`version-out-of-frame`): the subject steps out of a smaller window over the frame, but stays under the cost gem, crest, name,\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-04T08:53:55Z",
       "owner_why": "it plans it",
@@ -15562,9 +15554,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-03T15:59:47Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41803049110",
+      "run_id": "pending:e4bc0d3e-1793784518",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T08:53:55Z",
+      "started_at": "2026-11-04T09:29:13Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18211,9 +18203,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T09:28:23Z",
+    "at": "2026-11-04T09:29:13Z",
     "url": "",
-    "what": "review #2992 on muse"
+    "what": "build #2943 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-04T09:05:26Z",
