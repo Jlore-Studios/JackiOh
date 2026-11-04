@@ -1075,6 +1075,19 @@ describe("R377 public statistics match type", () => {
     expect(within(item("core-002")).getByTestId(statsTestid.tierCell)).toHaveTextContent("—");
   });
 
+  it("R3070000 says what a card always in hand and the Dormant Starship are read against, the average deck's win rate", async () => {
+    const tiers = { center: 0.02, spread: 0.034, cards: 412, baseline: 0.4875, bandLow: 0.45, bandHigh: 0.55 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, tiers }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.tiersNote)).toHaveTextContent(
+      "A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins 48.8% of its games.",
+    );
+  });
+
   it("R3022000 a field too small to measure says the spread is assumed, and a server without tiers shows none", async () => {
     const tiers = { center: 0, spread: 0.05, cards: 0, bandLow: 0.45, bandHigh: 0.55 };
     vi.stubGlobal(

@@ -1534,6 +1534,8 @@ export type PublicStatsTiers = {
   spread: number;
   /** The cards the field was read from; 0 when too few, and R2777000's prior is kept. */
   cards: number;
+  /** R3070000: the average deck's win rate, which a card always in hand and the Dormant Starship are read against. */
+  baseline?: number;
   bandLow: number;
   bandHigh: number;
 };

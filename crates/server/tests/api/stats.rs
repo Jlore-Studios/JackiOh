@@ -1777,6 +1777,107 @@ mod r377_public_stats_match_type {
     }
 }
 
+mod r3070000_every_card {
+    use super::*;
+
+    fn card<'a>(data: &'a Value, id: &str) -> &'a Value {
+        find(&data["cards"], "id", &json!(id)).expect("the card is listed")
+    }
+
+    /// `count` live Best of 1 games p1 wins when `won`: p1 holds core-001 to core-040 and core-041, sees
+    /// `hand` and plays none, p2 holds core-100, and p1 made `made` Dormant Starships, each used at once.
+    fn games(tag: &str, hand: &[&'static str], won: bool, made: usize, count: usize) -> Vec<Value> {
+        let mut deck: Vec<&'static str> = FIELD.to_vec();
+        deck.push("core-041");
+        (0..count)
+            .map(|i| {
+                let starships: Vec<Value> = (0..made)
+                    .map(|_| json!({ "card": "stinkyscape-t-dormant-starship", "turn": 5, "radiant": false }))
+                    .collect();
+                make_game_record(
+                    &format!("every-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(deck.clone()),
+                        p1_hand: Some(hand.to_vec()),
+                        p1_played: Some(Vec::new()),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        p1_created_used: (made > 0).then(|| json!(starships)),
+                        winner: Some(if won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    /// Forty Core cards, half seen in some games and half in others, as R3022000's test reads them.
+    const FIELD: [&str; 40] = [
+        "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
+        "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
+        "core-017", "core-018", "core-019", "core-020", "core-021", "core-022", "core-023", "core-024",
+        "core-025", "core-026", "core-027", "core-028", "core-029", "core-030", "core-031", "core-032",
+        "core-033", "core-034", "core-035", "core-036", "core-037", "core-038", "core-039", "core-040",
+    ];
+
+    #[tokio::test]
+    async fn r3070000_a_card_always_in_hand_and_the_dormant_starship_each_answer_an_adjusted_rate_and_a_tier()
+    {
+        let app = test_app().await;
+        let (top, bottom) = FIELD.split_at(20);
+        // core-041 is in every hand, as a Quickdraw card is. A Dormant Starship is made in the 48 games the
+        // top half was seen and won, and in none of the rest.
+        let with = |half: &[&'static str]| {
+            let mut hand = half.to_vec();
+            hand.push("core-041");
+            hand
+        };
+        let mut records = Vec::new();
+        records.extend(games("top-won", &with(top), true, 1, 48));
+        records.extend(games("top-lost", &with(top), false, 0, 12));
+        records.extend(games("bottom-won", &with(bottom), true, 0, 24));
+        records.extend(games("bottom-lost", &with(bottom), false, 0, 36));
+        insert_records(&app, records).await;
+
+        let (status, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(status, 200);
+        let tiers = &page["tiers"];
+        let spread = tiers["spread"].as_f64().expect("the field's spread");
+        let baseline = tiers["baseline"].as_f64().expect("the average deck's win rate");
+        // The average deck: p1's 41 cards won 72 of 120 decks each, and p2's core-100 48 of 120.
+        assert!(
+            (baseline - (41.0 * 72.0 + 48.0) / (42.0 * 120.0)).abs() < 1e-9,
+            "{tiers}"
+        );
+        let held = |rate: f64, games: f64| {
+            let noise = 0.25 / games;
+            0.5 + spread * spread / (spread * spread + noise) * (rate - baseline)
+        };
+
+        // core-041 was never left undrawn, yet answers a rate read against the average deck, and a tier.
+        let always = card(&page, "core-041");
+        let rate = always["adjustedWinRate"]
+            .as_f64()
+            .expect("read against the average deck");
+        assert!((rate - held(0.6, 120.0)).abs() < 1e-9, "{always}");
+        assert!(always["tier"].is_string(), "{always}");
+
+        // The Dormant Starship's row reads the 48 seats that made one, all of which won: S.
+        let starship = card(&page, "stinkyscape-t-dormant-starship");
+        assert_eq!(starship["games"], json!(48));
+        assert_eq!(starship["winRate"].as_f64(), Some(1.0));
+        let made = starship["adjustedWinRate"]
+            .as_f64()
+            .expect("read against the average deck");
+        assert!((made - held(1.0, 48.0)).abs() < 1e-9, "{starship}");
+        assert!(starship["adjustedLow"].as_f64().is_some());
+        assert_eq!(starship["hasEnoughGames"], json!(true));
+        assert_eq!(starship["tier"], json!("S"));
+    }
+}
+
 mod r3022000_tiers {
     use super::*;
 
@@ -1868,8 +1969,13 @@ mod r3022000_tiers {
             (first["tier"].clone(), last["tier"].clone()),
             (json!("S"), json!("F"))
         );
-        // p2's card was seen in every game: no baseline, so no rate and no tier.
-        assert_eq!(card(&page, "core-100")["tier"], Value::Null);
+        // R3070000: p2's card, seen in every game, is read against the average deck: its decks won 48 of 180
+        // against the average card's 40 · 132 + 48 of 41 · 180, so F.
+        assert!(
+            (tiers["baseline"].as_f64().unwrap() - 5328.0 / 7380.0).abs() < 1e-9,
+            "{tiers}"
+        );
+        assert_eq!(card(&page, "core-100")["tier"], json!("F"));
 
         // A filtered page reads its cards against the same field.
         let (_, _, one) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&card=core-040").await;
@@ -1970,8 +2076,17 @@ mod r2777000_adjusted_and_split_card_stats {
         let kept = prior / (prior + 0.25 * (1.0 / 60.0 + 1.0 / 60.0));
         let adjusted = a["adjustedWinRate"].as_f64().expect("both sides have games");
         assert!((adjusted - (0.5 + kept * 0.3)).abs() < 1e-9, "{adjusted}");
-        // core-002 was always seen: no baseline, so no adjusted rate, and it lists after core-001.
-        assert_eq!(card(&constructed, "core-002")["adjustedWinRate"], Value::Null);
+        // R3070000 amends this: core-002 was always seen, so it is read against the average deck. The four
+        // cards p1 held won 78 of their 120 decks each, and p2's core-005 42 of 120: a baseline of 354/600.
+        let held = prior / (prior + 0.25 / 120.0);
+        let always = card(&constructed, "core-002")["adjustedWinRate"]
+            .as_f64()
+            .expect("read against the average deck");
+        assert!(
+            (always - (0.5 + held * (0.65 - 354.0 / 600.0))).abs() < 1e-9,
+            "{always}"
+        );
+        // It still lists after core-001, whose rate is higher.
         let order = ids_of(&constructed);
         let at = |id: &str| order.iter().position(|listed| listed == id);
         assert!(at("core-001") < at("core-002"), "{order:?}");
@@ -2030,10 +2145,18 @@ mod r2777000_adjusted_and_split_card_stats {
         let (from, to) = range(a, "adjustedLow", "adjustedHigh");
         assert!((adjusted - from.unwrap() - half).abs() < 1e-9, "{from:?}");
         assert!((to.unwrap() - adjusted - half).abs() < 1e-9, "{to:?}");
-        // No adjusted rate (always seen), no range; no game at all, neither range.
+        // R3070000: always seen, it is read against the average deck, its range its seen games' alone; no
+        // game at all, neither range.
         let b = card(&constructed, "core-002");
         assert!(b["winRateLow"].as_f64().is_some());
-        assert_eq!(range(b, "adjustedLow", "adjustedHigh"), (None, None));
+        let always = b["adjustedWinRate"]
+            .as_f64()
+            .expect("read against the average deck");
+        let held_noise = 0.25 / 120.0;
+        let held_half = 1.96 * (prior / (prior + held_noise) * held_noise).sqrt();
+        let (from, to) = range(b, "adjustedLow", "adjustedHigh");
+        assert!((always - from.unwrap() - held_half).abs() < 1e-9, "{from:?}");
+        assert!((to.unwrap() - always - held_half).abs() < 1e-9, "{to:?}");
         let unheld = card(&constructed, "core-006");
         assert_eq!(unheld["winRate"], Value::Null);
         assert_eq!(range(unheld, "winRateLow", "winRateHigh"), (None, None));
