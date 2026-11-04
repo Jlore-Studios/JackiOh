@@ -514,12 +514,13 @@ describe("B31 the phone layouts fit the height and hide the log", () => {
     cy.get(ts("log")).should("not.be.visible");
   });
 
-  it("B31 at 390x844 the board is at most 820 px tall and the log is hidden", () => {
+  it("B31 at 390x844 the board is at most 832 px tall and the log is hidden", () => {
     cy.viewport(390, 844);
     mountGame(fullBoardView());
 
     cy.get(BOARD).should(($board) => {
-      expect(rectOf($board[0] as Element).height).to.be.at.most(820);
+      // Nothing is drawn above the board (#2917), so B46's vertical shell padding leaves 832px of 844 for it.
+      expect(rectOf($board[0] as Element).height).to.be.at.most(832);
     });
     cy.get(ts("log")).should("not.be.visible");
   });
