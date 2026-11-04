@@ -59,7 +59,8 @@ slots, ownership and artifact points, a whole run played out and its file folded
 packs, campfires, shops, the score and the placeholders' fight effects. `src/fight_tests.rs`, on the
 real catalog (`jackioh-cards`, a dev-dependency): the catalog's content, the starting cards, a fight's
 setup and seed, the curses and Combat artifacts in it (R2922001), a scripted game's report and the
-levels' costs (DR14's B5 to B11). The `ts` feature writes the public types to
+levels' costs (DR14's B5 to B11). `src/walk_tests.rs` walks whole seeded runs on both contents,
+checking bounds, fight setups and replay. The `ts` feature writes the public types to
 `apps/web/src/wire/generated/`, which `apps/web/src/wire/run.ts` re-exports as `@jackioh/run`; commit
 any diff.
 
