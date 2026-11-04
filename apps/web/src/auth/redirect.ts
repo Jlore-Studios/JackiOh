@@ -274,3 +274,20 @@ function cancelScheduledAbandon(): void {
   clearTimeout(scheduledAbandon);
   scheduledAbandon = null;
 }
+
+// R3025000: how linking a provider ended, said once on `/account`. Tab-local, as recovery is.
+
+export const LINK_RESULT_STORAGE_KEY = "jackioh.auth.linkResult";
+
+export type LinkResult = "linked" | "failed";
+
+export function holdLinkResult(result: LinkResult): void {
+  setStored(LINK_RESULT_STORAGE_KEY, result, sessionStorageOrNull());
+}
+
+/** Read once: a reload of `/account` says nothing again. */
+export function takeLinkResult(): LinkResult | null {
+  const raw = getStored(LINK_RESULT_STORAGE_KEY, sessionStorageOrNull());
+  removeStored(LINK_RESULT_STORAGE_KEY, sessionStorageOrNull());
+  return raw === "linked" || raw === "failed" ? raw : null;
+}

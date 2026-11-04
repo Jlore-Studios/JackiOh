@@ -28,6 +28,7 @@ import {
   clearConsumedAuthRedirect,
   consumeAuthRedirect,
   emailFromToken,
+  holdLinkResult,
   holdRecoverySession,
   type SessionLinkType,
 } from "../auth/redirect.ts";
@@ -100,7 +101,7 @@ type Mode = "signIn" | "signUp" | "forgot" | "claimReset" | "emailCode" | "mfa" 
  * R665: a session held for its second step. `signIn` keeps it as this browser's session; `recovery`
  * hands it back to the recovery link being checked (whose state still owns it, so leaving revokes it).
  */
-type SecondStep = { session: Session; factorId: string; then: "signIn" | "recovery" };
+type SecondStep = { session: Session; factorId: string; then: "signIn" | "recovery"; to?: string };
 
 /** An emailed link that carries a session, waiting for the server to say whose it is. */
 type SessionLink =
@@ -186,6 +187,8 @@ type Entry = {
   linkError: boolean;
   /** R666: an OAuth provider sent the player back with an error rather than a code. */
   oauthFailed: boolean;
+  /** R3025000: linking a provider came back with an error: said on `/account`, where it started. */
+  linkFailed: boolean;
   link: PendingLink | null;
   /** R3024000: the mailed link waiting for its button. */
   press: { token: string; linkType: EmailLinkType } | null;
@@ -245,6 +248,7 @@ function readEntry(): Entry {
     email: "",
     linkError: false,
     oauthFailed: false,
+    linkFailed: false,
     link: null,
     press: null,
   };
@@ -274,6 +278,13 @@ function readEntry(): Entry {
       break;
     case "error":
       entry.mode = "signIn";
+      if (newestFlow() === "link") {
+        // R3025000: linking a provider, asked for on `/account`, came back refused.
+        forgetVerifier("link");
+        holdLinkResult("failed");
+        entry.linkFailed = true;
+        break;
+      }
       if (newestFlow() === "oauth") {
         // R666: this browser's newest flow was an OAuth sign-in: not an emailed link's failure.
         forgetVerifier("oauth");
@@ -399,6 +410,11 @@ export default function LoginRoute(): ReactElement {
     noticeRef.current?.focus();
   }, [notice]);
 
+  // R3025000: a refused link goes back to `/account`, where it was asked for and where it is said.
+  useEffect(() => {
+    if (entry.linkFailed) navigate(paths.account, { replace: true });
+  }, [entry]);
+
   // A link this screen still answers for when it really unmounts is revoked: after the unmount, so
   // StrictMode's rehearsal (which remounts at once) does not.
   useEffect(() => {
@@ -450,6 +466,19 @@ export default function LoginRoute(): ReactElement {
           setLinkOutcome("none");
           setLinkError(true);
           setResendOffered(true);
+          return;
+        }
+        if (exchange.flow === "link") {
+          // R3025000: the provider is linked, and this is the same account's session: back to `/account`.
+          if (acted.current) {
+            revokeLink(state);
+            return;
+          }
+          const held = takeLink(state);
+          if (held === null) return;
+          setLinkOutcome("none");
+          holdLinkResult("linked");
+          signInWith(held, exchange.secondFactor, paths.account);
           return;
         }
         if (exchange.flow === "magiclink" || exchange.flow === "oauth") {
@@ -578,21 +607,21 @@ export default function LoginRoute(): ReactElement {
     if (step !== null && step.then === "signIn") void revokeSignedOutSession(step.session);
   }
 
-  function keepSession(session: Session): void {
+  function keepSession(session: Session, to: string = paths.landing): void {
     // Replaces (and revokes) any other session this browser held (R194).
     adoptSession(session);
-    // To the main menu (issue #479); `main.tsx`'s gate handles a pending account. A fixed `paths`
-    // value, never a URL from the query (B35).
-    navigate(paths.landing, { replace: true });
+    // To the main menu (issue #479), or `/account` after linking a provider (R3025000); `main.tsx`'s
+    // gate handles a pending account. A fixed `paths` value, never a URL from the query (B35).
+    navigate(to, { replace: true });
   }
 
   /** R665: the session is kept at once, or held for its authenticator code first. */
-  function signInWith(session: Session, secondFactor: string | null): void {
+  function signInWith(session: Session, secondFactor: string | null, to: string = paths.landing): void {
     if (secondFactor === null) {
-      keepSession(session);
+      keepSession(session, to);
       return;
     }
-    secondStep.current = { session, factorId: secondFactor, then: "signIn" };
+    secondStep.current = { session, factorId: secondFactor, then: "signIn", to };
     enterSecondStep();
   }
 
@@ -624,7 +653,7 @@ export default function LoginRoute(): ReactElement {
         if (secondStep.current !== step) return;
         secondStep.current = null;
         if (step.then === "signIn") {
-          keepSession(raised);
+          keepSession(raised, step.to);
           return;
         }
         // The recovery link goes on being checked, now with a token the server accepts.

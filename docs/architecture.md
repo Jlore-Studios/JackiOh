@@ -670,7 +670,8 @@ step that is not yet implemented says which BUILD task delivers it.
      the Redirect URLs. Keep Supabase's default **automatic linking** (an OAuth sign-in whose
      *verified* address matches an existing account signs into that account), and enable only
      providers that report whether an address is verified (all eight the client names do). Leave
-     "Allow manual linking" off: nothing here uses it.
+     "Allow manual linking" on: `/account` links and unlinks a provider for a signed-in player (R3025000),
+     `security_manual_linking_enabled` in `infra/supabase.tf`.
      Before the first provider goes live, check one thing by hand on the project: sign up with a
      password for an address you own and do not confirm it, then sign in with the provider for the
      same address, then try the password. If the password still signs in, Supabase kept an

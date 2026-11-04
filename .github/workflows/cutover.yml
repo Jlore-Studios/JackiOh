@@ -29,6 +29,9 @@
 #                       waits for a press on /login. It refuses a site whose deployed commit does not hold
 #                       those files, since that site has no button and every link would land on nothing.
 #                       `dry_run` prints the templates there now and writes nothing.
+#   manual-linking      turns `project`'s manual linking on (R3025000), as infra/supabase.tf has it, so
+#                       /account can link and unlink a provider. `dry_run` prints the setting and
+#                       writes nothing.
 #   stats-logins        JackiOh-Production's two statistics logins, each with a new password of its own
 #                       (the copy brought both from staging with staging's): stats_importer, which the
 #                       development lanes file through, and stats_reader, read-only, which
@@ -64,15 +67,16 @@ on:
           - production-auth
           - email
           - email-links
+          - manual-linking
           - stats-logins
           - dev-stats
       dry_run:
-        description: "production-auth, email, email-links, stats-logins and dev-stats: show what it would do, and write nothing"
+        description: "production-auth, email, email-links, manual-linking, stats-logins and dev-stats: show what it would do, and write nothing"
         required: false
         type: boolean
         default: true
       project:
-        description: "email-links: which project's templates"
+        description: "email-links and manual-linking: which project"
         required: false
         type: choice
         default: staging
@@ -387,6 +391,34 @@ jobs:
           fi
           api -X PATCH "$config" --data-binary "@$RUNNER_TEMP/auth.patch.json" > /dev/null
           echo "$PROJECT ($ref, running $deployed): changed $(jq -r 'keys | join(", ")' "$RUNNER_TEMP/auth.patch.json")" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: manual linking (R3025000)
+        if: ${{ inputs.step == 'manual-linking' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PROJECT: ${{ inputs.project }}
+        run: |
+          set -euo pipefail
+          case "$PROJECT" in
+            staging) ref=$STAGING_REF ;;
+            production) ref=$PRODUCTION_REF ;;
+            *) echo "::error::project is staging or production, not $PROJECT"; exit 1 ;;
+          esac
+          api() {
+            curl -sS --fail-with-body --retry 3 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" "$@"
+          }
+          config=https://api.supabase.com/v1/projects/$ref/config/auth
+          now=$(api "$config" | jq -r '.security_manual_linking_enabled')
+          echo "$PROJECT ($ref): manual linking is $now"
+          if [ "$now" = "true" ]; then exit 0; fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry_run: nothing written. Run it again without dry_run to turn it on." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          api -X PATCH "$config" --data '{"security_manual_linking_enabled": true}' > /dev/null
+          echo "$PROJECT ($ref): manual linking now $(api "$config" | jq -r '.security_manual_linking_enabled')" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: sign-in emails through Resend
         if: ${{ inputs.step == 'email' }}
