@@ -15085,8 +15085,14 @@
     "what": "revise #3037 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-04T19:13:38Z",
-    "notes": [],
+    "at": "2026-11-04T19:24:15Z",
+    "notes": [
+      "CI on #3037: #3037: queued a CI fix",
+      "delivered revise #3050 on claude-4 (run 41887119798): approved",
+      "started revise #3037 on claude-8 (its run is not listed yet)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15791,7 +15797,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T19:13:38Z",
+  "loop_tick": "2026-11-04T19:24:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
