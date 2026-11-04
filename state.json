@@ -17053,21 +17053,33 @@
       "taken_asks": []
     },
     "2983": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-6",
+      "owner_since": "2026-11-04T03:08:07Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-04T02:44:41Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:bfe1f310-1793761652",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-04T03:08:07Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T03:07:16Z",
+    "at": "2026-11-04T03:08:07Z",
     "url": "",
-    "what": "review #2970 on claude-1"
+    "what": "plan #2983 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T02:47:36Z",
