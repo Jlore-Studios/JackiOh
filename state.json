@@ -15509,7 +15509,7 @@
       "started_at": "2026-11-04T00:28:14Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1
+      "verdict_rounds": 3
     },
     "2943": {
       "failures": 0,
