@@ -14941,11 +14941,19 @@
     "what": "review #2992 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-04T10:55:03Z",
+    "at": "2026-11-04T11:31:10Z",
     "notes": [
-      "#3013 is held for `claude-8` until 05:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered review #2992 on muse (run 41807786256): approved",
-      "#3029: typed it Bug"
+      "delivered revise #2992 on muse (run 41819742505): built",
+      "delivered build #2882 on claude-7 (run 41814578944): built",
+      "delivered build #3011 on muse (run 41809514384): built",
+      "delivered build #2943 on claude-3 (run 41807894103): built",
+      "started review #3034 on claude-3 (run 41822428978)",
+      "started review #3032 on claude-7 (run 41822542708)",
+      "started review #3033 on muse (run 41822656634)",
+      "started build #3013 on claude-8 (run 41822776295)",
+      "started review #2992 on claude-4 (run 41822903791)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15651,7 +15659,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T10:55:03Z",
+  "loop_tick": "2026-11-04T11:31:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
