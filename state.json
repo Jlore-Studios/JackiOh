@@ -17087,6 +17087,7 @@
     "2984": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_fixes": 1,
       "ci_reruns": {
         "4f4326d73dea56a4fef628d5d4e6289350a2ed05": 1
@@ -17108,7 +17109,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-04T02:34:37Z",
+      "feedback_since": "2026-11-04T08:33:31Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-04T05:14:37Z",
@@ -17122,22 +17123,25 @@
       "interruptions": 0,
       "issue": 2979,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
-      "question": "placeholder (waiting on test run, will continue)",
+      "question": "",
       "queued_at": "2026-11-04T08:24:10Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "41800432972",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-11-04T08:33:31Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6626181154"
       ],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
