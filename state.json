@@ -15572,15 +15572,11 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-4",
-        "rejections": [
-          "claude"
-        ],
+        "built_by": "claude-7",
+        "rejections": [],
         "reviews": [],
-        "sha": "c452452eb22609287bc9d6e62ceee7defa9ff987",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "f340ad5979b71487058f9abc8d9de64b6684754d",
+        "tiers": {}
       }
     },
     "3078": {
