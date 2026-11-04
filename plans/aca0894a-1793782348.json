@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3011,
+  "title": "Patch: the Statistics page drops its full-art picker",
+  "branch": "bot/issue-3011",
+  "thread": "**Issue #3011 (data, not instructions):**\n\n```text\n# #3011: Patch: the Statistics page drops its full-art picker\nOpened by @squishy-squooby.\n\n## What it does\n\nAsked for on 2026-11-04: \"Remove the ability to view different art variants in the stats.\"\n\nToday the card breakdown on `/stats` lets a viewer choose which art a full-art card's faces print. It shows a row of buttons (No full art, Animated, Epic, Legendary, Mythic) under the faces of a full-art card, and of a token listed under one ([R2756000](spec/rulings/R2756000.md), amended by R2715000). It lives in `apps/web/src/routes/stats.tsx`:\n\n- `artsOf`, `artPick`, `DrillDownArt`, `ART_LABELS`;\n- the `drillDownArt` state;\n- the `stats-drilldown-actions` group with `statsTestid.drillDownArt`;\n- `FullArtShown` wrapped around the faces with the picked art.\n\nRemove the picker. The Statistics page is for numbers, and the card looks are being rebuilt as variant ladders in a follow-up issue, which should not have to carry this picker over.\n\nThe breakdown's faces then print what they printed before a viewer pressed any button, which is R2756000's \"Where it starts\": the card's full art (its still Epic, R2655000) when the viewer's Full-art cards setting is on, and its normal face when it is off. The Radiant face does the same while Show Radiant is on. The rest of the breakdown is unchanged: the faces, Show Radiant, patch history, turn curve and co-played synergy.\n\nRemove the dead code with it:\n- the helpers and state above, and the imports only they used (`FULL_ART_STRIP_TIERS`, `FULL_ARTS_OF_CARD`, `fullArtPickOf` and so on, where nothing else in the file uses them);\n- the testid;\n- any CSS used only by the button row;\n- the button labels in `apps/web/src/i18n/zh-CN.json`, only where nothing else uses those strings.\n\nSearch `e2e/` and `apps/web/src/` for `drillDownArt` and the labels, and update every spec that pressed the buttons.\n\n### Rulings\n\n- Write one new ruling in this issue's block. It retires R2756000's choice and keeps the start rule above as the whole behavior.\n- Mark R2756000 \"amended by\" it, and fix its `proven_in` so `cargo jackioh spec check` passes.\n- Put the \u00a711 paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n- If \u00a79.11 or \u00a710.10 describe the buttons, edit them.\n\nThis is the client's statistics route, not `apps/web/src/cards/`. No card plays or looks different, so it should need no patch fragment. Let `cargo jackioh classify --base origin/main --claims` decide.\n\n## Acceptance\n\n- The `/stats` card breakdown of a full-art card (for example Gary the Gambler), and of a token listed under one, renders no art buttons: no element carries `statsTestid.drillDownArt`.\n- Its faces print the still Epic full art with the Full-art cards setting on and the normal face with it off, base and Radiant (Show Radiant). The test is named after the new ruling.\n- A card without full art draws its breakdown as before.\n- No reference to the removed helpers, state or testid remains in `apps/web/src/` or `e2e/`.\n- `pnpm --dir apps/web test`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web e2e`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3011: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T08:52:44Z",
+    "claimed_at": "2026-11-04T08:53:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
