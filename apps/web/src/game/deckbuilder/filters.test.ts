@@ -622,7 +622,7 @@ describe("R711000 the reader's language", () => {
     expect(searchMatches(real("core-002"), CN("core-002"))).toBe(false);
     await setLocale("zh-CN");
     expect(searchMatches(real("core-002"), CN("core-002"))).toBe(true);
-    expect(searchMatches(real("core-002"), "bigot")).toBe(true);
+    expect(searchMatches(real("core-002"), "speciesist")).toBe(true);
     expect(matchesFilter(real("core-002"), filter({ search: CN("core-002") }))).toBe(true);
     expect(almanacPool(REAL, filter({ search: CN("core-002") }), DEFAULT_SORT)).toContain("core-002");
     expect(visiblePool(REAL, null, filter({ search: CN("core-002") }), DEFAULT_SORT)).toContain("core-002");
@@ -652,15 +652,15 @@ describe("R711000 the reader's language", () => {
   });
 
   it("R711000 the name sort follows the Chinese names under zh-CN, and is today's under English", async () => {
-    const ids = ["core-002", "core-006", "core-007"];
+    const ids = ["core-017", "core-006", "core-007"];
     const asc: PoolSort = { key: "name", dir: "asc" };
     const desc: PoolSort = { key: "name", dir: "desc" };
-    expect(sortPool(ids, REAL, asc)).toEqual(["core-002", "core-007", "core-006"]);
+    expect(sortPool(ids, REAL, asc)).toEqual(["core-017", "core-007", "core-006"]);
     await setLocale("zh-CN");
-    expect(sortPool(ids, REAL, asc)).toEqual(["core-007", "core-006", "core-002"]);
-    expect(sortPool(ids, REAL, desc)).toEqual(["core-002", "core-006", "core-007"]);
+    expect(sortPool(ids, REAL, asc)).toEqual(["core-007", "core-006", "core-017"]);
+    expect(sortPool(ids, REAL, desc)).toEqual(["core-017", "core-006", "core-007"]);
     await setLocale("en");
-    expect(sortPool(ids, REAL, asc)).toEqual(["core-002", "core-007", "core-006"]);
+    expect(sortPool(ids, REAL, asc)).toEqual(["core-017", "core-007", "core-006"]);
   });
 
   it("R711000 the deck list orders a cost's cards by their Chinese names under zh-CN", async () => {

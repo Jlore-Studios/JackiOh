@@ -100,7 +100,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit
     const STOCKPILE: &str = "core-073"; // (2) Field Spell
     const MENACE: &str = "core-019"; // (3) Unit
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
 
     use crate::scenario;
 
@@ -143,11 +143,11 @@ mod tests {
 
     #[test]
     fn r58_a_card_cast_on_draw_is_not_discounted_and_the_draw_repeats() {
-        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [CN_VIRUS, MENACE, FILLER] } }));
+        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [SUPER_VIRUS, MENACE, FILLER] } }));
         s.play(WAND, json!({}));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 2);
-        s.expect_in_zone(CN_VIRUS, "graveyard").expect_in_zone(MENACE, "hand");
-        assert_eq!(s.card(CN_VIRUS).cost_override, None);
+        s.expect_in_zone(SUPER_VIRUS, "graveyard").expect_in_zone(MENACE, "hand");
+        assert_eq!(s.card(SUPER_VIRUS).cost_override, None);
         assert_eq!(s.card(MENACE).cost_override, Some(1));
     }
 

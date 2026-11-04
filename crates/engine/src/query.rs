@@ -354,7 +354,7 @@ pub fn lucky_on(state: &GameState, card: &CardInstance) -> i32 {
 }
 
 /// §6.1, R1438: only the Lucky a card instance was given (B5 E38), never its printed Lucky; #23
-/// Reoccurring Dream and #42 Eugenics add it to their fixed roll, so tuning never reaches it (D14).
+/// Reoccurring Dream and #42 Selective Breeding add it to their fixed roll, so tuning never reaches it (D14).
 pub fn given_lucky_on(card: &CardInstance) -> i32 {
     crate::tuning::numbered_sum(&card.granted_keywords, KeywordKind::Lucky).unwrap_or(0)
 }

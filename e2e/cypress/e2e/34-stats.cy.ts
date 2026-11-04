@@ -52,7 +52,7 @@ const PROVISIONAL_CARDS_FIXTURE = {
     },
     {
       id: "core-002",
-      name: "Bigot",
+      name: "Speciesist",
       cost: 2,
       rarity: "Common",
       set: "core",
@@ -72,7 +72,7 @@ const PROVISIONAL_CARDS_FIXTURE = {
     activePatch: "v0.2.0",
     source: "provisional",
     bestCard: { id: "core-001", name: "Big D-fender", winRate: 0.65 },
-    worstCard: { id: "core-002", name: "Bigot", winRate: 0.35 },
+    worstCard: { id: "core-002", name: "Speciesist", winRate: 0.35 },
   },
 };
 
@@ -91,7 +91,7 @@ const CARD_DRILL_DOWN_FIXTURE = {
     { turn: 2, games: 30, wins: 18, winRate: 0.6 },
   ],
   coPlayed: [
-    { id: "core-002", name: "Bigot", games: 45, winRate: 0.6 },
+    { id: "core-002", name: "Speciesist", games: 45, winRate: 0.6 },
   ],
 };
 
@@ -181,12 +181,12 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
       .and("contain.text", "1,412");
 
     cy.get(ts(STATS_CARDS_TABLE)).should("be.visible");
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("contain.text", "Bigot");
+    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("contain.text", "Speciesist");
 
     cy.get(ts(STATS_SEARCH_INPUT)).type("D-fender");
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("not.contain.text", "Bigot");
+    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("not.contain.text", "Speciesist");
     cy.get(ts(STATS_SEARCH_INPUT)).clear();
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Bigot");
+    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Speciesist");
 
     // Card drill-down modal opens and closes (the title reads the card's catalog name)
     cy.get(ts(STATS_CARDS_TABLE)).contains("Big D-fender").click();

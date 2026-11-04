@@ -2220,7 +2220,7 @@ mod tests {
     #[test]
     fn a_broken_entry_fails_naming_the_entry_and_the_field() {
         let mut catalog = shipped_catalog();
-        // #2 Bigot, a Unit that declares no numbers, so the one param below is the only one.
+        // #2 Speciesist, a Unit that declares no numbers, so the one param below is the only one.
         let mut entry = catalog["core-002"].as_object().expect("core-002").clone();
         // A Unit face without its attack, a param no face writes, and a field nobody knows.
         if let Some(Json::Object(base)) = entry.get_mut("base") {
@@ -2481,7 +2481,7 @@ mod tests {
             failures("core-006", Json::Bool(true)),
             ["catalog[\"core-006\"]: `dealsDamage`, but no face's text says \"damage\""]
         );
-        // Bigot, a Unit that deals none.
+        // Speciesist, a Unit that deals none.
         assert_eq!(
             failures("core-002", Json::Bool(true)),
             [
@@ -2529,7 +2529,7 @@ mod tests {
 
     #[test]
     fn count_loc_counts_code_above_the_tests_without_comments_blank_lines_or_use_declarations() {
-        let source = r##"//! SPEC §8.1 #2 Bigot.
+        let source = r##"//! SPEC §8.1 #2 Speciesist.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{

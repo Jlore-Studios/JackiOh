@@ -212,7 +212,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // Tempo Timmy, a plain 3/3 unit.
     const MANA_WELL: &str = "core-006"; // A Field Spell: a backrow permanent.
     const HITTER: &str = "core-025"; // 4-mana 7/7.
-    const BIGOT: &str = "core-002"; // Set to 6/1 (it prints 4/1): the second hit that finishes the radiant Cube.
+    const SPECIESIST: &str = "core-002"; // Set to 6/1 (it prints 4/1): the second hit that finishes the radiant Cube.
     const FILLER: &str = "core-005"; // A card in hand, so no turn auto-ends mid-fixture.
 
     /// The controller's unit row as def ids, lane 1 to 5.
@@ -436,7 +436,7 @@ mod tests {
                     "seed": "cube-radiant-fill",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER], "field": [TIMMY] },
                     // 7 + 6 = 13 gets through the radiant Cube's 12 health in one turn.
-                    "p2": { "hand": [FILLER], "field": [HITTER, { "def": BIGOT, "statsOverride": { "attack": 6, "health": 1 } }] },
+                    "p2": { "hand": [FILLER], "field": [HITTER, { "def": SPECIESIST, "statsOverride": { "attack": 6, "health": 1 } }] },
                 }));
                 let timmy = s.card(TIMMY).id.clone();
                 s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": timmy }] }));
@@ -446,7 +446,7 @@ mod tests {
                 s.end_turn();
                 s.attack(HITTER, &cube);
                 s.expect_in_zone(&cube, "field"); // 7 of 12.
-                s.attack(BIGOT, &cube);
+                s.attack(SPECIESIST, &cube);
 
                 s.expect_in_zone(&cube, "graveyard");
                 // R64: "fill your board" takes every empty unit zone (R1136000), the Cube's own included.
@@ -478,14 +478,14 @@ mod tests {
                 let mut s = scenario(json!({
                     "seed": "cube-radiant-hungry",
                     "p1": { "hand": [{ "def": CUBE, "radiant": true }, FILLER] },
-                    "p2": { "hand": [FILLER], "field": [HITTER, { "def": BIGOT, "statsOverride": { "attack": 6, "health": 1 } }] },
+                    "p2": { "hand": [FILLER], "field": [HITTER, { "def": SPECIESIST, "statsOverride": { "attack": 6, "health": 1 } }] },
                 }));
                 s.play(CUBE, json!({}));
                 let cube = s.card(CUBE).clone();
 
                 s.end_turn();
                 s.attack(HITTER, &cube);
-                s.attack(BIGOT, &cube);
+                s.attack(SPECIESIST, &cube);
 
                 s.expect_in_zone(&cube, "graveyard");
                 assert_eq!(row(&s, P1), lanes([None, None, None, None, None]));

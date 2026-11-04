@@ -61,7 +61,7 @@ mod tests {
     const MROW: &str = "core-086"; // "Miss" Mrow 1/1 Felinor, Can't attack, a Death.
     const D_FENDER: &str = "core-001"; // Big D-fender 0/7: "Aura: … Defense Position … +2 Armor."
     const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: "End of turn: Deal 2 damage …".
-    const BIGOT: &str = "core-002"; // Bigot: "Cry: Destroy an enemy non-Human Unit."
+    const SPECIESIST: &str = "core-002"; // Speciesist: "Cry: Destroy an enemy non-Human Unit."
     const SAINTESS: &str = "core-081"; // Radiant Saintess 2/2: "Death: Make your other Units Radiant."
     const SHEEPISH: &str = "core-041"; // a Trap, set face-down.
     const BIG_FELINOR: &str = "core-043"; // the bottom of a Stack pile.
@@ -310,13 +310,13 @@ mod tests {
                 let mut s = table(
                     "taotie-cry",
                     json!([{ "def": BODY, "lane": 2 }]),
-                    json!([{ "def": BIGOT, "lane": 1 }]),
+                    json!([{ "def": SPECIESIST, "lane": 1 }]),
                 );
                 let felinor = s.unit(P1, 2).expect("p1's non-Human Unit");
 
                 s.end_turn();
 
-                // Bigot's Cry would destroy p1's non-Human Felinors; a fusion fires no Cry.
+                // Speciesist's Cry would destroy p1's non-Human Felinors; a fusion fires no Cry.
                 assert!(fused(&s));
                 s.expect_in_zone(&felinor, "field");
             }
