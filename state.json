@@ -16309,13 +16309,13 @@
       "question": "",
       "queued_at": "2026-11-04T02:04:49Z",
       "round_tier": "strong",
-      "run_id": "41771551370",
+      "run_id": "pending:4b20611b-1793766748",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
       "spot_check": true,
       "spot_check_n": 35,
-      "started_at": "2026-11-04T04:10:09Z",
+      "started_at": "2026-11-04T04:33:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17497,9 +17497,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T04:32:13Z",
+    "at": "2026-11-04T04:33:04Z",
     "url": "",
-    "what": "revise #2955 on claude-7"
+    "what": "spot-check #2965 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-04T04:03:56Z",
@@ -31499,9 +31499,9 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:4b20611b-1793766748",
         "sha": "ed35dcedf54153a081e84ed58e126bc6d7c44a4d",
-        "started_at": "2026-11-04T04:10:09Z",
+        "started_at": "2026-11-04T04:33:04Z",
         "status": "queued",
         "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
         "tries": 1
