@@ -54,6 +54,8 @@ export const loginTestid = {
   linkError: "login-link-error",
   linkErrorSignIn: "login-link-error-sign-in",
   confirmed: "login-confirmed",
+  /** R3024000: the button a mailed link waits for. */
+  pressLink: "login-press-link",
   /** R663: an email change's link came back. */
   emailChanged: "login-email-changed",
   sessionExpired: "login-session-expired",
