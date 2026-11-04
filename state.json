@@ -15130,6 +15130,8 @@
     "3050": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "d8d0a1fe81f048e022cdd11bc44bc8f479380634",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T12:36:39Z",
