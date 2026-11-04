@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 2979,
+  "title": "Patch: seeded random walks play whole dungeon runs and check that every fight starts and every count stays in bounds",
+  "branch": "bot/issue-2979",
+  "thread": "**Issue #2979 (data, not instructions):**\n\n```text\n# #2979: Patch: seeded random walks play whole dungeon runs and check that every fight starts and every count stays in bounds\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe dungeon run's tests walk one fixed path: always the first node, every fight won, heal at every campfire, leave every shop, walk away from every event. Shops, removals, events, curses and most artifact paths are tested one screen at a time, never as a whole run. That is how a run could grow its deck past what a game accepts, so that a later fight could never start, a fault the one fixed path never reached. Once built, a test plays a few hundred whole runs with random choices and random fight results, and fails if any fight cannot start, a run gets stuck on a screen, a number goes out of bounds, or the saved run does not replay to the same place.\n\n## Why\n- `crates/run/src/tests.rs:37-70`: `autoplay` \"always takes the first node, wins every fight at 20 HP, ... leaves shops, heals at campfires, walks away from events\". `a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state` (line 260) is the only whole-run test: one path, one seed.\n- R2701000 (`crates/run/src/fight_tests.rs:443`): \"A run that grew its deck past it would reach a fight it cannot start\", the kind of fault a walk is built to find.\n- `crates/tools` has no run mode (`jackioh-run` appears there only in the purity test), and the fuzz gate plays only games.\n- Much of the run is still moving: its numbers are strawmen to be tuned (`crates/run/src/config.rs`) and the designer's content will replace `placeholder.json` (`crates/run/src/fight.rs:50-55`), and each change shifts which paths a run reaches.\n\n## Proposal\nA test module in `crates/run`, pure (its choices drawn from the engine's `Rng` on a fixed seed per walk, CLAUDE.md rule 4). For each of a named number of seeds, on both the placeholder content and the catalog's (`run_catalog_content`), it:\n- picks at each phase a random action of that phase's kinds with random indices (a column, a buy, a removal, Radiant, a buff, a level, an event option, a kept subset, a blessing, leave), and reports a random fight result, mostly won at a random HP and sometimes lost, logging what was accepted;\n- checks after every accepted step: HP between 1 and `run_max_hp` while the run lives, Coins and Tickets never negative, the deck within `RUN_DECK_MAX` with no card twice and no artifact twice (\u00a715.2: nothing deals a card the deck holds; \u00a715.3; \u00a715.4: no run holds an artifact twice), and artifact levels within `RUN_ARTIFACT_LEVEL_MAX`;\n- at every fight, builds `run_fight_setup` and checks the engine's `begin_game` starts it, curses and Combat artifacts included (R2922001);\n- checks that no phase is a dead end (its free way on is accepted) and that every walk ends within a bound;\n- folds the log with `run_fold` and checks it reaches the walk's end state.\n\n## Where it lands\nA new test module in `crates/run/src/`, beside `tests.rs` and `fight_tests.rs`, and `crates/run/README.md`; SPEC \u00a715.\n\n## Acceptance criteria\n- [ ] The walks run inside `cargo test -p jackioh-run` in a few seconds, on both contents.\n- [ ] Letting a pack keep past `RUN_DECK_MAX` makes the walk test fail.\n- [ ] Each invariant fails when broken on purpose, or is shown failing on a hand-built state.\n- [ ] Any real fault found is fixed with its ruling in the issue's block.\n- [ ] Every number is a named constant (CLAUDE.md rule 9).\n\n## Size and risks\nMedium: one test module, 200 to 300 lines. A walk that tries random indices may rarely reach a narrow path (a shop the run can afford); weighting the picks toward actions the phase can pay for keeps coverage up. A real fault found would grow the patch.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T02:01:00Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2979: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T02:01:21Z",
+    "claimed_at": "2026-11-04T02:11:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
