@@ -1829,7 +1829,7 @@ button.modifier-badge[data-open="true"] {
   position: absolute;
   width: 140vmin;
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 0deg,
     color-mix(in srgb, var(--pal-gold-300) 22%, transparent) 0deg 4deg,
@@ -1848,7 +1848,7 @@ button.modifier-badge[data-open="true"] {
   position: absolute;
   width: min(52vmin, 340px);
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   box-shadow:
     0 0 0 3px color-mix(in srgb, var(--pal-gold-300) 80%, transparent),
     0 0 30px 10px color-mix(in srgb, var(--pal-gold-300) 35%, transparent);
