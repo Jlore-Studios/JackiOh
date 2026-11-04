@@ -18258,12 +18258,11 @@
     "what": "build #3012 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-04T10:43:06Z",
+    "at": "2026-11-04T10:55:03Z",
     "notes": [
       "#3013 is held for `claude-8` until 05:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered plan #3012 on claude-1 (run 41814481188): planned",
-      "started build #3012 on claude-1 (run 41816389090)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is idle, but nothing queued is for it; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-04T12:00:00Z; it can start a build or a plan again in 12m; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 108h 12m; `muse` its last run could not work (the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-2882:r); it is left alone until 2026-11-04T11:15:03Z; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 66h 12m; waiting for their owners: #3013 held for `claude-8` until 05:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+      "delivered review #2992 on muse (run 41807786256): approved",
+      "#3029: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18969,7 +18968,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T10:43:06Z",
+  "loop_tick": "2026-11-04T10:55:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
