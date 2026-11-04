@@ -14888,6 +14888,14 @@
           "claude": "strong"
         }
       }
+    },
+    "3036": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-04T10:46:15Z",
+      "issue": 3012,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
