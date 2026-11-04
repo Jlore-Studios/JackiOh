@@ -15513,7 +15513,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-04T23:00:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:caab1560-1793835157",
+      "run_id": "41934611363",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T23:33:06Z",
       "stop_requested": false,
