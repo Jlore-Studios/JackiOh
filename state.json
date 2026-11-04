@@ -15274,8 +15274,17 @@
     "what": "plan #3064 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-04T21:42:46Z",
-    "notes": [],
+    "at": "2026-11-04T21:49:31Z",
+    "notes": [
+      "#3060 needs a plan",
+      "#3064 needs a plan",
+      "delivered review #3068 on claude-7 (run 41916473759): reviewed",
+      "started revise #3068 on claude-7 (run 41919924456)",
+      "started plan #3060 on claude-3 (run 41920003754)",
+      "started plan #3064 on claude-8 (run 41920086435)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15980,7 +15989,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T21:42:46Z",
+  "loop_tick": "2026-11-04T21:49:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
