@@ -18874,15 +18874,7 @@
       {
         "key": "damage",
         "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -18893,18 +18885,18 @@
     "base": {
       "keywords": [
         {
-          "kind": "Poisonous"
+          "kind": "Flashback"
         }
       ],
-      "text": "Poisonous\nYour next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
+      "text": "Flashback\nDeal {damage} damage to all enemies. Your next Spell this turn has Poisonous."
     },
     "radiant": {
       "keywords": [
         {
-          "kind": "Poisonous"
+          "kind": "Flashback"
         }
       ],
-      "text": "Echo 1, Poisonous\nYour next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
+      "text": "Flashback\nDeal {damage} damage to all enemies. Your next Spell this turn has Poisonous."
     }
   },
   "stinkyscape-014": {
@@ -18988,9 +18980,7 @@
     "name": "Rod of Ages",
     "set": "Stinkyscape",
     "type": "Field Spell",
-    "tags": [
-      "Quickdraw"
-    ],
+    "tags": [],
     "rarity": "Mythic",
     "flavor": "Physical",
     "token": false,
@@ -19010,12 +19000,9 @@
       "keywords": [
         {
           "kind": "Animated"
-        },
-        {
-          "kind": "Flying"
         }
       ],
-      "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
+      "text": "Animated\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 12 keywords, make this Radiant."
     },
     "radiant": {
       "keywords": [
@@ -19023,13 +19010,10 @@
           "kind": "Animated"
         },
         {
-          "kind": "Flying"
-        },
-        {
           "kind": "Indestructible"
         }
       ],
-      "text": "Animated, Flying, Indestructible\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
+      "text": "Animated, Indestructible\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-017": {
@@ -19504,15 +19488,15 @@
     "loc": 104,
     "base": {
       "attack": 2,
-      "health": 9,
+      "health": 7,
       "keywords": [],
-      "text": "Cry: Choose one: summon a University, or this gains \"Activate: Summon a random Starship Piece.\""
+      "text": "Cry: Choose one: summon a University, or this gains \"End of turn: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
-      "health": 18,
+      "health": 14,
       "keywords": [],
-      "text": "Cry: Choose one: summon a Radiant University, or this gains \"Activate: Summon a random Radiant Starship Piece.\""
+      "text": "Cry: Choose one: summon a Radiant University, or this gains \"End of turn: Summon a random Radiant Starship Piece.\""
     }
   },
   "stinkyscape-027": {
@@ -20223,7 +20207,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
@@ -22145,7 +22129,7 @@
     "loc": 21,
     "base": {
       "attack": 3,
-      "health": 4,
+      "health": 3,
       "keywords": [
         {
           "kind": "Rush"
@@ -22155,7 +22139,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 8,
+      "health": 6,
       "keywords": [
         {
           "kind": "Rush"
@@ -23585,13 +23569,13 @@
       "attack": 2,
       "health": 1,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
     },
     "radiant": {
       "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
     }
   },
   "stinkyscape-130": {
@@ -23720,7 +23704,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "per",
@@ -25260,18 +25244,18 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Summon a Drone Interceptor."
+      "text": "Activate: Summon a Drone Interceptor."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon a Radiant Drone Interceptor."
+      "text": "Activate: Summon a Radiant Drone Interceptor."
     }
   },
   "stinkyscape-169": {

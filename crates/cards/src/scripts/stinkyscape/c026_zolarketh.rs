@@ -1,15 +1,16 @@
-//! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/9 → 4/18, of the
-//! Stinkyscape set.
-//!   Base:    "Cry: Choose one: summon a University, or this gains 'Activate: Summon a random Starship
+//! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/7 → 4/14 (2/9 → 4/18
+//! until #3041), of the Stinkyscape set.
+//!   Base:    "Cry: Choose one: summon a University, or this gains 'End of turn: Summon a random Starship
 //!            Piece.'"
-//!   Radiant: "Cry: Choose one: summon a Radiant University, or this gains 'Activate: Summon a random
+//!   Radiant: "Cry: Choose one: summon a Radiant University, or this gains 'End of turn: Summon a random
 //!            Radiant Starship Piece.'"
 //! Engine since #2657: the Cry's two modes are declared at play (R81, R1). `university` summons an
 //! M #97.6 University (R64), Radiant from the Radiant face, whose own Activate is its own to use; a full
-//! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the Activate
-//! is its own from then on, once a turn (R384), while it stays on the field (R78 resets the memory): a
-//! random non-token Starship Piece Unit summoned (`query::starship_pieces()`, R1878000, narrowed to
-//! Units, R380), Radiant from the Radiant face.
+//! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the End of turn
+//! is its own from then on, at its controller's end of turn (R62), while it stays on the field (R78 resets
+//! the memory): a random non-token Starship Piece Unit summoned (`query::starship_pieces()`, R1878000,
+//! narrowed to Units, R380), Radiant from the Radiant face. Through v0.5.11o (`script_v0_5_11o`, kept,
+//! R767000) the memory gave it an Activate for the same summon, once a turn (R384).
 //!
 //! Through v0.5.9f (`script_v0_5_9f`, kept, R767000) its Cry summoned a base University that couldn't
 //! use its own Activate (`refuse_own_activate`, R1876000), and its own Activate chose between a random
@@ -33,7 +34,7 @@ const UNIVERSITIES: &str = "universities";
 /// #2657: the Cry's two modes, in the order the card prints them (R81).
 const CRY_UNIVERSITY: &str = "university";
 const CRY_PIECE: &str = "piece";
-/// #2657: what ZolarKeth remembers once its Cry gave it the Activate.
+/// #2657: what ZolarKeth remembers once its Cry gave it the Activate (since #3041 the End of turn).
 const GAINED_KEY: &str = "gainedPieceActivate";
 
 /// R1876000: the Universities this Cry summoned.
@@ -149,7 +150,16 @@ fn zolarketh(radiant: bool, current: bool) -> Script {
     }
 }
 
-/// #2657: "Activate: Summon a random Starship Piece", ZolarKeth's once its Cry chose it.
+/// #3041: "End of turn: Summon a random Starship Piece", ZolarKeth's once its Cry chose it (R62): its
+/// controller's end of turn, and only while the memory is there.
+fn gained_end_of_turn(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    let chose_it = ctx
+        .live_self()
+        .is_some_and(|me| me.memory.get(GAINED_KEY).and_then(Value::as_bool) == Some(true));
+    if chose_it { vec![summon_piece(radiant)] } else { vec![] }
+}
+
+/// #2657: "Activate: Summon a random Starship Piece", ZolarKeth's once its Cry chose it; through v0.5.11o.
 fn gained_ability(radiant: bool) -> ActivationDecl {
     ActivationDecl {
         id: "piece".to_string(),
@@ -170,8 +180,9 @@ fn gained_ability(radiant: bool) -> ActivationDecl {
     }
 }
 
-/// #2657: "Cry: Choose one: summon a University, or this gains 'Activate: …'".
-fn chooses(radiant: bool) -> Script {
+/// #2657: "Cry: Choose one: summon a University, or this gains '…'": `end_of_turn` is #3041's End of turn,
+/// else v0.5.11o's Activate.
+fn chooses(radiant: bool, end_of_turn: bool) -> Script {
     Script {
         modes: vec![ModeDecl {
             kind: PromptKind::Mode,
@@ -187,15 +198,25 @@ fn chooses(radiant: bool) -> Script {
             })],
             _ => vec![],
         })),
-        activations: vec![gained_ability(radiant)],
+        activations: if end_of_turn { vec![] } else { vec![gained_ability(radiant)] },
+        end_of_turn: end_of_turn.then(|| hook(move |ctx| gained_end_of_turn(ctx, radiant))),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: chooses(false),
-        radiant: chooses(true),
+        base: chooses(false, true),
+        radiant: chooses(true, true),
+    }
+}
+
+/// R767000: through v0.5.11o the Cry's `piece` mode gave ZolarKeth an Activate, once a turn, that summoned
+/// the random Starship Piece; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: chooses(false, false),
+        radiant: chooses(true, false),
     }
 }
 
@@ -230,7 +251,9 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_11, script_v0_5_9f};
+    use super::{
+        CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_11, script_v0_5_11o, script_v0_5_9f,
+    };
     use crate::{filler, scenario};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -289,37 +312,79 @@ mod tests {
     }
 
     #[test]
-    fn its_cry_may_give_it_an_activate_that_summons_a_random_starship_piece_once_a_turn() {
+    fn r62_its_cry_may_give_it_an_end_of_turn_that_summons_a_random_starship_piece_at_its_controllers_end_of_turn() {
         let mut s = board(false, json!([]));
         s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
         assert!((1..=5).filter_map(|lane| s.unit(P1, lane)).all(|unit| unit.def_id != UNIVERSITY));
-        s.activate(ID, json!({}));
-        let pieces = pieces(&s);
-        assert_eq!(pieces.len(), 1);
-        assert!(!pieces[0].radiant);
+        assert!(pieces(&s).is_empty(), "nothing as it is played");
         s.expect_refused(|s| s.activate(ID, json!({})));
+        s.end_turn();
+        let first = pieces(&s);
+        assert_eq!(first.len(), 1, "one at the end of its controller's turn");
+        assert!(!first[0].radiant);
+        s.end_turn();
+        assert_eq!(pieces(&s).len(), 1, "none at the opponent's end of turn");
+        s.end_turn();
+        assert_eq!(pieces(&s).len(), 2, "one more at its controller's next");
     }
 
     #[test]
-    fn without_the_cry_it_has_no_activate() {
+    fn r62_without_the_cry_it_summons_no_piece_and_has_no_activate() {
         let mut s = board(false, json!([{ "def": ID, "lane": 1 }]));
         let zolar = s.unit_at(P1, 1);
         s.expect_refused(|s| s.activate(&zolar, json!({})));
+        s.end_turn();
+        assert!(pieces(&s).is_empty());
     }
 
     #[test]
-    fn r275_radiant_4_18_a_radiant_university_or_a_radiant_piece() {
+    fn r62_the_university_mode_gives_no_end_of_turn() {
+        let mut s = board(false, json!([]));
+        s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
+        s.end_turn();
+        assert!(pieces(&s).is_empty());
+    }
+
+    #[test]
+    fn r275_radiant_4_14_a_radiant_university_or_a_radiant_piece_at_the_end_of_turn() {
         let mut s = board(true, json!([]));
         s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
-        s.expect_stats(ID, json!({ "attack": 4, "health": 18 }));
+        s.expect_stats(ID, json!({ "attack": 4, "health": 14 }));
         assert!(university(&s).radiant, "a Radiant University");
 
         let mut s = board(true, json!([]));
         s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
-        s.activate(ID, json!({}));
+        s.end_turn();
         let pieces = pieces(&s);
         assert_eq!(pieces.len(), 1);
         assert!(pieces[0].radiant);
+    }
+
+    /// R767000: through v0.5.11o its Cry's `piece` mode gave it an Activate, not an End of turn.
+    #[test]
+    fn r384_r767000_the_kept_script_gives_an_activate_that_summons_a_random_starship_piece_once_a_turn() {
+        crate::under_kept(ID, script_v0_5_11o(), || {
+            for radiant in [false, true] {
+                let mut s = board(radiant, json!([]));
+                s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
+                s.activate(ID, json!({}));
+                let pieces = pieces(&s);
+                assert_eq!(pieces.len(), 1);
+                assert_eq!(pieces[0].radiant, radiant);
+                s.expect_refused(|s| s.activate(ID, json!({})));
+            }
+        });
+    }
+
+    /// R767000: nor did that script summon a piece at the end of turn.
+    #[test]
+    fn r62_r767000_the_kept_script_summons_no_piece_at_the_end_of_turn() {
+        crate::under_kept(ID, script_v0_5_11o(), || {
+            let mut s = board(false, json!([]));
+            s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
+            s.end_turn();
+            assert!(pieces(&s).is_empty());
+        });
     }
 
     #[test]
@@ -331,7 +396,7 @@ mod tests {
             assert!(!uni.radiant, "a base University");
             s.expect_stats(&uni, json!({ "attack": 0, "health": 12 }));
             s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");
-            s.expect_stats(ID, json!({ "attack": 2, "health": 9 }));
+            s.expect_stats(ID, json!({ "attack": 2, "health": 7 }));
         });
     }
 
@@ -447,11 +512,11 @@ mod tests {
     }
 
     #[test]
-    fn r275_r2521003_radiant_4_18_a_base_university_then_a_radiant_piece_and_your_universities() {
+    fn r275_r2521003_radiant_4_14_a_base_university_then_a_radiant_piece_and_your_universities() {
         crate::under_kept(ID, script_v0_5_9f(), || {
             let mut s = board(true, json!([]));
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(ID, json!({ "attack": 4, "health": 18 }));
+            s.expect_stats(ID, json!({ "attack": 4, "health": 14 }));
             let uni = university(&s);
             assert!(!uni.radiant, "a base University from the Radiant face too");
             s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");

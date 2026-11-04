@@ -251,9 +251,9 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
         // Not Core #84 Going Long nor Meditative #80 Aluneth (#2521).
         // Meditative+ #1 Bob's Plan.
-        // Stinkyscape #16, #44, #116, #148 and #154.
+        // Stinkyscape #44, #116, #148 and #154 (#16 Rod of Ages lost it in #3041).
         // Training Grounds #40 Goetzmann Game Design.
-        Tag::Quickdraw => 4 + meditative(4) + meditative_plus(1) + stinkyscape(5) + training_grounds(1),
+        Tag::Quickdraw => 4 + meditative(4) + meditative_plus(1) + stinkyscape(4) + training_grounds(1),
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.

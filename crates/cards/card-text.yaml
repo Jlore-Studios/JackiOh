@@ -4595,8 +4595,8 @@ stinkyscape-013: # Asphyxiants Cloud
     cast: Hold your breath. Forever.
   zh:
     name: 窒息毒云
-    base: "剧毒\n你在本回合中的下一张法术具有剧毒。对所有敌人造成{damage}点伤害。抽{draw}张牌。"
-    radiant: "回响1，剧毒\n你在本回合中的下一张法术具有剧毒。对所有敌人造成{damage}点伤害。抽{draw}张牌。"
+    base: "闪回\n对所有敌人造成{damage}点伤害。你在本回合中的下一张法术具有剧毒。"
+    radiant: "闪回\n对所有敌人造成{damage}点伤害。你在本回合中的下一张法术具有剧毒。"
 stinkyscape-014: # Arm of the Jempire
   flavour: The Jempire never sends a hand when an arm will do.
   voice:
@@ -4623,8 +4623,8 @@ stinkyscape-016: # Rod of Ages
     cast: The ages remember every hand that held it.
   zh:
     name: 万古之杖
-    base: "活化，飞行\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。\n当此牌拥有10个关键词时，使其变为光辉。"
-    radiant: "活化，飞行，不可摧毁\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。"
+    base: "活化\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。\n当此牌拥有12个关键词时，使其变为光辉。"
+    radiant: "活化，不可摧毁\n你打出到此牌上的第一个单位会被装备进此牌。\n回合结束时：获得{keywords}个随机战斗关键词。"
 stinkyscape-017: # Imprisoned Ship Smith
   flavour: Chains on his wrists, a forge in his head.
   voice:
@@ -4739,8 +4739,8 @@ stinkyscape-026: # ZolarKeth
     death: Office hours are over.
   zh:
     name: ZolarKeth
-    base: 战吼：抉择：召唤一个大学；或此单位获得“激活：随机召唤一个星舰部件。”
-    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“激活：随机召唤一个光辉星舰部件。”
+    base: 战吼：抉择：召唤一个大学；或此单位获得“回合结束时：随机召唤一个星舰部件。”
+    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“回合结束时：随机召唤一个光辉星舰部件。”
 stinkyscape-027: # Drone Core I
   flavour: The cheapest core on the market. It eats a card, but the drone works fine.
   voice:
@@ -5729,8 +5729,8 @@ stinkyscape-129: # Jlockeed's Missile Pod
     death: Pod's empty.
   zh:
     name: Jlockeed的导弹舱
-    base: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向下取整的伤害。\n加码(2)：星舰部件和装备。"
-    radiant: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向下取整的伤害。\n加码(2)：星舰部件和装备。"
+    base: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向上取整的伤害。\n加码(2)：星舰部件和装备。"
+    radiant: "回合结束时：对所有敌人造成等同于此单位攻击力除以{divisor}后向上取整的伤害。\n加码(2)：星舰部件和装备。"
 stinkyscape-130: # Jlockeed's Starship Retrofitting Program
   flavour: New fins, new paint, the same invoice. Now with a launch clause.
   voice:
@@ -6149,8 +6149,8 @@ stinkyscape-168: # Drone Hanger
     cast: Hangar doors open. Interceptor away.
   zh:
     name: 无人机机库
-    base: 回合开始时：召唤一个无人截击机。
-    radiant: 回合开始时：召唤一个光辉无人截击机。
+    base: 激活：召唤一个无人截击机。
+    radiant: 激活：召唤一个光辉无人截击机。
 stinkyscape-169: # Tiny Asteroid
   flavour: Small enough to mine before lunch.
   voice:

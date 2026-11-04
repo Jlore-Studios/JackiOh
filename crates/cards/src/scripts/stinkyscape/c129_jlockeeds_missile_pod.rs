@@ -1,12 +1,13 @@
 //! Stinkyscape #129 Jlockeed's Missile Pod (SPEC §8.10 row 129). (1, Embiggened 2) Unit, Jlockeed, Epic;
 //! 2/1 → 4/2.
-//!   Base:    "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded down, to all
+//!   Base:    "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all
 //!            enemies. / Embiggened (2): Starship Piece and Equip." — divisor 4
 //!   Radiant: the same words — divisor 3
 //!
-//! End of turn (R62): one hit of ⌊Attack ÷ divisor⌋ to the enemy hero and every enemy Unit, one effect
+//! End of turn (R62): one hit of ⌈Attack ÷ divisor⌉ to the enemy hero and every enemy Unit, one effect
 //! (`damage_all`, R59). R1878002: its Attack is the card's as it stands then, through the layers, buffs and
-//! auras included (§10.4); a hit of 0 is no hit (R63). Equipped, its text runs on its host and reads the
+//! auras included (§10.4); a hit of 0 (an Attack of 0) is no hit (R63). Through v0.5.11o (`script_v0_5_11o`,
+//! kept, R767000) the quotient was rounded down, so a 2/1 Pod hit nothing. Equipped, its text runs on its host and reads the
 //! host's Attack (R102, R1086). R1878001: the Embiggened version is a Starship Piece and Equip, both lent by
 //! its text to the card stamped embiggened, so Equip is a play option only at (2), as Core #56 Jilliax's
 //! (R831013); equipped onto a host it leaves no piece (R1852001). The divisor is the declared number (R386).
@@ -25,19 +26,21 @@ fn embiggened_piece_and_equip(args: HookArgs<'_>) -> Vec<Keyword> {
     }
 }
 
-/// R1878002: "its Attack divided by {divisor}, rounded down", read as the turn ends.
-fn barrage(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+/// R1878002: "its Attack divided by {divisor}, rounded up" (`round_up`; through v0.5.11o rounded down),
+/// read as the turn ends.
+fn barrage(ctx: &mut EffectContext<'_>, round_up: bool) -> Vec<Effect> {
     let Some(attack) = ctx.live_self().map(|me| unit_view(&*ctx.state, me).attack) else {
         return Vec::new();
     };
-    // The declared divisor floors at its `min`, 1 (R386).
-    let amount = attack / param(&*ctx, "divisor");
+    // The declared divisor floors at its `min`, 1 (R386). An Attack below 0 hits for 0, as it reads 0.
+    let (attack, divisor) = (attack.max(0), param(&*ctx, "divisor"));
+    let amount = attack / divisor + i32::from(round_up && attack % divisor > 0);
     vec![damage_all(json_as(json!({ "side": "enemy", "amount": amount, "heroes": true })))]
 }
 
-pub fn script() -> CardScripts {
+fn missile_pod(round_up: bool) -> CardScripts {
     let base = Script {
-        end_of_turn: Some(hook(barrage)),
+        end_of_turn: Some(hook(move |ctx| barrage(ctx, round_up))),
         conditional_keywords: Some(read_hook(embiggened_piece_and_equip)),
         ..Script::default()
     };
@@ -48,11 +51,22 @@ pub fn script() -> CardScripts {
     }
 }
 
+pub fn script() -> CardScripts {
+    missile_pod(true)
+}
+
+/// R767000: through v0.5.11o the hit was the Attack divided by the divisor rounded down (R1878002);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    missile_pod(false)
+}
+
 // Stinkyscape #129 Jlockeed's Missile Pod — SPEC §8.10 row 129, BUILD M12 row S 129 (R1086, R63).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use super::{ID, script_v0_5_11o};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -88,11 +102,52 @@ mod tests {
     }
 
     #[test]
-    fn r63_at_2_attack_its_quarter_is_0_and_nothing_is_hit() {
+    fn r1878002_at_2_attack_its_quarter_rounded_up_is_1_so_each_enemy_takes_1() {
         let mut s = standing(false);
+        s.end_turn();
+        let hits = hits(&s);
+        assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![1, 1, 1], "{hits:?}");
+        s.expect_health(PlayerId::P2, 29);
+    }
+
+    #[test]
+    fn r63_at_0_attack_its_hit_is_0_and_nothing_is_hit() {
+        let mut s = standing(false);
+        let id = pod(&s);
+        s.card_mut(id.as_str()).buffs.attack = -2;
+        assert_eq!(s.stats(id.as_str()).attack, 0);
         s.end_turn();
         assert_eq!(hits(&s), Vec::<(String, i32)>::new());
         s.expect_health(PlayerId::P2, 30);
+    }
+
+    #[test]
+    fn r1878002_at_5_attack_its_quarter_rounded_up_is_2() {
+        let mut s = standing(false);
+        let id = pod(&s);
+        s.card_mut(id.as_str()).buffs.attack = 3;
+        s.end_turn();
+        let hits = hits(&s);
+        assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![2, 2, 2], "{hits:?}");
+        s.expect_health(PlayerId::P2, 28);
+    }
+
+    /// R767000: through v0.5.11o the quotient was rounded down.
+    #[test]
+    fn r1878002_r767000_the_kept_script_rounds_down_so_a_2_attack_pod_hits_nothing_and_a_5_attack_one_for_1() {
+        crate::under_kept(ID, script_v0_5_11o(), || {
+            let mut s = standing(false);
+            s.end_turn();
+            assert_eq!(hits(&s), Vec::<(String, i32)>::new());
+            s.expect_health(PlayerId::P2, 30);
+
+            let mut s = standing(false);
+            let id = pod(&s);
+            s.card_mut(id.as_str()).buffs.attack = 3;
+            s.end_turn();
+            let hits = hits(&s);
+            assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![1, 1, 1], "{hits:?}");
+        });
     }
 
     #[test]
@@ -155,14 +210,15 @@ mod tests {
         s.expect_stats(host.as_str(), json!({ "attack": 6, "health": 5 }));
         assert!(!has_keyword(&s.stats(host.as_str()).keywords, KeywordKind::StarshipPiece));
         s.end_turn();
-        s.expect_health(PlayerId::P2, 29);
+        // The host's 6 Attack ÷ 4, rounded up, is 2.
+        s.expect_health(PlayerId::P2, 28);
     }
 
     #[test]
-    fn radiant_4_attack_divided_by_3_hits_each_enemy_for_1() {
+    fn radiant_4_attack_divided_by_3_rounded_up_hits_each_enemy_for_2() {
         let mut s = standing(true);
         s.end_turn();
         let hits = hits(&s);
-        assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![1, 1, 1], "{hits:?}");
+        assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![2, 2, 2], "{hits:?}");
     }
 }

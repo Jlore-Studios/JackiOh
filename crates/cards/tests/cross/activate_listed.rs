@@ -86,7 +86,6 @@ const ACTIVATE_CARDS: [&str; 71] = [
     "stinkyscape-018-1",
     "stinkyscape-018-2",
     "stinkyscape-018-3",
-    "stinkyscape-026",
     "stinkyscape-039",
     "stinkyscape-050",
     "stinkyscape-051",
@@ -114,6 +113,7 @@ const ACTIVATE_CARDS: [&str; 71] = [
     "stinkyscape-143",
     "stinkyscape-148",
     "stinkyscape-157",
+    "stinkyscape-168",
     "stinkyscape-169",
     "stinkyscape-170",
     "stinkyscape-171",
@@ -1825,27 +1825,6 @@ mod stinkyscape {
         assert!(watched.contains(&vanilla), "{watched:?}");
     });
 
-    both_faces!(s_n26_zolarketh, |radiant: bool| {
-        let mut s = scenario(json!({
-            "p1": { "field": [on("stinkyscape-026", radiant)], "hand": [STOCKPILE], "library": [X, X] },
-            "p2": { "hand": [FILLER], "library": [X, X] },
-        }));
-        // #2657: its Activate is its own once its Cry chose it, which it remembers.
-        s.card_mut("stinkyscape-026")
-            .memory
-            .insert("gainedPieceActivate".to_string(), json!(true));
-        let events = activate_listed(&mut s, "stinkyscape-026", |_| true);
-        let pieces = summoned_defs(&events);
-        assert_eq!(pieces.len(), 1, "{events:?}");
-        assert!(
-            jackioh_cards::CATALOG[&pieces[0]]
-                .base
-                .keywords
-                .iter()
-                .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
-        );
-    });
-
     mod s_n157_the_gauntlet {
         use super::*;
 
@@ -1881,6 +1860,20 @@ mod stinkyscape {
         // Stage 1: the resume, a card from the hand sent in (R1865000).
         activate_listed(&mut s, "stinkyscape-112", any);
         assert_eq!(s.hand(P1).len(), hand - 1, "the resume left the hand");
+    });
+
+    both_faces!(s_n168_drone_hanger, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on("stinkyscape-168", radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let events = activate_listed(&mut s, "stinkyscape-168", any);
+        assert_eq!(
+            summoned_defs(&events),
+            vec!["stinkyscape-t-drone-interceptor".to_string()]
+        );
+        let drone = s.unit(P1, 1).expect("the Interceptor in the leftmost unit zone");
+        assert_eq!(drone.radiant, radiant);
     });
 
     both_faces!(s_n148_alteran_reach, |radiant: bool| {

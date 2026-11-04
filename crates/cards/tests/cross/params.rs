@@ -544,7 +544,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-004-3", KEYWORD),
         ("stinkyscape-009", KEYWORD),
         ("stinkyscape-011-2", KEYWORD),
-        ("stinkyscape-013", KEYWORD),
         ("stinkyscape-023", KEYWORD),
         ("stinkyscape-024", KEYWORD),
         ("stinkyscape-039", KEYWORD),

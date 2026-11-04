@@ -1,19 +1,22 @@
-//! S #16 Rod of Ages (SPEC §8.10 row 16): (1) Field Spell, Quickdraw, Mythic, no stats (R2280000; 1/1 →
-//! 2/2 before issue #2280), of the Stinkyscape set.
-//!   Base:    "Animated, Flying / The first Unit you play onto this is Equipped into it. / End of turn:
-//!            Gain {keywords|random combat keyword|random combat keywords}. / Upon reaching 10 keywords,
-//!            make this Radiant."
-//!   Radiant: "Animated, Flying, Indestructible / The first Unit you play onto this is Equipped into it.
-//!            / End of turn: Gain {keywords|random combat keyword|random combat keywords}."
-//! Animated and Flying catalog keywords (§6.1, R2280000). lends_equip lets first unit equip into it (R1869000, R1086, R77, R102, R64, R2280001).
-//! End of turn grants random combat keywords (R21, R781005). Base becomes Radiant at 10 keywords (R1850005, R1748003).
+//! S #16 Rod of Ages (SPEC §8.10 row 16): (1) Field Spell, Mythic, no stats (R2280000; 1/1 → 2/2 before
+//! issue #2280), of the Stinkyscape set. It had Quickdraw and Flying until #3041.
+//!   Base:    "Animated / The first Unit you play onto this is Equipped into it. / End of turn: Gain
+//!            {keywords|random combat keyword|random combat keywords}. / Upon reaching 12 keywords, make
+//!            this Radiant."
+//!   Radiant: "Animated, Indestructible / The first Unit you play onto this is Equipped into it. / End of
+//!            turn: Gain {keywords|random combat keyword|random combat keywords}."
+//! Animated is a catalog keyword (§6.1, R2280000). lends_equip lets first unit equip into it (R1869000, R1086, R77, R102, R64, R2280001).
+//! End of turn grants random combat keywords (R21, R781005). Base becomes Radiant at 12 keywords (R1850005,
+//! R1748003); through v0.5.11o (`script_v0_5_11o`, kept, R767000) at 10, with Flying printed among them.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-016";
 
-/// "Upon reaching 10 keywords, make this Radiant": printed data (R1748003), the base face's only.
-const RADIANT_AT_KEYWORDS: i32 = 10;
+/// "Upon reaching 12 keywords, make this Radiant": printed data (R1748003), the base face's only.
+const RADIANT_AT_KEYWORDS: i32 = 12;
+/// Through v0.5.11o it was 10.
+const RADIANT_AT_KEYWORDS_V0_5_11O: i32 = 10;
 
 fn face(radiant_at_keywords: Option<i32>) -> Script {
     Script {
@@ -39,13 +42,22 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: through v0.5.11o the base face became Radiant at 10 keywords (R1850005); `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: face(Some(RADIANT_AT_KEYWORDS_V0_5_11O)),
+        radiant: face(None),
+    }
+}
+
 // S #16 Rod of Ages — SPEC §8.10 row 16, BUILD M12 row S 16.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{ID, RADIANT_AT_KEYWORDS};
+    use super::{ID, RADIANT_AT_KEYWORDS, script_v0_5_11o};
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -100,7 +112,7 @@ mod tests {
             assert!(s.unit(P1, 2).is_none());
             assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Animated));
             let keywords = s.stats(&rod).keywords;
-            assert!(has_keyword(&keywords, KeywordKind::Animated) && has_keyword(&keywords, KeywordKind::Flying));
+            assert!(has_keyword(&keywords, KeywordKind::Animated) && !has_keyword(&keywords, KeywordKind::Flying));
         }
 
         #[test]
@@ -121,7 +133,7 @@ mod tests {
             let fused = s.unit_at(P1, 2);
             assert_eq!(fused.id, rod.id, "the Rod is the kept host");
             s.expect_stats(&fused, json!({ "attack": 1, "health": 1 }));
-            assert!(has_keyword(&s.stats(&fused).keywords, KeywordKind::Flying));
+            assert!(!has_keyword(&s.stats(&fused).keywords, KeywordKind::Flying), "the Rod prints no Flying");
         }
 
         #[test]
@@ -168,10 +180,10 @@ mod tests {
         fn end_of_turn_grants_one_random_keyword() {
             let mut s = played(false, json!([]));
             let rod = s.backrow(P1, 2).expect("the Rod");
-            assert_eq!(kinds(&s, &rod), 2);
+            assert_eq!(kinds(&s, &rod), 1);
             s.end_turn();
             assert_eq!(s.card(&rod.id).granted_keywords.len(), 1);
-            assert_eq!(kinds(&s, &rod), 3);
+            assert_eq!(kinds(&s, &rod), 2);
             assert_eq!(s.state().active, P2);
         }
 
@@ -187,32 +199,66 @@ mod tests {
             assert_eq!(s.unit_at(P1, 2).id, rod.id);
         }
 
-        #[test]
-        fn r1850005_its_end_of_turn_keyword_reaches_10_and_makes_it_radiant() {
-            let mut s = played(false, json!([]));
-            let rod = s.backrow(P1, 2).expect("the Rod");
-            let granted = [
-                Keyword::Taunt,
-                Keyword::Rush,
-                Keyword::FirstStrike,
-                Keyword::Ranged,
-                Keyword::Poisonous,
-                Keyword::Windfury,
-                Keyword::Cleave,
-            ];
+        /// Ten distinct pool keywords, none a Taunt (R347: a Taunt held down by a drawn Indestructible
+        /// would cost the count a kind), granted one past Animated's: eleven kinds in all.
+        const GRANTED: [Keyword; 10] = [
+            Keyword::Rush,
+            Keyword::Charge,
+            Keyword::FirstStrike,
+            Keyword::Ranged,
+            Keyword::Poisonous,
+            Keyword::Windfury,
+            Keyword::Cleave,
+            Keyword::Lifesteal,
+            Keyword::Reborn,
+            Keyword::Trample,
+        ];
+
+        fn granted(s: &mut Scenario, rod: &CardInstance, count: usize) {
             find_instance_mut(s.state_mut(), &rod.id)
                 .expect("the Rod")
                 .granted_keywords
-                .extend(granted);
+                .extend(GRANTED.into_iter().take(count));
+        }
+
+        #[test]
+        fn r1850005_its_end_of_turn_keyword_reaches_12_and_makes_it_radiant() {
+            let mut s = played(false, json!([]));
+            let rod = s.backrow(P1, 2).expect("the Rod");
+            granted(&mut s, &rod, GRANTED.len());
             assert_eq!(kinds(&s, &rod), RADIANT_AT_KEYWORDS as usize - 1);
             assert!(!s.card(&rod.id).radiant);
             s.end_turn();
-            assert!(s.card(&rod.id).radiant);
+            assert!(s.card(&rod.id).radiant, "the keyword it gained took it to 12");
             assert!(s.events().iter().any(|event| matches!(
                 event,
                 GameEvent::RadiantSet { instance_id, .. } if *instance_id == rod.id
             )));
             assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(rod.id.clone()));
+        }
+
+        #[test]
+        fn r1850005_11_keywords_are_not_enough_since_issue_3041() {
+            let mut s = played(false, json!([]));
+            let rod = s.backrow(P1, 2).expect("the Rod");
+            granted(&mut s, &rod, GRANTED.len() - 1);
+            assert_eq!(kinds(&s, &rod), RADIANT_AT_KEYWORDS as usize - 2);
+            s.end_turn();
+            assert_eq!(kinds(&s, &s.card(&rod.id).clone()), RADIANT_AT_KEYWORDS as usize - 1);
+            assert!(!s.card(&rod.id).radiant);
+        }
+
+        /// R767000: through v0.5.11o the base face became Radiant at 10 keywords, Flying among them.
+        #[test]
+        fn r1850005_r767000_the_kept_script_becomes_radiant_at_10() {
+            crate::under_kept(ID, script_v0_5_11o(), || {
+                let mut s = played(false, json!([]));
+                let rod = s.backrow(P1, 2).expect("the Rod");
+                granted(&mut s, &rod, 8);
+                assert_eq!(kinds(&s, &rod), 9);
+                s.end_turn();
+                assert!(s.card(&rod.id).radiant);
+            });
         }
 
         #[test]
@@ -249,7 +295,7 @@ mod tests {
             // Vanilla's Radiant 12/12 (R77, R1086); it animated with them, Indestructible.
             s.expect_stats(&rod, json!({ "attack": 12, "health": 12 }));
             assert!(has_keyword(&s.stats(&rod).keywords, KeywordKind::Indestructible));
-            assert!(has_keyword(&s.stats(&rod).keywords, KeywordKind::Flying));
+            assert!(!has_keyword(&s.stats(&rod).keywords, KeywordKind::Flying));
         }
     }
 }

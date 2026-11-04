@@ -5070,7 +5070,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Rod of Ages",
         c(1),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[],
         R::Mythic,
         NO_STATS,
         NO_STATS,
@@ -5193,8 +5193,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Legendary,
-        st(2, 9),
-        st(4, 18),
+        st(2, 7),
+        st(4, 14),
     ),
     row(
         "27",
@@ -5399,7 +5399,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "47",
         "Circadian Fullcycler",
-        c(3),
+        c(4),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5764,8 +5764,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Rare,
-        st(3, 4),
-        st(6, 8),
+        st(3, 3),
+        st(6, 6),
     ),
     row(
         "93",
@@ -6171,7 +6171,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "133",
         "Ultra Capacitor",
-        c(2),
+        c(1),
         T::Unit,
         &[],
         R::Common,
@@ -6593,7 +6593,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "168",
         "Drone Hanger",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Rare,
