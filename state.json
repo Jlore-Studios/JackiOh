@@ -13562,9 +13562,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-04T04:00:50Z",
-      "owner_why": "its approval shipped `4f4326d73dea`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-7",
+      "owner_since": "2026-11-04T16:13:21Z",
+      "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z",
       "pending_request": false,
       "planned_at": "2026-11-04T03:30:46Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -13643,10 +13643,8 @@
       "verdict_rounds": 0
     },
     "2984": {
-      "action": "review",
-      "asks": [
-        "c:6635610985"
-      ],
+      "action": "revise",
+      "asks": [],
       "audit_tier": "",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -13684,7 +13682,7 @@
       "issue": 2979,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "revising",
       "merge_owner": "muse",
       "own_review": {
         "claimed": true,
@@ -13748,18 +13746,20 @@
         "until": "2026-11-04T10:29:50Z"
       },
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-04T16:10:19Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:33372817-1793808767",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-11-04T10:02:20Z",
+      "started_at": "2026-11-04T16:13:21Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6635610985"
+      ],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
@@ -15167,9 +15167,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T15:37:17Z",
+    "at": "2026-11-04T16:13:21Z",
     "url": "",
-    "what": "review #3037 on claude-8"
+    "what": "revise #2984 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-04T15:59:52Z",
