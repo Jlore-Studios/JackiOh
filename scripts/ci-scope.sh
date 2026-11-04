@@ -13,8 +13,8 @@
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
 #   rust_cards_lib     `rust_tools_wasm`, which also runs `tools fuzz` and `tools duos, selfplay`;
 #   rust_cards         `rust_engine` also runs `engine golden`, `rust_engine_rules` `engine
-#   rust_server        rules 2`, and `rust_server` `server api`, `server practice` and `server
-#                      practice rulings`)
+#   rust_server        rules 2` and `engine rules 3`, and `rust_server` `server api`, `server
+#                      practice` and `server practice rulings`)
 #   rust_ai
 #   rust_ai_slow
 #   rust_luau
