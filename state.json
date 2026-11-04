@@ -17560,6 +17560,8 @@
       "taken_asks": []
     },
     "2996": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T03:33:40Z",
@@ -17573,8 +17575,13 @@
         "trail": "ck 2>&1 | tail -5; echo \\\"fmt exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Check Rust formatting\", \"timeout\": 300000}\n- Bash: {\"command\": \"timeout 1500 cargo jackioh spec check 2>&1 | tail -15\", \"description\": \"Run the spec check for the new ruling\", \"timeout\": 1600000}\n- Bash: {\"command\": \"tail -3 /tmp/wasm-build.log\", \"description\": \"Check wasm build status\"}\n- Bash: {\"command\": \"grep -n \\\"PUBLIC_ENV_VARS\\\\|fn .*public\\\" crates/server/src/env.rs | head\", \"description\": \"Find tests over PUBLIC_ENV_VARS\"}\n- Bash: {\"command\": \"grep -n \\\"script-src\\\\|Content-Security\\\\|CSP\\\" docs/v0.3.0/SURFACE.md docs/deploy-cloudflare.md docs/*.md 2>/dev/null | head -20\", \"description\": \"Find other docs describing the CSP\"}\n- Bash: {\"command\": \"sed -n 236,244p docs/architecture.md; grep -rn \\\"csp\\\\|CSP\\\" e2e/cypress --include=*.ts -il | head; grep -rn \\\"connect-src\\\\|Content-Security\\\" apps/edge/src crates/server/src 2>/dev/nul\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2983/docs/architecture.md\", \"old_string\": \" CSP's `connect-src` names only the site, its socket and Supabase.\", \"new_string\": \" \u2026\n- Bash: {\"command\": \"tail -3 /tmp/wasm-build.log\", \"description\": \"Check wasm build status\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"## State\\n\\n- 2026-11-04 build pass 1 (opus): starting from the plan above; nothing built yet by earlier runs (only plan\u2026\n- Bash: {\"command\": \"grep -n \\\"target\\\\|cargo\\\" scripts/build-wasm.sh | head\", \"description\": \"Check wasm build target directory\"}\n- Bash: {\"command\": \"git diff apps/web/src/routes/login.tsx | head -120\", \"description\": \"Review the login.tsx diff\"}\n- Bash: {\"command\": \"sleep 60; tail -3 /tmp/wasm-build.log\", \"description\": \"Wait briefly and check wasm build\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -3 /tmp/wasm-build.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/wasm-build.log; do sleep 5; done; tail -4 /tmp/wasm-build.log\", \"description\": \"Wait for the wasm build to finish\", \"timeout\": 1800000, \"run_in_background\": \u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/wasm-build.log; do sleep 5; done; tail -4 /tmp/wasm-build.log\", \"description\": \"Block until the wasm build finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/auth/googleIdentity.test.ts src/net/auth-methods.test.ts src/routes/login-methods.test.tsx src/net/cloudflare-config.test.ts src/net/e\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run src/routes/login-methods.test.tsx src/auth/googleIdentity.test.ts 2>&1 | grep -i \\\"warn\\\\|act(\\\\|error\\\\|unhandled\\\" | head -20; echo done\", \"description\u2026\n- said: Clean. Now a quick mutation check that the route tests catch the wrong nonce being sent:\n- Bash: {\"command\": \"cp src/auth/GoogleButton.tsx /tmp/GoogleButton.bak && sed -i 's/latest.current(response.credential, nonce.raw)/latest.current(response.credential, nonce.hashed)/' src/auth/GoogleButton.t\u2026\n- Bash: {\"command\": \"grep -n \\\"nonce.raw\\\\|nonce.hashed\\\" src/auth/GoogleButton.tsx; cd /home/runner/work/_temp/work/item-2983 && echo \\\"- build pass 1: 6 changed web test files pass (109 tests); mutation (h\u2026\n- Bash: {\"command\": \"timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -20; echo \\\"typecheck exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Typecheck the web app\", \"timeout\": 960000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/net/auth-methods.test.ts'\\ns=open(p).read()\\nold=\\\"\\\"\\\" expect(call?.url.origin + call?.url.pathname).toBe(`${URL_}/auth/v1/token`);\\\"\\\"\\\"\\nnew=\\\"\\\"\\\" \u2026\n- Bash: {\"command\": \"git rev-parse --short origin/main 2>&1; timeout 1500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards\u2026\n- Bash: {\"command\": \"echo \\\"- build pass 1: typecheck ok (fixed one TS18048 in auth-methods test); harness's vitest --changed: 226 files / 4527 tests pass. Next: full eslint, clippy server.\\\" >> .bot-notes.m\u2026\n- said: Web side is green: typecheck, the full ESLint run, and the harness's changed-files vitest run (226 files, 4527 tests). Now clippy for the server crate, whose only change is one string in a list.\n- Bash: {\"command\": \"timeout 1700 cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -6; echo \\\"clippy exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Run clippy on the server crate\", \"timeout\u2026\n- Grep: {\"pattern\": \"PUBLIC_ENV_VARS|VITE_AUTH_OAUTH_PROVIDERS\", \"path\": \"/home/runner/work/_temp/work/item-2983/crates\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"sed -n 140,156p crates/server/README.md\", \"description\": \"Check server README env listing\"}\n- Bash: {\"command\": \"timeout 1700 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15; echo \\\"classify exit ${PIPESTATUS[0]}\\\"\", \"description\": \"Run the change classifier with claims\", \"timeou\u2026\n- Bash: {\"command\": \"timeout 600 cargo jackioh patches check 2>&1 | tail -2; timeout 600 cargo jackioh catalog check 2>&1 | tail -2; git status --short\", \"description\": \"Run patches and catalog checks; show \u2026\n- Bash: {\"command\": \"git diff apps/web/src/net/env-production.test.ts apps/web/static-pages.ts | head -90\", \"description\": \"Review env-production and static-pages diffs\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index(\\\"## State\\\")\\nend=s.index(\\\"## Log\\\")\\nnew=\\\"\\\"\\\"## State\\n\\n- 2026-11-04 build pass 1 (opus): DONE. Every plan ste\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Google sign-in through Google's own button, so it says jackioh.com\"} --> ## What changed When the build lists `google` in `VITE_AUTH_OAUTH_PROVIDERS` and sets the new public `VITE_GOOGLE_CLIENT_ID`, `/login` now loads Google Identity Services (GIS). Goo\u2026"
       },
       "issue": 2983,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-04T05:20:35Z",
+      "run_id": "pending:ccf4cf60-1793772092",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17593,6 +17600,9 @@
         "provider": "claude-6",
         "run": "41767884076"
       },
+      "started_at": "2026-11-04T06:02:36Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17960,9 +17970,9 @@
   },
   "labels_synced": "bd8537011bb62232",
   "last_run": {
-    "at": "2026-11-04T06:01:12Z",
+    "at": "2026-11-04T06:02:36Z",
     "url": "",
-    "what": "plan #2977 on claude-1"
+    "what": "review #2996 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-04T05:24:43Z",
