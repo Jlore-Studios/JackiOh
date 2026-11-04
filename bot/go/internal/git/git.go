@@ -360,6 +360,11 @@ func (x *Git) CommitAll(message string, who *Identity) bool {
 	return true
 }
 
+// CommitEmpty commits nothing: the first commit of an orphan branch that starts empty.
+func (x *Git) CommitEmpty(message string, who *Identity) {
+	x.Run(true, 600, who.env(), "commit", "--quiet", "--no-verify", "--allow-empty", "-m", message)
+}
+
 func (who *Identity) env() map[string]string {
 	return map[string]string{
 		"GIT_AUTHOR_NAME":     who.Name,

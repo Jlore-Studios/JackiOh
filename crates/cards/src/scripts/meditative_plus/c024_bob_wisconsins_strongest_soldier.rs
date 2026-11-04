@@ -121,6 +121,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
@@ -129,7 +131,6 @@ mod tests {
     const LOVE_BOMB: &str = "meditative-030-1";
 
     fn bob(seed: &str, radiant: bool, p1_library: Value, p2_field: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": p1_library },

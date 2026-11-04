@@ -85,6 +85,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -150,7 +152,6 @@ mod tests {
 
             #[test]
             fn played_into_lane_3_it_tributes_itself_a_death() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
@@ -168,7 +169,6 @@ mod tests {
 
             #[test]
             fn played_anywhere_else_it_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 }, "p2": { "hand": [ANCHOR] } }));
 
                 s.play(RUNNER, json!({ "zone": 2 }));
@@ -179,7 +179,6 @@ mod tests {
 
             #[test]
             fn with_4_mana_before_paying_it_bounces_two_different_random_enemy_permanents_to_their_controller_s_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
@@ -201,7 +200,6 @@ mod tests {
 
             #[test]
             fn with_3_mana_before_paying_it_bounces_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE] },
@@ -214,7 +212,6 @@ mod tests {
 
             #[test]
             fn s10_5_step_1_it_reads_the_mana_before_paying_the_price_this_play_paid_a_runner_made_to_cost_2_still_had_4() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RUNNER, "costMod": 1 }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE] },
@@ -228,7 +225,6 @@ mod tests {
 
             #[test]
             fn r60_fewer_enemy_permanents_than_two_it_bounces_what_there_is_and_nothing_on_an_empty_board() {
-                crate::register_all();
                 let mut one = scenario(json!({ "p1": { "hand": [RUNNER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [VANILLA] } }));
                 one.play(RUNNER, json!({ "zone": 1 }));
                 assert_eq!(bounced_ids(&one).len(), 1);
@@ -241,7 +237,6 @@ mod tests {
 
             #[test]
             fn r11_a_bounced_unit_token_ceases_to_exist() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [RUSH_TOKEN, RUSH_TOKEN] },
@@ -260,7 +255,6 @@ mod tests {
 
             #[test]
             fn r13_only_the_top_of_an_enemy_stack_pile_is_a_permanent_it_is_bounced_and_the_card_beneath_resumes_and_stays() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [BIG_FELINOR, { "def": FIENDER, "stack": true }] },
@@ -276,7 +270,6 @@ mod tests {
 
             #[test]
             fn r4_r317_a_full_hand_burns_the_bounced_card_into_its_owner_s_graveyard() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": {
@@ -293,7 +286,6 @@ mod tests {
 
             #[test]
             fn both_checks_may_pass_in_one_cry_in_lane_3_with_4_mana_it_dies_and_bounces_two() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
@@ -307,7 +299,6 @@ mod tests {
 
             #[test]
             fn r97_a_bounced_face_down_trap_is_never_named_in_your_view() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": PAWN, "faceUp": false }] },
@@ -322,7 +313,6 @@ mod tests {
 
             #[test]
             fn r386_a_degrade_of_the_threshold_to_5_stops_4_mana_bouncing_an_upgrade_to_3_lets_3_mana_bounce() {
-                crate::register_all();
                 let mut harder = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE] },
@@ -342,7 +332,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_bounces_makes_it_bounce_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA] },
@@ -360,7 +349,6 @@ mod tests {
 
             #[test]
             fn r275_is_a_4_2_with_the_same_text_the_designer_s_word_docs_radiant_audit_md() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "field": [{ "def": RUNNER, "radiant": true }], "hand": [ANCHOR] } }));
                 s.expect_stats(RUNNER, json!({ "attack": 4, "health": 2 }));
                 let def = crate::card_def(ID);
@@ -369,7 +357,6 @@ mod tests {
 
             #[test]
             fn in_lane_3_it_tributes_itself_and_with_4_mana_it_bounces_three() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RUNNER, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
@@ -383,7 +370,6 @@ mod tests {
 
             #[test]
             fn with_3_mana_it_stays_out_of_lane_3_and_bounces_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": RUNNER, "radiant": true }, ANCHOR], "mana": 3 },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
@@ -401,7 +387,6 @@ mod tests {
     /// itself there as in the unit zone.
     #[test]
     fn r1081000_played_flying_into_the_midlane_backrow_zone_it_tributes_itself() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 },
             "p2": { "hand": [ANCHOR], "field": [VANILLA] },

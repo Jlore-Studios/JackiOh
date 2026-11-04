@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    Bench, act, act_logged, events_of_type, in_hand, live, live_mut, put, set_library, slot,
+    Bench, act, act_logged, events_of_type, ids, in_hand, live, live_mut, put, set_library, slot,
 };
 use crate::rules::fixtures::prompt_harness::{
     answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
@@ -57,10 +57,6 @@ fn event_instance_ids(events: &[Value]) -> Vec<Value> {
         .iter()
         .map(|event| event.get("instanceId").cloned().unwrap_or(Value::Null))
         .collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {

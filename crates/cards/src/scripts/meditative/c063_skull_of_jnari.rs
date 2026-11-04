@@ -43,6 +43,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const SKULL: &str = "meditative-063";
@@ -54,7 +56,6 @@ mod tests {
     /// p1 holds the Skull (`radiant_face`) on the backrow with `hand` cards in hand. One `start_turn`
     /// runs p1's start of turn (the Skull fires), with its opening draw.
     fn skull_with(seed: &str, radiant_face: bool, hand: Value) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -99,7 +100,6 @@ mod tests {
 
             #[test]
             fn r1083_no_open_zone_draws_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "skull-full",
                     "p1": {
@@ -158,7 +158,6 @@ mod tests {
 
             #[test]
             fn it_takes_the_leftmost_open_unit_zone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "skull-leftmost",
                     "p1": {
@@ -175,7 +174,6 @@ mod tests {
 
             #[test]
             fn the_opponents_start_of_turn_summons_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "skull-theirs",
                     "p1": {
@@ -194,7 +192,6 @@ mod tests {
 
             #[test]
             fn r129_no_unit_in_hand_draws_no_random_number() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "skull-no-unit",
                     "p1": {
@@ -228,7 +225,6 @@ mod tests {
 
             #[test]
             fn units_reads_through_param() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "skull-param",
                     "p1": {

@@ -146,7 +146,6 @@ mod tests {
     #[test]
     fn r1884003_r2226000_fused_onto_a_unit_it_answers_no_spell_from_its_unit_zone() {
         use jackioh_engine::prelude::*;
-        crate::register_all();
         let mut s = crate::scenario(json!({
             "seed": "wormhole-fused",
             "active": "p2",

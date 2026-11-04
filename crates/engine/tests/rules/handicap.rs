@@ -9,7 +9,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{act, both, next_nonce, round_trip, setup_catalog};
+use crate::rules::fixtures::harness::{act, both, ids, next_nonce, round_trip, setup_catalog};
 use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 
 type Handicaps = PerPlayerOpt<Handicap>;
@@ -157,7 +157,7 @@ struct Stepped {
     events: Vec<GameEvent>,
 }
 
-fn input(player: PlayerId, body: ActionBody) -> ActionInput {
+fn player_input(player: PlayerId, body: ActionBody) -> ActionInput {
     ActionInput {
         body,
         player_id: player,
@@ -176,10 +176,6 @@ fn step(state: &GameState, body: ActionInput) -> Stepped {
     }
 }
 
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
-
 fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
@@ -192,16 +188,16 @@ fn started(seed: &str, handicaps: Option<Handicaps>, decks: Option<(Vec<String>,
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     let keep = ids(&state.players.p1.hand);
-    state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+    state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
     let keep = ids(&state.players.p2.hand);
-    state = act(&state, input(PlayerId::P2, ActionBody::Mulligan { keep }));
+    state = act(&state, player_input(PlayerId::P2, ActionBody::Mulligan { keep }));
     state
 }
 
 /// One endTurn, checked to have passed exactly one turn (no auto-ended cascade).
 fn pass_turn(state: &GameState) -> Stepped {
     let turn = state.turn;
-    let next = step(state, input(state.active, ActionBody::EndTurn));
+    let next = step(state, player_input(state.active, ActionBody::EndTurn));
     assert_eq!(next.state.turn, turn + 1, "endTurn passed exactly one turn");
     next
 }
@@ -422,6 +418,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 pool_hold: None,
                 tutorial_cards_only: None,
                 deck_copies: None,
+                hero_armor: None,
             }
         );
         assert_eq!(AI_DIFFICULTY.easy, HUMAN_HANDICAP);
@@ -438,6 +435,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 pool_hold: None,
                 tutorial_cards_only: None,
                 deck_copies: None,
+                hero_armor: None,
             }
         );
         assert_eq!(
@@ -453,6 +451,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 pool_hold: None,
                 tutorial_cards_only: None,
                 deck_copies: None,
+                hero_armor: None,
             }
         );
         assert_eq!(
@@ -943,7 +942,7 @@ mod r182_the_opening_hand_under_a_handicap {
             assert_eq!(state.players.p1.hand.len(), OPENING_DRAW[0] as usize);
 
             let keep = ids(&state.players.p1.hand);
-            state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+            state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
             assert_eq!(prompt_kind(&state, PlayerId::P2), Some(PromptKind::Mulligan));
             assert_eq!(prompt_options(&state, PlayerId::P2), Some(5), "{difficulty}");
             assert_eq!(state.players.p2.hand.len(), 5);
@@ -962,7 +961,7 @@ mod r182_the_opening_hand_under_a_handicap {
             assert_eq!(state.players.p1.library.len(), (h.deck_size - 4) as usize);
 
             let keep = ids(&state.players.p1.hand);
-            state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+            state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
             assert_eq!(
                 prompt_options(&state, PlayerId::P2),
                 Some(OPENING_DRAW[1] as usize),
@@ -985,7 +984,7 @@ mod r182_the_opening_hand_under_a_handicap {
             Some(OPENING_DRAW[0] as usize)
         );
         let keep = ids(&state.players.p1.hand);
-        state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+        state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
         assert_eq!(
             prompt_options(&state, PlayerId::P2),
             Some(OPENING_DRAW[1] as usize)
@@ -1004,7 +1003,7 @@ mod r182_the_opening_hand_under_a_handicap {
         ))
         .state;
         let keep = ids(&state.players.p1.hand);
-        state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+        state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
 
         let hand = def_ids(&state.players.p2.hand);
         assert_eq!(hand.len(), 5);
@@ -1029,7 +1028,7 @@ mod r182_the_opening_hand_under_a_handicap {
         ))
         .state;
         let keep = ids(&state.players.p1.hand);
-        state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+        state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
 
         let hand = def_ids(&state.players.p2.hand);
         assert_eq!(hand.len(), 5);
@@ -1042,7 +1041,7 @@ mod r182_the_opening_hand_under_a_handicap {
     fn r182_b4_the_hard_seats_mulligan_returns_and_redraws_its_whole_five_card_hand_per_s2_1() {
         let mut state = begin_game(&game("r182-mulligan", Some(on_p2(AI_DIFFICULTY.hard)), None)).state;
         let keep = ids(&state.players.p1.hand);
-        state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+        state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
 
         let before = ids(&state.players.p2.hand);
         assert_eq!(before.len(), 5);
@@ -1051,7 +1050,7 @@ mod r182_the_opening_hand_under_a_handicap {
 
         state = act(
             &state,
-            input(PlayerId::P2, ActionBody::Mulligan { keep: keep.clone() }),
+            player_input(PlayerId::P2, ActionBody::Mulligan { keep: keep.clone() }),
         );
         let after = ids(&state.players.p2.hand);
         // The turn has begun (p1's), so p2's hand is exactly its redrawn opening hand.
@@ -1267,7 +1266,7 @@ mod r183_extra_draws_per_turn {
             .expect("expected the cast-on-draw prompt");
         let answered = step(
             &round_trip(&paused.state),
-            input(
+            player_input(
                 PlayerId::P2,
                 ActionBody::Answer {
                     choice_id: pending.id.clone(),
@@ -1586,6 +1585,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 pool_hold: None,
                 tutorial_cards_only: Some(true),
                 deck_copies: Some(TUTORIAL_DECK_COPIES),
+                hero_armor: None,
             }
         );
         assert_eq!(tutorial_health(), 20);
@@ -2027,7 +2027,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         let mut lethal = started("r290-death", Some(on_p2(AI_TUTORIAL)), None);
         lethal.players.p2.library = vec![];
         lethal.players.p2.fatigue_count = tutorial_health() - 1;
-        let ended = step(&lethal, input(PlayerId::P1, ActionBody::EndTurn));
+        let ended = step(&lethal, player_input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(hero_hits(&ended.events, "hero-p2"), [tutorial_health()]);
         assert_eq!(ended.state.players.p2.hero.health, 0);
         assert_eq!(

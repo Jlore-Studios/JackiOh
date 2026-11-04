@@ -172,11 +172,11 @@ func TestHuman_ABuilderThatSaysOnlyAPersonCanDoItHandsItOn(t *testing.T) {
 	h.gh.Labels.Set(config.LabelHumanRequired, pyjson.New("name", config.LabelHumanRequired, "color", "ededed",
 		"description", ""))
 	_, result := h.night(workFake(map[string]runner.Handler{
-		"build": workBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.",
+		"build": workBuilder(map[string]string{}, humanBlocked("Set `VITE_SUPABASE_URL` in Cloudflare's project settings.",
 			true)),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "human_required")}, []any{"blocked", true})
-	assertIn(t, "Set `VITE_SUPABASE_URL` in Vercel's project settings.",
+	assertIn(t, "Set `VITE_SUPABASE_URL` in Cloudflare's project settings.",
 		humanHandedToPeople(t, h, 12))
 	entry := pyjson.List(config.Labels.Get(config.LabelHumanRequired))
 	color, description := entry[0], entry[1]

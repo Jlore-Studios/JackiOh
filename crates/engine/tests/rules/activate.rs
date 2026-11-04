@@ -22,7 +22,7 @@ use crate::rules::fixtures::activate::{
 };
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    act, act_ok, act_result, events_of_type, ids_of, in_hand, json_of, matches_object, new_game, put,
+    act, act_ok, act_result, events_of_type, ids_of, in_hand, input, json_of, matches_object, new_game, put,
     round_trip, set_library, setup_catalog, slot,
 };
 
@@ -41,10 +41,6 @@ fn game(seed: &str) -> GameState {
     let state = new_game(&format!("activate-{seed}"), None);
     register();
     state
-}
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 /// Past both mulligans, in p1's main phase on turn 1, with the note log in p2's backrow.

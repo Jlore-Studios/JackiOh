@@ -70,7 +70,6 @@ mod tests {
 
     #[test]
     fn r64_fills_every_empty_unit_zone_left_to_right_with_base_defenders() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [PARTY], "field": [{ "def": TIMMY, "lane": 2 }], "mana": 4 },
             "p2": { "hand": [FILLER] },
@@ -100,7 +99,6 @@ mod tests {
 
     #[test]
     fn r1136000_after_showdown_it_fills_all_five_zones_the_locked_ones_included() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [SHOWDOWN, PARTY, FILLER], "mana": 10, "library": [FILLER, FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },

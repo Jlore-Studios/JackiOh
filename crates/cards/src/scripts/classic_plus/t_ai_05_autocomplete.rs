@@ -73,6 +73,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const AUTOCOMPLETE: &str = "classicplus-t-ai-05";
     const TAX: &str = "classicplus-t-ai-07"; // (1) AI Spell
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
@@ -93,7 +95,6 @@ mod tests {
     /// p2 makes `plays` on its turn (each a hand card, played in order, with its zone when it takes one),
     /// then p1's turn begins.
     fn after_their_turn(plays: &[(&str, Option<i32>)], p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": merged(
@@ -312,7 +313,6 @@ mod tests {
 
             #[test]
             fn r448_a_countered_card_was_never_played_the_play_before_it_is_the_last_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -347,7 +347,6 @@ mod tests {
             #[test]
             fn r1300_a_copy_of_a_chinese_card_is_chinese() {
                 for chinese in [true, false] {
-                    crate::register_all();
                     let mut s = scenario(json!({
                         "active": "p2",
                         "p1": { "hand": [AUTOCOMPLETE, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },

@@ -128,6 +128,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -168,7 +170,6 @@ mod tests {
 
     #[test]
     fn r386_an_upgrade_answers_a_2_cost_play_and_a_degrade_finds_the_limit_at_its_floor_of_1() {
-        crate::register_all();
         let mut g = scenario(json!({
             "active": "p2",
             "p1": { "backrow": [armed(false)] },
@@ -188,7 +189,6 @@ mod tests {
 
         #[test]
         fn r56_fires_on_the_opponent_s_1_cost_play_and_summons_2_rush_tokens() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -203,7 +203,6 @@ mod tests {
 
         #[test]
         fn r56_a_2_cost_play_does_not_fire_it_the_trap_stays_armed_and_face_down() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -220,7 +219,6 @@ mod tests {
 
         #[test]
         fn r2179002_a_card_cast_on_draw_is_no_play_so_it_never_sets_it_off() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -237,7 +235,6 @@ mod tests {
 
         #[test]
         fn the_opponent_plays_the_trap_s_own_controller_never_sets_it_off() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(spare(), json!({ "backrow": [armed(false)], "hand": ["core-011", "core-005"] })),
                 "p2": spare(),
@@ -251,7 +248,6 @@ mod tests {
 
         #[test]
         fn s5_1_a_trap_is_consumed_when_it_fires_and_goes_to_its_owner_s_graveyard() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -281,7 +277,6 @@ mod tests {
 
         #[test]
         fn r430_a_full_unit_row_the_1_cost_play_resolves_and_the_trap_neither_fires_nor_is_consumed() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[]) },
@@ -299,7 +294,6 @@ mod tests {
 
         #[test]
         fn r430_a_locked_zone_is_not_an_empty_unit_zone_the_trap_waits() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[5]) },
@@ -315,7 +309,6 @@ mod tests {
 
         #[test]
         fn r430_r64_a_zone_a_dying_reborn_unit_holds_is_not_an_empty_unit_zone_either() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[5]) },
@@ -335,7 +328,6 @@ mod tests {
 
         #[test]
         fn r430_r64_one_empty_zone_is_enough_it_fires_the_one_token_that_fits_arrives_and_attacks_the_other_fizzles() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[4]) },
@@ -354,7 +346,6 @@ mod tests {
 
         #[test]
         fn r430_a_trap_that_waited_fires_on_a_later_play_once_a_zone_is_free() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[]) },
@@ -381,7 +372,6 @@ mod tests {
 
         #[test]
         fn r430_the_radiant_face_waits_on_a_full_row_too() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": row(&[]) },
@@ -401,7 +391,6 @@ mod tests {
 
         #[test]
         fn r17_fires_after_the_played_card_has_resolved_so_its_cry_has_already_happened() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -419,7 +408,6 @@ mod tests {
 
         #[test]
         fn the_engine_cell_the_played_unit_is_on_the_field_when_the_tokens_arrive() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -438,7 +426,6 @@ mod tests {
 
         #[test]
         fn r53_each_forced_attack_is_its_own_combat_and_the_second_token_does_not_attack_a_dead_target() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -455,7 +442,6 @@ mod tests {
 
         #[test]
         fn r53_the_target_still_strikes_back() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -479,7 +465,6 @@ mod tests {
 
         #[test]
         fn r53_a_forced_attack_spends_no_exertion_and_ignores_summoning_sickness() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -499,7 +484,6 @@ mod tests {
 
         #[test]
         fn r53_a_token_that_dies_to_the_strike_back_ceases_to_exist_r11_and_the_run_stops() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -521,7 +505,6 @@ mod tests {
 
         #[test]
         fn a_played_spell_summons_the_tokens_and_nothing_attacks() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
@@ -540,7 +523,6 @@ mod tests {
 
         #[test]
         fn any_card_a_3_cost_play_fires_it() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
@@ -556,7 +538,6 @@ mod tests {
 
         #[test]
         fn r64_fills_your_board_every_empty_unlocked_unit_zone_left_to_right() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
@@ -573,7 +554,6 @@ mod tests {
 
         #[test]
         fn r64_fills_only_the_empty_zones_leaving_what_is_already_there() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": [{ "def": "core-008", "lane": 1 }] },
@@ -590,7 +570,6 @@ mod tests {
 
         #[test]
         fn r1136000_r430_one_open_zone_sets_it_off_and_the_fill_takes_the_locked_ones_too() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
@@ -612,7 +591,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_same_a_played_unit_is_still_attacked_one_combat_at_a_time_r53() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
@@ -632,7 +610,6 @@ mod tests {
 
         #[test]
         fn s4_3_first_strike_on_the_target_kills_each_forced_attacker_before_it_lands_its_hit() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
@@ -651,7 +628,6 @@ mod tests {
 
         #[test]
         fn r56_the_radiant_face_keeps_no_threshold_but_still_only_answers_the_opponent() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(spare(), json!({ "backrow": [armed(true)], "hand": ["core-006", "core-005"] })),
                 "p2": spare(),
@@ -665,7 +641,6 @@ mod tests {
 
         #[test]
         fn s5_1_the_radiant_face_is_still_a_trap_not_a_field_trap_it_is_consumed() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
@@ -691,7 +666,6 @@ mod tests {
         /// R662: with an open zone it glows for its controller only, and the opponent's cheap
         /// play sets it off.
         fn glows_with_an_open_zone(radiant: bool) {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": format!("r662-060-{}-on", face(radiant)),
                 "active": "p2",
@@ -707,7 +681,6 @@ mod tests {
 
         /// R662: with every unit zone taken it does not glow, and the play leaves it armed (R430).
         fn dark_with_every_zone_taken(radiant: bool) {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": format!("r662-060-{}-off", face(radiant)),
                 "active": "p2",

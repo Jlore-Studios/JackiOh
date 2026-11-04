@@ -45,9 +45,9 @@ const TWINSPELL: &str = "core-079";
 const SEVEN_SEVEN: &str = "core-025";
 const LUNAR_ECLIPSE: &str = "core-035";
 const MAGIC_JAMMED: &str = "core-036";
-const EUGENICS: &str = "core-042";
+const SELECTIVE_BREEDING: &str = "core-042";
 const MR_VANILLA: &str = "core-008";
-const BIGOT: &str = "core-002";
+const SPECIESIST: &str = "core-002";
 const TRANSMOGULATE: &str = "core-083";
 const UNLICENSED: &str = "core-085";
 const COLLATERAL: &str = "core-034";
@@ -566,7 +566,7 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     fn r177_r35_a_library_card_transmogulate_replaced_stays_hidden_after_its_replacement_is_exiled() {
         jackioh_cards::register_all();
         let a = library_game(SEVEN_SEVEN);
-        let b = library_game(BIGOT);
+        let b = library_game(SPECIESIST);
 
         assert_eq!(a.pile("p1", "exile").len(), 1);
         assert_eq!(
@@ -657,7 +657,7 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         fn giga(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
                 "seed": "hunt-r4-giga",
-                "p1": { "hand": [GIGA, { "def": SEVEN_SEVEN, "radiant": radiant }, BIGOT], "mana": 10, "library": [HIT_JOB] },
+                "p1": { "hand": [GIGA, { "def": SEVEN_SEVEN, "radiant": radiant }, SPECIESIST], "mana": 10, "library": [HIT_JOB] },
                 "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
             }));
             s.play(GIGA, json!({}));
@@ -673,7 +673,7 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         fn glowy(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
                 "seed": "hunt-r4-glowy",
-                "p1": { "hand": [GLOWY, { "def": SEVEN_SEVEN, "radiant": radiant }, BIGOT], "mana": 10, "library": [HIT_JOB] },
+                "p1": { "hand": [GLOWY, { "def": SEVEN_SEVEN, "radiant": radiant }, SPECIESIST], "mana": 10, "library": [HIT_JOB] },
                 "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
             }));
             let chosen = must(
@@ -722,14 +722,14 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
     }
 }
 
-mod r177_eugenics_radiant_roll_over_a_hidden_library {
+mod r177_selective_breeding_radiant_roll_over_a_hidden_library {
     use super::*;
 
-    /// Eugenics exiles every
+    /// Selective Breeding exiles every
     /// card that costs (2) or less (§8 #42, R831014), so the 7/7 is the card left; the Radiant face then
     /// makes each remaining library card Radiant (a 100% roll). The two games differ only in whether
     /// that one library card, which neither player can read (§9.1), was Radiant already.
-    fn eugenics_game(left_card_radiant: bool) -> Scenario {
+    fn selective_breeding_game(left_card_radiant: bool) -> Scenario {
         let library: Vec<Value> = (0..8)
             .map(|at| {
                 if at == 5 {
@@ -740,19 +740,19 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
             })
             .collect();
         let mut s = scenario(json!({
-            "seed": "r5-eugenics-7",
-            "p1": { "hand": [{ "def": EUGENICS, "radiant": true }, STOCKPILE], "mana": 10, "library": library },
+            "seed": "r5-selective-breeding-7",
+            "p1": { "hand": [{ "def": SELECTIVE_BREEDING, "radiant": true }, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
         }));
-        s.play(EUGENICS, json!({}));
+        s.play(SELECTIVE_BREEDING, json!({}));
         s
     }
 
     #[test]
     fn r177_r97_42_rolls_every_remaining_library_card_so_its_cues_do_not_count_the_ones_already_radiant() {
         jackioh_cards::register_all();
-        let base = eugenics_game(false);
-        let radiant = eugenics_game(true);
+        let base = selective_breeding_game(false);
+        let radiant = selective_breeding_game(true);
 
         let ids =
             |s: &Scenario| -> Vec<String> { s.pile("p1", "exile").into_iter().map(|card| card.id).collect() };

@@ -376,8 +376,7 @@ func Append(gh gh.Client, number int, text string, sleep func(float64) /* = time
 		if old == "" && sha == "" && gh.BranchSHA(Branch) == "" {
 			created := false
 			if exc, ok := herr.Catch[*herr.GitHubError](func() {
-				gh.CreateOrphanBranch(Branch, path, updated, fmt.Sprintf("journal #%d: start [skip ci]", number),
-					config.NoDeploy)
+				gh.CreateOrphanBranch(Branch, path, updated, fmt.Sprintf("journal #%d: start [skip ci]", number), nil)
 				created = true
 			}); ok && exc.Status != 422 { // 422: another run made the branch first
 				herr.Raise(exc)

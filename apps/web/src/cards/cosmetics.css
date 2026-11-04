@@ -33,10 +33,14 @@
  * under a pen tip, through a slanted, feathered mask, then bursts, slashes a flourish under itself and
  * shines now and then, its timings the custom properties FullArtSignature.tsx sets.
  *
- * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2725003: on the normal
- * face the signature sits over the lower part of the art window, inside it, clear of the name ribbon and the
- * rules text. R2725004: no part of it is Radiant's gold: the ink is a cool silver and the pen's glow and the
- * landing's burst white.
+ * R2725000: the same rules draw the Full art version's Animated and Signature augments. R2949000: Signature signs
+ * only on Full art beside Animated, never on the normal face. R2725004: no part of it is Radiant's gold: the ink is
+ * a cool silver and the pen's glow and the landing's burst white.
+ *
+ * R2940001: the Sketch version, after the full-art tiers, rings a base face's art window with a pencil line and a
+ * smudge, in the palette's slates, no gold; its edge, hatched in graphite on paper, and its graphite bezel are
+ * cards.css's. A Radiant face keeps its gold-foil frame, and R2940002 a worn border its edge and bezel, the ring
+ * only taking its colour.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -800,14 +804,6 @@
   }
 }
 
-/* R2725003: on the normal face the signature is the art window's, over its lower part. */
-.cf .cf-art-frame > .cf-signature {
-  top: 58%;
-  left: 6%;
-  right: 6%;
-  height: 36%;
-}
-
 .cf-signature > svg {
   display: block;
   width: 100%;
@@ -882,6 +878,17 @@
 
 .cf-signature-burst {
   fill: var(--pal-white);
+}
+
+/* ---------------------------------------------------------------------------- sketch --- */
+
+/* R2940001: the window's ring drawn as a pencil line, a smudge offset under it, in the bezel's colour: graphite
+   (cards.css, beside the face's other edges, since this sheet sets an edge only per border) or a worn border's. */
+.cf[data-version="version-sketch"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.45cqw var(--cf-bezel),
+    0.35cqw 0.25cqw 0 0.55cqw color-mix(in srgb, var(--pal-slate-700) 40%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent);
 }
 
 /* ----------------------------------------------------------------------------- motion --- */

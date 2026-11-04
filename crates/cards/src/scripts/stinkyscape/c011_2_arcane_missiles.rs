@@ -73,7 +73,6 @@ mod tests {
         use super::*;
 
         fn board(radiant: bool, seed: &str, field: Value) -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "seed": seed,
                 "p1": { "hand": [{ "def": MISSILES, "radiant": radiant }, FILLER], "field": [VANILLA] },
@@ -132,7 +131,6 @@ mod tests {
 
         #[test]
         fn with_no_enemy_unit_every_hit_lands_on_the_enemy_hero() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [MISSILES, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -146,7 +144,6 @@ mod tests {
 
         #[test]
         fn spell_damage_raises_each_hit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [MISSILES, FILLER], "field": [SOLARIUS] },
                 "p2": { "hand": [FILLER] },
@@ -160,7 +157,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_makes_each_hit_2() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [MISSILES, FILLER] },
                 "p2": { "hand": [FILLER] },
@@ -178,7 +174,6 @@ mod tests {
 
         #[test]
         fn six_hits_of_1_each_drawn_anew() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "missiles-radiant",
                 "p1": { "hand": [{ "def": MISSILES, "radiant": true }, FILLER], "field": [VANILLA] },

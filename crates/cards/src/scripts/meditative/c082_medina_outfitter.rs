@@ -36,6 +36,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -74,7 +76,6 @@ mod tests {
 
             #[test]
             fn r386_r440_its_cry_buffs_each_card_in_your_hand_once_an_immutable_one_cued_none() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "outfitter",
                     "p1": {
@@ -107,7 +108,6 @@ mod tests {
 
             #[test]
             fn an_empty_hand_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "outfitter-empty",
                     "p1": { "mana": 10, "hand": [OUTFITTER], "library": filler(4) },
@@ -126,7 +126,6 @@ mod tests {
 
             #[test]
             fn radiant_three_buffs_each() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "outfitter-radiant",
                     "p1": {
@@ -147,7 +146,6 @@ mod tests {
 
         #[test]
         fn r749_times_is_tuned_on_the_radiant_face_only() {
-            crate::register_all();
             let base = scenario(json!({
                 "seed": "outfitter-tuned",
                 "p1": { "hand": [OUTFITTER], "library": filler(4) },

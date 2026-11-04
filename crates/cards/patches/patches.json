@@ -20742,5 +20742,116 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11h",
+    "date": "2026-11-03",
+    "title": "Patch: card versions and augments: Full art on many more cards, Animated and Signature on any version",
+    "source": "#2725",
+    "notes": "A card now wears one version, its normal face or the Full art version (Legendary, up from the full arts' Epic), and the augments layered on it, Animated (Epic) and Signature (Mythic), each a per-card cosmetic owned card by card like a foil and offered by data in the registry: every Rare and Epic Unit, every Legendary and Mythic card and the 21 full-art cards, 243 cards in every shipped set, Animated on all but the four Legacy cards, whose picture never moves (R2725000, R2725001, R2725003). A card pick names its version in `fullArt` and lists its `augments` (migration 0079); the server holds each part to ownership and the offer, a 400 otherwise, freezes it in the loadout and shows it to the other seat. The 84 full arts before it are retired: kept by their owners, dropped, sold and offered by nothing, and each counts as owning the version and augments it combines on its card, so a pick made before looks as it did (R2725002). Animated and Signature layer on the normal face and on Full art, the signature over the art window on the normal face (R2725003); the signature's ink is silver and its pen glow and burst white, clear of Radiant's gold (R2725004). The three new entries are granted to no account. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Card versions and augments",
+      "new": [
+        "Full art is now a version many more cards can wear: every Rare and Epic Unit and every Legendary and Mythic card. It is Legendary, rarer than before.",
+        "Animated (Epic) and Signature (Mythic) are now augments: earn one on a card and layer it on whichever version that card wears, its normal face too."
+      ],
+      "balance": [],
+      "changes": [
+        "A card's cosmetics in the Collection now pick a version, Normal or Full art, and toggle the Animated and Signature augments on top.",
+        "A full art you already own still counts: it gives you the Full art version and the augments it combined, on its card. The old full arts no longer drop.",
+        "The signature is now written in silver with a white pen glow, so it never looks like a Radiant card's gold."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3343de55d27371973091b40e2a58bb52d794d23f"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11i",
+    "date": "2026-11-03",
+    "title": "Patch: Signature only on Full art + Animated, with its own art and motion; Full art offered on a varied set of cards",
+    "source": "#2949",
+    "notes": "The owner's answers to #2725's open questions 2 and 3. Signature (Mythic) stays its own augment, owned card by card, but is worn only beside the Full art version and the Animated augment, each owned and offered on the card: the server refuses a pick naming it without both with a 400 and writes nothing, a change that leaves a held one without them drops it, and a match freezes it only beside both (R2949000). With it on, the face shows the Signature look: the Full art face with a picture of its own, the card's painter seeded apart, and a motion of its own with silver ink, plus the signature, base and Radiant, no gold (R2725004); the signature over the normal face's art window is gone, and a retired Mythic, which owns all three, now shows the Signature look. An offer clause may take a seeded share of its cards: Full art's offer narrows from 243 cards to 157, 60 in 100 of its Rare and Epic Units and its Legendaries and Mythics with the 21 full-art cards always in, at least its floor in every shipped set; Signature is offered where both are (155), and Animated does not change (R2949001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Signature on Full art and Animated",
+      "new": [
+        "Signature now has a look of its own: a full art and an animation that no other version has, with the card's name signed across it."
+      ],
+      "balance": [],
+      "changes": [
+        "Signature is worn only on a card that also wears Full art and Animated. In the Collection it waits until both are on, and turning either off turns it off.",
+        "Signature no longer signs the normal card face.",
+        "Full art is now offered on a varied set of cards rather than every Rare and Epic Unit and every Legendary and Mythic, so cards differ. Every card that had a full art before keeps it.",
+        "A signed full art you already own still counts as all three, and now shows the Signature look."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "71a4dec4f5cd6fe034d9e04317c6f7b936a99c4a"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11j",
+    "date": "2026-11-03",
+    "title": "Patch: the Starship's moment: pieces bolt on as it fuses, and a countdown, ignition and lift-off as it launches",
+    "source": "#2801",
+    "notes": "R2801000: the Dormant Starship's face bolts on a hull plate for each piece fused into it (apps/web/src/cards/StarshipHull.tsx); the fuse and launch animations are the effects layer's. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "The Starship's moment",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The Dormant Starship shows a hull plate for each piece fused into it, and each piece flies over and bolts on as it fuses.",
+        "Launching the Starship plays a 3-2-1 countdown, ignition and lift-off, bigger the more pieces it holds; tap to skip it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "be2d49fcb2ecd696785ac13a72a534c2d2da40c7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11k",
+    "date": "2026-11-03",
+    "title": "Patch: Alt art, Sketch and Alt full art card versions",
+    "source": "#2940",
+    "notes": "Part 2 of #2725's ten new card versions (tracker #2729): three versions that draw the card's subject anew, each per card, granted to no account, and offered on a seeded share of cards of its own (R2940000). Alt art (Rare, 310 cards: half of every card but the Legacy ones) re-seeds the card's painter in the normal frame, keeping its subject; the Sketch (Rare, 145 cards: Units and Legendary and Mythic cards) draws the normal picture in graphite on slate paper, its base frame a pencilled outline; Alt full art (Legendary chase, 84 cards: Epic Units and Legendary and Mythic cards but the Legacy ones) is Alt art's picture across the whole face (R2940001). Animated, a foil, a finish and a border layer on each; Signature on none, by R2949000's rule (R2940002). A Radiant face keeps every Radiant mark, and no sketch colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Alt art, Sketch and Alt full art",
+      "new": [
+        "Alt art: a new picture of the card in its normal frame, offered on about half of all cards.",
+        "Sketch: the card's art as a pencil-and-ink sketch on paper, with a pencilled frame, offered on many Units and Legendary and Mythic cards.",
+        "Alt full art: the Alt art picture across the whole card, a Legendary chase on some Epic Units and Legendary and Mythic cards."
+      ],
+      "balance": [],
+      "changes": [
+        "Each new version goes to its own mix of cards, so cards differ in what they can wear. Animated, foils, finishes and borders work on all three; Signature stays on Full art with Animated."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "c95f4c3ea54434aa69b22ae57b199f7972b9202a"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

@@ -58,6 +58,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -287,7 +289,6 @@ mod tests {
 
     #[test]
     fn r1081000_a_felinor_standing_in_the_backrow_keeps_the_aura() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [PRIME, DUPE], "hand": [FILLER] },
             "p2": { "hand": [FILLER] },

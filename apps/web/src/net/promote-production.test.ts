@@ -1,7 +1,9 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: production
-// moves by hand only. `/promote` on the one production issue opens a pull request of a commit of main
-// into production, the daily super run tests it, and it merges once that run passed; `/skip-super`
-// with a reason merges at once (#2750, the owner's calls of 2026-11-02). Each case runs the real
+// follows the super run. When the daily super run on main passes, the commit it tested merges into
+// production at once (the daily promotion, the owners' call of 2026-11-03). `/promote` on the one
+// production issue goes sooner: it opens a pull request of a commit of main into production, the
+// super run tests it, and it merges once that run passed; `/skip-super` with a reason merges at once
+// (#2750, the owner's calls of 2026-11-02). Each case runs the real
 // script in a fresh clone of a throwaway "origin", with a stand-in for `gh` (below) that keeps issues,
 // pull requests, comments, reactions and CI and super runs in a JSON file and does the merge for real
 // with git, so what production ends up holding is what GitHub would leave it.
@@ -72,7 +74,10 @@ if ((st.fail || []).some((prefix) => argv.join(" ").startsWith(prefix))) {
 const [a, b] = pos;
 // Which token each call went out with, and what it was: "pr merge", "issue close", "api DELETE".
 st.tokens.push(process.env.GH_TOKEN + " " + a + " " + (a === "api" ? (f("-X") || "GET") : b));
-if (a === "run" && b === "list" && f("--workflow") === "super.yml") {
+if (a === "run" && b === "list" && f("--workflow") === "super.yml" && f("--commit") === undefined) {
+  // The super runs on main, newest first: the daily promotion's.
+  out([...st.mainSuper].reverse().filter((r) => f("--status") === undefined || r.conclusion === f("--status")));
+} else if (a === "run" && b === "list" && f("--workflow") === "super.yml") {
   // The super run on a promotion pull request's head commit, newest first.
   const r = st.super[f("--commit")];
   out(r ? [r] : []);
@@ -149,6 +154,7 @@ interface Comment { id: number; login: string; type: string; assoc: string; at: 
 interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean; comments: string[] }
 interface SuperRun { databaseId: number; attempt: number; status: string; conclusion: string | null; url: string }
+interface MainSuperRun { databaseId: number; headSha: string; conclusion: string; url: string }
 interface Gh {
   next: number;
   nextComment: number;
@@ -161,6 +167,7 @@ interface Gh {
   running: string[];
   newestGreen: string;
   super: Record<string, SuperRun>;
+  mainSuper: MainSuperRun[];
   failMerges: number;
   fail: string[];
   log: string[];
@@ -223,7 +230,7 @@ function world(): World {
   git(root, "init", "-q", "--bare", "-b", "main", w.origin);
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
-  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", super: {}, failMerges: 0, fail: [], log: [], tokens: [] };
+  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", super: {}, mainSuper: [], failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
   commit(w, "c1", { [PATCHES]: patches("v0.2.0a", "v0.2.0b"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
@@ -281,6 +288,7 @@ const pr = (w: World, number: number): Pr => {
 const openIssues = (w: World): Issue[] => gh(w).issues.filter((i) => i.state === "open");
 const openPrs = (w: World): Pr[] => gh(w).prs.filter((p) => p.state === "open");
 const marker = (i: Issue): string => /promote-production (last=\d+ reported=[0-9.-]+)/u.exec(i.body)?.[1] ?? "";
+const daily = (i: Issue): string => /promote-production last=\d+ reported=[0-9.-]+ daily=([0-9-]+) -->/u.exec(i.body)?.[1] ?? "";
 const production = (w: World): string => git(w.origin, "rev-parse", "refs/heads/production");
 const tree = (w: World, rev: string): string => git(w.origin, "rev-parse", `${rev}^{tree}`);
 const head = (w: World, p: Pr): string => git(w.origin, "rev-parse", `refs/heads/${p.head}`);
@@ -299,6 +307,12 @@ const reactions = (w: World, id: number): string[] => gh(w).reactions.filter((r)
 const superRun = (w: World, sha: string, conclusion: string | null, attempt = 1, status = "completed"): void =>
   edit(w, (s) => {
     s.super[sha] = { databaseId: 77, attempt, status, conclusion, url: "https://github.com/acme/game/actions/runs/77" };
+  });
+
+/** A super run on main, as `gh run list --workflow super.yml --branch main` reports it. */
+const mainRun = (w: World, sha: string, id: number, conclusion = "success"): void =>
+  edit(w, (s) => {
+    s.mainSuper.push({ databaseId: id, headSha: sha, conclusion, url: `https://github.com/acme/game/actions/runs/${id}` });
   });
 
 /** The first run, which opens the production issue, #1; most cases start from there. */
@@ -330,10 +344,11 @@ describe("the production issue", () => {
     expect(rest).toEqual([]);
     expect(only).toMatchObject({ number: 1, title: "Production: 2 commits on main are not live yet", labels: [LABEL, "human"], assignees: PEOPLE });
     expect(marker(only as Issue)).toBe("last=0 reported=-");
+    expect(daily(only as Issue)).toBe("-");
     for (const command of ["`/promote`", "`/promote <sha>`", "`/skip-super <reason>`", "`/cancel`"]) {
       expect(only?.body).toContain(`| ${command} |`);
     }
-    expect(only?.body).toContain("**Production** moves only when someone comments `/promote` here");
+    expect(only?.body).toContain("**Production** promotes itself once a day: when the daily super run on `main` passes every job, the commit it tested merges into `production` and deploys.");
     expect(gh(w).labels).toEqual([LABEL]);
     expect(gh(w).prs).toEqual([]);
     expect(production(w)).toBe(before);
@@ -386,8 +401,8 @@ describe("the production issue", () => {
   });
 });
 
-describe("nothing moves production by itself", () => {
-  it("a green CI run on main only brings the queue up to date", () => {
+describe("a green CI run on main", () => {
+  it("only brings the queue up to date", () => {
     const w = started();
     const before = production(w);
     commit(w, "c4", { "app.txt": "four\n" });
@@ -398,14 +413,110 @@ describe("nothing moves production by itself", () => {
     expect(issue(w, 1).title).toBe("Production: 3 commits on main are not live yet");
   });
 
-  it("refuses a scheduled run, or any event it does not know", () => {
+  it("refuses a scheduled run, or any event it does not know: the daily promotion runs off super's own schedule", () => {
     const w = world();
     for (const event of ["schedule", "push"]) {
       const r = run(w, event);
       expect(r.status).not.toBe(0);
-      expect(r.text).toContain("production moves only on /promote");
+      expect(r.text).toContain(`does not handle the ${event} event: production follows a passing super run`);
     }
     expect(gh(w).issues).toEqual([]);
+  });
+});
+
+describe("the daily promotion", () => {
+  it("merges the commit a passing super run on main tested, at once, with no second super run, and starts the deploy", () => {
+    const w = started();
+    mainRun(w, w.sha.c3 as string, 501);
+    edit(w, (s) => {
+      s.tokens = [];
+    });
+    const r = ok(run(w, "workflow_run", { GH_TOKEN: "actions", PROMOTE_TOKEN: "bot" }));
+    expect(r.output).toContain("promoted=true");
+    const p = pr(w, 2);
+    expect(p).toMatchObject({ base: "production", state: "closed", merged: true, labels: [LABEL, "human"], assignees: PEOPLE });
+    expect(p.body).toContain("The daily promotion: the super run on `main` passed every job on this commit ([run](https://github.com/acme/game/actions/runs/501)), so this merges at once");
+    expect(p.body).toContain("- Started by: the daily promotion\n");
+    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
+    expect(lastReply(w)).toContain(
+      `Merged to production in #2, the daily promotion: the super run on \`main\` passed every job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)). 2 commit(s), catalog v0.2.0b; the deploy follows.`,
+    );
+    expect(daily(issue(w, 1))).toBe("501");
+    expect(issue(w, 1).title).toBe("Production: everything on main is live");
+    // Opened with the Actions token, whose pull request starts no workflow, so super does not run on
+    // it again; moved with the bot's.
+    const calls = (token: string): string[] =>
+      gh(w).tokens.filter((c) => c.startsWith(`${token} `)).map((c) => c.slice(token.length + 1));
+    expect(calls("actions")).toContain("pr create");
+    expect(calls("bot")).toEqual(["pr merge", "api DELETE"]);
+  });
+
+  it("acts on each passing run once, so a /cancel or a newer commit never brings it back", () => {
+    const w = started();
+    mainRun(w, w.sha.c2 as string, 501);
+    ok(run(w, "workflow_run"));
+    expect(tree(w, "production")).toBe(tree(w, w.sha.c2 as string));
+    commit(w, "c4", { "app.txt": "four\n" });
+    const r = ok(run(w, "workflow_run"));
+    expect(r.output).not.toContain("promoted=true");
+    expect(gh(w).prs).toHaveLength(1);
+    mainRun(w, w.sha.c4 as string, 502);
+    expect(ok(run(w, "workflow_run")).output).toContain("promoted=true");
+    expect(tree(w, "production")).toBe(tree(w, w.sha.c4 as string));
+    expect(daily(issue(w, 1))).toBe("502");
+  });
+
+  it("ignores a red run on main, and a passing one on a commit production already has", () => {
+    const w = started();
+    mainRun(w, w.sha.c3 as string, 501, "failure");
+    expect(ok(run(w, "workflow_run")).output).not.toContain("promoted=true");
+    expect(gh(w).prs).toEqual([]);
+    mainRun(w, w.sha.c1 as string, 502);
+    expect(ok(run(w, "workflow_run")).output).not.toContain("promoted=true");
+    expect(gh(w).prs).toEqual([]);
+    expect(daily(issue(w, 1))).toBe("502");
+  });
+
+  it("says why when the commit it tested has not passed CI, and moves nothing", () => {
+    const w = started();
+    const red = commit(w, "c4", { "app.txt": "four\n" }, false);
+    mainRun(w, red, 501);
+    expect(ok(run(w, "workflow_run")).output).not.toContain("promoted=true");
+    expect(gh(w).prs).toEqual([]);
+    expect(lastReply(w)).toBe(`The super run on \`main\` passed on \`${short(red, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)), but it is not promoted: \`${short(red, 12)}\` has no passing push-to-main CI run.`);
+  });
+
+  it("merges an open /promote of the same commit, leaves one of a newer commit to its own run, and supersedes an older one", () => {
+    const same = promoted();
+    mainRun(same, same.sha.c3 as string, 501);
+    expect(ok(run(same, "workflow_run")).output).toContain("promoted=true");
+    expect(pr(same, 2).merged).toBe(true);
+
+    const newer = promoted();
+    mainRun(newer, newer.sha.c2 as string, 501);
+    expect(ok(run(newer, "workflow_run")).output).not.toContain("promoted=true");
+    expect(pr(newer, 2).state).toBe("open");
+    expect(daily(issue(newer, 1))).toBe("501");
+
+    const older = started();
+    ok(say(older, `/promote ${short(older.sha.c2, 12)}`).run);
+    mainRun(older, older.sha.c3 as string, 501);
+    expect(ok(run(older, "workflow_run")).output).toContain("promoted=true");
+    expect(pr(older, 2)).toMatchObject({ state: "closed", merged: false });
+    expect(pr(older, 3)).toMatchObject({ merged: true });
+    expect(tree(older, "production")).toBe(tree(older, older.sha.c3 as string));
+  });
+
+  it("takes over an issue from before it, whose state line has no `daily`", () => {
+    const w = started();
+    edit(w, (s) => {
+      const first = s.issues[0];
+      if (first !== undefined) first.body = first.body.replace(/ daily=[0-9-]+/u, "");
+    });
+    mainRun(w, w.sha.c3 as string, 501);
+    expect(ok(run(w, "workflow_run")).output).toContain("promoted=true");
+    expect(daily(issue(w, 1))).toBe("501");
   });
 });
 
@@ -637,12 +748,14 @@ describe("the commands", () => {
     expect(gh(w).prs).toHaveLength(1);
   });
 
-  it("answers /hold, /resume and /delay that production moves only on /promote", () => {
+  it("answers /hold, /resume and /delay that there is nothing to hold: production follows the super run", () => {
     const w = started();
     for (const command of ["/hold", "/resume", "/delay 3h"]) {
       const { id } = say(w, command);
       expect(reactions(w, id)).toEqual(["confused"]);
-      expect(lastReply(w)).toBe("Production no longer merges by itself, so there is nothing to hold, resume or delay: it moves only when someone comments `/promote`.");
+      expect(lastReply(w)).toBe(
+        "There is nothing to hold, resume or delay: production follows the super run, promoting itself when the daily run on `main` passes, or a `/promote` here once its own run passes. `/cancel` closes an open promotion pull request.",
+      );
     }
     expect(gh(w).prs).toEqual([]);
   });
@@ -901,8 +1014,12 @@ describe("the workflow", () => {
     expect(WORKFLOW).toContain(`contains(github.event.issue.labels.*.name, '${LABEL}')`);
   });
 
-  it("has no schedule, and wakes on green CI on main and on super runs on promotion pull requests", () => {
+  it("has no schedule of its own, and wakes on green CI on main, on super runs passing on main and on super runs on promotion pull requests", () => {
     expect(WORKFLOW).not.toMatch(/^ {2}schedule:/mu);
+    expect(SUPER).toMatch(/^ {2}schedule:\n {4}- cron: /mu);
+    expect(WORKFLOW).toContain(
+      "github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'\n            && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success'",
+    );
     expect(WORKFLOW).toMatch(/^ {2}workflow_run:\n {4}workflows: \[CI, super\]\n {4}types: \[completed\]\n {4}branches: \[main, "promote\/\*\*"\]\n/mu);
     expect(WORKFLOW).toContain("github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'");
     expect(WORKFLOW).toContain("startsWith(github.event.workflow_run.head_branch, 'promote/')");
@@ -936,6 +1053,19 @@ describe("the workflow", () => {
 describe("the super run as production's gate", () => {
   it("runs on every pull request into production", () => {
     expect(SUPER).toMatch(/^ {2}pull_request:\n {4}branches: \[production\]\n/mu);
+  });
+
+  it("hands main's red run to the night bot as high priority, since production waits for a run on main that passes", () => {
+    expect(SUPER).toContain('--add-assignee "$BOT_LOGIN" --add-label "bot:build" \\\n              --add-label "priority:high" \\\n');
+  });
+
+  it("hands a failed promotion or deploy to Squishy, and closes it when a deploy passes", () => {
+    expect(WORKFLOW).toMatch(/^ {2}report:\n {4}name: report\n {4}needs: \[promote, deploy\]\n/mu);
+    expect(WORKFLOW).toContain('PROMOTION_TITLE: "CI: production promotion failed"');
+    expect(WORKFLOW).toContain("SQUISHY_LOGIN: squishy-squooby");
+    expect(WORKFLOW).toContain('SQUISHY_QUEUE: "squishy:build"');
+    expect(WORKFLOW).toContain('--add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE"');
+    expect(WORKFLOW).toContain('if [ "$DEPLOY" = success ]; then');
   });
 
   it("reports a promotion's red run under the title the script names, and hands it to the night bot first", () => {

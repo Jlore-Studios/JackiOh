@@ -315,7 +315,6 @@ mod tests {
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_exiles_the_other_faction_cards_alone_the_graveyard_too() {
             crate::under_kept(SWEAR, super::super::script_v0_5_11(), || {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [SWEAR, FILLER, SCORNBOI, VANGUARD],

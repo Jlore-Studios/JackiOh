@@ -75,6 +75,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const BOUNCE_ALL: &str = "bounce all units";
     const BOUNCE_ENEMY: &str = "bounce all enemy units";
     const DESTROY_ENEMY: &str = "destroy all enemy units";
@@ -100,7 +102,6 @@ mod tests {
 
         #[test]
         fn bounces_every_unit_on_both_sides_to_its_controller_s_hand_s6_3_bounce_r747() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017", "core-010"], "field": ["core-012"], "mana": 4 },
                 "p2": { "field": ["core-019", "core-020"] }
@@ -132,7 +133,6 @@ mod tests {
 
         #[test]
         fn r11_a_bounced_unit_token_ceases_to_exist_and_reaches_no_hand() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017", "core-010"], "field": ["core-t-rush"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
@@ -174,7 +174,6 @@ mod tests {
 
         #[test]
         fn declares_no_mode_the_base_face_bounces_both_sides_unconditionally() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-017", "core-010"], "mana": 4 }, "p2": { "field": ["core-019"] } }));
 
             s.play("core-017", json!({}));
@@ -190,7 +189,6 @@ mod tests {
 
         #[test]
         fn r81_mode_bounce_all_units_bounces_both_sides_then_draws_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017"], "field": ["core-012"], "library": ["core-010"], "mana": 4 },
                 "p2": { "field": ["core-019", "core-020"] }
@@ -210,7 +208,6 @@ mod tests {
 
         #[test]
         fn r81_mode_bounce_all_enemy_units_spares_your_own_units_then_draws_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017"], "field": ["core-012", "core-025"], "library": ["core-010"], "mana": 4 },
                 "p2": { "field": ["core-019", "core-020"] }
@@ -232,7 +229,6 @@ mod tests {
 
         #[test]
         fn r81_mode_destroy_all_enemy_units_destroys_them_instead_of_bouncing_them_then_draws_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017"], "field": ["core-012"], "library": ["core-010"], "mana": 4 },
                 "p2": { "field": ["core-019", "core-020"] }
@@ -254,7 +250,6 @@ mod tests {
 
         #[test]
         fn r46_the_destroy_mode_leaves_an_indestructible_enemy_standing_and_still_draws_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017"], "library": ["core-010"], "mana": 4 },
                 "p2": { "field": [{ "def": "core-025", "radiant": true }, "core-019"] }
@@ -272,7 +267,6 @@ mod tests {
 
         #[test]
         fn r11_the_bounce_modes_still_make_a_unit_token_cease_to_exist() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017"], "library": ["core-010"], "mana": 4 },
                 "p2": { "field": ["core-t-rush"] }
@@ -287,7 +281,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_draws_2_and_a_degrade_finds_the_draw_at_its_floor_of_1() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-017"], "library": ["core-010", "core-011"], "mana": 4 },
                 "p2": { "field": ["core-t-rush"] }

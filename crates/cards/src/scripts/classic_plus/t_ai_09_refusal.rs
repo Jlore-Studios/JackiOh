@@ -96,6 +96,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const REFUSAL: &str = "classicplus-t-ai-09";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
@@ -120,7 +122,6 @@ mod tests {
     }
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "active": "p2",
             "p1": merged(
@@ -269,7 +270,6 @@ mod tests {
 
             #[test]
             fn your_own_spells_never_set_it_off() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, VANILLA], "field": [MENACE], "backrow": [refusal(false, 2)], "library": [VANILLA], "mana": 8 },
                     "p2": { "hand": [VANILLA], "library": [VANILLA] },

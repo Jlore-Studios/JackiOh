@@ -27,7 +27,6 @@ mod tests {
 
     #[test]
     fn keywords_only_poisonous_destroys_the_unit_it_damages() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": READY, "lane": 1 }], "hand": [FILLER] },
             "p2": { "field": [{ "def": MENACE, "lane": 1 }], "hand": [FILLER] },
@@ -41,7 +40,6 @@ mod tests {
 
     #[test]
     fn r11_gone_when_it_leaves_the_field() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": READY, "lane": 1 }], "hand": ["core-016", FILLER] },
             "p2": { "hand": [FILLER] },
@@ -53,7 +51,6 @@ mod tests {
 
     #[test]
     fn radiant_4_2_divine_shield() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": READY, "lane": 1, "radiant": true }] },
             "p2": { "hand": [FILLER] },

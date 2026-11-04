@@ -52,6 +52,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -82,7 +84,6 @@ mod tests {
 
             #[test]
             fn r101_with_no_unit_to_tribute_it_cant_be_played() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TITAN, ANCHOR], "library": [A] }, "p2": { "hand": [ANCHOR] } }));
 
                 s.expect_refused_with(|s| s.play(TITAN, json!({})), "Tribute");
@@ -91,7 +92,6 @@ mod tests {
 
             #[test]
             fn tribute_1_then_its_cry_draw_1_and_heal_your_hero_3() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [VANILLA], "library": [A, B], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
@@ -107,7 +107,6 @@ mod tests {
 
             #[test]
             fn s6_3_the_heal_has_no_cap_a_hero_at_30_reaches_33() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [VANILLA], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -120,7 +119,6 @@ mod tests {
 
             #[test]
             fn r101_a_sheep_token_overpays_the_tribute_1_alone() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [SHEEP], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -134,7 +132,6 @@ mod tests {
 
             #[test]
             fn r101_only_a_card_that_says_so_tributes_the_opponents_units_an_enemy_unit_cant_pay_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [VANILLA], "library": [A] },
                     "p2": { "hand": [ANCHOR], "field": [TEMPO] },
@@ -146,7 +143,6 @@ mod tests {
 
             #[test]
             fn r391_on_a_full_board_it_may_take_the_zone_its_tribute_empties() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [MENACE, MENACE, VANILLA, MENACE, MENACE], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -159,7 +155,6 @@ mod tests {
 
             #[test]
             fn r391_r64_on_a_full_board_it_cant_take_the_zone_of_a_tributed_reborn_unit_which_is_reserved() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [MENACE, MENACE, DEFENDER, MENACE, MENACE], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -171,7 +166,6 @@ mod tests {
 
             #[test]
             fn r391_r13_on_a_full_board_it_never_takes_the_zone_of_a_tributed_stack_piles_top_the_card_beneath_resumes() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [TITAN, ANCHOR],
@@ -187,7 +181,6 @@ mod tests {
 
             #[test]
             fn r391_on_a_full_board_it_cant_take_a_locked_zone_even_the_one_its_tribute_empties() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [MENACE, MENACE, VANILLA, MENACE, MENACE], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -201,7 +194,6 @@ mod tests {
 
             #[test]
             fn r2285000_whenever_it_attacks_it_draws_1_and_heals_your_hero_3_before_the_damage() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [TITAN], "library": [A, B], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
@@ -216,7 +208,6 @@ mod tests {
 
             #[test]
             fn r53_a_forced_attack_is_an_attack_too_moths_to_the_flames_start_of_turn_makes_it_attack_and_it_draws_and_heals() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [TITAN], "library": [A, B], "health": 20 },
                     "p2": { "hand": [ANCHOR], "field": [MOTHS], "library": [C] },
@@ -232,7 +223,6 @@ mod tests {
 
             #[test]
             fn r2285000_it_draws_and_heals_before_the_combat_so_a_titan_that_dies_in_it_has_drawn_and_healed() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [TITAN], "library": [A, B], "health": 20 },
                     "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -248,7 +238,6 @@ mod tests {
 
             #[test]
             fn defending_does_nothing_an_attack_on_it_draws_and_heals_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ANCHOR], "field": [TITAN], "library": [A], "health": 20 },
@@ -263,7 +252,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_draw_makes_it_draw_2_of_heal_heal_4() {
-                crate::register_all();
                 let mut draw_up = scenario(json!({
                     "p1": { "hand": [TITAN, ANCHOR], "field": [VANILLA], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
@@ -288,7 +276,6 @@ mod tests {
 
             #[test]
             fn is_a_12_12_whose_cry_draws_2_and_heals_6() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TITAN, "radiant": true }, ANCHOR], "field": [VANILLA], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
@@ -303,7 +290,6 @@ mod tests {
 
             #[test]
             fn whenever_it_attacks_it_draws_2_and_heals_6() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [{ "def": TITAN, "radiant": true }], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
@@ -317,7 +303,6 @@ mod tests {
 
             #[test]
             fn r101_still_needs_its_tribute_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TITAN, "radiant": true }, ANCHOR], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
@@ -328,7 +313,6 @@ mod tests {
 
             #[test]
             fn r386_an_upgrade_of_heal_on_the_radiant_face_steps_6_to_7() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ANCHOR], "field": [{ "def": TITAN, "radiant": true }], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },

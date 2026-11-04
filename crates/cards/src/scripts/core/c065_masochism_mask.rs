@@ -140,6 +140,8 @@ mod tests {
     use super::script;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const MASK: &str = "core-065"; // Field Spell, 2, Quickdraw
@@ -175,7 +177,6 @@ mod tests {
     #[test]
     fn r386_an_upgrade_offers_lose_2_and_a_degrade_lose_4_and_the_answer_loses_that() {
         for (upgrade, loss) in [(true, 2), (false, 4)] {
-            crate::register_all();
             let mut s = mask_scenario(false);
             let moved = if upgrade {
                 crate::upgrade_number(&mut s, MASK, "loss")
@@ -205,7 +206,6 @@ mod tests {
 
         #[test]
         fn s10_6_the_start_of_your_turn_opens_a_mode_prompt_with_the_three_options() {
-            crate::register_all();
             let mut s = mask_scenario(false);
             s.start_turn();
 
@@ -221,7 +221,6 @@ mod tests {
 
         #[test]
         fn s6_2_it_does_not_ask_on_the_opponent_s_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [MASK], "library": LIBRARY },
@@ -234,7 +233,6 @@ mod tests {
 
         #[test]
         fn r18_losing_3_health_is_not_damage_so_armor_does_not_reduce_it() {
-            crate::register_all();
             let mut s = mask_scenario(false);
             s.start_turn().answer(json!(LOSE_THREE));
 
@@ -246,7 +244,6 @@ mod tests {
 
         #[test]
         fn exiles_the_bottom_card_of_your_library() {
-            crate::register_all();
             let mut s = mask_scenario(false);
             s.start_turn().answer(json!(EXILE_BOTTOM));
 
@@ -258,7 +255,6 @@ mod tests {
 
         #[test]
         fn summons_a_spikey_pillow() {
-            crate::register_all();
             let mut s = mask_scenario(false);
             s.start_turn().answer(json!(SUMMON_PILLOW));
 
@@ -269,7 +265,6 @@ mod tests {
 
         #[test]
         fn s10_6_radiant_asks_twice_with_nothing_among_the_four_options() {
-            crate::register_all();
             let mut s = mask_scenario(true);
             s.start_turn();
 
@@ -290,7 +285,6 @@ mod tests {
 
         #[test]
         fn s10_6_radiant_may_pick_the_same_option_twice_two_spikey_pillows() {
-            crate::register_all();
             let mut s = mask_scenario(true);
             s.start_turn().answer(json!(SUMMON_PILLOW)).answer(json!(SUMMON_PILLOW));
 
@@ -301,7 +295,6 @@ mod tests {
 
         #[test]
         fn s10_6_radiant_may_pick_the_same_option_twice_6_health() {
-            crate::register_all();
             let mut s = mask_scenario(true);
             s.start_turn().answer(json!(LOSE_THREE)).answer(json!(LOSE_THREE));
 
@@ -311,7 +304,6 @@ mod tests {
 
         #[test]
         fn s10_6_radiant_resumes_the_chain_the_first_pick_resolves_before_the_second_prompt_opens() {
-            crate::register_all();
             let mut s = mask_scenario(true);
             s.start_turn().answer(json!(LOSE_THREE));
 
@@ -327,7 +319,6 @@ mod tests {
 
         #[test]
         fn s10_6_radiant_s_two_picks_may_differ_in_the_other_order_too() {
-            crate::register_all();
             let mut s = mask_scenario(true);
             s.start_turn().answer(json!(EXILE_BOTTOM)).answer(json!(LOSE_THREE));
 

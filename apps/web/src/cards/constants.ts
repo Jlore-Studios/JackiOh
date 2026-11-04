@@ -106,3 +106,6 @@ export const DORMANT_DIM = 0.6;
 
 /** #2435: one beat of the Dormant seal's pulse, runes and crescent (dormant.css). */
 export const DORMANT_PULSE_MS = 3200;
+
+/** R2801000: the most hull plates a Dormant Starship's face bolts on, one a piece (StarshipHull.tsx). */
+export const STARSHIP_HULL_PLATES_MAX = 8;

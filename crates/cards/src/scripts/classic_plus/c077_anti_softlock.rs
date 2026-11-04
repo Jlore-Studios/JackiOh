@@ -55,8 +55,11 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::merged;
+    use crate::ids;
     use crate::def_ids;
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const SOFTLOCK: &str = "classicplus-077";
     const VANILLA: &str = "core-008";
@@ -79,7 +82,6 @@ mod tests {
     }
 
     fn softlock(radiant: bool, p1: Value, p2: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": merged(
                 json!({ "hand": [{ "def": SOFTLOCK, "radiant": radiant }, VANILLA], "library": [TIMMY, FILLER, FILLER] }),
@@ -103,10 +105,6 @@ mod tests {
 
     fn stack_and_pierce() -> Vec<String> {
         vec!["Stack".to_string(), "Pierce".to_string()]
-    }
-
-    fn ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.id.clone()).collect()
     }
 
     mod c_n77_anti_softlock {

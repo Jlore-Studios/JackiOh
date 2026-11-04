@@ -569,7 +569,7 @@ mod free_replays_r1965000 {
     const BASE_CAMP: &str = "meditativeplus-001-1";
     /// Meditative+ #17 Dogpile, (1): 2 damage to an enemy, and casts another Dogpile in hand at it.
     const DOGPILE: &str = "meditativeplus-017";
-    const BIGOT: &str = "core-002";
+    const SPECIESIST: &str = "core-002";
     const SEVEN_SEVEN: &str = "core-025";
     const FELINOR_TOKEN: &str = "core-t-felinor";
     const STOCKPILE: &str = "core-005";
@@ -594,7 +594,7 @@ mod free_replays_r1965000 {
             "active": AI,
             "turn": 9,
             "p1": {
-                "field": [SEVEN_SEVEN, BIGOT],
+                "field": [SEVEN_SEVEN, SPECIESIST],
                 "backrow": [IN_TOO_DEEP],
                 "graveyard": graveyard,
                 "hand": [],
@@ -689,14 +689,14 @@ mod free_replays_r1965000 {
         );
         let trimmed =
             trim_lethal(&dets, AI, found, &counter, Prices::NONE).expect("the trim fits the budget");
-        let bigot = mine(&start, AI, BIGOT).id;
+        let speciesist = mine(&start, AI, SPECIESIST).id;
         let seven = mine(&start, AI, SEVEN_SEVEN).id;
         let token = mine(&start, HUMAN, FELINOR_TOKEN).id;
         assert_eq!(
             trimmed,
             vec![
                 ActionBody::Attack {
-                    attacker_id: bigot,
+                    attacker_id: speciesist,
                     target_id: token
                 },
                 ActionBody::Attack {

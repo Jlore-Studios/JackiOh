@@ -16,7 +16,8 @@ seed: string,
  */
 humanDeck: Array<string>, 
 /**
- * `HUMAN_HANDICAP`, its `deck_size` the deck's length and its `hero_health` the run's HP (DR5).
+ * `HUMAN_HANDICAP`, its `deck_size` the deck's length and its `hero_health` the run's HP (DR5),
+ * then each Combat artifact held, once per level (R2922001).
  */
 humanHandicap: Handicap, 
 /**
@@ -25,6 +26,7 @@ humanHandicap: Handicap,
 humanMarks: Array<DeckMark>, enemyDeck: Array<string>, 
 /**
  * Easy's handicap, Medium's with Looming Presence, Hard's with Overwhelming Presence (DR5, R180),
- * its `deck_size` the enemy deck's length and its `hero_health` the enemy's.
+ * its `deck_size` the enemy deck's length and its `hero_health` the enemy's, then each curse taken
+ * (R2922001).
  */
 enemyHandicap: Handicap, enemy: RunEnemy, };

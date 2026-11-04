@@ -51,6 +51,8 @@ mod tests {
     use crate::events_json;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -321,7 +323,6 @@ mod tests {
 
         #[test]
         fn s8_4_costs_4_it_is_uncastable_on_3_mana() {
-            crate::register_all();
             let mut s = scenario(json!({ "seed": SEED, "p1": { "hand": [CHAOS], "mana": 3 } }));
             s.expect_refused_with(|s| s.play(CHAOS, json!({})), "costs 4, more than your mana");
         }
@@ -948,7 +949,6 @@ mod tests {
 
         #[test]
         fn r275_the_radiant_face_is_a_20_20_with_charge_in_rush_s_place() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [MENACE] },
                 "p2": { "field": [{ "def": GOLEM, "radiant": true }] },
@@ -1005,7 +1005,6 @@ mod tests {
 
         #[test]
         fn r275_the_radiant_golem_s_lifesteal_heals_what_its_20_dealt() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": GOLEM, "radiant": true }], "hand": [MENACE], "health": 5 },
                 "p2": { "health": 30 },
@@ -1058,7 +1057,6 @@ mod tests {
 
         #[test]
         fn s4_4_step_8_lifesteal_heals_its_controller_s_hero_by_the_amount_dealt() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [GOLEM], "hand": [MENACE], "health": 15 },
                 "p2": { "health": 30 },

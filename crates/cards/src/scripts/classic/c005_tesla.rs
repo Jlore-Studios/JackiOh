@@ -106,6 +106,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -251,7 +253,6 @@ mod tests {
 
             #[test]
             fn s4_5_a_reborn_body_is_summoned_and_answered_on_its_controller_s_own_turn_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "backrow": [set_tesla(false, 3)], "health": 20, "library": [VANILLA] },
                     "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "lane": 2 }] },
@@ -269,7 +270,6 @@ mod tests {
             /// R1081000: a Reborn body that stood in the backrow returns standing there, a Unit summoned.
             #[test]
             fn r1081000_a_reborn_body_returning_to_stand_in_the_backrow_is_summoned_and_answered() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [HIT_JOB, FILLER], "backrow": [set_tesla(false, 3)], "health": 20, "library": [VANILLA] },
                     "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "lane": 2 }] },
@@ -298,7 +298,6 @@ mod tests {
 
             #[test]
             fn your_own_units_never_set_it_off() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VANILLA, FILLER], "backrow": [set_tesla(false, 3)] },
                     "p2": { "hand": [FILLER] },
@@ -328,7 +327,6 @@ mod tests {
 
             #[test]
             fn r383_an_animated_card_animating_on_the_opponent_s_side_was_not_summoned_and_leaves_it_set() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VANILLA, FILLER], "backrow": [set_tesla(false, 3)], "library": [VANILLA] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": TESLA, "faceUp": false, "lane": 3 }], "library": [VANILLA] },

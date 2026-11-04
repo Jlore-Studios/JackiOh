@@ -80,7 +80,6 @@ mod tests {
 
     #[test]
     fn r1179004_takes_the_top_2_of_the_opponents_deck_with_no_random_number() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GLOVES, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
@@ -103,7 +102,6 @@ mod tests {
 
     #[test]
     fn r1179004_with_1_left_takes_1() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GLOVES, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE] },
@@ -115,7 +113,6 @@ mod tests {
 
     #[test]
     fn r1179004_an_empty_deck_gives_nothing_and_no_fatigue() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GLOVES, FILLER] },
             "p2": { "hand": [FILLER], "library": [] },
@@ -133,7 +130,6 @@ mod tests {
 
     #[test]
     fn r1179004_embiggened_takes_2_random_cards_of_their_hand() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GLOVES, FILLER] },
             "p2": { "hand": [MENACE, LUNAR], "library": [VANILLA, VANILLA] },
@@ -173,7 +169,6 @@ mod tests {
 
     #[test]
     fn r97_hidden_from_the_opponent_but_their_count() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GLOVES, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
@@ -189,7 +184,6 @@ mod tests {
 
     #[test]
     fn r386_cards_reads_through_param() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [GLOVES, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
@@ -201,7 +195,6 @@ mod tests {
 
     #[test]
     fn radiant_takes_3_each_costing_0() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
@@ -226,7 +219,6 @@ mod tests {
 
     #[test]
     fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
-        crate::register_all();
         let s = scenario(json!({
             "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
@@ -244,7 +236,6 @@ mod tests {
 
     #[test]
     fn radiant_embiggened_takes_3_random_each_costing_0() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
             "p2": { "hand": [MENACE, LUNAR, VANILLA], "library": [FILLER, FILLER] },

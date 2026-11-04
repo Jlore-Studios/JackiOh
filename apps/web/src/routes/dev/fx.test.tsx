@@ -2,20 +2,20 @@
 // palette and sub-look, every gallery scale and every card whose table entry names a motif, and
 // each plays something; #2793: every Core entry other than `none` plays as its card's play, #2796 every
 // Meditative and Meditative+ one, R2795000 every Classic+ one, a Field card wearing its aura, #2798
-// every Stinkyscape part-two one, and #2799 every Training Grounds one. R2785000: it plays a card as the
-// fixture set piece, which holds the board until a click skips it.
+// every Stinkyscape part-two one, #2799 every Training Grounds one, R2794000 every Classic one, a
+// marquee Unit's entrance as it lands, and R2797000 a Death, trigger or Activate from its hook's marker.
+// R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { planAuras } from "../../fx/aura/plan.ts";
-import { planCardFx, planCardMotif } from "../../fx/cardFx.ts";
+import { entranceKeyOf, planCardFx, planCardMotif } from "../../fx/cardFx.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { planFx } from "../../fx/cues.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
 import { createFxMemory } from "../../fx/memory.ts";
-import { motifScale } from "../../fx/motifs/build.ts";
 import {
   GALLERY_SET_PIECE,
   SYSTEM_MOMENTS,
@@ -52,11 +52,12 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(optionsOf(fxGalleryTestid.scale)).toEqual(FX_GALLERY_SCALES.map(String));
     const cards = optionsOf(fxGalleryTestid.card);
     expect(cards).toEqual(galleryCards().map((card) => card.defId));
-    // #2793: Core's 91 entries other than `none` (76 on the board, 7 through the director, 5 recipes, 3 set
-    // pieces); #2796: Meditative's 116 and Meditative+'s 29; R2795000: Classic+'s 96 (74 cards and 22
-    // tokens); #2798: Stinkyscape part two's 83; then the other sets' 4 motif cards, 3 aura-only Field
-    // Spells and 2 set pieces, and #2799: Training Grounds' 51.
-    expect(cards).toHaveLength(475);
+    // #2793: Core's 91 entries other than `none` (76 on the play, 7 on a hook, 5 recipes, 3 set pieces);
+    // #2796: Meditative's 116 and Meditative+'s 29; R2795000: Classic+'s 96 (74 cards and 22 tokens);
+    // #2798: Stinkyscape part two's 89 (R2801000: its six Starship cards among them); R2797000: Stinkyscape
+    // 001 to 090's 94; R2794000: Classic's 79 (its plays' motifs, its hooks' on their markers, its three
+    // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
+    expect(cards).toHaveLength(645);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -66,6 +67,36 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     fireEvent.change(screen.getByTestId(fxGalleryTestid.card), { target: { value: "classic-071" } });
     fireEvent.click(screen.getByTestId(fxGalleryTestid.playCard));
     expect(screen.getByTestId(fxGalleryTestid.root)).toBeInTheDocument();
+  });
+
+  it("R2794000 the gallery has a play for every Classic entry other than none, and each plays its motif, Flourish, entrance or set piece", () => {
+    const view = fullBoardView();
+    const intensity = FX_INTENSITY_SCALE.normal;
+    const classic = [...FX_CARD_TABLE].filter(([defId, entry]) => defId.startsWith("classic-") && entry.kind !== "none");
+    expect(classic).toHaveLength(79);
+    expect(galleryCards().filter((card) => card.defId.startsWith("classic-")).map((card) => card.defId)).toEqual(classic.map(([defId]) => defId));
+    for (const [defId, entry] of classic) {
+      const play = galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      // Planned as the board's effects layer plans it: remember, then plan.
+      const events = galleryCardEvents(defId, play, view, 1);
+      const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
+      const entries = planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece);
+      let drawn = false;
+      // A marquee Unit's entrance plays as it lands, Nature Titan's before its Cry's motif.
+      let landed = entranceKeyOf(defId) === undefined || play.kind === "setPiece";
+      for (const planned of entries) {
+        env.memory.remember(planned.events);
+        const recipe = planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null);
+        // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
+        if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        if ((play.kind === "recipe" || play.kind === "entrance") && recipe) drawn = true;
+        if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
+        if (recipe && planned.events.some((event) => event.type === "summoned")) landed = true;
+      }
+      expect(drawn, `${defId} ${play.kind}`).toBe(true);
+      expect(landed, `${defId} entrance`).toBe(true);
+    }
   });
 
   it("R2784000 #2792 every motif plays in every palette and sub-look at every scale on the fixture board", () => {
@@ -116,10 +147,6 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       const play = galleryPlayOf(defId, entry);
       if (play === null) throw new Error(`${defId} has no gallery play`);
       if (play.kind === "aura") continue;
-      if (play.kind === "director") {
-        expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
-        continue;
-      }
       // Planned as the board's effects layer plans it: remember, then plan.
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
@@ -127,7 +154,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       let drawn = false;
       for (const planned of entries) {
         env.memory.remember(planned.events);
-        if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
+        if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
         if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
         if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
       }
@@ -142,7 +170,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
   it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
-    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 83);
+    // R2801000: the pass's 83 and the Starship part's six.
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 89);
   });
 
   it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {
@@ -164,10 +193,6 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       if (entry.kind === "hooks" && entry.aura !== undefined) {
         expect(planAuras(galleryFieldView(defId, view), new Map()).map((aura) => aura.defId), defId).toContain(defId);
       }
-      if (play.kind === "director") {
-        expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
-        continue;
-      }
       if (play.kind === "aura") continue;
       // Planned as the board's effects layer plans it: remember, then plan.
       const events = galleryCardEvents(defId, play, view, 1);
@@ -175,7 +200,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       let drawn = false;
       for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece)) {
         env.memory.remember(planned.events);
-        if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
+        if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
         if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
@@ -193,17 +219,14 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       expect(offered, defId).toContain(defId);
       const play = galleryPlayOf(defId, entry);
       if (play === null) throw new Error(`${defId} has no gallery play`);
-      if (play.kind === "director") {
-        expect(galleryCues(play.motif, play.palette, motifScale(defId, view, 1), view, intensity).length, defId).toBeGreaterThan(0);
-        continue;
-      }
       // Planned as the board's effects layer plans it: remember, then plan.
       const events = galleryCardEvents(defId, play, view, 1);
       const env: FxPlanEnv = { intensity, card: () => undefined, memory: createFxMemory() };
       let drawn = false;
       for (const planned of planEntries(events, withEvents(galleryFieldView(defId, view), events), false, undefined, hasSetPiece)) {
         env.memory.remember(planned.events);
-        if (play.kind === "board" && planCardMotif(planned, planned.view, env) !== null) drawn = true;
+        // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
+        if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
         if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
         if (play.kind === "setPiece" && planned.wipe?.by === defId) drawn = true;
       }
@@ -233,7 +256,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const box = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 100, 100));
     try {
       render(<FxGallery />);
-      // A cry motif, a trigger through the director, a recipe, a set piece and a Field Spell's cast and aura.
+      // A cry motif, a trigger from its marker, a recipe, a set piece and a Field Spell's cast and aura.
       for (const defId of ["core-002", "core-013", "core-083", "core-017", "core-014"]) {
         fireEvent.change(screen.getByTestId(fxGalleryTestid.card), { target: { value: defId } });
         fireEvent.click(screen.getByTestId(fxGalleryTestid.playCard));

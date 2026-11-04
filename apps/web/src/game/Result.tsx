@@ -129,9 +129,13 @@ type GameResultProps = {
   animating?: string;
   /** R434: the opponent's hand, once the view reveals it (`revealedOpponentHand`), and its view. */
   theirHand?: TheirHandProps | null;
+  /** The route's way back to its own result dialog, drawn beside `Their hand` in the chip form (practice). */
+  onOpenResult?: () => void;
+  /** The chip's `practice-outcome` button that opens the route's result dialog. */
+  openResultTestId?: string;
 };
 
-export function GameResult({ result, viewer, form, actions, animating, theirHand = null }: GameResultProps): ReactElement {
+export function GameResult({ result, viewer, form, actions, animating, theirHand = null, onOpenResult, openResultTestId }: GameResultProps): ReactElement {
   useLocale();
   const outcome = outcomeFor(result, viewer);
   // Only the first appearance waits for the effects layer; a fold or an unfold is immediate.
@@ -210,6 +214,11 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
           </button>
         ) : null}
         {shownForm === "chip" && theirHand !== null ? <TheirHandButton view={theirHand.view} cards={theirHand.cards} /> : null}
+        {shownForm === "chip" && onOpenResult !== undefined && openResultTestId !== undefined ? (
+          <button type="button" className="result-overlay__open" data-testid={openResultTestId} onClick={onOpenResult}>
+            {t("Result")}
+          </button>
+        ) : null}
       </div>
     </>
   );

@@ -86,6 +86,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -100,7 +102,6 @@ mod tests {
     const FILLER: &str = "core-005";
 
     fn shot(p2: Value, radiant_face: bool, seed: &str) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": SHOT, "radiant": radiant_face }, FILLER], "field": [{ "def": BIG, "lane": 3 }] },

@@ -55,6 +55,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -63,7 +65,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // 4/4, no text
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const FIENDER: &str = "core-092"; // Stack Unit
-    const CN_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage
+    const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage
     const FILLER: &str = "core-010"; // (0) Spell, Combo 3 — a card to keep in hand
     const PALANTIR: &str = "classic-004"; // Aura: your opponent can't draw more than 1 card each turn.
 
@@ -110,7 +112,6 @@ mod tests {
 
             #[test]
             fn is_a_9_9_with_rush_on_the_field_it_may_attack_a_unit_the_turn_it_arrives() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [MACHINE, FILLER] }, "p2": { "field": [VANILLA], "hand": [FILLER] } }));
                 s.play(MACHINE, json!({}));
                 s.expect_stats(MACHINE, json!({ "attack": 9, "health": 9 }));
@@ -119,7 +120,6 @@ mod tests {
 
             #[test]
             fn s2_4_your_second_draw_in_a_turn_does_not_happen_at_all_no_card_moves_draw_limited_says_so() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, VANILLA, VANILLA] },
                 }));
@@ -132,7 +132,6 @@ mod tests {
 
             #[test]
             fn s2_4_a_draw_made_earlier_that_turn_counts_after_one_draw_the_next_stockpile_draws_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
                     "p2": { "hand": [MACHINE, FILLER] },
@@ -150,7 +149,6 @@ mod tests {
 
             #[test]
             fn binds_every_player_on_their_own_turn_the_opponents_start_of_turn_draw_is_their_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MACHINE] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
@@ -165,7 +163,6 @@ mod tests {
 
             #[test]
             fn s2_4_a_stopped_draw_takes_no_fatigue_from_an_empty_deck() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [] } }));
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(s.state().players.p1.fatigue_count, 1);
@@ -175,17 +172,16 @@ mod tests {
 
             #[test]
             fn s2_4_r58_nothing_is_cast_on_a_stopped_draw_a_cast_on_draw_card_stays_in_the_deck() {
-                crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, CN_VIRUS] },
+                    "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, SUPER_VIRUS] },
                 }));
                 s.play(STOCKPILE, json!({}));
                 let library = def_ids(&s.pile(P1, "library"));
-                assert_eq!(library, vec![CN_VIRUS]);
+                assert_eq!(library, vec![SUPER_VIRUS]);
                 assert_eq!(
                     s.last_events()
                         .iter()
-                        .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == CN_VIRUS))
+                        .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == SUPER_VIRUS))
                         .count(),
                     0,
                 );
@@ -193,7 +189,6 @@ mod tests {
 
             #[test]
             fn b5_e3_lifted_when_it_leaves_the_field_destroyed_the_next_draw_happens() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, STOCKPILE, HIT_JOB, FILLER],
@@ -213,7 +208,6 @@ mod tests {
 
             #[test]
             fn s3_2_r13_dormant_under_a_stack_pile_it_is_not_on_the_field_and_limits_nothing() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, FILLER],
@@ -228,7 +222,6 @@ mod tests {
 
             #[test]
             fn b5_e3_with_several_limits_the_lowest_holds_a_radiant_machine_tuned_to_2_beside_a_base_one_still_stops_the_2nd_draw() {
-                crate::register_all();
                 let mut both = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }, MACHINE] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
@@ -277,7 +270,6 @@ mod tests {
 
             #[test]
             fn r97_the_stopped_draw_names_no_card_in_either_view() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, VANILLA] } }));
                 s.play(STOCKPILE, json!({}));
                 for viewer in [P1, P2] {
@@ -298,7 +290,6 @@ mod tests {
 
             #[test]
             fn is_an_18_18_with_rush() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": MACHINE, "radiant": true }, FILLER] } }));
                 s.play(MACHINE, json!({})).expect_stats(MACHINE, json!({ "attack": 18, "health": 18 }));
                 let kinds: Vec<Value> = js(&s.stats(MACHINE).keywords)
@@ -313,7 +304,6 @@ mod tests {
 
             #[test]
             fn your_draws_are_free_its_controllers_stockpile_draws_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, FILLER], "field": [{ "def": MACHINE, "radiant": true }], "library": [VANILLA, VANILLA] },
                 }));
@@ -324,7 +314,6 @@ mod tests {
 
             #[test]
             fn binds_the_opponent_their_start_of_turn_draw_is_their_only_one() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
@@ -338,7 +327,6 @@ mod tests {
 
             #[test]
             fn r386_its_limit_is_the_declared_number_a_degrades_step_less_is_better_lets_the_opponent_draw_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -353,7 +341,6 @@ mod tests {
 
             #[test]
             fn r386_its_limit_never_goes_below_1_a_step_down_from_1_holds_at_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
@@ -366,7 +353,6 @@ mod tests {
 
             #[test]
             fn the_opponents_legal_plays_are_not_changed_by_it_a_limited_draw_is_not_a_refusal() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },

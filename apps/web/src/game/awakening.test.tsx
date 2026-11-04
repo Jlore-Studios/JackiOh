@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GameEvent, UnitView } from "@jackioh/shared";
 
-import { ANIMATIONS } from "./animations.ts";
+import { ANIMATIONS, STARSHIP_LAUNCH_HOLD_MS } from "./animations.ts";
 import { testid, type AnimatingMap, type AnimationFrames } from "./contract.ts";
 import Game from "./Game.tsx";
 import { awakeningsFrom } from "./awakening.ts";
@@ -140,8 +140,9 @@ describe("#2435 the board marks an awakened card", () => {
       `${STARSHIP_GLYPH}1`,
     );
 
+    // R2801000: the launch is the Starship's set piece, held ahead of its motion.
     act(() => {
-      vi.advanceTimersByTime(ANIMATIONS.starshipLaunched.durationMs);
+      vi.advanceTimersByTime(ANIMATIONS.starshipLaunched.durationMs + STARSHIP_LAUNCH_HOLD_MS);
     });
     expect(screen.getByTestId("card-u1")).not.toHaveAttribute("data-animating");
     expect(screen.getByTestId("card-u1")).not.toHaveAttribute("data-awakening");

@@ -16,7 +16,7 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog::spell_def;
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{in_hand, new_game, put, run_effect, slot};
+use super::fixtures::harness::{ids, in_hand, new_game, put, run_effect, slot};
 
 /// A Field Spell whose Aura guards its controller (Meditative #1's, without the Radiant Cry).
 fn guard() -> CardDef {
@@ -78,10 +78,6 @@ fn discards(events: &[GameEvent]) -> (usize, bool) {
         count(GameEventType::Discarded),
         count(GameEventType::DiscardPrevented) > 0,
     )
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 #[test]

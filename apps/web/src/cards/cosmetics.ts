@@ -34,7 +34,15 @@ import type { SeatLoadout } from "./loadouts.ts";
 import { foilFor, type FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
 import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
-import { ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, VERSION_ID_PREFIX, isOfferedId, offeredOn } from "./versions.ts";
+import {
+  ANIMATED_ART_ID_PREFIX,
+  AUGMENT_ID_PREFIX,
+  AUGMENT_SIGNATURE_ID,
+  VERSION_ID_PREFIX,
+  isOfferedId,
+  offeredOn,
+  signatureFits,
+} from "./versions.ts";
 
 export { ANIMATED_ART_ID_PREFIX };
 
@@ -332,7 +340,8 @@ function currentCardPicks(): { written: Record<string, unknown>; state: CardPick
 
 /**
  * Changes `defId`'s stored picks by `change`, from what storage holds now. It rewrites only the
- * fields this client knows of `defId`'s entry, so a newer client's kinds are kept.
+ * fields this client knows of `defId`'s entry, so a newer client's kinds are kept. R2949000: a change
+ * that leaves Signature without the Full art version and Animated drops it, as the server does.
  */
 function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void): void {
   const { written, state } = currentCardPicks();
@@ -340,6 +349,11 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
   const before = state.stored.get(defId) ?? {};
   const picks: StoredCardPicks = { ...before };
   change(picks);
+  if (picks.augments?.includes(AUGMENT_SIGNATURE_ID) === true && !signatureFits(picks.fullArt, picks.augments)) {
+    const kept = picks.augments.filter((id) => id !== AUGMENT_SIGNATURE_ID);
+    if (kept.length === 0) delete picks.augments;
+    else picks.augments = kept;
+  }
   const changed = CARD_PICK_FIELDS.filter((field) => !samePick(before[field], picks[field]));
   if (changed.length === 0) return;
   if (Object.keys(picks).length === 0) {

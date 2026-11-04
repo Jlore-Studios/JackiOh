@@ -47,12 +47,13 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     mod n1_big_d_fender {
         use super::*;
 
         #[test]
         fn a_defense_position_ally_takes_3_less_1_from_the_position_s4_1_and_2_from_the_aura() {
-            crate::register_all();
             scenario(json!({
                 "active": "p2",
                 "p1": { "field": ["core-001", { "def": "core-019", "position": "DEF" }] },
@@ -64,7 +65,6 @@ mod tests {
 
         #[test]
         fn an_attack_position_ally_is_unaffected() {
-            crate::register_all();
             scenario(json!({
                 "active": "p2",
                 "p1": { "field": ["core-001", "core-019"] },
@@ -76,7 +76,6 @@ mod tests {
 
         #[test]
         fn radiant_gives_4_armor_instead_so_a_defense_position_ally_takes_5_less() {
-            crate::register_all();
             scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -90,7 +89,6 @@ mod tests {
 
         #[test]
         fn r7_never_attacks_a_0_attack_unit_cannot_declare_an_attack_on_a_unit_or_the_hero() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": ["core-001", "core-019"] },
                 "p2": { "field": ["core-025"] }
@@ -102,7 +100,6 @@ mod tests {
 
         #[test]
         fn the_aura_is_your_units_an_enemy_unit_in_defense_position_gets_nothing() {
-            crate::register_all();
             scenario(json!({
                 "p1": { "field": ["core-001", "core-019"] },
                 "p2": { "field": [{ "def": "core-025", "position": "DEF" }] }
@@ -115,7 +112,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_moves_the_armor_to_3_and_a_degrade_to_1_and_the_aura_gives_that() {
             for (upgrade, armor, health) in [(true, 3, 6), (false, 1, 4)] {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "field": ["core-001", { "def": "core-019", "position": "DEF" }] },
@@ -135,7 +131,6 @@ mod tests {
 
     #[test]
     fn r1081000_a_defense_position_unit_standing_in_the_backrow_takes_the_armor() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "field": ["core-001", "core-019"] },

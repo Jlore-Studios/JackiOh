@@ -2,16 +2,37 @@
 // S6): who played which card, which zone a trap fired from, the last few events (so a `cardPlayed` right
 // after its own `drawn` is a cast on draw, `castOnDraw.ts`) and the plays still resolving, innermost
 // last, for `cardFx.ts`'s recipes (#21 Hinder, #27 Blood Ridden) and motifs (R2784000, with the ids its
-// hits landed on): a `cardPlayed` opens one, its `cardResolved` or `countered` closes it (R502). R202:
-// only ids the viewer may read are kept, so every hidden card looks the same to the planner.
+// hits landed on): a `cardPlayed` opens one, its `cardResolved` or `countered` closes it (R502). R2797000:
+// a card's hook is an entry too, innermost while it runs: a Death, a turn hook or a Whenever (`trigger`)
+// and an Activate open one at their `hookResolving` marker (R2783000; a Cry's opens none, its play is the
+// entry), a Trap's `cast` at its `trapFired`; the next marker or firing, a `cardResolved` or `countered`,
+// an attack, a turn's end or start and the game's end close it. R202: only ids the viewer may read are
+// kept, so every hidden card looks the same to the planner.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
 import { castOnDrawAt } from "./castOnDraw.ts";
 import { FX_MEMORY_HITS, FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
+import type { FxCardHook } from "./motifs/names.ts";
 import type { FxMemory, FxPlay, FxTrapZone } from "./types.ts";
 
 const HIDDEN_ID = "hidden";
+
+/**
+ * R2797000: the table hook a `hookResolving` marker opens an entry for: none for a Cry, which runs inside
+ * its card's own play (a Spell's effect is one), so its play keys it by `cast` or `cry`.
+ */
+const HOOK_OF: Readonly<Record<Extract<GameEvent, { type: "hookResolving" }>["hook"], FxCardHook | null>> = {
+  cry: null,
+  death: "death",
+  startOfTurn: "trigger",
+  endOfTurn: "trigger",
+  whenever: "trigger",
+  activate: "activate",
+};
+
+/** R2797000: the events after which no hook entry still runs: an attack, a turn's end or start, the game's end. */
+const HOOK_CLOSERS: ReadonlySet<GameEvent["type"]> = new Set(["attackDeclared", "turnEnded", "turnAutoEnded", "turnStarted", "gameOver"]);
 
 /** R2784000: the public id a hit lands on (a damage's target, a card destroyed, exiled or bounced), else null. */
 export function hitIdOf(event: GameEvent): string | null {
@@ -43,6 +64,17 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   let resolving: (FxPlay & { seen: Partial<Record<GameEvent["type"], number>> })[] = [];
   let castOnDraw = new WeakSet<GameEvent>();
 
+  /** R2797000: ends every hook entry; plays stay open. */
+  const dropHooks = (): void => {
+    resolving = resolving.filter((play) => play.hook === undefined);
+  };
+
+  /** R2797000: opens a hook's entry, innermost, so the hook's events are its own and not the play around it. */
+  const openHook = (player: PlayerId, instanceId: string, defId: string, hook: FxCardHook): void => {
+    resolving.push({ player, instanceId, defId, castOnDraw: false, step: 0, seen: {}, hook });
+    if (resolving.length > FX_MEMORY_RESOLVING) resolving = resolving.slice(resolving.length - FX_MEMORY_RESOLVING);
+  };
+
   /** Closes the innermost play of `player` with this id (the sentinel matches the innermost of `player`). */
   const close = (player: PlayerId, instanceId: string): void => {
     for (let i = resolving.length - 1; i >= 0; i -= 1) {
@@ -73,15 +105,26 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
           resolving.push({ player: event.player, instanceId: event.instanceId, defId: event.defId, castOnDraw: onDraw, step: 0, seen: {} });
           if (resolving.length > FX_MEMORY_RESOLVING) resolving = resolving.slice(resolving.length - FX_MEMORY_RESOLVING);
         } else if (event.type === "cardResolved" || event.type === "countered") {
+          dropHooks();
           close(event.player, event.instanceId);
+        } else if (event.type === "hookResolving") {
+          dropHooks();
+          // A hidden card's marker opens its entry all the same, so its events go to no play around it (R202).
+          const hook = HOOK_OF[event.hook];
+          if (hook !== null) openHook(event.controller, event.sourceId, event.defId, hook);
         } else if (event.type === "trapFired") {
           if (event.instanceId !== HIDDEN_ID) {
             put(traps, event.instanceId, { player: event.controller, row: event.row, lane: event.lane }, limit);
           }
-        } else if (event.type === "attackDeclared") {
-          if (event.attackerId !== HIDDEN_ID) put(attacks, event.attackerId, [...(attacks.get(event.attackerId) ?? []), event.targetId], limit);
-        } else if (event.type === "turnStarted") {
-          attacks.clear();
+          dropHooks();
+          openHook(event.controller, event.instanceId, event.defId, "cast");
+        } else if (HOOK_CLOSERS.has(event.type)) {
+          dropHooks();
+          if (event.type === "attackDeclared") {
+            if (event.attackerId !== HIDDEN_ID) put(attacks, event.attackerId, [...(attacks.get(event.attackerId) ?? []), event.targetId], limit);
+          } else if (event.type === "turnStarted") {
+            attacks.clear();
+          }
         }
       }
     },

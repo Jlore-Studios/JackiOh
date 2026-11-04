@@ -79,7 +79,7 @@ The very first line must be a single HTML comment carrying JSON, with nothing be
 with `"ci_local": "passed"` added for a `ci` revision whose failing check passed locally with
 nothing changed, or `{"status": "blocked", "question": "..."}` when a person must decide something first. When
 nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or `bot/`, a
-secret or a token, a dashboard setting such as Vercel's or Render's, an account), add
+secret or a token, a dashboard setting such as Supabase's or Cloudflare's, an account), add
 `"human_required": true` and say in `question` exactly what a person must do: the harness hands
 the thread to the people (`human required`, the bot's labels off) and names them.
 

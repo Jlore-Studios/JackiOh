@@ -30,6 +30,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     /// The §10.4-computed keyword kinds of a card on the field.
     fn keyword_kinds(s: &Scenario, card: &CardInstance) -> Vec<String> {
         s.stats(card)
@@ -48,7 +50,6 @@ mod tests {
 
         #[test]
         fn enters_as_a_4_4_with_no_keywords_and_no_text_of_its_own() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-008-base",
                 "p1": { "hand": ["traininggrounds-043"], "mana": 4 },
@@ -71,7 +72,6 @@ mod tests {
 
         #[test]
         fn patch_v0_1_1_no_longer_immutable_so_sheepish_transforms_it_into_a_sheep_token() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-008-sheepish",
                 "p1": { "hand": ["traininggrounds-043"], "mana": 4 },
@@ -96,7 +96,6 @@ mod tests {
 
         #[test]
         fn r275_the_radiant_face_is_a_12_12_with_no_keywords_its_stats_are_its_whole_upgrade() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-008-radiant",
                 // #26 Glowy Jelly Bean makes a chosen hand card Radiant (§8.2 row 26).
@@ -114,7 +113,6 @@ mod tests {
 
         #[test]
         fn s5_2_made_radiant_on_the_field_it_takes_the_12_12_face_at_once_and_keeps_its_damage() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-008-radiant-flip",
                 // Radiant #29 GIGA Glowy Jelly Bean: "every card in your hand and every permanent you

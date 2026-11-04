@@ -2,7 +2,8 @@
 // included, in catalog order, one line each under its own name, Stinkyscape split in two at 091; and
 // the loader's errors, each naming its file and card. R502, R670: the seven former `CARD_FX` cards are
 // `{ bespoke }` entries but #100 Ceaseless Void, whose `{ setPiece }` lands it with its collapse (R2800000).
-// R2787000: an entry's `aura`, and the ten Field Spells that wear one.
+// R2787000: an entry's `aura`, and the ten Field Spells that wear one. R2794000: a Unit's `entrance` beside
+// its hooks (Nature Titan's, beside its Cry).
 
 import { describe, expect, it } from "vitest";
 
@@ -132,19 +133,45 @@ describe("R2784000 the per-set effects tables", () => {
     expect(hooks.get("classic-071")?.kind).toBe("hooks");
   });
 
-  it("R2784000 R502 R670 R2800000 the seven former CARD_FX cards keep their recipes: six bespoke, and the Void's set piece lands with its collapse", () => {
+  it("R2784000 R502 R670 R2800000 R2794000 the seven former CARD_FX cards keep their recipes: five bespoke, Nature Titan's entrance beside its Cry, and the Void's set piece lands with its collapse", () => {
     const former = {
       "core-021": { kind: "bespoke", key: "manaCrack" },
       "core-027": { kind: "bespoke", key: "bloodDrain" },
-      "classic-045": { kind: "bespoke", key: "titanBloom" },
       "classic-056": { kind: "bespoke", key: "tyrantSigil" },
       "classic-080": { kind: "bespoke", key: "bigBoom" },
       "classicplus-024": { kind: "bespoke", key: "crushingWalls" },
     };
     for (const [defId, entry] of Object.entries(former)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
+    expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "hooks", hooks: { cry: { motif: "flight" } }, entrance: "titanBloom" });
+    expect(entranceKeyOf("classic-045")).toBe("titanBloom");
     expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold" });
     expect(entranceKeyOf("core-100")).toBe("voidCollapse");
-    expect(new Set([...Object.values(former).map((entry) => entry.key), entranceKeyOf("core-100")]).size).toBe(7);
+    expect(new Set([...Object.values(former).map((entry) => entry.key), entranceKeyOf("classic-045"), entranceKeyOf("core-100")]).size).toBe(7);
+  });
+
+  it("R2794000 an entrance stands beside a Unit's hooks; an unknown one, one on a non-Unit, or one alone fails", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    expect(parse(`"classic-045": { entrance: "titanBloom", cry: { motif: "flight" } }`).get("classic-045")).toEqual({
+      kind: "hooks",
+      hooks: { cry: { motif: "flight" } },
+      entrance: "titanBloom",
+    });
+    expect(parse(`"classic-045": { cry: { motif: "flight" }, entrance: "titanBloom", aura: { look: "bloom", scope: "side" } }`).get("classic-045")).toEqual({
+      kind: "hooks",
+      hooks: { cry: { motif: "flight" } },
+      aura: { look: "bloom", scope: "side" },
+      entrance: "titanBloom",
+    });
+    // No `entrance` key at all on an entry that names none, so the other tables' entries are unchanged.
+    expect(Object.keys(parse(`"classic-071": { cry: { motif: "lance" } }`).get("classic-071") ?? {})).toEqual(["kind", "hooks"]);
+    says(`"classic-045": { entrance: "titanBlossom", cry: { motif: "flight" } }`, /^fx\/cards\/test\.json5: classic-045: unknown entrance "titanBlossom"$/);
+    says(`"classic-045": { entrance: "manaCrack", cry: { motif: "flight" } }`, /classic-045: unknown entrance "manaCrack"$/);
+    says(`"classic-045": { entrance: 7, cry: { motif: "flight" } }`, /classic-045: unknown entrance "7"$/);
+    says(`"core-035": { entrance: "titanBloom", cast: { motif: "bolt" } }`, /core-035: an entrance is a Unit's; this card is a Spell$/);
+    says(`"classic-045": { entrance: "titanBloom" }`, /classic-045: names no hook$/);
   });
 
   it("R2784000 the twelve examples name their motifs", () => {
@@ -200,7 +227,7 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"core-035": {}`, /core-035: names no hook/);
   });
 
-  it("R2787000 the ten example Field Spells across the sets wear their auras", () => {
+  it("R2787000 R2794000 the ten example Field Spells across the sets wear their auras", () => {
     const examples = {
       "core-014": { look: "storm", scope: "side" },
       "core-046": { look: "void", scope: "board" },
@@ -214,6 +241,11 @@ describe("R2784000 the per-set effects tables", () => {
       "traininggrounds-019": { look: "bloom", scope: "zone" },
     };
     expect(Object.keys(examples)).toHaveLength(10);
+    // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
+    const hooksOf: Readonly<Record<string, object>> = {
+      "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },
+      "classic-075": { cast: { motif: "ward" } },
+    };
     const files = new Set<string>();
     for (const [defId, aura] of Object.entries(examples)) {
       expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
@@ -222,6 +254,8 @@ describe("R2784000 the per-set effects tables", () => {
       const entry = FX_CARD_TABLE.get(defId);
       expect(entry?.kind, defId).toBe("hooks");
       expect(entry?.kind === "hooks" ? entry.aura : undefined, defId).toEqual(aura);
+      const hooks = hooksOf[defId];
+      if (hooks !== undefined) expect(entry, defId).toEqual({ kind: "hooks", hooks, aura });
       const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
       if (file !== undefined) files.add(file.file);
     }

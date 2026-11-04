@@ -2,6 +2,7 @@
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
+import type { FxCardHook } from "./motifs/names.ts";
 
 /** A point in fractions of a box's width and height. */
 export type FxPoint = { x: number; y: number };
@@ -172,6 +173,24 @@ export type FxSetPieceCue = {
   delayMs: number;
   durationMs: number;
 };
+/**
+ * R2801000: a Starship's launch over it, `at`: a 3-2-1 countdown, each count popping in at its
+ * `countsMs` (none for a launch the queue does not hold), its engines igniting at `igniteMs`, and a
+ * flame and a contrail as big as `size` says. `still` draws one still frame of it, for reduced motion.
+ * It names no card (R202).
+ */
+export type StarshipSize = "small" | "medium" | "large";
+export type FxLaunchCue = {
+  kind: "launch";
+  at: FxAnchor;
+  tint: FxTint;
+  size: StarshipSize;
+  countsMs: readonly number[];
+  igniteMs: number;
+  delayMs: number;
+  durationMs: number;
+  still?: true;
+};
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -232,7 +251,8 @@ export type FxDomCue =
   | FxFogCue
   | FxZoneCue
   | FxTakeoverCue
-  | FxSetPieceCue;
+  | FxSetPieceCue
+  | FxLaunchCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 
@@ -296,6 +316,12 @@ export type FxPlay = {
    * the planned entry's included (at most FX_MEMORY_HITS); absent before the first. A chain hops on from the last.
    */
   hits?: readonly string[];
+  /**
+   * R2797000: the card hook this entry is, when it is no play: a Death, a turn hook or Whenever
+   * (`trigger`) or an Activate, opened by its `hookResolving` marker, or a Trap's `cast`, opened by its
+   * `trapFired`. Absent for a play, from its `cardPlayed` on.
+   */
+  hook?: FxCardHook;
 };
 
 export type FxMemory = {

@@ -10,19 +10,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{flush, playing, tower};
-use crate::rules::fixtures::harness::{act_result, in_hand, put, sink_for, slot};
-
-/// An `ActionInput` from a JSON object (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{act_result, by, in_hand, input, put, sink_for, slot};
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))

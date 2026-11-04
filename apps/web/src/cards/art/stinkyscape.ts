@@ -1399,7 +1399,10 @@ function rays(seed: number): string {
   return out.join("");
 }
 
-/** The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. */
+/**
+ * The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. R2949000: its subject is
+ * `defId`'s, and the rest of the picture grows from `seedId` (pictures.ts `artSeedOf`), the card's id by default.
+ */
 export function stinkyscapeSvg(
   defId: string,
   name: string | undefined,
@@ -1407,10 +1410,11 @@ export function stinkyscapeSvg(
   type: CardType,
   radiant: boolean,
   motion: ArtMotion | null = null,
+  seedId: string = defId,
 ): string {
   const subject = stinkySubject(defId, name, tags, type);
   const lower = (name ?? "").toLowerCase();
-  const seed = hashId(defId);
+  const seed = hashId(seedId);
   const based = drift(seed, subject.family, kindPaint(FAMILY_PAINTS[subject.family], subject, lower));
   const p = radiant ? gild(based) : based;
   const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
@@ -1429,7 +1433,7 @@ export function stinkyscapeSvg(
     moving("back", sky, motion) +
     (radiant ? rays(seed) : "") +
     moving("subject", group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn), motion) +
-    particleMarkup(motion, defId) +
+    particleMarkup(motion, seedId) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
   );

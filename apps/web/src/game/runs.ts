@@ -1,4 +1,5 @@
-// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps and wipes from redacted events and PlayerView.
+// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps, wipes and the Starship's fuse runs and
+// launches (R2801000) from redacted events and PlayerView.
 // R97, R202, R242, and R440 forbid hidden-card inference; `HIDDEN_PILE_OF` uses only public card text.
 
 import type { GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
@@ -416,4 +417,84 @@ export function wipeAt(
   }
   const sides = SIDES.filter((side) => taken.has(side));
   return { wipe: { by: hook.defId, sourceId: hook.sourceId, sides, anchor }, length };
+}
+
+// The Starship
+
+/**
+ * R2801000: Starship Pieces fused one after another into one Dormant Starship, as the runner plays them.
+ * `anchor` is the zone the Starship stands in (null when the seat cannot place it, R202), each piece's
+ * `from` the card the board shows it as (null for one it does not, a piece already in its graveyard), in
+ * the order they fused, and `count` how many pieces the Starship holds after the run.
+ */
+export type StarshipFuse = {
+  shipId: string;
+  player: PlayerId;
+  anchor: string | null;
+  pieces: readonly { pieceId: string; from: string | null }[];
+  count: number;
+};
+
+/** R2801000: a Starship's launch, as the runner plays it: where it stands, how many pieces it holds and its name (R1852003). */
+export type StarshipLaunch = { shipId: string; player: PlayerId; anchor: string | null; pieces: number; name: string };
+
+/**
+ * R2801000: the zone a Starship stands in: the one its latest `summoned` before `at` names (a Starship
+ * the pass summoned in the same batch is not on the planning view yet), else the card the view shows;
+ * null for R97's sentinel or a Starship the board does not show.
+ */
+function shipAnchor(events: readonly GameEvent[], at: number, view: PlayerView, shipId: string): string | null {
+  if (shipId === HIDDEN) return null;
+  for (let k = at - 1; k >= 0; k -= 1) {
+    const event = events[k];
+    if (event?.type === "summoned" && event.instanceId === shipId) return testid.zone(sideOf(view, event.player), event.row, event.lane);
+  }
+  return fieldSide(view, shipId) === null ? null : testid.card(shipId);
+}
+
+type StarshipFusedEvent = Extract<GameEvent, { type: "starshipFused" }>;
+
+/** One fusion at `at`: a `fused` into the Starship the next event names, with that `starshipFused`, or a lone `starshipFused`. */
+function fuseStep(events: readonly GameEvent[], at: number): { fused: StarshipFusedEvent; length: number } | null {
+  const first = events[at];
+  if (first?.type === "starshipFused") return { fused: first, length: 1 };
+  const next = events[at + 1];
+  if (first?.type === "fused" && next?.type === "starshipFused" && first.resultInstanceId === next.instanceId) return { fused: next, length: 2 };
+  return null;
+}
+
+/**
+ * R2801000: the fuse run at `at`, or null: every fusion from `at` on into the same Starship of the same
+ * player, one after another, each with the `fused` the engine reports right before its `starshipFused`
+ * (R1852000). Any other `fused` (an Equip's) is not a Starship's and plays as its own entry.
+ */
+export function fuseRunAt(events: readonly GameEvent[], at: number, view: PlayerView): { fuse: StarshipFuse; length: number } | null {
+  const head = fuseStep(events, at);
+  if (head === null) return null;
+  const ship = head.fused;
+  const pieces: { pieceId: string; from: string | null }[] = [];
+  let count = ship.pieces;
+  let i = at;
+  for (let step: ReturnType<typeof fuseStep> = head; step !== null; step = fuseStep(events, i)) {
+    const fused = step.fused;
+    if (fused.instanceId !== ship.instanceId || fused.player !== ship.player) break;
+    pieces.push({ pieceId: fused.pieceId, from: fieldSide(view, fused.pieceId) === null ? null : testid.card(fused.pieceId) });
+    count = fused.pieces;
+    i += step.length;
+  }
+  const anchor = shipAnchor(events, at, view, ship.instanceId);
+  return { fuse: { shipId: ship.instanceId, player: ship.player, anchor, pieces, count }, length: i - at };
+}
+
+/** R2801000: the launch at `at`, or null. */
+export function launchAt(events: readonly GameEvent[], at: number, view: PlayerView): StarshipLaunch | null {
+  const event = events[at];
+  if (event?.type !== "starshipLaunched") return null;
+  return {
+    shipId: event.instanceId,
+    player: event.player,
+    anchor: shipAnchor(events, at, view, event.instanceId),
+    pieces: event.pieces.length,
+    name: event.name,
+  };
 }

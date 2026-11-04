@@ -55,6 +55,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const SHELL: &str = "classicplus-012-5";
     const MENACE: &str = "core-019"; // (3) 9/9
     const POINTMASTER: &str = "core-020"; // (2) 7/1
@@ -62,7 +64,6 @@ mod tests {
     const FILLER: &str = "core-005";
 
     fn shell(radiant: bool) -> Scenario {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": SHELL, "radiant": radiant }, POINTMASTER, MAGIC_JAMMED, FILLER],
@@ -129,7 +130,6 @@ mod tests {
 
         #[test]
         fn r386_the_aura_reads_through_param_an_upgrade_makes_it_3_3() {
-            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SHELL, FILLER], "field": [MENACE] }, "p2": { "hand": [FILLER] } }));
             step_param(s.card_mut(SHELL), "aura", 1);
             s.play(SHELL, json!({}));

@@ -7,7 +7,7 @@ use jackioh_engine::testkit::{
     CardInstance, CreateGameOptions, GameState, PlayerId, Zone, begin_game, create_game, create_rng,
 };
 
-use super::support::{AI, HUMAN, card_by_id, dealt_game, det, every_card, random_decks, register_cards};
+use super::support::{AI, HUMAN, card_by_id, dealt_game, det, every_card, ids, random_decks, register_cards};
 
 /// Moves `count` cards (all when `None`) from the top of `side`'s library to its graveyard.
 fn to_graveyard(state: &mut GameState, side: PlayerId, count: Option<usize>) {
@@ -51,10 +51,6 @@ fn def_in(world: &GameState, id: &str) -> String {
     card_by_id(world, id)
         .map(|card| card.def_id.clone())
         .unwrap_or_default()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 #[test]

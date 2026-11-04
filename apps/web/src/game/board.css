@@ -2265,49 +2265,20 @@ button.modifier-badge[data-open="true"] {
 
 
 /* The shell's turn banner (Game.tsx, `turn-banner`): the live region that announces the turn, and
-   the element the `turnStarted` animation plays on. Left unstyled it was a loose line of body text
-   above the board, taking height a phone does not have. Where the turn plate shows, the banner
-   leaves the layout but stays in the accessibility tree (the visually-hidden pattern, not
-   `display: none`, so its animation still runs and ends); on a phone held upright it is a slim pill
-   over the board in the color of the side whose turn it is. */
+   the element the `turnStarted` animation plays on. Nothing but gameplay is drawn above the board,
+   so it always leaves the layout but stays in the accessibility tree (the visually-hidden pattern,
+   not `display: none`, so its animation still runs and ends). The active seat's glow and End turn's
+   label already show whose turn it is. */
 .game > .turn-banner {
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto 6px;
-  padding: 3px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  background: var(--bg-sunken);
-  color: var(--text);
-  font-size: var(--type-2xs-em);
-  font-weight: 750;
-  letter-spacing: 0.1em;
-  text-align: center;
-  text-transform: uppercase;
-}
-
-.game:has(> .board[data-active="you"]) > .turn-banner {
-  border-color: color-mix(in srgb, var(--you) 55%, var(--line));
-  color: color-mix(in srgb, var(--you) 55%, var(--pal-white));
-}
-
-.game:has(> .board[data-active="opponent"]) > .turn-banner {
-  border-color: color-mix(in srgb, var(--opponent) 55%, var(--line));
-  color: color-mix(in srgb, var(--opponent) 60%, var(--pal-white));
-}
-
-@media (min-width: 761px) and (min-height: 501px), (orientation: landscape) and (max-height: 500px) {
-  .game > .turn-banner {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    border: 0;
-    white-space: nowrap;
-  }
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
 }
 
 .log {
@@ -3357,6 +3328,14 @@ button.modifier-badge[data-open="true"] {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* B46: the clock keeps its words on one line beside the cut first span (clock.css keeps the
+     urgent pill's words too). Squeezed word-by-word it stood the bar three lines tall, and the
+     board's cards — already at their 44px floor at 390x664 — spilled 9px past the screen. */
+  .app-shell--wide:has(> .game) > .match-bar > .clock {
+    flex: none;
     white-space: nowrap;
   }
 }

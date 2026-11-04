@@ -12,13 +12,10 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    events_json, events_of_type, in_hand, live_mut, matches_object, new_game, next_nonce, put, sink_for, slot,
+    events_json, events_of_type, ids, in_hand, live_mut, matches_object, new_game, next_nonce, put, sink_for,
+    slot,
 };
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
 
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;

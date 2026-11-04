@@ -122,6 +122,8 @@ mod tests {
     use crate::filler;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -161,7 +163,6 @@ mod tests {
     /// p1 holds Spiritually (base unless `radiant_face`) with two more hand cards and cards in
     /// both decks; both sides keep units off the field so summons land.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -248,7 +249,6 @@ mod tests {
 
             #[test]
             fn r129_a_full_row_takes_fewer_units() {
-                crate::register_all();
                 let mut full = scenario(json!({
                     "seed": "spiritually-full",
                     "p1": {

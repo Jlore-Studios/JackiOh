@@ -63,6 +63,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const KEENUS: &str = "meditative-065";
@@ -217,7 +219,6 @@ mod tests {
 
             #[test]
             fn r781004_r1086_equip_onto_your_unit_fuses_and_the_host_draws_its_own() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "keenus-equip",
                     "p1": { "mana": 10, "hand": [VANILLA, KEENUS, FILLER], "library": filler(4) },
@@ -256,7 +257,6 @@ mod tests {
 
             #[test]
             fn r386_r781004_a_buff_steps_the_10_to_11() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "keenus-buff",
                     "p1": { "hand": [{ "def": KEENUS, "radiant": true }, FILLER], "library": filler(4), "mana": 10 },

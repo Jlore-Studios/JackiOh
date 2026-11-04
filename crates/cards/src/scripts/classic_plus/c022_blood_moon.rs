@@ -50,6 +50,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -241,7 +243,6 @@ mod tests {
 
             #[test]
             fn a_friendly_heal_never_fires_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "active": "p1",
                     "p1": {
@@ -306,7 +307,6 @@ mod tests {
 
             #[test]
             fn b2_7_its_face_is_a_field_trap_in_hand_too() {
-                crate::register_all();
                 let s = scenario(json!({
                     "p1": { "hand": [{ "def": MOON, "radiant": true }, MOON, FILLER] },
                     "p2": { "hand": [FILLER] },

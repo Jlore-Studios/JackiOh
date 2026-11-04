@@ -43,7 +43,7 @@ The source defines Radiant only as "upgraded versions of normal cards". Rulings 
 - Radiant is a boolean on an instance, never a separate card id. Making a card Radiant sets it; nothing in any set un-sets it — except De-Radiant, which clears it ([[R1102]]).
 - In hand or library: cost unchanged, stats and text swap to the radiant form, and a face with its own type swaps the card's type with it: a C+ #22 Blood Moon made Radiant in hand is a Field Trap there, which pools and filters then read.
 - On the field (Radiant Saintess, Knockoff Temu Glowy Jelly Bean, radiant GIGA Glowy Jelly Bean, Snom Bunny Mind Control, radiant K-Pop Fanatic's steal): the base-stat layer swaps immediately, damage taken and buffs are kept, newly gained keywords apply at once, ongoing triggers use the radiant text from then on, and Cry does not re-fire.
-- A copy of a Radiant card is Radiant. A card an effect generates "Radiant" is Radiant. Tokens can be Radiant (Radiant CN-Virus, Radiant Reminisce).
+- A copy of a Radiant card is Radiant. A card an effect generates "Radiant" is Radiant. Tokens can be Radiant (Radiant Super-Virus, Radiant Reminisce).
 - Every card has a Radiant face, so making any card Radiant changes it ([[R276]]). The five the source left without one (Quickstriker, Zao Gao, Combo-Fodder, Chaos Golem and My Pawn) were given one by the Radiant pass of 2026-09-24, and the unit tokens have theirs in [[§7]]. The Classic and Classic+ cards whose source faces were identical or missing were given one by patch v0.2.0 (C #63 Crop Dusting, C #86 Genn, C+ #63 Fruit Tree, C+ #75 J-lease J-Jungle EX-plorer), as `docs/radiant-audit.md` records.
 - A Unit that prints no Radiant form of its own (the Ghoul Token, [[§7]]) is, made Radiant, its base face with its attack and health doubled: the same keywords and text, and a summon's X/X doubled with it ([[R349]]). The catalog marks such a card `radiantFallback` and prints that fallback as its Radiant face. A fused or crafted card is not one of these: [[R77]] builds its Radiant form from its ingredients' Radiant forms, an ingredient without one lending its fallback.
 - A Radiant face is about twice its base face ([[R275]]): a Unit's attack and health are each at least double its base face's, and its effect is 100–150% stronger — 2 to 2.5 times the amount, a broader scope (one target to all, one side to a choice), or an added rider or keyword; a Spell, Field Spell, Trap or Field Trap scales its effect the same way and may add a draw or a tangential rider instead. `docs/radiant-audit.md` records every card against it, and names the few Classic and Classic+ faces where the designer's word stands against the standard ([[R275]]).
@@ -55,11 +55,11 @@ Places where the source card list was inconsistent, with the value the catalog u
 
 | Card | Issue in source | Catalog value used here |
 | --- | --- | --- |
-| #2 Bigot | No set listed | Core |
+| #2 Speciesist | No set listed | Core |
 | #15 Me and Mr Token, #16 Hit Job | Radiant separator is `~~` | Treated as `~~~` |
 | #12, #31, #51 | Header typos: tag "Felinors", name "KY’s, …" | Tag Felinor; names as in section 8 |
 | #68 Twisted Sorcerer | Listed as "Spell, Unit" with stats | Unit |
-| #90.1 | Named "CN-Viral Injection" like #90 | Named CN-Virus |
+| #90.1 | Named "Super-Virus Injection" like #90 | Named Super-Virus |
 | #94 Genn's Greed | "exile all cost cards" is garbled | Exile every card with an odd Cost (Genn Greymane reference) |
 | #29 GIGA Glowy Jelly Bean | Cost 6 exceeds max mana 4 | Kept at 6; only castable with mana gain |
 | #15, #34, #66, #86, #99, #100 | No card type in the header | Unit, Spell, Unit, Unit, Spell, Unit, from stats and text |

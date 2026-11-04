@@ -65,7 +65,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-127` | Jlockeed's Siege Tank | Unit | trigger bolt Tech/laser | 1.36 | bolt | trigger: the census agrees (bolt); Tech/laser for its cannon |
 | `stinkyscape-128` | Jlockeed's Yamato Cannon | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Ranged, Cleave) |
 | `stinkyscape-129` | Jlockeed's Missile Pod | Unit | trigger volley Tech/rocket | 1.35 | bolt | trigger: the census's bolt saw its hits one by one, but its End of turn hits every enemy at once, a volley of missiles; Tech/rocket |
-| `stinkyscape-130` | Jlockeed's Starship Retrofitting Program | Spell | none: Starship part | — | none: no motif reads addedToHand | the issue gives it to the Starship part (#2782); the census's addedToHand is that card |
+| `stinkyscape-130` | Jlockeed's Starship Retrofitting Program | Spell | cast send Tech/rocket | 1.35 | none: no motif reads addedToHand | cast: the Starship part's (#2782, R2801000): the Jlockeed card it adds, a Starship Piece from then on, is the census's addedToHand, which send reads; Tech/rocket for the ship |
 | `stinkyscape-131` | Spacerace Stimulus | Field Trap | cast snap Hustle/cash | 1.08 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then; Hustle/cash for its stimulus |
 | `stinkyscape-132` | Defensive Crystal | Unit | none: its Death's Armor shows no event; its fuse is the Starship part's | — | none: vanilla | the census's fused is its fuse, the Starship part's; a hero's Armor gain sends no event |
 | `stinkyscape-133` | Ultra Capacitor | Unit | none: Starship part | — | none: vanilla | its only hook is When launched, which the Starship part draws (#2782) |
@@ -80,10 +80,10 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-137-4` | Space Doctrine | Spell | cast send Tech/rocket | 1.19 | none: no motif reads modifierChanged | cast: its modifierChanged is its Flying rider; its hand of pieces is addedToHand, which send reads; Tech/rocket for the ship |
 | `stinkyscape-138` | Pocket Peptides | Trap | cast snap | 1.08 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
 | `stinkyscape-139` | Wormhole | Trap | cast negate Tech/starfield | 1.28 | negate | cast: the census agrees (negate): its firing counters, which negate reads once firings open a window; Tech/starfield for its wormhole |
-| `stinkyscape-140` | Rush Token Launcher | Unit | none: Starship part | — | bolt | the issue gives the Launchers to the Starship part (#2782) |
-| `stinkyscape-141` | Fruit Launcher | Unit | none: Starship part | — | none: no motif reads locked | the issue gives the Launchers to the Starship part (#2782) |
-| `stinkyscape-142` | Jade Launcher | Unit | none: Starship part | — | bolt | the issue gives the Launchers to the Starship part (#2782) |
-| `stinkyscape-143` | Book Launcher | Unit | none: Starship part | — | bolt | the issue gives the Launchers to the Starship part (#2782) |
+| `stinkyscape-140` | Rush Token Launcher | Unit | cry conjure Tech/rocket | 1.28 | bolt | cry: the Starship part's (#2782, R2801000): each Launcher lands in a ring of rocket exhaust; its Activate, which a launched Starship inherits, waits for #2783 |
+| `stinkyscape-141` | Fruit Launcher | Unit | cry conjure Tech/rocket | 1.28 | none: no motif reads locked | cry: the Starship part's (#2782, R2801000): each Launcher lands in a ring of rocket exhaust; its Activate, which a launched Starship inherits, waits for #2783 |
+| `stinkyscape-142` | Jade Launcher | Unit | cry conjure Tech/rocket | 1.55 | bolt | cry: the Starship part's (#2782, R2801000): each Launcher lands in a ring of rocket exhaust; its Activate, which a launched Starship inherits, waits for #2783 |
+| `stinkyscape-143` | Book Launcher | Unit | cry conjure Tech/rocket | 1.55 | bolt | cry: the Starship part's (#2782, R2801000): each Launcher lands in a ring of rocket exhaust; its Activate, which a launched Starship inherits, waits for #2783 |
 | `stinkyscape-144` | Prepare For Liftoff | Trap | cast snap | 1.08 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
 | `stinkyscape-145` | Fortify Flesh | Spell | cast ward | 1.45 | none: vanilla | cast: a hero's Armor gain sends no event, so the census sees nothing; ward, Armor's look, draws nothing at play until one does |
 | `stinkyscape-146` | Flash Freeze | Spell | bespoke flashFreeze | 1.10 | none: no motif reads marked | bespoke: it freezes the whole board in one breath, and no motif reads `marked` |
@@ -139,7 +139,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-t-ai-02` | Mining Subroutine | Spell | cast send Hustle/ore | 0.90 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Hustle/ore for its Resource |
 | `stinkyscape-t-ai-03` | Route Optimizer | Spell | cast send Tech/hologram | 0.97 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/hologram for its AI |
 | `stinkyscape-t-ai-04` | Predictive Shield | Trap | none: token | — | none: vanilla | a token: no motif reads attackCancelled or marked, whose own rows play |
-| `stinkyscape-t-ai-05` | Launch Sequencer | Spell | none: Starship part | — | none: no motif reads addedToHand | the issue gives it to the Starship part (#2782) |
+| `stinkyscape-t-ai-05` | Launch Sequencer | Spell | cast tithe Tech/rocket | 0.97 | none: no motif reads addedToHand | cast: the Starship part's (#2782, R2801000): its "Your Starship launch costs (1)" glints on its player's modifier badges and their Dormant Starship, which tithe reads from modifierChanged; Tech/rocket for the ship |
 | `stinkyscape-t-ai-06` | Probe Relay | Spell | cast send Tech/hologram | 0.97 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/hologram for its AI |
 | `stinkyscape-t-ai-07` | Combat Subroutine | Unit | cry bless Tech/hologram | 1.04 | none: no motif reads keywordGranted | cry: no census family reads keywordGranted, which bless reads; Tech/hologram for its AI |
 | `stinkyscape-t-ai-08` | Drone Uplink | Field Spell | cast conjure Tech/hologram; trigger conjure Tech/hologram; aura storm zone Tech/hologram | 1.04 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: no census family reads summoned, which conjure reads; Tech/hologram for its AI |
@@ -165,9 +165,10 @@ the range's Legendaries the shared Legendary entrance (#2803 reworks both).
 
 The Starship's own moments are the Starship part's of #2782: the fuse, the launch, Launch Sequencer
 `stinkyscape-t-ai-05`, #130 Jlockeed's Starship Retrofitting Program and the Launchers #140 to #143.
-Each card whose only hook is one of them is `none: Starship part` here: those four and Launch
-Sequencer, the three "When launched" pieces (#106 Warpfield Amplifier, #133 Ultra Capacitor, #136
-Magic Module), the two launches (#137 Starfleet Commander's Cry, #176 Preemptive Strike) and the
+That part (R2801000) gives Launch Sequencer `cast tithe`, the Retrofitting Program `cast send` and the
+Launchers `cry conjure`, all in Tech/rocket. Each other card whose only hook is one of them is
+`none: Starship part` here: the three "When launched" pieces (#106 Warpfield Amplifier, #133 Ultra
+Capacitor, #136 Magic Module), the two launches (#137 Starfleet Commander's Cry, #176 Preemptive Strike) and the
 Dormant Starship. A Starship Piece's other hooks have entries here (#93 Patcher Nanobots' `death`,
 #134 Felinor Containment Chamber's `death`, Salvage Protocol's `death`), and the War Doctrines a
 launch casts (#137.1 to #137.4) each play their own `cast`.

@@ -66,12 +66,14 @@ mod tests {
     use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const FAVOR: &str = "classic-046";
     const MACHINE: &str = "classic-049"; // Anti-Greed Machine: players can't draw more than 1 card each turn.
     const FILLER: &str = "core-010"; // (0) Spell
     const STOCKPILE: &str = "core-005";
     const MENACE: &str = "core-019";
-    const CN_VIRUS: &str = "core-090-1"; // Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw
     const HINDER: &str = "core-021"; // Cast on draw: … Discard 1 at random (R682: no prompt).
 
     use crate::js;
@@ -108,7 +110,6 @@ mod tests {
 
             #[test]
             fn draws_until_your_hand_holds_as_many_cards_as_the_opponents_this_spell_already_out_of_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR, FILLER], "library": many(6, MENACE) },
                     "p2": { "hand": many(4, STOCKPILE) },
@@ -120,7 +121,6 @@ mod tests {
 
             #[test]
             fn level_or_ahead_no_draw() {
-                crate::register_all();
                 let mut level = scenario(json!({
                     "p1": { "hand": [FAVOR, FILLER, FILLER], "library": many(3, MENACE) },
                     "p2": { "hand": many(2, STOCKPILE) },
@@ -137,7 +137,6 @@ mod tests {
 
             #[test]
             fn s2_4_a_fatigue_hit_adds_no_card_and_ends_it_one_hit_however_far_behind() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FAVOR], "library": [MENACE] }, "p2": { "hand": many(6, STOCKPILE) } }));
                 s.play(FAVOR, json!({}));
                 assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 1);
@@ -161,9 +160,8 @@ mod tests {
 
             #[test]
             fn r58_a_card_cast_on_draw_adds_no_card_and_ends_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [FAVOR], "library": [CN_VIRUS, MENACE, MENACE, MENACE] },
+                    "p1": { "hand": [FAVOR], "library": [SUPER_VIRUS, MENACE, MENACE, MENACE] },
                     "p2": { "hand": many(4, STOCKPILE) },
                 }));
                 s.play(FAVOR, json!({}));
@@ -171,7 +169,7 @@ mod tests {
                     .last_events()
                     .iter()
                     .map(js)
-                    .any(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS));
+                    .any(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS));
                 // The draw's chain repeats into one card (§2.4), and the draws stop there.
                 assert_eq!(s.hand(PlayerId::P1).len(), 1);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 2);
@@ -179,7 +177,6 @@ mod tests {
 
             #[test]
             fn s9_3_a_cast_on_draw_ends_it_too_r682_no_prompt_the_chain_still_repeats_into_one_menace() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR, FILLER], "library": [HINDER, MENACE, MENACE] },
                     "p2": { "hand": many(4, STOCKPILE) },
@@ -198,7 +195,6 @@ mod tests {
 
             #[test]
             fn b5_e3_a_draw_a_limit_stops_adds_no_card_and_ends_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR], "field": [MACHINE], "library": many(4, MENACE) },
                     "p2": { "hand": many(4, STOCKPILE) },
@@ -210,7 +206,6 @@ mod tests {
 
             #[test]
             fn reads_the_opponents_hand_as_it_resolves_their_hand_is_the_mark_whatever_their_deck_holds() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR], "library": many(5, MENACE) },
                     "p2": { "hand": many(2, STOCKPILE), "library": many(9, MENACE) },
@@ -221,7 +216,6 @@ mod tests {
 
             #[test]
             fn r749_the_base_faces_multiplier_is_not_tunable_an_upgrades_menu_offers_no_number_and_a_recorded_step_still_draws_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR, FILLER], "library": many(6, MENACE) },
                     "p2": { "hand": many(3, STOCKPILE) },
@@ -236,7 +230,6 @@ mod tests {
 
             #[test]
             fn r97_the_drawn_cards_are_never_named_in_the_opponents_view() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR], "library": many(2, MENACE) },
                     "p2": { "hand": many(2, STOCKPILE) },
@@ -255,7 +248,6 @@ mod tests {
 
             #[test]
             fn draws_until_you_hold_twice_as_many_cards_as_the_opponent() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FAVOR, "radiant": true }, FILLER], "library": many(8, MENACE) },
                     "p2": { "hand": many(3, STOCKPILE) },
@@ -267,7 +259,6 @@ mod tests {
 
             #[test]
             fn at_twice_as_many_already_no_draw() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FAVOR, "radiant": true }, FILLER, FILLER], "library": many(3, MENACE) },
                     "p2": { "hand": many(1, STOCKPILE) },
@@ -278,7 +269,6 @@ mod tests {
 
             #[test]
             fn r386_its_multiplier_steps_from_2_a_degrades_step_makes_it_1() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FAVOR, "radiant": true }], "library": many(8, MENACE) },
                     "p2": { "hand": many(3, STOCKPILE) },
@@ -291,7 +281,6 @@ mod tests {
 
             #[test]
             fn s2_4_a_fatigue_hit_ends_it_on_the_radiant_face_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FAVOR, "radiant": true }], "library": [] },
                     "p2": { "hand": many(3, STOCKPILE) },

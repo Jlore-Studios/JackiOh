@@ -123,7 +123,8 @@ export function takenOf(entry: AnimationEntry, view: PlayerView): string[] {
   return taken;
 }
 
-function tintOf(look: FlavorLook): FxTint {
+/** A look's three colors as a DOM cue's tint (the Starship's launch wears one too, starship.ts). */
+export function tintOf(look: FlavorLook): FxTint {
   const [glow, rim, core] = look.colors;
   return { glow, rim, core: core ?? glow };
 }

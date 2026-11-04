@@ -70,6 +70,7 @@ import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
+import { starshipClaim } from "../fx/starship.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
@@ -113,6 +114,14 @@ export type GameProps = {
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
   resultForm?: ResultForm;
+  /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
+  enemyLabel?: string;
+  /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */
+  controlExtras?: ReactNode;
+  /** The route's way back to its own result dialog from the board's result chip (practice). */
+  onOpenResult?: () => void;
+  /** The chip's `practice-outcome` button that opens the route's result dialog. */
+  openResultTestId?: string;
   /** R345: pins the R82 preference this board sends; the tutorial's lessons are written around R82. */
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
@@ -195,6 +204,10 @@ export default function Game({
   error,
   resultActions,
   resultForm = "panel",
+  enemyLabel,
+  controlExtras,
+  onOpenResult,
+  openResultTestId,
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   matchStatus,
@@ -371,8 +384,9 @@ export default function Game({
       setPieces: !silent,
       // R2800000: a board clear's hook plays its removals as one wipe, which its set piece claims.
       // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
+      // R2801000: and a Starship's launch after both.
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry),
+      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -727,6 +741,8 @@ export default function Game({
         highlight={highlight}
         animating={animating}
         animated={animated}
+        enemyLabel={enemyLabel}
+        controlExtras={controlExtras}
         turnClock={turnClock}
         matchStatus={matchStatus}
         boardRail={boardRail}
@@ -828,6 +844,8 @@ export default function Game({
             actions={resultActions}
             animating={animating.get(testid.result)}
             theirHand={theirHandOf(shown)}
+            onOpenResult={onOpenResult}
+            openResultTestId={openResultTestId}
           />
         </WearerProvider>
       ) : null}

@@ -45,7 +45,6 @@ mod tests {
 
         #[test]
         fn death_heals_your_hero_6_past_its_starting_health_then_fuses() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "health": 29, "field": [NANOBOTS], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -68,7 +67,6 @@ mod tests {
 
         #[test]
         fn heal_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "health": 20, "field": [NANOBOTS], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -86,7 +84,6 @@ mod tests {
 
         #[test]
         fn radiant_death_heals_your_hero_12() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],

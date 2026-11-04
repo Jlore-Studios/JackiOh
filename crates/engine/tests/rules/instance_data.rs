@@ -8,31 +8,27 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    act, act_with_nonce, in_hand, live, put, round_trip, run_effect, set_library, slot,
+    act, act_with_nonce, ids, in_hand, live, put, round_trip, run_effect, set_library, slot,
 };
 use crate::rules::fixtures::instance_data::{
     CONSTANT_STEP, body, constant, instance_deck, instance_game, military, nerfer, numbered, numbered_body,
     register_instance_fixtures,
 };
 
-fn input(player: PlayerId, action: ActionBody) -> ActionInput {
+fn player_input(player: PlayerId, action: ActionBody) -> ActionInput {
     ActionInput {
         body: action,
         player_id: player,
     }
 }
 
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
-}
-
 /// p1's main phase on turn 1, past the mulligans, with mana to spend.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&instance_game(seed, None)).state;
     let keep = ids(&state.players.p1.hand);
-    state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
+    state = act(&state, player_input(PlayerId::P1, ActionBody::Mulligan { keep }));
     let keep = ids(&state.players.p2.hand);
-    state = act(&state, input(PlayerId::P2, ActionBody::Mulligan { keep }));
+    state = act(&state, player_input(PlayerId::P2, ActionBody::Mulligan { keep }));
     state.players.p1.mana = ManaState {
         current: 4,
         max: 4,
@@ -58,7 +54,7 @@ fn play_of(
     let Some(play) = play else {
         panic!("no play for {}", card.def_id)
     };
-    input(PlayerId::P1, play)
+    player_input(PlayerId::P1, play)
 }
 
 /// Whether a play's targets, as JSON, hold `id`.
@@ -421,7 +417,7 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
 
         let copy = round_trip(&state);
         let option = pending.options.first().expect("no option");
-        let answer = input(
+        let answer = player_input(
             PlayerId::P1,
             ActionBody::Answer {
                 choice_id: pending.id.clone(),
@@ -461,7 +457,7 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
             )
             .expect("expected the victim offered");
         let copy = round_trip(&state);
-        let answer = input(
+        let answer = player_input(
             PlayerId::P1,
             ActionBody::Answer {
                 choice_id: pending.id.clone(),

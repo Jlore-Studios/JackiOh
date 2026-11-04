@@ -7,14 +7,7 @@ use jackioh_engine::testkit::PlayerId::P1;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{grunt, playing};
-use crate::rules::fixtures::harness::sink_for;
-
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
+use crate::rules::fixtures::harness::{by, sink_for};
 
 mod r80_the_named_end_of_the_library {
     use super::*;

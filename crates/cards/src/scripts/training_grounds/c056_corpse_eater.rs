@@ -79,6 +79,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -115,7 +117,6 @@ mod tests {
 
         #[test]
         fn r89_in_hand_it_gains_an_ally_unit_s_attack_and_max_health_when_it_dies() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -133,7 +134,6 @@ mod tests {
 
         #[test]
         fn on_either_side_an_enemy_unit_dying_feeds_it_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [EATER, FILLER], "field": [{ "def": FELINORS, "lane": 1 }] },
@@ -147,7 +147,6 @@ mod tests {
 
         #[test]
         fn r38_counts_the_dying_unit_s_current_attack_and_max_health_not_its_remaining_health() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -165,7 +164,6 @@ mod tests {
 
         #[test]
         fn r89_counts_the_layers_numbers_two_deaths_in_one_state_check_both_feed_it() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -183,7 +181,6 @@ mod tests {
 
         #[test]
         fn r11_a_unit_token_never_reaches_a_graveyard_so_it_never_feeds_the_eater() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -201,7 +198,6 @@ mod tests {
 
         #[test]
         fn s8_5_a_card_reaching_a_graveyard_from_a_hand_never_died_so_a_burn_does_not_count_r4() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 // HAND_CAP is 10: the hand is already full, so the draw below is burned (§2.4, R4).
@@ -221,7 +217,6 @@ mod tests {
 
         #[test]
         fn stops_once_it_is_on_the_field_the_hand_trigger_is_not_registered_from_a_unit_zone_s10_3() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [EATER, FILLER], "field": [{ "def": STRAAZA, "lane": 2 }] },
@@ -239,7 +234,6 @@ mod tests {
 
         #[test]
         fn r78_the_gain_travels_from_hand_onto_the_field_buffs_are_layer_4_on_the_instance() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -265,7 +259,6 @@ mod tests {
 
         #[test]
         fn gains_double_the_radiant_4_4_takes_twice_the_dying_unit_s_attack_and_max_health() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -282,7 +275,6 @@ mod tests {
 
         #[test]
         fn r38_doubles_the_current_attack_and_max_health_from_either_side() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -301,7 +293,6 @@ mod tests {
 
         #[test]
         fn r11_the_radiant_face_excludes_tokens_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -321,7 +312,6 @@ mod tests {
 
         #[test]
         fn stops_once_on_the_field_and_its_printed_divine_shield_is_the_catalog_s_not_a_grant() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": EATER, "radiant": true }, FILLER], "field": [{ "def": STRAAZA, "lane": 2 }] },
@@ -346,7 +336,6 @@ mod tests {
 
         #[test]
         fn r219_corpse_eater_gains_nothing_from_a_unit_suppressive_aura_starved_below_0_max_health_r38_s10_4() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [EATER, SUPPRESSIVE_AURA, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] }, // 1/1

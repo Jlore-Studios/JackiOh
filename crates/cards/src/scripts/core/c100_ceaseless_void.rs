@@ -70,6 +70,8 @@ mod tests {
     use jackioh_engine::state::find_instance_mut;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -240,7 +242,6 @@ mod tests {
 
         #[test]
         fn s10_4_r275_the_base_face_reads_10_10_and_the_radiant_face_20_20_through_the_layers() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [VOID], "hand": [SPARE] },
                 "p2": { "field": [{ "def": VOID, "radiant": true }] },
@@ -259,7 +260,6 @@ mod tests {
 
         #[test]
         fn s8_5_on_a_fresh_game_it_costs_its_printed_100_and_no_play_can_afford_it() {
-            crate::register_all();
             let mut s = void_scenario(json!({}));
             assert_eq!(s.state().counters, GameCounters { drawn: 0, played: 0, destroyed: 0, exiled: 0 });
             // The hook is consulted ahead of the printed cost, and on a fresh game they agree.
@@ -270,7 +270,6 @@ mod tests {
 
         #[test]
         fn r55_each_of_the_four_counters_takes_1_off_on_either_player_s_behalf() {
-            crate::register_all();
             let mut s = void_scenario(json!({}));
             for key in ["drawn", "played", "destroyed", "exiled"] {
                 let mut counters = json!({ "drawn": 0, "played": 0, "destroyed": 0, "exiled": 0 });
@@ -284,7 +283,6 @@ mod tests {
 
         #[test]
         fn r386_an_upgrade_takes_2_off_per_card_and_a_degrade_finds_the_discount_at_its_floor_of_1() {
-            crate::register_all();
             let mut s = void_scenario(json!({}));
             set_counters(&mut s, json!({ "drawn": 10 }));
             let id = held(&s).id;
@@ -295,7 +293,6 @@ mod tests {
 
         #[test]
         fn s8_5_floors_at_0_a_long_game_never_gives_it_a_negative_cost() {
-            crate::register_all();
             let mut s = void_scenario(json!({}));
             set_counters(&mut s, json!({ "drawn": 200, "played": 50, "destroyed": 10, "exiled": 10 }));
             assert_eq!(printed_cost(s.state(), &held(&s)), 0);
@@ -304,7 +301,6 @@ mod tests {
 
         #[test]
         fn s8_5_cost_recomputed_on_read_nothing_is_stored_on_the_instance() {
-            crate::register_all();
             let mut s = void_scenario(json!({}));
             let card = held(&s);
             assert!(card.cost_override.is_none());
@@ -321,7 +317,6 @@ mod tests {
 
         #[test]
         fn r65_the_hook_is_the_start_of_the_calculation_costmod_and_discounts_still_apply_after_it() {
-            crate::register_all();
             let mut s = void_scenario(json!({}));
             set_counters(&mut s, json!({ "drawn": 96 }));
             assert_eq!(printed_cost(s.state(), &held(&s)), 4);
@@ -335,7 +330,6 @@ mod tests {
 
         #[test]
         fn r55_the_counters_are_the_engine_s_real_draws_plays_destructions_and_exiles_move_them() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "void-real",
                 "p1": {
@@ -401,7 +395,6 @@ mod tests {
 
         #[test]
         fn s10_5_playing_it_never_makes_itself_cheaper_the_cost_is_paid_before_the_play_is_counted() {
-            crate::register_all();
             let mut s = void_scenario(json!({ "p1": { "field": [TIMMY], "mana": 4 } }));
             set_counters(&mut s, json!({ "drawn": 97 }));
             assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), 3);
@@ -415,7 +408,6 @@ mod tests {
 
         #[test]
         fn s8_5_once_the_game_has_spent_100_cards_it_is_free_and_it_lands_as_a_10_10() {
-            crate::register_all();
             let mut s = void_scenario(json!({ "p1": { "mana": 0 } }));
             set_counters(&mut s, json!({ "drawn": 60, "played": 20, "destroyed": 10, "exiled": 10 }));
             assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), 0);
@@ -446,7 +438,6 @@ mod tests {
 
         #[test]
         fn s8_5_exiles_both_rows_on_both_sides_and_leaves_itself_standing() {
-            crate::register_all();
             let mut s = board_scenario(false);
             let others: Vec<CardInstance> = [
                 units_of(&s, P1),
@@ -469,7 +460,6 @@ mod tests {
 
         #[test]
         fn s6_1_indestructible_does_not_stop_an_exile_a_unit_or_a_field_spell() {
-            crate::register_all();
             let mut s = board_scenario(false);
             let rocky = must(s.unit(P2, 1), "the radiant #66");
             let heroic = must(s.backrow(P2, 1), "the #98 Heroic Power");
@@ -483,7 +473,6 @@ mod tests {
 
         #[test]
         fn s6_3_an_exile_takes_no_death_trigger_and_counts_nothing_as_destroyed() {
-            crate::register_all();
             let mut s = board_scenario(false);
             let before = s.state().counters.destroyed;
 
@@ -497,7 +486,6 @@ mod tests {
 
         #[test]
         fn r11_a_unit_token_ceases_to_exist_instead_of_reaching_the_exile_pile_and_is_not_counted() {
-            crate::register_all();
             let mut s = board_scenario(false);
             let token = must(
                 units_of(&s, P1).into_iter().find(|unit| unit.def_id == RUSH_TOKEN),
@@ -516,7 +504,6 @@ mod tests {
 
         #[test]
         fn s3_1_it_reaches_the_field_and_only_the_field_hands_libraries_and_graveyards_are_untouched() {
-            crate::register_all();
             let mut s = void_scenario(json!({
                 "p1": { "field": [TIMMY], "library": [SPARE, SPARE], "graveyard": [SPARE], "mana": 4 },
                 "p2": { "hand": [SPARE, SPARE], "library": [SPARE], "graveyard": [SPARE] },
@@ -534,7 +521,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_the_radiant_face_keeps_the_cry_plus_charge_restates_no_clause() {
-            crate::register_all();
             let mut s = board_scenario(true);
             s.play(VOID, json!({}));
             assert_eq!(def_ids(&units_of(&s, P1)), vec![VOID.to_string()]);
@@ -582,7 +568,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_the_radiant_face_keeps_the_cost_clause_too() {
-            crate::register_all();
             let mut s = void_scenario(json!({ "radiantFace": true }));
             assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), PRINTED);
             set_counters(&mut s, json!({ "drawn": 30, "played": 30, "destroyed": 20, "exiled": 15 }));
@@ -594,7 +579,6 @@ mod tests {
         use super::*;
 
         fn glows_at_97_and_can_be_played(radiant_face: bool) {
-            crate::register_all();
             let mut s = void_scenario(json!({ "radiantFace": radiant_face }));
             set_counters(&mut s, json!({ "drawn": 97 }));
             assert!(hand_glows(&s, &held(&s).id, P1));
@@ -603,7 +587,6 @@ mod tests {
         }
 
         fn does_not_glow_at_95(radiant_face: bool) {
-            crate::register_all();
             let mut s = void_scenario(json!({ "radiantFace": radiant_face }));
             set_counters(&mut s, json!({ "drawn": 95 }));
             assert!(!hand_glows(&s, &held(&s).id, P1));

@@ -87,12 +87,6 @@ var StateBranch = Identity.StateBranch
 // StateFile is STATE_FILE = "state.json".
 var StateFile string = "state.json"
 
-// NoDeploy is the files an orphan branch the bot writes to starts with beside its own: Vercel
-// counts a deployment for every push to every branch and reads its settings from the commit
-// pushed, so a branch with no `vercel.json` of its own deploys on every write
-// (docs/architecture.md, §4.2).
-var NoDeploy = map[string]string{"vercel.json": "{ \"git\": { \"deploymentEnabled\": false } }\n"}
-
 // NightWorkflow is NIGHT_WORKFLOW = IDENTITY.workflow.
 var NightWorkflow = Identity.Workflow
 

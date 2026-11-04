@@ -103,25 +103,30 @@ describe("the two builds' Supabase projects", () => {
   });
 });
 
-describe("R1933000 production's card statistics hold live games alone", () => {
-  const WORKFLOWS = join(ROOT, ".github/workflows");
-  const text = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
-  const workflows = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
+const WORKFLOWS = join(ROOT, ".github/workflows");
+const workflowText = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
+const workflowFiles = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
 
-  it("files development records only from the development lanes, through staging's STATS_IMPORT_DATABASE_URL", () => {
-    const importers = workflows.filter((file) => text(file).includes("jackioh-server stats-import"));
+describe("R1933001 the development lanes file into both projects' card statistics", () => {
+  it("files development records only from the development lanes, through staging's and production's import logins", () => {
+    const importers = workflowFiles.filter((file) => workflowText(file).includes("jackioh-server stats-import"));
     expect(importers.sort()).toEqual(["gather.yml", "learn.yml"]);
     for (const file of importers) {
-      const secrets = [...text(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
-      expect(secrets.length, file).toBeGreaterThan(0);
-      expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL"]));
+      const secrets = [...workflowText(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
+      expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL", "PRODUCTION_STATS_IMPORT_DATABASE_URL"]));
+      // Each import names both, staging's first: a run files into each database it has a login for.
+      const filing = workflowText(file).slice(workflowText(file).lastIndexOf("for where in"));
+      expect(filing.startsWith("for where in staging production;"), file).toBe(true);
+      expect(filing, file).toMatch(/DATABASE_URL=\$url target\/release\/jackioh-server stats-import --totals-only/u);
     }
   });
+});
 
-  it("reads production through STATS_DATABASE_URL, which no workflow imports through", () => {
-    const readers = workflows.filter((file) => /\bSTATS_DATABASE_URL\b/u.test(text(file)));
+describe("R1933000 production's figures are read through STATS_DATABASE_URL, which no workflow imports through", () => {
+  it("is read by the win-rate refresh and the size check alone, neither of which imports", () => {
+    const readers = workflowFiles.filter((file) => /\bSTATS_DATABASE_URL\b/u.test(workflowText(file)));
     expect(readers.sort()).toEqual(["db-size.yml", "winrates-refresh.yml"]);
-    for (const file of readers) expect(text(file), file).not.toContain("stats-import");
+    for (const file of readers) expect(workflowText(file), file).not.toContain("stats-import");
   });
 });
 

@@ -31,6 +31,7 @@ import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
 import { planSetPiece } from "./setPieces.ts";
+import { planStarship } from "./starship.ts";
 import { shotCue } from "./stage.ts";
 import { entranceCues, entranceLandMs } from "./takeover.ts";
 import {
@@ -1170,8 +1171,11 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const motif = planCardMotif(entry, view, env);
   // R2800000: a board clear's set piece draws its wipe's removals in place of their own rows.
   const setPiece = planSetPiece(entry, view, env);
-  const replaced = (event: GameEvent): boolean => motif?.replaces.has(event) === true || setPiece?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? [])];
+  // R2801000: so does the Starship, its fuse run's fusions and its launch.
+  const starship = planStarship(entry, view, env);
+  const replaced = (event: GameEvent): boolean =>
+    motif?.replaces.has(event) === true || setPiece?.replaces.has(event) === true || starship?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(starship?.cues ?? [])];
   if (entry.sweep !== undefined) {
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
@@ -1186,6 +1190,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const systemSkip = new Set<GameEvent>([
     ...(motif?.replaces ?? []),
     ...(setPiece?.replaces ?? []),
+    ...(starship?.replaces ?? []),
     ...beats.replaces,
   ]);
   const system = planSystemMoment(entry, view, env, systemSkip);

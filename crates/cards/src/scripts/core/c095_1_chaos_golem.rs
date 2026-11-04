@@ -24,6 +24,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -69,7 +71,6 @@ mod tests {
 
         #[test]
         fn s6_1_rush_on_the_turn_it_arrives_it_may_attack_a_unit_and_first_strike_kills_it_untouched() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [GOLEM], "hand": [ANCHOR] },
                 "p2": { "field": [POSTDOC] },
@@ -89,7 +90,6 @@ mod tests {
 
         #[test]
         fn s4_4_divine_shield_negates_the_hit_back_and_lifesteal_heals_the_10_it_dealt() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [GOLEM], "hand": [ANCHOR], "health": 15 },
                 "p2": { "field": [{ "def": FAUCI, "radiant": true }] },
@@ -111,7 +111,6 @@ mod tests {
 
         #[test]
         fn r275_a_20_20_with_charge_in_rush_s_place() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": GOLEM, "radiant": true }], "hand": [ANCHOR] },
             }));
@@ -126,7 +125,6 @@ mod tests {
 
         #[test]
         fn r275_charge_on_the_turn_it_arrives_it_may_hit_the_hero_and_lifesteal_heals_the_20() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": GOLEM, "radiant": true }], "hand": [ANCHOR], "health": 5 },
             }));

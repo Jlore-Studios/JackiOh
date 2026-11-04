@@ -1,13 +1,14 @@
 // R2784000: the cards and mana motifs (docs/polish/9-card-animations.md): flight, glimpse, mana,
 // tithe, tally and send (#2793), then #2796's deal (cards dealt into a hand or deck) and seal (a
-// lasting modifier laid on a seat). Like the damage motifs (damage.ts) each plays in the entry's
-// phases (build.ts) and plans nothing without an event it reads.
+// lasting modifier laid on a seat), and R2794000's recall. Like the damage motifs (damage.ts) each
+// plays in the entry's phases (build.ts) and plans nothing without an event it reads.
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { animTestid, locateInstance, type AnimationEntry } from "../../game/animations.ts";
 import { sideOf, testid, type Side } from "../../game/contract.ts";
 import { tid } from "../build.ts";
 import { FX_MANA_MAX_SPARKS, FX_MOTIF_DEAL_MAX, FX_MOTIF_TITHE_MAX } from "../constants.ts";
+import { dormantStarshipOf } from "../starship.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../types.ts";
 import {
   flies,
@@ -45,6 +46,35 @@ export const flight: MotifPlanner = {
       const to = tid(animTestid.hand(side));
       cues.push({ kind: "ghost", from, to, delayMs: t.T, durationMs: t.L - t.T });
       cues.push(motifBurst(spec, to, "point", t.L, MOTIF_TUNING.small, "sparkle"));
+    }
+    return cues;
+  },
+};
+
+const RECALL_READS = ["addedToHand"] as const;
+
+/**
+ * R2794000 recall: a card back flying from its owner's graveyard pile into the hand (#2794): a small
+ * gather on the pile, the flight from Travel to Land and the hand's sparkle on Land. The hand's own
+ * glint still plays, and nothing shakes.
+ */
+export const recall: MotifPlanner = {
+  reads: RECALL_READS,
+  replaces: [],
+  plan(spec, entry, view, env) {
+    const hits = readEvents(entry, view, env, RECALL_READS);
+    if (hits.length === 0) return [];
+    const t = timesOf(entry.durationMs);
+    const cues: FxCue[] = [];
+    for (const h of hits) {
+      const event = h.event;
+      if (event.type !== "addedToHand") continue;
+      const side = sideOf(view, event.player);
+      const grave = tid(animTestid.graveyard(side));
+      const hand = tid(animTestid.hand(side));
+      cues.push(motifBurst(spec, grave, "point", t.G, MOTIF_TUNING.small));
+      cues.push({ kind: "ghost", from: grave, to: hand, delayMs: t.T, durationMs: t.L - t.T });
+      cues.push(motifBurst(spec, hand, "point", t.L, MOTIF_TUNING.small, "sparkle"));
     }
     return cues;
   },
@@ -113,19 +143,23 @@ export const mana: MotifPlanner = {
   },
 };
 
-const TITHE_READS = ["costChanged"] as const;
+const TITHE_READS = ["costChanged", "modifierChanged"] as const;
 
 /**
  * tithe: a glint on the cost gem of each hand card whose cost changed. A card the viewer may not
  * read (its `hiddenFrom` names the viewer, or it is nowhere in the view) glints by count only
  * (R202): one glint per event, capped, on the other seat's hand backs, never keyed to a back.
+ * R2801000: a price set for a player (an added modifier, public on both seats) glints on their
+ * modifier badges, and on their Dormant Starship, whose launch it may price (R1852006); the badge's
+ * own row still plays.
  */
 export const tithe: MotifPlanner = {
   reads: TITHE_READS,
-  replaces: [...TITHE_READS],
+  replaces: ["costChanged"],
   plan(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv) {
     const events = entry.events.filter((event): event is Extract<GameEvent, { type: "costChanged" }> => event.type === "costChanged");
-    if (events.length === 0) return [];
+    const priced = entry.events.filter((event): event is Extract<GameEvent, { type: "modifierChanged" }> => event.type === "modifierChanged" && event.added);
+    if (events.length === 0 && priced.length === 0) return [];
     const t = timesOf(entry.durationMs);
     const play = env.memory.resolving();
     const side = play === undefined ? "opponent" : sideOf(view, play.player);
@@ -142,6 +176,12 @@ export const tithe: MotifPlanner = {
         cues.push(motifBurst(spec, back, "point", t.L, MOTIF_TUNING.small, "arcane"));
         veiled += 1;
       }
+    }
+    for (const event of priced) {
+      const owner = sideOf(view, event.player);
+      cues.push(motifBurst(spec, tid(animTestid.modifiers(owner)), "point", t.L, MOTIF_TUNING.small, "arcane"));
+      const ship = dormantStarshipOf(view, owner);
+      if (ship !== null) cues.push(motifBurst(spec, tid(ship), "point", t.L, MOTIF_TUNING.small, "arcane"));
     }
     if (cues.length === 0) return [];
     cues.push(...motifShake(spec, t.L));

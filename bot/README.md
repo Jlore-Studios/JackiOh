@@ -182,7 +182,7 @@ workflow's).
 
 **`human required`** is the bot handing an item to people because it found it cannot do it
 (#793): it needs a change under `bot/`, `.harness/`, `.squishy/` or `.github/`, a secret or a
-token, a setting in a dashboard (GitHub's, Vercel's, Render's, Supabase's, Cloudflare's) or an
+token, a setting in a dashboard (GitHub's, Supabase's, Cloudflare's) or an
 account. Instead of asking the same question on every run (#760 spent two runs on one), it lets go
 of the item as a person's `human` would make it: its own labels come off (`bot:blocked`,
 `bot:build`, its live label, `bot:needs-plan`, the modes), it unassigns itself and assigns both
@@ -1546,8 +1546,7 @@ often another job, subscription and CLI, so the journal is the handover; a Claud
 subscription resumes its own session as well (above), and the journal and the handoff stay its
 fallback. Each section has a `Session:` line for a Claude run (whether it resumed, or why not,
 and what the resumed call took). A file over 300,000
-characters drops its oldest runs' notes first (the branch's history keeps them). The branch
-starts with a `vercel.json` that switches Vercel off for it, as `bot-state`'s does.
+characters drops its oldest runs' notes first (the branch's history keeps them).
 
 **A job that is killed** keeps its work too (#342). After every builder pass, check run and review
 the work job rewrites `result.json` as a pause of kind `died`, with its head, a bundle of its
@@ -1905,10 +1904,9 @@ the status loop records every subscription's usage over time (#2749), as CSV fil
 spreadsheet opens, on the unprotected orphan branch **`bot-usage`**
 ([`go/internal/usage/`](go/internal/usage/)): the identity's `usage_branch`, turned on by
 `usage_history` in `.harness/config.json`. Squishy keeps none: its config leaves the key off and
-its identity names no usage branch. The branch starts with a `vercel.json` that switches Vercel
-off for it, as `bot-state`'s and `bot-journal`'s do; Cloudflare needs nothing, since its own Git
-builds are disconnected and only `promote-production.yml` deploys there
-([docs/deploy-cloudflare.md](../docs/deploy-cloudflare.md), step 3). A record, never a gate: a
+its identity names no usage branch. Like `bot-state` and `bot-journal`, the branch deploys
+nowhere: Cloudflare's own Git builds are disconnected, and only `deploy-staging.yml` and
+`promote-production.yml` deploy ([docs/deploy-cloudflare.md](../docs/deploy-cloudflare.md)). A record, never a gate: a
 failed read or write is a warning, and the loop, the run and the delivery go on.
 
 **The files**, under `usage/`: `readings-YYYY-MM.csv`, `ticks-YYYY-MM.csv`, `pools-YYYY-MM.csv`,

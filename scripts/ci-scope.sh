@@ -296,7 +296,7 @@ for file in $files; do
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;
-    scripts/browse.sh | scripts/promote-production.sh | scripts/worktree.sh) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done

@@ -59,6 +59,8 @@ mod tests {
     use crate::merged;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -87,7 +89,6 @@ mod tests {
 
         #[test]
         fn s6_2_summons_a_rush_token_at_its_controller_s_start_of_turn() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(busy(), json!({ "backrow": [{ "def": "core-058", "lane": 1 }] })),
                 "p2": busy(),
@@ -102,7 +103,6 @@ mod tests {
 
         #[test]
         fn r62_and_s6_2_it_fires_on_the_controller_s_turns_only_never_on_the_opponent_s() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(busy(), json!({ "backrow": [{ "def": "core-058", "lane": 1 }] })),
                 "p2": busy(),
@@ -123,7 +123,6 @@ mod tests {
 
         #[test]
         fn r64_takes_the_leftmost_empty_unit_zone() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(busy(), json!({
                     "backrow": [{ "def": "core-058", "lane": 1 }],
@@ -140,7 +139,6 @@ mod tests {
 
         #[test]
         fn s3_2_a_full_row_summons_nothing_and_the_trigger_still_resolves() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(busy(), json!({
                     "backrow": [{ "def": "core-058", "lane": 1 }],
@@ -163,7 +161,6 @@ mod tests {
 
         #[test]
         fn the_base_face_has_no_aura_a_rush_token_beside_it_is_a_plain_3_3() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "backrow": [{ "def": "core-058", "lane": 1 }], "field": [{ "def": "core-t-rush", "lane": 1 }] },
             }));
@@ -177,7 +174,6 @@ mod tests {
 
         #[test]
         fn s10_4_layer_5_gives_your_rush_tokens_3_3() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }],
@@ -190,7 +186,6 @@ mod tests {
 
         #[test]
         fn the_engine_cell_s_def_key_only_rush_tokens_and_only_the_ones_you_control() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }],
@@ -214,7 +209,6 @@ mod tests {
 
         #[test]
         fn s10_4_layer_5_and_not_layer_4_the_aura_changes_no_buffs_on_the_instance() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }],
@@ -229,7 +223,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_same_the_radiant_face_still_summons_a_token_and_pumps_that_one_too() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": merged(busy(), json!({ "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }] })),
                 "p2": busy(),
@@ -243,7 +236,6 @@ mod tests {
 
         #[test]
         fn the_3_3_is_real_in_combat_a_pumped_token_trades_with_a_6_attack_unit() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }],
@@ -265,7 +257,6 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_the_aura_4_4_and_a_degrade_2_2() {
             for (upgrade, buff) in [(true, 4), (false, 2)] {
-                crate::register_all();
                 let mut g = scenario(json!({
                     "p1": {
                         "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }],

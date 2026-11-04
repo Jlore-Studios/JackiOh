@@ -194,6 +194,7 @@
   "Close settings": "关闭设置",
   "Settings sections": "设置分区",
   "Close": "关闭",
+  "Dismiss": "关闭",
   "In deck": "在卡组中",
   "In {name}": "在{name}中",
   "Remove {name} from {deck}": "从{deck}中移除{name}",
@@ -4150,5 +4151,9 @@
   "Fastest win": "最快胜利",
   "Version": "版本",
   "Augments": "增强",
-  "Signature": "签名"
+  "Signature": "签名",
+  "Needs Full art and Animated": "需要全画和动态",
+  "Alt art": "异画",
+  "Sketch": "素描",
+  "Alt full art": "异画全画"
 }

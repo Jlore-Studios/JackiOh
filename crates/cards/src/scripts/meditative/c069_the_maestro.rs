@@ -87,13 +87,14 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const MAESTRO: &str = "meditative-069";
     const FILLER: &str = "core-005";
 
     /// p1 holds the Maestro (base unless `radiant_face`); both sides keep cards in hand so no turn
     /// auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -190,7 +191,6 @@ mod tests {
 
         /// The Maestro on p1's field with `counters` Plague Counters, and every enemy zone full.
         fn full_enemy(seed: &str, radiant_face: bool, counters: i32) -> Scenario {
-            crate::register_all();
             scenario(json!({
                 "seed": seed,
                 "p1": {
@@ -214,7 +214,6 @@ mod tests {
 
         #[test]
         fn an_activations_mana_places_counters_too() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "maestro-activation",
                 "p1": {
@@ -377,7 +376,6 @@ mod tests {
     fn r1884005_a_copier_of_the_maestro_s_text_reads_its_price_off_the_copy() {
         const TNACK_TRAV: &str = "stinkyscape-020";
         const FIENDER: &str = "core-092"; // Legendary, so the fusion is.
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": "maestro-copied",
             "p1": { "hand": [TNACK_TRAV, FILLER], "library": filler(4), "mana": 10 },

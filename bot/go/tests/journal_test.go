@@ -143,9 +143,6 @@ func TestJournal_AppendsMakeTheBranchThenAddToTheFile(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	journal.Append(gh, 12, journalSection(1), noSleep)
 	assertIn(t, journal.Branch, gh.Branches)
-	// Vercel reads the pushed commit's settings: the branch must say "no deployments".
-	vercel, _ := gh.GetFile("vercel.json", journal.Branch)
-	assertIn(t, `"deploymentEnabled": false`, vercel)
 	journal.Append(gh, 12, journalSection(2), noSleep)
 	text, _ := gh.GetFile("12.md", journal.Branch)
 	assertTrue(t, strings.HasPrefix(text, "# Journal of #12"))

@@ -76,7 +76,6 @@ mod tests {
     }
 
     fn meteor_board(radiant: bool, units: Value) -> Scenario {
-        crate::register_all();
         scenario(json!({
             "p1": { "hand": [{ "def": METEOR, "radiant": radiant }, FILLER] },
             "p2": { "hand": [FILLER], "field": units, "library": filler(4) },
@@ -176,7 +175,6 @@ mod tests {
 
         #[test]
         fn the_zone_is_locked_whether_it_died_or_not() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [METEOR, FILLER], "library": filler(4) },
                 "p2": { "hand": [VANILLA, FILLER], "field": [{ "def": VANILLA, "lane": 2 }], "library": filler(4) },

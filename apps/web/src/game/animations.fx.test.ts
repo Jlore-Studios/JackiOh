@@ -468,7 +468,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   marketBought: ["jk-hand-edge", 250, "hand-<side>"],
   marketSold: ["jk-hand-edge", 250, "hand-<side>"],
   starshipFused: ["jk-fuse-merge", 400, "card-<instanceId>"],
-  starshipLaunched: ["jk-radiant-pulse", 600, "card-<instanceId>"],
+  starshipLaunched: ["jk-starship-launch", 600, "card-<instanceId>"],
   voteCast: ["jk-radiant-pulse", 400, "card-<instanceId> | backrow-<side>"],
   votedOut: ["jk-banner", 1200, "turn-banner"],
   fled: ["jk-exile-fade", 900, "hero-<side>"],

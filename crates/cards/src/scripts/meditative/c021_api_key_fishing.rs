@@ -79,6 +79,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -89,7 +91,6 @@ mod tests {
 
     /// p1 holds a Radiant API Key Fishing, against a hand to take.
     fn radiant_return() -> Scenario {
-        crate::register_all();
         scenario(json!({
             "seed": "meditative-021-radiant-return",
             "p1": { "hand": [{ "def": FISHING, "radiant": true }, TIMMY], "field": [TIMMY] },
@@ -132,7 +133,6 @@ mod tests {
 
         #[test]
         fn a_success_takes_their_whole_hand() {
-            crate::register_all();
             let mut s = scenario(json!({
                 // This seed passes the base 2%.
                 "seed": "probe-32",
@@ -150,7 +150,6 @@ mod tests {
 
         #[test]
         fn a_failure_takes_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 // This seed fails the base 2% (and the paid 5%).
                 "seed": "probe-0",
@@ -182,7 +181,6 @@ mod tests {
 
         #[test]
         fn r805_at_end_of_turn_adds_a_base_copy_and_stays_in_the_graveyard() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-021-return",
                 "p1": { "hand": [FISHING, TIMMY], "field": [TIMMY] },
@@ -203,7 +201,6 @@ mod tests {
 
         #[test]
         fn r805_not_on_later_turns() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-021-once",
                 "p1": { "hand": [FISHING, TIMMY], "field": [TIMMY] },
@@ -242,7 +239,6 @@ mod tests {
                 })
             };
             let takes = |cursor: u32, embiggen: bool| {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "seed": SEED,
                     "p1": { "hand": [{ "def": FISHING, "radiant": true }, TIMMY], "mana": 9, "field": [TIMMY] },
@@ -273,7 +269,6 @@ mod tests {
 
         #[test]
         fn r805_an_empty_hand_rolls_nothing() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "meditative-021-empty",
                 "p1": { "hand": [FISHING, TIMMY], "field": [TIMMY] },

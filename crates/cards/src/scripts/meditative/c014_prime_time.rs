@@ -86,6 +86,8 @@ mod tests {
     use crate::def_ids;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const PRIME: &str = "meditative-014";
@@ -116,7 +118,6 @@ mod tests {
 
         #[test]
         fn r804_draws_the_3_topmost_prime_indexed_cards_of_any_set() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [PRIME, FILLER],
@@ -135,7 +136,6 @@ mod tests {
 
         #[test]
         fn r804_a_token_index_never_matches() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [PRIME, FILLER],
@@ -154,7 +154,6 @@ mod tests {
 
         #[test]
         fn r801_fewer_matches_draw_fewer_without_fatigue() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [PRIME, FILLER], "mana": 9, "library": [EIGHT, FIVE] },
                 "p2": { "hand": [FILLER] },
@@ -170,7 +169,6 @@ mod tests {
 
         #[test]
         fn r386_draws_reads_through_param() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [PRIME, FILLER],

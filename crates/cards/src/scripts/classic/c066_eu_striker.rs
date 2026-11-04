@@ -84,6 +84,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -91,7 +93,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const BIG_FELINOR: &str = "core-043"; // (4) Unit: Cry: Destroy all non-Felinor Units.
     const STOCKPILE: &str = "core-005"; // (1) Spell
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const GRAND: &str = "classic-072"; // Trap: counters the opponent's non-Unit plays.
     const FILLER: &str = "core-010"; // (0) Spell
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
@@ -133,7 +135,6 @@ mod tests {
 
             #[test]
             fn r548_from_your_hand_after_you_play_a_unit_it_is_summoned_into_your_leftmost_open_zone_no_cry() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STRIKER, VANILLA, FILLER] } }));
                 let striker = s.card(STRIKER).clone();
                 s.play(VANILLA, json!({}));
@@ -147,7 +148,6 @@ mod tests {
 
             #[test]
             fn r64_the_leftmost_open_zone_a_gap_to_the_left_of_the_played_unit_included() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STRIKER, VANILLA, FILLER], "field": [{ "def": VANILLA, "lane": 2 }] },
                 }));
@@ -160,7 +160,6 @@ mod tests {
 
             #[test]
             fn r64_a_locked_zone_is_passed_over_c_84_lockdowns_lock_on_an_emptied_lane_1_sends_it_to_lane_2() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STRIKER, VANILLA, HIT_JOB, VANILLA], "backrow": [LOCKDOWN], "mana": 9 },
                 }));
@@ -180,7 +179,6 @@ mod tests {
 
             #[test]
             fn s4_1_it_is_summoning_sick_it_cannot_attack_the_turn_it_arrives() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STRIKER, VANILLA, FILLER] },
                     "p2": { "field": [VANILLA], "hand": [FILLER] },
@@ -199,7 +197,6 @@ mod tests {
 
             #[test]
             fn r548_after_the_unit_resolves_its_cry_happens_first_so_big_felinors_sweep_does_not_reach_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STRIKER, BIG_FELINOR, FILLER] } }));
                 s.play(BIG_FELINOR, json!({}));
                 s.expect_in_zone(STRIKER, "field");
@@ -208,7 +205,6 @@ mod tests {
 
             #[test]
             fn r64_with_no_open_unit_zone_it_stays_in_your_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STRIKER, VANILLA, FILLER], "field": [VANILLA, VANILLA, VANILLA, VANILLA] },
                 }));
@@ -218,7 +214,6 @@ mod tests {
 
             #[test]
             fn r548_on_the_field_after_you_play_any_card_it_returns_to_your_hand_reset_r78() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [STOCKPILE, FILLER],
@@ -236,7 +231,6 @@ mod tests {
 
             #[test]
             fn r401_r548_the_unit_that_summons_it_doesnt_bounce_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STRIKER, VANILLA, FILLER] } }));
                 s.play(VANILLA, json!({}));
                 s.expect_in_zone(STRIKER, "field");
@@ -244,7 +238,6 @@ mod tests {
 
             #[test]
             fn r401_r548_the_card_that_bounces_it_doesnt_summon_it_back_a_unit_play_returns_it_and_it_stays_in_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VANILLA, FILLER, VANILLA], "field": [STRIKER] } }));
                 let vanillas = held(&s, P1, VANILLA);
                 let (Some(first), Some(second)) = (vanillas.first().cloned(), vanillas.get(1).cloned()) else {
@@ -260,7 +253,6 @@ mod tests {
 
             #[test]
             fn r401_r548_a_unit_play_bounces_the_one_on_the_field_and_summons_the_one_in_hand_and_neither_comes_back() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STRIKER, VANILLA, FILLER], "field": [STRIKER] } }));
                 let on_field = s.unit(P1, 1);
                 let in_hand = held(&s, P1, STRIKER).into_iter().next();
@@ -274,7 +266,6 @@ mod tests {
 
             #[test]
             fn r119_r401_its_own_play_doesnt_bounce_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STRIKER, FILLER] } }));
                 s.play(STRIKER, json!({}));
                 s.expect_in_zone(STRIKER, "field");
@@ -282,20 +273,18 @@ mod tests {
 
             #[test]
             fn r70_a_cast_is_a_play_a_spell_cast_on_draw_returns_it_to_your_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE, FILLER], "field": [STRIKER], "library": [CN_VIRUS, VANILLA, VANILLA] },
+                    "p1": { "hand": [STOCKPILE, FILLER], "field": [STRIKER], "library": [SUPER_VIRUS, VANILLA, VANILLA] },
                 }));
                 s.play(STOCKPILE, json!({}));
                 s.expect_in_zone(STRIKER, "hand");
                 assert!(s.last_events().iter().any(
-                    |event| matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == CN_VIRUS)
+                    |event| matches!(event, GameEvent::CardResolved { def_id, .. } if def_id == SUPER_VIRUS)
                 ));
             }
 
             #[test]
             fn a_countered_card_is_no_play_under_the_opponents_grand_counterspell_it_stays_on_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STOCKPILE, FILLER], "field": [STRIKER] },
                     "p2": { "backrow": [GRAND], "hand": [FILLER] },
@@ -307,7 +296,6 @@ mod tests {
 
             #[test]
             fn the_opponents_plays_do_nothing_their_unit_leaves_yours_in_hand_their_card_leaves_yours_on_the_field() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [STRIKER, FILLER], "field": [STRIKER] },
                     "p2": { "hand": [VANILLA, STOCKPILE, FILLER] },
@@ -334,7 +322,6 @@ mod tests {
 
             #[test]
             fn r97_in_your_hand_the_opponents_view_never_names_it_the_summon_is_the_first_they_see_of_it() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [STRIKER, VANILLA, FILLER] } }));
                 let striker = s.card(STRIKER).clone();
                 assert!(!js(&s.view(P2)).to_string().contains(STRIKER));
@@ -355,7 +342,6 @@ mod tests {
 
             #[test]
             fn is_a_10_8_with_rush_summoned_from_your_hand_after_a_unit_and_may_attack_a_unit_at_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": STRIKER, "radiant": true }, VANILLA, FILLER] },
                     "p2": { "field": [VANILLA], "hand": [FILLER] },
@@ -374,7 +360,6 @@ mod tests {
 
             #[test]
             fn r401_r548_the_same_two_triggers_after_you_play_a_card_it_returns_to_your_hand_and_its_own_play_doesnt() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": STRIKER, "radiant": true }, STOCKPILE, FILLER], "library": [VANILLA, VANILLA] },
                 }));

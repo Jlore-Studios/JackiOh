@@ -181,7 +181,6 @@ mod tests {
 
         #[test]
         fn r384_activates_the_turn_it_arrives_a_second_use_is_refused() {
-            crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": { "hand": [ID, FILLER], "library": [SPARE, SPARE] },
                 "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },

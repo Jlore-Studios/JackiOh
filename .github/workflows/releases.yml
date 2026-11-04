@@ -8,8 +8,8 @@
 # Staging is main and production is the `production` branch (docs/deploy-cloudflare.md). A version
 # main's patches.json holds and production's does not is a pre-release, "on staging". The run after a
 # production merge brings it makes it a release, and the newest version production holds is Latest.
-# Production moves only on a `/promote` whose super run passed (promote-production.yml), so a patch
-# stays a pre-release until someone promotes it.
+# Production moves only past a super run that passed (promote-production.yml), so a patch
+# stays a pre-release until the daily promotion, or a `/promote`, takes it there.
 #
 # Every run writes every release and changes only what differs: it creates a missing one, oldest first,
 # and edits one whose title, notes or pre-release flag moved. So its first run published the whole

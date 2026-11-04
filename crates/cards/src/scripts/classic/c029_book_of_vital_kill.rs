@@ -51,6 +51,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -83,7 +85,6 @@ mod tests {
 
             #[test]
             fn r81_legalactions_offers_the_play_at_each_hero_and_at_no_unit() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER], "field": [VANILLA] },
                     "p2": { "hand": [FILLER], "library": [FILLER], "field": [VANILLA] },
@@ -111,7 +112,6 @@ mod tests {
 
             #[test]
             fn sets_the_enemy_hero_s_health_down_to_13_from_above() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 30 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -121,7 +121,6 @@ mod tests {
 
             #[test]
             fn sets_your_own_hero_s_health_up_to_13_from_below_not_a_heal() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER], "health": 4 }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 play_at(&mut s, P1);
                 s.expect_health(P1, 13);
@@ -130,7 +129,6 @@ mod tests {
 
             #[test]
             fn a_hero_above_its_starting_health_comes_down_to_13_too() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 45 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -138,7 +136,6 @@ mod tests {
 
             #[test]
             fn a_hero_at_13_stays_at_13() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 13 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -147,7 +144,6 @@ mod tests {
 
             #[test]
             fn e7_not_damage_its_armor_is_left_as_it_was_and_no_damage_event_is_made() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER] },
                     "p2": { "hand": [FILLER], "library": [FILLER], "health": 30, "armor": 5 },
@@ -162,7 +158,6 @@ mod tests {
 
             #[test]
             fn e7_nothing_that_answers_a_hit_or_a_heal_sees_it_a_set_final_gambit_stays_set_fed_fauci_gets_no_token() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER] },
                     "p2": { "hand": [FILLER], "library": [FILLER], "field": [FAUCI], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 30 },
@@ -179,7 +174,6 @@ mod tests {
 
             #[test]
             fn e7_a_hit_cap_never_sees_it_anti_oneshot_armor_s_5_does_not_stop_30_13() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER] },
                     "p2": { "hand": [FILLER], "library": [FILLER], "backrow": [ANTI_ONESHOT], "health": 30 },
@@ -191,7 +185,6 @@ mod tests {
 
             #[test]
             fn r97_healthset_is_public_both_players_read_it_naming_the_book_as_its_source() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 let book = s.card(VITAL).clone();
                 play_at(&mut s, P2);
@@ -209,7 +202,6 @@ mod tests {
 
             #[test]
             fn the_base_face_adds_nothing_to_the_hand() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 play_at(&mut s, P2);
                 assert_eq!(def_ids(&s.hand(P1)), vec![FILLER]);
@@ -217,7 +209,6 @@ mod tests {
 
             #[test]
             fn then_ends_the_turn_so_the_opponent_is_up() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 30 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -231,7 +222,6 @@ mod tests {
 
             #[test]
             fn sets_the_chosen_hero_s_health_to_13_adds_nothing_and_leaves_the_turn_going() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": VITAL, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER] },
@@ -245,7 +235,6 @@ mod tests {
 
             #[test]
             fn sets_your_own_hero_too() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": VITAL, "radiant": true }, FILLER], "health": 2 },
                     "p2": { "hand": [FILLER] },

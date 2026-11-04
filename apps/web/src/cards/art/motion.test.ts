@@ -12,7 +12,17 @@ import type { CardDef } from "@jackioh/shared";
 
 import { FULL_ART_CARDS, FULL_ART_TOKEN_PARENT, artMotionOf } from "../fullArt.ts";
 import { CardArt } from "./CardArt.tsx";
-import { ART_MOVES, ART_ROLES, FULL_ART_MOTION, PARTICLE_COUNT, motionStyle, type ArtMotion } from "./motion.ts";
+import {
+  ART_MOVES,
+  ART_ROLES,
+  FULL_ART_MOTION,
+  GOLD_PARTICLES,
+  PARTICLE_COUNT,
+  SIGNATURE_MOTION,
+  artMotionFor,
+  motionStyle,
+  type ArtMotion,
+} from "./motion.ts";
 
 afterEach(cleanup);
 
@@ -114,5 +124,30 @@ describe("R2715001 the full-art cards' moving art", () => {
     for (const [token, parent] of FULL_ART_TOKEN_PARENT) expect(artMotionOf(token), token).toBe(FULL_ART_MOTION[parent]);
     for (const id of FULL_ART_CARDS) expect(artMotionOf(id), id).toBe(FULL_ART_MOTION[id]);
     expect(artMotionOf("core-002")).toBeNull();
+  });
+});
+
+describe("R2949000 the Signature look's motion", () => {
+  it("R2949000 the Signature look's motion is its own: no card's Animated motion, no gold particle, and it moves the subject and the back", () => {
+    // No full-art card's motion, and so no borrowed one: it is the one motion drawing ink.
+    for (const [id, motion] of Object.entries(FULL_ART_MOTION)) {
+      expect(JSON.stringify(motion), id).not.toBe(JSON.stringify(SIGNATURE_MOTION));
+      expect(motion.particles.kind, id).not.toBe("ink");
+    }
+    for (const id of Object.keys(CATALOG)) expect(artMotionFor(id), id).not.toBe(SIGNATURE_MOTION);
+    expect(SIGNATURE_MOTION.particles.kind).toBe("ink");
+    expect(GOLD_PARTICLES.has(SIGNATURE_MOTION.particles.kind)).toBe(false);
+    expect(SIGNATURE_MOTION.subject).toBeDefined();
+    expect(SIGNATURE_MOTION.back).toBeDefined();
+    // Its picture tags those layers and draws its particles, its keyframes inside the gate.
+    for (const id of ["core-022", "stinkyscape-001", "traininggrounds-016"]) {
+      const { doc } = artDocument(id, SIGNATURE_MOTION);
+      expect(doc.querySelector("parsererror"), id).toBeNull();
+      expect(doc.querySelector(".art-m-subject"), id).not.toBeNull();
+      expect(doc.querySelector(".art-m-back"), id).not.toBeNull();
+      expect(doc.querySelectorAll(".art-m-particle").length, id).toBe(PARTICLE_COUNT);
+    }
+    const style = motionStyle(SIGNATURE_MOTION, "50px 50px");
+    expect(style.startsWith("<style>@media (prefers-reduced-motion: no-preference){")).toBe(true);
   });
 });

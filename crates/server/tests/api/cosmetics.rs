@@ -240,14 +240,14 @@ async fn r2715000_an_existing_account_owns_none_of_the_21() {
 }
 
 #[tokio::test]
-async fn r2725000_an_existing_account_owns_none_of_the_three() {
+async fn r2725000_r2940000_an_existing_account_owns_none_of_the_versions_and_augments() {
     let app = test_app().await;
     let profile = profile_id_of(&app, USER).await;
     // What an account made before #2725 could own: a card's retired signed full art and its Animated art.
     own(&app, &profile, Some("core-008"), "full-art-mr-vanilla-signed").await;
     own(&app, &profile, Some("core-008"), "animated-mr-vanilla").await;
     // #2725's three: the Full art version and the Animated and Signature augments, none a default or a
-    // starter (R2725000).
+    // starter (R2725000); then #2940's three versions, Alt art, Sketch and Alt full art (R2940000).
     let new: Vec<String> = shipped()
         .expect("the shipped registry")
         .into_iter()
@@ -255,9 +255,19 @@ async fn r2725000_an_existing_account_owns_none_of_the_three() {
         .inspect(|cosmetic| assert!(!cosmetic.default && !cosmetic.starter, "{}", cosmetic.id))
         .map(|cosmetic| cosmetic.id)
         .collect();
-    assert_eq!(new, ["version-full-art", "augment-animated", "augment-signature"]);
+    assert_eq!(
+        new,
+        [
+            "version-full-art",
+            "augment-animated",
+            "augment-signature",
+            "version-alt-art",
+            "version-sketch",
+            "version-alt-full-art",
+        ]
+    );
 
-    // Nothing grants them: the account reads what it was given, and none of the three, even those its
+    // Nothing grants them: the account reads what it was given, and none of the six, even those its
     // retired full arts count as owning (R2725002), which is read where they are worn and never written.
     let (status, body) = get(&app, Some(TOKEN)).await;
     assert_eq!(status, 200, "{body}");

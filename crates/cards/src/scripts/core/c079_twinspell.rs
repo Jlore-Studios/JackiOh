@@ -35,6 +35,8 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
 
     const TWINSPELL: &str = "core-079";
@@ -160,7 +162,6 @@ mod tests {
 
         #[test]
         fn r30_only_the_next_spell_echoes_a_second_spell_resolves_once() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [TWINSPELL, COIN, COIN], "mana": 4, "library": LIBRARY },
                 "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }

@@ -29,7 +29,7 @@ use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions
 
 use super::fixtures::combat::stacker;
 use super::fixtures::harness::{
-    Bench, act, act_result, both, in_hand, live, live_mut, new_game, put as put_with, set_library, slot,
+    Bench, act, act_result, both, ids, in_hand, live, live_mut, new_game, put as put_with, set_library, slot,
     spread,
 };
 
@@ -1147,10 +1147,6 @@ fn attackers_declared(events: &[GameEvent]) -> Vec<String> {
             _ => None,
         })
         .collect()
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
@@ -3638,7 +3634,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
 
     #[test]
     fn r831014_cost_filter_max_cost_exiles_only_cheap_cards() {
-        // Core #42 Eugenics' "exile all cards in your deck that cost (2) or less": `maxCost` keeps every
+        // Core #42 Selective Breeding's "exile all cards in your deck that cost (2) or less": `maxCost` keeps every
         // card whose cost per R65 is above it, and the cheap ones go one exile each (R135).
         let mut state = game("r831014-max-cost");
         let library = set_library(&mut state, P1, &[BODY, TRIBUTE_TWO, FUSE_PRICEY, BODY, FUSE_DEAR]);

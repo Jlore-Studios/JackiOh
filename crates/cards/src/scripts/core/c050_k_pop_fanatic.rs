@@ -199,6 +199,8 @@ mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -302,7 +304,6 @@ mod tests {
 
         #[test]
         fn r81_s8_2_engine_base_the_cry_schedules_a_delayed_effect_keyed_to_the_chosen_permanent() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 4 }], "library": LIBRARY },
@@ -330,7 +331,6 @@ mod tests {
 
         #[test]
         fn r62_r15_base_the_steal_happens_at_your_next_start_of_turn_same_lane_if_free() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
@@ -360,7 +360,6 @@ mod tests {
 
         #[test]
         fn r15_base_the_first_free_zone_when_your_same_lane_is_occupied() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "field": [{ "def": ROCK, "lane": 2 }], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
@@ -379,7 +378,6 @@ mod tests {
 
         #[test]
         fn r76_base_the_steal_fires_even_though_k_pop_fanatic_died_in_between() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
                 // The 7/7's damage is seeded: its Armor 7 (§8 row 25) zeroes a 1/1's strike back, no damage
@@ -410,7 +408,6 @@ mod tests {
 
         #[test]
         fn r76_base_it_fizzles_when_the_target_left_the_field() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "field": [{ "def": ROCK, "lane": 5 }], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 2 }], "library": LIBRARY },
@@ -434,7 +431,6 @@ mod tests {
 
         #[test]
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
-            crate::register_all();
             let mut g = scenario(json!({
                 // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 4.
                 "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 6 },
@@ -457,7 +453,6 @@ mod tests {
 
         #[test]
         fn radiant_divine_shield_eats_the_first_hit_and_the_delayed_steal_lands_with_its_rider_r282() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [{ "def": KPOP, "radiant": true }, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 3 }], "library": LIBRARY },
@@ -525,7 +520,6 @@ mod tests {
 
         #[test]
         fn s8_conventions_a_cry_with_nothing_to_choose_fizzles_and_the_unit_still_enters() {
-            crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": [KPOP, FILLER], "library": LIBRARY } }));
 
             g.play(KPOP, json!({}));
@@ -567,7 +561,6 @@ mod tests {
 
         #[test]
         fn r282_the_steal_lands_and_the_stolen_unit_becomes_radiant_in_place_its_damage_kept_r22() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2, "damage": 2 }], "library": LIBRARY },
@@ -592,7 +585,6 @@ mod tests {
 
         #[test]
         fn r282_a_stolen_field_spell_becomes_radiant_too_a_permanent_is_either_row_s6_3() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "backrow": [{ "def": CLONE_MACHINE, "lane": 3 }], "library": LIBRARY },
@@ -614,7 +606,6 @@ mod tests {
 
         #[test]
         fn r282_a_target_that_died_before_the_steal_is_not_made_radiant_in_the_graveyard_r76() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "field": [{ "def": ROCK, "lane": 5 }], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 2 }], "library": LIBRARY },
@@ -636,7 +627,6 @@ mod tests {
 
         #[test]
         fn r282_a_target_bounced_to_its_controller_s_hand_is_not_made_radiant_there_where_p1_may_not_read_it_r174() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
                 "p2": { "hand": [FLOOD, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
@@ -659,7 +649,6 @@ mod tests {
 
         #[test]
         fn r282_a_target_bounced_and_replayed_is_a_new_arrival_neither_stolen_nor_made_radiant_r174_r78() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
                 // The Coin pays for the replay: Flood costs 4.
@@ -683,7 +672,6 @@ mod tests {
 
         #[test]
         fn r282_a_target_dormant_under_a_stack_pile_is_neither_taken_nor_made_radiant_nor_is_the_card_on_top_r13() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_kpop(), FILLER], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
                 "p2": { "hand": [FIENDER, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
@@ -709,7 +697,6 @@ mod tests {
 
         #[test]
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
-            crate::register_all();
             let mut g = scenario(json!({
                 // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 4.
                 "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 6 },
@@ -732,7 +719,6 @@ mod tests {
 
         #[test]
         fn r282_r1045000_a_full_row_destroys_the_target_and_it_is_not_made_radiant() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [radiant_kpop(), FILLER],
@@ -838,7 +824,6 @@ mod tests {
 
         #[test]
         fn r437_r1045000_the_cry_marks_its_target_allure_pink_in_both_views_and_the_mark_goes_when_the_steal_resolves() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
@@ -866,7 +851,6 @@ mod tests {
 
         #[test]
         fn r437_r76_a_steal_that_fizzles_on_a_card_already_this_player_s_takes_the_mark_away_too() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 6 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
@@ -887,7 +871,6 @@ mod tests {
 
         #[test]
         fn r437_r174_the_mark_goes_the_moment_the_target_leaves_the_field_with_the_steal() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
                 // Flood (4) bounces every unit: p2 takes the prey back to hand on its own turn.
@@ -918,7 +901,6 @@ mod tests {
 
         #[test]
         fn r437_r33_a_face_down_target_p1_sees_the_mark_on_its_back_and_the_event_as_the_sentinel_p2_sees_both_in_full() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER], "backrow": [{ "def": "core-096", "lane": 3 }], "library": LIBRARY },
@@ -1128,7 +1110,6 @@ mod tests {
 
         #[test]
         fn r1045000_a_field_spell_with_no_open_backrow_zone_is_destroyed() {
-            crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [KPOP, FILLER],

@@ -1,6 +1,6 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches
 // and R2800000 set pieces.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
@@ -65,6 +65,9 @@ const SET_PIECE_PARTS: Readonly<Record<SetPieceShape, readonly string[]>> = {
   vortex: ["dark", "spiral", "core"],
   fold: ["edges", "light"],
 };
+
+/** R2801000: a Starship launch's layers, above its counts (fx.css). */
+const LAUNCH_PARTS = ["flame", "trail"] as const;
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -324,6 +327,30 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       for (const part of SET_PIECE_PARTS[cue.shape]) {
         const child = doc.createElement("div");
         child.className = `fx-setPiece-${part}`;
+        el.appendChild(child);
+      }
+      break;
+    }
+    case "launch": {
+      // R2801000: a Starship's launch over it: its countdown, each count popping in at its time (3, 2, 1),
+      // then its flame and its contrail from the ignition on. It names no card (R202).
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-size", cue.size);
+      if (cue.still === true) el.setAttribute("data-still", "true");
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-ignite", `${Math.max(0, cue.igniteMs)}ms`);
+      cue.countsMs.forEach((countMs, k) => {
+        const count = doc.createElement("div");
+        count.className = "fx-launch-count";
+        count.setAttribute("data-text", String(cue.countsMs.length - k));
+        count.style.setProperty("--fx-count-at", `${Math.max(0, countMs)}ms`);
+        el.appendChild(count);
+      });
+      for (const part of LAUNCH_PARTS) {
+        const child = doc.createElement("div");
+        child.className = `fx-launch-${part}`;
         el.appendChild(child);
       }
       break;

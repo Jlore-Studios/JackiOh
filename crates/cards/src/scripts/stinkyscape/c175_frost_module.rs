@@ -65,7 +65,6 @@ mod tests {
 
         #[test]
         fn r1860009_activate_freezes_a_chosen_enemy_unit() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [FROST], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -80,7 +79,6 @@ mod tests {
 
         #[test]
         fn r1860009_no_hero_may_be_chosen_once_a_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [FROST], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -95,7 +93,6 @@ mod tests {
 
         #[test]
         fn r1086_equipped_onto_a_unit_the_host_takes_the_activate() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [VANILLA, FROST, FILLER], "library": filler(4) },
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
@@ -116,7 +113,6 @@ mod tests {
 
         #[test]
         fn r1860009_radiant_activate_twice_a_turn() {
-            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [{ "def": FROST, "radiant": true }], "library": filler(4) },
                 "p2": {

@@ -2644,6 +2644,9 @@ pub const VERSION_OFFER_MIN_CARDS: usize = 20;
 /// SPEC §14.2, R2725001: the fewest cards of each shipped set each version and each augment is offered on, so
 /// every set has some.
 pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
+/// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
+/// seeded hash, modulo this, falls below the percent.
+pub const OFFER_SAMPLE_PERCENT_SCALE: u32 = 100;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
 /// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
 /// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter

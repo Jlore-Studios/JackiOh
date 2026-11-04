@@ -142,6 +142,8 @@ pub fn script_v0_5_2() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
@@ -229,7 +231,6 @@ mod tests {
 
     /// §8.7 row 30: one Fuser on `radiant`'s face, set on the field, stands at `size`/`size`.
     fn stands_at(radiant: bool, size: i32) {
-        crate::register_all();
         let mut s = scenario(json!({ "p1": { "field": [{ "def": FUSER, "radiant": radiant }] } }));
         let fuser = s.unit(P1, 1).expect("the Fuser in lane 1");
         s.expect_stats(&fuser, json!({ "attack": size, "health": size, "maxHealth": size }));
@@ -265,7 +266,6 @@ mod tests {
 
             #[test]
             fn r405_r387_each_discover_offers_3_different_non_token_felinor_units_of_any_set_never_the_fuser() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] } }));
                 s.play(FUSER, json!({}));
                 let first = open(&s);
@@ -298,7 +298,6 @@ mod tests {
 
             #[test]
             fn r77_it_keeps_its_instance_zone_damage_and_position_stats_sum_keywords_union_and_texts_join() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] }, "p2": { "hand": [FILLER] } }));
                 let card = s.card(FUSER).clone();
                 s.play(FUSER, json!({ "zone": 2 }));
@@ -383,7 +382,6 @@ mod tests {
 
             #[test]
             fn r177_the_options_reach_only_the_chooser() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(FUSER, json!({}));
                 // R2739000: a Discover of catalog cards shows the other seat how many, never which.
@@ -398,7 +396,6 @@ mod tests {
 
             #[test]
             fn r113_paused_between_the_prompts_the_state_survives_json_and_the_answer_replays_to_the_same_hash() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(FUSER, json!({}));
                 s.answer(json!(offered(&open(&s)).first().cloned().unwrap_or_default()));

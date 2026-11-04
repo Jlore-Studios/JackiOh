@@ -45,6 +45,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
@@ -80,7 +82,6 @@ mod tests {
 
             #[test]
             fn s8_7_adds_an_execute_a_brawl_and_a_blade_storm_to_your_hand_in_that_order() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REMOVAL, FILLER] } }));
                 s.play(REMOVAL, json!({}));
                 assert_eq!(def_ids(&s.hand(P1)), [FILLER, EXECUTE, BRAWL, STORM]);
@@ -110,7 +111,6 @@ mod tests {
 
             #[test]
             fn r11_they_are_spell_tokens_one_played_goes_to_the_graveyard_like_any_spell() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REMOVAL, FILLER], "mana": 8 } }));
                 s.play(REMOVAL, json!({}));
                 s.play(BRAWL, json!({}));
@@ -119,7 +119,6 @@ mod tests {
 
             #[test]
             fn r97_the_opponent_sees_three_cards_added_and_never_which() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REMOVAL, FILLER] } }));
                 s.play(REMOVAL, json!({}));
                 let theirs = added(&s.view(P2).events);
@@ -137,7 +136,6 @@ mod tests {
 
             #[test]
             fn s8_7_adds_a_radiant_execute_a_radiant_brawl_and_a_radiant_blade_storm() {
-                crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": REMOVAL, "radiant": true }, FILLER] } }));
                 s.play(REMOVAL, json!({}));
                 let fresh: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).collect();

@@ -139,7 +139,7 @@ The rest are in `crates/tools/README.md` (every `cargo jackioh` command), `crate
 
 ```
 cargo test -p jackioh-engine --features testkit --test 'rules*'     # the engine's rule tests (the binaries rules and rules_2)
-cargo test -p jackioh-cards c002_bigot                              # one card's tests
+cargo test -p jackioh-cards c002_speciesist                         # one card's tests
 cargo test -p jackioh-engine --features testkit --test 'rules*' r58 # by ruling: every test whose name holds r58
 cargo test -p jackioh-server --test server actor::                  # one area of the server suite
 pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web test file
@@ -175,8 +175,8 @@ newly reads from outside its crate goes in the script's map in the same pull req
 skip list (a pull request of only those paths skips every job but `bot selftest`) only with proof that
 nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A push to `main` runs everything. Everything slow
 or statistical runs daily in `super.yml`, whose header lists it, and on every pull request into `production`:
-production moves only by hand (`/promote` on the `production merge` issue) and merges only once that run
-passes (`docs/deploy-cloudflare.md` §2.1). A test moves there
+production promotes itself each day the run on `main` passes, the commit it tested, or sooner on `/promote`
+on the `production merge` issue once that pull request's run passes (`docs/deploy-cloudflare.md` §2.1). A test moves there
 (`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test
 keeps its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does,
 `ci.yml`'s the five-minute budget of every job.

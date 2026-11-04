@@ -36,7 +36,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use crate::def_ids;
-    use jackioh_engine::testkit::*;
+
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -65,7 +66,6 @@ mod tests {
 
     #[test]
     fn nothing_at_the_opponents_start() {
-        crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [ID], "library": LIBRARY },
@@ -79,7 +79,6 @@ mod tests {
 
     #[test]
     fn destroyed_it_stops() {
-        crate::register_all();
         let mut s = scenario(json!({
             // Mana to spare after the (4) exile, so the turn does not auto-end (R82) and
             // `start_turn` below is p1's.
@@ -101,7 +100,6 @@ mod tests {
 
     #[test]
     fn radiant_rock() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "backrow": [{ "def": ID, "radiant": true }], "library": LIBRARY },
             "p2": { "hand": [FILLER], "library": LIBRARY },

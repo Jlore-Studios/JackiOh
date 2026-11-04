@@ -45,6 +45,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+
+    use crate::scenario;
     use crate::def_ids;
 
     const RESOURCES: &str = "classic-058";
@@ -52,7 +54,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const STOCKPILE: &str = "core-005"; // (1) Spell
-    const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage
+    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage
     const FILLER: &str = "core-010"; // (0) Spell
     const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: your opponent has 1 less mana next turn. Discard 1 random card.
     const INCOME_TAX: &str = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
@@ -111,7 +113,6 @@ mod tests {
 
             #[test]
             fn s2_2_r62_it_is_a_start_of_turn_trigger_of_yours_only_the_opponents_turn_draws_nothing_from_it() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": RESOURCES, "faceUp": true }], "library": [STOCKPILE] },
                     "p2": { "hand": [FILLER], "library": [VANILLA, MENACE] },
@@ -146,13 +147,13 @@ mod tests {
             #[test]
             fn r58_your_cast_on_draw_a_cast_on_draw_card_at_the_bottom_of_their_deck_is_cast_for_you() {
                 crate::register_all();
-                let mut s = waiting(json!({ "p2Library": [VANILLA, CN_VIRUS] }));
+                let mut s = waiting(json!({ "p2Library": [VANILLA, SUPER_VIRUS] }));
                 s.end_turn();
                 let cast = s
                     .last_events()
                     .iter()
                     .map(js)
-                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == CN_VIRUS)
+                    .find(|event| event["type"] == "cardPlayed" && event["defId"] == SUPER_VIRUS)
                     .expect("the cast's cardPlayed event");
                 assert_eq!(cast["player"], "p1");
                 assert_eq!(cast["costPaid"], 0);
@@ -208,7 +209,6 @@ mod tests {
 
             #[test]
             fn s10_1_it_is_your_draw_in_your_per_turn_count_with_the_turns_own_draw_it_sets_off_c_9_income_tax() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER, VANILLA], "backrow": [{ "def": RESOURCES, "faceUp": true }], "library": [STOCKPILE] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": INCOME_TAX, "faceUp": false }], "library": [VANILLA, MENACE] },

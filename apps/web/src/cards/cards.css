@@ -285,6 +285,14 @@
     0 1px 3px rgb(0 0 0 / 0.55);
 }
 
+/* R2940001: the Sketch version's base frame is a pencilled outline: its edge hatched in graphite on paper and its
+   bezel graphite, the palette's slates and no gold. A Radiant face keeps its gold-foil frame, and R2940002 a worn
+   border (cosmetics.css) its own edge and bezel; the art window's pencil ring is cosmetics.css's. */
+.cf[data-version="version-sketch"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-slate-700);
+  --cf-edge: repeating-linear-gradient(135deg, var(--pal-slate-700) 0 1px, var(--pal-slate-100) 1px 3px);
+}
+
 .cf-scale {
   position: absolute;
   inset: 1.2% 1.7%;

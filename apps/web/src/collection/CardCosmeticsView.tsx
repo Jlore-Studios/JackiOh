@@ -9,7 +9,9 @@
 // it is an unworn copy of the face dressed by `SampleFace` (CosmeticLook.tsx), or a `FullArtShown`.
 // R2725000: a card's version is one of the normal face and the versions it is offered, and each augment it is
 // offered toggles on top; either write keeps the other (`writeCardVersion`), so a retired full art's pick becomes
-// the version and the augments it combines on its first edit (R2725002).
+// the version and the augments it combines on its first edit (R2725002). R2949000: Signature waits, listed and
+// previewed but not chosen, until the card wears the Full art version and Animated, and turning either off turns
+// it off (`updateCardPicks`).
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -32,7 +34,7 @@ import {
   type CardPicks,
 } from "../cards/cosmetics.ts";
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
-import { augmentPicksOf, augmentsOf, lookOf, versionPickOf } from "../cards/versions.ts";
+import { AUGMENT_SIGNATURE_ID, artPictureOf, augmentPicksOf, augmentsOf, lookOf, signatureFits, versionPickOf } from "../cards/versions.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
@@ -122,13 +124,21 @@ function isEquipped(item: StripItem, picks: CardPicks): boolean {
   return picks[item.kind] === item.id;
 }
 
-/** One item's small live preview: the card wearing it, or for a full art the art across the whole face. */
+/** R2949000: whether `item` is Signature on a card whose pick does not wear the Full art version and Animated, which it needs. */
+function signatureWaits(item: StripItem, picks: CardPicks): boolean {
+  return item.kind === "augment" && item.id === AUGMENT_SIGNATURE_ID && !signatureFits(picks.fullArt, picks.augments);
+}
+
+/**
+ * One item's small live preview: the card wearing it, or for a version the art across the whole face, R2940001 the
+ * picture that version draws.
+ */
 function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item: StripItem }): ReactElement {
   const { rarityFoil } = useCardSettings();
   if (item.kind === "version" && item.id !== NO_FULL_ART_ID) {
     return (
       <span className="collection-strip__picture collection-strip__picture--full-art">
-        <CardArt defId={def.id} radiant={false} tags={def.tags} type={def.type} name={def.name} shape="full" />
+        <CardArt defId={def.id} radiant={false} tags={def.tags} type={def.type} name={def.name} shape="full" picture={artPictureOf(item.id)} />
       </span>
     );
   }
@@ -143,12 +153,16 @@ function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item
   );
 }
 
-/** R2730000: one strip item: a hold or the inspect key previews it fullscreen, a click equips it. */
+/**
+ * R2730000: one strip item: a hold or the inspect key previews it fullscreen, a click equips it. R2949000: one that
+ * `waits` previews as ever and says what it needs, and a click equips nothing.
+ */
 function StripItemButton({
   def,
   face,
   item,
   equipped,
+  waits,
   show,
   hide,
   equip,
@@ -158,6 +172,7 @@ function StripItemButton({
   face: FaceModel;
   item: StripItem;
   equipped: boolean;
+  waits: boolean;
   show: (item: StripItem) => void;
   hide: (item: StripItem) => void;
   equip: (item: StripItem) => void;
@@ -171,8 +186,9 @@ function StripItemButton({
       data-owned={String(item.owned)}
       data-equipped={String(equipped)}
       data-rarity={item.rarity}
+      data-waits={waits ? "true" : undefined}
       aria-pressed={equipped}
-      aria-disabled={item.owned ? undefined : true}
+      aria-disabled={item.owned && !waits ? undefined : true}
       aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
       {...usePreviewHold(`strip-${item.id}`, () => {
         onPreview(item);
@@ -203,6 +219,7 @@ function StripItemButton({
       <span className="collection-strip__name">{item.name}</span>
       <span className="collection-strip__rarity">{t(item.rarity)}</span>
       {item.owned ? null : <span className="collection-strip__lock">{t("Locked")}</span>}
+      {item.owned && waits ? <span className="collection-strip__lock">{t("Needs Full art and Animated")}</span> : null}
     </button>
   );
 }
@@ -259,6 +276,7 @@ function StripKindGroup({
               face={face}
               item={item}
               equipped={isEquipped(item, picks)}
+              waits={signatureWaits(item, picks)}
               show={show}
               hide={hide}
               equip={equip}
@@ -323,7 +341,7 @@ export default function CardCosmeticsView({
   useBackLayer(onClose);
 
   const equip = (item: StripItem): void => {
-    if (!item.owned) return;
+    if (!item.owned || signatureWaits(item, picks)) return;
     if (item.kind === "version" || item.kind === "augment") {
       const next = chosen(picks, item);
       writeCardVersion(def.id, next.fullArt, next.augments);

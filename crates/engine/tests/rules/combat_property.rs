@@ -10,7 +10,7 @@ use crate::rules::fixtures::combat::{
     lifestealer, moths, pacifist, plain, poisonous, rusher, shielded, spikey_pillow, stacker, taunter,
     trample_lifesteal, trampler, zero_attack,
 };
-use crate::rules::fixtures::harness::{events_of_type, live, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, ids, live, new_game, put, slot};
 
 const COMBATS: i32 = 1000;
 
@@ -94,10 +94,6 @@ fn grants_for(rng: &mut Rng) -> Vec<Keyword> {
         }
     }
     picked
-}
-
-fn ids(cards: &[CardInstance]) -> Vec<String> {
-    cards.iter().map(|card| card.id.clone()).collect()
 }
 
 /// Every unit the board holds, the cards dormant under a Stack included (§3.2).

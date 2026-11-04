@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{act_logged, in_hand, json_of, setup_catalog};
+use crate::rules::fixtures::harness::{act_logged, in_hand, input, json_of, setup_catalog};
 use crate::rules::fixtures::ky_test::{
     FIXTURE_BANK, book, coin, four, gift, ky_test, ky_test_qd, ky_two, legend, register_ky_test_fixtures,
 };
@@ -79,10 +79,6 @@ fn hand_def_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .iter()
         .map(|card| card.def_id.clone())
         .collect()
-}
-
-fn input(body: Value) -> ActionInput {
-    json_as(body)
 }
 
 fn answers(state: &GameState, player: PlayerId) -> usize {

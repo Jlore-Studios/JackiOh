@@ -81,6 +81,8 @@ mod tests {
     use super::{script, ID};
     use jackioh_engine::testkit::*;
 
+    use crate::scenario;
+
     const TOXINS: &str = "classic-042";
     const SLIME: &str = "classic-027"; // (0) Unit 1/1: "Plague Counters placed on this are multiplied by {multiplier}." (2)
     const FAUCI: &str = "core-091"; // (2) Unit 1/6: "Whenever this takes damage, place a Plague Counter on this."
@@ -152,7 +154,6 @@ mod tests {
 
             #[test]
             fn recomputed_on_every_change_a_token_placed_later_applies_at_once() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [ECLIPSE, ECLIPSE, STOCKPILE], "backrow": [TOXINS], "field": [FAUCI] },
                     "p2": { "hand": [STOCKPILE], "field": [FAUCI] },
@@ -174,7 +175,6 @@ mod tests {
 
             #[test]
             fn s4_5_the_1_1_lowers_max_health_an_enemy_it_brings_to_0_dies_at_the_state_check() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOXINS, STOCKPILE] },
                     "p2": {
@@ -190,7 +190,6 @@ mod tests {
 
             #[test]
             fn r69_an_indestructible_enemy_dies_too_once_its_max_health_reaches_0() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOXINS, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": STATE_OF_GAME, "counters": { "plague": 3 } }] },
@@ -310,7 +309,6 @@ mod tests {
 
             #[test]
             fn an_enemy_it_brings_to_0_max_health_dies() {
-                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOXINS, "radiant": true }, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "counters": { "plague": 2 } }] },

@@ -57,6 +57,17 @@ const ANIMATED = {
 /** The grid the worn box's points are sampled from, in CSS pixels. */
 const SAMPLE_STEP_PX = 3;
 
+/** The gap between two faces, in CSS pixels. */
+const FACE_GAP_PX = 8;
+
+/**
+ * The tile Chrome rasterizes the page in, in CSS pixels. A face's twin one tile to its right is crossed by the tile
+ * seams where it is, so the control measures the pick and not the seams' noise: with the twins 178px apart, the
+ * Mythic's Signature look (R2949000) drew 1.1% of it under the signature's shadows at 170px. A face too wide for one
+ * tile keeps the plain gap.
+ */
+const RASTER_TILE_PX = 256;
+
 /** How far a channel must move for a pixel to count as drawn differently. */
 const PIXEL_DELTA_MIN = 4;
 
@@ -88,7 +99,16 @@ function clearPicks(): void {
 function Twins({ id, width }: { id: (typeof CARDS)[number]["id"]; width: number }) {
   return (
     <OwnCopy own>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#1b1f2b" }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          rowGap: FACE_GAP_PX,
+          columnGap: width + FACE_GAP_PX <= RASTER_TILE_PX ? RASTER_TILE_PX - width : FACE_GAP_PX,
+          padding: FACE_GAP_PX,
+          background: "#1b1f2b",
+        }}
+      >
         {FULL_ART_LAYOUT_TIERS.flatMap((tier) =>
           (["worn", "plain"] as const).map((which) => (
             <div
