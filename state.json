@@ -16669,6 +16669,13 @@
     "2972": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T02:28:09Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Web-only confirm/back-link change in ~6 files plus tests, one ruling note and zh-CN entries; no engine rules, AI, cross-crate design, migration, or 40-file scope, so no hard line holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
