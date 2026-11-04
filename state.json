@@ -17537,6 +17537,13 @@
     "2994": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T05:27:45Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "none of the five hard lines holds: two Cypress component specs plus one phone-only CSS rule in apps/web, no engine, AI, cross-crate design, migration or 40 files"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
