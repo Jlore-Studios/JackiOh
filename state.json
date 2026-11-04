@@ -17143,24 +17143,13 @@
       ],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "41767793335",
-            "tier": "medium"
-          }
-        ],
-        "sha": "4f4326d73dea56a4fef628d5d4e6289350a2ed05",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "7182401fd29e931fd1b30dbb19a898f81da25f7c",
+        "tiers": {}
       }
     },
     "2988": {
