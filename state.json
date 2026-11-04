@@ -17662,14 +17662,6 @@
       "asks": [],
       "failures": 0,
       "forced": false,
-      "hold": {
-        "ends": "2026-11-04T09:33:04Z",
-        "lifted": "2026-11-04T08:50:22Z",
-        "owner": "claude-7",
-        "since": "2026-11-04T07:33:04Z",
-        "until": "2026-11-04T08:50:00Z",
-        "why": "5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 2,
       "kind": "build",
       "last_findings": [],
@@ -17687,9 +17679,9 @@
       "queued_at": "2026-11-04T05:40:40Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "41790249223",
+      "run_id": "pending:7f9d8795-1793782195",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T07:08:53Z",
+      "started_at": "2026-11-04T08:50:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17969,9 +17961,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T08:34:20Z",
+    "at": "2026-11-04T08:50:35Z",
     "url": "",
-    "what": "spot-check #2996 on claude-4"
+    "what": "build #3000 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-04T08:28:14Z",
