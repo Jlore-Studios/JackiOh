@@ -218,6 +218,7 @@
     "notes": [],
     "since": "2026-10-06T07:15:07Z"
   },
+  "needs_decision_synced": "d4c5f9 A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it",
   "older_questions_labelled": "2026-11-04T06:32:46Z",
   "providers": {
     "claude-squishy": {
