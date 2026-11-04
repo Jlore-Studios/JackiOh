@@ -1,7 +1,8 @@
 // R2725000 (#2725): a card's version and the augments layered on it, read from its pick (versions.ts). R2725001: the
 // offers are the server's own (`COSMETIC_OFFERS`); R2725002: a retired full art's pick looks as it did and owns what
 // it combines. R2949000: Signature signs only beside the Full art version and Animated; R2949001: Full art's offer is a
-// varied share of the cards, and Signature's lies inside Full art's and Animated's.
+// varied share of the cards, and Signature's lies inside Full art's and Animated's. R2940000: #2940's Alt art, Sketch
+// and Alt full art, each on a varied set of its own; R2940001: the full bleed and the picture each version draws.
 
 import { describe, expect, it } from "vitest";
 
@@ -14,10 +15,15 @@ import {
   AUGMENT_ANIMATED_ID,
   AUGMENT_SIGNATURE_ID,
   NORMAL_LOOK,
+  VERSION_ALT_ART_ID,
+  VERSION_ALT_FULL_ART_ID,
   VERSION_FULL_ART_ID,
+  VERSION_SKETCH_ID,
+  artPictureOf,
   augmentPicksOf,
   augmentsOf,
   impliedBy,
+  isFullBleed,
   isOfferedId,
   lookOf,
   offeredOn,
@@ -128,20 +134,23 @@ describe("R2725000 a card's version and augments", () => {
 
   it("R2725001 offers match COSMETIC_OFFERS", () => {
     const offered = COSMETICS.filter((cosmetic) => cosmetic.kind === "version" || cosmetic.kind === "augment").map((cosmetic) => cosmetic.id);
-    expect(offered).toEqual([VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+    // R2940000: #2725's three, then #2940's three versions.
+    const partOne = [VERSION_FULL_ART_ID, AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+    expect(offered).toEqual([...partOne, VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID]);
     expect(Object.keys(COSMETIC_OFFERS)).toEqual(offered);
     for (const id of offered) {
       const cards = COSMETIC_OFFERS[id] ?? [];
       expect(isOfferedId(id), id).toBe(true);
-      // Real cards, never a token, the 21 full-art cards among them, and not every card.
+      // Real cards, never a token, and not every card.
       expect(cards.length, id).toBeGreaterThan(FULL_ART_CARDS.size);
       for (const card of cards) {
         expect(CATALOG[card]?.token, `${id} on ${card}`).toBe(false);
         expect(offeredOn(id, card)).toBe(true);
       }
-      for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(true);
       expect(offeredOn(id, "core-002"), `${id} on Speciesist`).toBe(false);
     }
+    // Part 1's three on each of the 21 full-art cards, whose retired full arts imply them (R2725002).
+    for (const id of partOne) for (const card of FULL_ART_CARDS) expect(offeredOn(id, card), `${id} on ${card}`).toBe(true);
     // No other id has an offer.
     expect(isOfferedId("foil-galaxy")).toBe(false);
     expect(isOfferedId(retired("Epic"))).toBe(false);
@@ -160,5 +169,49 @@ describe("R2725000 a card's version and augments", () => {
     for (const card of FULL_ART_CARDS) expect(fullArt.has(card), card).toBe(true);
     // Signature exactly where both are offered.
     expect([...signature].sort()).toEqual([...fullArt].filter((card) => animated.has(card)).sort());
+  });
+
+  it("R2940000 each new version is offered on its own varied set of cards, never every card and never Full art's", () => {
+    const on = (id: string): ReadonlySet<string> => new Set(COSMETIC_OFFERS[id] ?? []);
+    const key = (cards: ReadonlySet<string>): string => [...cards].sort().join(" ");
+    const collectible = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token")).length;
+    const versions = [VERSION_FULL_ART_ID, VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID];
+    // No two of the four on the same cards, and none on every card.
+    expect(new Set(versions.map((id) => key(on(id)))).size).toBe(versions.length);
+    for (const id of versions) expect(on(id).size, id).toBeLessThan(collectible);
+    // Alt art the widest of the three; each lands on cards another of them leaves out.
+    expect(on(VERSION_ALT_ART_ID).size).toBeGreaterThan(on(VERSION_SKETCH_ID).size);
+    expect(on(VERSION_ALT_ART_ID).size).toBeGreaterThan(on(VERSION_ALT_FULL_ART_ID).size);
+    for (const id of [VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID]) {
+      for (const other of versions.filter((version) => version !== id)) {
+        expect([...on(id)].some((card) => !on(other).has(card)), `${id} beside ${other}`).toBe(true);
+      }
+    }
+    // R2940001: never Alt art or Alt full art on a Legacy card, whose one picture is its Core card's.
+    const legacy = Object.values(CATALOG).filter((def) => def.name.startsWith("Legacy: "));
+    expect(legacy.length).toBeGreaterThan(0);
+    for (const def of legacy) {
+      expect(offeredOn(VERSION_ALT_ART_ID, def.id), def.id).toBe(false);
+      expect(offeredOn(VERSION_ALT_FULL_ART_ID, def.id), def.id).toBe(false);
+    }
+  });
+
+  it("R2940001 each new version's look: its picture, the full bleed of Alt full art, and Signature on none", () => {
+    expect([null, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID].map(isFullBleed)).toEqual([false, true, false, false, true]);
+    expect([null, VERSION_FULL_ART_ID, VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID].map(artPictureOf)).toEqual([
+      "normal",
+      "normal",
+      "alt",
+      "sketch",
+      "alt",
+    ]);
+    for (const version of [VERSION_ALT_ART_ID, VERSION_SKETCH_ID, VERSION_ALT_FULL_ART_ID]) {
+      const both = [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID];
+      // R2940002: Animated layers on it; R2949000: Signature fits none of them.
+      expect(lookOf(version, both), version).toEqual({ version, animated: true, signed: false });
+      expect(signatureFits(version, both), version).toBe(false);
+      expect(augmentsOf(lookOf(version, both)), version).toEqual([AUGMENT_ANIMATED_ID]);
+      expect(versionPickOf(version), version).toBe(version);
+    }
   });
 });
