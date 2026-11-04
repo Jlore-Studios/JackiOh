@@ -149,11 +149,24 @@
       "taken_asks": []
     },
     "2993": {
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-squishy",
+          "tier": "strong"
+        },
+        "at": "2026-11-04T04:30:29Z",
+        "built_by": "claude-squishy",
+        "by": "`claude` (strong)",
+        "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T02:38:02Z",
       "issue": 2981,
       "kind": "revise",
+      "merge_owner": "claude-squishy",
       "self_check_findings": [],
       "votes": {
         "approvals": [
