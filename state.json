@@ -14490,11 +14490,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-04T08:55:51Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-04T10:26:48Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-04T09:24:52Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
