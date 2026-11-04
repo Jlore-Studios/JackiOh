@@ -11043,7 +11043,7 @@
       "strikes": 2,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "2883": {
       "action": "build",
