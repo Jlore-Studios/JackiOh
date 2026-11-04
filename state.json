@@ -28853,11 +28853,6 @@
       }
     },
     "claude-8": {
-      "infra": {
-        "at": "2026-11-04T09:41:03Z",
-        "reason": "the push was refused: git push --quiet --no-verify https://github.com/Jlore-Studios/JackiOh.git deliver/bot/issue-2882:refs/heads/bot/issue-2882 failed (1): remote: Internal Server Error        \nremote: Request ID 181C:1E4AD:221618E:2D0C186:6AEAFDAD        \nremote: Time 2026-11-04T09:41:02Z\nTo https://github.com/Jlore-Studios/JackiOh.git\n ! [remote rejected]     deliver/bot/issue-2882 -> bot/issue-2882 (Internal Server Error)\nerror: failed to push some refs to 'https://github.com/Jlore-Studios/J",
-        "streak": 1
-      },
       "refused_until": "2026-11-02T02:50:00Z",
       "spent": [
         {
