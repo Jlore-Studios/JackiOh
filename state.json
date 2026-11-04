@@ -16874,19 +16874,28 @@
     "what": "plan #2979 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-04T01:54:23Z",
+    "at": "2026-11-04T02:02:21Z",
     "notes": [
-      "CI on #2964: #2964: queued a CI fix",
-      "delivered suggest on claude-3 (run 41752667443): suggested",
-      "#2979: typed it Task",
-      "#2978: typed it Task",
-      "#2977: typed it Task",
-      "#2976: typed it Task",
-      "#2975: typed it Task",
-      "#2974: typed it Task",
-      "#2973: typed it Task",
-      "#2972: typed it Task",
-      "#2971: typed it Task"
+      "#2972 needs a plan",
+      "#2973 needs a plan",
+      "#2974 needs a plan",
+      "#2975 needs a plan",
+      "#2976 needs a plan",
+      "#2977 needs a plan",
+      "#2978 needs a plan",
+      "#2979 needs a plan",
+      "delivered revise #2965 on claude-6 (run 41748368091): approved",
+      "started revise #2965 on claude-6 (run 41758417926)",
+      "started plan #2973 on muse (run 41758499409)",
+      "started plan #2972 on muse (run 41758581077)",
+      "started plan #2975 on muse (run 41758658464)",
+      "started plan #2974 on claude-8 (run 41758736592)",
+      "started plan #2976 on claude-4 (run 41758817788)",
+      "started plan #2977 on claude-8 (run 41758901361)",
+      "started plan #2978 on claude-5 (run 41758997456)",
+      "started plan #2979 on claude-3 (run 41759084627)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17590,7 +17599,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T01:54:23Z",
+  "loop_tick": "2026-11-04T02:02:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
