@@ -569,6 +569,8 @@ motion). The request waits for the window to close and goes at once when a secon
 toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
 goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, and the
 creator before a new card's first save, since the item counts against the server's caps until then.
+A deletion within `UNDO_REPEAT_MS` of the one taken is a double click's second press: `hold` refuses it
+(returns `false`) and every caller leaves the item in place and stays where it is (R3059000).
 Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
 trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
 trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,

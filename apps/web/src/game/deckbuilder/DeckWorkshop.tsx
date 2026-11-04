@@ -624,18 +624,22 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         onDelete={() => {
           const id = openDeck.id;
           const next = neighbourOf(decks, id);
-          // R2119000: `hold` first, since it sends any deletion held before this one.
-          hold({
-            words: () => t("Deck deleted"),
-            send: (keepalive) => {
-              store.deleteDeck(id);
-              void store.flush({ keepalive });
-            },
-            restore: () => {
-              store.unhide();
-              setOpen({ kind: "deck", id });
-            },
-          });
+          // R2119000: `hold` first, since it sends any deletion held before this one. R3059000: a double click's
+          // second press lands on the neighbour that just opened here, and `hold` refuses it.
+          if (
+            !hold({
+              words: () => t("Deck deleted"),
+              send: (keepalive) => {
+                store.deleteDeck(id);
+                void store.flush({ keepalive });
+              },
+              restore: () => {
+                store.unhide();
+                setOpen({ kind: "deck", id });
+              },
+            })
+          )
+            return;
           store.hide("deck", id);
           setOpen(next === null ? null : { kind: "deck", id: next.id });
           setView("list");
@@ -679,17 +683,20 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         }}
         onDelete={() => {
           const id = openTrio.id;
-          hold({
-            words: () => t("Trio deleted"),
-            send: (keepalive) => {
-              store.deleteTrio(id);
-              void store.flush({ keepalive });
-            },
-            restore: () => {
-              store.unhide();
-              setOpen({ kind: "trio", id });
-            },
-          });
+          if (
+            !hold({
+              words: () => t("Trio deleted"),
+              send: (keepalive) => {
+                store.deleteTrio(id);
+                void store.flush({ keepalive });
+              },
+              restore: () => {
+                store.unhide();
+                setOpen({ kind: "trio", id });
+              },
+            })
+          )
+            return;
           store.hide("trio", id);
           setOpen(null);
           setView("list");
