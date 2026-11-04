@@ -14897,12 +14897,12 @@
     "what": "spot-check #2992 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-04T12:00:49Z",
+    "at": "2026-11-04T12:14:50Z",
     "notes": [
-      "delivered review #3034 on claude-3 (run 41822428978): approved",
-      "started review #2992 on claude-6 (run 41825897976)",
-      "started plan #2944 on claude-4 (run 41825985572)",
-      "nothing more to start: nothing is queued"
+      "delivered review #2992 on claude-6 (run 41825897976): stopped",
+      "started review #2992 on claude-6 (run 41827853401)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15608,7 +15608,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T12:00:49Z",
+  "loop_tick": "2026-11-04T12:14:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
