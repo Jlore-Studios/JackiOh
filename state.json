@@ -98,6 +98,7 @@
       "action": "build",
       "asks": [],
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-squishy",
       "owner_since": "2026-11-04T02:37:04Z",
