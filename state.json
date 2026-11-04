@@ -18200,15 +18200,17 @@
     "what": "build #3013 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-04T09:05:26Z",
+    "at": "2026-11-04T09:22:44Z",
     "notes": [
-      "delivered plan #3014 on muse (run 41802830121): planned",
-      "delivered review #2996 on claude-4 (run 41802725765): stopped",
-      "delivered build #3000 on claude-7 (run 41802624051): interrupted",
-      "started build #3014 on muse (run 41805174249)",
-      "nothing more to start: nothing is queued",
-      "#3023: typed it Task",
-      "#3023: the production countdown, so `tracking`"
+      "delivered plan #3012 on claude-1 (run 41803423276): interrupted",
+      "delivered plan #3013 on claude-8 (run 41803304222): planned",
+      "delivered plan #2943 on claude-3 (run 41803049110): planned",
+      "delivered revise #2992 on muse (run 41800219760): built",
+      "started review #2992 on muse (run 41807786256)",
+      "started build #2943 on claude-3 (run 41807894103)",
+      "started build #3013 on claude-8 (run 41808007729)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 100%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-04T09:50:00Z; it can start a build or a plan again in 19m; `claude-8` is busy; `claude-1` it refused a call; its limit resets at 2026-11-04T10:20:00Z; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 109h 29m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-07T05:00:00Z; it can start a build or a plan again in 67h 29m; waiting for their owners: #3012 held for `claude-1` until 04:20 (it refused a call)",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18914,7 +18916,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T09:05:26Z",
+  "loop_tick": "2026-11-04T09:22:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
