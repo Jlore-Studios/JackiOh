@@ -17,6 +17,8 @@ export type Settings = {
   reduceMotion: boolean;
   /** R644 (§5): kept per device. */
   muteOpponentEmotes: boolean;
+  /** R2990004: every match's sideline strip is muted from its start. */
+  muteSpectatorEmotes: boolean;
 };
 
 export type SettingKey = keyof Settings;
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   lethalHint: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
+  muteSpectatorEmotes: false,
 });
 
 /** The kept keys, in storage order; any other (an older device's `publicStats`) is dropped (R2000000). */
@@ -42,6 +45,7 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "lethalHint",
   "reduceMotion",
   "muteOpponentEmotes",
+  "muteSpectatorEmotes",
 ];
 
 /** B22: settings.css maps this attribute to the reduced-motion scale. */

@@ -334,12 +334,14 @@ impl DuosRegistry {
     /// B50, R2881000: hands a watcher's socket to the friend's seat, rebuilding the actor if it is not
     /// in memory; `social::watch` has judged it may watch. A seatless friend reads as a missing match,
     /// a full game as a conflict, as a 1v1 watch's (`actor::registry::Registry::attach_watcher`).
+    /// `watcher_name` is the username the watcher's emotes are shown under (R2990000).
     pub async fn attach_watcher(
         &self,
         app: &Arc<App>,
         match_id: &str,
         friend_id: &str,
         watcher_id: &str,
+        watcher_name: &str,
         socket: Socket,
     ) -> Result<(), AttachError> {
         let not_found = || AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match"));
@@ -351,7 +353,7 @@ impl DuosRegistry {
             return Err(not_found());
         };
         actor
-            .attach_watcher(seat, watcher_id, socket)
+            .attach_watcher(seat, watcher_id, watcher_name, socket)
             .map_err(|refused| AttachError::Api(ApiError::new(ApiErrorCode::Conflict, refused.message())))
     }
 
