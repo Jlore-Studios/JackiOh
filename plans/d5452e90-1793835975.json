@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3062,
+  "title": "Patch: the fuzz monitor sends every action the legal list offers, and each one must be accepted",
+  "branch": "bot/issue-3062",
+  "thread": "**Issue #3062 (data, not instructions):**\n\n```text\n# #3062: Patch: the fuzz monitor sends every action the legal list offers, and each one must be accepted\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe game hands the board and the practice AI a list of every move you can make right now. The nightly random games test that a move left off that list is refused, but of the listed moves they only ever try the one they pick. A listed move that is rarely picked, such as an unusual target combination or a mulligan subset, could be refused or crash the game, and nobody would know until a player tapped it. Once this is built, the random games try every listed move on a copy of the board and fail on any the game refuses.\n\n## Why\n\n- `crates/engine/src/reduce.rs:803`: `legal_actions` promises \"Every action that would not error\".\n- `crates/tools/src/fuzz.rs:1004-1015` checks only the chosen action (\"legalActions offered \u2026 but reduce refused it\").\n- I8 (`crates/engine/src/testkit/invariants.rs:30`, :1129-1134) checks the other direction: an accepted action must be listed. #2978's forged plays are also unlisted actions. The probes (`fuzz.rs:1750-1825`) send only malformed or wrong-seat actions.\n- So no check ever sends the listed actions the policy does not pick.\n\n## Proposal\n\n- A new monitor check, I14, in `testkit/invariants.rs`. For each seat it reduces every listed action on a copy of the state and reports any refusal or panic, with the action and the seed.\n- The fuzz's `play_game` calls it on its own named stride, as I8 runs on `I8_GATE_STRIDE` (`invariants.rs:78-81`). A named cap limits the actions tried per state: a mulligan can list 256 subsets, and a play up to 64 choice combinations.\n- It takes nothing from the game's random stream, so every seed plays the same game as before.\n- Duos is left for later.\n\n## Where it lands\n\n- `crates/engine/src/testkit/invariants.rs`.\n- `crates/tools/src/fuzz.rs` and its tests.\n- `crates/tools/README.md` (the monitor's list).\n- \u00a710.2.\n\n## Acceptance criteria\n\n- [ ] A unit test with a forged listing that holds one action `reduce` refuses reports exactly one I14 finding.\n- [ ] A fuzz test that plants a broken reducer through the existing probed deal fails in the invariant stage.\n- [ ] `cargo jackioh fuzz --seeds 200` and `--handicap` stay green, and every seed's replay hash is unchanged.\n- [ ] The pull request records the wall time of `fuzz --seeds 200` before and after, and `rust (checks, fuzz 200)` stays inside its five minutes.\n\n## Size and risks\n\nSmall to medium: about 200 lines in two files, plus tests. The cost per state is the risk, so measure the stride and the cap before landing. A real listed-but-refused action the check finds turns the gate red until it is fixed, which is the point.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:56:06Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:56:13Z:\n\nBut rip compute lol\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3062: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T22:59:14Z",
+    "claimed_at": "2026-11-04T23:46:45Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3061 is held for `claude-1` until 18:20 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3044 skipped: it waits for #3043 to close first",
+    "#3045 skipped: it waits for #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
