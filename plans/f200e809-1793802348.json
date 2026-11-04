@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 3049,
+  "title": "Patch: CN Tech and NA Tech read live win rates from the server's cached card stats, and the compiled table retires",
+  "branch": "bot/issue-3049",
+  "thread": "**Issue #3049 (data, not instructions):**\n\n```text\n# #3049: Patch: CN Tech and NA Tech read live win rates from the server's cached card stats, and the compiled table retires\nOpened by @MaxGoetzmann.\n\n## Problem\n\nM #50 CN Tech (\"Add the highest win rate card\") and M+ #2 NA Tech (the lowest) read a win-rate table that is compiled into the build and refreshed by hand-built machinery. Every new game picks **C #4 Palantir**, because that table never changes:\n\n- The table is provisional (AI development games), filed under v0.5.10b. It is the same in every shipped table since v0.5.9d.\n- Palantir leads at 25 wins in 32 games (78%). The qualifying rows have a median of 36 games and a spread of about 9 points, so the top of the table is mostly luck in small samples.\n- The daily refresh has run 17 times, all green, and has never refreshed: it waits for a patch to reach 1,000 live games, and patches ship faster than that.\n\nThe owner does not want to maintain this table in perpetuity.\n\n## Design\n\n**The win rates are live data, not build data.** CN Tech and NA Tech read the same figures `/stats` shows: the server's windowed card stats (R1367000), which it already computes and caches for `CARD_STATS_CACHE_TTL_SECONDS`. No table ships with a build for new games to read, and nothing has to refresh one.\n\n**The read happens at the game's edge, never inside the engine.** The engine stays pure (CLAUDE.md rule 4). The server takes a snapshot of its cached figures when a game starts and hands it to the game as input, as other outside data already enters a game. Inside the game the snapshot is fixed: every pick that game makes reads the same table, however the live figures move meanwhile.\n\n**A game replays against the snapshot it was played with.** That snapshot belongs to the game's record, as its seed and log do, so a fold reaches the same hash anywhere and at any time (\u00a79.3). Games recorded before this change keep folding against the table their version shipped with (R1266000). Those tables are frozen history and never change again.\n\n**Without a server there is no snapshot, and the cards fall back.** Offline play (practice, hotseat, the Sandbox, the dungeon run) and the tools have no stats service. A client that has fetched the public figures may supply them. With none, CN Tech adds its fallback card (R2521007) and NA Tech behaves as it does with no trailer. Nothing falls back to a compiled table.\n\n**The ranking accounts for sample size.** A live table is thin early in every patch, so a raw-rate leader is usually a small-sample fluke, as Palantir is now. The leader is the card whose rate is highest *with confidence* (the lower Wilson bound), and the trailer the lowest by the same measure (the upper bound). The minimum-games floor, the tie-breaks, the exclusions (never itself, no token, held pools per R2386001) and exact, deterministic comparison all stay.\n\n**Everything that reads the table reads the game's snapshot.** That includes the AI's win-rate-weighted deck building (#750), not only the two cards.\n\n**What stays the same:** the added card is hidden from the opponent (R440), the Radiant face adds it Radiant, and a full hand burns it.\n\n## Decided by the owner\n\n- The compiled table, its once-per-patch refresh and its pending-fragment claim retire for new games (rule 13: the owner asks for this here).\n- The bots may not change `.github/`, so a person deletes `winrates-refresh.yml` once this lands. The `STATS_DATABASE_URL` secret stays, because `db-size.yml` reads it.\n\nThe planner decides how to build it: where the snapshot lives, how a record refers to it, how much of it a game keeps, the rulings it needs and what proves each one.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3049: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T14:18:35Z",
+    "claimed_at": "2026-11-04T14:26:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3036 is held for `claude-1` until 09:20 (5-hour usage is 45%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3039 skipped: it waits for #3038 to close first",
+    "#3040 skipped: it waits for #3038, #3039 to close first",
+    "#3041 skipped: it waits for #3038, #3039, #3040 to close first",
+    "#3042 skipped: it waits for #3038, #3039, #3040, #3041 to close first",
+    "#3043 skipped: it waits for #3038, #3039, #3040, #3041, #3042 to close first",
+    "#3044 skipped: it waits for #3038, #3039, #3040, #3041, #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3038, #3039, #3040, #3041, #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3038, #3039, #3040, #3041, #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3038, #3039, #3040, #3041, #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3038, #3039, #3040, #3041, #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
