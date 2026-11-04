@@ -16757,11 +16757,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-04T02:27:12Z",
+        "at": "2026-11-04T04:45:10Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "it changes the play-choice listing/refusal rules in crates/engine/src/, which the rating rule names as hard"
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule 1: it changes why_unplayable's refusal steps in crates/engine/src/play_choices.rs and adds an engine fuzz-monitor invariant"
       },
       "failures": 0,
       "forced": false,
