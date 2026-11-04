@@ -228,21 +228,21 @@ function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection 
 }
 
 /**
- * R2777001: the match types the page reads, Constructed (Best of 1 and Conquest together) first and the default,
- * then All Random, then each constructed mode alone. No figure mixes chosen decks with dealt ones, so every mode
- * together is not offered.
+ * R2777004: the match types the page reads. Every mode together comes first and is what the page opens on, then
+ * Constructed (Best of 1 and Conquest together, R2777001), All Random, and each constructed mode alone.
  */
-const MODES = ["constructed", "random", "bo1", "bo3"] as const;
+const MODES = ["all", "constructed", "random", "bo1", "bo3"] as const;
 type StatsMode = (typeof MODES)[number];
-const DEFAULT_MODE: StatsMode = "constructed";
+const DEFAULT_MODE: StatsMode = "all";
 const MODE_LABELS: Record<StatsMode, string> = {
+  all: "All modes",
   constructed: "Constructed",
   random: "All Random",
   bo1: "Best of 1",
   bo3: "Conquest",
 };
 
-/** R2777001: the mode an address asks for; one the page does not offer (an old `all`, or none) is Constructed. */
+/** R2777004: the mode an address asks for; none, or one the page does not offer, is every mode. */
 function modeOf(params: URLSearchParams): StatsMode {
   const asked = params.get("mode");
   return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
