@@ -16874,6 +16874,13 @@
     "2976": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T03:18:27Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's search expansion (`crates/ai/src/search.rs`, `candidates.rs`) and adds a ruling amending R1759000."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
