@@ -564,3 +564,14 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-04T09:35:39Z,41802935615,muse,muse-spark-1.3-contributor,plan,3011,medium,planned,,41.6,0,0,0,,8,13,90,92,0.3,,none,,1
 2026-11-04T09:36:01Z,41800322253,claude-8,sonnet+opus,build,2882,medium,infra,infra,27,75,14653,2790229,0.734,5,8,,,5.6,claude-8,fresh,,1
 2026-11-04T09:44:04Z,41800432972,muse,muse-spark-1.3-contributor,revise,2984,medium,built,,65.9,0,0,0,,1,14,88,92,9.3,muse,none,,1
+2026-11-04T10:00:53Z,41803186993,claude-3,opus,revise,3007,hard,approved,,5.5,8,1465,268826,1.0778,58,60,,,0.7,claude-3,none,,1
+2026-11-04T10:22:19Z,41809616368,muse,muse-spark-1.3-contributor,build,2882,medium,infra,infra,36.7,0,0,0,,15,24,92,95,3.4,claude-8,none,cap,1
+2026-11-04T10:12:50Z,41808007729,claude-8,opus,build,3013,hard,interrupted,5-hour cap,40.5,0,0,0,,47,85,,,36.6,claude-8,fresh,,1
+2026-11-04T10:34:19Z,41814481188,claude-1,opus,plan,3012,medium,planned,,3,16,24407,1372216,2.3942,8,14,,,95.3,claude-1,resumed,,1
+2026-11-04T10:49:57Z,41807786256,muse,muse-spark-1.3-contributor,review,2992,medium,approved,,80.1,0,0,0,,11,31,91,98,1.4,muse,none,,5
+2026-11-04T11:17:38Z,41819742505,muse,muse-spark-1.3-contributor,revise,2992,medium,built,,0,0,0,0,,32,32,98,98,7,muse,none,,0
+2026-11-04T11:19:12Z,41814578944,claude-7,sonnet+opus,build,2882,medium,built,,11.6,38,9889,1229850,0.4442,0,1,,,4.8,muse,fresh,cap,1
+2026-11-04T11:20:11Z,41809514384,muse,muse-spark-1.3-contributor,build,3011,medium,built,,95.3,0,0,0,,15,32,92,98,50.6,muse,none,,1
+2026-11-04T11:19:10Z,41807894103,claude-3,opus,build,2943,hard,built,,59.2,340,151191,44788425,18.2921,31,69,,,1049.4,claude-3,fresh,,1
+2026-11-04T11:44:48Z,41822903791,claude-4,opus+sonnet,review,2992,medium,reviewed,,1.3,21,9528,1115036,0.6165,0,2,,,8.1,muse,none,,1
+2026-11-04T11:40:39Z,41805174249,muse,muse-spark-1.3-contributor,build,3014,medium,stopped,stop,150,0,0,0,,10,0,91,98,17.7,muse,none,,1
