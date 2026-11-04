@@ -1,7 +1,8 @@
 /* The sideline strip (R2990004, SidelineStrip.tsx): the watchers' emotes in a column at the screen's
    inline end, over the board and under its prompts and result (`--z-strip`). Only its controls take
    a press, so a show never covers a card. On a phone layout (`data-phone`, game/phoneBar.ts's query)
-   it is a wrapping row along the top edge, and the menu drops below its button instead of above. */
+   it is a wrapping row along the top edge, under the rail when the rail rides that edge (#2932), and
+   the menu drops below its button instead of above. */
 
 .sideline-strip {
   position: fixed;
@@ -115,6 +116,21 @@
 .sideline-strip[data-phone] .emote-menu-you {
   top: calc(100% + 8px);
   bottom: auto;
+}
+
+/* #2932: on a phone held upright a match's or a watch's rail rides the top row (board.css,
+   `data-rail-top`), Back, the ranks and the watcher count across it. There the strip leaves that row
+   and takes the board's, at its top end corner, as a grid item over the board rather than a fixed box
+   over the rail. */
+@media (max-width: 600px) {
+  .app-shell--wide > .game[data-rail-top="true"] > .sideline-strip[data-phone] {
+    position: relative;
+    inset: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: start;
+    justify-self: end;
+  }
 }
 
 @keyframes sideline-pop {

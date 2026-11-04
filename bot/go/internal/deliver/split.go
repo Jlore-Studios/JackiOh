@@ -609,10 +609,10 @@ func (x *Deliverer) Revise(number int, status string) {
 					"rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		queue.SetStateLabel(x.Ctx, number, x.Labels(number), config.LabelBlocked)
 		x.holdAutoMerge(0)
-		x.GH.CreateComment(number, "I need a decision before I can revise this.\n\n"+py.Str(question))
-		x.remember(number, pyjson.New("question", py.OrStr(question, "")))
+		x.askDecision(number, "revise", "I need a decision before I can revise this.", "", py.OrStr(question, ""),
+			fmt.Sprintf("answer here with `%s revise <your answer>` (or `@%s <your answer>`), which queues it again",
+				config.Slash, x.Cfg.BotLogin))
 		return
 	}
 	// As the run found it: the source and the clearance `_carry` reads are reset below.
@@ -750,6 +750,9 @@ func (x *Deliverer) Revise(number int, status string) {
 	done := "done"
 	if pushed {
 		done = "pushed"
+	}
+	if built := x.defaultMd(number); built != "" {
+		note += "\n\n" + built // nobody answered its question in time (#2986)
 	}
 	x.GH.CreateComment(number, fmt.Sprintf("Revision %s (%s) on %s; %s%s\n\n%s%s",
 		done, x.link(), x.builtOn(), said, note, report, mergeNote))

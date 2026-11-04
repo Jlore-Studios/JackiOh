@@ -670,6 +670,12 @@ describe("the match screen's ranks (R604, R612)", () => {
     const short = banner.querySelector(".match-ranks__short");
     expect(short).toHaveTextContent("Normal III");
     expect(short).toHaveTextContent("Raisin");
+    // #2932: the compact line's words ride spans the top strip hides visually (board.css), the crests carrying the ranks, so
+    // a screen reader reads the same sentence: the label once, each seat's rank words once.
+    expect(short?.querySelectorAll(".match-ranks__label")).toHaveLength(1);
+    expect(short?.querySelector(".match-ranks__label")).toHaveTextContent("Ranked ·");
+    expect([...(short?.querySelectorAll(".match-ranks__tier") ?? [])].map((tier) => tier.textContent)).toEqual(["Normal III", "Raisin"]);
+    expect(short?.textContent).toMatch(/^Ranked · Max#3 \(you\)\s*Normal III vs/);
     // #1650: a small crest beside each seat's words on both lines, which carry no pips or placements words.
     for (const name of ["Normal Grape III · 1/3 pips", "Raisin · 2/5 placements"]) {
       const crests = within(banner).getAllByRole("img", { name, hidden: true });

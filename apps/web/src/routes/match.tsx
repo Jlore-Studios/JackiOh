@@ -543,6 +543,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           ) : null}
         </>
       }
+      phoneRailTop
       boardRail={
         <>
           <BackLink showSettings={false} />
@@ -568,12 +569,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
                 {rankCaption(ranks.seats.p2.rank)}
               </span>
               <span className="match-ranks__short">
-                {ranks.ranked ? t("Ranked") : t("Unranked")} · <Username name={ranks.seats.p1.username} />
+                <span className="match-ranks__label">{ranks.ranked ? t("Ranked") : t("Unranked")} · </span>
+                <Username name={ranks.seats.p1.username} />
                 {ranks.seats.p1.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p1.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
-                {rankShortWords(ranks.seats.p1.rank)} {t("vs")}{" "}
+                <span className="match-ranks__tier">{rankShortWords(ranks.seats.p1.rank)}</span> {t("vs")}{" "}
                 <Username name={ranks.seats.p2.username} />
                 {ranks.seats.p2.you ? t(" (you)") : ""}{ranks.ranked ? <StreakFlame streak={ranks.seats.p2.streak} size="small" /> : null} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
-                {rankShortWords(ranks.seats.p2.rank)}
+                <span className="match-ranks__tier">{rankShortWords(ranks.seats.p2.rank)}</span>
               </span>
             </p>
           ) : null}

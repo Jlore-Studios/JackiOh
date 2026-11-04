@@ -657,6 +657,9 @@ func (x *Worker) FirstPrompt(conflicts []string) (string, string) {
 			"someone gave one, is in the comments of the task above.\n\n" +
 			prompts.Data(question, "The question asked")
 	}
+	if note := py.OrStr(plan.Get("default_note"), ""); note != "" {
+		previous += "\n\n" + note // nobody answered it in time: it goes ahead on its default (#2986)
+	}
 	if len(conflicts) > 0 {
 		previous += "\n\n`main` moved since then; merging it left conflict markers in: " +
 			backticked(conflicts) + ". Resolve them, keeping both sides' meaning. Do not commit."
@@ -1260,6 +1263,12 @@ func (x *Worker) buildPass(cycle int, role string, prompt string, why string /* 
 		x.Result.Set("report", report.Body)
 		x.Result.Set("reason", reason)
 		x.Result.Set("human_required", report.HumanRequired)
+		if len(report.Options) > 0 {
+			// Its options, and its default, which the lane that asked builds if no trusted answer comes
+			// in time (#2986).
+			x.Result.Set("decision", pyjson.New("options", pyjson.ListOf(report.Options), "default", report.Default,
+				"gives_up", report.GivesUp, "model", x.BuildSeat.Model))
+		}
 		x.finish()
 		return nil, entry
 	}

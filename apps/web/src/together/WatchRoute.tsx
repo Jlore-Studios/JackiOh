@@ -403,6 +403,7 @@ export function WatchRoute({
             loadouts={loadouts}
             sideline={sideline}
             matchStatus={status}
+            phoneRailTop
             turnClock={turnClock}
             boardRail={
               <>

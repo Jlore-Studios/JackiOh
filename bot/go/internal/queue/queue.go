@@ -110,12 +110,18 @@ func LabelNames(thread *pyjson.Object) map[string]bool {
 // Leave exactly `wanted` (or none) of the queue's state labels on the thread. A pull request
 // back in the queue is no longer ready for a person to merge, so `ready for merge` comes off. A
 // thread that leaves the queue (a run takes it, it is blocked, stopped or done) waits for no owner
-// any more, so `bot:waiting` comes off unless it stays queued (`bot:build`, `bot:revise`).
+// any more, so `bot:waiting` comes off unless it stays queued (`bot:build`, `bot:revise`). A thread
+// that leaves `bot:blocked` (a person answered and queued it again, the bot went ahead on its
+// default, or a person stopped it) waits for no decision any more, so `needs decision` comes off
+// (#2986).
 func SetStateLabel(ctx *hctx.Context, number int, current map[string]bool, wanted string) {
 	for _, name := range StateLabels {
 		if current[name] && name != wanted {
 			ctx.GH.RemoveLabel(number, name)
 		}
+	}
+	if current[config.LabelNeedsDecision] && wanted != config.LabelBlocked {
+		ctx.GH.RemoveLabel(number, config.LabelNeedsDecision)
 	}
 	if current[config.LabelWaiting] && wanted != config.LabelBuild && wanted != config.LabelRevise {
 		ctx.GH.RemoveLabel(number, config.LabelWaiting)

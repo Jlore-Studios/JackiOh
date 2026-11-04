@@ -220,7 +220,7 @@ var PruneEvery = 24 * time.Hour
 // parts only an open one uses.
 var ShedWhenClosed = []string{"handoff", "last_findings", "self_check_findings", "strike_log", "votes",
 	"asks", "taken_asks", "question", "paused", "hold", "handoff_requested", "waiting_comment", "own_review",
-	"build_next", "waiting_turn", "turn"}
+	"build_next", "waiting_turn", "turn", "decision"}
 
 // Prune is, once a day: drop the record of every item whose thread closed more than
 // `KEEP_CLOSED` ago, and the bulky parts of the others that are closed. Open threads keep
@@ -287,7 +287,10 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 	labelRevise := config.LabelRevise
 	labelBlocked := config.LabelBlocked
-	notes := Prune(ctx, state)
+	// A stop for a decision first (#2986): a closed one loses `needs decision` before Prune sheds it,
+	// and one past its end goes ahead, so the planner below finds it queued for its lane.
+	notes := SyncDecisions(ctx)
+	notes = append(notes, Prune(ctx, ctx.Store.Load())...)
 	// A pull request waiting its turn whose turn came is taken up first (#2948), so a conflict its
 	// turn brought is its lane's, below.
 	notes = append(notes, SyncTurns(ctx, 0)...)

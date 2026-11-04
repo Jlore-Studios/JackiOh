@@ -66,6 +66,7 @@ import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
 import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
+import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
@@ -132,6 +133,13 @@ export type GameProps = {
   matchStatus?: ReactNode;
   /** Route navigation and match-series information, mounted in the board rail. */
   boardRail?: ReactNode;
+  /**
+   * #2932: on a phone held upright the rail rides the top strip, beside the turn banner, in a row that
+   * already exists, so it takes no height from the field; the control bar keeps End turn, the log, the
+   * menu and settings. Off, or on any other layout, the rail stays in the control bar. A route with a
+   * back link and a rank line (a match, a replay, a watch) opts in; the Duos board keeps its own bar.
+   */
+  phoneRailTop?: boolean;
   /** DR14 (#2706): route chrome drawn beside each hero, as `boardRail` is in the rail (a dungeon run's relics). */
   heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
@@ -216,6 +224,7 @@ export default function Game({
   turnClock,
   matchStatus,
   boardRail,
+  phoneRailTop = false,
   heroAside,
   boardNotice,
   emotes,
@@ -296,6 +305,9 @@ export default function Game({
   const queue = useRef<AnimationQueue | null>(null);
   // #258: the OS preference is followed live, as the queue below follows the setting.
   const osReducesMotion = useOsReducedMotion();
+  // #2932: the rail rides the top strip on a phone held upright, when the route asks for it and has one.
+  const portrait = usePhonePortrait();
+  const railTop = phoneRailTop && portrait && boardRail !== undefined && boardRail !== null;
   const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
   const hitStopTimer = useRef<number | null>(null);
   const triggerHitStopMs = useCallback((durationMs: number): void => {
@@ -693,6 +705,7 @@ export default function Game({
       className="game"
       ref={attach}
       data-testid="game"
+      data-rail-top={railTop ? "true" : undefined}
       data-replay={replay ? "true" : undefined}
       data-lethal-hint={lethalShown ? "true" : undefined}
       data-viewer={shown.viewer}
@@ -727,6 +740,8 @@ export default function Game({
       {inFlight === null ? null : (
         <span data-testid="animation-queue" data-animating={inFlight.type} hidden aria-hidden="true" />
       )}
+      {/* #2932: the rail in the top strip, with the turn banner beside it (board.css); the board gets none. */}
+      {railTop ? <div className="board-rail board-rail--top">{boardRail}</div> : null}
       {banner !== null ? (
         <div
           className="turn-banner"
@@ -750,7 +765,7 @@ export default function Game({
         controlExtras={controlExtras}
         turnClock={turnClock}
         matchStatus={matchStatus}
-        boardRail={boardRail}
+        boardRail={railTop ? undefined : boardRail}
         heroAside={heroAside}
         market={replay ? undefined : { legal, onAction: dispatch }}
         showOfferDraw={showOfferDraw}

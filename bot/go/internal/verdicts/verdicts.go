@@ -149,6 +149,46 @@ type BuildReport struct {
 	// CILocal: a CI fix's builder ran the failing check locally and says how it went
 	// (`"ci_local"`: `passed`, lowercased; #2948), "" when it said nothing.
 	CILocal string // default: ""
+	// Options, Default and GivesUp: a question's answers (`"options"`, each one), the one that stays
+	// inside the issue's own stated limits (`"default"`, its number in `Options` from 1) and what that
+	// one gives up (`"gives_up"`; #2986). Default is 0, and the question has no default, when it
+	// names none of the options, and always for a `human_required` stop, which never goes ahead.
+	Options []string // default: ()
+	Default int      // default: 0
+	GivesUp string   // default: ""
+}
+
+// MaxOptions is how many of a question's options are kept, and OptionChars how much of each, and
+// of what its default gives up.
+var (
+	MaxOptions  = 6
+	OptionChars = 1000
+)
+
+// options is a blocked report's `"options"`, `"default"` and `"gives_up"`: each option stripped, the
+// empty ones left out, at most `MaxOptions`; the default's number when it names one of them (a
+// whole number, or its text), else 0.
+func options(found *pyjson.Object) ([]string, int, string) {
+	out := []string{}
+	listed, _ := found.Get("options").([]any)
+	for _, raw := range listed {
+		text, ok := raw.(string)
+		if text = py.SliceTo(py.Strip(text), OptionChars); ok && text != "" && len(out) < MaxOptions {
+			out = append(out, text)
+		}
+	}
+	chosen, err := py.Int(found.Get("default"))
+	if text, isText := found.Get("default").(string); isText {
+		chosen, err = py.Int(py.Strip(text))
+	}
+	if err != nil || chosen < 1 || chosen > len(out) {
+		chosen = 0
+	}
+	givesUp := ""
+	if chosen > 0 {
+		givesUp = py.SliceTo(py.Strip(py.OrStr(found.Get("gives_up"), "")), OptionChars)
+	}
+	return out, chosen, givesUp
 }
 
 // BuildReport_ is verdicts.build_report.
@@ -156,7 +196,7 @@ func BuildReport_(text string) *BuildReport {
 	value, rest := Header(text, "bot")
 	found, ok := value.(*pyjson.Object)
 	if !ok {
-		return &BuildReport{Status: "unknown", Body: rest, SendBack: []SendBack{}}
+		return &BuildReport{Status: "unknown", Body: rest, SendBack: []SendBack{}, Options: []string{}}
 	}
 	status := py.Lower(py.Str(found.GetOr("status", "")))
 	sent := []SendBack{}
@@ -171,7 +211,11 @@ func BuildReport_(text string) *BuildReport {
 	nextModel := py.SliceTo(py.Lower(strings.Trim(py.Strip(py.OrStr(found.Get("next_model"), "")), "`")), 40)
 	human := status == "blocked" && found.Get("human_required") == true
 	local := py.SliceTo(py.Lower(py.Strip(py.OrStr(found.Get("ci_local"), ""))), 20)
-	return &BuildReport{status, title, question, rest, nextModel, human, sent, local}
+	report := &BuildReport{status, title, question, rest, nextModel, human, sent, local, []string{}, 0, ""}
+	if status == "blocked" && !human {
+		report.Options, report.Default, report.GivesUp = options(found)
+	}
+	return report
 }
 
 // Finding is verdicts.Finding.

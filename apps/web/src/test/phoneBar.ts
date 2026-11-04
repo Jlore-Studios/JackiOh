@@ -2,12 +2,12 @@
 // jsdom has no media queries, so `window.matchMedia` is stubbed for the one query the hook reads; the
 // returned function puts the original back, so call it in an `afterEach`.
 
-import { PHONE_BAR_QUERY } from "../game/config.ts";
+import { PHONE_BAR_QUERY, PHONE_PORTRAIT_QUERY } from "../game/config.ts";
 
-export function stubPhoneBar(matches: boolean): () => void {
+function stubQueries(answers: readonly string[], matches: boolean): () => void {
   const original = window.matchMedia;
   window.matchMedia = ((query: string) => {
-    if (query !== PHONE_BAR_QUERY) return original(query);
+    if (!answers.includes(query)) return original(query);
     return {
       media: query,
       matches,
@@ -22,4 +22,17 @@ export function stubPhoneBar(matches: boolean): () => void {
   return () => {
     window.matchMedia = original;
   };
+}
+
+export function stubPhoneBar(matches: boolean): () => void {
+  return stubQueries([PHONE_BAR_QUERY], matches);
+}
+
+/**
+ * #2932: a test's answer to whether the board is on the phone portrait layout (`usePhonePortrait`). A
+ * real portrait phone matches `PHONE_BAR_QUERY` too (its first clause is the same width), so both
+ * are answered.
+ */
+export function stubPhonePortrait(matches: boolean): () => void {
+  return stubQueries([PHONE_PORTRAIT_QUERY, PHONE_BAR_QUERY], matches);
 }
