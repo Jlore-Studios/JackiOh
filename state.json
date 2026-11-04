@@ -13935,15 +13935,15 @@
       "ci_sha": "5f397e6f0717e82c7bb2d28909d07f0f7db34df3",
       "cleared": {
         "approver": {
-          "family": "muse",
-          "model": "muse-spark-1.3-contributor",
-          "provider": "muse",
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-4",
           "tier": "medium"
         },
-        "at": "2026-11-04T10:58:24Z",
+        "at": "2026-11-04T11:45:50Z",
         "built_by": "muse",
-        "by": "`muse` (medium)",
-        "sha": "5f397e6f0717e82c7bb2d28909d07f0f7db34df3"
+        "by": "`claude` (medium)",
+        "sha": "a6c69931321abfecdfaef3a986cfdfe77d296666"
       },
       "cross_rounds": 0,
       "died": 0,
@@ -13956,7 +13956,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "muse",
+      "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
