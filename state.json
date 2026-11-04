@@ -14969,10 +14969,10 @@
     "what": "review #2992 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-04T11:44:53Z",
+    "at": "2026-11-04T11:53:28Z",
     "notes": [
-      "delivered review #2992 on claude-4 (run 41822903791): reviewed",
-      "delivered build #3014 on muse (run 41805174249): stopped"
+      "#2992: approved and green, so its strikes are cleared",
+      "#2992: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15678,7 +15678,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T11:44:53Z",
+  "loop_tick": "2026-11-04T11:53:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
