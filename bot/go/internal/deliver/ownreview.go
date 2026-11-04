@@ -315,8 +315,12 @@ func (x *Deliverer) OwnReview(number int, status string) {
 		if waiting {
 			note = "A comment arrived during the run, so a revision answers it first, and auto-merge " +
 				"waits for it."
-		} else if !pushed && reserved.Str("source") == "ci" && record.Truthy("ci_run_id") {
-			// A CI fix that changed nothing, which its review agreed with: CI runs its failed jobs again.
+		} else if !pushed && reserved.Str("source") == "ci" && record.Truthy("ci_run_id") &&
+			!record.Truthy("ci_on_head") {
+			// A CI fix of the merge queue's build that changed nothing, which its review agreed
+			// with: CI runs its failed jobs again. One of the head's own CI read that CI itself
+			// (`ciRed`), and its build ran it again already when its failing check passed locally
+			// (#2948, `localPass`).
 			x.rerunCI(number)
 			note += " Nothing needed changing, so I asked CI to run the failed jobs again."
 		}

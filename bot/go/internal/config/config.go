@@ -695,7 +695,7 @@ type Config struct {
 	MergeMethod        string
 	CIWorkflow         string
 	RequiredChecks     []string
-	CIReruns           int
+	CIReruns           int // `ci_reruns`: CI runs again on a head with no commit at most this often (#2948)
 	SuggestionsEnabled bool
 	SuggestionsMaxOpen int
 	// SuggestionsIdleMinutes: a survey is due once a free lane has had nothing to start for this

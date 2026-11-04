@@ -818,6 +818,14 @@ func RequeueCleared(ctx *hctx.Context, pull *pyjson.Object, record *pyjson.Objec
 	return fmt.Sprintf("#%d: back in the merge queue (taken out: %s)", number, reason)
 }
 
+// CIRerunsLeft is how many more times CI may run again with no commit on the head a CI fix is for
+// (the record's `ci_sha`), out of `allowed` (`ci_reruns`, #2948): a CI fix whose failing check
+// passes locally re-runs it (`deliver`), and each re-run is counted in `ci_reruns`, by head.
+func CIRerunsLeft(record *pyjson.Object, allowed int) int {
+	sha := py.OrStr(record.Get("ci_sha"), "")
+	return max(0, allowed-py.MustInt(py.Or(record.Obj("ci_reruns").Get(sha), 0)))
+}
+
 // Queue a pull request for a revision. Returns the reply line.
 func QueueRevise(ctx *hctx.Context, number int, by string, force bool /* = False */, source string /* = "request" */, labelPresent bool /* = False */, extra *pyjson.Object /* = None */, ask *asks.Ask /* = None */) string {
 	pull := ctx.GH.GetPull(number)

@@ -121,7 +121,7 @@ func Sweep(ctx *hctx.Context) []string {
 	notes := []string{}
 	parts := []part{
 		{"labels", Labels}, {"comments", comments}, {"reviews", reviews},
-		{"assignments", assignments}, {"failed_ci", failedCI}, {"needs_plan", needsPlan}, {"holds", holds},
+		{"assignments", assignments}, {"early_ci", earlyCI}, {"failed_ci", failedCI}, {"needs_plan", needsPlan}, {"holds", holds},
 		{"turns", turns}, {"green_heads", GreenHeads}, {"person_merges", PersonMerges}, {"trees", Trees},
 		{"deliveries", Deliveries},
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
@@ -682,6 +682,14 @@ func assignments(ctx *hctx.Context, since time.Time) []string {
 // the issue's mode labels as they are) is a nil `mode`.
 func queueBuild(ctx *hctx.Context, n int, by string, mode *string) string {
 	return queue.QueueBuild(ctx, n, by, false, false, nil, mode)
+}
+
+// earlyCI stops the CI runs going on this bot's pull requests once a required job failed on the
+// head (#2948, `events.StopRedRuns`): the status loop's runners refresh does it every two minutes
+// for the night bot, and this, each tick's sweep, for Squishy too, whose sweep runs in a process of
+// its own.
+func earlyCI(ctx *hctx.Context, since time.Time) []string {
+	return events.StopRedRuns(ctx)
 }
 
 // failedCI is _failed_ci.

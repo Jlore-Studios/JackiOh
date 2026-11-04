@@ -1556,6 +1556,10 @@ func (x *Worker) rounds(conflicts []string, handed bool) {
 		if built == nil {
 			return
 		}
+		if cycle == 1 && !harnessRound && !handedRound && x.ciPassedLocally(built, entry) {
+			report = built // a CI fix whose failing check passed locally: CI runs again (#2948)
+			break
+		}
 		if cycle == 1 && !harnessRound && !handedRound && built.Status == "send_back" && x.reconciles() {
 			// A reconcile that sends parts back to their builders ends here (#2748, `sendBack`).
 			if x.sendBack(built) {

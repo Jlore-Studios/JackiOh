@@ -448,24 +448,30 @@ func TestEvents_ChangesRequestedOnABotPRQueuesARevision(t *testing.T) {
 	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
 }
 
-func TestEvents_CIFailureIsRerunOnceThenFixed(t *testing.T) {
+// Red CI on a bot pull request's head gets its CI fix at once, with no re-run of its failed jobs
+// first (#2948): the fix run judges, running the failing check itself.
+func TestEvents_CIFailureIsFixedWithNoRerunFirst(t *testing.T) {
 	w := newEventsReviewWorld()
 	w.ci(1, "s1")
-	assertEqual(t, w.gh.Reruns, []any{99})
-	assertNotIn(t, config.LabelRevise, w.gh.LabelNames(9))
-	w.ci(2, "s1")
+	assertEqual(t, w.gh.Reruns, []any{})
 	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
 	record := dig(t, w.ctx.Store.Load(), "items", "9")
-	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "ci_run_id"), dig(t, record, "ci_fixes")},
-		[]any{"ci", 99, 1})
+	assertEqual(t, []any{dig(t, record, "source"), dig(t, record, "ci_run_id"), dig(t, record, "ci_fixes"),
+		dig(t, record, "ci_early"), dig(t, record, "ci_on_head")}, []any{"ci", 99, 1, false, true})
+	assertIn(t, "CI failed ([run](u)).", lastOf(t, w.gh.BotComments(9)))
 }
 
 func TestEvents_ActionsCallsUseTheJobsOwnToken(t *testing.T) {
 	w := newEventsReviewWorld()
 	actions := fakes.NewFakeGitHub()
 	w.ctx.ActionsGH = actions
-	w.ci(1, "s1")
-	assertEqual(t, []any{actions.Reruns, w.gh.Reruns}, []any{[]any{99}, []any{}})
+	// The early stop's cancel of a red CI run goes through the job's token (#2948).
+	run := pyjson.New("id", 99, "name", "CI", "event", "pull_request", "status", "in_progress",
+		"head_branch", "bot/issue-5", "head_sha", "s1", "run_attempt", 1, "pull_requests", []any{pyjson.New("number", 9)})
+	jobs := []*pyjson.Object{pyjson.New("id", 1, "name", "rust (test engine)", "status", "completed",
+		"conclusion", "failure", "completed_at", "2026-09-29T13:00:00Z")}
+	assertIn(t, "stopped the rest of it", events.StopRedCI(w.ctx, run, jobs))
+	assertEqual(t, []any{actions.Cancels, w.gh.Cancels}, []any{[]any{99}, []any{}})
 	w.ctx.Dispatch(nil, true, "auto")
 	assertEqual(t, len(actions.Dispatches), 1)
 	assertEqual(t, w.gh.Dispatches, []fakes.Dispatch{})
