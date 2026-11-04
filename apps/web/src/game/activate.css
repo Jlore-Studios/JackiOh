@@ -14,6 +14,18 @@
   translate: 0 -50%;
 }
 
+/* #2932: on a phone's field the control leaves the card for the stack hung off its corner
+   (FieldBadges.tsx, board.css), where it is one more item of that column, not placed on the card's
+   left edge: its wrapper is no box. */
+.board .field-badges .activate-controls {
+  display: contents;
+}
+
+/* The stack takes no pointer (board.css); its control still does. */
+.board .field-badges .activate-control {
+  pointer-events: auto;
+}
+
 .board .activate-control {
   position: relative;
   display: inline-flex;
@@ -108,6 +120,17 @@
     bottom: min(-12px, (100% - var(--hit-min)) / 2);
     left: -2px;
     right: calc(-1 * clamp(0px, 50cqw - 100% - 3px - var(--activate-clear), var(--activate-reach)));
+  }
+
+  /* #2932: a phone's field control hangs at the card's top-left, over the zone beside it, whose
+     switch target is just above it and whose row is just over it (board.css, `--badges-top`). So its
+     band reaches down from the control only, as far as --hit-min or the bottom of its zone allows
+     (as the switch's target is short of the tile's middle on a tile too small for 44px), never up
+     over that switch and never past the zone into the row below. */
+  .board .field-badges .activate-control::before {
+    top: -1px; /* the control's own 1px border: the band starts at its outer edge */
+    bottom: auto;
+    height: min(var(--hit-min), calc(100cqh - var(--badges-top)));
   }
 }
 

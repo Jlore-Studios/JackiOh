@@ -1,0 +1,17 @@
+{
+  "title": "Patch: phone board fixes: unstretched field cards, match bar on top, thinner hero plates, activates and keyword marks off the face",
+  "sources": "#2932",
+  "notes": "How the phone board looks only: nothing plays differently.",
+  "player": {
+    "title": "Phone board fixes",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "On upright phones, field cards keep their card shape and grow taller, the match bar sits up top, hero plates are thinner, and Activate and keyword marks hang off the card's corner."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

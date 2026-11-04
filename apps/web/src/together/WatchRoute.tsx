@@ -346,6 +346,7 @@ export function WatchRoute({
             resultForm="chip"
             loadouts={loadouts}
             matchStatus={status}
+            phoneRailTop
             turnClock={turnClock}
             boardRail={
               <>
