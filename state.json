@@ -32269,6 +32269,7 @@
         "every": 5,
         "head": "4539713ba5f9605f54b6927c5dcfb2dc863e19ae",
         "issue": 2983,
+        "last_why": "stopped: #2996 was closed",
         "merged_at": "2026-11-04T08:17:17Z",
         "n": 45,
         "pr": 2996,
@@ -32279,12 +32280,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:32b72928-1793780408",
+        "run_id": "",
         "sha": "3809c73ce671c88facee6311ffa38899a5db3adc",
         "started_at": "2026-11-04T08:20:43Z",
         "status": "queued",
         "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 45
