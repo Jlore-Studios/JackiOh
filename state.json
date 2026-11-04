@@ -17023,7 +17023,9 @@
     },
     "2984": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6626181154"
+      ],
       "ci_fixes": 1,
       "ci_reruns": {
         "4f4326d73dea56a4fef628d5d4e6289350a2ed05": 1
@@ -17070,12 +17072,12 @@
       "pending_request": false,
       "provider": "muse",
       "question": "placeholder (waiting on test run, will continue)",
-      "queued_at": "2026-11-04T04:00:48Z",
-      "requested_by": "jgoetzmann-bot",
+      "queued_at": "2026-11-04T08:24:10Z",
+      "requested_by": "jgoetzmann",
       "run_id": "41771452805",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "request",
       "started_at": "2026-11-04T04:09:12Z",
       "stop_requested": false,
       "taken_asks": [],
