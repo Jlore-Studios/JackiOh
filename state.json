@@ -216,10 +216,8 @@
     "what": "build #2981 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-04T06:32:00Z",
-    "notes": [
-      "#2980 stopped on a question before #2986, so `needs decision`, with no deadline"
-    ],
+    "at": "2026-11-04T06:49:51Z",
+    "notes": [],
     "since": "2026-10-06T07:15:07Z"
   },
   "older_questions_labelled": "2026-11-04T06:32:46Z",
