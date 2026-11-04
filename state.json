@@ -16492,15 +16492,14 @@
     "what": "revise #2965 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-04T00:24:20Z",
+    "at": "2026-11-04T00:35:15Z",
     "notes": [
       "CI on #2964: #2964: queued a CI fix",
-      "delivered plan #2942 on claude-1 (run 41742035597): planned",
-      "delivered build #2962 on muse (run 41721798388): built",
-      "started review #2969 on muse (run 41746977370)",
-      "started build #2942 on claude-1 (run 41747054930)",
+      "delivered review #2969 on muse (run 41746977370): approved",
+      "delivered review #2965 on claude-6 (run 41732125204): approved",
+      "started revise #2965 on claude-6 (run 41748368091)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17204,7 +17203,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T00:24:20Z",
+  "loop_tick": "2026-11-04T00:35:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
