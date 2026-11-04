@@ -16,7 +16,9 @@ import {
   SIGN_UP_FAILED_MESSAGE,
   authRedirectUrl,
   classifyProviderRefusal,
+  emailLinkUrl,
   exchangeAuthCode,
+  isEmailLinkToken,
   listTotpFactors,
   refreshSession,
   requestEmailSignIn,
@@ -1160,5 +1162,24 @@ describe("R323 R324 PKCE: the mailers' challenge and the code's exchange", () =>
     const calls = serve(200, TOKEN_BODY);
     expect(await exchangeAuthCode("../../token?x=1")).toEqual({ kind: "refused" });
     expect(calls).toEqual([]);
+  });
+});
+
+describe("R3024000 the provider's link behind the button", () => {
+  it("R3024000 is built on this site's project from the token and type alone", () => {
+    const url = new URL(emailLinkUrl("pkce_0123456789abcdef", "recovery"));
+    expect(url.origin).toBe(URL_);
+    expect(url.pathname).toBe("/auth/v1/verify");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      token: "pkce_0123456789abcdef",
+      type: "recovery",
+      redirect_to: `${window.location.origin}${paths.login}`,
+    });
+  });
+
+  it("R3024000 a token is hex with `pkce_` before it, or it is not sent", () => {
+    expect(isEmailLinkToken("pkce_0123abcd")).toBe(true);
+    expect(isEmailLinkToken("0123abcd")).toBe(true);
+    for (const token of ["", "a/b", "a&type=signup", "x".repeat(129)]) expect(isEmailLinkToken(token), token).toBe(false);
   });
 });

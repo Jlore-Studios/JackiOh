@@ -668,6 +668,39 @@ export async function exchangeAuthCode(code: string): Promise<CodeExchange> {
   return { kind: "elsewhere" };
 }
 
+// An emailed link that waits for a press (R3024000)
+
+/** The links a template mails. An invite is the dashboard's, and goes straight to the provider. */
+const EMAIL_LINK_TYPES: ReadonlySet<string> = new Set(["signup", "recovery", "magiclink", "email_change"]);
+
+export type EmailLinkType = "signup" | "recovery" | "magiclink" | "email_change";
+
+export function isEmailLinkType(type: string): type is EmailLinkType {
+  return EMAIL_LINK_TYPES.has(type);
+}
+
+/** GoTrue's token hash: hex, with `pkce_` before it on a PKCE link. Anything else is never sent. */
+const EMAIL_LINK_TOKEN_PATTERN = /^[A-Za-z0-9_-]{1,128}$/u;
+
+export function isEmailLinkToken(token: string): boolean {
+  return EMAIL_LINK_TOKEN_PATTERN.test(token);
+}
+
+/**
+ * R3024000: the provider's own link, which confirms on arrival. It is built here from the link's token
+ * and type alone, on this site's project, so a link cannot send the player anywhere else (B35).
+ */
+export function emailLinkUrl(token: string, type: EmailLinkType): string {
+  const config = requireConfig();
+  const params = new URLSearchParams({ token, type, redirect_to: authRedirectUrl() });
+  return `${config.url}/auth/v1/verify?${params.toString()}`;
+}
+
+/** R3024000: the player pressed the button. A navigation, as R666's is; R323's code comes back to `/login`. */
+export function followEmailLink(token: string, type: EmailLinkType): void {
+  window.location.assign(emailLinkUrl(token, type));
+}
+
 // Session calls
 
 /** R663, R323, R160: request a confirmed email change with a neutral address refusal. */

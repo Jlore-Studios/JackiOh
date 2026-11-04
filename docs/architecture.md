@@ -641,6 +641,10 @@ step that is not yet implemented says which BUILD task delivers it.
      `http://localhost:5173/login` for local development. The client
      asks for `<origin>/login` on every mailer (`authRedirectUrl`, B35), and the provider honors it
      only when it matches this allow-list, falling back to the Site URL otherwise.
+   The mail templates are `infra/email-templates/` (R3024000), since a mail scanner opens links by
+   itself: each link opens `/login`, which waits for a press, and only that goes on to Supabase. `cutover.yml`'s
+   `email-links` step writes a project's templates once its site serves that button; written sooner, every
+   link would land on nothing.
    The links are PKCE links (R323): the mailers send a `code_challenge`, the link comes back to
    `/login?code=…`, and the browser that asked exchanges the code for a session with the verifier
    it kept. A link opened on another device confirms the address and asks for a sign-in (R324).
@@ -648,9 +652,8 @@ step that is not yet implemented says which BUILD task delivers it.
 
    The further ways in (issue #267, R664–R666) need these dashboard steps, done by a person:
    - **Email sign-in link and code (R664).** Auth → Emails → Templates → **Magic Link**: the
-     template must carry both `{{ .ConfirmationURL }}` (the link) and `{{ .Token }}` (the code),
-     since the screen offers both; the default template has the link only. For example:
-     `<p>Sign in to JackiOh: <a href="{{ .ConfirmationURL }}">open this link in the browser you asked from</a>, or type this code: <strong>{{ .Token }}</strong></p><p>If you didn't ask to sign in, ignore this email.</p>`.
+     template must carry both the link and `{{ .Token }}` (the code), since the screen offers both; the
+     default template has the link only. `infra/email-templates/magic_link.html` has both.
      Auth → Providers → Email: keep **Confirm email** on, and leave the email OTP expiry at its
      default (3600 s) or shorter. Nothing else changes: the link returns to `<origin>/login`, which
      the Redirect URLs above already allow, and it is a PKCE link (R323).

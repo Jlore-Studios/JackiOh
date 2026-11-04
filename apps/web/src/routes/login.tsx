@@ -5,7 +5,7 @@
 // never sign in (R193). Hold recovery links only after the player types the checked address; never prefill it.
 // Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
 // Email-code sign-in (R664), OAuth (R666), Google's own button (R2983000), and MFA (R665) retain only their proven
-// session; §9.4 still gates it.
+// session; §9.4 still gates it. A mailed link does nothing until the player presses its button (R3024000).
 // Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
@@ -44,6 +44,7 @@ import {
   authConfig,
   authMessageOf,
   exchangeAuthCode,
+  followEmailLink,
   googleClientId,
   oauthProviders,
   refreshSession,
@@ -60,6 +61,7 @@ import {
   verifyEmailCode,
   verifySecondFactor,
   type CodeExchange,
+  type EmailLinkType,
   type OAuthProvider,
 } from "../net/auth.ts";
 import { forgetVerifier, newestFlow } from "../auth/pkce.ts";
@@ -90,9 +92,9 @@ export const signUpPrivacyTestid = "login-sign-up-privacy";
 
 /**
  * `emailCode`: the email sign-in link and code (R664). `mfa`: a session waiting for the code from
- * the account's authenticator app (R665).
+ * the account's authenticator app (R665). `press`: a mailed link waiting for its button (R3024000).
  */
-type Mode = "signIn" | "signUp" | "forgot" | "claimReset" | "emailCode" | "mfa";
+type Mode = "signIn" | "signUp" | "forgot" | "claimReset" | "emailCode" | "mfa" | "press";
 
 /**
  * R665: a session held for its second step. `signIn` keeps it as this browser's session; `recovery`
@@ -185,6 +187,8 @@ type Entry = {
   /** R666: an OAuth provider sent the player back with an error rather than a code. */
   oauthFailed: boolean;
   link: PendingLink | null;
+  /** R3024000: the mailed link waiting for its button. */
+  press: { token: string; linkType: EmailLinkType } | null;
 };
 
 /** What the server said about a link's token (`GET /api/auth/me`, which verifies it). */
@@ -242,6 +246,7 @@ function readEntry(): Entry {
     linkError: false,
     oauthFailed: false,
     link: null,
+    press: null,
   };
 
   const link = consumeAuthRedirect();
@@ -261,6 +266,11 @@ function readEntry(): Entry {
       // Exchanged once mounted (R323), then decided like any other link.
       entry.mode = "signIn";
       entry.link = { kind: "code", code: link.code };
+      break;
+    case "press":
+      // Nothing happens until the button: a mail scanner opens links, and presses nothing.
+      entry.mode = "press";
+      entry.press = { token: link.token, linkType: link.linkType };
       break;
     case "error":
       entry.mode = "signIn";
@@ -698,6 +708,21 @@ export default function LoginRoute(): ReactElement {
     });
   }
 
+  /** R3024000: on to the provider's link; its code comes back here (R323). */
+  function followLink(): void {
+    const press = entry.press;
+    if (busy || press === null) return;
+    acted.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      followEmailLink(press.token, press.linkType);
+    } catch (cause) {
+      setError(authMessageOf(cause));
+      setBusy(false);
+    }
+  }
+
   /** R2983000: exchange Google's ID token here, with its attempt's raw nonce; signs in as R666's code does. */
   function continueWithGoogle(idToken: string, nonce: string): void {
     if (busy) return;
@@ -940,11 +965,19 @@ export default function LoginRoute(): ReactElement {
   const claiming = mode === "claimReset";
   const emailCode = mode === "emailCode";
   const secondFactor = mode === "mfa";
+  const pressing = mode === "press";
   /** R664: the code was mailed to the address in the field, so the field to type it is shown. */
   const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
+  const pressType = entry.press?.linkType ?? "signup";
+
   let title: string;
-  if (signingUp) title = t("Create an account");
+  if (pressing) {
+    if (pressType === "recovery") title = t("Reset your password");
+    else if (pressType === "magiclink") title = t("Sign in");
+    else if (pressType === "email_change") title = t("Confirm your new email");
+    else title = t("Confirm your email");
+  } else if (signingUp) title = t("Create an account");
   else if (forgot || claiming) title = t("Reset your password");
   else if (emailCode) title = t("Sign in with an email code");
   else if (secondFactor) title = t("Two-step sign-in");
@@ -967,6 +1000,11 @@ export default function LoginRoute(): ReactElement {
   } else {
     submitLabel = busy ? t("Signing in…") : t("Sign in");
   }
+
+  let pressLabel: string;
+  if (pressType === "recovery") pressLabel = t("Continue");
+  else if (pressType === "magiclink") pressLabel = t("Sign in");
+  else pressLabel = t("Confirm my email");
 
   // One i18n entry per sentence, split around the inserted link or address.
   const [signedInBefore = "", signedInAfter = ""] = t("This browser is signed in as {address}.").split("{address}");
@@ -1191,6 +1229,9 @@ export default function LoginRoute(): ReactElement {
               {t("Enter the address you signed up with. If it has an account, we'll email a link to choose a new password.")}
             </p>
           ) : null}
+          {pressing ? (
+            <p className="auth-hint">{t("Mail scanners open links by themselves, so this step waits for you.")}</p>
+          ) : null}
           {signingUp && !refusedHere ? (
             // Said before the player has an account, not after they have confirmed one.
             <p className="auth-hint" data-testid={loginTestid.inviteOnly}>
@@ -1200,7 +1241,13 @@ export default function LoginRoute(): ReactElement {
         </div>
 
         <div className="auth-board__body">
-          {refusedHere ? (
+          {pressing ? (
+            <div className="form-card">
+              <button type="button" data-testid={loginTestid.pressLink} disabled={busy} onClick={followLink}>
+                {pressLabel}
+              </button>
+            </div>
+          ) : refusedHere ? (
             <SignUpRefused />
           ) : (
             <form
@@ -1438,7 +1485,7 @@ export default function LoginRoute(): ReactElement {
             claiming
               ? forgotButton
               : null}
-            {forgot || claiming || emailCode || secondFactor ? (
+            {forgot || claiming || emailCode || secondFactor || pressing ? (
               <button
                 type="button"
                 className="link-button"
