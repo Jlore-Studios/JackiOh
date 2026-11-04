@@ -1,0 +1,78 @@
+{
+  "action": "build",
+  "number": 3039,
+  "title": "Patch (part 2 of 11): an awakened card is never Dormant again, and a card played by Flashback keeps it",
+  "branch": "bot/issue-3039",
+  "thread": "**Issue #3039 (data, not instructions):**\n\n```text\n# #3039: Patch (part 2 of 11): an awakened card is never Dormant again, and a card played by Flashback keeps it\nOpened by @jgoetzmann-bot.\n\nSection 1, last two bullets, of #3000.\n\n## What\n\n**Dormant goes for good once a card awakens.** Today Dormant is a status that R78's reset takes off as the card leaves the field, and the card starts it again whenever it next enters printing it (`slumber::start_slumber_on_field`, R1839000). New rule: once a card has awakened, it never enters Dormant again. That holds whatever awakened it (`slumber::awaken_card`: its countdown, its Activate, `effects::awaken`, a Starship's launch). It holds when the card is played again from the graveyard, Reborn, returned to a hand and replayed, or summoned again.\n\nAdd a field on `CardInstance` (`crates/engine/src/state.rs`), for example `awakened: Option<bool>`:\n- only ever `Some(true)`, skipped while absent (D14);\n- set in `awaken_card`;\n- kept in every zone and through R78's and R766's resets, like `flashback_spent`;\n- read by `start_slumber_on_field`, which starts no Dormant for such a card.\n\nA copy or a Transform is a new card without it. So is a fresh Dormant Starship summoned for a dying piece (R1852002), which is Dormant. A card that left the field still Dormant is Dormant again next time. The field also covers any card made Dormant by an effect.\n\n**An awakened Dormant Starship that returns** isn't Dormant. Its hull starts a fresh, empty memory as today (`start_starship_on_field`, untouched), so it stands awake, holds no pieces, isn't launched and draws no name. A piece that dies afterwards fuses into a Dormant Starship, a new one summoned if there is none. Rejected alternative: launching it again on its return, which would fire launch triggers with nothing fused. This is a ruling.\n\n**Flashback is kept.** A play by the card's own Flashback (R783012) no longer spends it (R783013). In `crates/engine/src/play_steps.rs`, drop:\n- the mark set at \u00a710.5 step 1 (`run.flashback` from `graveyard_play::spends_flashback`, around line 732);\n- `card.flashback_spent = Some(true)` as the card leaves the graveyard (around line 1748);\n- whatever only served them (`PlayRun.flashback`, `spends_flashback`).\n\nThe card keeps Flashback, printed or lent by Sanctum's aura, so whenever it is in its graveyard it is offered again at its cost. Leave `CardInstance.flashback_spent` and its read in `layers.rs` in place, because `layers.rs` is part 1's. Nothing sets it any more: mark it retired in its doc comment.\n\nR783013 is superseded by the new ruling. Keep its note, retitle it \"(superseded by R\u2026)\" with a line saying why, and rename its tests in `crates/engine/tests/rules/flashback.rs` so each carries both ruling tokens and proves the new rule. Update Moonberry's R1867007 and Sanctum's R1869003 notes and their cards' tests. In `spec/06-keywords.md`, the Flashback row becomes \"Can be played from your graveyard, at its cost; it keeps Flashback\", and the Dormant row says an awakened card is never Dormant again.\n\n## Tests\n- **Engine:**\n  - `crates/engine/tests/rules/slumber.rs`: played from the graveyard, Reborn, bounced and replayed, and summoned again, the card is not Dormant; a card bounced before it awakened is Dormant again;\n  - `crates/engine/tests/rules/flashback.rs` (with `fixtures/keywords_783.rs`): a card flashed back twice.\n- **Cards:**\n  - Imprisoned Ship Smith (`stinkyscape/c017_imprisoned_ship_smith.rs`) and Imprisoned Cosmality (`c019_imprisoned_cosmality.rs`): awakened, killed, then Reborn or replayed, each is not Dormant;\n  - the Dormant Starship, in `crates/cards/tests/cross/deaths_and_reborn.rs` (its own file is part 1's): launched, given Reborn and killed, it comes back awake, not Dormant, and the next dying piece fuses into a new Dormant Starship;\n  - Moonberry (`c021_moonberry.rs`), Prepare For Liftoff (`c144_prepare_for_liftoff.rs`) and a card Sanctum lends Flashback to (`c152_sanctum.rs`): flashed back, back in the graveyard, flashed back again.\n\n## Files\n- **Owned:**\n  - `crates/engine/src/slumber.rs`;\n  - `crates/engine/src/state.rs`: the new `CardInstance` field and `flashback_spent`'s doc. Part 10 edits `MarketOffer` there after you;\n  - `crates/engine/src/play_steps.rs`: the Flashback spend only. Part 11 edits the Echo repeats there after you;\n  - `crates/engine/src/graveyard_play.rs`;\n  - the test files above and `apps/web/src/wire/generated/CardInstance.ts`;\n  - the notes R783013, R1867007, R1869003 and R1839000 (for a link), and `spec/06-keywords.md`'s Dormant and Flashback rows.\n- **Not yours:** `starship.rs`, `layers.rs`, `t_dormant_starship.rs`, `zones.rs` and `catalog.json` (no card's words change).\n- Leave these cards' rows in `spec/08-catalog.md`, `BUILD.md` and `docs/radiant-audit.md` unless a row states the old rule. Part 4 edits the row just above Imprisoned Ship Smith (S 16 Rod of Ages), so put anything about S 17 in your ruling instead.\n\n## Check\n- `cargo test -p jackioh-engine --features testkit --test 'rules*' slumber`, and the same with `flashback` and with `r783013`.\n- `cargo test -p jackioh-cards imprisoned`, and the same with `moonberry`, `prepare_for_liftoff`, `sanctum` and `deaths_and_reborn`.\n- `cargo jackioh spec check`, `cargo fmt --check`, and `cargo clippy -p jackioh-engine --all-targets -- -D warnings`.\n\n### Working in the fullsend tree\nThis part of #3000 lands on `bot/issue-3000` beside the other parts, with no pull request of its own. One reconcile run makes the branch green, so this part need not pass every check alone, but it tests its own code.\n- Read `docs/ADDING_CARDS.md` before any card change (CLAUDE.md rule 10). Every number is a named constant or a card `param` (rule 9).\n- **Rulings** take this sub-issue's own block: R(N\u00d71000) up, for its number N (`docs/issues-and-patches.md`, Ruling numbers). Each has a test named after it and its \u00a711 paragraph in `spec/pending/N.md`. Never run `cargo jackioh spec index`.\n- **Shared by entry.** Other parts edit other entries of `crates/cards/catalog.json`, `crates/cards/card-text.yaml` (and the `chinese.json` its export writes), `crates/cards/tests/cross/catalog.rs`, `crates/cards/src/census.rs`, `crates/engine/src/config.rs`, `apps/web/src/i18n/zh-CN.json`, `spec/06-keywords.md`, `spec/07-tokens.md`, `spec/08-catalog.md`, `docs/radiant-audit.md`, `docs/stinkyscape-set.md` and `BUILD.md`. Change only the entries, rows and constants named here.\n- **Left to the reconcile:**\n  - `KEPT_SCRIPTS` in `crates/cards/src/history.rs`;\n  - the pending patch fragment;\n  - any test in another part's file that your change breaks: name it in your summary.\n- Commit only the files under `apps/web/src/wire/generated/` that your own types regenerate.\n\nIts build lands on `bot/issue-3000`, not `main` (fullsend).\n\nPart of #3000, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41836333892)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read spec/06-keywords.md's Dormant, Flashback and Awaken rows, R1839000\u2013R1839003, R783012, R783013, R1867007, R1869003, R2259000, slumber.rs, graveyard_play.rs, and play_steps.rs around lines 725\u2013740 and 1740\u20131756.\n2. In state.rs, add the CardInstance field (awakened, Some(true) only, serde-skipped when None, ts optional) with a doc comment saying it is kept through R78's and R766's resets. Set it in slumber::awaken_card and check it in start_slumber_on_field.\n3. Add the engine tests in rules/slumber.rs: graveyard replay, Reborn, bounce and replay, summon again, and a card bounced while still Dormant.\n4. Add the card tests: c017 and c019 in their own files, and the Dormant Starship in crates/cards/tests/cross/deaths_and_reborn.rs, covering its return awake and unlaunched and the next piece's new Dormant Starship.\n5. In play_steps.rs, remove the Flashback spend (run.flashback and the flashback_spent write), and spends_flashback in graveyard_play.rs if nothing else uses it. Mark flashback_spent retired in state.rs. Do not touch layers.rs.\n6. Rewrite R783013's tests in rules/flashback.rs (and fixtures/keywords_783.rs) to prove the new rule, named with both tokens. Update c021 Moonberry's r1867007 test, c144's and c152's tests: each is flashed back twice.\n7. Write the new ruling notes (Dormant lost for good, which covers the returning Starship; Flashback kept, superseding R783013). Retitle R783013. Update R1867007, R1869003 and the Dormant and Flashback rows in spec/06-keywords.md, and add spec/pending/N.md.\n8. Regenerate apps/web/src/wire/generated/CardInstance.ts (`--features jackioh-engine/ts`) and commit only that file.\n9. Run the checks and summarise what parts 10 and 11 build on (state.rs, play_steps.rs).\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read spec/06-keywords.md's Dormant, Flashback and Awaken rows, R1839000\u2013R1839003, R783012, R783013, R1867007, R1869003, R2259000, slumber.rs, graveyard_play.rs, and play_steps.rs around lines 725\u2013740 and 1740\u20131756.\n2. In state.rs, add the CardInstance field (awakened, Some(true) only, serde-skipped when None, ts optional) with a doc comment saying it is kept through R78's and R766's resets. Set it in slumber::awaken_card and check it in start_slumber_on_field.\n3. Add the engine tests in rules/slumber.rs: graveyard replay, Reborn, bounce and replay, summon again, and a card bounced while still Dormant.\n4. Add the card tests: c017 and c019 in their own files, and the Dormant Starship in crates/cards/tests/cross/deaths_and_reborn.rs, covering its return awake and unlaunched and the next piece's new Dormant Starship.\n5. In play_steps.rs, remove the Flashback spend (run.flashback and the flashback_spent write), and spends_flashback in graveyard_play.rs if nothing else uses it. Mark flashback_spent retired in state.rs. Do not touch layers.rs.\n6. Rewrite R783013's tests in rules/flashback.rs (and fixtures/keywords_783.rs) to prove the new rule, named with both tokens. Update c021 Moonberry's r1867007 test, c144's and c152's tests: each is flashed back twice.\n7. Write the new ruling notes (Dormant lost for good, which covers the returning Starship; Flashback kept, superseding R783013). Retitle R783013. Update R1867007, R1869003 and the Dormant and Flashback rows in spec/06-keywords.md, and add spec/pending/N.md.\n8. Regenerate apps/web/src/wire/generated/CardInstance.ts (`--features jackioh-engine/ts`) and commit only that file.\n9. Run the checks and summarise what parts 10 and 11 build on (state.rs, play_steps.rs).",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3000",
+  "part_of": 3000,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read spec/06-keywords.md's Dormant, Flashback and Awaken rows, R1839000\u2013R1839003, R783012, R783013, R1867007, R1869003, R2259000, slumber.rs, graveyard_play.rs, and play_steps.rs around lines 725\u2013740 and 1740\u20131756.\n2. In state.rs, add the CardInstance field (awakened, Some(true) only, serde-skipped when None, ts optional) with a doc comment saying it is kept through R78's and R766's resets. Set it in slumber::awaken_card and check it in start_slumber_on_field.\n3. Add the engine tests in rules/slumber.rs: graveyard replay, Reborn, bounce and replay, summon again, and a card bounced while still Dormant.\n4. Add the card tests: c017 and c019 in their own files, and the Dormant Starship in crates/cards/tests/cross/deaths_and_reborn.rs, covering its return awake and unlaunched and the next piece's new Dormant Starship.\n5. In play_steps.rs, remove the Flashback spend (run.flashback and the flashback_spent write), and spends_flashback in graveyard_play.rs if nothing else uses it. Mark flashback_spent retired in state.rs. Do not touch layers.rs.\n6. Rewrite R783013's tests in rules/flashback.rs (and fixtures/keywords_783.rs) to prove the new rule, named with both tokens. Update c021 Moonberry's r1867007 test, c144's and c152's tests: each is flashed back twice.\n7. Write the new ruling notes (Dormant lost for good, which covers the returning Starship; Flashback kept, superseding R783013). Retitle R783013. Update R1867007, R1869003 and the Dormant and Flashback rows in spec/06-keywords.md, and add spec/pending/N.md.\n8. Regenerate apps/web/src/wire/generated/CardInstance.ts (`--features jackioh-engine/ts`) and commit only that file.\n9. Run the checks and summarise what parts 10 and 11 build on (state.rs, play_steps.rs)."
+  },
+  "usage_facts": {
+    "queued_at": "2026-11-04T13:50:58Z",
+    "claimed_at": "2026-11-04T16:52:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3049 is held for `claude-4` until 11:20 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3040 skipped: it waits for #3039 to close first",
+    "#3041 skipped: it waits for #3039, #3040 to close first",
+    "#3042 skipped: it waits for #3039, #3040, #3041 to close first",
+    "#3043 skipped: it waits for #3039, #3040, #3041, #3042 to close first",
+    "#3044 skipped: it waits for #3039, #3040, #3041, #3042, #3043 to close first",
+    "#3045 skipped: it waits for #3039, #3040, #3041, #3042, #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3039, #3040, #3041, #3042, #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3039, #3040, #3041, #3042, #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3039, #3040, #3041, #3042, #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
