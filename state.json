@@ -16722,6 +16722,13 @@
     "2973": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T02:29:07Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: no engine rules, AI, cross-crate, migration, or ~40-file change, so medium by the remainder rule."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
