@@ -17897,7 +17897,8 @@
       "started_at": "2026-11-04T06:03:56Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 6624496987
     }
   },
   "labels_synced": "e249a5faf5e8580b",
