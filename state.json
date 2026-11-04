@@ -29155,12 +29155,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:54daa87e-1793794562",
+        "run_id": "",
         "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
         "started_at": "2026-11-04T12:16:27Z",
         "status": "queued",
         "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 51
