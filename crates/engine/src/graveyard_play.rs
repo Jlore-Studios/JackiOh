@@ -4,8 +4,9 @@
 //!
 //! A permission is a card on the field saying so (Classic #28 Second Wind, #74, #90 In Too Deep's
 //! reward L): `Script.graveyard_play`, a pure read asked of the cards acting on the player's own side.
-//! Flashback (#783, R783012, R783013) is the one a card grants itself, any type at any price, paid in
-//! mana; the play that only Flashback allows spends it for good (`spends_flashback`).
+//! Flashback (#783, R783012) is the one a card grants itself, any type at any price, paid in mana; a
+//! play by it spends nothing, so the card is offered by it again whenever it lies there (R3039001,
+//! superseding R783013).
 //!
 //! Everything else is a play's: the card leaves the graveyard at §10.5 step 4 as a hand card leaves
 //! the hand, its choices are a hand card's (R81, R90), R65's prices reach it, it counts as played and
@@ -75,8 +76,8 @@ pub fn in_own_graveyard(state: &GameState, player: PlayerId, card: &CardInstance
             .any(|held| held.id == card.id)
 }
 
-/// R783012: whether the card has Flashback where it is now, read through the layers (§10.4) — gone once
-/// it is spent (R783013).
+/// R783012: whether the card has Flashback where it is now, read through the layers (§10.4); a play by
+/// it keeps it (R3039001).
 pub fn has_flashback(state: &GameState, card: &CardInstance) -> bool {
     crate::layers::unit_has(state, card, KeywordKind::Flashback)
 }
@@ -101,23 +102,6 @@ fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Gr
         });
     }
     out
-}
-
-/// R783013: whether this play from the graveyard, at this price and paid as the action says, is
-/// Flashback's (the card has it and no field permission covers the play as `why_graveyard_play_refused`
-/// reads it), so it spends it. A Plague payment is always its permission's.
-pub fn spends_flashback(
-    state: &GameState,
-    player: PlayerId,
-    card: &CardInstance,
-    price: i32,
-    plague: Option<&PlagueSpend>,
-) -> bool {
-    has_flashback(state, card)
-        && plague.is_none()
-        && !field_admitting(state, player, card).iter().any(|grant| {
-            grant.permission.plague != Some(true) && price >= grant.permission.min_price.unwrap_or(0)
-        })
 }
 
 /// R454, R65: whether a play may take this card from its player's graveyard now (it lies there and a

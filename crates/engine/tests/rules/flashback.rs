@@ -1,6 +1,7 @@
-//! Flashback (#783, R783012, R783013): a card with it in its owner's graveyard may be played from there
-//! once, at its cost, as a play for every rule, spending the keyword for good; a play another permission
-//! allows spends nothing. `fixtures/keywords_783.rs` stands in for the cards #781 prints.
+//! Flashback (#783, R783012, R3039001): a card with it in its owner's graveyard may be played from there,
+//! at its cost, as a play for every rule, and keeps the keyword, so it is offered again whenever it lies
+//! there; R783013, which had the play spend it for good, is superseded. `fixtures/keywords_783.rs` stands
+//! in for the cards #781 prints.
 
 use jackioh_engine::testkit::*;
 
@@ -87,82 +88,93 @@ mod r783012_flashback_play {
     }
 }
 
-mod r783013_flashback_spent {
+/// R3039001 (superseding R783013): a play by Flashback spends nothing, so the card keeps the keyword and
+/// is offered by it again whenever it lies in its owner's graveyard.
+mod r3039001_r783013_flashback_kept {
     use super::*;
 
-    #[test]
-    fn r783013_spent_as_replayed_never_offered_again_unit_and_spell() {
-        // A Spell: back in the graveyard as any Spell goes, spent.
-        let mut state = playing("r783013-spell");
-        state.players.p1.mana.current = 10;
-        let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
-        state = act(
-            &state,
-            json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
-        );
-        let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
-        assert_eq!(landed.flashback_spent, Some(true));
-        assert!(!has_flashback(&state, &landed));
-        assert!(plays_of(&state, &spell.id, P1).is_empty());
-        assert!(cast_spell(&state, &spell.id).error.is_some());
+    fn play_unit(state: &GameState, id: &str) -> GameState {
+        act(
+            state,
+            json!({ "type": "play", "instanceId": id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
+        )
+    }
 
-        // A Unit: spent on the field, and still once it dies.
-        let mut units = playing("r783013-unit");
-        let body = in_graveyard(&mut units, &flashback_unit().id, P1);
-        let before = hero_health(&units, P2);
-        units = act(
-            &units,
-            json!({ "type": "play", "instanceId": body.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
-        );
-        assert_eq!(hero_health(&units, P2), before - 1);
-        let standing = must(find_instance(&units, &body.id).cloned(), "the Unit on the field");
-        assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
-        assert!(!has_flashback(&units, &standing));
-        apply_now(
-            &mut units,
-            jackioh_engine::effects::destroy(json_as(
-                json!({ "target": { "of": "instance", "instanceId": body.id } }),
-            )),
-        );
-        let dead = must(graveyard_card(&units, &body.id), "the Unit in the graveyard");
-        assert_eq!(dead.flashback_spent, Some(true));
-        assert!(!has_flashback(&units, &dead));
-        assert!(plays_of(&units, &body.id, P1).is_empty());
+    /// Back in p1's graveyard with its Flashback, never written spent, and offered by it again.
+    fn kept_in_graveyard(state: &GameState, id: &str) -> CardInstance {
+        let landed = must(graveyard_card(state, id), "the card in the graveyard");
+        assert_eq!(landed.flashback_spent, None);
+        assert!(has_flashback(state, &landed));
+        assert!(!plays_of(state, id, P1).is_empty(), "offered again");
+        landed
     }
 
     #[test]
-    fn r783013_a_permission_play_spends_no_flashback() {
-        let mut state = playing("r783013-permission");
+    fn r3039001_r783013_kept_as_replayed_and_flashed_back_twice_unit_and_spell() {
+        // A Spell: back in the graveyard as any Spell goes, Flashback kept, so flashed back again.
+        let mut state = playing("r3039001-spell");
+        state.players.p1.mana.current = 10;
+        let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
+        let before = hero_health(&state, P2);
+        for _ in 0..2 {
+            let result = cast_spell(&state, &spell.id);
+            assert_eq!(result.error, None);
+            state = result.state;
+            kept_in_graveyard(&state, &spell.id);
+        }
+        assert_eq!(hero_health(&state, P2), before - 4, "its Cry ran twice");
+        assert_eq!(state.players.p1.turn_log.cards_played, 2);
+
+        // A Unit: it keeps the keyword on the field, and once it dies it is flashed back again.
+        let mut units = playing("r3039001-unit");
+        units.players.p1.mana.current = 10;
+        let body = in_graveyard(&mut units, &flashback_unit().id, P1);
+        let before = hero_health(&units, P2);
+        for _ in 0..2 {
+            units = play_unit(&units, &body.id);
+            let standing = must(find_instance(&units, &body.id).cloned(), "the Unit on the field");
+            assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
+            assert_eq!(standing.flashback_spent, None);
+            assert!(has_flashback(&units, &standing));
+            apply_now(
+                &mut units,
+                jackioh_engine::effects::destroy(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": body.id } }),
+                )),
+            );
+            kept_in_graveyard(&units, &body.id);
+        }
+        assert_eq!(hero_health(&units, P2), before - 2, "its Cry ran twice");
+    }
+
+    #[test]
+    fn r3039001_r783013_a_permission_play_and_a_flashback_play_alike_keep_it() {
+        let mut state = playing("r3039001-permission");
         state.players.p1.mana.current = 10;
         let wind = put(&mut state, &second_wind().id, slot(P1, Row::Units, 1), json!({}));
         let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
 
-        // Second Wind allows the play, so Flashback is kept.
+        // Second Wind allows the play, which keeps Flashback.
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
-        let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
-        assert_eq!(landed.flashback_spent, None);
-        assert!(has_flashback(&state, &landed));
+        kept_in_graveyard(&state, &spell.id);
 
-        // Without the permission, Flashback still offers it once.
+        // Without the permission, Flashback's own play keeps it as well.
         let mut lone = wind.clone();
         jackioh_engine::zones::remove_from_any_zone(&mut state, &mut lone);
-        assert!(!plays_of(&state, &spell.id, P1).is_empty());
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
-        let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
-        assert_eq!(landed.flashback_spent, Some(true));
-        assert!(plays_of(&state, &spell.id, P1).is_empty());
+        kept_in_graveyard(&state, &spell.id);
     }
 
     #[test]
-    fn r783013_a_permission_that_cannot_cover_the_play_leaves_it_to_flashback_which_is_spent() {
-        // A floor above its price (Radiant Second Wind's shape at (3)): the play is Flashback's, so spent.
-        let mut state = playing("r783013-floor");
+    fn r3039001_r783013_a_play_only_flashback_allows_keeps_it_paid_in_mana_or_plague() {
+        // A floor above its price (Radiant Second Wind's shape at (3)): the play is Flashback's, which keeps it.
+        let mut state = playing("r3039001-floor");
         state.players.p1.mana.current = 10;
         put(&mut state, &picky_wind().id, slot(P1, Row::Units, 1), json!({}));
         let spell = in_graveyard(&mut state, &flashback_spell().id, P1);
@@ -170,15 +182,12 @@ mod r783013_flashback_spent {
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
-        let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
-        assert_eq!(landed.flashback_spent, Some(true));
-        assert!(!has_flashback(&state, &landed));
-        assert!(plays_of(&state, &spell.id, P1).is_empty());
-        assert!(cast_spell(&state, &spell.id).error.is_some());
+        kept_in_graveyard(&state, &spell.id);
+        assert_eq!(cast_spell(&state, &spell.id).error, None, "and plays again");
 
-        // A Plague-only permission (Corpse Plantation's shape): a play paid in mana is Flashback's, spending
-        // it; one paid in its Plague Counters is the permission's and keeps it.
-        let mut grave = playing("r783013-plague");
+        // A Plague-only permission (Corpse Plantation's shape): a play paid in mana is Flashback's, one paid in
+        // its Plague Counters the permission's, and both keep it.
+        let mut grave = playing("r3039001-plague");
         let field = put(
             &mut grave,
             &plague_field().id,
@@ -191,18 +200,7 @@ mod r783013_flashback_spent {
             .plague = Some(2);
         let body = in_graveyard(&mut grave, &flashback_unit().id, P1);
 
-        let in_mana = act(
-            &grave,
-            json!({ "type": "play", "instanceId": body.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
-        );
-        let standing = must(
-            find_instance(&in_mana, &body.id).cloned(),
-            "the Unit on the field",
-        );
-        assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
-        assert_eq!(standing.flashback_spent, Some(true));
-        assert!(!has_flashback(&in_mana, &standing));
-
+        let in_mana = play_unit(&grave, &body.id);
         let in_plague = act(
             &grave,
             json!({
@@ -213,12 +211,11 @@ mod r783013_flashback_spent {
                 "playerId": "p1",
             }),
         );
-        let standing = must(
-            find_instance(&in_plague, &body.id).cloned(),
-            "the Unit on the field",
-        );
-        assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
-        assert_eq!(standing.flashback_spent, None);
-        assert!(has_flashback(&in_plague, &standing));
+        for played in [&in_mana, &in_plague] {
+            let standing = must(find_instance(played, &body.id).cloned(), "the Unit on the field");
+            assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }));
+            assert_eq!(standing.flashback_spent, None);
+            assert!(has_flashback(played, &standing));
+        }
     }
 }

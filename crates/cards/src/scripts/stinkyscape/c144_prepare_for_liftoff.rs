@@ -5,7 +5,7 @@
 //!          costs (0)."
 //! Radiant: "Tradable, Flashback\nReveals when one of your Starship Pieces dies: Summon it from your
 //!          graveyard. Your Starship launch costs (0)."
-//! Engine: Tradable (R1838000) and Flashback (§6.1, set again from its owner's graveyard once) are
+//! Engine: Tradable (R1838000) and Flashback (§6.1, set again from its owner's graveyard, R3039001) are
 //! catalog keywords. Set face-down, it reveals (R17) when "one of your Starship Pieces" dies: a piece
 //! whose copy fuses into their Dormant Starship (`starshipFused` for them, R1852000, R1852002), one that
 //! died on their side, into their graveyard, a stolen one included (R1859012, R2618000). Then
@@ -289,12 +289,15 @@ mod tests {
     }
 
     #[test]
-    fn flashback_sets_it_again_once_from_the_graveyard_where_it_reveals_again() {
+    fn r3039001_flashback_sets_it_again_each_time_it_lands_in_the_graveyard_where_it_reveals_again() {
         let mut s = board(
             "liftoff-flashback",
             false,
             "p1",
-            json!({ "field": [{ "def": AP_ROUNDS, "lane": 2 }, { "def": AP_ROUNDS, "lane": 3 }] }),
+            json!({
+                "hand": [HIT_JOB, HIT_JOB, HIT_JOB],
+                "field": [{ "def": AP_ROUNDS, "lane": 2 }, { "def": AP_ROUNDS, "lane": 3 }, { "def": AP_ROUNDS, "lane": 4 }],
+            }),
             json!({}),
         );
         hit(&mut s, P1, 2);
@@ -302,15 +305,18 @@ mod tests {
         s.expect_in_zone(ID, "graveyard");
         assert!(offered(&s), "Flashback offers it from the graveyard");
 
-        set_from_graveyard(&mut s);
-        let trap = s.card(ID).clone();
-        assert!(matches!(trap.zone, Zone::Field { player: P1, row: Row::Backrow, lane: 1 }), "{:?}", trap.zone);
-        assert!(trap.face_up != Some(true), "set face-down");
-        assert_eq!(trap.flashback_spent, Some(true));
+        for lane in [3, 4] {
+            s.state_mut().players.p1.mana.current = 10;
+            set_from_graveyard(&mut s);
+            let trap = s.card(ID).clone();
+            assert!(matches!(trap.zone, Zone::Field { player: P1, row: Row::Backrow, lane: 1 }), "{:?}", trap.zone);
+            assert!(trap.face_up != Some(true), "set face-down");
+            assert_eq!(trap.flashback_spent, None, "its Flashback kept");
 
-        hit(&mut s, P1, 3);
-        assert!(trap_fired(&s));
-        s.expect_in_zone(ID, "graveyard");
-        assert!(!offered(&s), "not again");
+            hit(&mut s, P1, lane);
+            assert!(trap_fired(&s));
+            s.expect_in_zone(ID, "graveyard");
+            assert!(offered(&s), "offered again");
+        }
     }
 }

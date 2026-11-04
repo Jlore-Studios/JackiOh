@@ -9,7 +9,8 @@
 //!
 //! `CardInstance.slumber` is absent on every other card, so a game with no Dormant card serializes,
 //! hashes and plays exactly as before (D14). It is a status, never text: R78's reset takes it off with
-//! the card leaving the field.
+//! the card leaving the field. An awakening is for good (R3039000): it marks the card
+//! (`CardInstance.awakened`, kept in every zone), and a marked card never enters Dormant again.
 
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, Slumber, find_instance, find_instance_mut};
@@ -28,14 +29,20 @@ pub fn slumber_turns_of(card: &CardInstance) -> Option<i32> {
 /// R1839000, R1839001: a Unit (`as_unit`: in a unit zone, or standing in or carried on a backrow zone,
 /// R1081000, R446) arriving from off the field whose running text prints Dormant enters Dormant, with
 /// its printed countdown; "Dormant for 0 turns" is no Dormant. A field-to-field move is no arrival, and
-/// a card set face-down as a Trap has no text in force (R1487000), so neither starts one.
+/// a card set face-down as a Trap has no text in force (R1487000), so neither starts one. Nor does a
+/// card that has awakened before, however it comes back (R3039000).
 pub fn start_slumber_on_field(
     state: &GameState,
     card: &mut CardInstance,
     from_off_field: bool,
     as_unit: bool,
 ) {
-    if !from_off_field || !as_unit || card.set_as.is_some() || card.slumber.is_some() {
+    if !from_off_field
+        || !as_unit
+        || card.set_as.is_some()
+        || card.slumber.is_some()
+        || card.awakened == Some(true)
+    {
         return;
     }
     let Some(text) = crate::scripts::flags_of(state, card).slumber else {
@@ -64,8 +71,9 @@ pub fn acts_to_awaken(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R1839002: the card awakens, summoning sick for the rest of this turn (R2259000), and `awakened` says
-/// so. False, changing nothing, for a card that is not Dormant or lies beneath a Stack pile, where it
-/// acts for nothing (its countdown waits there, R1839003).
+/// so; it is marked awakened for good, so it is never Dormant again (R3039000). False, changing
+/// nothing, for a card that is not Dormant or lies beneath a Stack pile, where it acts for nothing (its
+/// countdown waits there, R1839003).
 pub fn awaken_card(sink: &mut EngineSink<'_>, instance_id: &str) -> bool {
     let Some(card) = find_instance(sink.state, instance_id) else {
         return false;
@@ -78,6 +86,8 @@ pub fn awaken_card(sink: &mut EngineSink<'_>, instance_id: &str) -> bool {
         return false;
     };
     live.slumber = None;
+    // R3039000: whatever awakened it, it never enters Dormant again, in any zone, however it returns.
+    live.awakened = Some(true);
     // R2259000, §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which an awakening
     // starts afresh, whenever the card arrived.
     live.summoned_turn = Some(turn);

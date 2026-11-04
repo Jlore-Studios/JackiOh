@@ -5,8 +5,8 @@
 //! Engine: Indestructible is a catalog keyword (§6.1): a destroy leaves it standing. R1869003: while it
 //! acts on the field, an aura (§10.4 layer 5) lends Flashback (R783012) to every card in its
 //! controller's deck and graveyard, so each card in that graveyard is offered as a play from there at
-//! its cost (`graveyard_play`), and a played one's `flashbackSpent` keeps the aura off it for good
-//! (R783013). The entry reads the card's zone alone, no layer, so it cannot recurse. A deck card holds
+//! its cost (`graveyard_play`), and a played one keeps it, so it is offered again whenever it lands there
+//! (R3039001). The entry reads the card's zone alone, no layer, so it cannot recurse. A deck card holds
 //! the keyword but is never played from the deck, and the opponent's cards are not reached. Radiant: Cry
 //! (R1): gain {mana} mana this turn (§6.3 Mana).
 
@@ -84,7 +84,9 @@ mod tests {
     }
 
     fn play_from_graveyard(s: &mut Scenario, card: &CardInstance, extra: Value) {
-        let mut action = json!({ "type": "play", "playerId": "p1", "instanceId": card.id, "nonce": format!("sanctum-{}", card.id) });
+        // A card played from here again is a new action: its nonce counts the turn's plays.
+        let nonce = format!("sanctum-{}-{}", card.id, s.state().players.p1.turn_log.cards_played);
+        let mut action = json!({ "type": "play", "playerId": "p1", "instanceId": card.id, "nonce": nonce });
         if let (Some(into), Some(more)) = (action.as_object_mut(), extra.as_object()) {
             for (key, value) in more {
                 into.insert(key.clone(), value.clone());
@@ -103,7 +105,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1869003_each_graveyard_card_is_offered_and_plays_once() {
+        fn r1869003_r3039001_each_graveyard_card_is_offered_and_flashed_back_again_each_time_it_lands_there() {
             let mut s = standing(false, json!([VANILLA, FILLER]));
             assert_eq!(graveyard_defs_offered(&s, P1), vec![VANILLA, FILLER]);
 
@@ -112,13 +114,15 @@ mod tests {
             assert_eq!(s.unit_at(P1, 2).id, vanilla.id);
             s.expect_mana(P1, 4 - 1);
             let stockpile = s.pile(P1, "graveyard")[0].clone();
-            play_from_graveyard(&mut s, &stockpile, json!({}));
-            s.expect_mana(P1, 4 - 2);
-            // Back in the graveyard, its Flashback spent for good (R783013): not offered again.
-            s.expect_in_zone(&stockpile, "graveyard");
-            assert!(s.card(&stockpile.id).flashback_spent == Some(true));
-            assert!(!flashback(&s, &stockpile));
-            assert!(graveyard_defs_offered(&s, P1).is_empty());
+            for flashback_play in 1..=2 {
+                play_from_graveyard(&mut s, &stockpile, json!({}));
+                s.expect_mana(P1, 4 - 1 - flashback_play);
+                // Back in the graveyard, the lent Flashback still reaches it (R3039001): offered again.
+                s.expect_in_zone(&stockpile, "graveyard");
+                assert_eq!(s.card(&stockpile.id).flashback_spent, None);
+                assert!(flashback(&s, &stockpile));
+                assert_eq!(graveyard_defs_offered(&s, P1), vec![FILLER]);
+            }
         }
 
         #[test]

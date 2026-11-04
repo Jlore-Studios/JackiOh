@@ -130,6 +130,14 @@ frozen?: number,
  */
 slumber?: Slumber, 
 /**
+ * R3039000: the card has awakened (`slumber::awaken_card`: its countdown, its Activate, an Awaken,
+ * a Starship's launch), so it never enters Dormant again (`slumber::start_slumber_on_field`). Kept
+ * in every zone and through R78's and R766's resets, like `flashback_spent`; a copy or a Transform
+ * is a new card without it, and so is a fresh Dormant Starship. Only ever `Some(true)`; absent on
+ * every other card, so a game where nothing awakens serializes and hashes as before (D14).
+ */
+awakened?: true, 
+/**
  * R1852000, R1852005: the card is a Starship — the Dormant Starship, whose hull text
  * (`StaticFlags.starshipHull`) started this as it entered the field — and this is its memory: the
  * pieces fused into it and, once it has launched, its name. A status, never text: R78's reset takes
@@ -145,10 +153,10 @@ starship?: StarshipMemory,
  */
 timesPlayed?: number, 
 /**
- * R783013: the card has used its Flashback, played from its graveyard by it, so it has no
- * Flashback any more, printed or given (`layers`). Kept in every zone and through R78's and
- * R766's resets, so the card is never offered from a graveyard by it again; a copy or a
- * Transform is a new card without it. Only ever `Some(true)`.
+ * Retired (R3039001): nothing sets it since a play by Flashback keeps the keyword. R783013 had it
+ * written as the card left its graveyard by its Flashback, so it had no Flashback any more,
+ * printed or given (`layers`, which still reads it), kept in every zone and through R78's and
+ * R766's resets; a copy or a Transform is a new card without it. Only ever `Some(true)`.
  */
 flashbackSpent?: true, 
 /**

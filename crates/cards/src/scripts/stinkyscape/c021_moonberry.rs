@@ -154,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn r1867007_played_again_from_the_graveyard_once_by_flashback_then_not_again() {
+    fn r1867007_r3039001_flashed_back_back_in_the_graveyard_and_flashed_back_again() {
         let mut s = scenario(json!({
             "p1": { "hand": [MOONBERRY, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER] },
@@ -163,30 +163,30 @@ mod tests {
         let grave =
             s.pile(P1, "graveyard").into_iter().find(|card| card.def_id == MOONBERRY).expect("played");
 
-        let (error, state) = graveyard_play(s.state(), &grave.id, 1);
-        assert!(error.is_none(), "{error:?}");
-        let added: Vec<&CardInstance> =
-            state.players.p1.hand.iter().filter(|card| card.def_id != FILLER).collect();
-        assert_eq!(added.len(), 2);
+        let mut state = s.state().clone();
+        for attempt in 1..=2 {
+            let (error, next) = graveyard_play(&state, &grave.id, attempt);
+            assert!(error.is_none(), "flashback {attempt}: {error:?}");
+            state = next;
+            let added: Vec<&CardInstance> =
+                state.players.p1.hand.iter().filter(|card| card.def_id != FILLER).collect();
+            assert_eq!(added.len(), 1 + attempt as usize, "flashback {attempt} added its card");
 
-        let spent = state
-            .players
-            .p1
-            .graveyard
-            .iter()
-            .find(|card| card.id == grave.id)
-            .expect("back in the graveyard");
-        assert!(
-            legal_actions(&state, P1)
+            // Back in the graveyard, its Flashback kept (R3039001): offered again.
+            let kept = state
+                .players
+                .p1
+                .graveyard
                 .iter()
-                .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, .. } => Some(instance_id),
-                    _ => None,
-                })
-                .all(|id| id != &spent.id)
-        );
-        let (error, _) = graveyard_play(&state, &spent.id, 2);
-        assert!(error.is_some());
+                .find(|card| card.id == grave.id)
+                .expect("back in the graveyard");
+            assert_eq!(kept.flashback_spent, None);
+            assert!(has_flashback(&state, kept));
+            assert!(legal_actions(&state, P1).iter().any(|action| matches!(
+                action,
+                ActionBody::Play { instance_id, .. } if *instance_id == kept.id
+            )));
+        }
     }
 
     mod radiant {

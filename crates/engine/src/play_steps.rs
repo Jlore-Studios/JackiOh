@@ -348,9 +348,6 @@ pub struct PlayRun {
     /// E11, R454: the Plague Counters paying part of the price (`costPaid` is the whole price).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plague: Option<PlagueSpend>,
-    /// R783013: a play by the card's own Flashback, which step 4 spends (`take_from_play_source`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub flashback: Option<bool>,
     /// E12, R452: a random cast — every choice its caster would make is made at random.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random: Option<bool>,
@@ -456,7 +453,6 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         lost: None,
         source: None,
         plague: None,
-        flashback: None,
         random: None,
         target_enemies: None,
         friends_only: None,
@@ -729,11 +725,6 @@ pub fn validate_play(
     }
     if from == PlayFrom::Graveyard {
         run.source = Some(PlaySource::Graveyard);
-        // R783013: a play only the card's own Flashback allows spends it, read now: a Tribute at step 2
-        // may take the permission that allowed it off the field.
-        if crate::graveyard_play::spends_flashback(state, player, &card, cost, action.plague.as_ref()) {
-            run.flashback = Some(true);
-        }
     }
     if let Some(plague) = &action.plague {
         run.plague = Some(PlagueSpend {
@@ -1744,10 +1735,7 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         remove_from_any_zone(state, card);
         // R155: leaving the graveyard spends the landing §5.1's return belongs to (§10.5 step 7).
         card.return_to_hand_at_end_of_turn = None;
-        // R783013: a play by its Flashback spends it as the card leaves the graveyard.
-        if run.flashback == Some(true) {
-            card.flashback_spent = Some(true);
-        }
+        // R3039001: a play by its Flashback spends nothing, so the card keeps the keyword.
         return true;
     }
     let side = &mut state.players[run.player];
