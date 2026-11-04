@@ -13,9 +13,9 @@ name, type, entry and scale to the catalog and the table, and the table to the p
   played. Its families read damage, removals, counters, costs and returns only.
 - **Why**: where the entry follows the census, and why it overrides it where it does.
 
-`cast` and `cry` draw on the board as the card resolves. `death`, `trigger` and `activate`, and a
-Trap's `cast`, plan nothing on the board until their hooks open a window (#2783); the `/dev/fx`
-gallery plays every entry.
+`cast` and `cry` draw on the board as the card resolves. `death`, `trigger` and `activate` draw
+from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFired` (R2797000); the
+`/dev/fx` gallery plays every entry.
 
 | Card | Name | Type | Entry | Scale | Census | Why |
 | --- | --- | --- | --- | --- | --- | --- |

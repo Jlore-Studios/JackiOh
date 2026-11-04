@@ -2,6 +2,7 @@
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
+import type { FxCardHook } from "./motifs/names.ts";
 
 /** A point in fractions of a box's width and height. */
 export type FxPoint = { x: number; y: number };
@@ -315,6 +316,12 @@ export type FxPlay = {
    * the planned entry's included (at most FX_MEMORY_HITS); absent before the first. A chain hops on from the last.
    */
   hits?: readonly string[];
+  /**
+   * R2797000: the card hook this entry is, when it is no play: a Death, a turn hook or Whenever
+   * (`trigger`) or an Activate, opened by its `hookResolving` marker, or a Trap's `cast`, opened by its
+   * `trapFired`. Absent for a play, from its `cardPlayed` on.
+   */
+  hook?: FxCardHook;
 };
 
 export type FxMemory = {
