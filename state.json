@@ -13667,7 +13667,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-04T08:33:31Z",
+      "feedback_since": "2026-11-04T16:13:21Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-04T09:44:04Z",
@@ -13754,7 +13754,7 @@
       "run_id": "41865102930",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-11-04T16:13:21Z",
       "stop_requested": false,
       "taken_asks": [
