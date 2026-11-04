@@ -16918,6 +16918,13 @@
     "2978": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T05:18:26Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11 hard-line 1 names the rules/resolution loop, which this does not change \u2014 testkit oracle, doc lines and tests only"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
