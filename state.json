@@ -17956,7 +17956,7 @@
       "asks": [],
       "failures": 0,
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "live": "splitting",
       "owner": "claude-7",
