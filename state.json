@@ -15336,6 +15336,8 @@
       "taken_asks": []
     },
     "3081": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T21:28:09Z",
@@ -15349,8 +15351,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,80p .bot-notes.md | head -120 && git status --short | head\", \"description\": \"Read bot notes and worktree state\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\" .bot-notes.md; sed -n '/^## State/,/^## Log/p' .bot-notes.md | head -40; tail -30 .bot-journal.md; git log --oneline -1\", \"description\": \"Check notes State and Log secti\u2026\n- Bash: {\"command\": \"cat .bot-journal.md | head -30; ls /tmp/exp 2>/dev/null | head -3; sed -n 300,360p crates/tools/src/arena.rs; grep -n \\\"^use\\\\|AI_GATE_BUDGET\\\\|SearchBudget\\\" crates/tools/src/arena.rs |\u2026\n- Bash: {\"command\": \"cat crates/tools/src/selfplay.rs | sed -n 1,200p\", \"description\": \"Read selfplay.rs head\"}\n- Bash: {\"command\": \"sed -n 196,330p crates/tools/src/selfplay.rs; grep -n \\\"play_chunks\\\\|selfplay::play\\\\|fn play\\\\b\\\" -r crates/tools/src | head -30\", \"description\": \"Read play_chunks and callers\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='crates/tools/src/selfplay.rs'\\ns=open(p).read()\\ns=s.replace(\\\"use jackioh_ai::{AI_GATE_BUDGET, ai_generation, dev_game_config};\\\",\\\"use jackioh_ai::{AI_\u2026\n- Bash: {\"command\": \"grep -n \\\"fn r850000_one_ai_on_both_seats_splits_every_deal\\\\|fn r747000_a_mid_skill_game_reproduces_and_replays\\\" crates/tools/src/arena.rs\", \"description\": \"Locate the two arena tests\"}\n- Bash: {\"command\": \"sed -n 1400,1430p crates/tools/src/arena.rs; sed -n 1452,1500p crates/tools/src/arena.rs; sed -n 1660,1700p crates/tools/src/arena.rs; sed -n 1750,1775p crates/tools/src/arena.rs\", \"desc\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/arena.rs'\\ns=open(p).read()\\nanchor=\\\"\\\"\\\" pub self_budget: SearchBudget,\\n}\\n\\n/// What a game came to, with its seats' fallbacks\\\"\\\"\\\"\\nassert s.\u2026\n- Bash: {\"command\": \"grep -n \\\"exported(\\\" crates/tools/src/selfplay_records.rs\", \"description\": \"Find exported callers\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/selfplay_records.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" use crate::stats::{ReportArgs, read_records, report};\\n\\n /// The real exporter's lines for game\u2026\n- Bash: {\"command\": \"git diff crates/tools/src/selfplay_records.rs; cargo fmt --check && echo FMT_OK\", \"description\": \"Check rustfmt result on selfplay_records\"}\n- said: Now the tests. I'll run the first plan command (arena + selfplay_records) in the background and the clippy check afterwards.\n- Bash: {\"command\": \"(time cargo test -p jackioh-tools --bin jackioh -- arena:: selfplay_records:: ) > /tmp/t1.log 2>&1; tail -40 /tmp/t1.log\", \"description\": \"Run arena and selfplay_records tests\", \"timeout\u2026\n- Bash: {\"command\": \"(time cargo test -p jackioh-tools --bin jackioh -- selfplay:: ) > /tmp/t2.log 2>&1; tail -20 /tmp/t2.log\", \"description\": \"Run selfplay tests unchanged\", \"timeout\": 600000}\n- Bash: {\"command\": \"(time cargo test -p jackioh-tools --bin jackioh -- --skip fuzz:: --skip selfplay:: --skip positions::) > /tmp/t3.log 2>&1; tail -12 /tmp/t3.log\", \"description\": \"Run the bin's non-fuzz, \u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -8; cargo fmt --check && echo FMT_OK\", \"description\": \"Run clippy on jackioh-tools and fmt check\", \"timeout\": 60000\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -5; cargo jackioh catalog check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -3\", \"description\": \"Run spec, catalog and patches checks\", \"\u2026\n- Bash: {\"command\": \"git fetch -q origin main 2>&1 | tail -1; cargo jackioh classify --base 4e0b3b0167 --claims 2>&1 | tail -6; git status --short\", \"description\": \"Run classify claims check and show status\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Plan')\\nstate=\\\"\\\"\\\"## State\\n\\nPlan: the `## Plan` section below. The bot's part is built and checked; the ci.yml s\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 7 minutes\"} --> ## What changed `rust (test tools, wasm)` ran 7m30s, and most of its time went to three groups of tests in the `jackioh` bin that play whole AI games at the full `AI_GATE_BUDGET`. Those tests prove how a game is dealt, seated\u2026"
       },
       "issue": 3058,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T22:14:17Z",
         "from_run": "41916374334",
         "gates": [
           {
@@ -15442,7 +15447,11 @@
         "source": "build",
         "until": "2026-11-04T22:43:29Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-04T22:13:29Z",
+      "run_id": "pending:89053fab-1793830437",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15461,6 +15470,9 @@
         "provider": "claude-6",
         "run": "41916374334"
       },
+      "started_at": "2026-11-04T22:14:17Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15474,9 +15486,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T22:05:46Z",
+    "at": "2026-11-04T22:14:17Z",
     "url": "",
-    "what": "build #3042 on claude-8"
+    "what": "review #3081 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-04T22:02:28Z",
