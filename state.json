@@ -15161,17 +15161,8 @@
       "taken_asks": []
     },
     "3060": {
-      "action": "plan",
-      "asks": [
-        "c:6642970568"
-      ],
-      "build_next": {
-        "from_run": "41920003754",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-04T22:03:19Z",
-        "until": "2026-11-04T22:33:19Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T22:03:11Z",
         "difficulty": "medium",
@@ -15190,10 +15181,9 @@
         "reason": "planned on sonnet",
         "trail": "s/web/src/routes/practice.tsx | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"error\\\" apps/web/src/practice/core.ts | head -20; grep -n \\\"error\\\\|setError\\\" apps/web/src/routes/dev/hotseat.tsx | head -20; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 325,360p apps/web/src/routes/dev/hotseat.tsx; sed -n 480,510p apps/web/src/practice/core.ts; sed -n 685,715p apps/web/src/practice/core.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; ls spec/rulings | tail -5; ls spec/pending; cat spec/pending/3025.md | head -30; sed -n 1,80p spec/README.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; ls spec/rulings | grep -n \\\"R30\\\\|R29\\\" | tail -8; cat spec/rulings/R3025000.md 2>/dev/null | head -30; grep -n \\\"2924\\\\|Ruling numbers\\\" spec/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"^### 10\\\\.\\\\(8\\\\|9\\\\|10\\\\|11\\\\)\\\\|^## 10\\\" spec/10-engine-guide.md; grep -n \\\"half-built\\\\|held back\\\\|until the board shows\\\\|SHOWS\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -rn \\\"R2924\\\\|2924\\\" spec/*.md | cut -c1-200 | head; ls spec/rulings | grep \\\"R2924\\\\|R29[0-9][0-9]00\\\" | head; grep -n \\\"dispatch\\\\|onAct\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"Game.tsx\\\\|moves wait\\\\|until the board shows\\\\|shows that view\\\" apps/web/README.md | cut -c1-260 | head -20; grep -n \\\"Game.tsx\\\\|h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 150,200p apps/web/README.md | cut -c1-400; grep -n \\\"legal\\\\b\\\" spec/10-engine-guide.md | sed -n 1,5p | cut -c1-80; sed -n 228,232p spec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; awk 'NR>=228 && NR<=289 {print NR\\\": \\\"substr($0,1,170)}' spec/10-engine-guide.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; git show --stat --format=%s 4e0b3b0167 | head -30; git show --stat --format=%s cddcec16be | head -20; ls spec/rulings/R0846.md spec/rulings/R00\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 362,424p apps/web/src/routes/dev/hotseat.tsx; grep -n \\\"snapshot.view\\\\|view:\\\" apps/web/src/practice/useGame.ts* 2>/dev/null | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -rn \\\"view()\\\" apps/web/src/game/hotseat.ts | head; grep -n \\\"view\\\\b.*=>\\\\|function view\\\\|view()\\\" apps/web/src/game/hotseat.ts | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 60,175p apps/web/src/game/hotseat.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"pressed\\\" apps/web/src/game/Board.tsx | head -20; sed -n 1,60p apps/web/src/test/fixtures.ts | head -80; grep -n \\\"export function pe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 1,90p apps/web/src/game/PromptBare.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 1,80p apps/web/src/game/MulliganConcurrent.test.tsx; grep -n \\\"mulligan\\\" apps/web/src/game/Prompt.test.tsx | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"one tap\\\\|oneTap\\\\|discover\\\" apps/web/src/game/PromptBare.test.tsx | head -20; sed -n 95,140p apps/web/src/game/PromptBare.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"ROUTE1\\\" apps/web/src/game/PromptBare.test.tsx | head; sed -n 215,260p apps/web/src/game/PromptBare.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"immediate\\\" apps/web/src/game/Prompt.tsx | head -30; grep -n \\\"PICKLE\\\" apps/web/src/game/PromptBare.test.tsx | head -5; sed -n 140,2\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"kind: \\\\\\\"hand\\\\\\\"\\\\|case \\\\\\\"hand\\\\\\\"\\\\|hand-card\\\\|handCard\\\" apps/web/src/game/actions.ts | head -20; grep -n \\\"export function on\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"^function startPlay\\\" -A40 apps/web/src/game/actions.ts | head -70; grep -n \\\"^function settle\\\" -A25 apps/web/src/game/actions.ts | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"^function readyAction\\\\|^export function readyAction\\\" -A30 apps/web/src/game/actions.ts | head -50; grep -n \\\"hand-you\\\\|handCard:\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -rln \\\"Game.tsx\\\\|<Game\\\" apps/web/src --include=*.test.tsx | head -40; echo ---; grep -rn \\\"end-turn\\\\|testid.endTurn\\\" apps/web/src --in\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"end-turn\\\\|testid.endTurn\\\" apps/web/src/test/ux/board-ux.test.tsx apps/web/src/test/ux/glow-render.test.tsx apps/web/src/routes/prac\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; sed -n 120,175p apps/web/src/routes/match.test.tsx; sed -n 1450,1475p apps/web/src/routes/match.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"useLayoutEffect\\\" apps/web/src/game/Game.tsx; sed -n 455,500p apps/web/src/game/Game.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -rn \\\"dblclick\\\\|double\\\" e2e/cypress 2>/dev/null | grep -i \\\"end\\\\|turn\\\" | head -5; grep -n \\\"Wait\\\\|waiting for the game\\\\|pressed\\\" ap\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3060; grep -n \\\"concede\\\" apps/web/src/game/contract.ts | head -5; grep -n \\\"concede-confirm\\\\|concedeConfirm\\\" apps/web/src/game/ConfirmConcede.tsx \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3060/.bot-plan.md\", \"content\": \"# Plan draft, issue #3060 (planner notes; the final message is the whole plan)\\n\\nRead: Game.tsx (dispatch :545, lates\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"One web module (Game.tsx) plus its test, a README paragraph and a ruling note: no engine, AI, cross-crate, migration or 40-file change, so none of the five hard lines holds.\"} --> ## Goal `Game.tsx`'s `dispatch` drops an `endTurn`, `answer` or `mulligan` b\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-04T21:51:42Z",
       "owner_why": "it plans it",
@@ -15206,12 +15196,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-04T21:48:56Z",
       "requested_by": "jgoetzmann",
-      "run_id": "41920003754",
+      "run_id": "pending:0bc7271c-1793829858",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T21:51:42Z",
+      "started_at": "2026-11-04T22:04:39Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6642970568"
+      ]
     },
     "3064": {
       "action": "plan",
@@ -15306,9 +15298,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T21:52:14Z",
+    "at": "2026-11-04T22:04:39Z",
     "url": "",
-    "what": "plan #3064 on claude-8"
+    "what": "build #3060 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-04T21:49:31Z",
