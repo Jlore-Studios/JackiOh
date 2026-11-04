@@ -38,6 +38,9 @@ export const statsTestid = {
   modeSelect: "stats-mode-select",
   /** R2777000: a card row's adjusted win rate. */
   adjustedCell: "stats-adjusted-cell",
+  /** R3022000: a card's tier (a table row's or a grid item's) and the line under the cards that says what tiers mean. */
+  tierCell: "stats-tier-cell",
+  tiersNote: "stats-tiers-note",
   /** R2895000: the Cards tab's Show 95% ranges toggle, a row's two ranges and the line that says what they mean. */
   rangesToggle: "stats-ranges-toggle",
   adjustedRange: "stats-adjusted-range",
