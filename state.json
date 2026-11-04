@@ -13763,11 +13763,11 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "muse",
-        "built_by": "muse",
+        "builder": "claude",
+        "built_by": "claude-7",
         "rejections": [],
         "reviews": [],
-        "sha": "7182401fd29e931fd1b30dbb19a898f81da25f7c",
+        "sha": "902601709824d5ccba79188f2db2d864c55607ba",
         "tiers": {}
       }
     },
