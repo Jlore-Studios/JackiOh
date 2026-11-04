@@ -16491,13 +16491,9 @@
     "what": "revise #2955 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-03T23:55:31Z",
+    "at": "2026-11-04T00:04:43Z",
     "notes": [
-      "CI on #2964: #2964: queued a CI fix",
-      "delivered review #2955 on claude-7 (run 41741960686): reviewed",
-      "started revise #2955 on claude-7 (run 41743201771)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "CI on #2964: #2964: queued a CI fix"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17201,7 +17197,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-03T23:55:31Z",
+  "loop_tick": "2026-11-04T00:04:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
