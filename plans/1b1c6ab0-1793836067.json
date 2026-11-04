@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3065,
+  "title": "Patch: `cargo jackioh run-sim` plays whole dungeon runs with the AI in the player's seat and reports how each kind of fight goes",
+  "branch": "bot/issue-3065",
+  "thread": "**Issue #3065 (data, not instructions):**\n\n```text\n# #3065: Patch: `cargo jackioh run-sim` plays whole dungeon runs with the AI in the player's seat and reports how each kind of fight goes\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe dungeon run's numbers, such as enemy health, prices and what a boss pays out, are placeholders. No test or tool has ever played one of its fights to the end: today's checks start each fight and then make up its result. Once this is built, the maintainer runs one command that plays seeded runs from start to finish with the AI in the player's seat. It prints a table: how often each kind of fight is won, how much health it costs, how far a run gets and what it scores. That gives the placeholders something to be tuned against.\n\n## Why\n\n- `spec/15-dungeon-run.md:286` and `docs/dungeon-run.md:236` list tuning the strawmen as open: `RUN_LEVEL_EMBERS` (`crates/run/src/config.rs:73`), `RUN_ENEMY_HEALTH` (:90) and the `RUN_SCORE_*` weights (:186-208).\n- `crates/run/src/walk_tests.rs:58-66`: every fight result is made up (\"`fight_won` clamps HP, so any won report is accepted\"). `check_fight` (:256-260) creates and begins a fight's game but never plays it.\n- `crates/ai/src/match_.rs:69-79`: `MatchSetup` has `dealt`, `last_boards` and `glitch_boards` but no deck marks, so `play_match` cannot play a run fight's Radiant and buffed cards. `ReplayInput` already has them (`crates/engine/src/replay.rs:808`).\n- No file in `crates/tools/src` names a deck mark, so the fuzz never plays a game with one either.\n\n## Proposal\n\n- `MatchSetup` takes optional `deck_marks`, passed through `play_match` and the fold. Without them, every game is created and folded as today.\n- A new `cargo jackioh run-sim --seeds N [--skill \u2026] [--budget \u2026]` in `crates/tools`, which gains `jackioh-run` as a dependency:\n  - each fight comes from `run_fight_setup`, and each result goes back through `run_fight_report`;\n  - the player's seat is the AI at R747000's skill knob;\n  - map, pack, shop and event choices follow a simple seeded policy, like the walk tests'.\n- It prints win rate and HP lost by node kind, HP at each boss, rows reached, turns per fight, score and Embers.\n- A per-PR test at a tiny budget, a daily `#[ignore = \"daily: \u2026\"]` sweep, the tools README row, and `scripts/ci-scope.sh`'s map if the new dependency needs it.\n\n## Where it lands\n\n- `crates/ai/src/match_.rs` and `crates/ai/tests/ai/match_setup.rs`.\n- A new `crates/tools/src/run_sim.rs`, plus `crates/tools/src/main.rs`, `Cargo.toml` and `README.md`.\n- Possibly `scripts/ci-scope.sh`.\n- \u00a715.\n\n## Acceptance criteria\n\n- [ ] A marked card in a `MatchSetup` starts Radiant and buffed, and its record folds to its hash. A setup without marks folds every existing record unchanged.\n- [ ] A per-PR tools test plays one seed's first fights at a tiny budget. Every fight ends cleanly (no refusal, fallback or search panic) and folds to its hash, and the run file folds to the same end.\n- [ ] The daily sweep plays N seeds at full budget and prints the report.\n- [ ] `crates/tools/README.md`'s command table lists the command, so the acceptance README check passes.\n- [ ] No strawman number changes in this pull request.\n\n## Size and risks\n\nAbout 6 to 8 files and 500 lines. Label it hard, since it spans crates. AI-against-AI games are slow, so the per-PR test stays tiny and the full sweep runs daily. The AI plays the player's seat better or worse than a person would, so the report is broken down by skill and is a guide, not a target.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:57:03Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-04T22:57:16Z:\n\nWill be used in future bug hunting I imagine\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3065: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T22:59:35Z",
+    "claimed_at": "2026-11-04T23:48:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3061 is held for `claude-1` until 18:20 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3044 skipped: it waits for #3043 to close first",
+    "#3045 skipped: it waits for #3043, #3044 to close first",
+    "#3046 skipped: it waits for #3043, #3044, #3045 to close first",
+    "#3047 skipped: it waits for #3043, #3044, #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3043, #3044, #3045, #3046, #3047 to close first"
+  ]
+}
