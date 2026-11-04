@@ -15386,11 +15386,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-04T22:30:51Z",
+        "at": "2026-11-04T23:12:36Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's evaluation and adds a root probe to `decide` (crates/ai/src)."
+        "tier": "strong",
+        "why": "rule 2, the AI: a new root probe and evaluation weight in crates/ai/src/evaluate.rs, decide.rs and config.rs"
       },
       "failures": 0,
       "forced": false,
