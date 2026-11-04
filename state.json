@@ -18091,15 +18091,8 @@
       "waiting_comment": 6627414367
     },
     "3013": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41803304222",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-04T09:25:00Z",
-        "until": "2026-11-04T09:55:00Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18111,10 +18104,9 @@
         "reason": "planned on opus",
         "trail": "{\"command\": \"sed -n 1418,1470p apps/web/src/cards/cards.css; sed -n 1800,1822p apps/web/src/cards/cards.css\", \"description\": \"Read minion portrait and state row CSS\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn is_slug\\\" crates/server/src/cosmetics.rs; grep -n \\\"fn fill\\\" -A30 crates/server/src/api/dev.rs | grep -n \\\"quantities\\\\|card_ids\\\\|collectable\\\\|let at\\\" | head; sed -n\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn is_slug\\\" crates/server/src | head -3; grep -n \\\"fn collectable_cards\\\" -A8 crates/server/src/api/dev.rs\", \"description\": \"Locate is_slug and collectable_cards\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"content\": \"## Goal\\n\\nEach account keeps a per-card **proficiency** (plays, level, picked stamp) in a new table, migration 0080, \u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3013/.bot-plan.md <<'EOF'\\n\\n## Steps\\n\\n1. **Constants.** In `crates/server/src/config.rs`, after `SET_TRACK_UNLOCK_LEVEL`, add these with doc c\u2026\n- Bash: {\"command\": \"ls crates/server/src/api | head -60; grep -n \\\"pub mod card_picks\\\" crates/server/src/api/mod.rs; grep -n \\\"routes()\\\\|six routes\\\\|The six\\\" crates/server/tests/api/economy_turns.rs | h\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3013/.bot-plan.md <<'EOF'\\n\\n## Tests\\n\\n**Rust**\\n\\n- **`economy/proficiency.rs`** (unit):\\n - `r3013000_the_curve_has_a_level_per_entry_rising_\u2026\n- Bash: {\"command\": \"wc -c /home/runner/work/_temp/work/item-3013/.bot-plan.md; awk '/^## /{if(s)print s, n; s=$0; n=0; next}{n+=NF}END{print s, n}' /home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"des\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"content\": \"## Goal\\n\\nMigration 0080 adds `card_proficiency` (account, card, plays, level, stamp; select-own RLS). The server cou\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"limit\": 5}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"content\": \"## Goal\\n\\nMigration 0080 adds `card_proficiency` (account, card, plays, level, stamp; select-own RLS). The server cou\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-3013/.bot-plan.md; awk '/^## /{if(s)print s, n; s=$0; n=0; next}{n+=NF}END{print s, n}' /home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \" The rulings record each decision with the alternative it rejected:\\n - **R3013000**: countin\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \"9. **SQL.** Write `46_card_proficiency.sql` after `43_news_claims.sql`, without its trigger o\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \"The governing spec is \\u00a714.2, \\u00a714.8, \\u00a714.10, \\u00a714.11, \\u00a79.1 and \\u00a71\u2026\n- Bash: {\"command\": \"wc -w /home/runner/work/_temp/work/item-3013/.bot-plan.md; grep -c \\\"|\\\" /home/runner/work/_temp/work/item-3013/.bot-plan.md; sed 's/|//g' /home/runner/work/_temp/work/item-3013/.bot-pla\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \"- **Hidden information (rule 7).** Other seats' stamps travel only through `cards_due`, after\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \" - `r3013001_a_stamp_above_the_cards_level_is_400_and_writes_nothing`: `record_store_calls` s\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-3013/.bot-plan.md; sed 's/|//g' /home/runner/work/_temp/work/item-3013/.bot-plan.md | wc -w\", \"description\": \"Final word count check\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \"Stamps show on own faces (card face, hand, board, deck builder, Collection) and to other view\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \" - `r3013000_level_for_plays_steps_at_each_threshold`: 0, 2, 3, 14, 15 and 200 give 0, 0, 1, \u2026\n- Bash: {\"command\": \"wc -w /home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"description\": \"Check final word count\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \"- [ ] Every Goal requirement is met and every test above passes. If Docker or a browser is mi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \"- **Numbers.** The curve [3, 15, 40, 100, 200] is a proposal; retuning it changes only `confi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \" Replays and watchers need nothing more.\\n\", \"new_string\": \"\"}\n- Bash: {\"command\": \"wc -w /home/runner/work/_temp/work/item-3013/.bot-plan.md; cat /home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"description\": \"Final count and print the plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \" Each ruling names what it rejected:\", \"new_string\": \" Each ruling's `proven_in` lists the fi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3013/.bot-plan.md\", \"old_string\": \" - Give every remaining literal `stamps: Vec::new()`.\\n\\n9. **SQL.**\", \"new_string\": \" - Give\u2026\n- said: ## Goal Migration 0080 adds `card_proficiency` (account, card, plays, level, stamp; select-own RLS). The server counts a card's own plays from hand into it inside a ladder, unranked or Conquest result's transaction. Practice, co-op, bots, Created cards and tokens add nothing, and nothing is backfil\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-04T08:55:51Z",
       "owner_why": "it plans it",
@@ -18127,9 +18119,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-04T08:53:27Z",
       "requested_by": "squishy-squooby",
-      "run_id": "41803304222",
+      "run_id": "pending:96e82dc4-1793784567",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T08:55:51Z",
+      "started_at": "2026-11-04T09:30:01Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18203,9 +18195,9 @@
   },
   "labels_synced": "e249a5faf5e8580b",
   "last_run": {
-    "at": "2026-11-04T09:29:13Z",
+    "at": "2026-11-04T09:30:01Z",
     "url": "",
-    "what": "build #2943 on claude-3"
+    "what": "build #3013 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T09:05:26Z",
