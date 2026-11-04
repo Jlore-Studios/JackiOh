@@ -448,6 +448,16 @@ func (x *GitHub) MarkReady(nodeID string) {
 	)
 }
 
+// MarkDraft turns a pull request back into a draft (#3009: the bot's work on an item it handed to
+// a person).
+func (x *GitHub) MarkDraft(nodeID string) {
+	x.Graphql(
+		"mutation($id: ID!) { convertPullRequestToDraft(input: {pullRequestId: $id})"+
+			" { clientMutationId } }",
+		pyjson.New("id", nodeID),
+	)
+}
+
 func (x *GitHub) MergePull(number int, method string, title string /* = "" */) *pyjson.Object {
 	body := pyjson.New("merge_method", method)
 	if title != "" {

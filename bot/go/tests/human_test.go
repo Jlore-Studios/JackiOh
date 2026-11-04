@@ -1,6 +1,7 @@
 // #793: `human required`. An item only a person can do (a change to `bot/` or `.github/`, a
 // secret, a dashboard, an account) gets the label and a comment naming the people, and the bot
-// leaves it alone until a person takes the label off.
+// leaves it alone until a person takes the label off. Since #3009 it is never a question, and the
+// bot archives its work on it.
 //
 // bot/tests/test_human.py.
 package tests
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/human"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/issueplan"
@@ -19,6 +21,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/runner"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/triage"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/trust"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/verdicts"
@@ -86,12 +89,16 @@ func TestHuman_ThePlannersOwnLineBeforeTheGoalSaysIt(t *testing.T) {
 }
 
 func TestHuman_TheCommentNamesThePeopleAndTheWayBack(t *testing.T) {
-	text := human.Ask("Add the secret.", "jgoetzmann-bot", "build this", " What I had is on `b`.", "")
+	text := human.Ask("Add the secret.", "jgoetzmann-bot", "build this", " Planned on a run.", "branch `b`.", "")
 	assertTrue(t, strings.HasPrefix(text, humanPeople+" this needs a person: I cannot build this "+
-		"myself. What I had is on `b`."))
-	assertIn(t, "Add the secret.", text)
-	assertIn(t, "assigned you and labelled it `"+config.LabelHumanRequired+"`", text)
-	assertIn(t, "take the label off and `/harness build`", text)
+		"myself, so I stopped. Planned on a run."))
+	// What a person must do, where the work is, what the bot did, and how to give it back (#3009).
+	assertIn(t, "**What a person must do or check:** Add the secret.", text)
+	assertIn(t, "**Where my work is:** branch `b`.", text)
+	assertIn(t, "assigned you and labelled it `"+config.LabelHumanRequired+"`, and I archived my work on it", text)
+	assertIn(t, "take the label off: then `/harness build`", text)
+	assertIn(t, "I start again from the issue and its branch's history", text)
+	assertIn(t, "**Where my work is:** nowhere", human.Ask("Q", "jgoetzmann-bot", "build this", "", "", ""))
 }
 
 // ---------------------------------------------------------------------------- ReportTests
@@ -132,8 +139,11 @@ func humanHandedToPeople(t *testing.T, h *flowHarness, number int) string {
 	assertEqual(t, assigned, setOf("MaxGoetzmann", "jgoetzmann"))
 	said := lastOf(t, h.gh.BotComments(number))
 	assertTrue(t, strings.HasPrefix(said, humanPeople), said)
-	assertIn(t, "So it is yours now: I took my labels off, unassigned myself", said)
+	assertIn(t, "**What I did:** it is yours now. I took my labels off, unassigned myself", said)
 	assertTrue(t, dig(t, h.ctx.Store.Load(), "items", fmt.Sprint(number), "question"))
+	// A hand-over is no question (#3009), and the bot archives its work on it.
+	assertNotIn(t, config.LabelNeedsDecision, labels)
+	assertTrue(t, queue.ArchivedOf(state.Item(h.ctx.Store.Load(), number)) != nil)
 	return said
 }
 
@@ -223,11 +233,83 @@ func TestHuman_ARevisionOnlyAPersonCanMakeHandsThePullRequestOn(t *testing.T) {
 			true)),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, dig(t, result, "status"), "blocked")
-	// `bot:pr` stays, and `needs decision` goes on beside `human required` (#2986).
-	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired, config.LabelNeedsDecision))
+	// `bot:pr` stays, and `needs decision` never goes on (#3009): a hand-over is no question.
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelHumanRequired))
 	said := lastOf(t, h.gh.BotComments(40))
 	assertTrue(t, strings.HasPrefix(said, humanPeople+" this needs a person: I cannot revise this"))
 	assertIn(t, "`/harness revise <notes>`", said)
+	// Its work is archived: the pull request a draft with auto-merge off, and its issue's record
+	// forgets it too.
+	assertTrue(t, h.gh.GetPull(40).Truthy("draft"))
+	assertIn(t, fmt.Sprintf("**Where my work is:** branch `bot/issue-12`, pull request #40, its head `%s`.", start[:12]), said)
+	archived := queue.ArchivedOf(state.Item(h.ctx.Store.Load(), 40))
+	assertEqual(t, []any{archived.Get("pr"), archived.Get("issue"), archived.Get("head")}, []any{40, 12, start})
+	assertEqual(t, queue.ArchivedOf(state.Item(h.ctx.Store.Load(), 12)).Get("item"), 40)
+}
+
+// A hand-over archives the bot's work (#3009, section 2): its open pull request goes back to a
+// draft with auto-merge off and no queue label, one summary on the item and on the pull request
+// says where the work is and what a person must do, and the records forget the item, so no CI fix,
+// conflict revision or merge-queue requeue takes it up again; a person who takes the label off and
+// queues it brings the bot back.
+func TestHuman_AHandOverArchivesTheBotsWork(t *testing.T) {
+	h := newFlowHarness(t)
+	start := fakes.PushBranch(h.origin, h.root, "bot/issue-12", map[string]string{"src/game.txt": "v2\n"})
+	fakes.Git(h.clone, "fetch", "-q", "origin")
+	fakes.Git(h.deliverRepo, "fetch", "-q", "origin")
+	h.gh.AddIssue(12, fakes.Issue{Title: "CI: a secret", Labels: []string{config.LabelBuild}})
+	h.gh.AddPull(40, "bot/issue-12", fakes.Pull{Body: "Closes #12", Labels: []string{config.LabelPR, config.LabelBlocked},
+		SHA: start})
+	h.gh.EnableAutoMerge("PR_40", "squash", start, "")
+	h.ctx.Store.Update(func(s *pyjson.Object) any {
+		state.Item(s, 40).Update(pyjson.New("issue", 12, "kind", "revise", "merge_owner", "claude-1",
+			"ci_fixes", 1, "turn", pyjson.New("model", "x")))
+		state.Item(s, 12).Set("pr", 40)
+		return nil
+	}, "the pull request's record")
+	_, result := h.night(workFake(map[string]runner.Handler{
+		"build":  workBuilder(map[string]string{}, humanBlocked("Add `RENDER_API_KEY` to GitHub's secrets.", true)),
+		"review": workReviewer(workApprove)}))
+	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "human_required")}, []any{"blocked", true})
+	said := humanHandedToPeople(t, h, 12)
+	// The pull request: a draft, auto-merge off, no queue label; the branch kept.
+	pull := h.gh.GetPull(40)
+	assertTrue(t, pull.Truthy("draft"))
+	assertNotIn(t, "PR_40", h.gh.AutoMerge)
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR))
+	assertTrue(t, h.gh.Branches["bot/issue-12"])
+	// One summary, on the issue and on its pull request.
+	assertIn(t, "**What a person must do or check:** Add `RENDER_API_KEY` to GitHub's secrets.", said)
+	assertIn(t, fmt.Sprintf("**Where my work is:** branch `bot/issue-12`, pull request #40, its head `%s`. "+
+		"The pull request is a draft now, with auto-merge off; its branch is kept.", start[:12]), said)
+	assertEqual(t, lastOf(t, h.gh.BotComments(40)), said)
+	// The records forget it, and keep an `archived` entry.
+	s := h.ctx.Store.Load()
+	issue, pr := state.Item(s, 12), state.Item(s, 40)
+	archived := queue.ArchivedOf(issue)
+	assertEqual(t, []any{archived.Get("branch"), archived.Get("pr"), archived.Get("head"), archived.Get("why")},
+		[]any{"bot/issue-12", 40, start, "Add `RENDER_API_KEY` to GitHub's secrets."})
+	assertEqual(t, queue.ArchivedOf(pr).Get("item"), 12)
+	for _, key := range []string{"kind", "queued_at", "session", "merge_owner", "ci_fixes", "turn"} {
+		assertFalse(t, issue.Has(key) || pr.Has(key), key)
+	}
+	assertEqual(t, queue.OwnerOf(s, 12), "")
+	// No CI fix, conflict revision or merge-queue requeue takes it up.
+	run := pyjson.New("name", "CI", "conclusion", "failure", "head_branch", "bot/issue-12", "head_sha", start,
+		"id", 99, "run_attempt", 1, "html_url", "u", "pull_requests", []any{pyjson.New("number", 40)})
+	assertEqual(t, events.Handle(h.ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Bot,
+		"workflow_run", run)), []string{"#40: handed to a person, its work archived; left alone"})
+	h.gh.Threads.Item(40).Set("mergeable_state", "dirty")
+	plan.Housekeeping(h.ctx, h.ctx.Store.Load())
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR))
+	assertEqual(t, plan.Make(h.ctx, false, nil, "auto", nil).Get("action"), "none")
+	// A person did their part, took the label off and queued it: the bot has it back.
+	h.gh.RemoveLabel(12, config.LabelHumanRequired)
+	flowAsk(h, 12, "/harness build", 52)
+	assertIn(t, "Queued #12", lastOf(t, h.gh.BotComments(12)))
+	assertEqual(t, dig(t, plan.Make(h.ctx, false, nil, "auto", nil), "number"), 12)
+	s = h.ctx.Store.Load()
+	assertTrue(t, queue.ArchivedOf(state.Item(s, 12)) == nil && queue.ArchivedOf(state.Item(s, 40)) == nil)
 }
 
 func TestHuman_TheBotLeavesItAloneUntilTheLabelComesOff(t *testing.T) {

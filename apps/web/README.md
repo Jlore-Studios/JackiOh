@@ -592,8 +592,18 @@ routes (net/navigate.ts paths, and public/_redirects):
                          legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
                          `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
                          with &coop=1 (a friend whose `duos` is true) the co-op seat's views on DuosBoard,
-                         drawn as a co-op replay step is (R2881000)
-  /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
+                         drawn as a co-op replay step is (R2881000); the watcher's emotes from the
+                         sidelines (R2990000–R2990002): the socket's `spectatorHand` is the hand the
+                         sideline strip's Send an emote offers while it is open, a pick goes out as
+                         `{type:"emote"}` and shows at once as You, and the other watchers' relays show by name
+  /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos; a watcher's emote
+                         (`spectatorEmote`) shows in its sideline strip, as on /match/:id
+sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.tsx, sideline.css), the watchers'
+                         emotes at the screen's inline end (along its top on a phone), each with its watcher's
+                         name, on /match/:id, /duos/:matchId and /watch/:matchId; useSideline.ts over
+                         session.ts (a watcher's gate at the server's SPECTATOR_EMOTE_* numbers, R2990002, one
+                         show per watcher), wire.ts (the frames' checks); its Mute lasts the match and the
+                         Audio tab's Mute spectator emotes mutes every match's from its start
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
 net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
@@ -676,7 +686,8 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
 `friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
-`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>` and `duos-ping-marker`.
+`duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
+`sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
 
 ## Practice
 

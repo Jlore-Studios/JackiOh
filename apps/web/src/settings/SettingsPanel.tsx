@@ -47,7 +47,7 @@ const SECTIONS: readonly SectionSpec[] = [
     controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint"],
   },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
-  { id: "audio", title: "Audio", controls: ["muteOpponentEmotes"] },
+  { id: "audio", title: "Audio", controls: ["muteOpponentEmotes", "muteSpectatorEmotes"] },
 ];
 
 const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = {
@@ -80,6 +80,11 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   muteOpponentEmotes: {
     label: "Mute opponent emotes",
     hint: "Never show or hear an opponent's emotes, in every match.",
+  },
+  // R2990004: the sideline strip's Mute, on from the start of every match.
+  muteSpectatorEmotes: {
+    label: "Mute spectator emotes",
+    hint: "Never show or hear spectators' emotes, in every match.",
   },
 };
 

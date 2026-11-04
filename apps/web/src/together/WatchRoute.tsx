@@ -2,7 +2,10 @@
 // The watch socket (authenticated as `/ws/match` is) is told whom to watch in its hello, and answers the
 // friend's `PlayerView` frames, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`.
 // The board is `Game.tsx` as a replay draws it. Nothing a watcher sends after the hello reaches the
-// game, and this screen sends nothing but the hello (CLAUDE.md rule 7).
+// game, and this screen sends the hello and its emotes, nothing else (CLAUDE.md rule 7).
+// R2990000, R2990001: the socket deals the watcher its own emote hand (`spectatorHand`), which the
+// sideline strip offers while the socket is open; a pick goes out as `{type:"emote"}` and shows at
+// once, since the server never echoes it, and the other watchers' relays (`spectatorEmote`) show by name.
 // Whether the friend may be watched is the server's: a refusal is a `forbidden` frame and a closed
 // socket. A tab that wakes probes a quiet socket with the hello again and replaces one that does not
 // answer (R1441, R1103000), within the reopen attempts.
@@ -15,9 +18,10 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, EmojiEmoteId, PlayerView } from "@jackioh/shared";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
+import { getAudioEngine } from "../audio/index.ts";
 import { createLoadoutsHolder, type SeatLoadouts } from "../cards/loadouts.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
@@ -36,6 +40,8 @@ import { readSession } from "../net/session.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
 import { getFriends } from "../net/social.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import { useSetting } from "../settings/index.ts";
+import { useSideline } from "../sideline/useSideline.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { useCatalogLookup } from "./catalog.ts";
@@ -58,6 +64,8 @@ const IGNORE = (): void => undefined;
 /** R2881000: and a watched co-op board is offered nothing and hears no ping, as `DuosReplay.tsx`'s. */
 const NO_COOP_ACTIONS: readonly DuosActionBody[] = [];
 const NO_PINGS: readonly ReceivedPing[] = [];
+/** R2990001: no hand dealt yet, or none to offer while the socket is not open. */
+const NO_HAND: readonly EmojiEmoteId[] = [];
 
 /** The watch socket's address beside the match socket's, with no token: it is offered as a subprotocol (R1379000). */
 export function watchSocketUrl(matchId: string, friendId: string, base: string = matchSocketUrl()): string {
@@ -81,14 +89,25 @@ function useWatch(
   clock: WatchClockReading | null;
   connection: WatchConnection;
   reconnect: () => void;
+  /** R2990001: the watcher's own emote hand, from the last `spectatorHand` frame. */
+  hand: readonly EmojiEmoteId[];
+  /** R2990000: another watcher's last relayed emote; `seq` makes repeats notify. */
+  relayed: { watcher: string; emote: EmojiEmoteId; seq: number } | null;
+  /** R2990000: one emote out on the open socket; dropped while there is none. */
+  sendEmote: (emote: EmojiEmoteId) => void;
 } {
   const [view, setView] = useState<PlayerView | null>(null);
   const [coopView, setCoopView] = useState<DuosView | null>(null);
   const [loadouts, setLoadouts] = useState<SeatLoadouts | null>(null);
   const [clock, setClock] = useState<WatchClockReading | null>(null);
   const [connection, setConnection] = useState<WatchConnection>("connecting");
+  const [hand, setHand] = useState<readonly EmojiEmoteId[]>(NO_HAND);
+  const [relayed, setRelayed] = useState<{ watcher: string; emote: EmojiEmoteId; seq: number } | null>(null);
   /** The running effect's retry (#1570); a no-op until the effect sets it. */
   const reconnectRef = useRef<() => void>(IGNORE);
+  /** The running effect's emote send, as `reconnectRef` is its retry. */
+  const sendEmoteRef = useRef<(emote: EmojiEmoteId) => void>(IGNORE);
+  const relaySeq = useRef(0);
 
   useEffect(() => {
     let stopped = false;
@@ -98,6 +117,10 @@ function useWatch(
     let refused = false;
     let over = false;
     const held = createLoadoutsHolder();
+    const relay = (watcher: string, emote: EmojiEmoteId): void => {
+      relaySeq.current += 1;
+      setRelayed({ watcher, emote, seq: relaySeq.current });
+    };
 
     const replace = (stale: WebSocket): void => {
       if (stopped || refused || over) return;
@@ -158,12 +181,17 @@ function useWatch(
         wakeProbe.cancel();
         if (typeof event.data !== "string") return;
         if (coop) {
-          // R2881000: a co-op game's watcher is sent the seat's views, and a refusal, only.
+          // R2881000: a co-op game's watcher is sent the seat's views and a refusal, and, R2990000, the
+          // emote frames.
           const frame = parseDuosFrame(event.data);
           if (frame?.type === "view") {
             over = frame.view.result !== null;
             setCoopView(frame.view);
             setClock(watchClockOf(frame.view.own.clockMs));
+          } else if (frame?.type === "spectatorHand") {
+            setHand(frame.emotes);
+          } else if (frame?.type === "spectatorEmote") {
+            relay(frame.watcher, frame.emote);
           } else if (frame?.type === "error" && frame.code === "forbidden") {
             refused = true;
             setConnection("refused");
@@ -180,6 +208,10 @@ function useWatch(
           setLoadouts(held.seats(frame.seats));
         } else if (frame.type === "cardLoadouts") {
           setLoadouts(held.cards(frame.cards));
+        } else if (frame.type === "spectatorHand") {
+          setHand(frame.emotes);
+        } else if (frame.type === "spectatorEmote") {
+          relay(frame.watcher, frame.emote);
         } else if (frame.type === "error" && frame.code === "forbidden") {
           refused = true;
           setConnection("refused");
@@ -209,6 +241,14 @@ function useWatch(
       setConnection("connecting");
       open();
     };
+    // R2990000: cosmetic, as a seat's emote is: with no socket, or one not yet open, it is dropped.
+    sendEmoteRef.current = (emote) => {
+      try {
+        socket?.send(JSON.stringify({ type: "emote", emote }));
+      } catch {
+        // Not open yet; its `open` brings the strip's hand back.
+      }
+    };
 
     wakeProbe.listen();
     open();
@@ -223,8 +263,11 @@ function useWatch(
   const reconnect = useCallback((): void => {
     reconnectRef.current();
   }, []);
+  const sendEmote = useCallback((emote: EmojiEmoteId): void => {
+    sendEmoteRef.current(emote);
+  }, []);
 
-  return { view, coopView, loadouts, clock, connection, reconnect };
+  return { view, coopView, loadouts, clock, connection, reconnect, hand, relayed, sendEmote };
 }
 
 /** The connection in a watcher's words. */
@@ -269,7 +312,20 @@ export function WatchRoute({
   coop?: boolean;
 }): ReactElement {
   useLocale();
-  const { view, coopView, loadouts, clock, connection, reconnect } = useWatch(matchId, friendId, coop);
+  const { view, coopView, loadouts, clock, connection, reconnect, hand, relayed, sendEmote } = useWatch(matchId, friendId, coop);
+  // R2990000–R2990002, R2990004: the watcher's own picks while the socket is open, the others' by `seq`.
+  const sideline = useSideline({
+    hand: connection === "open" ? hand : NO_HAND,
+    emit: sendEmote,
+    engine: getAudioEngine(),
+    globalMute: useSetting("muteSpectatorEmotes"),
+  });
+  const lastRelaySeq = useRef(0);
+  useEffect(() => {
+    if (relayed === null || relayed.seq === lastRelaySeq.current) return;
+    lastRelaySeq.current = relayed.seq;
+    sideline.receive(relayed.watcher, relayed.emote);
+  }, [relayed, sideline]);
   const lookup = useCatalogLookup();
   const [friends] = usePolled(() => getFriends({ keep: false }), null);
   const name = friends.kind === "ready" ? friends.value.friends.find((friend) => friend.profileId === friendId)?.username : undefined;
@@ -329,7 +385,7 @@ export function WatchRoute({
       <div className="app-shell app-shell--wide watch-screen">
         <CatalogContext.Provider value={lookup}>
           <DuosChromeContext.Provider value={{ back: <BackLink to={paths.together} label="← Play together" showSettings={false} />, status, clock: turnClock }}>
-            <DuosBoard view={coopView} legal={NO_COOP_ACTIONS} onAction={IGNORE} pings={NO_PINGS} onPing={IGNORE} jloreCapped={false} replay />
+            <DuosBoard view={coopView} legal={NO_COOP_ACTIONS} onAction={IGNORE} pings={NO_PINGS} onPing={IGNORE} jloreCapped={false} replay sideline={sideline} />
           </DuosChromeContext.Provider>
         </CatalogContext.Provider>
       </div>
@@ -345,6 +401,7 @@ export function WatchRoute({
             replay
             resultForm="chip"
             loadouts={loadouts}
+            sideline={sideline}
             matchStatus={status}
             phoneRailTop
             turnClock={turnClock}

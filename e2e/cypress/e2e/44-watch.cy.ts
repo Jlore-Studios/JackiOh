@@ -5,13 +5,19 @@
 // reseeds the server (R144) and redeems the good code for it; only spec 10 reads that account and it reseeds first.
 // The waiting panel shows only to a watcher who comes within `SPECTATE_DELAY_MS` of the join, so the browser is on
 // Play together first. "Full" (`SPECTATORS_PER_MATCH`) is the server's test: the E2E server seeds three friends.
+// R2990000: a watcher's emote from the sideline strip reaches a seat live, the joiner's Node socket standing in
+// for the player, with the hand the watch socket dealt (R2990001).
 // Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only, as every spec
 // outside scripts/shard-specs.mjs's SMOKE.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
-import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
+import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
+  EMOTE_MENU,
   GAME,
+  SIDELINE_EMOTE,
+  SIDELINE_MENU,
+  SIDELINE_STRIP,
   TOGETHER_FRIEND_ROW,
   TOGETHER_REQUEST_ACCEPT,
   TOGETHER_REQUEST_ROW,
@@ -22,6 +28,7 @@ import {
   WATCH_SCREEN,
   WATCH_STATUS,
   WATCH_WAITING,
+  emoteItemId,
   heroId,
   ts,
 } from "../../support/testids.ts";
@@ -43,13 +50,61 @@ const FIRST_VIEW_TIMEOUT_MS = SPECTATE_DELAY_MS + timeouts.view;
 /** The browser's `Date.now()` against the server's monotonic clock, which `SPECTATE_DELAY_MS` is measured on. */
 const CLOCK_SLACK_MS = 1_000;
 
+/** R2990000: a watcher's emote is relayed live, never `SPECTATE_DELAY_MS` behind, so a view push's wait covers it. */
+const RELAY_TIMEOUT_MS = timeouts.view;
+
+/** The joiner's Node socket, the seat a watcher's emote is relayed to (R2990000). */
+const JOINER = "joiner";
+const JOINER_SEAT = "p2";
+
 // HTTP contract (SPEC S7), as far as this spec reads it
 
 type MeBody = { profile: { id: string }; username?: { name: string } };
 type JoinBody = { matchId: string; seat: string };
+type PlayerRef = { profileId: string; username: string };
+type FriendsBody = { friends: PlayerRef[]; incoming: { requestId: string; from: PlayerRef }[] };
 
 function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy.request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) }).its("body");
+}
+
+function friendsOf(account: E2EAccount): Cypress.Chainable<FriendsBody> {
+  return cy.request<FriendsBody>({ method: "GET", url: apiUrl("/api/friends"), headers: bearerHeaders(account.token) }).its("body");
+}
+
+/** B43, B45: `asked` and `asker` friends, by a request and its accept, unless they already are. */
+function befriend(asker: E2EAccount, askerId: string, asked: E2EAccount, askedName: string): void {
+  friendsOf(asked).then((body) => {
+    if (body.friends.some((friend) => friend.profileId === askerId)) return;
+    if (!body.incoming.some((request) => request.from.profileId === askerId)) {
+      cy.request({ method: "POST", url: apiUrl("/api/friends/requests"), headers: bearerHeaders(asker.token), body: { username: askedName } })
+        .its("status")
+        .should("eq", 201);
+    }
+    friendsOf(asked).then((after) => {
+      const request = after.incoming.find((got) => got.from.profileId === askerId);
+      expect(request, "B43: the request reached the friend").to.not.eq(undefined);
+      cy.request({
+        method: "POST",
+        url: apiUrl(`/api/friends/requests/${request?.requestId ?? ""}/accept`),
+        headers: bearerHeaders(asked.token),
+      })
+        .its("status")
+        .should("eq", 200);
+    });
+  });
+}
+
+/**
+ * `name`'s Node socket's frames, read again until one is `what` or RELAY_TIMEOUT_MS has passed. A task is
+ * not retried by `.should`, and specs never sleep (`cy.wait(ms)` is refused), so each read is one more task.
+ */
+function untilReceived(name: string, match: (frame: Frame) => boolean, what: string, deadline = Date.now() + RELAY_TIMEOUT_MS): void {
+  cy.wsPlayer({ action: "messages", name }).then((result) => {
+    if ((result.messages ?? []).some(match)) return;
+    expect(Date.now(), `${what} within RELAY_TIMEOUT_MS`).to.be.below(deadline);
+    untilReceived(name, match, what, deadline);
+  });
 }
 
 function friendRow(profileId: string): string {
@@ -281,6 +336,103 @@ describe("44 watching a friend's live game", () => {
     // Free the accounts for the next spec.
     cy.then(() => {
       cy.concedeAs(one, matchId);
+    });
+  });
+
+  it("R2990000 a watcher's emote from the sidelines reaches a player", () => {
+    const one = accounts.p1();
+    const two = accounts.p2();
+    const joiner = accounts.pending();
+    let oneId = "";
+    let oneName = "";
+    let twoId = "";
+    let twoName = "";
+    let matchId = "";
+    let picked = "";
+
+    me(one).then((body) => {
+      oneId = body.profile.id;
+      oneName = body.username?.name ?? "";
+    });
+    me(two).then((body) => {
+      twoId = body.profile.id;
+      twoName = body.username?.name ?? "";
+    });
+
+    // The spec's first test ends with `one` removing `two`, so they are made friends again.
+    cy.then(() => {
+      befriend(one, oneId, two, twoName);
+    });
+
+    // A room as the first test opens one, and the joiner's seat on a Node socket, which the relay reaches.
+    cy.then(() => {
+      cy.request<{ code: string }>({
+        method: "POST",
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(one.token),
+        body: { mode: "random", seed: SEED, seat: HOST_SEAT },
+      }).then((created) => {
+        cy.request<JoinBody>({
+          method: "POST",
+          url: apiUrl(`/api/rooms/${created.body.code}/join`),
+          headers: bearerHeaders(joiner.token),
+          body: { mode: "random" },
+        }).then((joined) => {
+          expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(JOINER_SEAT);
+          matchId = joined.body.matchId;
+        });
+      });
+    });
+    cy.then(() => {
+      cy.wsPlayer({ action: "connect", name: JOINER, url: server.ws(), token: joiner.token, matchId, seat: JOINER_SEAT });
+    });
+
+    // `two` watches `one` and waits out the delay for the first view.
+    cy.then(() => {
+      cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
+      cy.get(ts(WATCH_STATUS), { timeout: FIRST_VIEW_TIMEOUT_MS })
+        .should("have.attr", "data-connection", "open")
+        .and("contain.text", oneName);
+    });
+    cy.get(ts(GAME)).should("have.attr", "data-replay", "true");
+
+    // R2990001: the watch socket dealt the watcher its own hand of emoji, which the strip's menu offers.
+    cy.window().then((win) => {
+      const dealt = framesOf(win).find((frame) => frame.type === "spectatorHand");
+      const hand = Array.isArray(dealt?.emotes) ? (dealt.emotes as string[]) : [];
+      expect(hand.length, "R2990001: the watcher was dealt a hand").to.be.greaterThan(0);
+      picked = hand[0] ?? "";
+      cy.get(ts(SIDELINE_MENU)).click();
+      cy.get(`${ts(EMOTE_MENU)} [role="menuitem"]`).then((items) => {
+        expect([...items].map((item) => item.getAttribute("data-testid")), "the menu offers the dealt hand").to.deep.eq(hand.map(emoteItemId));
+      });
+    });
+    cy.then(() => {
+      cy.get(`${ts(EMOTE_MENU)} ${ts(emoteItemId(picked))}`).click();
+      // Shown at once as the watcher's own, since the server never echoes it.
+      cy.get(`${ts(SIDELINE_STRIP)} ${ts(SIDELINE_EMOTE)}[data-self="true"][data-emote="${picked}"]`).should("contain.text", "You");
+    });
+
+    // R2990000: the seat hears it live, under the watcher's name.
+    cy.then(() => {
+      untilReceived(
+        JOINER,
+        (frame) => frame.type === "spectatorEmote" && frame.watcher === twoName && frame.emote === picked,
+        "the watcher's spectatorEmote at the joiner's seat",
+      );
+    });
+    cy.window().then((win) => {
+      expect(
+        framesOf(win).some((frame) => frame.type === "spectatorEmote" && frame.watcher === twoName),
+        "R2990000: the watcher is never sent its own emote back",
+      ).to.eq(false);
+    });
+
+    // Free the accounts for the next spec, no longer friends, as the first test leaves them.
+    cy.then(() => {
+      cy.wsPlayer({ action: "disconnect", name: JOINER });
+      cy.concedeAs(one, matchId);
+      cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
     });
   });
 });

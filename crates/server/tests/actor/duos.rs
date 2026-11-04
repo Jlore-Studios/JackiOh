@@ -2808,7 +2808,7 @@ mod r2881000_watching_a_coop_game {
     //! seat, `SPECTATE_DELAY_MS` behind and offered nothing; whom a 1v1 watch refuses, and the friend's
     //! own teammate, are refused; both seats hear the count; the watch ends after the result's view.
     use jackioh_server::actor::ws_server::WATCH_PATH;
-    use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
+    use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATOR_EMOTE_HAND_SIZE, SPECTATORS_PER_MATCH};
 
     use super::*;
     use crate::support::store::befriend;
@@ -2971,7 +2971,11 @@ mod r2881000_watching_a_coop_game {
             assert!(hand["count"].is_number(), "{duel}: {hand}");
             assert!(!hand.is_array(), "{duel}: {hand}");
         }
-        for frame in watcher.frames() {
+        // R2990001: its own emote hand first, then views only.
+        let frames = watcher.frames();
+        let (hand, views) = frames.split_first().expect("the watcher was sent frames");
+        assert_eq!(hand["type"], "spectatorHand", "{hand}");
+        for frame in views {
             assert_eq!(frame["type"], "view", "a watcher is sent views only: {frame}");
         }
 
@@ -3198,6 +3202,88 @@ mod r2881000_watching_a_coop_game {
             assert!(seat.of_type_since(from, "ping").is_empty(), "{:?}", seat.frames());
         }
         assert!(watcher.close_code().is_none(), "within its malformed budget");
+    }
+
+    /// R2990000: a co-op watcher's emote, from its own hand (R2990001), goes live to both people's
+    /// sockets and the other watcher, of either seat, and never back to its sender or into the game.
+    #[tokio::test(start_paused = true)]
+    async fn r2990000_a_coop_watchers_emote_reaches_both_people_and_the_other_watcher_and_never_the_game() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        let pal = account(&h.app, 5, "Pal").await;
+        befriend(&h.app, &fan, &h.host).await;
+        befriend(&h.app, &pal, &h.guest).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        let other = watch(&h, &pal, &h.guest).await;
+        assert_admitted(&watcher);
+        assert_admitted(&other);
+        let hands: Vec<Vec<Value>> = [&watcher, &other]
+            .into_iter()
+            .map(|client| {
+                client
+                    .of_type("spectatorHand")
+                    .first()
+                    .and_then(|frame| frame["emotes"].as_array().cloned())
+                    .unwrap_or_else(|| panic!("no spectatorHand frame: {:?}", client.frames()))
+            })
+            .collect();
+        for hand in &hands {
+            assert_eq!(hand.len(), SPECTATOR_EMOTE_HAND_SIZE, "{hand:?}");
+        }
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let (logged, hash, next_seq) = (h.logged().await.len(), actor.hash(), actor.next_seq());
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+        let (watcher_from, other_from) = (watcher.received(), other.received());
+
+        watcher
+            .send_json(json!({ "type": "emote", "emote": hands[0][0] }))
+            .await;
+        settle().await;
+
+        let expected = json!({ "type": "spectatorEmote", "watcher": fan.name, "emote": hands[0][0] });
+        for (seat, from) in [(&a1, a1_from), (&a2, a2_from)] {
+            assert_eq!(
+                seat.of_type_since(from, "spectatorEmote"),
+                vec![expected.clone()],
+                "{:?}",
+                seat.frames()
+            );
+        }
+        let (_, _, frame) = other
+            .wait_for(other_from, PROMPTLY, |frame| frame["type"] == "spectatorEmote")
+            .await
+            .unwrap_or_else(|| panic!("the other watcher never heard it: {:?}", other.frames()));
+        assert_eq!(frame, expected);
+        assert!(
+            watcher.of_type_since(watcher_from, "spectatorEmote").is_empty(),
+            "no echo"
+        );
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        assert_eq!(h.logged().await.len(), logged, "nothing logged");
+        assert_eq!(actor.hash(), hash, "the state is untouched");
+        assert_eq!(actor.next_seq(), next_seq);
+
+        // R2990001: a voice line, or an emoji outside the hand, is dropped silently; R2990000: an id
+        // outside the pool is answered `malformed`.
+        let outside = jackioh_engine::EMOJI_EMOTE_IDS
+            .iter()
+            .map(|id| json!(id.as_str()))
+            .find(|id| !hands[1].contains(id))
+            .expect("an emoji outside the hand");
+        for id in [json!("greetings"), outside, json!("sobbing")] {
+            other.send_json(json!({ "type": "emote", "emote": id })).await;
+        }
+        settle().await;
+        for seat in [&a1, &a2] {
+            assert_eq!(seat.of_type("spectatorEmote").len(), 1, "{:?}", seat.frames());
+        }
+        let answers = other.of_type("error");
+        assert_eq!(answers.len(), 1, "{:?}", other.frames());
+        assert_eq!(answers[0]["code"], "malformed", "{}", answers[0]);
+        assert!(other.close_code().is_none(), "within its malformed budget");
     }
 
     #[tokio::test(start_paused = true)]
