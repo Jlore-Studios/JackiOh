@@ -31501,7 +31501,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-04T05:05:12Z",
         "every": 5,
+        "findings": 0,
         "head": "a569d7120a355c7695ca7656f6a932e8c361f2dc",
         "issue": 2953,
         "last_why": "stopped: #2965 was closed",
@@ -31509,18 +31511,19 @@
         "n": 35,
         "pr": 2965,
         "queued_at": "2026-11-04T03:27:40Z",
+        "reason": "stopped: #2965 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:10495b47-1793767701",
         "sha": "ed35dcedf54153a081e84ed58e126bc6d7c44a4d",
         "started_at": "2026-11-04T04:49:00Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 36
