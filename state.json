@@ -15154,6 +15154,13 @@
     "3060": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-04T22:03:11Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "One web module (Game.tsx) plus its test, a README paragraph and a ruling note: no engine, AI, cross-crate, migration or 40-file change, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
