@@ -1371,6 +1371,13 @@ export default function StatsRoute(): ReactElement {
                         spread: (tiers.spread * 100).toFixed(1),
                       })}
                 </p>
+                {typeof tiers.baseline === "number" && (
+                  <p>
+                    {t("A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins {baseline} of its games.", {
+                      baseline: percentText(tiers.baseline),
+                    })}
+                  </p>
+                )}
               </div>
             )}
 

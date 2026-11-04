@@ -1442,15 +1442,25 @@ pub struct StatsField {
     pub spread: f64,
     /// The cards `center` and `spread` were read from; 0 for `StatsField::PRIOR`.
     pub cards: usize,
+    /// R3070000: the average deck's win rate, as a fraction: the average card's in-deck win rate over every
+    /// card the field was given, a draw a game not won. A card read against it (`held_posterior`) is one
+    /// with too few never-drawn games for its drawn delta.
+    pub baseline: f64,
+    /// R3070000: the never-drawn games a card's drawn delta needs, at least 1; with fewer, the card is read
+    /// against `baseline`. The page's floor (R2427000), passed in, as the floor is the page's (R654).
+    pub drawn_floor: i32,
 }
 
 impl StatsField {
     /// R2777000's field, kept below `ADJUSTED_FIELD_MIN_CARDS`: a drawn delta of 0 reads an even game, and
-    /// real lifts spread `ADJUSTED_WIN_RATE_PRIOR_SPREAD`.
+    /// real lifts spread `ADJUSTED_WIN_RATE_PRIOR_SPREAD`. R3070000: a card never undrawn is read against
+    /// an even game.
     pub const PRIOR: StatsField = StatsField {
         center: 0.0,
         spread: ADJUSTED_WIN_RATE_PRIOR_SPREAD,
         cards: 0,
+        baseline: ADJUSTED_WIN_RATE_CENTER,
+        drawn_floor: 1,
     };
 }
 
@@ -1459,20 +1469,35 @@ impl StatsField {
 /// `v` (`delta_noise`); with `w = 1/v`, the fixed-effect mean is `Σw·d / Σw`, Cochran's
 /// `Q = Σw·(d − mean)²`, and `τ² = (Q − (k − 1)) / (Σw − Σw²/Σw)`, at least
 /// `ADJUSTED_FIELD_SPREAD_FLOOR²`. The centre is then `Σw*·d / Σw*`, `w* = 1/(v + τ²)`. With fewer than
-/// `ADJUSTED_FIELD_MIN_CARDS` such cards it is `StatsField::PRIOR`. The cards' deltas share games, which
-/// the estimate ignores: a card shares about one game in twenty-five with another.
-pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>) -> StatsField {
+/// `ADJUSTED_FIELD_MIN_CARDS` such cards it keeps `StatsField::PRIOR`'s centre and spread. The cards'
+/// deltas share games, which the estimate ignores: a card shares about one game in twenty-five with
+/// another.
+///
+/// R3070000: only a card with `drawn_floor` games on both sides (at least 1) gives a delta, and every card
+/// given counts toward `baseline`, the average card's in-deck win rate (an even game when none has a game).
+pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_floor: i32) -> StatsField {
+    let drawn_floor = drawn_floor.max(1);
+    let mut held = Tally::default();
     let lifts: Vec<(f64, f64)> = cards
         .into_iter()
         .filter_map(|stats| {
+            add_tally(&mut held, &stats.in_deck);
             let seen = seen(stats);
             let never = not_drawn(stats);
+            if seen.games < drawn_floor || never.games < drawn_floor {
+                return None;
+            }
             let delta = win_rate(&seen)? - win_rate(&never)?;
             Some((delta, delta_noise(&seen, &never)))
         })
         .collect();
+    let baseline = win_rate(&held).unwrap_or(ADJUSTED_WIN_RATE_CENTER);
     if lifts.len() < ADJUSTED_FIELD_MIN_CARDS {
-        return StatsField::PRIOR;
+        return StatsField {
+            baseline,
+            drawn_floor,
+            ..StatsField::PRIOR
+        };
     }
     let weights: f64 = lifts.iter().map(|(_, noise)| 1.0 / noise).sum();
     let squares: f64 = lifts.iter().map(|(_, noise)| 1.0 / (noise * noise)).sum();
@@ -1494,6 +1519,8 @@ pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>) -> StatsF
         center,
         spread: spread_squared.sqrt(),
         cards: lifts.len(),
+        baseline,
+        drawn_floor,
     }
 }
 
@@ -1511,7 +1538,9 @@ fn delta_noise(seen: &Tally, never: &Tally) -> f64 {
 /// `field.spread` and `SE²` the delta's sampling variance at its widest (`delta_noise`). It is the
 /// posterior mean of a card's lift under a normal prior of spread `τ` about the field's centre, so a
 /// few games' swing is mostly discounted and many games' is mostly kept, and an average card reads an
-/// even game. `StatsField::PRIOR` gives R2777000's own figure. `None` when either side has no games.
+/// even game. `StatsField::PRIOR` gives R2777000's own figure. R3070000: a card with fewer than
+/// `field.drawn_floor` never-drawn games is read against the average deck instead (`held_posterior`).
+/// `None` when it was never seen.
 pub fn adjusted_win_rate(stats: &CardStats, field: &StatsField) -> Option<f64> {
     adjusted_posterior(stats, field).map(|(mean, _)| mean)
 }
@@ -1528,9 +1557,13 @@ pub fn adjusted_interval(stats: &CardStats, field: &StatsField) -> Option<(f64, 
 }
 
 /// R2777000, R2895000, R3022000: the posterior of a card's lift read from an even game, `(mean, variance)`.
+/// R3070000: with fewer than `field.drawn_floor` never-drawn games, `held_posterior` of its seen games.
 fn adjusted_posterior(stats: &CardStats, field: &StatsField) -> Option<(f64, f64)> {
     let seen = seen(stats);
     let never = not_drawn(stats);
+    if never.games < field.drawn_floor.max(1) {
+        return held_posterior(&seen, field);
+    }
     let delta = win_rate(&seen)? - win_rate(&never)?;
     let noise = delta_noise(&seen, &never);
     let prior = field.spread * field.spread;
@@ -1539,6 +1572,31 @@ fn adjusted_posterior(stats: &CardStats, field: &StatsField) -> Option<(f64, f64
         ADJUSTED_WIN_RATE_CENTER + weight * (delta - field.center),
         weight * noise,
     ))
+}
+
+/// R3070000: the posterior of the lift of a card its seats always had in hand, read from an even game,
+/// `(mean, variance)`: the win rate of `games` (the seats that saw it, or for the Dormant Starship the
+/// seats that made one) less the average deck's (`field.baseline`), kept in the share `τ² / (τ² + SE²)`
+/// with `SE² = p(1 − p) / games` at `p = ADJUSTED_WIN_RATE_CENTER`: the seen side's variance alone, as
+/// the baseline is read over every deck. `None` when `games` has none.
+pub fn held_posterior(games: &Tally, field: &StatsField) -> Option<(f64, f64)> {
+    let rate = win_rate(games)?;
+    let game_variance = ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER);
+    let noise = game_variance / f64::from(games.games);
+    let prior = field.spread * field.spread;
+    let weight = prior / (prior + noise);
+    Some((
+        ADJUSTED_WIN_RATE_CENTER + weight * (rate - field.baseline),
+        weight * noise,
+    ))
+}
+
+/// R3070000: `held_posterior` as a page shows it: the adjusted win rate and its 95% range,
+/// `(rate, (low, high))`, the range R2895000's at `STATS_INTERVAL_Z`.
+pub fn held_adjusted(games: &Tally, field: &StatsField) -> Option<(f64, (f64, f64))> {
+    let (mean, variance) = held_posterior(games, field)?;
+    let half = STATS_INTERVAL_Z * variance.sqrt();
+    Some((mean, (mean - half, mean + half)))
 }
 
 string_union! {
@@ -2682,17 +2740,23 @@ mod tests {
                 adjusted_win_rate(&split, &StatsField::PRIOR).unwrap(),
                 small
             ));
-            // No baseline or nothing seen: no adjusted rate.
+            // Nothing seen: no adjusted rate.
             let never_seen = CardStats {
                 played: tally(0, 0, 0),
                 ..card(40, 0.6, 0.4)
             };
             assert_eq!(adjusted_win_rate(&never_seen, &StatsField::PRIOR), None);
+            // R3070000 amends this: a card never left undrawn is read against an even game under the prior
+            // field, its 40 seen games alone the noise.
             let always_seen = CardStats {
                 in_deck: tally(40, 24, 0),
                 ..card(40, 0.6, 0.4)
             };
-            assert_eq!(adjusted_win_rate(&always_seen, &StatsField::PRIOR), None);
+            let held = 0.0025 / (0.0025 + 0.25 / 40.0);
+            assert!(close(
+                adjusted_win_rate(&always_seen, &StatsField::PRIOR).unwrap(),
+                0.5 + held * 0.1
+            ));
         }
 
         #[test]
@@ -2755,7 +2819,7 @@ mod tests {
         fn r3022000_the_field_reads_its_centre_and_its_spread_off_the_cards_drawn_deltas() {
             let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
             let cards = lifted_field(40, 1000);
-            let field = stats_field(&cards);
+            let field = stats_field(&cards, 1);
             // Equal games, so equal weights: the centre is the mean delta, and τ² the deltas' sample
             // variance less their sampling variance.
             let noise: f64 = 0.25 * (2.0 / 1000.0);
@@ -2782,21 +2846,31 @@ mod tests {
                 0.5 + 0.0025 / (0.0025 + noise) * 0.10
             ));
 
-            // Too few cards with both sides keep the prior: a card never seen does not count.
+            // Too few cards with both sides keep the prior's centre and spread: a card never seen gives no
+            // delta. R3070000: every card still counts toward the baseline.
             let mut few = lifted_field(ADJUSTED_FIELD_MIN_CARDS - 1, 1000);
             few.push(CardStats {
                 played: tally(0, 0, 0),
                 ..seen_and_unseen(1000, 0.56, 0.46)
             });
-            assert_eq!(stats_field(&few), StatsField::PRIOR);
+            let prior = stats_field(&few, 1);
             assert_eq!(
-                stats_field(&lifted_field(ADJUSTED_FIELD_MIN_CARDS, 1000)).cards,
+                (prior.center, prior.spread, prior.cards),
+                (
+                    StatsField::PRIOR.center,
+                    StatsField::PRIOR.spread,
+                    StatsField::PRIOR.cards
+                )
+            );
+            assert!(close(prior.baseline, 30300.0 / 60000.0), "{}", prior.baseline);
+            assert_eq!(
+                stats_field(&lifted_field(ADJUSTED_FIELD_MIN_CARDS, 1000), 1).cards,
                 ADJUSTED_FIELD_MIN_CARDS
             );
 
             // Cards all alike read the floor, never a spread of 0.
             let alike = vec![seen_and_unseen(1000, 0.55, 0.45); 40];
-            let flat = stats_field(&alike);
+            let flat = stats_field(&alike, 1);
             assert!(close(flat.spread, ADJUSTED_FIELD_SPREAD_FLOOR), "{}", flat.spread);
             assert!(close(flat.center, 0.10));
         }
@@ -2839,6 +2913,63 @@ mod tests {
                 ..seen_and_unseen(40, 0.6, 0.4)
             };
             assert_eq!(card_tier(&never_seen, &StatsField::PRIOR), None);
+        }
+
+        #[test]
+        fn r3070000_a_card_never_left_undrawn_is_read_against_the_average_deck() {
+            let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+            // The field of R3022000's test, its floor at 20 never-drawn games: the average card's decks win
+            // (20 · 1,020 + 20 · 1,000) of 80,000.
+            let cards = lifted_field(40, 1000);
+            let field = stats_field(&cards, 20);
+            assert_eq!((field.cards, field.drawn_floor), (40, 20));
+            assert!(close(field.baseline, 40400.0 / 80000.0), "{}", field.baseline);
+            let weight = |games: f64| {
+                let prior = field.spread * field.spread;
+                prior / (prior + 0.25 / games)
+            };
+
+            // A Quickdraw card: in every one of its 500 decks' hands, 300 of them won. Its lift is its win
+            // rate less the average deck's, kept at the field's spread with the seen side's noise alone.
+            let quickdraw = CardStats {
+                in_deck: tally(500, 300, 0),
+                played: tally(500, 300, 0),
+                ..seen_and_unseen(0, 0.5, 0.5)
+            };
+            let rate = adjusted_win_rate(&quickdraw, &field).unwrap();
+            assert!(
+                close(rate, 0.5 + weight(500.0) * (0.6 - field.baseline)),
+                "{rate}"
+            );
+            let (low, high) = adjusted_interval(&quickdraw, &field).unwrap();
+            let half = STATS_INTERVAL_Z * (weight(500.0) * 0.25 / 500.0).sqrt();
+            assert!(close(rate - low, half) && close(high - rate, half));
+            assert_eq!(card_tier(&quickdraw, &field), Some(CardTier::S));
+
+            // Ten never-drawn games, below the floor: read against the average deck too, from its seen games.
+            let rarely_undrawn = CardStats {
+                in_deck: tally(500, 297, 0),
+                played: tally(490, 294, 0),
+                ..seen_and_unseen(0, 0.5, 0.5)
+            };
+            assert_eq!(not_drawn(&rarely_undrawn), tally(10, 3, 0));
+            assert!(close(
+                adjusted_win_rate(&rarely_undrawn, &field).unwrap(),
+                0.5 + weight(490.0) * (0.6 - field.baseline)
+            ));
+            // At the floor, the drawn delta as before.
+            let drawn = seen_and_unseen(20, 0.6, 0.4);
+            let noise = 0.25 * (2.0 / 20.0);
+            let kept = field.spread * field.spread / (field.spread * field.spread + noise);
+            assert!(close(
+                adjusted_win_rate(&drawn, &field).unwrap(),
+                0.5 + kept * (0.2 - field.center)
+            ));
+
+            // The Dormant Starship's games are a tally of their own: the same figure, and its range.
+            let (made, (from, to)) = held_adjusted(&tally(500, 300, 0), &field).unwrap();
+            assert!(close(made, rate) && close(from, low) && close(to, high));
+            assert_eq!(held_adjusted(&tally(0, 0, 0), &field), None);
         }
 
         #[test]

@@ -36,11 +36,11 @@ use jackioh_engine::wire::stats::{
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
     StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
     WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate, card_drills_of,
-    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, drawn_delta, not_drawn,
-    patch_windows, played_delta, seen, sources_of, stats_field, tier_of, wilson_interval, win_rate,
-    windowed_card_stats, windowed_game_figures,
+    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, drawn_delta,
+    held_adjusted, not_drawn, patch_windows, played_delta, seen, sources_of, stats_field, tier_of,
+    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
 };
-use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
+use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot, made_by_a_rule};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
@@ -389,6 +389,18 @@ pub struct PublicStatsCardsResponse {
     pub patches: Vec<PatchWindow>,
 }
 
+/// R3070000: the seats that made a copy of `id` during their games, used or not (R2089000): the games of a
+/// card only a rule makes. `None` when no counted seat made one.
+fn made_games(report: &WindowedReport, id: &str) -> Option<Tally> {
+    let row = report.created.iter().find(|row| row.stats.card == id)?;
+    let (used, unused) = (&row.stats.created_played, &row.stats.created_not_played);
+    Some(Tally {
+        games: used.games + unused.games,
+        wins: used.wins + unused.wins,
+        draws: used.draws + unused.draws,
+    })
+}
+
 /// R3022000: what `GET /api/stats/cards`' tiers are read against: the field (`stats_field`) of every card
 /// in the report, whatever the page's filters show, and the balance band.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -400,6 +412,9 @@ pub struct PublicStatsTiers {
     pub spread: f64,
     /// The cards the field was read from; 0 when too few were, and R2777000's centre and prior are kept.
     pub cards: usize,
+    /// R3070000: the average deck's win rate, which a card with too few never-drawn games, and the Dormant
+    /// Starship, is read against.
+    pub baseline: f64,
     /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
     pub band_low: f64,
     pub band_high: f64,
@@ -1019,19 +1034,18 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     // R3022000: the field every card's adjusted rate is read against: every deckable card of the report,
-    // whatever the filters show, so a set's page reads its cards as the whole page does, from the cards
-    // whose drawn delta the page shows (R2427000's floor on both its sides).
+    // whatever the filters show, so a set's page reads its cards as the whole page does, its centre and
+    // spread from the cards whose drawn delta the page shows (R2427000's floor on both its sides).
+    // R3070000: every card counts toward the average deck's win rate, which a card with fewer never-drawn
+    // games than the floor is read against.
     let field = stats_field(
         app.catalog
             .defs
             .iter()
             .filter(|(_, def)| !def.token)
             .filter_map(|(id, _)| report.card(id))
-            .map(|card| &card.stats)
-            .filter(|stats| {
-                i64::from(seen(stats).games) >= CARD_STATS_MIN_SAMPLE
-                    && i64::from(not_drawn(stats).games) >= CARD_STATS_MIN_SAMPLE
-            }),
+            .map(|card| &card.stats),
+        i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX),
     );
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
@@ -1048,8 +1062,11 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let stat = held.map(|card| &card.stats);
         let total_decks = held.map(|card| card.decks).unwrap_or(0);
         let window = kept.window_of(id, request);
+        // R3070000: a card only a rule makes, the Dormant Starship (R1857001), is in no deck: its row reads
+        // the seats that made one, its Created games (R2089000).
+        let made = made_by_a_rule(def).then(|| made_games(report, id)).flatten();
         // R2777002: the games the card's own figures count: under All Random, the decks that saw it.
-        let counted = stat.map(|stat| mode.counted(stat)).unwrap_or_default();
+        let counted = made.unwrap_or_else(|| stat.map(|stat| mode.counted(stat)).unwrap_or_default());
         let (counted_games, counted_wins) = tally_of(&counted);
         let rate = win_rate(&counted);
         // R2895000: the rate's 95% range, over the same games.
@@ -1089,9 +1106,16 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         };
         let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
         // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
-        // R3022000: read against the field.
-        let adjusted = stat.and_then(|stat| adjusted_win_rate(stat, &field));
-        let adjusted_range = stat.and_then(|stat| adjusted_interval(stat, &field));
+        // R3022000: read against the field. R3070000: a card a rule makes, against the average deck.
+        let (adjusted, adjusted_range) = match made {
+            Some(made) => {
+                held_adjusted(&made, &field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))
+            }
+            None => (
+                stat.and_then(|stat| adjusted_win_rate(stat, &field)),
+                stat.and_then(|stat| adjusted_interval(stat, &field)),
+            ),
+        };
         // R3022000: the tier, from R654's floor as the rate is shown.
         let tier = adjusted
             .zip(adjusted_range)
@@ -1209,6 +1233,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             center: field.center,
             spread: field.spread,
             cards: field.cards,
+            baseline: field.baseline,
             band_low: TIER_BAND_LOW,
             band_high: TIER_BAND_HIGH,
         },
