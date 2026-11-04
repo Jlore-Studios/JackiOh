@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
-import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3 } from "./fixtures.ts";
+import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3 } from "./fixtures.ts";
 import { githubReleases, markdownText, type GithubRelease, type ShippedRecord } from "./github.ts";
 import { releaseArtPath } from "./releaseArt.ts";
 import type { Release } from "./releases.ts";
@@ -19,6 +19,8 @@ const SHIPPED: readonly ShippedRecord[] = [
   { version: V1, commit: "c1" },
   { version: V2, commit: "c2" },
   { version: V3, commit: "c3" },
+  { version: M1, commit: "cm1" },
+  { version: M2, commit: "cm2" },
 ];
 const TECHNICAL: readonly TechnicalEntry[] = [
   { version: V3, commit: "t1", pr: 1, title: "faster menus", kind: "app", player: "Menus open **faster**." },
@@ -35,6 +37,18 @@ function fixtureReleases(options: { live?: readonly string[]; patches?: readonly
     sites: SITES,
     ...(options.releases === undefined ? {} : { releases: options.releases }),
     ...(options.limit === undefined ? {} : { limit: options.limit }),
+  });
+}
+
+/** R3012001: the tiered history (major V1, patch V2, micros M1 and M2, patch V3), V3 only on staging unless `live` says otherwise. */
+function tieredReleases(live: readonly string[] = [V1, V2, M1, M2]) {
+  return githubReleases({
+    patches: TIERED_PATCHES,
+    shipped: SHIPPED,
+    technical: TECHNICAL,
+    snapshot: (version) => TIERED_SNAPSHOTS[version] ?? null,
+    live: new Set(live),
+    sites: SITES,
   });
 }
 
@@ -121,9 +135,9 @@ describe("GitHub releases", () => {
   });
 
   it("#2681 embeds each release's artwork from staging or production as appropriate", () => {
-    // V3 is only on staging: its image is the staging host's; the two on production have production's.
-    const { releases } = fixtureReleases({ live: [V1, V2] });
-    const image = (tag: string, site: string): string => `(${site}${releaseArtPath(tag, "animated")})`;
+    // V3 is only on staging: its image is the staging host's; V1 and V2, on production, have production's.
+    const { releases } = tieredReleases();
+    const image = (tag: string, site: string): string => `(${site}${releaseArtPath(tag)})`;
     expect(release(releases, V3).body).toContain(image(V3, "https://staging.example"));
     expect(release(releases, V3).body).not.toContain("https://prod.example/release-art/");
     for (const tag of [V1, V2]) {
@@ -133,16 +147,46 @@ describe("GitHub releases", () => {
     // One image per release, in the Markdown a release reads: its alt names the patch, and it comes straight after the date line.
     const body = release(releases, V3).body;
     expect(body.match(/!\[/gu)).toHaveLength(1);
-    expect(body).toContain(`**2026-03-04** · Earlier patches · Micro patch\n\n![${V3}: Two fixture sets, release artwork]${image(V3, "https://staging.example")}\n\n`);
-    // It is the normal file, which holds still for a patch and drifts for a major, and every level of card detail keeps it.
-    expect(body).not.toContain("-still.svg");
-    for (const limit of [GITHUB_RELEASE_BODY_LIMIT, release(fixtureReleases().releases, V3).body.length - 1, 1]) {
-      expect(release(fixtureReleases({ limit }).releases, V3).body, String(limit)).toContain(releaseArtPath(V3, "animated"));
+    expect(body).toContain(`**2026-03-04** · Core · Patch\n\n![${V3}: Two fixture sets, release artwork]${image(V3, "https://staging.example")}\n\n`);
+    // Every level of card detail keeps it.
+    for (const limit of [GITHUB_RELEASE_BODY_LIMIT, release(tieredReleases().releases, V3).body.length - 1, 1]) {
+      const cut = githubReleases({
+        patches: TIERED_PATCHES,
+        shipped: SHIPPED,
+        technical: TECHNICAL,
+        snapshot: (version) => TIERED_SNAPSHOTS[version] ?? null,
+        live: new Set([V1, V2, M1, M2]),
+        sites: SITES,
+        limit,
+      });
+      expect(release(cut.releases, V3).body, String(limit)).toContain(releaseArtPath(V3));
     }
     // A title with Markdown in it cannot break the image out of its brackets.
-    const odd: Patch[] = FIXTURE_PATCHES.map((patch) => (patch.version === V2 ? { ...patch, title: "A [b](x) *title*" } : patch));
-    const written = release(fixtureReleases({ patches: odd }).releases, V2).body;
+    const odd: Patch[] = TIERED_PATCHES.map((patch) => (patch.version === V2 ? { ...patch, title: "A [b](x) *title*" } : patch));
+    const written = release(
+      githubReleases({ patches: odd, shipped: SHIPPED, technical: TECHNICAL, snapshot: (version) => TIERED_SNAPSHOTS[version] ?? null, live: new Set([V1, V2, M1, M2]), sites: SITES }).releases,
+      V2,
+    ).body;
     expect(written).toContain(`![${V2}: A \\[b\\](x) \\*title\\*, release artwork]${image(V2, "https://prod.example")}`);
+  });
+
+  it("R3012001 a major's release links its still poster, and a micro patch's release carries no image", () => {
+    const { releases } = tieredReleases();
+    // A major's image is its `.svg`, which is the still poster (the `-still` file holds the same bytes).
+    const major = release(releases, V1).body;
+    expect(major).toContain(`(${SITES.production}/release-art/${V1}.svg)`);
+    expect(major).not.toContain("-still.svg");
+    expect(major).toContain("· Major version");
+    // A micro's release carries notes and no artwork at all, whichever host holds it.
+    for (const tag of [M1, M2]) {
+      const body = release(releases, tag).body;
+      expect(body, tag).not.toContain("![");
+      expect(body, tag).not.toContain("release-art");
+      expect(body, tag).toContain("Micro patch");
+    }
+    expect(release(tieredReleases([]).releases, M1).body).not.toContain("release-art");
+    // V2 follows V1 and carries its own image, as a patch does.
+    expect(release(releases, V2).body).toContain(`(${SITES.production}/release-art/${V2}.svg)`);
   });
 
   it("escape what Markdown would read in a card's words, and keep its line breaks", () => {
@@ -170,8 +214,10 @@ describe("GitHub releases of the real history", () => {
     for (const entry of releases) {
       expect(entry.body.length, entry.tag).toBeLessThanOrEqual(GITHUB_RELEASE_BODY_LIMIT);
       expect(entry.target, entry.tag).toMatch(/^[0-9a-f]{40}$/u);
-      // #2681: each names its own tag's artwork, the encoded version in its path.
-      expect(entry.body, entry.tag).toContain(`](${SITES.production}/release-art/${encodeURIComponent(entry.tag)}.svg)`);
+      // #2681, R3012001: a major or a patch names its own tag's artwork, the encoded version in its path; a micro patch has none.
+      const art = `](${SITES.production}/release-art/${encodeURIComponent(entry.tag)}.svg)`;
+      if (patches.find((patch) => patch.version === entry.tag)?.tier === "micro") expect(entry.body, entry.tag).not.toContain("release-art");
+      else expect(entry.body, entry.tag).toContain(art);
     }
   });
 
