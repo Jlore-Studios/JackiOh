@@ -4688,7 +4688,7 @@ mod the_result_s_views_carry_what_it_paid_each_seat {
         .await;
         let watcher = Client::new();
         h.actor
-            .attach_watcher(P1, "watcher-1", watcher.socket())
+            .attach_watcher(P1, "watcher-1", "Watcher", watcher.socket())
             .expect("the watcher is let in");
         h.idle().await;
 

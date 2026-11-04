@@ -206,6 +206,12 @@ pub enum ServerMessage {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         stamps: Vec<CardStamp>,
     },
+    /// R2990001: a watcher's own emote hand, emoji only, dealt from the match seed and the watcher's
+    /// account (`social::watch::deal_spectator_emote_hand`); sent to that watcher alone as it attaches.
+    SpectatorHand { emotes: Vec<EmoteId> },
+    /// R2990000: a watcher's emote, relayed live to both people's seats and every other watcher, never
+    /// to its sender. `watcher` is the username every friend list already shows (R1436), never an id.
+    SpectatorEmote { watcher: String, emote: EmoteId },
 }
 
 // Builders
@@ -274,6 +280,21 @@ pub fn card_loadouts_message(cards: SeatCards) -> ServerMessage {
 
 pub fn emote_relay_message(from: PlayerId, emote: EmoteId) -> ServerMessage {
     ServerMessage::Emote { from, emote }
+}
+
+/// R2990001: the hand frame one watcher receives, its own and no one else's.
+pub fn spectator_hand_message(emotes: &[EmoteId]) -> ServerMessage {
+    ServerMessage::SpectatorHand {
+        emotes: emotes.to_vec(),
+    }
+}
+
+/// R2990000: a watcher's emote, as both seats and the other watchers hear it.
+pub fn spectator_emote_message(watcher: &str, emote: EmoteId) -> ServerMessage {
+    ServerMessage::SpectatorEmote {
+        watcher: watcher.to_string(),
+        emote,
+    }
 }
 
 pub fn aim_relay_message(from: PlayerId, aim: Option<Aim>) -> ServerMessage {

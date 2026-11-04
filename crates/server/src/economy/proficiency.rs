@@ -102,7 +102,10 @@ mod tests {
     fn r3013000_the_curve_rises_from_a_quick_first_level() {
         let curve = PROFICIENCY_LEVEL_PLAYS;
         assert_eq!(curve.len(), PROFICIENCY_LEVELS);
-        assert!(curve.first().is_some_and(|first| *first >= 1), "level 0 needs no play");
+        assert!(
+            curve.first().is_some_and(|first| *first >= 1),
+            "level 0 needs no play"
+        );
         assert!(
             curve.windows(2).all(|pair| pair[0] < pair[1]),
             "each level takes more plays than the one before"
@@ -116,7 +119,11 @@ mod tests {
         assert_eq!(level_for_plays(0), 0);
         for (below, threshold) in PROFICIENCY_LEVEL_PLAYS.iter().enumerate() {
             let below = i64::try_from(below).expect("a few levels");
-            assert_eq!(level_for_plays(threshold - 1), below, "one play short of {threshold}");
+            assert_eq!(
+                level_for_plays(threshold - 1),
+                below,
+                "one play short of {threshold}"
+            );
             assert_eq!(level_for_plays(*threshold), below + 1, "at {threshold}");
         }
         assert_eq!(level_for_plays(i64::MAX), top_level());

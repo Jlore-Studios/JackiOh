@@ -242,9 +242,7 @@ func (x *Deliverer) OwnReview(number int, status string) {
 				"`%s revise <notes>` (or `@%s <notes>`) queues the rest", config.Slash, x.Cfg.BotLogin))
 			return
 		}
-		x.askDecision(number, "revise", "Its own review run needs a decision before it can fix this.", "", question,
-			fmt.Sprintf("answer here with `%s revise <your answer>` (or `@%s <your answer>`), which queues it again",
-				config.Slash, x.Cfg.BotLogin))
+		x.askDecision(number, "revise", "Its own review run needs a decision before it can fix this.", "", question)
 		return
 	}
 	approved := status == "approved"

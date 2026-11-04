@@ -22,6 +22,10 @@ import (
 // MaxAttempts is MAX_ATTEMPTS.
 var MaxAttempts int = 6
 
+// ServerErrorSeconds is how long a write GitHub answered with a server error (5xx) waits before it
+// reads the file again and tries once more, within MaxAttempts.
+var ServerErrorSeconds = 2.0
+
 // DefaultState is state.default_state.
 func DefaultState() *pyjson.Object {
 	return pyjson.New(
@@ -127,6 +131,13 @@ func (x *StateStore) Update(change func(*pyjson.Object) any, message string /* =
 			if exc.Status == 409 || exc.Status == 422 {
 				// Two writers raced; back off a little, differently each time, and re-read.
 				x.Sleep(uniform(0.05, 0.3))
+				continue
+			}
+			if exc.Status >= 500 {
+				// GitHub's own error (a 500 on 2026-11-04 lost a delivered run's record, and the
+				// loop delivered the run again): wait and re-read. A write GitHub made before it
+				// erred reads back as made, and this change then changes nothing.
+				x.Sleep(ServerErrorSeconds)
 				continue
 			}
 			herr.Raise(exc)

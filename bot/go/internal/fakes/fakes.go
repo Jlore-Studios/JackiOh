@@ -760,6 +760,8 @@ func (o *Own) Dequeue(nodeID string) {
 
 func (o *Own) MarkReady(nodeID string) { o.self().pullByNode(nodeID).Set("draft", false) }
 
+func (o *Own) MarkDraft(nodeID string) { o.self().pullByNode(nodeID).Set("draft", true) }
+
 func (o *Own) MergePull(number int, method string, title string) *pyjson.Object {
 	thread := o.Threads.Item(number)
 	thread.Set("state", "closed")

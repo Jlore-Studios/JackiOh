@@ -816,8 +816,9 @@ func TestSquishyCases_ItSpotChecksNoMergedChange(t *testing.T) {
 }
 
 // Squishy has the night bot's merge gates (#2986, section 1) in its own config, and the same shared
-// `needs decision` label (no `squishy:` mirror): a question of its with a default goes ahead on its
-// own lane, `squishy:build` queued and `squishy:blocked` off.
+// `needs decision` label (no `squishy:` mirror) and `decision_assignees` (#3009): a question of its
+// assigns the same people, and with a default goes ahead on its own lane, `squishy:build` queued and
+// `squishy:blocked` off.
 func TestSquishyCases_ItsMergeGatesAndItsDecisions(t *testing.T) {
 	squishyCasesModule(t)
 	night := loadsObject(t, readText(t, filepath.Join(config.RepoRoot, ".harness", "config.json")))
@@ -826,6 +827,8 @@ func TestSquishyCases_ItsMergeGatesAndItsDecisions(t *testing.T) {
 	assertEqual(t, cfg.MigrationPaths, pyjson.Strings(night.Get("migration_paths")))
 	assertEqual(t, cfg.LockFiles, pyjson.Strings(night.Get("lock_files")))
 	assertEqual(t, cfg.DecisionWaitHours, 24)
+	assertEqual(t, cfg.DecisionAssignees, pyjson.Strings(night.Get("decision_assignees")))
+	assertEqual(t, cfg.DecisionAssignees, []string{"jgoetzmann", "MaxGoetzmann"})
 	assertEqual(t, config.LabelNeedsDecision, "needs decision")
 	assertTrue(t, config.Labels.Has("needs decision"))
 	assertFalse(t, config.Labels.Has("squishy:needs decision"))
@@ -836,9 +839,31 @@ func TestSquishyCases_ItsMergeGatesAndItsDecisions(t *testing.T) {
 		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
 	assertEqual(t, result.Get("status"), "blocked")
 	assertEqual(t, world.gh.LabelNames(12), setOf("squishy:blocked", "needs decision", "squishy:planned", "difficulty:medium"))
-	assertIn(t, "`/squishy build`", lastOf(t, world.gh.BotComments(12)))
+	assertIn(t, "Reply with a number, or tell me something else in your own words", lastOf(t, world.gh.BotComments(12)))
+	assigned := map[string]bool{}
+	for _, a := range pyjson.List(world.gh.Threads.Item(12).Get("assignees")) {
+		assigned[pyjson.Obj(a).Str("login")] = true
+	}
+	assertEqual(t, assigned, setOf("jgoetzmann", "MaxGoetzmann"))
 	testsupport.ClockOf(world.ctx).At = testsupport.ClockOf(world.ctx).At.Add(25 * time.Hour)
 	plan.SyncDecisions(world.ctx)
 	assertEqual(t, world.gh.LabelNames(12), setOf("squishy:build", "squishy:planned", "difficulty:medium"))
 	assertIn(t, "`squishy:build`, or `/squishy build`", lastOf(t, world.gh.Threads.Values()).Str("body"))
+}
+
+// A trusted reply revises Squishy's question too (#3009), on its own lane: `squishy:build` queued,
+// `squishy:blocked`, `needs decision` and the people it assigned off.
+func TestSquishyCases_AReplyRevisesItsQuestion(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	world.gh.AddIssue(12, fakes.Issue{Title: "Patch: Earning", Labels: []string{"squishy:build", "difficulty:medium"}})
+	world.run(workFake(map[string]runner.Handler{
+		"build":  func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, decisionAsk) },
+		"review": func(r *runner.RunRequest) *runner.RunResult { return runner.NewRunResult(true, squishyCasesApprove) }}))
+	world.gh.AddComment(12, "Take (B).", fakes.Comment{CreatedAt: clock.ISO(testsupport.Night.Add(time.Hour))})
+	assertEqual(t, plan.SyncDecisions(world.ctx),
+		[]string{"#12: @jgoetzmann answered its question, so it is queued again with the answer"})
+	assertEqual(t, world.gh.LabelNames(12), setOf("squishy:build", "squishy:planned", "difficulty:medium"))
+	assertEqual(t, pyjson.List(world.gh.Threads.Item(12).Get("assignees")), []any{})
+	assertIn(t, "`/squishy stop` stops it.", lastOf(t, world.gh.BotComments(12)))
 }

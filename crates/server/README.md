@@ -411,9 +411,9 @@ frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_
 closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refused (`forbidden`, 4403)
 (R835002). Once it is in, a later `hello` is answered with the view it was last sent, again (nothing
 before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket, at most once
-per `WATCH_HELLO_INTERVAL_MS`; every other frame a watcher sends is unanswered, and past
-`MALFORMED_FRAMES_PER_WINDOW` of them it is closed with 1008, as a seat's is (R2609000). Leaving changes
-nothing in the match.
+per `WATCH_HELLO_INTERVAL_MS`; its emotes are relayed (below), and every other frame a watcher sends is
+unanswered, and past `MALFORMED_FRAMES_PER_WINDOW` of them it is closed with 1008, as a seat's is (R2609000).
+Leaving changes nothing in the match.
 Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
 gets the same `error forbidden` and close the moment the two unfriend or either blocks the other
 (`MatchActor::revoke_watchers`); no setting lets a watcher go (R2615000).
@@ -433,6 +433,20 @@ clock as that seat was shown it, each `SPECTATE_DELAY_MS` late, and nothing else
 people's `/ws/duos` sockets, and again to one that reattaches; the hello answers, the malformed budget and
 the revokes of an unfriend, a block or a deleted account. A finished game's actor is reaped only once its
 watchers have had the result's view and been closed with 1000.
+
+A watcher, of a 1v1 match or a co-op game, throws emotes from the sidelines (R2990000). As it attaches, after
+`loadouts` and before any view, it alone is sent `spectatorHand {emotes}`: `SPECTATOR_EMOTE_HAND_SIZE` distinct
+emoji and no voice line, dealt from the match seed and its own account on the stream
+`{seed}:spectator-emotes:{profileId}` (`social::watch::deal_spectator_emote_hand`, R2990001). It sends `emote
+{emote}`, the seat's frame (`social::watch::parse_watch_frame`): an id outside the pool is answered `error
+malformed` and counts against its malformed budget; one outside its hand, a voice line among them, or past its
+limit (`SPECTATOR_EMOTE_COOLDOWN_MS`, `SPECTATOR_EMOTE_WINDOW_MS`, `SPECTATOR_EMOTE_WINDOW_MAX`, by the engine's
+`emote_gate_within`, kept per account for the actor's life; R2990002) is dropped silently. One let through goes
+out at once as `spectatorEmote {watcher, emote}`, `watcher` the sender's `name#tag`, to each person's own
+`/ws/match` or `/ws/duos` socket and every other watcher, never back to the sender, and to none that blocks it or
+is blocked by it, one store read per emote off the actor's lock (`social::watch::send_spectator_emote`,
+R2990003). It is never queued: no `reduce`, log, hash, record, telemetry, card that hears emotes (R1127) or bot
+persona (R645) sees it.
 
 ## Card statistics (§9.11, R376–R378, R1044000, R1044001, R1994000)
 

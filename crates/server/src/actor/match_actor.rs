@@ -20,7 +20,7 @@ use tokio::sync::{mpsc, oneshot};
 use jackioh_engine::{
     Action, ActionBody, Aim, AimEnd, EmoteId, GameEvent, GameOverReason, HandView, PLAYER_IDS, PendingView,
     PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, Rng, aim_key, deal_emote_hand, emote_gate,
-    hand_holds, portrait_or_default,
+    emote_gate_within, hand_holds, portrait_or_default,
 };
 
 use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
@@ -2541,15 +2541,19 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // B50, B51: a friend's live 1v1 game watched from their seat. Each change records each seat's view,
 // keyed by home (R677: a Glitch's swap moves the record with the account), and a watcher is sent each
 // view of its friend's seat SPECTATE_DELAY_MS after the state it shows, by one armed wait. Nothing a
-// watcher's socket sends reaches a reducer, log, relay or clock; past its malformed budget it is
-// closed with 1008. Its leaving changes only the count the players are told.
+// watcher's socket sends reaches a reducer, log or clock: its emotes alone are relayed, live, to the
+// players and the other watchers, from its own hand under its own limit (R2990000-R2990003), and never
+// to a persona, a card that hears emotes or the telemetry. Past its malformed budget it is closed with
+// 1008. Its leaving changes only the count the players are told.
 
-use crate::actor::protocol::watchers_frame;
+use crate::actor::protocol::{spectator_emote_message, spectator_hand_message, watchers_frame};
 // A watcher's socket closes with `CLOSE_NORMAL` when a newer socket of its account replaces it or
 // after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes.
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
-use crate::social::watch::parse_watch_hello;
+use crate::social::watch::{
+    SPECTATOR_EMOTE_LIMITS, WatchFrame, deal_spectator_emote_hand, parse_watch_frame, send_spectator_emote,
+};
 
 /// What a revoked watcher's `forbidden` frame and close say: the words every refused hello carries
 /// (`social::watch`), so a socket learns that it may no longer watch, never which change said so.
@@ -2571,14 +2575,17 @@ struct SpectateFrame {
 /// One watching socket: the account behind it, the seat its friend began the match in, the last
 /// recorded view it was sent, and (R1834003) the pairs whose card picks it has been sent.
 /// R2609000: and its own `SeatGuard`, holding a seat's malformed budget and its answered hellos.
+/// R2990000, R2990001: and the name its emotes are shown under, and its own emote hand.
 struct Watcher {
     id: u64,
     profile_id: String,
+    name: String,
     home: PlayerId,
     socket: Socket,
     sent: Option<u64>,
     card_picks_sent: BTreeSet<(PlayerId, String)>,
     guard: SeatGuard,
+    emote_hand: Vec<EmoteId>,
 }
 
 /// R1834003: sends `socket` the card picks `shown` makes due, marking them in `sent`.
@@ -2605,6 +2612,9 @@ struct Spectate {
     timer: Option<(Timer, i64)>,
     /// Set once the actor stops or the match is voided: no watcher is taken or sent anything more.
     closed: bool,
+    /// R2990002: each watching account's recent emote sends for `emote_gate_within`, kept by account
+    /// for the actor's life, so a new socket of the account starts from where its last one stopped.
+    emote_sent_at: BTreeMap<String, Vec<i64>>,
 }
 
 impl Spectate {
@@ -2616,6 +2626,7 @@ impl Spectate {
             next_id: 0,
             timer: None,
             closed: false,
+            emote_sent_at: BTreeMap::new(),
         }
     }
 }
@@ -2654,14 +2665,17 @@ impl WatchRefused {
 impl MatchActor {
     /// B50: `profile_id`'s watcher socket on the seat `home`'s account plays. A newer socket of the
     /// account replaces its older one; otherwise a match with SPECTATORS_PER_MATCH watchers is `Full`.
-    /// Its hellos are answered (R1103000), its other frames count against its malformed budget
-    /// (R2609000).
+    /// Its hellos are answered (R1103000), its emotes relayed under `name` (R2990000), its other
+    /// frames count against its malformed budget (R2609000).
     pub fn attach_watcher(
         &self,
         home: PlayerId,
         profile_id: &str,
+        name: &str,
         socket: Socket,
     ) -> Result<(), WatchRefused> {
+        // R2990001: the watcher's own hand, the same on every socket of the account.
+        let hand = deal_spectator_emote_hand(&self.shared.match_row.seed, profile_id);
         let (id, replaced, done) = {
             let mut core = self.lock();
             if core.stopped || core.voided || core.spectate.closed {
@@ -2685,11 +2699,13 @@ impl MatchActor {
             core.spectate.watchers.push(Watcher {
                 id,
                 profile_id: profile_id.to_string(),
+                name: name.to_string(),
                 home,
                 socket: socket.clone(),
                 sent: None,
                 card_picks_sent: BTreeSet::new(),
                 guard: SeatGuard::default(),
+                emote_hand: hand.clone(),
             });
             (id, replaced, done)
         };
@@ -2698,14 +2714,16 @@ impl MatchActor {
         let heard = actor.clone();
         socket.attach(SocketHandlers {
             // B50: nothing a watcher sends reaches the reducer. R1103000: a hello is answered;
-            // R2609000: anything else is counted against the watcher's malformed budget, unanswered.
+            // R2990000: an emote is relayed, and one naming no pool id answered `malformed`;
+            // R2609000: the latter and anything else count against the watcher's malformed budget.
             message: Box::new(move |text: String| {
                 let Some(shared) = heard.upgrade() else { return };
                 let actor = MatchActor { shared };
-                if parse_watch_hello(&text).is_ok() {
-                    actor.answer_watcher_hello(id);
-                } else {
-                    actor.note_watcher_junk(id);
+                match parse_watch_frame(&text) {
+                    WatchFrame::Hello => actor.answer_watcher_hello(id),
+                    WatchFrame::Emote(emote) => actor.relay_spectator_emote(id, emote),
+                    WatchFrame::Malformed(reason) => actor.note_watcher_junk(id, Some(&reason)),
+                    WatchFrame::Junk => actor.note_watcher_junk(id, None),
                 }
             }),
             close: Box::new(move || {
@@ -2732,6 +2750,8 @@ impl MatchActor {
         let mut core = self.lock();
         // R1834002: the seats' loadouts before any view, as a seat's socket has them.
         socket.send(encode(&loadouts_message(&self.shared.loadouts)));
+        // R2990001: the watcher's own emote hand, to it alone.
+        socket.send(encode(&spectator_hand_message(&hand)));
         // The newcomer's first view, when one is already SPECTATE_DELAY_MS old.
         self.spectate_flush(&mut core, now_ms());
         if !replacing {
@@ -2820,11 +2840,12 @@ impl MatchActor {
         watcher.socket.send(record.frame.as_str());
     }
 
-    /// R2609000: a frame of a watcher's that is not a hello is still unanswered (R1103000) but counts
-    /// against the watcher's own `MALFORMED_FRAMES_PER_WINDOW`, as a seat's does (R835002). Past it the
-    /// socket is closed with 1008, and its close handler takes the watcher off and tells the players
-    /// the new count (B51).
-    fn note_watcher_junk(&self, id: u64) {
+    /// R2609000: a frame of a watcher's that is neither a hello nor an emote is still unanswered
+    /// (R1103000) but counts against the watcher's own `MALFORMED_FRAMES_PER_WINDOW`, as a seat's does
+    /// (R835002); R2990000: an emote frame naming no pool id counts too, and is answered `malformed`
+    /// with `answer` first, as a seat's is. Past the budget the socket is closed with 1008, and its
+    /// close handler takes the watcher off and tells the players the new count (B51).
+    fn note_watcher_junk(&self, id: u64, answer: Option<&str>) {
         let socket = {
             let mut core = self.lock();
             if core.stopped || core.spectate.closed {
@@ -2833,7 +2854,13 @@ impl MatchActor {
             let Some(watcher) = core.spectate.watchers.iter_mut().find(|watcher| watcher.id == id) else {
                 return;
             };
-            if !watcher.guard.note_malformed(now_ms()) {
+            let over = watcher.guard.note_malformed(now_ms());
+            if let Some(reason) = answer {
+                watcher
+                    .socket
+                    .send(encode(&error_message(SocketErrorCode::Malformed, reason, None)));
+            }
+            if !over {
                 return;
             }
             watcher.socket.clone()
@@ -2841,6 +2868,64 @@ impl MatchActor {
         tracing::warn!(event = "match.watcher.flooded", matchId = %self.match_id_str());
         // The close calls `detach_watcher` back, which takes the actor's lock.
         socket.close(Some(CLOSE_POLICY_VIOLATED), Some("too many malformed frames"));
+    }
+
+    /// R2990000: watcher `id`'s emote. R2990001: one its hand does not hold is dropped silently, and
+    /// R2990002: so is one past its limit (`SPECTATOR_EMOTE_LIMITS`), neither spending any of it nor
+    /// counting as a refusal. One let through goes out live, as `spectatorEmote` under the watcher's
+    /// name, to each player's own socket and every other watcher, never back to its sender, and
+    /// (R2990003) to none that blocks it or is blocked by it (`send_spectator_emote`, off the lock). It
+    /// is never queued, so no reducer, log, hash, record, telemetry, persona (R645) or card that hears
+    /// emotes (R1127) ever sees it.
+    fn relay_spectator_emote(&self, id: u64, emote: EmoteId) {
+        let (sender_id, frame, recipients) = {
+            let mut core = self.lock();
+            if core.stopped || core.spectate.closed {
+                return;
+            }
+            let Some(watcher) = core.spectate.watchers.iter().find(|watcher| watcher.id == id) else {
+                return;
+            };
+            if !hand_holds(&watcher.emote_hand, emote) {
+                tracing::warn!(event = "match.spectator_emote.outside_hand", matchId = %self.match_id_str(), emote = %emote);
+                return;
+            }
+            let sender_id = watcher.profile_id.clone();
+            let frame = encode(&spectator_emote_message(&watcher.name, emote));
+            let now = now_ms();
+            let history = core
+                .spectate
+                .emote_sent_at
+                .get(&sender_id)
+                .map_or(&[][..], Vec::as_slice);
+            let gate = emote_gate_within(history, now, SPECTATOR_EMOTE_LIMITS);
+            if !gate.ok {
+                return;
+            }
+            let mut sent_at = gate.sent_at;
+            sent_at.push(now);
+            core.spectate.emote_sent_at.insert(sender_id.clone(), sent_at);
+            let (first, second) = &self.shared.seats;
+            let players = [first, second].into_iter().filter_map(|seat| {
+                core.sockets[seat.player]
+                    .as_ref()
+                    .map(|socket| (seat.profile_id.clone(), socket.clone()))
+            });
+            let watchers = core
+                .spectate
+                .watchers
+                .iter()
+                .filter(|other| other.id != id)
+                .map(|other| (other.profile_id.clone(), other.socket.clone()));
+            let recipients: Vec<(String, Socket)> = players.chain(watchers).collect();
+            (sender_id, frame, recipients)
+        };
+        tokio::spawn(send_spectator_emote(
+            self.shared.deps.clone(),
+            sender_id,
+            recipients,
+            frame,
+        ));
     }
 
     /// A watcher's socket went: it leaves, and the players hear the new count (B51).

@@ -372,6 +372,9 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 		}
 		pull := ctx.GH.GetPull(py.MustInt(thread.Get("number")))
 		record := recordOf(state, py.Str(pull.Get("number")))
+		if queue.ArchivedOf(record) != nil {
+			continue // handed to a person, its work archived (#3009): no conflict revision, no requeue
+		}
 		if eqStr(pull.Get("mergeable_state"), "dirty") && !record.Truthy("stop_requested") {
 			number := py.MustInt(pull.Get("number"))
 			if queue.WaitingTurnOf(record) != nil {
