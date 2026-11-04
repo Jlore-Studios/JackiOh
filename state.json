@@ -31512,12 +31512,12 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:4b20611b-1793766748",
+        "run_id": "",
         "sha": "ed35dcedf54153a081e84ed58e126bc6d7c44a4d",
         "started_at": "2026-11-04T04:33:04Z",
         "status": "queued",
         "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
-        "tries": 1
+        "tries": 2
       }
     ],
     "count": 36
