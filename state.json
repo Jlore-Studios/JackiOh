@@ -16611,9 +16611,15 @@
     "what": "build #2942 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-04T00:12:09Z",
+    "at": "2026-11-04T00:24:20Z",
     "notes": [
-      "CI on #2964: #2964: queued a CI fix"
+      "CI on #2964: #2964: queued a CI fix",
+      "delivered plan #2942 on claude-1 (run 41742035597): planned",
+      "delivered build #2962 on muse (run 41721798388): built",
+      "started review #2969 on muse (run 41746977370)",
+      "started build #2942 on claude-1 (run 41747054930)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17317,7 +17323,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T00:12:09Z",
+  "loop_tick": "2026-11-04T00:24:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
