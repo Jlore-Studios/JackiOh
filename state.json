@@ -15147,6 +15147,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "3060": {
+      "suggestion": true
+    },
     "3064": {
       "asks": [
         "c:6642962040"
