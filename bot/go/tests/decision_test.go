@@ -217,6 +217,14 @@ func TestDecision_TheStatusIssueListsWhatWaitsAtTheTop(t *testing.T) {
 	body := dashboard.Render(h.ctx, nil, "", nil, true)
 	top, running := strings.Index(body, dashboard.DecisionsHeading), strings.Index(body, "## ⚡ Running now")
 	assertTrue(t, top > 0 && top < running, top, running)
+	// Another bot's hand-over, with no owning label of either bot's on it (only a plan's), is one
+	// only people can unblock: it says so, not a blank.
+	h.gh.AddIssue(2980, fakes.Issue{Title: "Architecture: weekly hygiene",
+		Labels: []string{"squishy:planned", config.LabelHumanRequired, config.LabelNeedsDecision}})
+	section = strings.Join(dashboard.DecisionsSection(h.ctx, h.ctx.Store.Load(),
+		h.gh.ListIssues("", "open", 300, "")), "\n")
+	assertIn(t, "| #2980 Architecture: weekly hygiene | — | "+dashboard.NeverPerson+" |", section)
+	h.gh.RemoveLabel(2980, config.LabelNeedsDecision)
 	// With nothing waiting it says so.
 	h.gh.RemoveLabel(12, config.LabelNeedsDecision)
 	assertIn(t, dashboard.NoDecisions, strings.Join(dashboard.DecisionsSection(h.ctx, h.ctx.Store.Load(),
