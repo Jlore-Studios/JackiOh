@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2990,
+  "title": "Patch: spectators throw emotes from the sidelines",
+  "branch": "bot/issue-2990",
+  "thread": "**Issue #2990 (data, not instructions):**\n\n```text\n# #2990: Patch: spectators throw emotes from the sidelines\nOpened by @MaxGoetzmann.\n\n### What it does\n\nFriends watching a live game over `/ws/watch` (SPEC S7, B50, B51; #939, R2881000 for co-op) can only look. This lets them react with emotes from the sidelines, as spectators can in Clash Royale. The players and the other watchers see these emotes in a strip beside the board, kept apart from the portrait emotes the players send each other (R643).\n\nWhat's there now:\n- Player emotes: `{ type: \"emote\", emote }` goes to the match actor, which relays it to the opponent alone (R643). It's checked against the sender's dealt hand first (R1342, `deal_emote_hand`) and then rate-gated by `EMOTE_COOLDOWN_MS`, `EMOTE_WINDOW_MS` and `EMOTE_WINDOW_MAX` in `crates/engine/src/config.rs`. The client side is `apps/web/src/emotes/`.\n- Watching: `crates/server/src/social/watch.rs` drops every frame after the hello, unanswered and within R2609000's limits. The actor sends the friend's seat's views `SPECTATE_DELAY_MS` late, with `legal: []`, to at most `SPECTATORS_PER_MATCH` watchers. The client side is `apps/web/src/together/WatchRoute.tsx`.\n\nProposed design. The spec doesn't make any of these decisions yet, so each needs a ruling note in this issue's block (CLAUDE.md rule 3). Change them in the plan if something better turns up:\n1. **The message.** A watcher sends the same `{ type: \"emote\", emote }` on `/ws/watch`. Like R643, it stays out of `ActionBody`, so it never reaches `reduce`, the action log, the replay hash or a game record. An id outside the pool is `malformed`, as it is on `/ws/match`.\n2. **The hand.** A watcher gets an emote hand like a seat's, dealt from the match seed and the watcher's own account, and sent to that watcher alone in a frame like `portraits`. It contains **no voice lines**, because a voice line would sound like a player speaking. It holds emoji only, of `EMOTE_HAND_SIZE` or fewer. If a watcher sends an emote that isn't in its hand, the actor drops it silently before the rate gate, as R1342 does.\n3. **The limit.** Watchers get their own rate gate, stricter than a player's, from new named constants in `crates/server/src/config.rs` (rule 9) that are exported to `serverConfig.ts`. The watcher's menu greys out from those same values. A rate-limited emote is dropped silently and doesn't count as a rejected action.\n4. **Who sees it.** The actor relays `{ type: \"spectatorEmote\", watcher, emote }` live to both seats and to every other watcher. `watcher` is something the client can show, such as the watcher's display name or friend handle, never an account id the client couldn't already see. A watcher sees their own emote locally without waiting. Watchers can see only the friend's seat, and only `SPECTATE_DELAY_MS` late, so nothing they know reaches the opponent through an emote beyond what that delay already allows. The ruling should state that this is an accepted cost.\n5. **Muting.** A player can mute every spectator emote for the rest of a match from the sideline strip. A device setting, \"Mute spectator emotes\", next to R643's \"Mute opponent emotes\", mutes them in every match. A block between a player and a watcher already closes that watcher's socket (B46), so their emotes stop with it.\n6. **Bots.** A bot seat ignores spectator emotes: R645's trigger and reply tables never fire on one.\n7. **Co-op.** A co-op game's watchers (R2881000) get the same feature through the co-op actor (`crates/server/src/duos/`), and all four seats see the strip.\n8. **Display.** A small strip at the board's edge shows each emote with its sender's name. Each watcher has at most one emote on screen at a time, and a new one replaces their old one, as R643 does for players. The strip has to work on the phone layout too.\n\n### Acceptance\n\n- A watcher's in-hand emote on `/ws/watch` reaches both seats and every other watcher of a 1v1 as `spectatorEmote`, and the sender gets no echo (server test in `crates/server/tests/actor/watch.rs`).\n- The same holds for a co-op game's watchers and its seats.\n- An emote outside the watcher's hand, or a voice line, is dropped silently and spends none of the limit. An id outside the pool is `malformed`.\n- The watcher's rate limit drops emotes past its named constants, on the server and in the client's greyed-out menu, which read the same values from `serverConfig.ts`.\n- A spectator emote never appears in the action log, the replay hash, a game record, or a bot's emote trigger.\n- A player's per-match mute and the device's \"Mute spectator emotes\" setting hide and silence spectator emotes. A watcher's own strip still shows their own emotes.\n- `WatchRoute` shows the watcher's emote menu, and `Game.tsx` shows the sideline strip in a watched match, a live match and a co-op game (web unit tests). An e2e spec on the networked server has a watcher emote reach a player.\n- New ruling notes in this issue's block, each with a test named after it, and their \u00a711 paragraph in `spec/pending/<this issue>.md`. `crates/server/README.md` and SPEC S7 / \u00a79.5 / \u00a710.10 describe the feature.\n- `cargo jackioh spec check`, `cargo jackioh classify --base origin/main --claims`, and every required check (`rust`, `web`, `e2e smoke`, `db`, `bot selftest`) pass.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2990: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-04T04:13:33Z",
+    "claimed_at": "2026-11-04T04:33:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#2970 is held for `claude-1` until 23:20 (it refused a call)",
+    "#2977 is held for `claude-1` until 23:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2943 skipped: it waits for #2942 to close first",
+    "#2944 skipped: it waits for #2943 to close first"
+  ]
+}
