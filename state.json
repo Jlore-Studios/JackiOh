@@ -16667,17 +16667,8 @@
       }
     },
     "2972": {
-      "action": "plan",
-      "asks": [
-        "c:6620455276"
-      ],
-      "build_next": {
-        "from_run": "41758581077",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-04T02:28:22Z",
-        "until": "2026-11-04T02:58:22Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T02:28:09Z",
         "difficulty": "medium",
@@ -16696,10 +16687,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ng the three dungeon test files. Text: Hearthstone asks befo\u2026\n- 2. Spec: create `spec/pending/2972.md` with the \u00a711 paragraph (`**[[R2972000]] \u2026 (issue #2972, 2026-11-04)**: \u2026`), and edit `spec/15-dungeon-run.md`: extend the \u00a715.8 sentence \"Abandoning at any time ends a run, lost.\" (\"The start screen asks first, and the map links back to the Play menu ([[R29720\u2026\n- 3. Testids: in `apps/web/src/dungeon/testids.ts` add `abandonAsk: \"dungeon-abandon-ask\"`, `abandonConfirm: \"dungeon-abandon-confirm\"`, `abandonCancel: \"dungeon-abandon-cancel\"`; in `apps/web/src/dungeon/fight/testids.ts` add `leaveDialog: \"dungeon-fight-leave\"`, `leaveStay: \"dungeon-fight-leave-sta\u2026\n- 4. Start screen: in `SavedRun` (`StartScreen.tsx:104-118`) copy `collection/TokenOffer.tsx:139-152,179-196`: `asking`/`asked` state, first press sets asking, question `div role=\"alertdialog\"` with `aria-labelledby`, `onKeyDown` Escape (stopPropagation) answering Cancel, Cancel `autoFocus`, question\u2026\n- 5. Fight dialog: create `apps/web/src/dungeon/fight/ConfirmLeaveFight.tsx` copying `practice/PracticeLeave.tsx:43-113` minus the save branch: props `{ onStay, onLeave }`, `useBackLayer(onStay)`, stay button focused on mount, window Escape listener, scrim click-outside \u2192 `onStay`, `role=\"alertdialog\u2026\n- 6. Fight guard: in `FightScreen.tsx` copy `routes/match.tsx:332-344`: `const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null)`, `const atStake = setup !== null && controller !== null && snapshot !== null && !over` (`over` exists at line 139), effect registering `guardLeaving((le\u2026\n- 7. Map Back link: in `RunScreen.tsx` add `import { paths } from \"../../net/navigate.ts\"` and `import { BackLink } from \"../../routes/nav.tsx\"`, render `<BackLink to={paths.play} />` as the first child of the `dungeon-run-screen` div, exactly as `dungeon/stats/DungeonStats.tsx` does. No CSS change: \u2026\n- 8. zh-CN: add `\"Abandon this run? It ends here and cannot be undone.\": \"\u653e\u5f03\u8fd9\u6b21\u63a2\u9669\u5417\uff1f\u63a2\u9669\u5c06\u5c31\u6b64\u7ed3\u675f\uff0c\u4e14\u65e0\u6cd5\u64a4\u9500\u3002\"`, `\"Leave this fight?\": \"\u79bb\u5f00\u8fd9\u573a\u6218\u6597\uff1f\"`, `\"It ends here and the fight starts over from its first turn.\": \"\u6218\u6597\u5c06\u5c31\u6b64\u7ed3\u675f\uff0c\u5e76\u4ece\u7b2c\u4e00\u56de\u5408\u91cd\u65b0\u5f00\u59cb\u3002\"`, `\"Leave fight\": \"\u79bb\u5f00\u6218\u6597\"`. Verify `t(\"Confirm\")`, `t(\"Cancel\")`, `t(\"Keep playing\u2026\n- 9. Tests: update `it(\"B19 a saved run offers continue or abandon\")` in `StartScreen.test.tsx` to the new flow (first click shows `abandonAsk`, `abandon` uncalled; Confirm calls once; Cancel and Escape \u2014 copy the Escape dispatch from `collection/TokenOffer.test.tsx` \u2014 call nothing and close the ques\u2026\n- 10. Run: the three dungeon test files, `src/i18n/i18n.test.ts` (fails on any `t()` literal missing a zh-CN entry), typecheck and eslint on the touched files, and `cargo jackioh spec check`.\n- ## Tests\n- - `apps/web/src/dungeon/start/StartScreen.test.tsx`: updated B19 test plus `it(\"R2972000 abandoning a run asks first and only Confirm abandons\")` \u2014 question shown, `abandon` uncalled; Confirm calls once; Cancel and Escape call nothing and restore the Abandon button.\n- - `apps/web/src/dungeon/fight/FightScreen.test.tsx`: `it(\"R2972000 leaving a fight in progress is held and says the fight starts over\")` \u2014 `navigate` held plus dialog shown; Stay keeps the fight; after the result `navigate` succeeds and nothing is held.\n- - `apps/web/src/dungeon/map/RunScreen.test.tsx`: `it(\"R2972000 the run map links back to the Play menu and keeps the run\")` \u2014 Back link targets `/play`; following it calls no store verb.\n- - Commands: `pnpm --dir apps/web test src/dungeon/start/StartScreen.test.tsx`, `pnpm --dir apps/web test src/dungeon/fight/FightScreen.test.tsx`, `pnpm --dir apps/web test src/dungeon/map/RunScreen.test.tsx`, `pnpm --dir apps/web test src/i18n/i18n.test.ts`, `pnpm --dir apps/web typecheck`, `pnpm -\u2026\n- ## Done when\n- - [ ] One Abandon press shows the question and calls nothing; Confirm calls `abandon` once; Cancel and Escape call nothing.\n- - [ ] In-app navigation mid-fight is held with the start-over question; Stay keeps the fight; nothing is held once the fight has its result.\n- - [ ] The run map shows a Back link to `/play`; following it keeps the run saved.\n- - [ ] The run screen keeps its classes and scroll structure (no fixed-height change).\n- - [ ] All commands above pass, including `cargo jackioh spec check`.\n- - [ ] No rule in **Never** broken (no skipped/disabled tests, no new lint suppressions, no secrets).\n- ## Risks\n- - The guard holding the run's own flow: the effect depends on `atStake` (`!over`) and its cleanup releases on unmount, so the report \u2192 Continue \u2192 `act` path never meets a guard. A dialog left open across unmount is cleared by the same cleanup, as `match.tsx` does.\n- - Back with the fight dialog open: `backLayers`' `popstate` listener runs before the guard's (`navigate.ts: onPop` checks `popBackLayer` first), so Back closes the dialog (Stay) instead of leaving \u2014 the same as Concede and the online-match dialog.\n- - `useBackLayer` pushes a history entry in browsers without `CloseWatcher`; inert in the dungeon tests' jsdom, but keep the `PracticeLeave` structure verbatim so behavior matches practice.\n- - zh-CN parameter tokens must match the English key exactly; the four new keys carry no `{\u2026}` params, and the reused button keys already pass `i18n.test.ts`'s token check.\n- - `spec check` fails if any `R2972000` cited in code comments lacks the note, or any `proven_in` file lacks a running `R2972000` test \u2014 all three test files get one.\n- ## Open questions\n- None. Every requirement is settled by the patterns named above (TokenOffer's inline ask, PracticeLeave minus Save, match's `guardLeaving`, DungeonStats' `BackLink`).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2972 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2972/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-04T02:06:46Z",
       "owner_why": "it plans it",
@@ -16712,12 +16702,14 @@
       "provider": "muse",
       "queued_at": "2026-11-04T01:57:58Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41758581077",
+      "run_id": "pending:04fb6559-1793759440",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-04T02:06:46Z",
+      "started_at": "2026-11-04T02:31:07Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6620455276"
+      ]
     },
     "2973": {
       "action": "build",
@@ -17024,9 +17016,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T02:30:24Z",
+    "at": "2026-11-04T02:31:07Z",
     "url": "",
-    "what": "build #2973 on muse"
+    "what": "build #2972 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T02:02:21Z",
