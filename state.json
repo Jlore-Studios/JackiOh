@@ -16474,9 +16474,11 @@
         "by": "`claude` (strong)",
         "sha": "6e14acfeff5c3e34c548b4d6f0b2010ce244e0fa"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-04T00:28:14Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-04T03:56:28Z",
         "family": "claude",
@@ -16486,6 +16488,7 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-04T05:20:00Z",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 2942,
       "kind": "review",
       "live": "reviewing",
