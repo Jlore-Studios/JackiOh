@@ -16866,11 +16866,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-04T03:18:27Z",
+        "at": "2026-11-04T03:49:50Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's search expansion (`crates/ai/src/search.rs`, `candidates.rs`) and adds a ruling amending R1759000."
+        "tier": "strong",
+        "why": "Rule 2 (the AI): it changes which moves the beam search expands, in crates/ai/src/search.rs and candidates.rs"
       },
       "failures": 0,
       "forced": false,
