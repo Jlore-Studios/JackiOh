@@ -216,6 +216,7 @@
         "why": "in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is."
       },
       "asks": [],
+      "last_findings": [],
       "live": "building",
       "owner": "",
       "planned_at": "2026-11-04T11:11:33Z",
