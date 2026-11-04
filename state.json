@@ -14737,9 +14737,11 @@
         "by": "`claude` (medium)",
         "sha": "c6b1a8e3369360a9c5d499fbf8f4f3174436345b"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T10:46:15Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-04T13:30:26Z",
         "family": "claude",
@@ -14749,6 +14751,7 @@
         "reason": "`claude-1` stops: 5-hour usage is 45%, at or over its 40% cap outside its hours; it resets at 2026-11-04T15:20:00Z",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; sed -n 1,60p apps/web/src/palette.test.ts; sed -n 150,195p apps/web/src/palette.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; sed -n 1,60p apps/web/src/typescale.test.ts; sed -n 140,195p apps/web/src/typescale.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; git diff f74d14ebf0c66279570cc566c67b25851777ac9e...HEAD -- apps/web/src/patches/patches.css | grep -nE '^\\\\+.*(#[0-9a-fA-F]{3,8}|rgba?\\\\(|font\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; sed -i 's|\\\"patches/patches.css\\\": 37,|\\\"patches/patches.css\\\": 44,|' apps/web/src/palette.test.ts; sed -i 's|\\\"patches/patches.css\\\": 30,|\\\"pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; printf '## State\\\\nPass 2: CI web (unit 3/4) failed on palette.test.ts and typescale.test.ts counts for patches.css; raised UNMIGRATED to 44 an\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend\"} --> ## What changed The Patch notes page and the release art now follow each patch's recorded `tier` from `patches.json` (R13690\u2026"
       },
+      "interruptions": 0,
       "issue": 3012,
       "kind": "review",
       "live": "reviewing",
