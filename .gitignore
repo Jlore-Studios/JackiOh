@@ -16,6 +16,10 @@ ai-gate-shards/
 # every browser (apps/web/src/net/env-production.test.ts holds both to that).
 !apps/web/.env.production
 !apps/web/.env.staging
+# The dev dashboard's two builds (#3074): its Supabase project's URL and publishable key, the same as the
+# web's (apps/admin/src/env.test.ts holds them to that).
+!apps/admin/.env.production
+!apps/admin/.env.staging
 
 # Local scratch.
 *.tmp.*
