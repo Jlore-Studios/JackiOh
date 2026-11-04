@@ -31195,7 +31195,8 @@
       "2026-11-04T02:12:24Z,claude-5,ping,before,41758997456,23,2026-11-04T04:10:00Z,60,2026-11-09T09:00:00Z,allowed_warning,40,60,"
     ],
     "runs": [
-      "2026-11-04T02:21:20Z,41759084627,claude-3,opus,plan,2979,medium,interrupted,refusal,8.2,59,47589,3228609,1.3998,97,100,,,9.9,,fresh,,1"
+      "2026-11-04T02:21:20Z,41759084627,claude-3,opus,plan,2979,medium,interrupted,refusal,8.2,59,47589,3228609,1.3998,97,100,,,9.9,,fresh,,1",
+      "2026-11-04T02:12:24Z,41758997456,claude-5,opus,plan,2978,medium,interrupted,weekly cap,0,0,0,0,,23,23,60,60,9.5,,none,,0"
     ]
   },
   "version": 1
