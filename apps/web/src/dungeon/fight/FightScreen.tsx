@@ -178,6 +178,29 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     [controller],
   );
 
+  const snapshot = state.snapshot;
+
+  // R2972000: while the fight is live, every in-app move off it asks first (R1754000), as every
+  // way off a live online match does (R2479000). These hooks sit before the screens below: a
+  // live-to-failed transition re-renders this same screen, and hooks after a return would change
+  // the hook count. The stopped screen holds nothing: Try again deals the same fight again from
+  // its seed, so there is no live fight to keep. The cleanup releases the guard when the store
+  // moves screens on its own (Continue sends the report and unmounts this screen), and `!over`
+  // releases it once the fight has its result.
+  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
+  const atStake =
+    setup !== null && controller !== null && snapshot !== null && !over && state.phase !== "failed";
+  useEffect(() => {
+    if (!atStake) return;
+    const release = guardLeaving((leave) => {
+      setLeaving({ leave });
+    });
+    return () => {
+      release();
+      setLeaving(null);
+    };
+  }, [atStake]);
+
   if (setup === null) {
     return (
       <Shell variant="lobby">
@@ -205,25 +228,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       </Shell>
     );
   }
-
-  const snapshot = state.snapshot;
-
-  // R2972000: while the fight has no result, every in-app move off it asks first (R1754000),
-  // as every way off a live online match does (R2479000). The cleanup releases the guard when
-  // the store moves screens on its own (Continue sends the report and unmounts this screen),
-  // and `!over` releases it once the fight has its result.
-  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
-  const atStake = setup !== null && controller !== null && snapshot !== null && !over;
-  useEffect(() => {
-    if (!atStake) return;
-    const release = guardLeaving((leave) => {
-      setLeaving({ leave });
-    });
-    return () => {
-      release();
-      setLeaving(null);
-    };
-  }, [atStake]);
 
   if (controller === null || snapshot === null) {
     return (

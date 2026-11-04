@@ -353,6 +353,20 @@ describe("R2972000 leaving a fight in progress asks first", () => {
     at(paths.dungeon);
   });
 
+  it("R2972000 confirming the question makes the held move off the fight", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    expect(navigate(paths.play)).toBe(false);
+    fireEvent.click(await screen.findByTestId(fightTestid.leaveConfirm));
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    expect(host.starts()).toHaveLength(1);
+    at("/");
+  });
+
   it("R2972000 once the fight has its result nothing is held", async () => {
     at(paths.dungeon);
     const act = vi.fn<(action: RunAction) => string | null>(() => null);
