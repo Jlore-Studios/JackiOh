@@ -19411,6 +19411,10 @@
         {
           "at": "2026-11-04T04:06:25Z",
           "minutes": 45.1
+        },
+        {
+          "at": "2026-11-04T04:07:09Z",
+          "minutes": 1.5
         }
       ],
       "tokens_spent": [
@@ -20141,6 +20145,13 @@
           "cost": 6.0397,
           "input": 195,
           "output": 79962
+        },
+        {
+          "at": "2026-11-04T04:07:09Z",
+          "cache": 2201438,
+          "cost": 1.5609,
+          "input": 42,
+          "output": 6441
         }
       ],
       "usage": {
@@ -20148,7 +20159,7 @@
           "resets_at": "2026-11-04T05:20:00Z",
           "utilization": 1.0
         },
-        "observed_at": "2026-11-04T04:06:25Z",
+        "observed_at": "2026-11-04T04:07:09Z",
         "rejected_resets_at": "2026-11-04T05:20:00Z",
         "status": "rejected"
       }
@@ -31785,7 +31796,13 @@
       "2026-11-04T03:54:55Z,claude-1,stream,call,41765288773,95,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
       "2026-11-04T03:55:40Z,claude-1,stream,call,41765288773,97,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
       "2026-11-04T03:56:25Z,claude-1,stream,call,41765288773,99,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
-      "2026-11-04T03:57:32Z,claude-1,refusal,call,41765288773,100,2026-11-04T05:20:00Z,,,rejected,100,,2026-11-04T05:20:00Z"
+      "2026-11-04T03:57:32Z,claude-1,refusal,call,41765288773,100,2026-11-04T05:20:00Z,,,rejected,100,,2026-11-04T05:20:00Z",
+      "2026-11-04T03:10:42Z,claude-1,ping,before,41765105563,66,2026-11-04T05:20:00Z,,,allowed,100,,",
+      "2026-11-04T03:55:12Z,claude-1,stream,call,41765105563,96,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
+      "2026-11-04T03:55:27Z,claude-1,stream,call,41765105563,97,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
+      "2026-11-04T03:55:42Z,claude-1,stream,call,41765105563,98,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
+      "2026-11-04T03:56:12Z,claude-1,stream,call,41765105563,99,2026-11-04T05:20:00Z,,,allowed_warning,100,,",
+      "2026-11-04T03:56:27Z,claude-1,stream,call,41765105563,100,2026-11-04T05:20:00Z,,,rejected,100,,"
     ],
     "runs": [
       "2026-11-04T03:45:34Z,41767793335,muse,muse-spark-1.3-contributor,review,2984,medium,approved,,12,0,0,0,,12,13,84,84,1.5,,none,,1",
