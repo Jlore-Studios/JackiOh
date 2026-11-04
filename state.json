@@ -17170,6 +17170,8 @@
       }
     },
     "2988": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T02:31:47Z",
@@ -17183,8 +17185,11 @@
         "trail": "- Bash: {\"command\": \"head -c 3000 .bot-notes.md; echo ----; wc -l .bot-journal.md; git status --short | head\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2974/apps/web/src/together/WatchRoute.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\" .bot-notes.md; tail -30 .bot-journal.md | cut -c1-300; cat apps/web/src/duos/context.ts; grep -n \\\"RoundClock\\\" -r apps/web/src | head; grep -n \\\"defaultMonotonic\\\" -r a\u2026\n- Bash: {\"command\": \"sed -n 40,100p apps/web/src/duos/DuosRoute.tsx; sed -n 40,70p apps/web/src/game/net.ts; grep -n \\\"watchTestid\\\" -A25 apps/web/src/together/testids.ts | head -50; grep -n \\\"WATCH_\\\" e2e/s\u2026\n- Bash: {\"command\": \"cd apps/web/src; grep -n \\\"turnClock\\\" game/*.tsx duos/*.tsx | head -30; sed -n 770,800p game/Board.tsx; sed -n 335,350p i18n/i18n.ts; grep -n \\\"e2e\\\\|WATCH\\\" ../../../e2e/support/testid\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974 && cat >> apps/web/src/together/config.ts <<'EOF'\\n\\n/** How often a watched game's clock repaints (presentation only, not a SPEC value). */\\nex\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/together/testids.ts'\\ns=open(p).read()\\nold=' reconnect: \\\"watch-reconnect\\\",\\\\n} as const;'\\nassert s.count(old)==1\\ns=s.replace(old,' reconnect: \\\"wa\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/together/WatchRoute.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep('''// frames are the\u2026\n- Bash: {\"command\": \"sed -n 1,140p apps/web/src/together/WatchRoute.test.tsx; grep -n \\\"describe(\\\\|^ it(\\\\|^ it(\\\" apps/web/src/together/WatchRoute.test.tsx\"}\n- Bash: {\"command\": \"sed -n 285,305p apps/web/src/together/WatchRoute.test.tsx; sed -n 440,485p apps/web/src/together/WatchRoute.test.tsx; sed -n 655,740p apps/web/src/together/WatchRoute.test.tsx; ls apps/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974/apps/web/src; grep -n \\\"fakeAudioEngine\\\\|FakeAudioEngine\\\\|playSfx\\\" audio/test/fakeAudio.ts | head; grep -rn \\\"fakeAudioEngine\\\" --include=*.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; grep -n \\\"export function baseView\\\\|export function duosView\\\" -A22 apps/web/src/test/fixtures.ts | head -80; grep -n \\\"clockMs\\\" apps/web/src\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; python3 - <<'EOF'\\np='apps/web/src/together/WatchRoute.test.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p).read()\\nold=\\\"legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; { cat <<'EOF'\\n## State\\n\\nPlan below (from the issue) is followed unchanged. Done: config.ts `WATCH_CLOCK_TICK_MS`, testids (web + e2e mirror)\u2026\n- Bash: {\"command\": \"sleep 90; cat /tmp/claude-1001/-home-runner-work--temp-work-item-2974/c7d3a45d-2b18-40d3-98a1-40c3f3f27c71/tasks/b8x68u1ec.output | tail -40\"}\n- tool error: <tool_use_error>Blocked: sleep 90 followed by: cat /tmp/claude-1001/-home-runner-work--temp-work-item-2974/c7d3a45d-2b18-40d3-98a1-40c3f3f27c71/tasks/b8x68u1ec.output tail -40. To wait for a conditio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; (pnpm --dir apps/web typecheck 2>&1 | tail -20) \", \"timeout\": 400000}\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-2974/c7d3a45d-2b18-40d3-98a1-40c3f3f27c71/tasks/b8x68u1ec.output; until grep -qE \\\"Tests +[0-9]|Test Files|ELIFECYCLE|Error\\\" \\\"$f\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; (pnpm --dir apps/web typecheck 2>&1 | tail -15); echo \\\"--- eslint\\\"; (pnpm exec eslint apps/web/src/together e2e/support 2>&1 | tail -20); ech\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974/apps/web; timeout 560 pnpm exec vitest run src/game/Clock.test.tsx src/i18n/i18n.test.ts src/writing.test.ts src/wording.test.ts src/together 2>\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; git rev-parse --verify origin/main 2>&1 | head -1; timeout 560 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-2974; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Goal')\\nhead='''## State\\n\\nDONE, the plan followed unchanged: config.ts \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a watched game's turn clock counts down, and a finished one stops saying Disconnected\"} --> ## What changed A watched game's turn clock now counts down on its own between frames, and a finished game's status line says \"Game over\" instead of \"Disconnecte\u2026"
       },
       "issue": 2974,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-04T03:54:06Z",
         "from_run": "41761344407",
         "gates": [
           {
@@ -17276,7 +17281,11 @@
         "source": "build",
         "until": "2026-11-04T04:21:16Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-04T03:51:16Z",
+      "run_id": "pending:b7a06acb-1793764407",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17295,6 +17304,9 @@
         "provider": "claude-8",
         "run": "41761344407"
       },
+      "started_at": "2026-11-04T03:54:06Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17394,9 +17406,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T03:33:40Z",
+    "at": "2026-11-04T03:54:06Z",
     "url": "",
-    "what": "build #2983 on claude-6"
+    "what": "review #2988 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-04T03:28:11Z",
