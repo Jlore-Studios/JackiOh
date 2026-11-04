@@ -1777,6 +1777,129 @@ mod r377_public_stats_match_type {
     }
 }
 
+mod r3022000_tiers {
+    use super::*;
+
+    /// Forty Core cards, the field the test reads.
+    const FIELD: [&str; 40] = [
+        "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
+        "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
+        "core-017", "core-018", "core-019", "core-020", "core-021", "core-022", "core-023", "core-024",
+        "core-025", "core-026", "core-027", "core-028", "core-029", "core-030", "core-031", "core-032",
+        "core-033", "core-034", "core-035", "core-036", "core-037", "core-038", "core-039", "core-040",
+    ];
+
+    /// `count` live Best of 1 games: p1 holds the forty, sees `hand` of them and plays none, and wins
+    /// when `won`.
+    fn games(tag: &str, hand: &[&'static str], won: bool, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                make_game_record(
+                    &format!("tiers-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(FIELD.to_vec()),
+                        p1_hand: Some(hand.to_vec()),
+                        p1_played: Some(Vec::new()),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn card<'a>(data: &'a Value, id: &str) -> &'a Value {
+        find(&data["cards"], "id", &json!(id)).expect("the card is listed")
+    }
+
+    #[tokio::test]
+    async fn r3022000_the_cards_read_against_the_whole_field_and_each_answers_its_tier() {
+        let app = test_app().await;
+        let (top, bottom) = FIELD.split_at(20);
+        let mut records = Vec::new();
+        // The first twenty seen in 60 games (48 won), the last twenty in 60 others (24 won), all forty
+        // in 60 more (all won): the first twenty's drawn delta is 108/120 − 24/60 = +50 points, the last
+        // twenty's 84/120 − 48/60 = −10. A deck that sees more of its cards wins more here, so the
+        // average card's delta is +20, not 0.
+        records.extend(games("top-won", top, true, 48));
+        records.extend(games("top-lost", top, false, 12));
+        records.extend(games("bottom-won", bottom, true, 24));
+        records.extend(games("bottom-lost", bottom, false, 36));
+        records.extend(games("all", &FIELD, true, 60));
+        insert_records(&app, records).await;
+
+        let (status, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(status, 200);
+        // Equal games, so equal weights: the centre is the mean delta, and τ² the deltas' sample variance
+        // less their sampling variance.
+        let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+        let noise: f64 = 0.25 * (1.0 / 120.0 + 1.0 / 60.0);
+        let spread_squared = 40.0 * 0.3 * 0.3 / 39.0 - noise;
+        let tiers = &page["tiers"];
+        assert_eq!(tiers["cards"], json!(40));
+        assert!(close(tiers["center"].as_f64().unwrap(), 0.2), "{tiers}");
+        assert!(
+            close(tiers["spread"].as_f64().unwrap(), spread_squared.sqrt()),
+            "{tiers}"
+        );
+        assert_eq!(
+            (tiers["bandLow"].as_f64(), tiers["bandHigh"].as_f64()),
+            (Some(0.45), Some(0.55))
+        );
+
+        // Each half keeps its 30 points from the centre as far as its games back it: the top is S, the
+        // bottom F, though a raw −10 points would have read C under R2777000's centre of 0.
+        let weight = spread_squared / (spread_squared + noise);
+        let first = card(&page, "core-001");
+        let last = card(&page, "core-040");
+        assert!(
+            close(first["adjustedWinRate"].as_f64().unwrap(), 0.5 + weight * 0.3),
+            "{first}"
+        );
+        assert!(
+            close(last["adjustedWinRate"].as_f64().unwrap(), 0.5 - weight * 0.3),
+            "{last}"
+        );
+        assert_eq!(
+            (first["tier"].clone(), last["tier"].clone()),
+            (json!("S"), json!("F"))
+        );
+        // p2's card was seen in every game: no baseline, so no rate and no tier.
+        assert_eq!(card(&page, "core-100")["tier"], Value::Null);
+
+        // A filtered page reads its cards against the same field.
+        let (_, _, one) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&card=core-040").await;
+        assert_eq!(ids_of(&one), vec!["core-040".to_string()]);
+        assert_eq!(one["tiers"], page["tiers"]);
+        assert_eq!(card(&one, "core-040")["adjustedWinRate"], last["adjustedWinRate"]);
+        assert_eq!(card(&one, "core-040")["tier"], json!("F"));
+    }
+
+    #[tokio::test]
+    async fn r3022000_below_the_floor_a_card_has_no_tier_and_a_small_field_keeps_r2777000_s_prior() {
+        let app = test_app().await;
+        let mut records = Vec::new();
+        // 15 games, below R654's floor of 20: core-001 seen in 8 (all won) and never drawn in 7 (none won).
+        records.extend(games("seen", &["core-001"], true, 8));
+        records.extend(games("unseen", &["core-002"], false, 7));
+        insert_records(&app, records).await;
+
+        let (_, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        // No card has the floor's games on both sides: R2777000's centre and prior.
+        assert_eq!(page["tiers"]["cards"], json!(0));
+        assert_eq!(page["tiers"]["center"].as_f64(), Some(0.0));
+        assert_eq!(page["tiers"]["spread"].as_f64(), Some(0.05));
+        let a = card(&page, "core-001");
+        assert_eq!(a["hasEnoughGames"], json!(false));
+        assert!(a["adjustedWinRate"].as_f64().is_some());
+        assert_eq!(a["tier"], Value::Null);
+    }
+}
+
 mod r2777000_adjusted_and_split_card_stats {
     use super::*;
 
