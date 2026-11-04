@@ -86,8 +86,9 @@ flowchart TD
   end
   D -- "approved: its own lane owns the merge" --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
-  CI -- "red (after one re-run), or out of the merge queue" --> E
+  CI -- "a required job red: the rest of the run stopped<br/>within 3 minutes of the status loop's look,<br/>or out of the merge queue" --> E
   E -- "a CI fix, the merge owner's first" --> XF
+  XF -- "a CI fix whose failing check passes locally:<br/>no commit, CI runs again (once a head)" --> CI
   M -- "every 5th medium or hard merge" --> SP["after-merge spot-check: Opus on another subscription;<br/>blocks nothing, findings open a follow-up issue"]
 ```
 
@@ -110,8 +111,9 @@ its parts, and the bot says so on it (#2748).
 
 To change one of its pull requests, comment **`@jgoetzmann-bot <what to change>`** or
 **`/harness revise <notes>`** on it, submit a review that requests changes, or add **`bot:revise`**.
-It also revises its own pull requests without being asked: when CI fails twice on the same
-commit (it re-runs the failed jobs once first, in case the failure was flaky), and when `main`
+It also revises its own pull requests without being asked: when CI fails on its head (a required
+job red stops the rest of that CI run within three minutes, and the fix runs the failing check
+itself first, with no flake re-run: [Stopping red CI early](#stopping-red-ci-early)), and when `main`
 moves on and leaves the branch with conflicts (once the reviews approved a change, resolving its
 conflicts takes no review run again: [the review rule](#difficulty-and-tiers); `bot:resolving` while
 it runs). Before a change goes ready at all, its own review run test-merges it with `main` and the
@@ -357,7 +359,9 @@ Every way of asking either gets an answer at once, or is found again later:
     `approve` or `reject` vote on a suggestion, which the event job also wakes for at once (#929);
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
-  - a failed, cancelled or broken CI run (`bot selftest` among its jobs) on a bot pull request's head;
+  - a failed, cancelled or broken CI run (`bot selftest` among its jobs) on a bot pull request's head
+    (not one it stopped itself), and a CI run still going there with a required job red, which it
+    stops ([Stopping red CI early](#stopping-red-ci-early), #2948);
   - a label the bot uses (`config.Labels`) that the repository does not have. It checks each
     time that list changes, so a new label exists within ten minutes of its merge, without
     `harness setup` (the method labels shipped in #328 without existing); and one it retired
@@ -1050,8 +1054,9 @@ and reviews it: plan, run 1 and run 2, one lane and one model, each a fresh sess
      so it goes ready and auto-merges with no further review run.
 
    What it found is the run's result's `settle`, and the approval's comment says it.
-4. **Tracking CI** stays the harness's, by events: a model job cannot push, so nothing waits on CI
-   in a lane. The merge owner is the own review run's subscription, so a red check or the merge
+4. **Tracking CI** stays the harness's, by events and the status loop's look at the runs going
+   ([Stopping red CI early](#stopping-red-ci-early)): a model job cannot push, so nothing waits on
+   CI in a lane. The merge owner is the own review run's subscription, so a red check or the merge
    queue's failure on the head it approved comes back to that same lane first, ahead of its new
    work (`events.fixCI`), and that CI fix resumes the Claude session the own review run kept (its
    last fix pass's, or else its build's, both kept on the pull request,
@@ -1070,6 +1075,57 @@ and reviews it: plan, run 1 and run 2, one lane and one model, each a fresh sess
    change (its own run's reviewer carries the clearance, [the review
    rule](#rating-strikes-and-the-step-up)), a person's pull request (its reviewer must be in its
    run) or a build on a subscription with no reviewer of its own.
+
+### Stopping red CI early
+
+CI's `workflow_run: completed` comes once the whole run is over, often twenty minutes after a
+required job went red in its third, so the harness does not wait for it on a bot pull request
+(#2948, section 4; [`go/internal/events/early.go`](go/internal/events/early.go)):
+
+- **Spotting it.** At each tick of the status loop (its runners refresh every two minutes, which
+  reads the runs going anyway, `dashboard.StopRed`; and its sweep every five, `events.StopRedRuns`)
+  the harness looks at the CI runs still going on the pull requests of its own branches (`bot/…`:
+  never a person's branch, `main` or the merge queue's `gh-readonly-queue/…`, and only on the head
+  the pull request has now). A job counts when it is one of the required checks, a piece named after
+  one (`rust (test engine)`), or a job one needs that carries no check's name (`config.CINeeded`:
+  `what the change touches`, `e2e component`); a test holds that to `ci.yml`'s `needs`. When one
+  has failed, the harness notes when it first saw it (the state file's `ci_red_seen`) and lets the
+  run's other early jobs report for up to three minutes from when the job failed
+  (`events.CIEarlyMinutes`), or less when nothing else of the run is still going.
+- **Stopping it.** It records the run's attempt, head and time in the state file's `ci_stopped`
+  first (the last 100, for seven days), turns auto-merge off when it was on (a run cancelled before
+  its summary jobs leaves those required checks skipped, which counts as passing), and cancels the
+  rest of the run. Then it queues the CI fix (`bot:revise`, `bot:fixing-ci` while it runs) with the
+  run's failed jobs and their log tails, the cancelled ones left out, on the lane that owns the pull
+  request (`events.fixCI`, `plan.MergeOwner`), held and handed off as any owner's work. When a run
+  holds the pull request already (a live label: its own review run, say) or a revision is queued,
+  it only cancels: that run reads the head's CI as it ends, and the CI reader takes the cancelled
+  run's failed pieces for red ([the own review run](#the-own-review-run)'s final check).
+- **Its own cancellations** are never a red run: `events.OnCI` ignores the completed event of a
+  run (that attempt of it) in `ci_stopped`, whatever its conclusion, so it re-runs nothing and
+  queues no second fix. A blocked or stopped pull request, and one handed to people, is left alone,
+  as `OnCI` leaves it.
+- **No flake re-run first**, for any red CI on a bot pull request's head (stopped early or
+  completed red): the fix run judges. Its builder runs the failing check locally first, the failed
+  jobs' steps as `ci.yml` runs them (the harness knows its own checks, `gates`, not each CI job's
+  command, so the model runs it, told so in its feedback, `plan.CILocalNote`). When that passes and
+  nothing needs changing, it says so (`"ci_local": "passed"`), the run makes no commit (a merge of
+  `main` it made is dropped) and runs no checks or review, and its delivery runs the whole CI run
+  again (every job, the cancelled and skipped ones too), with no commit; that costs none of the
+  item's CI fixes (`max_failures`), and auto-merge goes back on for a head the reviews had cleared
+  (`deliver.localPass`). A head runs again so at most `ci_reruns` times (1): red again after that,
+  a local pass is no answer (the fix is told so), and a CI fix counts toward `max_failures` as
+  ever, so the model fixes it or the pull request goes `bot:blocked`. Otherwise the fix changes the
+  code, and the harness runs the full local checks before it pushes, as any CI fix.
+- **No jobs are skipped on the fix commit**: no path filter or `[skip ci]`; every required check
+  runs in full on every head, and the merge queue runs them again.
+- **The merge queue's own CI** is left as it was: ci.yml's `queue-cancel-*` jobs stop a failed
+  build there, and `events.OnQueueCI` queues its fix at once.
+
+Squishy runs the same code under its own labels (`squishy:revise`, `squishy:fixing-ci`) and branches
+(`squishy/…`), with no status loop of its own: its sweep, which the night bot's loop runs for it
+each tick (`--companions`, every five minutes), is where its red CI is stopped, and
+`squishy-commands.yml` delivers its CI events to `OnCI`.
 
 ### Ownership and the hold
 
@@ -1270,10 +1326,10 @@ independent measure of this self-review.
   and the newer `main` do together. The last approver owns the merge (#2748): this CI fix, like one
   for a red check on the pull request, goes first to the subscription whose approval shipped the
   head (`merge_owner`), ahead of its new work and with the hold's rules; nothing holds a lane while
-  CI and the queue run, since the harness watches them by events (`events.OnQueueCI`, the CI-twice
-  rule, the sweep). The fix merges `main` first and is reviewed like any revision (its own review
-  run's approval at the item's tier ships it, and it resumes the session that run kept), under the
-  same cap as any CI fix (three,
+  CI and the queue run, since the harness watches them by events and the status loop
+  (`events.OnQueueCI`, `events.OnCI`, the early stop, the sweep). The fix merges `main` first and
+  is reviewed like any revision (its own review run's approval at the item's tier ships it, and it
+  resumes the session that run kept), under the same cap as any CI fix (three,
   `max_failures`, then `bot:blocked`), with no test skipped or disabled to get green, and its
   auto-merge queues it again at the back. One still in
   the queue was built again without a failing pull request ahead of it, and a held pull request or
@@ -1790,8 +1846,8 @@ days.
      collaborator with write access. It needs the `public_repo` and `workflow` scopes, and
      nothing else. It needs `workflow` because merging `main` into a branch can carry a
      workflow change along. A fine-grained token will not do: it cannot reach a repository its
-     account only collaborates on. Starting runs and re-running CI jobs use the job's own
-     Actions token, so the bot's token needs no `repo` scope. Without this token the bot falls
+     account only collaborates on. Starting runs, and stopping and re-running CI runs, use the
+     job's own Actions token, so the bot's token needs no `repo` scope. Without this token the bot falls
      back to the Actions token: its comments come from `github-actions[bot]`, and its pull
      requests do not start CI, so auto-merge never fires.
 3. **Labels, the state branch and the repository settings**, once, with an admin token (a

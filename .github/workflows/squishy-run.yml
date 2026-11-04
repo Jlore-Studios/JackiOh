@@ -296,7 +296,7 @@ jobs:
       contents: write        # the push (with the Actions token only when no bot token is set)
       issues: write
       pull-requests: write
-      actions: write         # start the next run; re-run failed CI jobs
+      actions: write         # start the next run; run CI again after a CI fix's local pass
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4

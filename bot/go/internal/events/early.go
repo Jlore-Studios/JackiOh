@@ -206,7 +206,11 @@ func stopRun(ctx *hctx.Context, number int, pull *pyjson.Object, names map[strin
 	now := ctx.Now()
 	sha := py.Str(run.Get("head_sha"))
 	key := runKey(run)
+	already := false // another process stopped it meanwhile (the state file is compare-and-set)
 	ctx.Store.Update(func(s *pyjson.Object) any {
+		if already = Stopped(s, run); already {
+			return nil
+		}
 		kept := []any{}
 		for _, entry := range pyjson.Objs(s.Get(CIStoppedKey)) {
 			if at := clock.ParseISOValue(entry.Get("at")); !at.IsZero() && now.Sub(at) < keepFor() {
@@ -224,6 +228,9 @@ func stopRun(ctx *hctx.Context, number int, pull *pyjson.Object, names map[strin
 		s.Set(CIRedSeenKey, seen)
 		return nil
 	}, fmt.Sprintf("ci stopped #%d", number))
+	if already {
+		return ""
+	}
 	if pull.Truthy("auto_merge") {
 		queue.HoldMerge(ctx, pull)
 	}
