@@ -17998,11 +17998,10 @@
     "what": "spot-check #2998 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-04T07:32:16Z",
+    "at": "2026-11-04T07:41:44Z",
     "notes": [
       "CI on #2964: #2964: queued a CI fix",
-      "#3000 is held for `claude-7` until 02:50 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered review #2991 on muse (run 41773616578): approved"
+      "#3000 is held for `claude-7` until 02:50 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18706,7 +18705,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-04T07:32:16Z",
+  "loop_tick": "2026-11-04T07:41:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
