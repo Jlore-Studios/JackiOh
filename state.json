@@ -16994,15 +16994,8 @@
       ]
     },
     "2982": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41761499192",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-04T02:43:27Z",
-        "until": "2026-11-04T03:13:27Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17014,10 +17007,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- };\n- ```\n- Change both buttons' `disabled` to `busy !== null || claimingAll || spendOut` and `aria-busy` to `busy !== null || claimingAll || spendOut` (local flag covers the gap between sequential spends when global `spendOut` flickers). Render above the `<ul>`, only when `news.filter((e) => !e.claimed).lengt\u2026\n- ```tsx\n- <button type=\"button\" className=\"spend-wait\" data-testid={newsTestid.claimAll} disabled={...} aria-busy={...} onClick={() => { void claimAll(); }}>{t(\"Claim all\")}</button>\n- ```\n- 5. **`NewsPanel.tsx` + `QuestsPanel.tsx` \u2014 card markup.** Keep every existing class/testid/text (tests pass unchanged) and add card classes. News `li` becomes `className=\"account-quests__quest entry-card\"` + `data-claimed={entry.claimed ? \"true\" : undefined}`; inside: `<div className=\"entry-card__h\u2026\n- 6. **`entry-card.css` (new, imported by both panels).** One frame: `.account-quests__quest.entry-card { display:flex; flex-direction:column; gap:8px; min-width:0; max-width:100%; padding:10px 12px; border:1px solid var(--tavern-brass); border-radius:10px; background:color-mix(in srgb, var(--tavern-\u2026\n- 7. **`landing.css`.** In the `.landing-quests-panel li, .landing-news-panel li` rule drop `gap:2px` (shared owns gap). Narrow `.landing-quests-panel p, .landing-news-panel p { margin-top:8px }` to direct children (`> p`) so card internals are untouched (keeps error/next-line spacing). Delete the no\u2026\n- 8. **`account.css`.** In `.tavern.app-shell .account-quests__quest` drop `gap:4px` (keep display/flex-direction). Leave list and progress rules.\n- 9. **`zh-CN.json`.** Add `\"Claim all\": \"\u5168\u90e8\u9886\u53d6\"` and `\"Alert\": \"\u516c\u544a\"` (alphabetical spots; `\"Patch\": \"\u7248\u672c\"` already exists).\n- 10. **Screenshots.** Per the `ui-walkthrough` skill (`sh scripts/browse.sh`): landing news panel open and `/collection` quests, desktop and 360px widths; app is dark-only, so parchment-panel vs tavern-shell surfaces are the two contrast contexts. Attach to the PR.\n- ## Tests\n- In `apps/web/src/routes/landing-news.test.tsx` (reuse `entry()`, `serve()`, `claimed()`, gated-POST answer pattern; mock `../economy/wallet.ts` with the `Shop.test.tsx` importOriginal-spread pattern, `mockClear` at each new test's start):\n- - `it(\"R2982000 Claim all claims each unclaimed entry newest first, the count dropping per answer\")` \u2014 serve 2 unclaimed + 1 claimed; open bookmark; Claim-all hidden until 2 unclaimed shown; click; assert POSTs to both claim paths with UUID Idempotency-Keys, count 2\u21921\u21920 per answer, button gone at 0.\n- - `it(\"R2982000 a refusal partway stops the run and shows news-error\")` \u2014 3 entries, middle claim 409; assert third entry never POSTed, `news-error` shows the reason, first entry shows Claimed, count reflects only answered claims.\n- - `it(\"R2982000 while the run is out every Claim and Claim all are disabled with aria-busy\")` \u2014 gate answers; assert all Claim buttons + Claim-all disabled with `aria-busy=\"true\"` mid-run, enabled after.\n- - `it(\"R2982000 announceWallet fires once for a run that paid Jlore\")` \u2014 2 jlore entries; `expect(announceWallet).toHaveBeenCalledTimes(1)`.\n- - `it(\"R2982000 a single claim still announces once, and a non-Jlore claim not at all\")` \u2014 guards the announce move in step 3.\n- Commands: `pnpm --dir apps/web test src/routes/landing-news.test.tsx`, then `pnpm --dir apps/web test src/routes/QuestsPanel.test.tsx` and `pnpm --dir apps/web test src/i18n/i18n.test.ts` (zh entries), `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`, `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Claim-all shows only at \u22652 unclaimed; claims newest-first through `onClaim`; count drops per answer.\n- - [ ] First refusal stops the run, shows `news-error`, earlier claims stand, later entries unsent.\n- - [ ] Mid-run, Claim-all + all Claims disabled with `aria-busy`.\n- - [ ] `announceWallet` once per paying run; single-claim behavior preserved.\n- - [ ] R2982000 note + pending paragraph exist; `cargo jackioh spec check` passes.\n- - [ ] Cards render (header/body/footer, tag, pill, claimed fade) on landing + `/collection` at desktop + 360px; screenshots in PR.\n- - [ ] Existing news/quest tests and e2e testids pass unchanged; typecheck, eslint, i18n tests green.\n- ## Risks\n- - **Double announce:** `useNews.claim` + `NewsList` could both announce; step 3 removes exactly one call site, covered by the single-claim test.\n- - **Stale `news` closure mid-run:** rewards/ids come from the press-time snapshot, never re-read; each answer still replaces the list via `useNews`.\n- - **`spendOut` flicker between sequential spends:** local `claimingAll` (not global spend state) drives disabled/aria-busy for the whole run.\n- - **CSS specificity:** scoped `landing.css`/`account.css` rules beat the shared class, so step 7\u20138 edit the conflicting rules rather than out-specifying them; no styles copied between the two files.\n- - **i18n enforcement:** `i18n.test.ts` fails on any `t()` literal missing from `zh-CN.json`; step 9 covers both new strings (`Patch` already translated).\n- ## Open questions\n- - The zh-CN wording for `\"Alert\"` (draft: \u516c\u544a) and `\"Claim all\"` (draft: \u5168\u90e8\u9886\u53d6) may want a native speaker's correction in review; both are plain catalog entries, swappable without code change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2982 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2982/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-04T02:33:12Z",
       "owner_why": "it plans it",
@@ -17030,9 +17022,9 @@
       "provider": "muse",
       "queued_at": "2026-11-04T02:23:42Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41761499192",
+      "run_id": "pending:7012132b-1793760255",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-04T02:33:12Z",
+      "started_at": "2026-11-04T02:44:47Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17049,9 +17041,9 @@
   },
   "labels_synced": "91e09bf7bb3b2c44",
   "last_run": {
-    "at": "2026-11-04T02:34:37Z",
+    "at": "2026-11-04T02:44:47Z",
     "url": "",
-    "what": "build #2979 on muse"
+    "what": "build #2982 on muse"
   },
   "last_sweep": {
     "at": "2026-11-04T02:39:46Z",
