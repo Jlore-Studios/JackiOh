@@ -14795,19 +14795,12 @@
         "reason": "`claude-1` stops: 5-hour usage is 45%, at or over its 40% cap outside its hours; it resets at 2026-11-04T15:20:00Z",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; sed -n 1,60p apps/web/src/palette.test.ts; sed -n 150,195p apps/web/src/palette.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; sed -n 1,60p apps/web/src/typescale.test.ts; sed -n 140,195p apps/web/src/typescale.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; git diff f74d14ebf0c66279570cc566c67b25851777ac9e...HEAD -- apps/web/src/patches/patches.css | grep -nE '^\\\\+.*(#[0-9a-fA-F]{3,8}|rgba?\\\\(|font\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; sed -i 's|\\\"patches/patches.css\\\": 37,|\\\"patches/patches.css\\\": 44,|' apps/web/src/palette.test.ts; sed -i 's|\\\"patches/patches.css\\\": 30,|\\\"pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3036; printf '## State\\\\nPass 2: CI web (unit 3/4) failed on palette.test.ts and typescale.test.ts counts for patches.css; raised UNMIGRATED to 44 an\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: patch notes by tier, with a still poster for a major, release art for a patch, micros under their patch, and a side legend\"} --> ## What changed The Patch notes page and the release art now follow each patch's recorded `tier` from `patches.json` (R13690\u2026"
       },
-      "hold": {
-        "ends": "2026-11-04T15:35:35Z",
-        "lifted": "2026-11-04T15:21:07Z",
-        "owner": "claude-1",
-        "since": "2026-11-04T13:35:35Z",
-        "until": "2026-11-04T15:20:00Z",
-        "why": "5-hour usage is 45%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "issue": 3012,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-04T12:26:13Z",
+        "claimed": true,
+        "claimed_at": "2026-11-04T15:23:07Z",
         "from_run": "41816389090",
         "gates": [
           {
@@ -14903,7 +14896,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-04T12:25:15Z",
-      "run_id": "41829266625",
+      "run_id": "pending:c61687b4-1793805755",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -14923,7 +14916,7 @@
         "provider": "claude-1",
         "run": "41829266625"
       },
-      "started_at": "2026-11-04T12:26:13Z",
+      "started_at": "2026-11-04T15:23:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15215,9 +15208,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-04T14:57:05Z",
+    "at": "2026-11-04T15:23:07Z",
     "url": "",
-    "what": "build #3049 on claude-4"
+    "what": "review #3036 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-04T15:12:36Z",
