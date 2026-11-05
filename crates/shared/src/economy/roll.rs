@@ -1,26 +1,29 @@
 //! The card pack roll (SPEC §14.3, §14.4; #1301, #1339): pure, from a pack's pool, the account's
 //! holdings and a seed to what each slot grants and the next pity counters. No store, no clock,
-//! no I/O: `economy::packs` reads the holdings, draws the seed and writes the grants, and a
-//! replay is [`roll_opening`] over the same holdings and seed (R1301003, R1339002). Every list it
-//! walks is a `Vec` or an `IndexMap` in catalog or registry order, so the same inputs draw the same.
+//! no I/O: `economy::open::open_card_pack` decides an opening over the holdings the store read and the
+//! host's seed, and a replay is [`roll_opening`] over the same holdings and seed (R1301003, R1339002).
+//! Every list it walks is a `Vec` or an `IndexMap` in catalog or registry order, so the same inputs draw the same.
 
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::rng::Rng;
 use jackioh_engine::wire::PrintedRarity;
 use jackioh_engine::{CardDefs, SetName, set_ships};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::config::{
     GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY,
     PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity, global_cosmetics, offered, pack_cosmetics, row_owns};
+use crate::cosmetics::{
+    CardCosmetic, Cosmetic, CosmeticRarity, global_cosmetics, offered, pack_cosmetics, row_owns,
+};
+use crate::economy::ledger::InventoryItem;
 use crate::economy::math::{PityCounters, apply_pity};
-use crate::economy::store::CardCosmetic;
 use crate::economy::tiers::{card_tier, cosmetic_tier, tier_draw};
 
-/// Which card pack (§14.3): a set's, or the global one, whose pool is every set that ships.
+/// Which card pack (§14.3): a set's, or the global one, whose pool is every set that ships. It crosses a
+/// boundary as the name a request gives it ([`PackKind::name`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PackKind {
     Set(SetName),
@@ -46,9 +49,38 @@ impl PackKind {
             PackKind::Global => GLOBAL_PACK_NAME,
         }
     }
+
+    /// The inventory row a pack is counted in (§14.3): a set's under its set's name, the global
+    /// pack's under no key.
+    pub fn inventory(self) -> (InventoryItem, String) {
+        match self {
+            PackKind::Set(set) => (InventoryItem::SetPack, set.as_str().to_string()),
+            PackKind::Global => (InventoryItem::GlobalPack, String::new()),
+        }
+    }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+impl Serialize for PackKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.name())
+    }
+}
+
+impl<'de> Deserialize<'de> for PackKind {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let name = String::deserialize(deserializer)?;
+        PackKind::parse(&name)
+            .ok_or_else(|| serde::de::Error::custom(format!("no card pack is named \"{name}\"")))
+    }
+}
+
+/// One card of a pack's pool (§14.3): its catalog id and the rarity it prints.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 pub struct PoolCard {
     pub id: String,
     pub rarity: PrintedRarity,
@@ -84,6 +116,11 @@ pub struct Holdings {
 
 /// What one slot grants (§14.3's dupe chain, R1301002).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum SlotGrant {
     /// A new card: a copy of it.
@@ -102,6 +139,11 @@ pub enum SlotGrant {
 /// One slot of an opened pack: the rarity it rolled, pity's force included, which the pity counters
 /// read (§14.4), the card it drew and what that granted.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Slot {
     pub rarity: PrintedRarity,
@@ -121,6 +163,11 @@ pub struct Opening {
 /// holdings before it and `cosmetics`, with `seed`, replays it however the live catalog or registry
 /// has moved since.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct OpeningLog {
     pub pack: String,
