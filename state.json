@@ -31966,7 +31966,9 @@
           "provider": "claude-3"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-05T05:13:01Z",
         "every": 5,
+        "findings": 0,
         "head": "2a91f708ea0d901defa2d7daf41accf488f3f6c3",
         "issue": 3093,
         "last_why": "stopped: #3126 was closed",
@@ -31974,18 +31976,19 @@
         "n": 65,
         "pr": 3126,
         "queued_at": "2026-11-05T04:08:36Z",
+        "reason": "stopped: #3126 was closed",
         "reviewer": {
           "family": "claude",
           "model": "opus",
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:8a0b8660-1793854784",
         "sha": "b60666c6b030d31157d55d04993657c2b5b38622",
         "started_at": "2026-11-05T05:00:12Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten",
-        "tries": 2
+        "tries": 3,
+        "verdict": "failed"
       }
     ],
     "count": 66
