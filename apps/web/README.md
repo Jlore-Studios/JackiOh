@@ -74,6 +74,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
 
+The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
+Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
+worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
+a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
+in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
+the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
+`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
+draws its own buttons.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`

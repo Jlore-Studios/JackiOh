@@ -48,6 +48,7 @@ import { SiteFooter } from "./SiteFooter.tsx";
 
 import "../auth/tavern.css";
 import "./landing.css";
+import "./top-bar.css";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
@@ -289,7 +290,7 @@ function Corner({ account }: { account: Account }): ReactElement | null {
   if (account.kind === "ready" || holdsSession) {
     return (
       <a
-        className="landing-corner-link"
+        className="landing-corner-link top-bar-button top-bar-button--text"
         href={paths.account}
         data-testid={landingTestid.account}
         onClick={followInApp(paths.account)}
@@ -300,7 +301,7 @@ function Corner({ account }: { account: Account }): ReactElement | null {
   }
   return (
     <a
-      className="landing-corner-link"
+      className="landing-corner-link top-bar-button top-bar-button--text"
       href={paths.login}
       data-testid={landingTestid.signIn}
       onClick={followInApp(paths.login)}

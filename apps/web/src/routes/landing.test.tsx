@@ -183,6 +183,8 @@ describe("B37 the corner slot", () => {
     const signIn = await screen.findByTestId(landingTestid.signIn, undefined, SLOW);
     expect(screen.queryByTestId(landingTestid.account)).toBeNull();
     expect(landing()).toHaveAttribute("data-account", "anonymous");
+    // #3189: the corner link wears the top bar's pill, the one BackLink's Back wears (routes/top-bar.css).
+    expect(signIn).toHaveClass("top-bar-button", "top-bar-button--text");
     await expectLeadsTo(signIn, paths.login);
   });
 
@@ -193,6 +195,7 @@ describe("B37 the corner slot", () => {
     const account = await screen.findByTestId(landingTestid.account, undefined, SLOW);
     expect(screen.queryByTestId(landingTestid.signIn)).toBeNull();
     expect(landing()).toHaveAttribute("data-account", "signed-in");
+    expect(account).toHaveClass("top-bar-button", "top-bar-button--text");
     await expectLeadsTo(account, paths.account);
   });
 
