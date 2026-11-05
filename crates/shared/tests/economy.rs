@@ -9,7 +9,7 @@ use jackioh_shared::config::{CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, PACK_SLOTS,
 use jackioh_shared::cosmetics::{OwnedCosmetics, registry};
 use jackioh_shared::economy::boundary::{EconomyAnswer, EconomyCall, apply};
 use jackioh_shared::economy::cosmetic_pack::{CosmeticHoldings, roll_cosmetic_pack};
-use jackioh_shared::economy::ledger::{AccountCounters, Cause, Counter, InventoryItem, LedgerGrant};
+use jackioh_shared::economy::ledger::{Cause, Counter, InventoryItem, LedgerGrant};
 use jackioh_shared::economy::math::PityCounters;
 use jackioh_shared::economy::open::{
     CosmeticPackInputs, EconomyRefusal, PackInputs, PackRecords, RefusalReason, open_card_pack,
