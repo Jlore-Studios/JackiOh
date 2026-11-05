@@ -52,9 +52,9 @@ describe("B7: faceModel copies the def and picks the face", () => {
       set: "Core",
       radiant: false,
     });
-    expect(f.stats).toEqual({ attack: 7, health: 1, maxHealth: 1, attackTone: "base", healthTone: "base" });
-    expect(f.keywords).toEqual([{ kind: "First Strike" }]);
-    expect(f.text).toEqual({ full: "First Strike", marks: [] });
+    expect(f.stats).toEqual({ attack: 6, health: 1, maxHealth: 1, attackTone: "base", healthTone: "base" });
+    expect(f.keywords).toEqual([{ kind: "Rush" }, { kind: "First Strike" }]);
+    expect(f.text).toEqual({ full: "Rush, First Strike", marks: [] });
   });
 
   it("B7 a radiant face takes stats and keywords from def.radiant, and its keyword list replaces the base one", () => {
@@ -82,9 +82,9 @@ describe("B7: faceModel copies the def and picks the face", () => {
 
   it("R277 a radiant face that adds a keyword marks just the keyword (core-020)", () => {
     const f = face("core-020", true);
-    expect(f.text.full).toBe("First Strike, Divine Shield");
+    expect(f.text.full).toBe("Rush, First Strike, Divine Shield");
     expect(markedText(f.text.full, f.text.marks)).toEqual(["Divine Shield"]);
-    expect(f.stats?.attack).toBe(14);
+    expect(f.stats?.attack).toBe(12);
     expect(f.stats?.maxHealth).toBe(2);
   });
 
@@ -393,7 +393,7 @@ describe("B8: faceModel cost", () => {
 /* B9 */
 
 describe("B9: faceModel stat tones", () => {
-  // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 12/20 on its radiant one.
+  // core-013 Jlockeed Shredder-10 prints 6/8 on its base face and 12/16 on its radiant one.
   const ID = "core-013";
 
   it("B9 attack above the printed face is buffed, below is reduced, equal is base", () => {
@@ -405,8 +405,8 @@ describe("B9: faceModel stat tones", () => {
 
   it("B9 at full health, max health above the printed health is buffed, below is reduced, equal is base", () => {
     expect(face(ID, false, { live: live(6, 12, 12) }).stats?.healthTone).toBe("buffed");
-    expect(face(ID, false, { live: live(6, 9, 9) }).stats?.healthTone).toBe("reduced");
-    expect(face(ID, false, { live: live(6, 10, 10) }).stats?.healthTone).toBe("base");
+    expect(face(ID, false, { live: live(6, 7, 7) }).stats?.healthTone).toBe("reduced");
+    expect(face(ID, false, { live: live(6, 8, 8) }).stats?.healthTone).toBe("base");
   });
 
   it("B9 health below max health is damaged, whatever max health is", () => {
@@ -427,9 +427,9 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    expect(face(ID, true, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
-    expect(face(ID, false, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    expect(face(ID, true, { live: live(6, 10, 10) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
+    expect(face(ID, true, { live: live(12, 16, 16) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
+    expect(face(ID, false, { live: live(12, 16, 16) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
+    expect(face(ID, true, { live: live(6, 8, 8) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 
   it("B9 with no def (an unknown card) both tones are base", () => {
@@ -452,9 +452,9 @@ describe("B9: faceModel stat tones", () => {
     const f = face("core-022", true);
     // R277: a printed radiant face also says which stats it raised over the base face's.
     expect(f.stats).toEqual({
-      attack: 8,
-      health: 12,
-      maxHealth: 12,
+      attack: 4,
+      health: 8,
+      maxHealth: 8,
       attackTone: "base",
       healthTone: "base",
       grew: { attack: true, health: true },
@@ -557,18 +557,18 @@ describe("a face in play is the card as the view says it stands; the collection'
   });
 
   it("a unit in play prints the keywords it has gained since it was printed, and only those", () => {
-    // Pointmaster (First Strike) after a Plastic Surgery's Poisonous, in Defense Position (Taunt, Armor 1).
+    // Pointmaster (Rush, First Strike) after a Plastic Surgery's Poisonous, in Defense Position (Taunt, Armor 1).
     const f = face("core-020", false, {
       live: {
         attack: 10,
         health: 5,
         maxHealth: 5,
-        keywords: [{ kind: "First Strike" }, { kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }],
+        keywords: [{ kind: "Rush" }, { kind: "First Strike" }, { kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }],
       },
       inPlay: {},
     });
     expect(f.gained).toEqual([{ kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }]);
-    expect(f.text.full).toBe("First Strike");
+    expect(f.text.full).toBe("Rush, First Strike");
     expect(f.printed).toBeNull();
   });
 

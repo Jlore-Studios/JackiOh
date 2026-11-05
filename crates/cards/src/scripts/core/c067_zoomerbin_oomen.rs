@@ -80,12 +80,13 @@ mod tests {
     /// #60, #71, #96, Classic #63, Meditative #64 and #68, Stinkyscape (#1884) #5, #131, #135, #138
     /// and #144, and Training Grounds (#2204) #13, #14 and #24. Classic #10 Exile and Classic+ #22
     /// Blood Moon (#2179) cost (2).
-    const TRAP_POOL: [&str; 16] = [
+    const TRAP_POOL: [&str; 17] = [
         "core-018",
         "core-041",
         "core-060",
         "core-071",
         "core-096",
+        "classic-014",
         "classic-063",
         "meditative-064",
         "meditative-068",
@@ -147,7 +148,7 @@ mod tests {
 
         #[test]
         fn build_row_67_r380_the_base_pool_is_every_sets_cost_1_traps_and_the_radiant_pool_every_trap() {
-            // #85 costs 2, so only the radiant query reaches it.
+            // #85 costs 3 (and Classic #14 Shadowstep 1 since issue #3136), so only the radiant query reaches #85.
             assert_eq!(query_ids(json!({ "type": TRAP_TYPES, "cost": 1 })), TRAP_POOL);
             let every_trap = query_ids(json!({ "type": TRAP_TYPES }));
             for id in TRAP_POOL.iter().chain(["core-085"].iter()) {

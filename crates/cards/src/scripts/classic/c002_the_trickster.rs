@@ -56,7 +56,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRICKSTER: &str = "classic-002";
-    const EXPERIMENT: &str = "core-085"; // (2) Trap
+    const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
     const SHEEPISH: &str = "core-041"; // (1) Trap
     const TESLA: &str = "classic-005"; // (2) Field Trap
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
@@ -101,11 +101,11 @@ mod tests {
 
             #[test]
             fn cry_your_next_trap_costs_2_less() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, TWO_TRAP, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.expect_mana(P1, 3);
             }
 
@@ -130,12 +130,12 @@ mod tests {
             #[test]
             fn the_first_such_play_consumes_it_even_when_that_card_already_costs_0_under_cloaked_toe_cracker() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [TRICKSTER, EXPERIMENT, MANA_WELL, STOCKPILE], "field": ["classic-006"] },
+                    "p1": { "hand": [TRICKSTER, TWO_TRAP, MANA_WELL, STOCKPILE], "field": ["classic-006"] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 assert_eq!(modifier_labels(&s, P1, "you"), Vec::<String>::new());
                 assert_eq!(cost_of(&s, MANA_WELL), 3);
             }
@@ -152,7 +152,7 @@ mod tests {
             #[test]
             fn spells_and_units_neither_use_nor_consume_it() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [TRICKSTER, STOCKPILE, VANILLA, EXPERIMENT], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [TRICKSTER, STOCKPILE, VANILLA, TWO_TRAP], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
@@ -160,7 +160,7 @@ mod tests {
                 assert_eq!(cost_of(&s, VANILLA), 1);
                 s.play(STOCKPILE, json!({}));
                 s.play(VANILLA, json!({}));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 assert_eq!(modifier_labels(&s, P1, "you"), vec!["Your next Trap or Field Spell costs (2) less"]);
             }
 
@@ -182,14 +182,14 @@ mod tests {
 
             #[test]
             fn it_is_yours_the_opponent_s_traps_are_untouched() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, STOCKPILE] }, "p2": { "hand": [EXPERIMENT, STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, STOCKPILE] }, "p2": { "hand": [TWO_TRAP, STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
 
             #[test]
             fn r177_the_opponent_reads_your_hand_as_a_count_and_no_cost_of_it_only_the_public_badge() {
-                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, TWO_TRAP, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(TRICKSTER, json!({}));
                 let theirs = js(&s.view(P2));
                 assert_eq!(theirs["opponent"]["hand"], json!({ "count": 2 }));
@@ -198,13 +198,13 @@ mod tests {
                         assert_eq!(event["cost"], json!(-1));
                     }
                 }
-                assert!(!theirs.to_string().contains(EXPERIMENT));
+                assert!(!theirs.to_string().contains(TWO_TRAP));
                 assert_eq!(modifier_labels(&s, P2, "opponent"), vec!["Your next Trap or Field Spell costs (2) less"]);
                 let your_hand = js(&s.view(P1))["you"]["hand"].clone();
                 let Some(cards) = your_hand.as_array() else {
                     panic!("your own hand travels in full (§10.8)");
                 };
-                let experiment = cards.iter().find(|card| card["defId"] == EXPERIMENT);
+                let experiment = cards.iter().find(|card| card["defId"] == TWO_TRAP);
                 assert_eq!(experiment.map(|card| card["cost"].clone()), Some(json!(0)));
             }
 
@@ -251,17 +251,17 @@ mod tests {
             #[test]
             fn cry_your_next_trap_field_trap_or_field_spell_costs_0() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, TESLA, EXPERIMENT, STOCKPILE] },
+                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, TESLA, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, MANA_WELL), 0);
                 assert_eq!(cost_of(&s, TESLA), 0);
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 assert_eq!(modifier_labels(&s, P1, "you"), vec!["Your next Trap or Field Spell costs (0)"]);
                 s.play(MANA_WELL, json!({ "zone": 1 }));
                 s.expect_mana(P1, 3);
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
 
             #[test]

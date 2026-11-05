@@ -152,12 +152,12 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
           // The first-strike lethal hit prevents a return strike.
           selectAttacker(pointmaster);
           cy.get(ts(cardId(jilliax))).click();
-          cy.get(ts(cardId(jilliax))).find(DAMAGE_POP).should("have.text", "7");
+          cy.get(ts(cardId(jilliax))).find(DAMAGE_POP).should("have.text", "6");
           cy.settled();
 
           cy.get(ts(cardId(jilliax))).should("not.exist");
           cy.get(ts(graveyardCountId("opponent"))).should("have.text", "1");
-          cy.get(ts(cardId(pointmaster))).find(attackIs(7)).should("exist");
+          cy.get(ts(cardId(pointmaster))).find(attackIs(6)).should("exist");
           cy.get(ts(cardId(pointmaster))).find(healthIs(1)).should("exist");
           cy.get(ts(cardId(pointmaster))).find(DAMAGE_POP).should("not.exist");
           cy.get(ts(heroId("opponent"))).find(healthIs(33)).should("exist");

@@ -1070,7 +1070,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 > **Historical (#2578).** The 240 games below, the oracle of the TypeScript → Rust port, are retired, and `golden bless` with them. The
 > format lives on: `golden record --seeds A..B [--force ids] --out <path>` writes §13.3's lines from the build it runs on, and
 > `golden check --file <path>` replays them with §13.2's hashes on any build; `golden check` alone folds the hotseat fixture to
-> `HOTSEAT_HASH` (now `972f5b85`).
+> `HOTSEAT_HASH` (now `512357ea`).
 
 The oracle the rewrite is held to, recorded from the TypeScript engine **before** any Rust runs
 (part 23), and replayed by the Rust engine.

@@ -1,6 +1,7 @@
 //! #42 Selective Breeding (SPEC §8.2). Spell, cost 2, Common.
-//!   Base:    "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 30%
-//!             chance to become Radiant." (patch v0.3.10; it exiled 7 random cards before)
+//!   Base:    "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 50%
+//!             chance to become Radiant." (patch v0.3.10; it exiled 7 random cards before; 30% until
+//!             issue #3136, which only moves the declared `chance`)
 //!   Radiant: "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes
 //!             Radiant." (patch v0.3.10: 100%, and no Lucky, since nothing is left to chance)
 //!   Engine:  `exile_matching` over the library with `maxCost` 2 (R831014): each card's cost read per R65.
@@ -26,7 +27,7 @@ const RADIANT_CHANCE: f64 = 1.0;
 /// The declared `chance` is a percentage.
 const PERCENT: i32 = 100;
 
-/// The faces differ only in the chance (§6.1): the base face's the declared `chance` (or its printed
+/// The faces differ only in the chance (§6.1): the base face's the declared `chance`, 50% (or its printed
 /// 30% when `declared` is off), the Radiant face's certain. Any Lucky given (`given_lucky_on`, R1438)
 /// still rolls the base face's chance twice a card. The exile runs first and the chance rolls over
 /// what is left.
@@ -160,18 +161,28 @@ mod tests {
             .iter()
             .filter(|card| card.radiant)
             .count();
-        // A Nerf takes it to 20%: the same rolls keep no more cards (each roll below 0.2 is below 0.3).
+        // A Nerf takes it to 40%: the same rolls keep no more cards (each roll below 0.4 is below 0.5).
         assert!(converted_tuned(None, "selective-breeding-tuned") <= plain);
-        // Seven Buffs take it to its bound of 100%: every card left becomes Radiant.
-        assert_eq!(converted_tuned(Some(7), "selective-breeding-tuned"), 50);
+        // Five Buffs take it to its bound of 100%: every card left becomes Radiant.
+        assert_eq!(converted_tuned(Some(5), "selective-breeding-tuned"), 50);
     }
 
     #[test]
     fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_chance() {
         crate::under_kept(ID, script_v0_4_4b(), || {
-            // The kept script never reads the declared number: seven Buffs leave it at 30%.
-            assert!(converted_tuned(Some(7), "selective-breeding-tuned") < 50);
+            // The kept script never reads the declared number: five Buffs leave it at 30%.
+            assert!(converted_tuned(Some(5), "selective-breeding-tuned") < 50);
         });
+    }
+
+    /// Issue #3136: the base face's declared `chance` is 50, from 30; the Radiant face's stays 100.
+    #[test]
+    fn issue_3136_the_declared_chance_is_50_on_the_base_face_and_100_on_the_radiant() {
+        crate::register_all();
+        let params = crate::js(&crate::card_def(ID).params);
+        assert_eq!(params[0]["key"], "chance");
+        assert_eq!(params[0]["base"], 50);
+        assert_eq!(params[0]["radiant"], 100);
     }
 
     fn radiant_flags(s: &Scenario) -> Vec<bool> {
@@ -229,13 +240,13 @@ mod tests {
         }
 
         #[test]
-        fn rolls_each_remaining_library_card_independently_at_30_percent_so_neither_0_nor_all_50_come_up() {
+        fn rolls_each_remaining_library_card_independently_at_50_percent_so_neither_0_nor_all_50_come_up() {
             let s = cast(mixed(), "selective-breeding");
             let remaining = s.pile(PlayerId::P1, "library");
 
             assert_eq!(remaining.len(), 50);
             let converted = remaining.iter().filter(|card| card.radiant).count();
-            // One roll for the whole zone would give 0 or 50; 50 independent 30% rolls give neither.
+            // One roll for the whole zone would give 0 or 50; 50 independent 50% rolls give neither.
             assert!(converted > 0);
             assert!(converted < 50);
         }
@@ -265,7 +276,7 @@ mod tests {
         }
     }
 
-    /// R1438: given Lucky 1, the base face rolls each remaining card twice at 30% and keeps a success:
+    /// R1438: given Lucky 1, the base face rolls each remaining card twice at 50% and keeps a success:
     /// 50 more draws than the plain base face over the same exile, and more cards come up Radiant.
     #[test]
     fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {

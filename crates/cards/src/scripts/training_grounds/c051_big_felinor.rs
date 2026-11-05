@@ -7,7 +7,8 @@
 //! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
 //! file's notes, as they stood:
 //!
-//! #43 Big Felinor (SPEC §8.2). Unit 3/10 → 6/20, Felinor, cost 3, Rare.
+//! #43 Big Felinor (SPEC §8.2). Unit 3/10 → 6/20, Felinor, cost 3, Rare. (This Legacy card is 1/10 → 2/20
+//! since issue #3136, its attack set by that balance pass; it is its own copy, R2195003.)
 //!   Base:    "Cry: destroy all non-Felinor units on both sides"
 //!   Radiant: "Enemy non-Felinor units only" (§8 Conventions: a restated clause replaces the base one).
 //!   Engine:  "Simultaneous destroy, one state check."
@@ -104,12 +105,12 @@ mod tests {
         }
 
         #[test]
-        fn spares_itself_because_big_felinor_is_felinor_tagged_and_not_tags_already_excludes_it() {
+        fn issue_3136_spares_itself_because_big_felinor_is_felinor_tagged_and_it_stays_a_1_10() {
             let mut s = board(false, false);
             s.play("traininggrounds-051", json!({ "zone": 3 }));
 
             s.expect_in_zone("traininggrounds-051", "field");
-            s.expect_stats("traininggrounds-051", json!({ "attack": 3, "health": 10, "maxHealth": 10 }));
+            s.expect_stats("traininggrounds-051", json!({ "attack": 1, "health": 10, "maxHealth": 10 }));
             assert_eq!(def_at(&s, PlayerId::P1, 3).as_deref(), Some("traininggrounds-051"));
         }
 
@@ -151,14 +152,14 @@ mod tests {
         }
 
         #[test]
-        fn still_spares_felinors_on_both_sides_and_itself() {
+        fn issue_3136_still_spares_felinors_on_both_sides_and_itself_a_2_20() {
             let mut s = board(false, true);
             s.play("traininggrounds-051", json!({ "zone": 3 }));
 
             s.expect_in_zone("core-012", "field");
             s.expect_in_zone("core-t-felinor", "field");
             s.expect_in_zone("traininggrounds-051", "field");
-            s.expect_stats("traininggrounds-051", json!({ "attack": 6, "health": 20, "maxHealth": 20 }));
+            s.expect_stats("traininggrounds-051", json!({ "attack": 2, "health": 20, "maxHealth": 20 }));
         }
 
         #[test]

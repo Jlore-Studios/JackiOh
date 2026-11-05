@@ -41,7 +41,7 @@ mod tests {
     const GARY: &str = "core-004"; // 1/1
     const VANILLA: &str = "core-008"; // 4/4
     const PANTHER: &str = "core-032"; // 5/4 Rush
-    const POINTMASTER: &str = "core-020"; // 7/1 First Strike
+    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack hitter (Pointmaster is a 6/1 since issue #3136)
     const MENACE: &str = "core-019"; // 9/9 Taunt
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
@@ -111,7 +111,7 @@ mod tests {
         /// §4.4 step 2: it divides after Armor — Going Long's 2 off a 7 leaves 5, halved to 3
         #[test]
         fn s4_4_step_2_it_divides_after_armor_going_longs_2_off_a_7_leaves_5_halved_to_3() {
-            let mut s = attack_on_guarded(POINTMASTER, vec![json!(ARGUSLAND), json!(GOING_LONG)], 30);
+            let mut s = attack_on_guarded(SEVEN_SEVEN, vec![json!(ARGUSLAND), json!(GOING_LONG)], 30);
             assert_eq!(hero_hits(&s, P1), vec![3]);
             s.expect_health(P1, 27);
         }
@@ -198,7 +198,7 @@ mod tests {
         /// §4.4 step 4a the lethal window reads the halved amount: a 7 halved to 4 is lethal at 4 and Final Gambit fires
         #[test]
         fn s4_4_step_4a_the_lethal_window_reads_the_halved_amount_a_7_halved_to_4_is_lethal_at_4_and_final_gambit_fires() {
-            let mut s = attack_on_guarded(POINTMASTER, vec![json!(ARGUSLAND), json!(GAMBIT)], 4);
+            let mut s = attack_on_guarded(SEVEN_SEVEN, vec![json!(ARGUSLAND), json!(GAMBIT)], 4);
             s.expect_events(json!(["trapFired", "healed"]));
             s.expect_in_zone(GAMBIT, "graveyard");
             s.expect_health(P1, 14);
@@ -207,7 +207,7 @@ mod tests {
         /// §4.4 step 4a ... and at 5 health the same hit is not lethal, so Final Gambit stays set
         #[test]
         fn s4_4_step_4a_and_at_5_health_the_same_hit_is_not_lethal_so_final_gambit_stays_set() {
-            let mut s = attack_on_guarded(POINTMASTER, vec![json!(ARGUSLAND), json!(GAMBIT)], 5);
+            let mut s = attack_on_guarded(SEVEN_SEVEN, vec![json!(ARGUSLAND), json!(GAMBIT)], 5);
             assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
             s.expect_in_zone(GAMBIT, "field");
             assert_ne!(s.card(GAMBIT).face_up, Some(true));
@@ -242,20 +242,20 @@ mod tests {
         fn r386_an_upgrade_makes_the_divisor_3_a_7_becomes_3_a_degrade_never_takes_it_below_2_a_7_stays_4() {
             let mut up = scenario(json!({
                 "p1": { "hand": [FILLER], "backrow": [ARGUSLAND] },
-                "p2": { "hand": [FILLER], "field": [POINTMASTER] },
+                "p2": { "hand": [FILLER], "field": [SEVEN_SEVEN] },
                 "active": "p2",
             }));
             step_param(up.card_mut(ARGUSLAND), "divisor", 1);
-            up.attack(POINTMASTER, "hero");
+            up.attack(SEVEN_SEVEN, "hero");
             assert_eq!(hero_hits(&up, P1), vec![3]);
 
             let mut down = scenario(json!({
                 "p1": { "hand": [FILLER], "backrow": [ARGUSLAND] },
-                "p2": { "hand": [FILLER], "field": [POINTMASTER] },
+                "p2": { "hand": [FILLER], "field": [SEVEN_SEVEN] },
                 "active": "p2",
             }));
             step_param(down.card_mut(ARGUSLAND), "divisor", -1);
-            down.attack(POINTMASTER, "hero");
+            down.attack(SEVEN_SEVEN, "hero");
             assert_eq!(hero_hits(&down, P1), vec![4]);
         }
     }
@@ -267,7 +267,7 @@ mod tests {
         fn quarters_a_hit_on_your_hero_rounded_up_a_9_becomes_3_a_7_becomes_2() {
             let nine = attack_on_guarded(MENACE, vec![radiant_argusland()], 30);
             assert_eq!(hero_hits(&nine, P1), vec![3]);
-            let seven = attack_on_guarded(POINTMASTER, vec![radiant_argusland()], 30);
+            let seven = attack_on_guarded(SEVEN_SEVEN, vec![radiant_argusland()], 30);
             assert_eq!(hero_hits(&seven, P1), vec![2]);
         }
 
@@ -280,7 +280,7 @@ mod tests {
         /// §4.4 steps 2 and 3: after Armor (7 − 2 = 5, quartered to 2) and before a cap
         #[test]
         fn s4_4_steps_2_and_3_after_armor_7_2_5_quartered_to_2_and_before_a_cap() {
-            let armored = attack_on_guarded(POINTMASTER, vec![radiant_argusland(), json!(GOING_LONG)], 30);
+            let armored = attack_on_guarded(SEVEN_SEVEN, vec![radiant_argusland(), json!(GOING_LONG)], 30);
             assert_eq!(hero_hits(&armored, P1), vec![2]);
             let capped = attack_on_guarded(MENACE, vec![radiant_argusland(), json!(ANTI_ONESHOT)], 30);
             assert_eq!(hero_hits(&capped, P1), vec![3]);
@@ -315,11 +315,11 @@ mod tests {
         fn r386_its_divisor_is_the_declared_number_a_degrade_takes_4_to_3_so_a_7_becomes_3() {
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "backrow": [radiant_argusland()] },
-                "p2": { "hand": [FILLER], "field": [POINTMASTER] },
+                "p2": { "hand": [FILLER], "field": [SEVEN_SEVEN] },
                 "active": "p2",
             }));
             step_param(s.card_mut(ARGUSLAND), "divisor", -1);
-            s.attack(POINTMASTER, "hero");
+            s.attack(SEVEN_SEVEN, "hero");
             assert_eq!(hero_hits(&s, P1), vec![3]);
         }
     }

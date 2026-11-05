@@ -36,7 +36,7 @@ gallery plays every entry.
 | `classic-011` | Mind Melt | Spell | cast vanish | 1.08 | vanish | cast: the census agrees (vanish) |
 | `classic-012` | Book of Blood | Spell | cast bolt Dark/blood | 1.35 | lance | cast: it hits one Unit, a bolt; the census's lance counted its Lifesteal heal as a second target; blood sub-look |
 | `classic-013` | Boots on the Ground | Unit | none: its draw comes as it attacks, which takes no hook marker | — | none: vanilla | the census agrees: its draw comes in combat, which opens no hook window |
-| `classic-014` | Shadowstep | Trap | cast recall Dark/shadow | 1.16 | none: vanilla | cast: its firing bounces your dying Units to the hand, which recall (R2794000) reads; #2793's send flies a made card from the hero, not one back; shadow sub-look |
+| `classic-014` | Shadowstep | Trap | cast recall Dark/shadow | 1.08 | none: vanilla | cast: its firing bounces your dying Units to the hand, which recall (R2794000) reads; #2793's send flies a made card from the hero, not one back; shadow sub-look |
 | `classic-015` | Nose Hunter | Unit | activate vanish | 1.08 | vanish | activate: the census agrees (vanish) |
 | `classic-016` | Book of Flame | Spell | cast scorch Fire | 1.35 | bolt | kept: #2784's example; scorch burns where the bolt lands |
 | `classic-017` | Counterspell | Trap | cast negate | 1.16 | negate | cast: the census agrees (negate) |

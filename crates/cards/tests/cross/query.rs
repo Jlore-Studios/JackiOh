@@ -215,14 +215,13 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
         // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker and #87 Tatches the Totem
         // (§8.8) are (1) KY cards too since the set ships (R1420). Re-pinned for v0.3.15 (Meditative+
         // ships, #1187): M+ #25 KY's Intuition (§8.9) is a (1) KY card too. C+ #62 KY's Papaya costs (2)
-        // since #1704.
+        // since #1704, and Core #82 KY's Trial since #3136.
         assert_eq!(
             ids_of_defs(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
             ))),
             strings(&[
                 "core-051",
-                "core-082",
                 "classicplus-041",
                 "classicplus-042",
                 "meditative-045",
@@ -461,8 +460,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     {
         register();
         // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10, Classic+ #22 Blood Moon
-        // (2) since #2179. The Stinkyscape set's (1) Cost ones join them from its release (#1884), and the
-        // Training Grounds set's from its own (#2204).
+        // (2) since #2179, and Classic #14 Shadowstep (1) since #3136. The Stinkyscape set's (1) Cost ones
+        // join them from its release (#1884), and the Training Grounds set's from its own (#2204).
         assert_eq!(
             ids_of_defs(query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
@@ -471,6 +470,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "core-060",
                 "core-071",
                 "core-096",
+                "classic-014",
                 "classic-063",
                 "meditative-064",
                 "meditative-068",

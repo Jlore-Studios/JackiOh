@@ -44,7 +44,7 @@ mod tests {
     const GIFTED: &str = "core-064"; // Field Spell, 2
     const FRIEND: &str = "core-062"; // Spell, 1 — radiant adds +2/+2, so the face it ran is visible
     const SURGERY: &str = "core-063"; // Spell, 1 — +3/+3 base, +6/+6 radiant
-    const POINTMASTER: &str = "core-020"; // Unit, 2 — 7/1 base, 14/2 radiant: the threshold probe
+    const POINTMASTER: &str = "core-020"; // Unit, 2 — 6/1 base, 12/2 radiant: the threshold probe
     const TIMMY: &str = "core-011"; // Unit, 3/3
     const MENACE: &str = "core-019"; // Unit, 9/9 — filler so a turn never auto-ends (§2.5, R82)
     const FELINOR: &str = "core-t-felinor";
@@ -150,7 +150,7 @@ mod tests {
             s.play(POINTMASTER, json!({}));
 
             // Pointmaster costs 2, over the base threshold of 1, so it enters on its base face.
-            s.expect_stats(POINTMASTER, json!({ "attack": 7, "maxHealth": 1 }));
+            s.expect_stats(POINTMASTER, json!({ "attack": 6, "maxHealth": 1 }));
             assert!(!s.card(POINTMASTER).radiant);
         }
 
@@ -164,7 +164,7 @@ mod tests {
             s.play(POINTMASTER, json!({}));
 
             assert!(s.card(POINTMASTER).radiant);
-            s.expect_stats(POINTMASTER, json!({ "attack": 14, "maxHealth": 2 }));
+            s.expect_stats(POINTMASTER, json!({ "attack": 12, "maxHealth": 2 }));
         }
 
         #[test]

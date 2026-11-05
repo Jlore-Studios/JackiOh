@@ -57,7 +57,7 @@ mod tests {
     const POSTDOC: &str = "core-061"; // Unit, Human, 2 — 2/4 → 4/8
     const TIMMY: &str = "core-011"; // Unit, Human, 3/3, Rush + First Strike
     const ROCK: &str = "core-066"; // Unit, Human, 10/10 Indestructible → 20/20 plus Immutable
-    const SHREDDER: &str = "core-013"; // Unit, no tags, 6/10 — the radiant face's "any unit"
+    const SHREDDER: &str = "core-013"; // Unit, no tags, 6/8 — the radiant face's "any unit"
     const PILLOW: &str = "core-065-1"; // #65.1, the aura source for "auras apply afresh"
     const SURGERY: &str = "core-063"; // #63, the only buff this wave can put on an enemy unit
 
@@ -200,7 +200,7 @@ mod tests {
             s.expect_stats(&postdoc, json!({ "attack": 4, "maxHealth": 8 }));
             let copy = s.unit_at(P1, COPY_LANE);
             assert_eq!(copy.def_id, SHREDDER);
-            s.expect_stats(&copy, json!({ "attack": 6, "maxHealth": 10 }));
+            s.expect_stats(&copy, json!({ "attack": 6, "maxHealth": 8 }));
             assert!(copy.vanilla);
         }
 

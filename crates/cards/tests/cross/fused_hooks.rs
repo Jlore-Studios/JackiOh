@@ -772,6 +772,9 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
                     { "def": MASOCHISM_MASK, "lane": 1 },
                     { "def": WEAPONS, "lane": 2 },
                     { "def": EXPERIMENTATION, "lane": 3 },
+                    // A second Weapons: its +2 twice (issue #3136, +3 once before) keeps the sum above what the
+                    // base Pillow's own −2 takes off, so a second −2 from the fused aura would show.
+                    { "def": WEAPONS, "lane": 4 },
                 ],
                 "hand": [STOCKPILE],
                 "library": LAYER_LIBRARY,
@@ -792,7 +795,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         let pillow = g.unit_at(P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
 
-        g.expect_stats(&pillow.id, json!({ "attack": 1 }));
+        // 0 + 2 + 2 from the Weapons, −2 from the base Pillow's own aura; the fused Radiant aura spares it.
+        g.expect_stats(&pillow.id, json!({ "attack": 2 }));
     }
 }
 

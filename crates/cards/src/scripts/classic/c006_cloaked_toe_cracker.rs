@@ -94,7 +94,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CRACKER: &str = "classic-006";
-    const EXPERIMENT: &str = "core-085"; // (2) Trap
+    const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
     const SHEEPISH: &str = "core-041"; // (1) Trap
     const TESLA: &str = "classic-005"; // (2) Field Trap
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
@@ -130,60 +130,60 @@ mod tests {
             #[test]
             fn r65_aura_your_traps_and_field_traps_in_hand_cost_0_while_it_is_on_the_field() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, SHEEPISH, TESLA], "field": [CRACKER] },
+                    "p1": { "hand": [TWO_TRAP, SHEEPISH, TESLA], "field": [CRACKER] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 assert_eq!(cost_of(&s, SHEEPISH), 0);
                 assert_eq!(cost_of(&s, TESLA), 0);
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.play(TESLA, json!({ "zone": 2 }));
                 s.expect_mana(P1, 4);
             }
 
             #[test]
             fn played_from_hand_the_trap_costs_0_at_once() {
-                let mut s = scenario(json!({ "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                let mut s = scenario(json!({ "p1": { "hand": [CRACKER, TWO_TRAP, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
                 s.play(CRACKER, json!({}));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
             }
 
             #[test]
             fn once_it_leaves_the_field_your_traps_return_to_their_own_cost() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [CRACKER] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [CRACKER] },
                     "p2": { "hand": [HIT_JOB, STOCKPILE] },
                     "active": "p2",
                 }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
                 let cracker = s.card(CRACKER).id.clone();
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": cracker }] }));
                 s.expect_in_zone(CRACKER, "graveyard");
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
 
             #[test]
             fn the_opponent_s_traps_and_your_field_spells_and_spells_are_untouched() {
                 let s = scenario(json!({
                     "p1": { "hand": [MANA_WELL, STOCKPILE], "field": [CRACKER] },
-                    "p2": { "hand": [EXPERIMENT, STOCKPILE] },
+                    "p2": { "hand": [TWO_TRAP, STOCKPILE] },
                 }));
                 assert_eq!(cost_of(&s, MANA_WELL), 3);
                 assert_eq!(cost_of(&s, STOCKPILE), 1);
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
 
             #[test]
             fn the_base_face_gains_no_mana_after_a_trap() {
-                let mut s = scenario(json!({ "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [CRACKER] }, "p2": { "hand": [STOCKPILE] } }));
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                let mut s = scenario(json!({ "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [CRACKER] }, "p2": { "hand": [STOCKPILE] } }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.expect_mana(P1, 4);
             }
 
             #[test]
             fn r177_the_opponent_reads_your_hand_as_a_count_and_no_cost_of_it() {
-                let mut s = scenario(json!({ "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [CRACKER, TWO_TRAP, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
                 s.play(CRACKER, json!({}));
                 let theirs = js(&s.view(P2));
                 assert_eq!(theirs["opponent"]["hand"], json!({ "count": 2 }));
@@ -192,23 +192,23 @@ mod tests {
                         assert_eq!(event["cost"], json!(-1));
                     }
                 }
-                assert!(!theirs.to_string().contains(EXPERIMENT));
+                assert!(!theirs.to_string().contains(TWO_TRAP));
                 let your_hand = js(&s.view(P1))["you"]["hand"].clone();
                 let Some(cards) = your_hand.as_array() else {
                     panic!("your own hand travels in full (§10.8)");
                 };
-                let experiment = cards.iter().find(|card| card["defId"] == EXPERIMENT);
+                let experiment = cards.iter().find(|card| card["defId"] == TWO_TRAP);
                 assert_eq!(experiment.map(|card| card["cost"].clone()), Some(json!(0)));
             }
 
             #[test]
             fn r13_dormant_under_a_stack_pile_its_aura_is_off_your_traps_cost_their_own_price() {
                 let s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [CRACKER, { "def": "core-092", "stack": true }] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [CRACKER, { "def": "core-092", "stack": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some("core-092".to_string()));
-                assert_eq!(cost_of(&s, EXPERIMENT), 2);
+                assert_eq!(cost_of(&s, TWO_TRAP), 2);
             }
         }
 
@@ -267,17 +267,17 @@ mod tests {
             #[test]
             fn r783006_set_its_aura_is_dormant_revealed_it_is_a_3_4_and_the_aura_starts() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] },
+                    "p1": { "hand": [CRACKER, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 let set = set_cracker(&mut s);
-                assert_eq!(cost_of(&s, EXPERIMENT), 2, "face-down, its Aura does not act");
+                assert_eq!(cost_of(&s, TWO_TRAP), 2, "face-down, its Aura does not act");
                 assert!(!js(&s.view(P2)).to_string().contains(CRACKER));
                 reveal(&mut s, &set);
                 let unit = s.unit(P1, 1).expect("it animated into its own lane");
                 assert_eq!(unit.def_id, CRACKER);
                 s.expect_stats(unit.id.as_str(), json!({ "attack": 3, "health": 4, "maxHealth": 4 }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0, "revealed, its Aura acts");
+                assert_eq!(cost_of(&s, TWO_TRAP), 0, "revealed, its Aura acts");
             }
         }
 
@@ -293,47 +293,47 @@ mod tests {
                 set_cracker(&mut s);
                 s.expect_mana(P1, 3);
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, EXPERIMENT, STOCKPILE] },
+                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 set_cracker(&mut s);
                 s.expect_mana(P1, 2);
-                s.play(EXPERIMENT, json!({ "zone": 2 }));
+                s.play(TWO_TRAP, json!({ "zone": 2 }));
                 s.expect_mana(P1, 0);
             }
 
             #[test]
             fn r783006_revealed_it_is_a_6_8_its_traps_cost_0_and_a_trap_gains_1() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, EXPERIMENT, STOCKPILE] },
+                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, TWO_TRAP, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 let set = set_cracker(&mut s);
                 reveal(&mut s, &set);
                 let unit = s.unit(P1, 1).expect("revealed").id;
                 s.expect_stats(unit.as_str(), json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
-                s.play(EXPERIMENT, json!({ "zone": 2 }));
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
+                s.play(TWO_TRAP, json!({ "zone": 2 }));
                 s.expect_mana(P1, 3);
             }
 
             #[test]
             fn is_a_6_8_with_the_same_aura() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT], "field": [{ "def": CRACKER, "radiant": true }] },
+                    "p1": { "hand": [TWO_TRAP], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.expect_stats(CRACKER, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
-                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                assert_eq!(cost_of(&s, TWO_TRAP), 0);
             }
 
             #[test]
             fn after_you_play_a_trap_gain_1_mana_this_turn() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.expect_mana(P1, 5);
             }
 
@@ -367,10 +367,10 @@ mod tests {
             #[test]
             fn the_mana_is_this_turn_s_it_is_gone_at_your_next_refresh() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }], "library": [STOCKPILE, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
                 }));
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.expect_mana(P1, 5);
                 s.end_turn();
                 s.end_turn();
@@ -380,10 +380,10 @@ mod tests {
             #[test]
             fn r33_r97_the_gain_never_names_the_face_down_trap_in_the_opponent_s_view() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 let Some(trap) = s.backrow(P1, 1) else {
                     panic!("the Trap should be set");
                 };
@@ -391,7 +391,7 @@ mod tests {
                 assert_eq!(theirs["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 2 }));
                 let text = theirs.to_string();
                 assert!(!text.contains(&format!("\"{}\"", trap.id)));
-                assert!(!text.contains(EXPERIMENT));
+                assert!(!text.contains(TWO_TRAP));
                 let mana_changes: Vec<Value> = theirs["events"]
                     .as_array()
                     .map(|events| events.iter().filter(|event| event["type"] == "manaChanged").cloned().collect())
@@ -423,11 +423,11 @@ mod tests {
             #[test]
             fn r386_a_degrade_of_mana_never_goes_below_1() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 step_param(s.card_mut(CRACKER), "mana", -1);
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.expect_mana(P1, 5);
             }
 
@@ -444,11 +444,11 @@ mod tests {
             #[test]
             fn r386_an_upgrade_of_mana_gains_2() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
+                    "p1": { "hand": [TWO_TRAP, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 step_param(s.card_mut(CRACKER), "mana", 1);
-                s.play(EXPERIMENT, json!({ "zone": 1 }));
+                s.play(TWO_TRAP, json!({ "zone": 1 }));
                 s.expect_mana(P1, 6);
             }
         }

@@ -98,7 +98,7 @@ mod tests {
     const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
     const MOTHS: &str = "core-009"; // Moths to the Flame, (2) 1/14
     const VANILLA: &str = "core-008"; // Mr. Vanilla, (1) 4/4
-    const SILAS: &str = "core-052"; // Silly Silas, (3) 4/4
+    const LANE_EATER: &str = "classic-071"; // Lane Eater, (3) 4/4 (Silly Silas, core-052, is a 2/2 since issue #3136)
     const FILLER: &str = "core-005";
 
     fn shot(p2: Value, radiant_face: bool, seed: &str) -> Scenario {
@@ -343,7 +343,7 @@ mod tests {
             #[test]
             fn r414_a_tie_on_attack_plus_health_goes_to_the_higher_cost_a_3_4_4_over_a_1_4_4() {
                 expect_lucky_keeps(
-                    json!({ "field": [{ "def": VANILLA, "lane": 1 }, { "def": SILAS, "lane": 3 }] }),
+                    json!({ "field": [{ "def": VANILLA, "lane": 1 }, { "def": LANE_EATER, "lane": 3 }] }),
                     &[1, 3],
                     3,
                 );

@@ -53,8 +53,8 @@ core-003: # Right-house defender
     death: Be right back.
   zh:
     name: 对门守卫者
-    base: 嘲讽，圣盾，复生
-    radiant: "嘲讽，圣盾，复生\n亡语：召唤一个基础版对门守卫者。"
+    base: 嘲讽，圣盾，复生，无法守备
+    radiant: "嘲讽，圣盾，复生，无法守备\n亡语：召唤一个基础版对门守卫者。"
 core-004: # Gary the Gambler
   flavour: Heads, he wins. Tails, he also wins. He thinks this is how coins work.
   voice:
@@ -212,8 +212,8 @@ core-020: # Pointmaster
     death: Pointless.
   zh:
     name: 锋芒大师
-    base: 先攻
-    radiant: 先攻，圣盾
+    base: 突袭，先攻
+    radiant: 突袭，先攻，圣盾
 core-021: # Hinder
   flavour: Sorry, you were saying something about your plan?
   voice:
@@ -506,8 +506,8 @@ core-052: # Silly Silas
     death: So... dizzy...
   zh:
     name: 憨憨塞拉斯
-    base: 战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。
-    radiant: 战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。
+    base: "陨坑\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。"
+    radiant: "陨坑\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。"
 core-053: # Reno
   flavour: Bring it back. Bring it all back.
   voice:
@@ -6973,8 +6973,8 @@ traininggrounds-056: # Legacy: Corpse Eater
     death: Finally... full.
   zh:
     name: 传统：噬尸者
-    base: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。"
-    radiant: "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
+    base: 当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。
+    radiant: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
 traininggrounds-057: # Legacy: Recycling Initiative
   flavour: Reduce, reuse, recast.
   voice:

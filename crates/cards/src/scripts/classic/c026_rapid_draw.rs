@@ -1,8 +1,8 @@
 //! C #26 Rapid Draw (SPEC §8.6 row 26). (0) Spell, Common.
-//!   Base:    "Draw {draw}. Then discard {discard|random card|random cards}." — draw 4, discard 4
-//!   Radiant: "Draw {draw}. Then discard {discard|random card|random cards}." — draw 5, discard 4
-//!   Engine:  "Four draws (Radiant five; the hand cap applies, R4), then 4 random discards (R682;
-//!            fewer in hand, all of them). Tunes: draw 4 ↑; discard 4 ↓."
+//!   Base:    "Draw {draw}. Then discard {discard|random card|random cards}." — draw 5, discard 4
+//!   Radiant: "Draw {draw}. Then discard {discard|random card|random cards}." — draw 6, discard 4
+//!   Engine:  "Five draws (Radiant six; the hand cap applies, R4), then 4 random discards (R682;
+//!            fewer in hand, all of them). Tunes: draw 5 ↑; discard 4 ↓." (draw 4 and 5 until issue #3136)
 //!
 //! The draws are §2.4's pipeline (`draw`): each its own cast-on-draw chain (R58), fatigue on an empty
 //! deck, the hand cap burning the overflow (R4, R317), a draw limit stopping the rest (R457).
@@ -70,6 +70,7 @@ mod tests {
     const D: &str = "core-020";
     const E: &str = "core-012";
     const F: &str = "core-045";
+    const G: &str = "core-008";
 
     fn discarded_defs(s: &Scenario) -> Vec<String> {
         s.events()
@@ -108,17 +109,19 @@ mod tests {
             use super::*;
 
             #[test]
-            fn draws_4_then_r682_discards_4_at_random_with_no_prompt() {
-                let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER, FILLER], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
+            fn issue_3136_draws_5_then_r682_discards_4_at_random_with_no_prompt() {
+                // Six in the library: exactly five are drawn, the sixth stays.
+                let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER, FILLER], "library": [A, B, C, D, E, F] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
 
                 assert!(s.state().pending.is_none());
-                assert_eq!(s.hand(P1).len(), 2);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![F]);
+                assert_eq!(s.hand(P1).len(), 3);
                 let discarded = discarded_defs(&s);
                 assert_eq!(discarded.len(), 4);
                 for def_id in &discarded {
-                    assert!([FILLER, A, B, C, D].contains(&def_id.as_str()));
+                    assert!([FILLER, A, B, C, D, E].contains(&def_id.as_str()));
                 }
                 let mut expected: Vec<&str> = discarded.iter().map(String::as_str).collect();
                 expected.push(RAPID);
@@ -138,10 +141,12 @@ mod tests {
 
             #[test]
             fn r682_with_4_or_fewer_cards_in_hand_it_discards_all_of_them_and_asks_nothing() {
-                let mut s = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
+                // Four in the library: four are drawn and the fifth draw is a fatigue hit.
+                let mut s = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
 
+                s.expect_health(P1, 29);
                 assert!(s.state().pending.is_none());
                 assert_eq!(def_ids(&s.hand(P1)), Vec::<String>::new());
                 assert_eq!(discarded_defs(&s), vec![A, B, C, D]);
@@ -149,29 +154,30 @@ mod tests {
 
             #[test]
             fn r58_each_draw_has_its_own_cast_on_draw_chain_and_the_discard_then_reads_the_hand_the_draws_left() {
-                let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER], "library": [VIRUS, A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER], "library": [VIRUS, A, B, C, D, E, F] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
 
                 s.expect_health(P1, 29);
                 let library = def_ids(&s.pile(P1, "library"));
-                assert_eq!(library, vec![E]);
+                assert_eq!(library, vec![F]);
                 assert!(s.state().pending.is_none());
-                assert_eq!(s.hand(P1).len(), 1);
+                assert_eq!(s.hand(P1).len(), 2);
                 let discarded = discarded_defs(&s);
                 assert_eq!(discarded.len(), 4);
                 for def_id in &discarded {
-                    assert!([FILLER, A, B, C, D].contains(&def_id.as_str()));
+                    assert!([FILLER, A, B, C, D, E].contains(&def_id.as_str()));
                 }
             }
 
             #[test]
-            fn s2_4_fatigue_a_deck_of_2_draws_2_and_fatigues_twice_and_the_2_cards_in_hand_are_discarded() {
+            fn s2_4_fatigue_a_deck_of_2_draws_2_and_fatigues_three_times_and_the_2_cards_in_hand_are_discarded() {
                 let mut s = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
 
-                s.expect_health(P1, 27);
+                // Fatigue 1, 2 and 3 for the three draws the deck cannot make.
+                s.expect_health(P1, 24);
                 assert_eq!(discarded_defs(&s), vec![A, B]);
                 assert!(s.state().pending.is_none());
             }
@@ -181,7 +187,7 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [RAPID, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
-                        "library": [A, B, C, D],
+                        "library": [A, B, C, D, E],
                     },
                     "p2": { "hand": [FILLER] },
                 }));
@@ -190,8 +196,8 @@ mod tests {
 
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(P1).len(), 6);
-                assert_eq!(count(&s, GameEventType::Burned), 3);
-                assert!(contains_all(&def_ids(&s.pile(P1, "graveyard")), &[B, C, D]));
+                assert_eq!(count(&s, GameEventType::Burned), 4);
+                assert!(contains_all(&def_ids(&s.pile(P1, "graveyard")), &[B, C, D, E]));
                 assert_eq!(discarded_defs(&s).len(), 4);
             }
 
@@ -204,7 +210,7 @@ mod tests {
 
                 s.play(RAPID, json!({}));
 
-                assert_eq!(count(&s, GameEventType::DrawLimited), 3);
+                assert_eq!(count(&s, GameEventType::DrawLimited), 4);
                 assert_eq!(discarded_defs(&s), vec![A]);
                 let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![B, C, D]);
@@ -212,7 +218,7 @@ mod tests {
 
             #[test]
             fn r97_the_card_left_in_hand_stays_hidden_from_the_opponent_while_the_discards_are_public() {
-                let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER], "library": [A, B, C, D] }, "p2": { "hand": [FILLER] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [RAPID, FILLER], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
 
                 s.play(RAPID, json!({}));
 
@@ -224,18 +230,18 @@ mod tests {
                     assert!(theirs.contains(&card.id));
                 }
                 let mine = serde_json::to_string(&s.view(P1)).unwrap();
-                for id in [A, B, C, D, FILLER] {
+                for id in [A, B, C, D, E, FILLER] {
                     assert!(mine.contains(id));
                 }
             }
 
             #[test]
-            fn r386_an_upgrade_draws_5_a_degrade_of_discard_takes_5_an_upgrade_of_it_3() {
+            fn r386_an_upgrade_draws_6_an_upgrade_of_discard_takes_5_a_degrade_of_it_3() {
                 let mut draw_up = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E, F] }, "p2": { "hand": [FILLER] } }));
                 step_param(draw_up.card_mut(RAPID), "draw", 1);
                 draw_up.play(RAPID, json!({}));
                 assert!(draw_up.state().pending.is_none());
-                assert_eq!(draw_up.hand(P1).len(), 1);
+                assert_eq!(draw_up.hand(P1).len(), 2);
                 assert_eq!(discarded_defs(&draw_up).len(), 4);
 
                 let mut discard_up = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
@@ -257,16 +263,18 @@ mod tests {
             use super::*;
 
             #[test]
-            fn draws_5_then_discards_4_at_random() {
+            fn issue_3136_draws_6_then_discards_4_at_random() {
+                // Seven in the library: exactly six are drawn, the seventh stays.
                 let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": RAPID, "radiant": true }], "library": [A, B, C, D, E, F] },
+                    "p1": { "hand": [{ "def": RAPID, "radiant": true }], "library": [A, B, C, D, E, F, G] },
                     "p2": { "hand": [FILLER] },
                 }));
 
                 s.play(RAPID, json!({}));
 
                 assert!(s.state().pending.is_none());
-                assert_eq!(s.hand(P1).len(), 1);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![G]);
+                assert_eq!(s.hand(P1).len(), 2);
                 assert_eq!(discarded_defs(&s).len(), 4);
             }
 

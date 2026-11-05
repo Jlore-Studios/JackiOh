@@ -861,7 +861,7 @@ describe("B19: what a face-up root adds", () => {
     expect(tones(yourUnit(view, 1))).toEqual(["buffed", "damaged"]);
     // Mr. Vanilla prints 4/4; the view has 4/4.
     expect(tones(enemyUnit(view, 1))).toEqual(["base", "base"]);
-    // Radiant Carnivorous Cube prints 8/12 radiant; the view has 6 attack and 2 of 2.
+    // Radiant Carnivorous Cube prints 4/8 radiant; the view has 3 attack and 2 of 2.
     expect(tones(enemyUnit(view, 3))).toEqual(["reduced", "reduced"]);
     // Ceaseless Void prints 10/10; the view has 10/10.
     expect(tones(enemyUnit(view, 5))).toEqual(["base", "base"]);

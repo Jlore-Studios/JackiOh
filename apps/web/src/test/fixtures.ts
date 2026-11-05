@@ -230,7 +230,7 @@ export function fullBoardView(over: Partial<PlayerView> = {}): PlayerView {
   const enemyUnits: UnitView[] = [
     unit("p2", { defId: "core-008", attack: 4, maxHealth: 4, health: 4, keywords: [{ kind: "Divine Shield" }] }),
     unit("p2", { defId: "core-013", position: "DEF", attack: 3, maxHealth: 5, health: 2 }),
-    unit("p2", { defId: "core-022", radiant: true, attack: 6, maxHealth: 2, health: 2, counters: { plague: 1 } }),
+    unit("p2", { defId: "core-022", radiant: true, attack: 3, maxHealth: 2, health: 2, counters: { plague: 1 } }),
     unit("p2", { defId: "core-040", attack: 1, maxHealth: 1, health: 1, armor: 1 }),
     unit("p2", { defId: "core-100", attack: 10, maxHealth: 10, health: 10, cost: 0, keywords: [{ kind: "Trample" }] }),
   ];

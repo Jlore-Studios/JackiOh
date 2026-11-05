@@ -345,7 +345,7 @@ mod r171_with_the_cards_that_change_control {
                 "hand": [SILAS, VANILLA],
                 "field": [
                     { "def": VANILLA, "lane": 2 },
-                    { "def": POINTMASTER, "lane": 3 },
+                    { "def": SEVEN_SEVEN, "lane": 3 },
                     { "def": VANILLA, "lane": 5 },
                 ],
             },
@@ -489,7 +489,8 @@ mod r171_with_the_cards_that_change_control {
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         assert_eq!(g.card(&traveller).controller, PlayerId::P2);
-        g.play(SILAS, json!({ "zone": 1, "modes": ["left"] }));
+        // Crater (issue #3136) left lane 1 Locked, so the second Silas goes into the open lane 3.
+        g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         assert_eq!(g.unit("p1", 5).map(|c| c.id), Some(traveller.id.clone()));
         expect_entered_now(&g, &traveller);
@@ -507,7 +508,8 @@ mod r171_with_the_cards_that_change_control {
         g.attack(&timmy, "hero");
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
-        g.play(SILAS, json!({ "zone": 1, "modes": ["left"] }));
+        // Crater (issue #3136) left lane 1 Locked, so the second Silas goes into the open lane 3.
+        g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         expect_entered_now(&g, &timmy);
         g.attack(&timmy, "hero");

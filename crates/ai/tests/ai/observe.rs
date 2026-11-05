@@ -1017,7 +1017,8 @@ mod determinize_b12 {
                 )
             })
             .collect();
-        assert_eq!(costs, vec![1, 1, 1, 1, 2]);
+        // Core #85 Unlicensed Experimentation costs (3) since issue #3136 (it was (2)).
+        assert_eq!(costs, vec![1, 1, 1, 1, 3]);
 
         for k in 0..20 {
             let world = det(

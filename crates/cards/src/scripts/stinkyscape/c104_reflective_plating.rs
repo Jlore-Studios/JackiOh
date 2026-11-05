@@ -41,7 +41,7 @@ mod tests {
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    const SHREDDER: &str = "core-013"; // (3) 6/10.
+    const SHREDDER: &str = "core-013"; // (3) 6/8.
     const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage.
 
     fn attacked_by(radiant: bool, attacker: &str) -> (Scenario, CardInstance, CardInstance) {
@@ -114,7 +114,7 @@ mod tests {
             s.attack(&shredder, &plating);
             s.expect_stats(&plating, json!({ "health": 6 }));
             s.expect_health(P2, HERO_HEALTH - 6);
-            s.expect_stats(&shredder, json!({ "health": 4 }));
+            s.expect_stats(&shredder, json!({ "health": 2 }));
         }
     }
 }

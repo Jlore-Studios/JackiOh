@@ -1,10 +1,15 @@
 //! #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-//! R14, R33, R78, R81, R88). Unit 4/4 → 8/8, Human, cost 4, Legendary. BUILD wave 3 (rotation).
-//!   Base:    "Cry: choose left or right; rotate every card on the field one step around its ring
+//! R14, R33, R78, R81, R88). Unit 2/2 → 4/4, Human, cost 4, Legendary, Crater on both faces (issue #3136;
+//! it was 4/4 → 8/8 and had no Crater). BUILD wave 3 (rotation).
+//!   Base:    "Crater. Cry: choose left or right; rotate every card on the field one step around its ring
 //!            (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
 //!            instead" — §8 Conventions: the cell restates only what happens to a crossing card, so
 //!            the direction choice and the rotation itself are kept.
+//!
+//! Crater (R783010, R688) is the catalog's keyword, so the script has nothing to add: the engine Locks
+//! the unit zone Silas arrives in before his Cry, the Rotate then moves him on with the rest, and the
+//! Lock stays on the zone he arrived in.
 //!
 //! The direction is a play-time choice, not a prompt: R81 names this card and §10.6 says no Core card
 //! opens a `direction` prompt, so the script declares `modes` and `chosen_options(ctx)` reads `ctx.modes`.
@@ -103,6 +108,30 @@ mod tests {
                 lane,
             },
         );
+    }
+
+    /// Issue #3136: Silas has Crater on both faces. As he arrives he Locks the unit zone he is played
+    /// into, before his Cry (R783010, §6.1 Crater); the Rotate then moves him one step along the ring and
+    /// the Lock stays on the zone he arrived in (R688).
+    #[test]
+    fn r783010_crater_locks_the_arrival_zone_before_the_cry_then_the_rotate_moves_silas_on() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": "core-052", "radiant": radiant }] } }));
+            assert_eq!(s.state().players.p1.locks.units, vec![false; 5]);
+
+            s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
+
+            // The Lock is on lane 1 and only there; Silas stands one step along, in lane 2.
+            assert_eq!(s.state().players.p1.locks.units, vec![true, false, false, false, false]);
+            assert!(s.unit(P1, 1).is_none());
+            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
+            // The Lock came first, then the Rotate.
+            let kinds: Vec<GameEventType> = s.last_events().iter().map(|event| event.event_type()).collect();
+            let locked = kinds.iter().position(|kind| *kind == GameEventType::Locked);
+            let rotated = kinds.iter().position(|kind| *kind == GameEventType::Rotated);
+            assert!(locked.is_some() && rotated.is_some());
+            assert!(locked < rotated);
+        }
     }
 
     mod n52_silly_silas_base_rotating_right {
@@ -315,7 +344,7 @@ mod tests {
             // Neither card crosses, so the radiant clause never applies and both simply step one lane.
             assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
             assert_eq!(s.unit_at(P1, 4).def_id, "core-053");
-            s.expect_stats("core-052", json!({ "attack": 8, "maxHealth": 8 }));
+            s.expect_stats("core-052", json!({ "attack": 4, "maxHealth": 4 }));
         }
 
         #[test]

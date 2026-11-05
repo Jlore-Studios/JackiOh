@@ -344,13 +344,16 @@ mod r210_the_tribute_a_play_pays {
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
         let guard = g.card(RIGHT_HOUSE).clone();
+        // The turn of the play: with Can't Defend (issue #3136) the defender has no switch to Defense left
+        // to keep the turn going, so the Rock's cost may end it and the state's turn move on.
+        let turn = g.state().turn;
         g.play(ROCK, json!({ "zone": 2, "tributes": [guard.id] }));
 
         // §6.3 Sacrifice "counts as a death"; §6.1 Reborn: "first death: return at 1 health".
         g.expect_in_zone(&guard.id, "field");
         assert_eq!(g.unit(P1, 1).map(|card| card.id.clone()), Some(guard.id.clone()));
         assert_eq!(g.card(&guard.id).reborn_spent, Some(true));
-        assert_eq!(g.card(&guard.id).summoned_turn, Some(g.state().turn));
+        assert_eq!(g.card(&guard.id).summoned_turn, Some(turn));
     }
 
     #[test]

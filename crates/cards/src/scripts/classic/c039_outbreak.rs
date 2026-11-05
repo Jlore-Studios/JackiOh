@@ -127,7 +127,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const PAWN: &str = "core-096"; // (1) Trap, answers only a lethal attack.
-    const UNLICENSED: &str = "core-085"; // (2) Trap; answers a permanent of a type its controller controls.
+    const UNLICENSED: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing here (Unlicensed Experimentation, core-085, costs 3 since issue #3136).
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";

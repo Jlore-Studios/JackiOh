@@ -27,6 +27,7 @@ const ASCENT_LINE = /^Ascent (\d+):/;
 export type ShortForm = number | "colon" | "clamp";
 
 export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: ShortForm }>> = {
+  "core-052": { radiant: "clamp" },
   "core-093": { base: 2, radiant: 2 },
   "core-095": { base: "colon", radiant: "colon" },
   "core-098": { base: 2, radiant: 2 },
