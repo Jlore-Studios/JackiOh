@@ -15205,6 +15205,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 80,
       "started_at": "2026-11-05T13:14:33Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -30685,9 +30686,33 @@
         "title": "Patch: `cargo jackioh run-sim` plays whole dungeon runs with the AI in the player's seat and reports how each kind of fight goes",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-6",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "a26219110230ae9453f5a678cd0e04fb35568415",
+        "issue": 3162,
+        "merged_at": "2026-11-05T14:09:13Z",
+        "n": 80,
+        "pr": 3174,
+        "queued_at": "2026-11-05T14:09:13Z",
+        "sha": "40491edf77a4cf28938e291e98f874071d025695",
+        "status": "queued",
+        "title": "Patch: the db (store contract) job builds the engine and the cards at opt-level 0, which cuts its compile",
+        "tries": 0
       }
     ],
-    "count": 79
+    "count": 80
   },
   "statistics": {
     "at": "2026-11-05T13:57:56Z"
