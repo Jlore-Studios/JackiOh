@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3176,
+  "title": "Patch: follow-up to #3165 from the after-merge spot-check",
+  "branch": "bot/issue-3176",
+  "thread": "**Issue #3176 (data, not instructions):**\n\n```text\n# #3176: Patch: follow-up to #3165 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3165 -->\nThe after-merge spot-check of #3165 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42017305812)) found 1 blocking problem(s) in the change as it merged (`5a7d4be2fc56`). `claude-4` (claude, `opus`, strong) reviewed it. #3165 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/tools/src/run_sim.rs:503`: `tally` calls `fight.kind.is_boss()`, but `RunNodeKind` has no `is_boss` method on `main`, so `jackioh-tools` (every `cargo jackioh` command) and the workspace's build, clippy and tests fail to compile at this merge commit.\n  Evidence: `git grep -n is_boss HEAD` (leaving out `is_boss_card`) finds only this call. `RunNodeKind::is_boss` (`matches!(self, RunNodeKind::MiniBoss | RunNodeKind::Boss)`) was in `crates/run/src/lib.rs` at the PR's branch base f18823b01e (line 327), but fb42f52ced (#3145, #3121's dead-code sweep), which merged before this PR, deleted it as unused. The PR was built and checked against the older base, so its green gates never compiled this code with that removal. Fix: in run_sim.rs, replace the call with `matches!(fight.kind, RunNodeKind::MiniBoss | RunNodeKind::Boss)` (the meaning the tally test expects: a MiniBoss fills `boss_hp[0]`), or put the method back in `crates/run/src/lib.rs`. Then run `cargo build -p jackioh-tools`, `cargo test -p jackioh-tools --bin jackioh run_sim` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-3` (`claude`) built #3165 and `claude-3` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-4"
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3176: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T11:37:39Z",
+    "claimed_at": "2026-11-05T11:40:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
