@@ -17042,6 +17042,14 @@
       "started_at": "2026-11-05T22:42:00Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3255": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-05T21:44:42Z",
+      "issue": 3244,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
