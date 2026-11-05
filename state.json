@@ -15827,15 +15827,8 @@
       "verdict_rounds": 1
     },
     "3206": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42113770925",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-05T21:59:57Z",
-        "until": "2026-11-05T22:29:57Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15847,10 +15840,9 @@
         "reason": "planned on sonnet",
         "trail": "null; sed -n 1,200p spec/README.md | grep -n -i -A12 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; git show --stat HEAD~2 | head -30; grep -n \\\"amend\\\" -i docs/issues-and-patches.md | head -20; grep -rn \\\"amends\\\\|Amends\\\" spec/rulings/*.md |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"announceWallet\\\\|useWallet\\\\|getNews\\\\|getQuests(\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"\\\\.test\\\\.\\\" ; ls apps/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 225,260p apps/web/src/routes/match.tsx; sed -n 855,880p apps/web/src/routes/practice.tsx; sed -n 290,305p apps/web/src/duos/DuosBoard.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"wallet\\\" apps/web/src --include=*.test.ts --include=*.test.tsx -il | head -20; grep -n \\\"fetch\\\\|getMe\\\\|getWallet\\\\|calls\\\" apps/we\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 1330,1370p apps/web/src/net/api.ts; sed -n 1630,1662p apps/web/src/net/api.ts; grep -n \\\"announce()\\\" apps/web/src/routes/DevTools.tsx; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 160,215p apps/web/src/routes/NewsPanel.tsx; grep -n \\\"getNews\\\\|getMe\\\\|wallet\\\\|quests\\\\|news\\\" apps/web/src/routes/landing.tsx | head \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 60,140p apps/web/src/cards/ownedFullArt.ts; grep -rn \\\"useAccount()\\\" apps/web/src --include=*.tsx --include=*.ts | grep -v \\\"\\\\.test\\\\.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 40,125p apps/web/src/routes/collection.tsx; grep -n \\\"getCollection\\\\|getWallet\\\\|getPacks\\\\|getCosmeticPacks\\\\|getTracks\\\" apps/web/src\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"rememberRead\\\\|keptPaths\\\\|cachedRead\\\\|forgetRead\\\" apps/web/src e2e --include=*.test.ts --include=*.test.tsx --include=*.ts --incl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"R2125000\\\\|R2630000\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | grep -v \\\"readCache.test\\\" | grep \\\"it(\\\\|describe(\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"currentMatchId\\\\|currentSeriesId\\\\|currentDuosMatchId\\\\|\\\\.queued\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"\\\\.test\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 520,640p apps/web/src/routes/gate.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 425,540p apps/web/src/main.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 115,215p apps/web/src/routes/DevTools.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 40,135p apps/web/src/shop/Shop.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -n \\\"ladderPath\\\\|export type Ladder\\\\|LADDERS\\\" apps/web/src/net/api.ts | head; sed -n 1295,1330p apps/web/src/net/api.ts; sed -n 55,125p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"revision\\\\|onChanged\\\\|reread\\\\|setAttempt\\\" apps/web/src/routes/collection.tsx apps/web/src/shop/*.tsx apps/web/src/packs/PackOpeni\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -n \\\"onArrived\\\\|nextDueAt\\\" apps/web/src/routes/QuestsPanel.tsx | head -20; sed -n 20,50p apps/web/src/shop/TokenPicker.tsx; sed -n 385,4\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -n \\\"it(\\\\|describe(\\\\|navigate\\\\|calls\\\\|toHaveBeenCalledTimes\\\\|useFakeTimers\\\\|setSystemTime\\\" apps/web/src/economy/JlorePill.test.tsx \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; cat apps/web/src/net/errors.ts | sed -n 1,60p; cat apps/web/vitest.config.ts 2>/dev/null | head -40; cat vitest.config.ts | head -50\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 1,140p apps/web/src/routes/gate.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 1,120p apps/web/src/routes/collection.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 1,110p apps/web/src/routes/landing-news.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; git log --oneline -12 -- apps/web/src/net/readCache.ts apps/web/src/net/gate.ts; sed -n 575,640p apps/web/src/routes/landing.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 100,215p apps/web/src/net/liveGame.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"R2125000\\\\|R2630000\\\" spec/*.md | cut -c1-120; grep -n \\\"R2125000\\\" spec/10-engine-guide.md | cut -c1-60; awk 'NR==284' spec/10-engi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 280,290p spec/10-engine-guide.md | cut -c1-1800; sed -n 132,137p apps/web/README.md; grep -n \\\"^### 10.10\\\\|^### 10\\\\.1[0-9]\\\" spec/10-e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; sed -n 60,92p apps/web/src/routes/QuestsPanel.tsx; sed -n 215,245p apps/web/src/routes/QuestsPanel.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rln \\\"api/wallet\\\\|api/quests\\\\|api/auth/me\\\\|intercept\\\" e2e/cypress 2>/dev/null | head; ls e2e/cypress/e2e | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3206; grep -rn \\\"forgetOwnedCosmetics\\\\|rereadOwnedCosmetics\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"\\\\.test\\\\.\\\" ; ls apps/web/src\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3206/.bot-plan.md\", \"content\": \"# Draft plan for #3206 (planner notes; the final message is the plan)\\n\\nRead: net/api.ts (apiRequest, keptGet, writes\u2026\n- said: **Plan for #3206: share reads in flight and keep a fresh answer for a short window** ## Goal A kept answer younger than a new client constant, `READ_CACHE_FRESH_MS` (45 s), is used with no read behind it. A GET of one path with one token, while it is out, shares that request, and one caller's abort\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-05T21:33:43Z",
       "owner_why": "it plans it",
@@ -15863,9 +15855,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-05T16:41:54Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42113770925",
+      "run_id": "pending:9f60769c-1793916266",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T21:33:43Z",
+      "started_at": "2026-11-05T22:05:07Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17091,9 +17083,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T22:04:12Z",
+    "at": "2026-11-05T22:05:07Z",
     "url": "",
-    "what": "review #3253 on claude-3"
+    "what": "build #3206 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T21:40:44Z",
