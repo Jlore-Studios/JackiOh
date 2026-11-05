@@ -505,7 +505,10 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         and the deck builder's slot picker offer what the account owns, and an unowned
                         stored pick draws as the default (R1833000); holding a tile, a strip item or a
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
-                        R2730000). Only there does a locked item a held token covers offer the token
+                        R2730000), a grid card as the card, in hand and on the board with a Radiant
+                        toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
+                        Only there does a locked item a held token covers offer the token
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
