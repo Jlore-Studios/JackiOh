@@ -551,10 +551,13 @@ pub extern "C" fn choose_action(
     })
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
-/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
-/// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
-/// fixtures were dealt.
+/// Every rules, AI and run number a client reads, as one flat JSON object (#3093): `AI_BUDGET`,
+/// `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `FIXTURE_BANNED_IDS` and `AI_DECK` for practice, the tutorial
+/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests;
+/// `RUN`, the dungeon run's numbers (`run_constants`'s object); and each constant of
+/// `apps/web/src/wire/engineConfig.ts` by its own name (`DECK_SIZE`, …), so a host restates none
+/// (CLAUDE.md rule 9). `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as
+/// it stood when the fixtures were dealt.
 #[unsafe(no_mangle)]
 pub extern "C" fn constants() -> *mut c_char {
     out(wasm_core::constants())
