@@ -16193,15 +16193,8 @@
       "stop_requested": false
     },
     "3229": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42093569697",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-05T19:53:40Z",
-        "until": "2026-11-05T20:23:40Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16213,10 +16206,9 @@
         "reason": "planned on sonnet",
         "trail": "Button.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229 && cat apps/web/src/dungeon/map/run.css | head -200; grep -n \\\"icon\\\\|node\\\" apps/web/src/dungeon/map/run.css | head -80\"}\n- Bash: {\"command\": \"sed -n 200,330p apps/web/src/dungeon/map/RunScreen.test.tsx; cat apps/web/src/dungeon/map/testids.ts\"}\n- Bash: {\"command\": \"cd apps/web/src && sed -n 1,80p cards/icons.tsx; cat game/LockIcon.tsx | head -50; sed -n 1,60p rank/StreakFlame.tsx; ls styles 2>/dev/null; grep -rln \\\"palette.css\\\" . | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229 && grep -rln \\\"dungeon\\\" e2e --include=*.ts | head; grep -rn \\\"emoji\\\\|\\\\\\\\\\\\\\\\u{1F\\\" apps/web/src --include=*.test.ts --include=*.test.tsx -il \u2026\n- Bash: {\"command\": \"ls e2e e2e/cypress/e2e | head -80; grep -rli \\\"dungeon\\\" e2e --include=*.ts --include=*.md --exclude-dir=node_modules | head\"}\n- Bash: {\"command\": \"ls apps/web/src/dungeon/test apps/web/src/dungeon/fight apps/web/src/dungeon/start apps/web/src/dungeon/stats; grep -rnP '\\\\p{Extended_Pictographic}' apps/web/src/dungeon -l\"}\n- Bash: {\"command\": \"cd apps/web/src && find . -name 'palette.css' -o -name 'surfaces.css' -o -name 'typescale.css' | head; \"}\n- Bash: {\"command\": \"cd apps/web/src && grep -rn \\\"readdirSync\\\\|readFileSync\\\" --include=*.test.ts --include=*.test.tsx . | head -20\"}\n- tool error: Exit code 1 /bin/bash: line 1: cd: apps/web/src: No such file or directory\n- Bash: {\"command\": \"cat palette.css | head -150; grep -rln \\\"readdirSync\\\\|readFileSync\\\\|import.meta.glob\\\" --include=*.test.ts --include=*.test.tsx . | head -20\"}\n- Bash: {\"command\": \"cd apps/web/src && cat palette.test.ts | head -120; sed -n 1,80p writing.test.ts\"}\n- Bash: {\"command\": \"cd apps/web/src && grep -n -- \\\"--bg\\\\b\\\\|--bg-raised\\\\|--line\\\\|--text\\\\|--accent\\\\|--danger\\\\|--ok\\\\|--good\\\\|--warn\\\\|--gold\\\\|--brass\\\" index.css | head -40; grep -n \\\"^ --\\\" surface\u2026\n- Bash: {\"command\": \"sed -n 120,300p palette.test.ts | head -5; sed -n 1,120p palette.test.ts\"}\n- Bash: {\"command\": \"grep -n -- \\\"--bg\\\\|--line\\\\|--text\\\\|--accent\\\\|--danger\\\\|--ok\\\\b\\\\|--good\\\\|--warn\\\\|--hit-min\\\\|--type-2xl\\\\|--gold\\\\|--brass\\\" index.css | head -50\"}\n- Bash: {\"command\": \"sed -n 120,260p palette.test.ts; grep -ohn \\\"var(--[a-z0-9-]*\\\" dungeon/map/run.css dungeon/dungeon.css dungeon/fight/fight.css dungeon/stats/dungeon-stats.css | sort | uniq -c | sort -r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229 && git show --stat HEAD~1 | head -30; git show --stat HEAD~2 | head -30; sed -n 1,70p apps/web/src/index.css\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229/apps/web/src/dungeon && grep -n \\\"kind\\\\|export\\\" test/fixtures.ts | head -60; sed -n 1,80p map/RunScreen.test.tsx; grep -rn \\\"RunNodeKind\\\" ../\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229/apps/web/src && cat wire/generated/RunNodeKind.ts; sed -n 80,200p dungeon/map/RunScreen.test.tsx\"}\n- Bash: {\"command\": \"sed -n 1,60p typescale.css | grep -n \\\"type-\\\" | head -20; ls /home/runner/work/_temp/work/item-3229/scripts; ls /home/runner/work/_temp/work/item-3229/apps/web; grep -rn \\\"icon\\\" /home/\u2026\n- Bash: {\"command\": \"grep -rn \\\"currentColor\\\" --include=*.tsx . | grep -v test | head -30; sed -n 1,60p audio/AudioToggle.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229 && grep -n \\\"dungeon\\\\|Dungeon\\\" apps/web/README.md | head -20; grep -n \\\"dungeon\\\" scripts/ci-scope.sh | head; sed -n 1,40p scripts/brand-logo.\u2026\n- Bash: {\"command\": \"grep -rn \\\"icon\\\\|emoji\\\" spec/15-dungeon-run.md | head -20; grep -rn \\\"\\u2694\\\\|\\ud83d\\udee1\\\\|emoji\\\" apps/web/README.md apps/web/WRITING.md crates/run/README.md docs/*.md 2>/dev/null \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229/apps/web/src && grep -rn \\\"run.css\\\" --include=*.ts --include=*.tsx . ; grep -rn \\\"pal-gold-300\\\" dungeon | head -3; cat ../vitest.config.ts | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229/apps/web && node -e '\\nconst P={\\\"red-400\\\":\\\"f87171\\\",\\\"orange-400\\\":\\\"fb923c\\\",\\\"ember-500\\\":\\\"ff5a36\\\",\\\"gold-300\\\":\\\"ffd24a\\\",\\\"slate-100\\\":\u2026\n- Bash: {\"command\": \"which rsvg-convert magick convert inkscape chromium chromium-browser google-chrome 2>&1 | head; python3 -c \\\"import cairosvg\\\" 2>&1; ls ~/.cache/ms-playwright ~/.cache/Cypress 2>&1 | hea\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/icons-3229 && cd /tmp/icons-3229 && cat > gen.mjs <<'EOF'\\nimport { writeFileSync } from \\\"node:fs\\\";\\nconst G = {\\n fight: `<path d=\\\"M4 4 L14.5 14.5\\\"/><path d=\\\"M13 16 L\u2026\n- Read: {\"file_path\": \"/tmp/icons-3229/sheet.png\"}\n- Bash: {\"command\": \"cd /tmp/icons-3229 && python3 - <<'EOF'\\nimport re\\ns=open('gen.mjs').read()\\ns=re.sub(r\\\" fight: `.*?`,\\\\n\\\", ''' fight: `<path d=\\\"M4 4 L14.5 14.5\\\"/><path d=\\\"M12.6 16.4 L16.4 12.6\\\"/\u2026\n- Read: {\"file_path\": \"/tmp/icons-3229/sheet.png\"}\n- Bash: {\"command\": \"cd /tmp/icons-3229 && python3 - <<'EOF'\\ns=open('gen.mjs').read()\\ns=s.replace('<path d=\\\"M4 4 L4 7.5 M4 4 L7.5 4\\\"/><path d=\\\"M20 4 L20 7.5 M20 4 L16.5 4\\\"/>','')\\nopen('gen.mjs','w').w\u2026\n- Read: {\"file_path\": \"/tmp/icons-3229/sheet.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229/apps/web/src/dungeon && sed -n 60,82p test/fixtures.ts; sed -n 128,160p test/fixtures.ts; grep -n \\\"passiveName\\\" -A8 map/RunDisplay.tsx | head \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3229 && grep -n -i \\\"dungeon\\\\|MapScreen\\\\|run map\\\" apps/web/README.md | head -20; sed -n 70,90p apps/web/README.md\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3229/.bot-plan.md\", \"content\": \"# Draft plan #3229 (planner notes)\\n\\nRead: MapScreen.tsx (NODE_META emoji map, lines 15-27, used at 71-94), run.css (\u2026\n- said: ## Goal The dungeon map draws each node kind (`fight`, `elite`, `ghost`, `miniBoss`, `boss`, `shop`, `campfire`, `event`, `chest`, `shrine`) as an inline SVG instead of a system emoji. Each SVG is single-colour (`currentColor`) on a 24-unit grid, as the client's other icons are. `run.css` colours e\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-05T19:24:17Z",
       "owner_why": "it plans it",
@@ -16229,9 +16221,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-05T17:56:44Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42093569697",
+      "run_id": "pending:45aecec8-1793908810",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T19:24:17Z",
+      "started_at": "2026-11-05T20:00:58Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16688,9 +16680,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T19:59:53Z",
+    "at": "2026-11-05T20:00:58Z",
     "url": "",
-    "what": "revise #3068 on claude-7"
+    "what": "build #3229 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-05T19:33:23Z",
