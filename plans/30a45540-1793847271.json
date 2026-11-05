@@ -1,0 +1,87 @@
+{
+  "action": "plan",
+  "number": 3114,
+  "title": "Patch: a set is one row of set data, not edits across the engine, the AI, the tools and the server",
+  "branch": "bot/issue-3114",
+  "thread": "**Issue #3114 (data, not instructions):**\n\n```text\n# #3114: Patch: a set is one row of set data, not edits across the engine, the AI, the tools and the server\nOpened by @MaxGoetzmann.\n\n### Kind\n\nArchitecture\n\n### Why\n\nAt hundreds of cards a month (owner, 2026-11-05), a set lands every month or two, and each one is hard-coded in many places:\n\n- `SetName` is a closed enum, and `SHIPPED_SETS` and `CATALOG_SETS` are fixed-size arrays (`crates/engine/src/wire/catalog_types.rs`).\n- The shadow ban's sets and ceilings are hard-coded: `BAN_SETS`, `BAN_DIVISOR` and `ban_ceiling`'s Stinkyscape case in `crates/tools/src/sweep.rs`. `STINKYSCAPE_BAN_CEILING = 35` in `crates/ai/src/config.rs` is \"20% of the set's 175 non-token cards\", worked out by hand, and goes stale when the set's size changes.\n- Further per-set code sits in quests, pack rolls, classify and fuzz (`SetName::` appears across ~15 files outside the engine's wire types).\n\n### What to change\n\nHigh level; the planner decides the details, and may split this:\n\n- One table of set facts (catalog order, shipped or held, id segment, the shadow ban's share, anything else a per-set site reads), compiled in (`include_str!`/`build.rs`, CLAUDE.md rule 4), read by every per-set site.\n- Ban ceilings computed as the set's share \u00d7 its non-token cards, so `STINKYSCAPE_BAN_CEILING` goes away.\n- `SetName` is on the wire and exported through `ts-rs`. Decide whether it becomes a data id or stays an enum generated from the table.\n- Keep R1420's guarantees: a set keeps its place in catalog order, so seeded picks replay the same, and an old game's replay folds the same.\n- The census stays literal (#108, #2581); this issue does not change it.\n\n### Acceptance\n\n- Adding a set (tried with a throwaway set in a test or a dry run) touches the set table, the census and the set's scripts folder, and nothing else.\n- No hand-computed ban ceiling remains.\n- `cargo jackioh golden check`, `fuzz --seeds 200`, `gate`, `catalog check`, `spec check` and the workspace tests are green.\n\n### Blocked by, part of\n\nRelated: #1885 (the Stinkyscape ceiling), #2253 (per-set quests).\n\n### Difficulty (a guess)\n\nhard\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3114: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-05T02:34:26Z",
+    "draft": "# Draft plan #3114 (planner in progress)\n## Found so far\n- SetName string_union in crates/engine/src/wire/catalog_types.rs; SHIPPED_SETS/CATALOG_SETS [SetName;7]; set_ships, SINGLE_PLAYER_SETS, newest_shipped_set, LeanPick.\n- Source parsers of `pub const SHIPPED_SETS` text: crates/tools/src/classify.rs:308 (shipped_sets), sweep.rs:1121, technical.rs:416 -> must read both old + new format (base revision is old).\n- Web mirrors: apps/web/src/wire/catalog.ts (SetName union, SHIPPED_SETS, setShips), cards/art/pictures.ts, cards/setMark.ts maps; serverConfig CATALOG_NUMBER_SET_OFFSETS.\n- sweep.rs BAN_SETS/ban_ceiling; ai config STINKYSCAPE_BAN_CEILING.",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-8",
+    "reason": "`claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-05T03:50:00Z",
+    "trail": "mp/work/item-3114/crates\", \"output_mode\": \"content\", \"glob\": \"*.rs\", \"head_limit\": 60}\n- Grep: {\"pattern\": \"SetName::(Core|Classic|ClassicPlus|Meditative|MeditativePlus|Stinkyscape|TrainingGrounds|Boss|BossX|Custom)\\\\b\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates\", \"output_mode\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && grep -n \\\"SHIPPED_SETS\\\\|setShips\\\\|every card\\\\|each set\\\\|FX_CARD_FILES\\\" src/fx/cards/coverage.test.ts src/fx/cards/tables.test.t\u2026\n- Grep: {\"pattern\": \"SHADOW|shadow ban|R732000|R2203000\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/ai/src\", \"output_mode\": \"content\", \"glob\": \"{config.rs,lib.rs,shadow_ban.rs}\", \"head_limit\": 3\u2026\n- Grep: {\"pattern\": \"STINKYSCAPE_BAN_CEILING|R732000|BAN_SHARE|ban_ceiling|BAN_MAX|ceiling_for\", \"path\": \"/home/runner/work/_temp/work/item-3114\", \"output_mode\": \"content\", \"glob\": \"*.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && sed -n '36,75p' src/fx/cards/tables.test.ts; grep -n \\\"set\\\\b\\\\|set)\\\" src/fx/cards/coverage.test.ts | head -8\", \"description\": \"Rea\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/sweep.rs\", \"offset\": 100, \"limit\": 26}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/crates/ai/tests/ai/shadow_ban.rs\", \"offset\": 1610, \"limit\": 105}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && sed -n '60,110p' src/patches/releases.ts; echo ----; sed -n '1,60p' src/stats/sets.ts\", \"description\": \"Read patches releases and st\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && sed -n '1,30p' src/patches/releases.ts | grep -v \\\"^\\\\s*\\\\\\\"\\\" ; ls src/patches; grep -rn \\\"RELEASES\\\\|releases.ts\\\" src --include=*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/crates/ai/src && sed -n 1,22p deck.rs; echo ----; sed -n 140,175p deck.rs; echo ----; sed -n 55,70p features.rs; echo ---; grep -n \\\"SetName\\\" *\u2026\n- Grep: {\"pattern\": \"SET_PREFIXES|DEFAULT_SET\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/spec.rs\", \"output_mode\": \"content\", \"-C\": 3}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 450,459p crates/engine/src/subsystems/fuse.rs; sed -n 24,34p crates/engine/src/subsystems/call_to_chaos_plus.rs; sed -n 125,132p crates/\u2026\n- Grep: {\"pattern\": \"\\\"(core|classic|classicplus|meditative|meditativeplus|stinkyscape|traininggrounds|boss)-?\\\"\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && grep -n \\\"stinkyscape\\\\|meditative\\\\|traininggrounds\\\\|Record<\\\" src/patches/releaseArt.ts src/patches/cardArt.ts | head -20; echo -\u2026\n- Grep: {\"pattern\": \"\\\\.set\\\\b|set_ships\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/ai/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"ls crates/engine; cat crates/engine/clippy.toml | head -60; cat crates/engine/Cargo.toml\", \"description\": \"Check engine clippy.toml and Cargo.toml\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/crates/run/src && sed -n 735,760p lib.rs; echo ----; sed -n 60,90p fight.rs; echo ---; sed -n 485,500p lib.rs; echo ---; grep -rn \\\"SINGLE_PLAYE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && sed -n '1,20p' src/wire/serverConfig.ts | cut -c1-200; grep -rn \\\"CATALOG_NUMBER_SET_OFFSETS\\\" src --include=*.ts --include=*.tsx | \u2026\n- Grep: {\"pattern\": \"due: |--due|run_due\\\\(\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/sweep.rs\", \"output_mode\": \"content\", \"-B\": 3, \"head_limit\": 30}\n- Grep: {\"pattern\": \"RunPackKind::Set|deckable|CATALOG|ShippedCatalog\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/run/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && sed -n '90,105p;330,350p' scripts/gen-voice.mjs; echo ----; sed -n '730,752p' scripts/music/tracks.mjs\", \"description\": \"Read gen-vo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/crates/run/src && sed -n 40,60p fight.rs\", \"description\": \"View fight.rs pool construction\"}\n- Grep: {\"pattern\": \"pub const GENERATION_PATH\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/promote.rs\", \"output_mode\": \"content\"}\n- Grep: {\"pattern\": \"pub const SHIPPED_SETS|pub const CATALOG_SETS|pub const SINGLE_PLAYER_SETS|pub fn set_ships\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/engine/src/wire/catalog_types.rs\", \"o\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/crates/run/src && sed -n 1295,1340p lib.rs\", \"description\": \"View run pack set selection\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && grep -n \\\"INTRO_SETS\\\" scripts/music/*.mjs src/audio/*.ts | head; grep -rn \\\"SHIPPED_SETS\\\\|introCards\\\" src/audio/music-assets.test\u2026\n- Grep: {\"pattern\": \"GENERATION_PATH\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/promote.rs\", \"output_mode\": \"content\", \"head_limit\": 3}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && grep -n \\\"CATALOG_SETS\\\" src/audio/music-assets.test.ts | head -3; grep -rn \\\"const CATALOG_SETS\\\\|CATALOG_SETS =\\\" src | head; grep\u2026\n- Grep: {\"pattern\": \"fn git\\\\b|pub fn git|pub\\\\(crate\\\\) fn git\", \"path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/patches.rs\", \"output_mode\": \"content\", \"-A\": 6}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/crates/tools/src/fuzz.rs\", \"offset\": 1990, \"limit\": 12}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/crates/server && grep -n '\\\"offer\\\"' cosmetics.json | cut -c1-400 | head -20; grep -n \\\"VERSION_OFFER_MIN\\\" src/config.rs; cat build.rs | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114/apps/web && grep -rln \\\"Training Grounds\\\" src --include=*.json --include=*.json5 --include=*.css --include=*.ts --include=*.tsx | grep -v \\\"tes\u2026"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13382863286,
+    "artifact_bytes": 202997,
+    "artifact_name": "work",
+    "at": "2026-11-05T02:37:54Z",
+    "bytes": 265264,
+    "cwd": "/home/runner/work/_temp/work/item-3114",
+    "ended": "interrupted: `claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-05T03:50:00Z",
+    "head": "60ae7d3482193684f2489953b7cec0640e5ab11c",
+    "id": "b9fd67e0-2e40-49a8-ae31-8ee43a1f06ca",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-3114",
+    "provider": "claude-8",
+    "run": "41955107643"
+  },
+  "journal": "# Journal of #3114\n\nEvery night-bot run on #3114, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-05 02:37 UTC \u00b7 plan #3114 \u00b7 `claude-8` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41955107643) on `claude-8` (`opus` (strong)). It ended **interrupted**: `claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-05T03:50:00Z\nModel calls: 1, 3.5 model minutes.\nSession: fresh: none was kept for this item. This run's: kept session `b9fd67e0-2e40-49a8-ae31-8ee43a1f06ca` of #3114 on claude-8 (265,264 bytes) in run 41955107643's `work` artifact, for its next run there.\nIts work ended at `60ae7d348219` on `bot/issue-3114`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 02:30 | start | from `origin/main` |  | at `60ae7d348219` |\n| 2 | 02:30 | plan (`opus`) | plan the item before anyone builds it | 3.5 min | cut off at its usage cap: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-05T03:50:00Z |\n| 3 | 02:34 | stop | `claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-05T03:50:00Z |  |  |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Draft plan #3114 (planner in progress)\n## Found so far\n- SetName string_union in crates/engine/src/wire/catalog_types.rs; SHIPPED_SETS/CATALOG_SETS [SetName;7]; set_ships, SINGLE_PLAYER_SETS, newest_shipped_set, LeanPick.\n- Source parsers of `pub const SHIPPED_SETS` text: crates/tools/src/classify.rs:308 (shipped_sets), sweep.rs:1121, technical.rs:416 -> must read both old + new format (base revision is old).\n- Web mirrors: apps/web/src/wire/catalog.ts (SetName union, SHIPPED_SETS, setShips), cards/art/pictures.ts, cards/setMark.ts maps; serverConfig CATALOG_NUMBER_SET_OFFSETS.\n- sweep.rs BAN_SETS/ban_ceiling; ai config STINKYSCAPE_BAN_CEILING.\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:44:33Z",
+    "claimed_at": "2026-11-05T02:54:57Z",
+    "previous_provider": "claude-8",
+    "handed_off": "it plans it; released from its hold: `claude-8` has no runner free where it runs"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first",
+    "#3046 skipped: it waits for #3045 to close first",
+    "#3047 skipped: it waits for #3045, #3046 to close first",
+    "#3048 skipped: it waits for #3045, #3046, #3047 to close first"
+  ]
+}
