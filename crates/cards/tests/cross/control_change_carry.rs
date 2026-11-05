@@ -1,7 +1,9 @@
 //! What a card's "you" follows once it changes sides (SPEC §6.2, §8 Conventions: "'Your' means the
-//! controller", R30, R171). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L1).
-//!  - #79 Twinspell's "the next Spell you play gains Echo +1" is a modifier the permanent installed,
-//!    and it moves with the permanent to its new controller.
+//! controller", R171, R384, R3044000). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md,
+//! lens L1).
+//!  - #79 Twinspell's "Activate: The next Spell you play this turn gains Echo +1" is its controller's to
+//!    use: stolen, it is the thief who activates it and whose next Spell echoes (until #3044 its grant was
+//!    a modifier the permanent installed, which moved with it, R30).
 //!  - §6.2: a start-of-turn hook fires on its controller's own turn start. One queued for that
 //!    controller does not fire for the player who took the card while the queue was running.
 
@@ -42,12 +44,12 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-/// R30: a stolen Twinspell's grant is its new controller's
-mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
+/// R384, R3044000: a stolen Twinspell's Activate is its new controller's
+mod r3044000_a_stolen_twinspells_activate_is_its_new_controllers {
     use super::*;
 
     #[test]
-    fn r30_r12_r171_r2618000_a_stolen_twinspell_grants_its_echo_to_the_thiefs_next_spell_and_goes_to_the_thiefs_graveyard_s8_c79()
+    fn r3044000_r12_r171_r2618000_a_stolen_twinspell_grants_its_echo_to_the_thiefs_next_spell_and_goes_to_the_thiefs_graveyard_s8_c79()
      {
         let mut g = setup(json!({
             "p1": { "hand": [TWINSPELL, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
@@ -61,28 +63,22 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         g.end_turn();
-        // The steal fired at the start of p2's turn, and the modifier went with the card; both seats
-        // were told, since `modifierChanged` names the seat (R169).
+        // The steal fired at the start of p2's turn. Twinspell installs nothing standing on the field, so
+        // there was no modifier to carry: p2 activates it (R384), and the grant is p2's.
         assert_eq!(g.state().active, PlayerId::P2);
         assert_eq!(g.card(&twinspell).controller, PlayerId::P2);
         assert_eq!(echo_next_spell_mods(&g, PlayerId::P1), 0);
+        assert_eq!(echo_next_spell_mods(&g, PlayerId::P2), 0);
+        g.activate(&twinspell, json!({}));
+        assert_eq!(echo_next_spell_mods(&g, PlayerId::P1), 0);
         assert_eq!(echo_next_spell_mods(&g, PlayerId::P2), 1);
-        let changes: Vec<(PlayerId, bool)> = g
-            .last_events()
-            .iter()
-            .filter_map(|event| match event {
-                GameEvent::ModifierChanged { player, added, .. } => Some((*player, *added)),
-                _ => None,
-            })
-            .collect();
-        assert_eq!(changes, [(PlayerId::P1, false), (PlayerId::P2, true)]);
 
-        // p2's Stockpile resolves twice (draw 2, twice), and Twinspell goes to p2's graveyard, the side it
-        // was on, as p2's card (R2618000).
+        // Twinspell has gone to p2's graveyard, the side it was on, as p2's card (R2618000), and p2's
+        // Stockpile resolves twice (draw 2, twice).
+        g.expect_in_zone(&twinspell, "graveyard");
         let before = g.hand("p2").len();
         g.play(STOCKPILE, json!({}));
         assert_eq!(g.hand("p2").len(), before - 1 + 4);
-        g.expect_in_zone(&twinspell, "graveyard");
         assert!(
             g.pile("p2", "graveyard")
                 .iter()

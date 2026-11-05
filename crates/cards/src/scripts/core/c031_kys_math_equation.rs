@@ -556,6 +556,8 @@ mod tests {
                 "p1": { "hand": ["31"], "field": ["15"], "backrow": ["79"], "library": ["15", "15"], "mana": 10 },
                 "p2": { "field": ["15"], "library": ["15", "15"] },
             }));
+            // R3044000: Twinspell's Activate gives the next Spell this turn its Echo +1.
+            s.activate("79", json!({}));
             s.play("31", at_enemy_hero());
             // The repeat asks its target afresh (§10.6).
             assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));

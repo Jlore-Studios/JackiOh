@@ -144,6 +144,7 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
         let menace = must(s.unit("p2", 1), "p2's unit");
 
         s.play(TWINSPELL, json!({}));
+        s.activate(TWINSPELL, json!({}));
         s.play(
             OUTBREAK,
             json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }),

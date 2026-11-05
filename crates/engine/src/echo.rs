@@ -126,10 +126,11 @@ pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
     own + copied_echo(state, card)
 }
 
-/// How much Echo one rider grants now. A rider a permanent installed (`sourceId`, #79 Twinspell) is
-/// that permanent's lasting effect (§5.1, R209): it grants only while the permanent is on the field
-/// under the rider's player, and what its face says now (§5.2: a Twinspell #49 made Radiant says
-/// "Echo +2"). A rider with no source (an engine or test fixture) grants its own `amount`.
+/// How much Echo one rider grants now. A rider a permanent installed (`sourceId`, #79 Twinspell through
+/// v0.5.11o) is that permanent's lasting effect (§5.1, R209): it grants only while the permanent is on
+/// the field under the rider's player, and what its face says now (§5.2: a Twinspell #49 made Radiant
+/// said "Echo +2"). A rider with no source (#79 Twinspell's Activate since #3044, R3044000, or an engine
+/// or test fixture) grants its own `amount`.
 pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModifier) -> i32 {
     let ModifierKind::EchoNextSpell { amount, source_id } = &modifier.kind else {
         return 0;

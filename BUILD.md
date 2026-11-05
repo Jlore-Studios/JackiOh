@@ -262,7 +262,7 @@ Phases per §2.2 and R62. Start-of-turn: the board snapshot (R419), refresh mana
 Acceptance:
 - Turn 1 P1: 1 mana; turn 4: 4; turn 10: 4. Mana Well turn 4: 5 available.
 - `nextTurnMod = −1` (Hinder) on a turn-2 player yields 1 mana, and 0 mana never goes negative.
-- A "this turn" discount is gone after `endTurn`; Twinspell's pending Echo is not (R30).
+- A "this turn" discount is gone after `endTurn`, and so is an unused Twinspell grant (R3044000); an "until used" Echo grant is not (R30).
 - Start-of-turn triggers fire before the draw (test: Gravedigger adds a card, then the draw happens; hand order proves it).
 - `play` with `x` greater than current mana errors; `x = 0` errors (R348).
 
@@ -473,7 +473,7 @@ Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 f
 | 76 | Field of Dreams | 2 | Costs (2) (patch v0.3.13); hand of N → N Reminisce, old cards in GY (R31); exiled; radiant gives radiant Reminisce |
 | 77 | Professor Curvature | 2 | Next turn only: cards whose current cost is 4 or more −1 (radiant −2); not this turn; expires (R48, R363) |
 | 78 | /fullsend | 2 | Refresh 3, never past max (R364); −1 cost this turn; hand exiled at end of turn; radiant also each play draws 1 |
-| 79 | Twinspell | 2 | Next spell echoes once (radiant twice); consumed to GY on use (R30); survives cleanup |
+| 79 | Twinspell | 2 | Activate, once a turn (R384): the next Spell this turn echoes once, a cast included; the base face then goes to the GY by a plain move, no death (R3044000); radiant stays and serves again next turn; an unused grant ends at cleanup |
 | 80 | Zao Gao | 2 | Discards 2 random cards, no prompt (R354); two Rush Tokens each with two distinct pool keywords; radiant the tokens are Radiant 6/6 Rush, Cleave, and roll three keywords they do not have; tagged CN |
 | 81 | Radiant Saintess | 2 | Death makes every other unit you control Radiant; no Reborn, so she dies once; radiant 4/4 Reborn, so she dies twice and each Death radiates the units standing then, the hand untouched (through v0.5.2 no Reborn and every card in your hand made Radiant too, hidden from the opponent, R177; issue #2179) |
 | 82 | KY's Trial | 2 | Three different sets of the five that ship, then three distinct numbers of the chosen one, never 82 or a token index (R54, R831004; patch v0.3.10, the Core set alone before); chosen card is radiant; radiant costs 0 |

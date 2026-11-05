@@ -1,10 +1,13 @@
-//! A permanent's lasting effect lasts while it is on the field (SPEC §5.1, §5.2, R30, R169, R209).
+//! What became of #79 Twinspell's lasting effect (SPEC §5.1, §5.2, R209, R384, R3044000).
 //! Found by the polish-4 edge-case hunt, rounds 2 and 4 (docs/polish/4-edge-cases.md, lenses L1, L2, L8).
-//! #79 Twinspell's "the next Spell you play gains Echo +1" is a player modifier that ends when Twinspell
-//! leaves the field (bounced by radiant #52, destroyed by #36), and one replayed adds no second rider.
-//! Its amount is Twinspell's current face's, as when radiant #49 steals it and makes it Radiant. #79
-//! prints no Cry (R169), so a Twinspell summoned onto the field (§6.2: no Cry) grants it too, as does
-//! Twinspell's text fused by #85 onto the other player's Field Spell.
+//! Through v0.5.11o Twinspell's "the next Spell you play gains Echo +1" was a player modifier the
+//! permanent installed standing on the field, which ended when it left (R209). Since #3044 it is an
+//! Activate, once a turn (R384), whose grant is its player's for that turn, a rider with no source
+//! (R3044000): it outlives the Twinspell that gave it (bounced by radiant #52), and Twinspell standing on
+//! the field gives nothing until it is activated, by whoever controls it then (stolen by radiant #97.4,
+//! whose Radiant face then stays), however it came to stand there (#22's summoned copies of a Unit
+//! carrying its text, Twinspell's text fused by #85 onto the other player's Field Spell).
+//! The engine's lasting grant that R209 describes is proved in `crates/engine/tests/rules/rulings_a.rs`.
 //! Test paths: SURFACE §4.1, §8.
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
@@ -61,16 +64,16 @@ fn unit_carrying(g: &mut Scenario, unit_lane: i32, backrow_lane: i32) -> CardIns
     fused.expect("setup: the fusion")
 }
 
-mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
+mod r209_r3044000_twinspells_grant_is_its_players_and_outlives_twinspell {
     use super::*;
 
     #[test]
-    fn r209_r30_a_twinspell_radiant_silly_silas_bounces_to_its_controllers_hand_takes_its_grant_with_it_so_the_next_spell_resolves_once()
+    fn r209_r3044000_a_radiant_twinspell_bounced_by_radiant_silly_silas_leaves_its_grant_behind_so_the_next_spell_still_echoes()
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": {
-                "hand": [TWINSPELL, { "def": SILAS, "radiant": true }, STOCKPILE, VANILLA],
+                "hand": [{ "def": TWINSPELL, "radiant": true }, { "def": SILAS, "radiant": true }, STOCKPILE, VANILLA],
                 "mana": 10,
                 "library": LIBRARY,
             },
@@ -78,6 +81,8 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         }));
         let twin = g.card(TWINSPELL).clone();
         g.play(TWINSPELL, json!({ "zone": 5 }));
+        assert!(echo_riders(&g, PlayerId::P1).is_empty());
+        g.activate(TWINSPELL, json!({}));
         assert_eq!(echo_riders(&g, PlayerId::P1).len(), 1);
 
         // Backrow ring, rotating right from p1's seat: p1's lane 5 would cross to p2's lane 5, so the
@@ -85,19 +90,21 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         g.expect_in_zone(&twin, "hand");
 
-        assert!(echo_riders(&g, PlayerId::P1).is_empty());
+        // No lasting effect ends with it: the grant is p1's (R3044000).
+        assert_eq!(echo_riders(&g, PlayerId::P1).len(), 1);
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
-        assert_eq!(stockpile_resolutions(g.last_events()), 1);
-        assert_eq!(g.hand("p1").len(), before - 1 + 2);
+        assert_eq!(stockpile_resolutions(g.last_events()), 2);
+        assert_eq!(g.hand("p1").len(), before - 1 + 4);
     }
 
     #[test]
-    fn r209_r30_r174_a_twinspell_bounced_by_radiant_silly_silas_and_replayed_grants_echo_1_once_not_twice() {
+    fn r3044000_r78_r384_a_radiant_twinspell_bounced_and_replayed_activates_afresh_so_the_next_spell_gains_both_grants()
+     {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": {
-                "hand": [TWINSPELL, { "def": SILAS, "radiant": true }, STOCKPILE, VANILLA],
+                "hand": [{ "def": TWINSPELL, "radiant": true }, { "def": SILAS, "radiant": true }, STOCKPILE, VANILLA],
                 "mana": 10,
                 "library": LIBRARY,
             },
@@ -105,21 +112,26 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         }));
         let twin = g.card(TWINSPELL).clone();
         g.play(TWINSPELL, json!({ "zone": 5 }));
+        g.activate(TWINSPELL, json!({}));
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         g.expect_in_zone(&twin, "hand");
 
+        // Leaving the field reset its uses (R78, R384), so the replayed Twinspell may be activated again,
+        // and each grant gives its own Echo +1.
         g.play(&twin, json!({ "zone": 4 }));
-        assert_eq!(echo_riders(&g, PlayerId::P1).len(), 1);
+        g.activate(&twin, json!({}));
+        assert_eq!(echo_riders(&g, PlayerId::P1).len(), 2);
 
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
-        assert_eq!(stockpile_resolutions(g.last_events()), 2);
-        assert_eq!(g.hand("p1").len(), before - 1 + 4);
-        g.expect_in_zone(&twin, "graveyard");
+        assert_eq!(stockpile_resolutions(g.last_events()), 3);
+        assert_eq!(g.hand("p1").len(), before - 1 + 6);
+        assert!(echo_riders(&g, PlayerId::P1).is_empty());
+        g.expect_in_zone(&twin, "field");
     }
 
     #[test]
-    fn r209_r30_a_twinspell_the_opponent_destroys_with_magic_jammed_leaves_no_grant_behind_so_the_next_spell_gains_no_echo()
+    fn r209_r3044000_a_twinspell_the_opponent_destroys_with_magic_jammed_before_it_was_activated_gave_nothing_so_the_next_spell_gains_no_echo()
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
@@ -132,6 +144,8 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         g.play(TWINSPELL, json!({ "zone": 2 }));
+        // Standing on the field it installs nothing.
+        assert!(echo_riders(&g, PlayerId::P1).is_empty());
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P2);
 
@@ -140,7 +154,6 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
             json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
         );
         g.expect_in_zone(&twin, "graveyard");
-        assert!(echo_riders(&g, PlayerId::P1).is_empty());
 
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
@@ -151,11 +164,12 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
     }
 }
 
-mod r209_twinspells_grant_follows_its_current_face {
+mod r3044000_a_twinspell_is_activated_by_its_controller_on_the_face_it_wears {
     use super::*;
 
     #[test]
-    fn r209_a_twinspell_stolen_by_a_radiant_mega_church_grants_echo_2_to_the_thiefs_next_spell() {
+    fn r3044000_r384_a_twinspell_stolen_by_a_radiant_mega_church_is_the_thiefs_to_activate_and_its_radiant_face_stays()
+     {
         jackioh_cards::register_all();
         let library = [LIBRARY, LIBRARY].concat();
         let mut g = scenario(json!({
@@ -175,35 +189,37 @@ mod r209_twinspells_grant_follows_its_current_face {
         assert_eq!(g.state().active, PlayerId::P1);
 
         // Twinspell is p1's now, and Radiant on the field, where §5.2 has its text be the radiant one
-        // from then on: "Echo +2".
+        // from then on: its Activate leaves it on the field.
         g.activate(
             CHURCH,
             json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
         );
         assert_eq!(g.card(&twin).controller, PlayerId::P1);
         assert!(g.card(&twin).radiant);
-        // R169's badge says so too.
+        g.activate(&twin, json!({}));
+        assert!(echo_riders(&g, PlayerId::P2).is_empty());
+        // R169's badge says so.
         assert!(
             g.view("p1")
                 .you
                 .modifiers
                 .iter()
-                .any(|modifier| modifier.label == "Next Spell gains Echo +2")
+                .any(|modifier| modifier.label == "Next Spell gains Echo +1")
         );
 
         let before = g.hand("p1").len();
         g.play(STOCKPILE, json!({}));
-        assert_eq!(stockpile_resolutions(g.last_events()), 3);
-        assert_eq!(g.hand("p1").len(), before - 1 + 6);
-        g.expect_in_zone(&twin, "graveyard");
+        assert_eq!(stockpile_resolutions(g.last_events()), 2);
+        assert_eq!(g.hand("p1").len(), before - 1 + 4);
+        g.expect_in_zone(&twin, "field");
     }
 }
 
-mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_field {
+mod r3044000_twinspells_activate_is_the_cards_however_it_came_to_stand_on_the_field {
     use super::*;
 
     #[test]
-    fn r209_r41_r169_twinspells_summoned_by_22s_death_grant_their_echo_like_played_ones_so_the_next_spell_resolves_three_times()
+    fn r3044000_r41_twinspells_text_on_units_22_summons_is_activated_on_each_so_the_next_spell_resolves_three_times()
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
@@ -226,25 +242,43 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         g.expect_in_zone(&eaten, "graveyard");
 
         // Hit Job kills the Cube, whose Death summons two copies of the Unit it ate, Twinspell's text
-        // and all, into p1's unit row (R41, R64). A summon fires no Cry (§6.2).
+        // and all, into p1's unit row (R41, R64). Neither installs anything standing there.
         g.play(
             HIT_JOB,
             json!({ "targets": [{ "pick": "instance", "instanceId": cube.id }] }),
         );
-        let copies = g
+        let copies: Vec<String> = g
             .last_events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::Summoned { def_id, .. } if *def_id == eaten.def_id))
-            .count();
-        assert_eq!(copies, 2);
+            .filter_map(|event| match event {
+                GameEvent::Summoned {
+                    instance_id, def_id, ..
+                } if *def_id == eaten.def_id => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(copies.len(), 2);
+        assert!(echo_riders(&g, PlayerId::P1).is_empty());
+
+        // Each copy's Activate gives Echo +1, then sends that copy to the graveyard: a plain move, no
+        // death (R3044000).
+        for copy in &copies {
+            g.activate(copy.as_str(), json!({}));
+            g.expect_in_zone(copy.as_str(), "graveyard");
+        }
         assert_eq!(echo_riders(&g, PlayerId::P1).len(), 2);
+        assert!(
+            g.last_events()
+                .iter()
+                .all(|event| event.event_type() != GameEventType::Destroyed)
+        );
 
         g.play(STOCKPILE, json!({}));
         assert_eq!(stockpile_resolutions(g.last_events()), 3);
     }
 
     #[test]
-    fn r209_r77_twinspell_fused_by_85_onto_the_trap_controllers_field_spell_grants_its_echo_to_that_controller()
+    fn r3044000_r77_twinspell_fused_by_85_onto_the_trap_controllers_field_spell_is_that_controllers_to_activate()
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
@@ -271,10 +305,13 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         assert_ne!(g.card(&well).def_id, MANA_WELL);
         assert!(echo_riders(&g, PlayerId::P2).is_empty());
 
-        // "The next Spell you play gains Echo +1" now stands on p1's side, and "you" is its controller
-        // (§8 Conventions): p1's next Spell, Stockpile, resolves twice.
+        // "Activate: The next Spell you play this turn gains Echo +1. Then this goes to the graveyard."
+        // now stands on p1's side, and "you" is its controller (§8 Conventions): p1 activates it, the
+        // fused Mana Well goes to the graveyard, and p1's next Spell, Stockpile, resolves twice.
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
+        g.activate(&well, json!({}));
+        g.expect_in_zone(&well, "graveyard");
         g.play(STOCKPILE, json!({}));
         assert_eq!(stockpile_resolutions(g.last_events()), 2);
     }

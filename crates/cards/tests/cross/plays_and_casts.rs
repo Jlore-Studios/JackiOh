@@ -47,12 +47,14 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     #[test]
     fn r70_a_cast_on_draw_spell_s_echo_repeat_resolves_before_the_draw_repeats_2_4_10_5_step_6() {
         register_all();
-        // p1 has Twinspell's grant up. The start-of-turn draw takes #27 Blood Ridden, which casts itself
-        // (R70: a cast Spell takes Twinspell's Echo). Its resolution and its Echo repeat (§10.5 step 6)
-        // find no card in p1's hand to make Radiant; only then does the draw repeat (§2.4).
+        // p1 activates Twinspell, so the next Spell p1 plays this turn gains Echo +1 (R3044000), then plays
+        // #75 Infinite Reserves, a Field Spell, which leaves the grant waiting. Its Cry's draw takes #27
+        // Blood Ridden, which casts itself (R70: a cast Spell takes the grant). Its resolution and its Echo
+        // repeat (§10.5 step 6) find no card in p1's hand to make Radiant; only then does the draw repeat
+        // (§2.4).
         let mut g = scenario(json!({
             "p1": {
-                "hand": [TWINSPELL],
+                "hand": [TWINSPELL, INFINITE_RESERVES],
                 "field": [{ "def": VANILLA, "lane": 1 }],
                 "library": [BLOOD_RIDDEN, VANILLA, VANILLA],
             },
@@ -60,11 +62,10 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         }));
 
         g.play(TWINSPELL, json!({}));
-        g.end_turn(); // p1 → p2
-        g.end_turn(); // p2 → p1: the start-of-turn draw casts Blood Ridden
+        g.activate(TWINSPELL, json!({}));
+        g.play(INFINITE_RESERVES, json!({})); // its Cry's draw casts Blood Ridden
 
-        assert_eq!(g.state().active, P1);
-        // Both resolutions ran: 7 health each (R18), and the grant was spent (R30).
+        // Both resolutions ran: 7 health each (R18), and the grant was spent.
         g.expect_health(P1, 16);
         g.expect_in_zone(BLOOD_RIDDEN, "graveyard");
         let drawn_after: Vec<CardInstance> = g

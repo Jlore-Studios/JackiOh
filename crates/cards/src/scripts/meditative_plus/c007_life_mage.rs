@@ -140,6 +140,7 @@ mod tests {
             json!({}),
         );
         s.play(TWINSPELL, json!({}));
+        s.activate(TWINSPELL, json!({}));
         s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
         s.answer(hero(P2));
         assert_eq!(heals_on(&s, "hero-p1"), vec![4, 4]);

@@ -752,8 +752,8 @@ core-079: # Twinspell
     cast: Say it twice. Say it twice.
   zh:
     name: 双生法术
-    base: 你的下一个法术获得回响+{echoGain}。然后这张牌进入墓地。
-    radiant: 你的下一个法术获得回响+{echoGain}。然后这张牌进入墓地。
+    base: 激活：在本回合中，你的下一个法术获得回响+{echoGain}。然后这张牌进入墓地。
+    radiant: 激活：在本回合中，你的下一个法术获得回响+{echoGain}。
 core-080: # Zao Gao
   flavour: A plate of rice cakes and a reckless idea.
   voice:

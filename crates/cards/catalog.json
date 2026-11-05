@@ -2872,7 +2872,7 @@
       {
         "key": "echoGain",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -2881,11 +2881,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
+      "text": "Activate: The next Spell you play this turn gains Echo +{echoGain}. Then this goes to the graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
+      "text": "Activate: The next Spell you play this turn gains Echo +{echoGain}."
     }
   },
   "core-080": {

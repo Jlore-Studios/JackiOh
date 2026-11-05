@@ -558,10 +558,13 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     }
 
     #[test]
-    fn r102_r77_r209_a_twinspell_fused_onto_a_twinspell_gives_the_next_spell_both_echo_1s_8_79() {
+    fn r102_r77_r3044000_a_twinspell_fused_onto_a_twinspell_has_two_activates_but_the_first_sends_it_to_the_graveyard_8_79()
+     {
         let library: Vec<&str> = vec![MR_VANILLA; 10];
         // p2 plays a Twinspell; p1's Unlicensed Experimentation fuses it onto p1's own Twinspell (R61,
-        // R77). The fused Field Spell prints "the next Spell you play gains Echo +1" twice.
+        // R77). The fused Field Spell prints "Activate: The next Spell you play this turn gains Echo +1.
+        // Then this goes to the graveyard." twice, two abilities (R102), and the first one used sends the
+        // card away before the second can be.
         let mut s = scenario(json!({
             "seed": "r7-card-twin-twin",
             "active": "p2",
@@ -576,6 +579,23 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
                 .is_some_and(|id| is_fused_id(id, "core-079+core-079"))
         );
         s.end_turn();
+        let twin = s.backrow(P1, 1).expect("the fused Twinspell");
+        let offered = |s: &Scenario| -> Vec<String> {
+            legal_actions(s.state(), P1)
+                .into_iter()
+                .filter_map(|action| match action {
+                    ActionBody::Activate {
+                        instance_id, ability, ..
+                    } if instance_id == twin.id => ability,
+                    _ => None,
+                })
+                .collect()
+        };
+        assert_eq!(offered(&s), vec!["echo".to_string(), "echo#2".to_string()]);
+
+        s.activate(&twin, json!({ "ability": "echo" }));
+        s.expect_in_zone(&twin, "graveyard");
+        assert!(offered(&s).is_empty());
 
         let from = s.events().len();
         s.play(STOCKPILE, json!({}));
@@ -583,7 +603,7 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
             .iter()
             .filter(|event| matches!(event, GameEvent::Drawn { .. }))
             .count();
-        assert_eq!(draws, 6);
+        assert_eq!(draws, 4);
     }
 }
 

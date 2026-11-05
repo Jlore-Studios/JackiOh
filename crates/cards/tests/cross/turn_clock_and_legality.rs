@@ -29,7 +29,7 @@ const HEROIC: &str = "core-098";
 const CRAFT: &str = "core-099"; // two chained Discovers
 const FELINORS: &str = "core-012";
 const JELLY_BEAN: &str = "core-026"; // Choose a card in your hand; it becomes Radiant (radiant: choose 2)
-const TWINSPELL: &str = "core-079"; // the next Spell you play gains Echo +1
+const TWINSPELL: &str = "core-079"; // Activate: the next Spell you play this turn gains Echo +1
 const MC_TECH: &str = "classic-040"; // Radiant: "Cry: … steal one of your choice", a prompt at resolution
 const CHAOS_GOLEM: &str = "core-095-1"; // a Token: no random pool or Discover may ever offer it (§5.1)
 const LIBRARY: [&str; 5] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
@@ -513,6 +513,7 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
             "p2": { "hand": [RENO], "library": [RENO] },
         }));
         s.play(TWINSPELL, json!({ "zone": 1 }));
+        s.activate(TWINSPELL, json!({}));
         let picks: Vec<Value> = [RENO, VANILLA]
             .iter()
             .map(|id| json!({ "pick": "instance", "instanceId": s.card(*id).id }))

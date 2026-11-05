@@ -126,6 +126,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
         grant_reborn(&mut g, &fauci);
 
         g.play(TWINSPELL, json!({}));
+        g.activate(TWINSPELL, json!({}));
         // The check between the resolutions (§4.5) kills Fauci and Reborn returns it; the repeat then
         // asks for a fresh target, and the first hit's damage event is dispatched after all of that.
         g.play(TRUE_STRIKE, json!({ "targets": pick::instance(&fauci) }));
@@ -182,6 +183,7 @@ mod r212_a_card_that_arrived_after_a_death_does_not_answer_it {
         let gary = g.unit_at(PlayerId::P2, 1);
 
         g.play(TWINSPELL, json!({}));
+        g.activate(TWINSPELL, json!({}));
         g.play(ADAPTIVE_UI, json!({ "x": 1, "targets": pick::instance(&gary) }));
         answer_repeat_with_hero(&mut g);
 

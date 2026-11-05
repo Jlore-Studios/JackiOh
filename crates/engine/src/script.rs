@@ -430,7 +430,8 @@ pub struct StaticFlags {
     /// R30: this card's own Echo, so its play resolves this many extra times.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub echo: Option<i32>,
-    /// R30, R209: the Echo this permanent's rider gives the next Spell, read off its face now (#79).
+    /// R30, R209: the Echo this permanent's rider gives the next Spell, read off its face now (#79
+    /// through v0.5.11o, whose replays keep it, R767000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub echo_grant: Option<i32>,
     /// #38: while on the field, its controller's cards gain "Combo X: deal X damage to the enemy hero"

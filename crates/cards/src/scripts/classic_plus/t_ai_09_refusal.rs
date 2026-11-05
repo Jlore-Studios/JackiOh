@@ -106,7 +106,7 @@ mod tests {
     const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: Destroy target backrow card. Lock its zone.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: your next Spell gains Echo +1.
+    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
     const BEAR: &str = "core-060"; // (1) Trap
     const COUNTERSPELL_TEST_FILLER: &str = "core-011"; // (1) Unit
     const SCEPTER: &str = "classic-007"; // (1) Field Spell: Cry: exile a (1) Cost or less Spell from your hand. Activate: cast a copy of it.
@@ -209,6 +209,7 @@ mod tests {
             #[test]
             fn r448_a_countered_spell_makes_no_echo_repeats() {
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": TWINSPELL, "faceUp": true }] }), false);
+                s.activate(TWINSPELL, json!({}));
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(count(s.last_events(), "cardResolved"), 0);
@@ -298,6 +299,7 @@ mod tests {
             #[test]
             fn r81_a_pick_made_while_it_resolves_is_no_target_of_the_play_an_echo_repeat_aimed_at_your_unit_leaves_it_set() {
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": TWINSPELL, "faceUp": true }] }), false);
+                s.activate(TWINSPELL, json!({}));
                 s.play(TRUE_STRIKE, json!({ "targets": p1_hero() }));
                 assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P2));
                 let targets = pick::unit_at(&s, P1, 1);
