@@ -16700,6 +16700,13 @@
     "3115": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41975124334",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-05T05:50:01Z",
+        "until": "2026-11-05T06:20:01Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
