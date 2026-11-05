@@ -15452,9 +15452,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6644263694"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6645383538
     },
