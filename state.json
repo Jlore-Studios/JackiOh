@@ -16969,7 +16969,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-05T23:13:21Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:270542dc-1793920710",
+      "run_id": "42128715530",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
