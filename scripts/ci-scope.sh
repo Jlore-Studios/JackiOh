@@ -88,7 +88,8 @@
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
 #    on the pull request that adds it.
 #  - The files outside a crate that its tests read run that crate's groups: apps/web/src/wire/
-#    (the engine's and the server's export tests write it) engine and server; docs/radiant-audit.md
+#    (the engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads
+#    engineConfig.ts, #3093) engine and server, and tools, wasm; docs/radiant-audit.md
 #    (radiant_standard.rs) and spec/07-tokens.md (the catalog test's table of tokens, R1177001) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read) tools, wasm, the first as well as server; crates/server/tests/'s
@@ -114,7 +115,8 @@
 #    `include_str!(`, `include_bytes!(`, `read_to_string(`), `CARGO_MANIFEST_DIR`, `#[ignore` or
 #    `preview_sets(` runs tools, wasm.
 #  - web runs for everything but what no web test, build or typecheck reads: the server's, the
-#    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
+#    tools', luau's and the C module's (crates/wasm/c/, #3093: nothing in the web builds or loads it)
+#    crates (except each manifest, which every cargo command loads, and the files
 #    the web's tests read there: env.rs, app.rs (whose probe routes apps/edge's config test holds),
 #    the Dockerfile, tests/deploy/, the practice claim fixture,
 #    tests/fixtures/practice-claim.json, which the worker's claim test plays, and the quest pool,
@@ -132,7 +134,9 @@
 #    job that runs it runs.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
 #    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's tests/golden/,
-#    whose hotseat fixture tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
+#    whose hotseat fixture tools' `replay` includes) and README, the C module's sources (crates/wasm/c/src/:
+#    no client, server or `jackioh` links it; its manifest, which every cargo command loads, is not among
+#    them), the web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
 #    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
 #    Worker), the lint and unit-test configs, and the scripts no build runs.
@@ -265,7 +269,7 @@ for file in $files; do
       echo "ci-scope: $file is in no crate the map knows, running every Rust group" >&2
       on $RUST
       ;;
-    apps/web/src/wire/*) on rust_engine rust_server ;;
+    apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
     docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
@@ -282,10 +286,10 @@ for file in $files; do
   esac
 
   case "$file" in
-    crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml) on web ;;
+    crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml | crates/wasm/c/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
     crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json | crates/server/quests.json) on web ;;
-    crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
+    crates/server/* | crates/tools/* | crates/luau/* | crates/wasm/c/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
@@ -300,7 +304,7 @@ for file in $files; do
 
   case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
-    crates/*/tests/* | crates/*/README.md | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
+    crates/*/tests/* | crates/*/README.md | crates/wasm/c/src/* | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | eslint.config.js | vitest.config.ts) ;;

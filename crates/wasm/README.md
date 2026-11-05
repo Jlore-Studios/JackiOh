@@ -24,7 +24,7 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `build_ai_deck(options)` | `{ deck, rngCursor }`; `options` is `{ rngSeed, rngCursor, size }` and `AiDeckOptions`' own keys, `leanSet` among them (R1370) |
 | `choose_action(state, seat, rng_seed, rng_cursor)` | spec §10.7's random policy, `{ action, rngCursor }` |
 | `validator(call, input)` | one of the validator's functions (`validateDeck`, `validateTrio`, `checkDeckDraft`, `checkImportRoom`, …) by name |
-| `constants()`, `engine_tables()` | the AI budgets, shadow-ban ids and deck builder's numbers (`AI_DECK`); the three Call to Chaos tables (Core's, Classic+'s and Meditative's) and the Heroic Power table the client prints |
+| `constants()`, `engine_tables()` | every rules, AI and run number a client reads, as one flat object (#3093): the AI budgets, shadow-ban ids and deck builder's numbers (`AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `FIXTURE_BANNED_IDS`, `AI_DECK`), `RUN` (`run_constants`'s object) and each constant of `apps/web/src/wire/engineConfig.ts` under its own name (`DECK_SIZE`, …), so a host restates none (CLAUDE.md rule 9); the three Call to Chaos tables (Core's, Classic+'s and Meditative's) and the Heroic Power table the client prints |
 | `preview_sets(sets)` | R1400, R1420: treat `SetName[]` as shipped for the module's life (the dev hotseat's E2E injection); a module built without the `preview` feature refuses any set |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | #936: the Duos wrapper for `/dev/duos`: a `DuosState` (its four decks and handicaps checked first, as `create_game`'s setup is), then `{ state, events, error? }`, `DuosActionBody[]` and `DuosView`; the seat crosses as its string (`"a1"`). Built only with the `duos` feature (the dev server's build only: `JACKIOH_WASM_DUOS=1`, off by default); without it each throws the reason |
 | `craft_preview(recipe, cost, prompt)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say; `prompt` is the open prompt's `{ craftMode, craftOffer }`, its frame and offer (R1563007) |
@@ -77,19 +77,25 @@ cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown
 
 ## The shared bodies (`core/`, #1505)
 
-Both browser modules wrap one set of bodies: `crates/wasm/core` (`jackioh-wasm-core`) holds the
+The three wrappers wrap one set of bodies: `crates/wasm/core` (`jackioh-wasm-core`) holds the
 JSON helpers, the state cache and every binding's work as `Result<String, String>` (or
 `Result<bool | (), String>`) functions. `src/lib.rs` keeps only the wasm-bindgen wrappers, the
 panic hook, the clock and the custom-card refusal (R915009); `luau/src/main.rs` keeps only the C
-wrappers, the panic hook, the clock, the custom-card setup check (R915005, R915006) and
-`check_custom_card`. The exports stay identical, and behavior does not change.
+wrappers through emscripten, the panic hook, the clock, the custom-card setup check (R915005,
+R915006) and `check_custom_card`; `c/src/lib.rs` keeps only the C wrappers on a plain
+`wasm32-unknown-unknown` link, the memory interface, the panic hook, no clock and the custom-card
+refusal. The exports stay identical, and behavior does not change.
 
 A binding cannot be added to one side and forgotten in the other: `tests/export_parity.rs`
 compares each module's export list to a declared allow-list (`SHARED`, the bindings both export;
 `NORMAL_ONLY`, `learned_parity` and the Duos bindings with the reason; `LUAU_ONLY`, the creator's
-check and the C boundary's strings) and fails when a binding is bound in only one module. It also
-holds `.cargo/config.toml`'s `EXPORTED_FUNCTIONS` and the factory types `scripts/build-wasm.sh`
-writes to every C binding.
+check and the C boundary's strings) and fails when a binding is bound in only one module. The C
+module is held to every binding the browser module binds, so one added for the web reaches a host that
+is not JavaScript by itself; its allow-list (`C_ONLY`) names only its memory interface, and
+`LUAU_NOT_IN_C` the two Luau bindings that leave with the Luau host (#2956 part 5), each with its
+reason. The test also holds `.cargo/config.toml`'s `EXPORTED_FUNCTIONS` and the factory types
+`scripts/build-wasm.sh` writes to every Luau-module C binding, and the C module's sources to importing
+nothing from the host.
 
 ```
 cargo test -p jackioh-wasm --test export_parity
@@ -126,4 +132,22 @@ practice or online, never loads it, and the normal module refuses a game with cu
 ```
 sh scripts/build-wasm.sh                                  # both modules
 JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh              # the normal module alone
+```
+
+## The C module (`c/`, #3093)
+
+`crates/wasm/c` (`jackioh-wasm-c`) is the engine's C boundary on its own: every binding the browser
+module binds, as an `extern "C"` function over JSON strings, built as a plain `wasm32-unknown-unknown`
+`cdylib` with no emscripten, no Luau VM, no wasm-bindgen glue, no JavaScript and no system interface,
+so its import section is empty. A host that is not JavaScript (a Roblox port's translation of it,
+#2898) runs it as it is, with the numbers it needs read from `constants()` and none restated. Its
+memory interface (`jackioh_alloc`, `jackioh_free`, `jackioh_result_ptr`, `jackioh_result_len`), its
+calling convention, its errors and its determinism are written in `c/README.md`, the contract. It reads no clock:
+`ai_decide` and `lethal_hint` take `deadline_ms` for the browser's signature and ignore it, so the
+search ends at its `budget`.
+
+```
+cargo test -p jackioh-wasm-c                                  # each export against its core body
+cargo build -p jackioh-wasm-c --release --target wasm32-unknown-unknown
+JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh   # the same, and checks its imports with node
 ```

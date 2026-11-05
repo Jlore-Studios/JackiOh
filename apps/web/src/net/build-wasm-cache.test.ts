@@ -41,7 +41,11 @@ function world(): string {
       'target=""; prev=""; for a in "$@"; do [ "$prev" = --target ] && target=$a; prev=$a; done',
       'dir="${CARGO_TARGET_DIR:-target}/$target/release"; mkdir -p "$dir"',
       'case "$target" in',
-      '  wasm32-unknown-unknown) echo "normal $RUN" > "$dir/jackioh_wasm.wasm" ;;',
+      '  wasm32-unknown-unknown)',
+      '    case " $* " in',
+      '      *" jackioh-wasm-c "*) echo "c $RUN" > "$dir/jackioh_wasm_c.wasm" ;;',
+      '      *) echo "normal $RUN" > "$dir/jackioh_wasm.wasm" ;;',
+      "    esac ;;",
       '  wasm32-unknown-emscripten) echo "luau $RUN" > "$dir/jackioh-wasm-luau.js"; echo "luau $RUN" > "$dir/jackioh_wasm_luau.wasm" ;;',
       "esac",
     ].join("\n"),
@@ -115,6 +119,57 @@ describe("scripts/build-wasm.sh's directories", () => {
     expect(built["luau/jackioh_wasm_luau.wasm"]).toBe("luau shared\n");
     expect(existsSync(join(root, "target"))).toBe(false);
     expect(existsSync(join(root, ".cache"))).toBe(false);
+  });
+
+  it("builds the C module only when JACKIOH_WASM_C asks for it, then checks its imports with node (#3093)", () => {
+    const root = world();
+    // The check runs node on the module; the stand-in finds none.
+    sh(join(root, "bin/node"), "exit 0");
+    const skipped = run(root, "default", { JACKIOH_WASM_LUAU: "0" });
+    expect(skipped.builds.filter((line) => line.includes("jackioh-wasm-c"))).toEqual([]);
+    const asked = run(root, "asked", { JACKIOH_WASM_LUAU: "0", JACKIOH_WASM_C: "1" });
+    expect(asked.builds.filter((line) => line.includes("jackioh-wasm-c"))).toEqual([
+      "build -p jackioh-wasm-c --release --target wasm32-unknown-unknown",
+    ]);
+    expect(asked.out).toContain("imports nothing");
+    // The normal module is the one the web loads: the C build leaves it as the run's own.
+    expect(files(pkg(root))["jackioh_wasm_bg.wasm"]).toBe("normal asked\n");
+  });
+
+  it("fails the build when the C module imports something from its host (#3093)", () => {
+    const root = world();
+    // node answers the module's imports; this one lists one, as a wasm-bindgen glue's would.
+    sh(join(root, "bin/node"), 'echo "build-wasm: the C module imports [{}]" >&2; exit 1');
+    const result = spawnSync("sh", [join(root, "scripts/build-wasm.sh")], {
+      encoding: "utf8",
+      env: {
+        PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
+        HOME: root,
+        CARGO_LOG: join(root, "cargo-imports.log"),
+        RUN: "imports",
+        JACKIOH_WASM_PREVIEW: "0",
+        JACKIOH_WASM_NORMAL: "0",
+        JACKIOH_WASM_LUAU: "0",
+        JACKIOH_WASM_C: "1",
+      },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("the C module imports");
+  });
+
+  it("refuses a JACKIOH_WASM_C that is neither 0 nor 1, and still builds nothing for the two modules off (#3093)", () => {
+    const root = world();
+    const env = { PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`, HOME: root, CARGO_LOG: join(root, "cargo.log") };
+    const script = join(root, "scripts/build-wasm.sh");
+    const odd = spawnSync("sh", [script], { encoding: "utf8", env: { ...env, JACKIOH_WASM_C: "2" } });
+    expect(odd.status).toBe(1);
+    expect(odd.stderr).toContain("JACKIOH_WASM_C is 0 (the default) or 1");
+    const nothing = spawnSync("sh", [script], {
+      encoding: "utf8",
+      env: { ...env, JACKIOH_WASM_NORMAL: "0", JACKIOH_WASM_LUAU: "0" },
+    });
+    expect(nothing.status).toBe(1);
+    expect(nothing.stderr).toContain("builds nothing");
   });
 
   it("clones the emsdk again when the one it finds cannot activate the pin", () => {

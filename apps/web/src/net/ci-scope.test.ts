@@ -380,6 +380,8 @@ describe("scripts/ci-scope.sh", () => {
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
         "crates/luau/Cargo.toml",
+        // Every cargo command loads a manifest; nothing in the web builds or loads the C module itself (#3093).
+        "crates/wasm/c/Cargo.toml",
         "crates/server/src/env.rs",
         // apps/edge's config test holds the probe routes the Worker calls.
         "crates/server/src/app.rs",
@@ -406,6 +408,8 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/tests/cross/catalog.rs",
         "crates/ai/tests/ai/shadow_ban.rs",
         "crates/wasm/tests/x.rs",
+        "crates/wasm/c/src/lib.rs",
+        "crates/wasm/c/README.md",
         "crates/server/README.md",
         "crates/engine/README.md",
         "docs/architecture.md",
@@ -431,11 +435,15 @@ describe("scripts/ci-scope.sh", () => {
         "crates/engine/tests/golden/01-hotseat-full-game.json",
         "package.json",
         "scripts/build-wasm.sh",
+        // A manifest is loaded by every cargo command, the C module's sources by none the specs run (#3093).
+        "crates/wasm/c/Cargo.toml",
       ],
       off: [
         "crates/server/tests/api/queue.rs",
         "crates/engine/tests/rules/after_attack.rs",
         "crates/cards/README.md",
+        "crates/wasm/c/src/lib.rs",
+        "crates/wasm/c/README.md",
         "apps/web/src/net/ci-scope.test.ts",
         "apps/web/src/game/Board.test.tsx",
         "docs/architecture.md",
@@ -541,9 +549,11 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
+    ["crates/wasm/c/src/lib.rs", ["rust_tools_wasm"]],
     ["crates/luau/src/lib.rs", ["rust_luau", "rust_tools_wasm"]],
     ["crates/scratch/src/lib.rs", [...RUST]],
-    ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],
+    // The engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads engineConfig.ts (#3093).
+    ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server", "rust_tools_wasm"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["spec/07-tokens.md", ["rust_cards"]],
     ["e2e/support/config.ts", ["rust_server"]],

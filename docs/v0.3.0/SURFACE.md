@@ -762,7 +762,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;
     // call ∈ validateDeck | validateTrio | validateLoadout | checkDeckDraft | checkTrioDraft | checkImportRoom | trioConflicts | normalizeName;
     // the input and output are those TS functions' argument and result, as JSON
-#[wasm_bindgen] pub fn constants() -> String;                                      // { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK } for practice, the tutorial harness, the lean toggle (R1370) and their tests
+#[wasm_bindgen] pub fn constants() -> String;
+    // one flat object of every rules, AI and run number a client reads (#3093): AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK (practice, the tutorial harness, the lean toggle, R1370, and their tests),
+    // RUN (run_constants's object) and each constant of engineConfig.ts (§5.1) under its own name (DECK_SIZE, …), so a host that is not the web restates none (CLAUDE.md rule 9)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
@@ -782,7 +784,8 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 `wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
 `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. The deploy jobs
 (`promote-production.yml`, `deploy-staging.yml`) install the pinned toolchain the way CI does before
-the web build.
+the web build. `JACKIOH_WASM_C=1` also builds the C module (§10.5) and checks that it imports nothing;
+no CI job sets it yet.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 
@@ -825,6 +828,23 @@ sources from `packages/shared/src/` into `apps/web/src/wire/{catalog,codes,emote
 unchanged. The Rust server needs the same functions; part 5 ports them to `crates/engine/src/wire/`.
 Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-cases.json` (from
 `packages/shared/test/fixtures/code-input-cases.ts`, part 5), so they cannot drift.
+
+### 10.5 The C module (`crates/wasm/c`, #3093)
+
+`jackioh-wasm-c` exports every binding of §10.1 (and `learned_parity` and the `duos_*` bindings the
+browser module also binds) as an `extern "C"` function over JSON strings, built as a plain
+`wasm32-unknown-unknown` `cdylib`: no wasm-bindgen glue, no JavaScript, no system interface, so its
+import section is empty and a host that is not JavaScript instantiates it with no imports. It is a third
+wrapper over `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau`
+(the same C names through emscripten, with the Luau VM; #2956 part 5 deletes it), and
+`crates/wasm/tests/export_parity.rs` holds its exports to the browser module's, so a binding added for
+the web reaches such a host by itself. A string crosses as a pointer and a length into the module's
+memory, which the module's `jackioh_alloc`, `jackioh_free`, `jackioh_result_ptr` and `jackioh_result_len`
+give a host to read and write; every binding returns a status (0 ok, 1 failed) and leaves its JSON text,
+or the failure's message, in the result buffer. The module reads no clock, so `ai_decide` and
+`lethal_hint` take `deadline_ms` for the browser's signature and ignore it: the search ends at its
+`budget`. `crates/wasm/c/README.md` is the contract. `JACKIOH_WASM_C=1 sh scripts/build-wasm.sh`
+builds it (§10.2) and checks that it imports nothing.
 
 ## 11. The server
 
