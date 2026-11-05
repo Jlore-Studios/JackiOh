@@ -1869,6 +1869,10 @@ struct Fixture {
 
 #[tokio::test]
 async fn r1303002_r2560000_the_game_the_worker_played_folds_and_pays() {
+    // A recorded game: the browser dealt it from the pools as they are (`practice-claim.json`, a random
+    // deck), so it folds only on them, not as the pool probe (#3117) rotates them, and it is re-recorded
+    // by `claim.test.ts` when a card joins a pool. The hold goes to the blocking jobs the claim runs.
+    let _unshifted = jackioh_engine::testkit::hold_pool_shift(0);
     let fixture: Fixture = serde_json::from_str(include_str!("../fixtures/practice-claim.json"))
         .expect("the fixture is a practice claim");
     let setup = PracticeSetup {
