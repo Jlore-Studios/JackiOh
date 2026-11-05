@@ -1,23 +1,24 @@
 //! S #18.1 MELCHIOR (SPEC §8.10 row S 18.1, §7; §6.1, §6.3, R21, R62, R384, R781005, R1839000,
-//! R1843000, R1866001): (1) Field Spell, Tech, Token (printed Legendary), summoned by S #18 Imitated
-//! Instrumentality.
+//! R1843000, R1866001, R3142001): (1) Field Spell, Tech, Token (printed Legendary), summoned by S #18
+//! Imitated Instrumentality.
 //!   Base:    "Indestructible / Start of turn: Vote to remove you if your opponent has more Units than
-//!            you. / Activate: Discover a combat keyword. Give it to each of your Units."
+//!            you. / Activate: Give each of your Units {keywords} random combat keyword." (1)
 //!   Radiant: "Indestructible / Start of turn: Vote to remove you if your opponent has more Units than
 //!            you. / Activate: Give each of your Units {keywords} random combat keywords." (3)
 //!
 //! Engine: Indestructible is printed in `catalog.json` (§6.1). Start of turn (R62): `vote_out` when its
 //! controller's opponent has strictly more Units than they do, as `active_units_of` counts them, so a
-//! Dormant card is no Unit (R1839000) (R1843000). Activate (R384, once a turn): a Discover of three
-//! different combat keywords drawn from R21's pool (R781005), offered as a `mode` prompt, the pick
-//! granted to each of its controller's Units as the answer resolves (`grant_keyword`); with no Unit,
-//! nothing is asked.
+//! Dormant card is no Unit (R1839000) (R1843000). Activate (R384, once a turn): each of its controller's
+//! Units draws its own `keywords` random combat keywords from R21's pool (`grant_random_keywords`), 1 on
+//! the base face and 3 on the Radiant one, asking nothing (R3142001). Through v0.5.11o the base face
+//! Discovered one combat keyword, a `mode` prompt of three different ones drawn from the pool (R781005),
+//! and gave the pick to each Unit as the answer resolved (`script_v0_5_11o`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-018-1";
 
-/// The step the Discover's answer re-enters (§10.6).
+/// The step the Discover's answer re-enters (§10.6); only the script kept for v0.5.11o and before has it.
 const PICKED: &str = "picked";
 
 /// R1866001: "votes to remove you if your opponent has more Units than you".
@@ -39,7 +40,7 @@ fn instance(id: &str) -> Value {
     json!({ "of": "instance", "instanceId": id })
 }
 
-/// The base Activate: three different combat keywords on offer (§6.3 Discover).
+/// The base Activate through v0.5.11o: three different combat keywords on offer (§6.3 Discover).
 fn discover(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if your_units(ctx).is_empty() {
         return vec![];
@@ -53,7 +54,8 @@ fn discover(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     })))]
 }
 
-/// The pick, given to each Unit its controller has as the answer resolves.
+/// The pick of the base Activate through v0.5.11o, given to each Unit its controller has as the answer
+/// resolves.
 fn give_picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(picked) = chosen_options(ctx).into_iter().next() else {
         return vec![];
@@ -64,7 +66,7 @@ fn give_picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         .collect()
 }
 
-/// The Radiant Activate: each Unit draws its own `keywords` (R21).
+/// The Activate: each Unit draws its own `keywords` (R21, R3142001).
 fn give_random(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let count = param(&*ctx, "keywords");
     your_units(ctx)
@@ -73,14 +75,17 @@ fn give_random(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         .collect()
 }
 
-fn melchior(radiant: bool) -> Script {
+/// One face. `discovers` is the base face as it was through v0.5.11o (R3142001): it Discovers a keyword.
+fn melchior(radiant: bool, discovers: bool) -> Script {
     let activate = ActivationDecl {
         // One id on both faces, so a face changed mid-turn keeps the turn's use (R384).
         id: "keywords".to_string(),
-        label: if radiant {
+        label: if discovers {
+            "Discover a combat keyword. Give it to each of your Units".to_string()
+        } else if radiant {
             "Give each of your Units random combat keywords".to_string()
         } else {
-            "Discover a combat keyword. Give it to each of your Units".to_string()
+            "Give each of your Units a random combat keyword".to_string()
         },
         uses: ActivationUses::Count(1),
         cost: None,
@@ -88,14 +93,14 @@ fn melchior(radiant: bool) -> Script {
         modes: vec![],
         can_activate: None,
         has: None,
-        run: if radiant { hook(give_random) } else { hook(discover) },
+        run: if discovers { hook(discover) } else { hook(give_random) },
     };
     let mut script = Script {
         start_of_turn: Some(hook(vote_if_outnumbered)),
         activations: vec![activate],
         ..Script::default()
     };
-    if !radiant {
+    if discovers {
         script.resume.insert(PICKED, hook(give_picked));
     }
     script
@@ -103,17 +108,27 @@ fn melchior(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: melchior(false),
-        radiant: melchior(true),
+        base: melchior(false, false),
+        radiant: melchior(true, false),
     }
 }
 
-// S #18.1 MELCHIOR — SPEC §8.10 row S 18.1, BUILD M12 row S 18.1 (R1843000, R1866001).
+/// R767000: through v0.5.11o the base face Discovered a combat keyword and gave it to each Unit
+/// (R3142001); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: melchior(false, true),
+        radiant: melchior(true, false),
+    }
+}
+
+// S #18.1 MELCHIOR — SPEC §8.10 row S 18.1, BUILD M12 row S 18.1 (R1843000, R1866001, R3142001).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
+    use super::script_v0_5_11o;
+    use crate::{filler, scenario, under_kept};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -180,6 +195,27 @@ mod tests {
             .collect()
     }
 
+    /// The keywords each of p1's two Units has after the Activate, the opponent's Unit checked bare and
+    /// nothing asked.
+    fn gained(radiant: bool, seed: &str) -> Vec<Vec<String>> {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [FILLER],
+                "backrow": [{ "def": MELCHIOR, "radiant": radiant }],
+                "field": [VANILLA, VANILLA],
+                "library": filler(4),
+            },
+            "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
+        }));
+        s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
+        assert!(s.state().pending.is_none(), "nothing is asked");
+        for unit in units(&s, P2) {
+            assert!(keywords(&s, &unit).is_empty(), "{unit}");
+        }
+        units(&s, P1).iter().map(|unit| keywords(&s, unit)).collect()
+    }
+
     mod base {
         use super::*;
 
@@ -194,28 +230,25 @@ mod tests {
             );
         }
 
+        /// R3142001: no Discover; each Unit draws its own one combat keyword from R21's pool, so the Units
+        /// differ across seeds.
         #[test]
-        fn r1866001_activate_discovers_three_different_combat_keywords_and_gives_the_pick_to_each_of_your_units() {
-            let mut s = table(false, json!([VANILLA, VANILLA]), json!([VANILLA]));
-            s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
-            let options = offered(&s);
-            assert_eq!(options.len(), 3, "{options:?}");
-            assert_eq!(options.iter().collect::<IndexSet<_>>().len(), 3, "{options:?}");
-            assert!(options.iter().all(|option| RANDOM_KEYWORD_POOL.contains(&option.as_str())), "{options:?}");
-            // §6.3 Discover: the choice is shown to its controller only.
-            assert_eq!(crate::js(&s.view(P2))["pending"]["forYou"], json!(false));
-
-            s.answer(json!(options[0]));
-            for unit in units(&s, P1) {
-                assert_eq!(keywords(&s, &unit), [options[0].clone()], "{unit}");
+        fn r3142001_activate_gives_each_of_your_units_its_own_random_combat_keyword_and_asks_nothing() {
+            let mut differ = false;
+            for seed in 0..8 {
+                let sets = gained(false, &format!("melchior-base-{seed}"));
+                assert_eq!(sets.len(), 2);
+                for set in &sets {
+                    assert_eq!(set.len(), 1, "{set:?}");
+                    assert!(set.iter().all(|key| RANDOM_KEYWORD_POOL.contains(&key.as_str())), "{set:?}");
+                }
+                differ |= sets[0] != sets[1];
             }
-            for unit in units(&s, P2) {
-                assert!(keywords(&s, &unit).is_empty(), "{unit}");
-            }
+            assert!(differ, "each Unit draws its own");
         }
 
         #[test]
-        fn r1866001_with_no_unit_it_asks_nothing() {
+        fn r3142001_with_no_unit_it_gives_nothing_and_the_turns_use_is_spent() {
             let mut s = table(false, json!([]), json!([VANILLA]));
             let melchior = melchior_id(&s);
             s.activate(melchior.as_str(), json!({ "ability": "keywords" }));
@@ -230,9 +263,47 @@ mod tests {
             let mut s = table(false, json!([VANILLA]), json!([]));
             let melchior = melchior_id(&s);
             s.activate(melchior.as_str(), json!({ "ability": "keywords" }));
-            let options = offered(&s);
-            s.answer(json!(options[1]));
+            assert!(s.state().pending.is_none(), "nothing is asked");
             s.expect_refused(|s| s.activate(melchior.as_str(), json!({ "ability": "keywords" })));
+        }
+
+        #[test]
+        fn r3142001_keywords_reads_through_param_and_is_1_on_the_base_face() {
+            let mut s = table(false, json!([VANILLA]), json!([]));
+            assert_eq!(crate::upgrade_number(&mut s, MELCHIOR, "keywords"), 2);
+            s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
+            let unit = units(&s, P1)[0].clone();
+            assert_eq!(keywords(&s, &unit).len(), 2);
+        }
+
+        /// R767000: through v0.5.11o the base Activate Discovered three different combat keywords from
+        /// R21's pool and gave the pick to each of its controller's Units.
+        #[test]
+        fn r767000_the_kept_script_discovers_a_combat_keyword_and_gives_the_pick_to_each_of_your_units() {
+            under_kept(MELCHIOR, script_v0_5_11o(), || {
+                let mut s = table(false, json!([VANILLA, VANILLA]), json!([VANILLA]));
+                s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
+                let options = offered(&s);
+                assert_eq!(options.len(), 3, "{options:?}");
+                assert_eq!(options.iter().collect::<IndexSet<_>>().len(), 3, "{options:?}");
+                assert!(options.iter().all(|option| RANDOM_KEYWORD_POOL.contains(&option.as_str())), "{options:?}");
+                // §6.3 Discover: the choice is shown to its controller only.
+                assert_eq!(crate::js(&s.view(P2))["pending"]["forYou"], json!(false));
+
+                s.answer(json!(options[0]));
+                for unit in units(&s, P1) {
+                    assert_eq!(keywords(&s, &unit), [options[0].clone()], "{unit}");
+                }
+                for unit in units(&s, P2) {
+                    assert!(keywords(&s, &unit).is_empty(), "{unit}");
+                }
+
+                // Radiant, kept as it is: three random ones each, no prompt.
+                let mut s = table(true, json!([VANILLA]), json!([]));
+                s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
+                assert!(s.state().pending.is_none());
+                assert_eq!(keywords(&s, &units(&s, P1)[0]).len(), 3);
+            });
         }
 
         #[test]
@@ -250,30 +321,11 @@ mod tests {
     mod radiant {
         use super::*;
 
-        fn gained(seed: &str) -> Vec<Vec<String>> {
-            let mut s = scenario(json!({
-                "seed": seed,
-                "p1": {
-                    "hand": [FILLER],
-                    "backrow": [{ "def": MELCHIOR, "radiant": true }],
-                    "field": [VANILLA, VANILLA],
-                    "library": filler(4),
-                },
-                "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
-            }));
-            s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
-            assert!(s.state().pending.is_none(), "nothing is asked");
-            for unit in units(&s, P2) {
-                assert!(keywords(&s, &unit).is_empty(), "{unit}");
-            }
-            units(&s, P1).iter().map(|unit| keywords(&s, unit)).collect()
-        }
-
         #[test]
         fn r1866001_radiant_each_unit_gains_its_own_three_random_combat_keywords() {
             let mut differ = false;
             for seed in 0..8 {
-                let sets = gained(&format!("melchior-radiant-{seed}"));
+                let sets = gained(true, &format!("melchior-radiant-{seed}"));
                 assert_eq!(sets.len(), 2);
                 for set in &sets {
                     assert_eq!(set.len(), 3, "{set:?}");

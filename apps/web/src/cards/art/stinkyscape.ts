@@ -32,14 +32,15 @@ export type StinkySubject = { family: StinkyFamily; kind: string; tier: number }
 
 /**
  * The cards printed with the Starship Piece keyword. A face's art reads no keywords, so the set's
- * list is kept here, and `stinkyscape.test.ts` holds it to the catalog's.
+ * list is kept here, and `stinkyscape.test.ts` holds it to the catalog's. The Stinkyscape Golem left it
+ * with the keyword (#3142, R3142002) and is drawn from its name (`FLEET_NAMES`).
  */
 export const STARSHIP_PIECES: ReadonlySet<string> = new Set(
   [
     "038", "040", "043", "048", "049", "050", "051", "052", "053", "054", "055", "056", "057", "058", "059",
     "060", "061", "062", "063", "064", "065", "066", "067", "079", "090", "093", "098", "100", "101", "104",
-    "105", "106", "107", "108", "122", "131", "132", "133", "134", "136", "140", "141", "142", "143", "150-1",
-    "175", "177", "t-ai-10",
+    "105", "106", "107", "108", "122", "131", "132", "133", "134", "136", "140", "141", "142", "143", "175",
+    "177", "t-ai-10",
   ].map((suffix) => `${STINKYSCAPE_PREFIX}${suffix}`),
 );
 
@@ -92,9 +93,13 @@ const PIECE_WORDS: readonly (readonly [string, string])[] = [
   ["stimulus", "module"],
 ];
 
-/** The fleet's cards that print no Starship Piece: the hull waiting to launch and the base. */
-const FLEET_NAMES: readonly string[] = ["dormant starship", "megabase"];
-const FIGHTER_NAMES: readonly string[] = ["falcon", "stratos", "yuma", "golem", "honey badger"];
+/**
+ * The fleet's cards that print no Starship Piece: the hull waiting to launch, the base and, since it lost the
+ * keyword (#3142), the Stinkyscape Golem, a golem and ship hybrid (R3142002). The Training Grounds Golem is
+ * `traininggrounds.ts`'s, so it never reaches this file.
+ */
+const FLEET_NAMES: readonly string[] = ["dormant starship", "megabase", "golem"];
+const FIGHTER_NAMES: readonly string[] = ["falcon", "stratos", "yuma", "honey badger"];
 const BATTLESHIP_NAMES: readonly string[] = ["paragon-x", "halo", "prototype-x2", "phalanx", "galaxy"];
 const MINER_NAMES: readonly string[] = ["miner", "ozark", "orca", "galaxy"];
 
@@ -155,9 +160,13 @@ function wordsHave(lower: string, word: string): boolean {
   return new RegExp(`(^|[^a-z])${word}([^a-z]|$)`).test(lower);
 }
 
+/** R3142002: the word that makes a fleet card the golem and ship hybrid. */
+const GOLEM_NAME = "golem";
+
 function fleetKind(lower: string): string {
   const piece = wordIn(lower, PIECE_WORDS);
   if (piece !== null) return piece;
+  if (lower.includes(GOLEM_NAME)) return "golem";
   if (FIGHTER_NAMES.some((ship) => lower.includes(ship))) return "fighter";
   if (BATTLESHIP_NAMES.some((ship) => lower.includes(ship))) return "battleship";
   return "cruiser";
@@ -175,6 +184,9 @@ export function stinkySubject(defId: string, name: string | undefined, tags: rea
     const doctrine = DOCTRINE_WORDS.find(([word]) => wordsHave(lower, word))?.[1] ?? "strike";
     return { family: "doctrine", kind: doctrine, tier };
   }
+  // R3142002: a Human Unit is a person whatever its name holds, so the Drone Commander is an officer with a
+  // drone hovering behind her and not a drone ship; a Drone Interceptor or Corvette (no Human) stays a drone.
+  if (type === "Unit" && has("Human") && wordsHave(lower, "drone")) return { family: "crew", kind: "commander", tier };
   if (has("Drone Core") || wordsHave(lower, "drone")) {
     const kind = has("Drone Core")
       ? "core"
@@ -588,6 +600,50 @@ function hull(rng: Rng, p: Paint, cls: string): string {
       out.push(line(L * x, -W * 1.9, L * x, W * 1.9, p.light, 0.5, { opacity: 0.45, "stroke-dasharray": "1.5 1.2" }));
     }
   }
+  return out.join("");
+}
+
+/**
+ * R3142002: the Stinkyscape Golem, a golem and ship hybrid: a stone-plated humanoid, bow to the right, with
+ * a cockpit visor for a face, wing fins on its back and engine nozzles burning at its heels.
+ */
+function golem(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  // Wing fins swept back behind the shoulders.
+  for (const side of [-1, 1]) {
+    out.push(poly([[-6, side * 10], [-30, side * 30], [-38, side * 30], [-28, side * 11]], "url(#hl)", p.line));
+    out.push(rect(-37, side > 0 ? 28.6 : -30, 8, 1.4, p.accent));
+  }
+  // Engine nozzles under the legs, and their burn.
+  for (const y of [-9, 9]) {
+    out.push(poly([[-27, y - 2.6], [-27 - between(rng, 10, 16), y], [-27, y + 2.6]], p.glow, "none", { opacity: 0.85 }));
+    out.push(poly([[-27, y - 1.2], [-33, y], [-27, y + 1.2]], "#ffffff", "none", { opacity: 0.8 }));
+    out.push(rect(-30, y - 3.4, 6, 6.8, p.dark, inked(p)));
+  }
+  // Legs and stone-plated torso, a block built of slabs.
+  out.push(rect(-26, -13, 17, 9, "url(#rk)", { ...inked(p), rx: 2 }));
+  out.push(rect(-26, 4, 17, 9, "url(#rk)", { ...inked(p), rx: 2 }));
+  out.push(poly([[-12, -17], [12, -20], [22, -8], [22, 8], [12, 20], [-12, 17], [-18, 9], [-18, -9]], "url(#rk)", p.line));
+  out.push(poly([[-18, 2], [22, 2], [22, 8], [12, 20], [-12, 17], [-18, 9]], p.dark, "none", { opacity: 0.35 }));
+  for (const [x1, y1, x2, y2] of [[-10, -17, -6, 17], [2, -19, 6, 19], [-18, -2, 22, -2]] as const) {
+    out.push(line(x1, y1, x2, y2, p.dark, 0.5, { opacity: 0.75 }));
+  }
+  // Shoulder slabs and fists.
+  for (const side of [-1, 1]) {
+    out.push(poly([[0, side * 17], [14, side * 20], [22, side * 25], [10, side * 29], [-2, side * 24]], "url(#rk)", p.line));
+    out.push(circle(24, side * 27, 4.2, "url(#dr)", inked(p)));
+    out.push(circle(22.5, side * 25.8, 1.2, p.light, { opacity: 0.5 }));
+  }
+  // The head with its cockpit visor, a slit of canopy glass at the bow.
+  out.push(poly([[14, -9], [30, -6], [34, 0], [30, 6], [14, 9]], "url(#rk)", p.line));
+  out.push(path("M20 -5.5L30 -3.2L32.4 0L30 3.2L20 5.5Z", "url(#vz)", inked(p)));
+  out.push(path("M22 -3.4L29 -2", "none", { stroke: "#ffffff", "stroke-width": 0.8, opacity: 0.7, "stroke-linecap": "round" }));
+  out.push(rect(14, -10.4, 7, 1.6, p.accent));
+  out.push(rect(14, 8.8, 7, 1.6, p.accent));
+  // The reactor at the chest.
+  out.push(circle(2, 0, 4.6, p.dark, inked(p)));
+  out.push(circle(2, 0, 3.2, p.glow));
+  out.push(circle(1, -1, 1, "#ffffff", { opacity: 0.8 }));
   return out.join("");
 }
 
@@ -1243,6 +1299,26 @@ function pilot(rng: Rng, p: Paint, kind: string, laurels: boolean): string {
   return out.join("");
 }
 
+/**
+ * R3142002: the Drone Commander, an officer: the crew figure with epaulettes and a medal, and a drone hovering
+ * behind her shoulder, a lens on its glowing eye.
+ */
+function commander(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  out.push(group(at(24, -18, 12, 0.6), droneBody(p, 11, 2)));
+  out.push(line(24, -9, 20, 8, p.glow, 0.5, { opacity: 0.45, "stroke-dasharray": "1.5 1.2" }));
+  out.push(pilot(rng, p, "commander", false));
+  for (const side of [-1, 1]) {
+    out.push(rect(side * 25 - 5, 14, 10, 4, p.accent, { ...inked(p), rx: 1, transform: `rotate(${fmt(side * 14)} ${fmt(side * 25)} 16)` }));
+    out.push(line(side * 25 - 3, 18, side * 25 - 3, 21, p.accent, 0.5));
+    out.push(line(side * 25, 18, side * 25, 21, p.accent, 0.5));
+    out.push(line(side * 25 + 3, 18, side * 25 + 3, 21, p.accent, 0.5));
+  }
+  out.push(circle(-10, 31, 2.2, p.glow, inked(p)));
+  out.push(path("M-10 28.8L-10 26.5", "none", { stroke: p.accent, "stroke-width": 0.8 }));
+  return out.join("");
+}
+
 function ai(p: Paint, kind: string): string {
   const out: string[] = [];
   out.push(circle(0, 0, 36, "none", { stroke: p.glow, "stroke-width": 0.8, opacity: 0.5, "stroke-dasharray": "6 3" }));
@@ -1325,6 +1401,7 @@ function subjectMarkup(rng: Rng, p: Paint, subject: StinkySubject, lower: string
   const { family, kind, tier } = subject;
   switch (family) {
     case "fleet":
+      if (kind === "golem") return golem(rng, p);
       return ["fighter", "cruiser", "battleship", "dormant"].includes(kind) ? hull(rng, p, kind) : piece(rng, p, kind);
     case "weapon":
       return weapon(rng, p, kind, tier, lower);
@@ -1347,7 +1424,7 @@ function subjectMarkup(rng: Rng, p: Paint, subject: StinkySubject, lower: string
     case "acclaimed":
       return pilot(rng, p, kind, true);
     case "crew":
-      return pilot(rng, p, kind, false);
+      return kind === "commander" ? commander(rng, p) : pilot(rng, p, kind, false);
     case "ai":
       return ai(p, kind);
     case "space":

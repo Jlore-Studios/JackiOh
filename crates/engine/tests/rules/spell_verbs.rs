@@ -874,7 +874,7 @@ mod r1848005_the_melee_makes_forced_attacks_between_random_pairs_until_one_unit_
 mod r1848006_inflation_rolls_each_card_of_a_hand_and_a_deck_and_raises_its_price {
     use super::*;
     use crate::rules::fixtures::spell_verbs::{hyperinflation, nono, sanctions, stable, stimmy};
-    use jackioh_engine::prelude::{inflation_chance_of, next_inflation_chance};
+    use jackioh_engine::prelude::{inflation_chance_of, next_inflation_chance, next_inflation_chance_by};
 
     /// The `costMod` of every card of `player`'s hand and library, in order, a Stimmycheck left out.
     fn mods(s: &Scenario, player: PlayerId) -> Vec<i32> {
@@ -942,8 +942,25 @@ mod r1848006_inflation_rolls_each_card_of_a_hand_and_a_deck_and_raises_its_price
         );
     }
 
+    /// R3142000: the step a copy's chance grows by is 5, and was 10 through v0.5.11o, whose kept script reads
+    /// `INFLATION_CHANCE_STEP_V0_5_11O` through `next_inflation_chance_by`.
     #[test]
-    fn r1848006_the_copy_carries_a_chance_10_higher_and_rolls_at_it() {
+    fn r3142000_the_step_is_5_and_through_v0_5_11o_it_was_10() {
+        assert_eq!(INFLATION_CHANCE_STEP, 5);
+        assert_eq!(INFLATION_CHANCE_STEP_V0_5_11O, 10);
+        assert_eq!(next_inflation_chance(INFLATION_CHANCE), 20);
+        assert_eq!(
+            next_inflation_chance_by(INFLATION_CHANCE, INFLATION_CHANCE_STEP_V0_5_11O),
+            25
+        );
+        assert_eq!(
+            next_inflation_chance_by(98, INFLATION_CHANCE_STEP),
+            INFLATION_ROLL_SIDES
+        );
+    }
+
+    #[test]
+    fn r1848006_the_copy_carries_a_chance_one_step_higher_and_rolls_at_it() {
         let mut s = stimmy_board("r1848006-copy", false);
         s.play(stimmy.id.as_str(), json!({}));
         let copy = s

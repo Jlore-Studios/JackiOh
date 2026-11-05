@@ -4878,7 +4878,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "7",
         "The Greatest Heist",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Quest],
         R::Legendary,
@@ -4998,7 +4998,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12",
         "Otherworldly Nightmare",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5028,7 +5028,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12.3",
         "Psychic Scream",
-        c(3),
+        c(4),
         T::Spell,
         &[G::OtherOrigins, G::Token],
         R::Token,
@@ -5259,7 +5259,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "33",
         "Drone Core VII",
-        c(4),
+        c(5),
         T::Spell,
         &[G::DroneCore],
         R::Epic,
@@ -5353,8 +5353,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Rare,
-        st(4, 5),
-        st(8, 10),
+        st(3, 3),
+        st(6, 6),
     ),
     row(
         "43",
@@ -5389,7 +5389,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "46",
         "Circadian Halfcycler",
-        c(2),
+        c(1),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5653,16 +5653,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
     row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
-    row(
-        "79",
-        "Orca",
-        emb(4, 5),
-        T::Unit,
-        &[],
-        R::Epic,
-        st(8, 8),
-        st(16, 16),
-    ),
+    row("79", "Orca", emb(4, 5), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
     row(
         "80",
         "Galaxy",
@@ -5670,8 +5661,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Legendary,
+        st(5, 5),
         st(10, 10),
-        st(20, 20),
     ),
     row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
     row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
@@ -5784,8 +5775,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Epic,
-        st(9, 9),
-        st(18, 18),
+        st(8, 8),
+        st(16, 16),
     ),
     row(
         "95",
@@ -5800,7 +5791,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "96",
         "Ocean Tsunami",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Rare,
@@ -6503,7 +6494,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "159",
         "Faction: ETHICS",
-        c(2),
+        c(1),
         T::Spell,
         &[G::Faction],
         R::Rare,

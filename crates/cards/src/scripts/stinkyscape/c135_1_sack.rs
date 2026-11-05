@@ -1,12 +1,13 @@
 //! S #135.1 Sack (SPEC §7, §8.10 row 135.1; R1850003, R1875005): (1) Unit, Token (printed Common),
 //! 0/4 → 0/8, of the Stinkyscape set.
-//!   Base:    "When this leaves the field, summon the Unit stuffed into it."
-//!   Radiant: "Brittle 1 / When this leaves the field, summon the Unit stuffed into it."
+//!   Base:    "Can't Defend / When this leaves the field, summon the Unit stuffed into it."
+//!   Radiant: "Can't Defend, Brittle 1 / When this leaves the field, summon the Unit stuffed into it."
 //! Engine: a holder (R1850003): the Unit S #135 Sacked stuffs into it waits in `state.held`, and at the
 //! first state check after the Sack leaves the field, any way (it dies, is Bounced, exiled, transformed
 //! or held itself; R1875005), that Unit is summoned for the Sack's controller then, R64's zone, summoning
 //! sick, no Cry (R1), or exiled with no zone open. The release is the engine's, so the Sack has no text
-//! of its own to run. A Sack holding nothing summons nothing. Radiant: Brittle 1 (R638), catalog data:
+//! of its own to run. A Sack holding nothing summons nothing. Can't Defend (R2657000), catalog data on both
+//! faces since #3142: a Sack is never in Defense Position. Radiant: Brittle 1 (R638), catalog data:
 //! it crumbles at its controller's next start of turn, releasing its Unit. Declares no numbers.
 
 use jackioh_engine::prelude::*;
@@ -83,6 +84,39 @@ mod tests {
             .flat_map(|player| (1..=5).filter_map(move |lane| s.unit(player, lane)))
             .find(|card| card.def_id == ID)
             .expect("a Sack")
+    }
+
+    /// #3142, R2657000: a Sack is never in Defense Position on either face: no switch is offered or allowed,
+    /// and one put there is taken back out at the next state check.
+    #[test]
+    fn r2657000_a_sack_is_never_in_defense_position_on_either_face() {
+        for radiant in [false, true] {
+            let mut s = crate::scenario(json!({
+                "p1": {
+                    "hand": [FILLER],
+                    "field": [{ "def": ID, "radiant": radiant }, VANILLA],
+                    "library": crate::filler(4),
+                },
+                "p2": { "hand": [FILLER], "library": crate::filler(4) },
+            }));
+            let sack = s.unit_at(P1, 1).id;
+            let plain = s.unit_at(P1, 2).id;
+            assert!(has_keyword(&s.stats(sack.as_str()).keywords, KeywordKind::CantDefend), "radiant {radiant}");
+            let switches: Vec<String> = legal_actions(s.state(), P1)
+                .into_iter()
+                .filter_map(|action| match action {
+                    ActionBody::SwitchPosition { instance_id, .. } => Some(instance_id),
+                    _ => None,
+                })
+                .collect();
+            assert!(!switches.contains(&sack), "radiant {radiant}: {switches:?}");
+            assert!(switches.contains(&plain), "a Unit without it may: {switches:?}");
+            s.expect_refused_with(|s| s.switch_position(sack.as_str()), "Defense Position");
+            // Put there as an effect that ignored the keyword would, then the next state check runs.
+            s.card_mut(sack.as_str()).position = Some(Position::Def);
+            s.end_turn();
+            assert_eq!(s.card(sack.as_str()).position, Some(Position::Atk), "radiant {radiant}");
+        }
     }
 
     /// R2476000: after "the Unit stuffed into it", the Unit it holds by name, to both seats.

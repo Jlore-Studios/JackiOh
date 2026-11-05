@@ -141,11 +141,15 @@ pub fn inflation_chance_of(card: Option<&CardInstance>, printed: i32) -> i32 {
         .clamp(0, INFLATION_ROLL_SIDES)
 }
 
-/// R1848006: the chance a Stimmycheck's copy carries, never past a certain hit.
+/// R1848006, R3142000: the chance a Stimmycheck's copy carries, never past a certain hit.
 pub fn next_inflation_chance(chance: i32) -> i32 {
-    chance
-        .saturating_add(INFLATION_CHANCE_STEP)
-        .clamp(0, INFLATION_ROLL_SIDES)
+    next_inflation_chance_by(chance, INFLATION_CHANCE_STEP)
+}
+
+/// R3142000, R767000: `next_inflation_chance` with the step given, for the Stimmycheck script kept for
+/// the versions through v0.5.11o, whose step was `INFLATION_CHANCE_STEP_V0_5_11O`.
+pub fn next_inflation_chance_by(chance: i32, step: i32) -> i32 {
+    chance.saturating_add(step).clamp(0, INFLATION_ROLL_SIDES)
 }
 
 /// `inflate`'s argument.

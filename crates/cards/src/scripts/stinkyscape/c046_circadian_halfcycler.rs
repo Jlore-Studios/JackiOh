@@ -1,4 +1,4 @@
-//! S #46 Circadian Halfcycler (SPEC §8.10 row 46): (2) Field Spell, Epic, a card of the Stinkyscape set.
+//! S #46 Circadian Halfcycler (SPEC §8.10 row 46): (1) Field Spell, Epic, a card of the Stinkyscape set.
 //!   Base:    "Aura: The AI plays the first 3 actions of each of your turns.
 //!             End of turn: Summon a Drone Interceptor."
 //!   Radiant: "Aura: The AI plays the first 3 actions of each of your turns.
@@ -66,6 +66,18 @@ mod tests {
             },
             "p2": { "hand": [FILLER], "library": filler(6) },
         }))
+    }
+
+    /// #3142: it costs (1) on both faces, where it cost (2).
+    #[test]
+    fn it_costs_1_on_both_faces() {
+        for radiant in [false, true] {
+            let s = scenario(json!({
+                "p1": { "hand": [{ "def": HALFCYCLER, "radiant": radiant }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            assert_eq!(effective_cost(s.state(), s.card(HALFCYCLER), Default::default()), 1, "radiant {radiant}");
+        }
     }
 
     fn engaged(events: &[GameEvent], player: PlayerId) -> bool {

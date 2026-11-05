@@ -30,7 +30,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-093` | Patcher Nanobots | Unit | death mend | 1.16 | vanish | death: the census's vanish is noise (fused pieces, other cards' exiles); its own Death is the healed, which mend (#2793) reads; its fuse is the Starship part's |
 | `stinkyscape-094` | Tmack Trav | Unit | none: its second attack is combat, which the attack rows and keyword beats draw | — | none: vanilla | the census agrees (none: vanilla): Rush and its attack again are combat |
 | `stinkyscape-095` | Faction: Vanguard Coalition | Spell | cast send | 1.28 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
-| `stinkyscape-096` | Ocean Tsunami | Unit | cry send Hustle/ore | 1.36 | vanish | cry: the census's vanish is one exile in its window; its own effect fills the hand (addedToHand), which send reads; Hustle/ore for its Resources |
+| `stinkyscape-096` | Ocean Tsunami | Unit | cry send Hustle/ore | 1.45 | vanish | cry: the census's vanish is one exile in its window; its own effect fills the hand (addedToHand), which send reads; Hustle/ore for its Resources |
 | `stinkyscape-097` | Asteroid Field | Spell | cast barrage | 1.16 | nova | kept: #2784's example; the census's nova reads the same hits, which barrage rains one by one |
 | `stinkyscape-098` | Hull Booster | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only (Equip, Armor), which the keyword beats draw |
 | `stinkyscape-099` | No-No Words | Spell | cast bolt Dark/curse | 1.24 | bolt | cast: the census agrees (bolt); Dark/curse for its hex |
@@ -103,7 +103,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-156` | Catalyst Comet | Spell | cast send | 1.35 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads: it adds a card and shuffles itself in |
 | `stinkyscape-157` | The Gauntlet | Field Spell | cast conjure; aura storm board | 1.35 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; its Gauntlet spans the middle three lanes of both sides, so its aura covers the board |
 | `stinkyscape-158` | Stratos Swarm | Spell | bespoke stratosSwarm | 1.45 | none: no motif reads summoned | bespoke: conjure's circle lands one Unit, where the Swarm fills the board |
-| `stinkyscape-159` | Faction: ETHICS | Spell | cast send | 1.28 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
+| `stinkyscape-159` | Faction: ETHICS | Spell | cast send | 1.19 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `stinkyscape-160` | Faction: Golden Accord | Spell | cast send | 1.28 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `stinkyscape-161` | Faction: Pegasus | Spell | cast send | 1.28 | bolt | cast: the census's bolt is a split hit in its window; its own effect is addedToHand, which send reads |
 | `stinkyscape-162` | Faction: Star-Jumper Core | Spell | cast send | 1.28 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |

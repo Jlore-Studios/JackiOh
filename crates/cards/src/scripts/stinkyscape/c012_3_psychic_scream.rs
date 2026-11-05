@@ -1,4 +1,4 @@
-//! S #12.3 Psychic Scream (SPEC §8.10 row S 12.3; §3.2, §6.3, R12, R1867006): (3) Spell,
+//! S #12.3 Psychic Scream (SPEC §8.10 row S 12.3; §3.2, §6.3, R12, R1867006): (4) Spell,
 //! Other-Origins, Token (printed Epic).
 //!   Base:    "Shuffle all permanents into your opponent's deck."
 //!   Radiant: "Shuffle all permanents into your opponent's deck. Each costs ({surcharge}) more (up
@@ -94,13 +94,25 @@ mod tests {
             .collect()
     }
 
+    /// #3142: it costs (4) on both faces, where it cost (3).
+    #[test]
+    fn it_costs_4_on_both_faces() {
+        for radiant in [false, true] {
+            let s = scenario(json!({
+                "p1": { "hand": [{ "def": SCREAM, "radiant": radiant }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            assert_eq!(effective_cost(s.state(), s.card(SCREAM), Default::default()), 4, "radiant {radiant}");
+        }
+    }
+
     mod base {
         use super::*;
 
         #[test]
         fn r1867006_every_permanent_of_both_sides_goes_into_the_opponents_deck_as_their_card() {
             let mut s = scenario(json!({
-                "p1": { "hand": [SCREAM, FILLER], "field": [VANILLA], "backrow": [WELL] },
+                "p1": { "hand": [SCREAM, FILLER], "field": [VANILLA], "backrow": [WELL], "mana": 10 },
                 "p2": { "hand": [FILLER], "field": [MENACE], "backrow": [SHEEPISH] },
             }));
             let mine = s.unit_at(P1, 1).id.clone();
@@ -138,7 +150,7 @@ mod tests {
         #[test]
         fn r1867006_face_down_cards_go_too_a_dormant_one_stays() {
             let mut s = scenario(json!({
-                "p1": { "hand": [SCREAM, FILLER] },
+                "p1": { "hand": [SCREAM, FILLER], "mana": 10 },
                 "p2": {
                     "hand": [FILLER],
                     "field": [
@@ -171,7 +183,7 @@ mod tests {
             crate::register_all();
             let library = vec![json!(FILLER); 60];
             let mut s = scenario(json!({
-                "p1": { "hand": [SCREAM, FILLER], "field": [SHEEP, VANILLA] },
+                "p1": { "hand": [SCREAM, FILLER], "field": [SHEEP, VANILLA], "mana": 10 },
                 "p2": { "hand": [FILLER], "library": library },
             }));
             let token = s.unit_at(P1, 1).id.clone();

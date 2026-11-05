@@ -1,13 +1,13 @@
 //! SPEC §7, §8.10 Stinkyscape 150.1 Stinkyscape Golem (R11, R275, R783000, R1852000). (4) Unit, Token
 //! (printed Legendary). Summoned by S #150 Call to Chaos (Stinky Edition)'s ninth entry, as Core #95.1
 //! Chaos Golem is by #95's.
-//!   Base:    10/10 "Starship Piece, Flying, Ranged, Rush".
+//!   Base:    10/10 "Flying, Ranged, Rush".
 //!   Radiant: 20/20, the same keywords.
 //!
 //! No script: the keywords and stats of each face are printed on the catalog and §10.4 layer 1 reads
 //! them off the face the radiant flag picks. The behavior is the engine's: Rush §4.1 (unit targets
-//! only), Flying and Ranged (R783000), and Starship Piece, whose death fuses a copy of it into its
-//! owner's Dormant Starship (R1852000).
+//! only), Flying and Ranged (R783000). It printed Starship Piece, whose death fuses a copy of it into its
+//! owner's Dormant Starship (R1852000), until #3142: it is no piece now, so its death fuses nothing.
 
 use jackioh_engine::prelude::*;
 
@@ -23,6 +23,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use jackioh_engine::prelude::dormant_starship_of;
     use jackioh_engine::testkit::*;
 
     use crate::{js, scenario};
@@ -80,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn r1852000_its_death_fuses_a_copy_into_its_owner_s_dormant_starship() {
+    fn r1852000_its_death_fuses_nothing_into_its_owner_s_dormant_starship() {
         let mut s = scenario(json!({
             "p1": { "field": [{ "def": MENACE, "radiant": true }], "hand": [ANCHOR] },
             "p2": { "field": [{ "def": ID, "position": "DEF" }] },
@@ -95,9 +96,30 @@ mod tests {
             .filter(|event| event.event_type().as_str() == "starshipFused")
             .map(js)
             .collect();
-        assert_eq!(fused.len(), 1);
-        assert_eq!(fused[0]["player"], json!("p2"));
-        assert_eq!(fused[0]["defId"], json!(ID));
+        assert!(fused.is_empty(), "nothing is fused: {fused:?}");
+        assert!(dormant_starship_of(s.state(), P2).is_none(), "and no Starship is summoned for it");
+    }
+
+    /// #3142: it lost Starship Piece, on both faces.
+    #[test]
+    fn it_is_no_starship_piece_on_either_face() {
+        for radiant in [false, true] {
+            let s = scenario(json!({
+                "p1": { "field": [{ "def": ID, "radiant": radiant }], "hand": [ANCHOR] },
+            }));
+            let golem = golem_of(&s, P1);
+            assert!(!unit_has(s.state(), &golem, KeywordKind::StarshipPiece), "radiant {radiant}");
+        }
+    }
+
+    #[test]
+    fn base_a_10_10_with_flying_ranged_and_rush() {
+        let mut s = scenario(json!({
+            "p1": { "field": [ID], "hand": [ANCHOR] },
+        }));
+        let golem = golem_of(&s, P1);
+        s.expect_stats(&golem, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
+        assert_eq!(keywords_of(&s, &golem), vec!["Flying", "Ranged", "Rush"]);
     }
 
     #[test]
@@ -107,6 +129,6 @@ mod tests {
         }));
         let golem = golem_of(&s, P1);
         s.expect_stats(&golem, json!({ "attack": 20, "health": 20, "maxHealth": 20 }));
-        assert_eq!(keywords_of(&s, &golem), vec!["Flying", "Ranged", "Rush", "Starship Piece"]);
+        assert_eq!(keywords_of(&s, &golem), vec!["Flying", "Ranged", "Rush"]);
     }
 }
