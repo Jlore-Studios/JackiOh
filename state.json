@@ -16016,6 +16016,8 @@
       }
     },
     "3087": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-04T23:14:26Z",
@@ -16029,8 +16031,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,60p .bot-notes.md | head -80 && grep -n '^## State' -A 30 .bot-notes.md | head -60\", \"description\": \"Read bot notes state\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/undo/hold.ts\"}\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md; wc -l .bot-notes.md .bot-journal.md; git status --short\", \"description\": \"Check notes sections and git status\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/undo/hold.test.tsx\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='apps/web/src/undo/hold.ts'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"// undo toast (`UndoToast.tsx`), one at a time. Nothing here is a rule (CLAUDE.md rule 7)\u2026\n- Bash: {\"command\": \"grep -n \\\"hold(\\\" apps/web/src --include=*.tsx --include=*.ts -r | grep -v test\", \"description\": \"Find hold callers\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/game/deckbuilder/DeckWorkshop.tsx\", \"offset\": 610, \"limit\": 100}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/creator/Creator.tsx\", \"offset\": 415, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/together/TogetherRoute.tsx\", \"offset\": 215, \"limit\": 45}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new):\\n s=open(p).read()\\n assert s.count(old)==1, (p, old[:40], s.count(old))\\n open(p,'w').write(s.replace(old,new))\\n\\np='apps/web/src/game/deckbuil\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\nRun 2 (build, sonnet), following the plan below. Done: hold.ts (UNDO_REPEAT_MS, boolean `hold`, repeat gua\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx\", \"offset\": 664, \"limit\": 70}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3059/apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx\", \"offset\": 820, \"limit\": 60}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new):\\n s=open(p).read()\\n assert s.count(old)==1, (p, old[:40], s.count(old))\\n open(p,'w').write(s.replace(old,new))\\n\\np='apps/web/src/game/deckbuil\u2026\n- Bash: {\"command\": \"sed -i 's/R3059000 a refused hold does not extend the guard, and Undo ends it/R3059000 a refused hold does not extend the guard/' apps/web/src/undo/hold.test.tsx && sed -n 600,780p apps/\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef sub(p, old, new):\\n s=open(p).read()\\n assert s.count(old)==1, (p, old[:40], s.count(old))\\n open(p,'w').write(s.replace(old,new))\\np='apps/web/src/together/Togeth\u2026\n- Bash: {\"command\": \"cat spec/rulings/R3070000.md; echo ------; cat spec/pending/3070.md; echo ------; cat spec/rulings/R2119000.md; echo -----; sed -n 276,284p spec/10-engine-guide.md; echo -----; grep -n \\\u2026\n- Bash: {\"command\": \"grep -rn \\\"UNDO_WINDOW_MS\\\\|R2119000\\\" --include=*.md . 2>/dev/null | grep -v node_modules | grep -v \\\"^./spec/rulings/R2119000.md\\\" | grep -v \\\"^./.bot-\\\" | cut -c1-220; sed -n 560,575p\u2026\n- said: Now the spec notes and docs.\n- Bash: {\"command\": \"cat > spec/rulings/R3059000.md <<'EOF'\\n---\\nid: R3059000\\ntitle: \\\"A second deletion within UNDO_REPEAT_MS of the first is ignored, so a double click on Delete deck or Remove deletes on\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -15; cargo fmt --check 2>&1 | tail -5; echo fmt=$?\", \"description\": \"Run spec check and fmt check\", \"timeout\": 600000}\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -15; pnpm exec eslint apps/web/src/undo apps/web/src/game/deckbuilder apps/web/src/together apps/web/src/creator 2>&1 | tail -20\", \"description\"\u2026\n- Bash: {\"command\": \"git status --short; cargo jackioh patches check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -2; git fetch -q origin main 2>&1 | tail -1; cargo jackioh classify --base origin/\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Goal')\\nstate=\\\"\\\"\\\"## State\\n\\nRun 2 (build, sonnet): everything in the plan is done and checked. Code (hold.ts, De\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a quick second click on Delete deck or Remove friend deletes nothing more\"} --> ## What changed `useUndoHold().hold` now returns a boolean. It refuses a deletion that arrives within `UNDO_REPEAT_MS` (500 ms, a new named constant in `apps/web/src/undo/ho\u2026"
       },
       "issue": 3059,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T00:22:05Z",
         "from_run": "41932127545",
         "gates": [
           {
@@ -16122,7 +16127,11 @@
         "source": "build",
         "until": "2026-11-05T00:50:54Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-05T00:20:54Z",
+      "run_id": "pending:523fb563-1793838096",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16141,6 +16150,9 @@
         "provider": "claude-6",
         "run": "41932127545"
       },
+      "started_at": "2026-11-05T00:22:05Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16154,9 +16166,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T00:11:29Z",
+    "at": "2026-11-05T00:22:05Z",
     "url": "",
-    "what": "plan #3061 on claude-3"
+    "what": "review #3087 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T00:07:35Z",
