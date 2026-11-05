@@ -752,6 +752,19 @@ pub fn series(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::series::apply(&call))
 }
 
+// The loadout visibility rule (SPEC §10.8, R1834003, R3013002; #3102)
+
+/// One call of `jackioh_shared::loadout`, the rule that keeps a decklist from leaking through a seat's
+/// cosmetics, which the server calls natively: the input is a `LoadoutCall`
+/// (`{ "call": "cardsDue", "shown": …, "loadouts": …, "sent": … }`), the output a `LoadoutAnswer`
+/// (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`). The host holds the deal
+/// of a match and each receiver's `sent` set and hands them back on every call (`crates/shared/README.md`,
+/// the host contract). No decision is made here.
+pub fn loadout(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::loadout::LoadoutCall = parse("loadout: the call", call_json)?;
+    to_json(&jackioh_shared::loadout::apply(&call))
+}
+
 // The match host's machine (#3101; SPEC §9.2, §9.3, §9.5)
 
 /// One call of `jackioh_shared::host`, the match host's decisions the server calls natively: the input is
@@ -1237,6 +1250,53 @@ mod series_body_tests {
         for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
             let error = series(call).unwrap_err();
             assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod loadout_body_tests {
+    use super::*;
+
+    /// The body is `jackioh_shared::loadout::apply` over JSON: the `sent` set it answers is the next call's input.
+    #[test]
+    fn loadout_body_answers_the_due_cards_and_the_set_to_keep() {
+        let loadouts = json!([
+            { "seat": { "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" },
+              "cards": [{ "cardId": "core-001", "foil": "foil-cracked-ice" }] },
+            { "seat": { "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" } },
+        ]);
+        let call = json!({
+            "call": "cardsDue", "shown": [["p1", "core-001"], ["p2", "core-002"]], "loadouts": loadouts,
+        });
+        let due: Value = serde_json::from_str(&loadout(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(
+            due["due"]["cards"],
+            json!([{ "seat": "p1", "cards": [{ "cardId": "core-001", "foil": "foil-cracked-ice" }] }])
+        );
+        assert_eq!(
+            due["due"]["sent"],
+            json!([["p1", "core-001"], ["p2", "core-002"]])
+        );
+
+        // Handed back, nothing is sent twice.
+        let again = json!({
+            "call": "cardsDue", "shown": [["p1", "core-001"]], "loadouts": loadouts, "sent": due["due"]["sent"],
+        });
+        let again: Value = serde_json::from_str(&loadout(&again.to_string()).unwrap()).unwrap();
+        assert_eq!(again["due"]["cards"], json!([]));
+    }
+
+    #[test]
+    fn loadout_body_refuses_a_call_that_does_not_parse() {
+        for call in [
+            "",
+            "{}",
+            r#"{"call":"nope"}"#,
+            r#"{"call":"shownDefs","dealt":{}}"#,
+        ] {
+            let error = loadout(call).unwrap_err();
+            assert!(error.starts_with("loadout: the call"), "{call:?}: {error}");
         }
     }
 }

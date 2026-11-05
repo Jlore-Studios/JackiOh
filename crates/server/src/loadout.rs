@@ -10,6 +10,9 @@
 //! R1834003: the seat-level half travels whole, on join and on reconnect (`loadouts`). A card's own
 //! picks travel only once a card dealt from that seat's deck, still showing as dealt, is in the
 //! receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]): no decklist can be read (§10.8).
+//! Those two decisions, the frozen shapes they read and the deal they read against are `jackioh-shared`'s
+//! (`loadout`, #3102), which the browser and Roblox call through `jackioh-wasm-core`; this file keeps the
+//! store, the registry and the freezing.
 //!
 //! R3013002: a card's proficiency stamp (§14.14) is frozen and travels the same way, beside its picks
 //! ([`Loadout::stamps`]), so another seat, a watcher and a replay's viewer see it only once the card is shown.
@@ -18,7 +21,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use jackioh_engine::{BackrowView, HandView, PLAYER_IDS, PlayerId, PlayerView, SideView};
+pub use jackioh_shared::loadout::{CardStamp, Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
 
 use crate::cosmetics::{
     AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, check_pick, default_of, full_art_of, full_art_picked,
@@ -139,22 +142,16 @@ impl AccountPicks {
     }
 }
 
-/// R1834002: what a seat wears on its side and on every card that has no pick of its own, each a
-/// registry id of its kind: the `loadouts` frame's half for one seat. Its foil, finish and border
-/// are their kinds' defaults (R1953001), kept so the frame keeps its shape.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeatLoadout {
-    pub table: String,
-    pub field: String,
-    pub card_back: String,
-    pub foil: String,
-    pub finish: String,
-    pub border: String,
+/// What the server reads and writes of a [`SeatLoadout`] by cosmetic kind, which `jackioh-shared`'s struct
+/// (R1834002, the `loadouts` frame's half for one seat) does not know.
+pub trait SeatLoadoutExt {
+    fn defaults_of(registry: &[Cosmetic]) -> SeatLoadout;
+    /// The id of a kind's slot, empty for a kind a seat wears no slot of.
+    fn get(&self, kind: CosmeticKind) -> &str;
 }
 
-impl SeatLoadout {
-    pub fn defaults_of(registry: &[Cosmetic]) -> SeatLoadout {
+impl SeatLoadoutExt for SeatLoadout {
+    fn defaults_of(registry: &[Cosmetic]) -> SeatLoadout {
         SeatLoadout {
             table: default_of(registry, CosmeticKind::Table).to_string(),
             field: default_of(registry, CosmeticKind::Field).to_string(),
@@ -165,7 +162,7 @@ impl SeatLoadout {
         }
     }
 
-    pub fn get(&self, kind: CosmeticKind) -> &str {
+    fn get(&self, kind: CosmeticKind) -> &str {
         match kind {
             CosmeticKind::Table => &self.table,
             CosmeticKind::Field => &self.field,
@@ -179,88 +176,45 @@ impl SeatLoadout {
             | CosmeticKind::Augment => "",
         }
     }
+}
 
-    fn set(&mut self, kind: CosmeticKind, id: String) {
-        match kind {
-            CosmeticKind::Table => self.table = id,
-            CosmeticKind::Field => self.field = id,
-            CosmeticKind::CardBack => self.card_back = id,
-            CosmeticKind::Foil => self.foil = id,
-            CosmeticKind::Finish => self.finish = id,
-            CosmeticKind::Border => self.border = id,
-            CosmeticKind::FullArt
-            | CosmeticKind::Portrait
-            | CosmeticKind::Version
-            | CosmeticKind::Augment => {}
-        }
-    }
-
-    /// The deck slots as a deck would carry them, each one picked: what a rematch replays (R672).
-    pub fn deck_slots(&self) -> DeckSlots {
-        DeckSlots {
-            table: Some(self.table.clone()),
-            field: Some(self.field.clone()),
-            card_back: Some(self.card_back.clone()),
-        }
+/// Puts `id` in the slot of `kind` on `seat`; a kind a seat wears no slot of changes nothing.
+fn set_slot(seat: &mut SeatLoadout, kind: CosmeticKind, id: String) {
+    match kind {
+        CosmeticKind::Table => seat.table = id,
+        CosmeticKind::Field => seat.field = id,
+        CosmeticKind::CardBack => seat.card_back = id,
+        CosmeticKind::Foil => seat.foil = id,
+        CosmeticKind::Finish => seat.finish = id,
+        CosmeticKind::Border => seat.border = id,
+        CosmeticKind::FullArt | CosmeticKind::Portrait | CosmeticKind::Version | CosmeticKind::Augment => {}
     }
 }
 
-/// R3013002: the proficiency stamp one card of a seat's deck wears (§14.14), a stamp its level had
-/// unlocked as the match froze it (R3013001).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct CardStamp {
-    pub card_id: String,
-    pub stamp: i64,
-}
-
-/// R1834002: one seat's frozen loadout: its seat-level half, and the cards of its deck that wear
-/// something of their own, by card id. A card left out wears the seat's picks and no full art.
-/// R3013002: and the cards of its deck that wear a stamp, by card id; a loadout frozen before #3013,
-/// and a bot's, has none, and a loadout without one keeps its shape.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct Loadout {
-    pub seat: SeatLoadout,
-    #[serde(default)]
-    pub cards: Vec<CardPicks>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub stamps: Vec<CardStamp>,
-}
-
-impl Loadout {
+/// What the server reads and writes of a [`Loadout`] that needs the cosmetics registry.
+pub trait LoadoutExt {
     /// What a seat wears when nothing is frozen for it: every kind's default, no card of its own.
-    pub fn defaults() -> Loadout {
+    fn defaults() -> Loadout;
+}
+
+impl LoadoutExt for Loadout {
+    fn defaults() -> Loadout {
         Loadout {
             seat: SeatLoadout::defaults_of(registry()),
             cards: Vec::new(),
             stamps: Vec::new(),
         }
     }
-
-    pub fn card(&self, card_id: &str) -> Option<&CardPicks> {
-        self.cards.iter().find(|card| card.card_id == card_id)
-    }
-
-    /// R3013002: the stamp `card_id` wears, if any.
-    pub fn stamp(&self, card_id: &str) -> Option<&CardStamp> {
-        self.stamps.iter().find(|stamp| stamp.card_id == card_id)
-    }
 }
 
-/// R1834003: one seat's cards, as the `cardLoadouts` frame and a replay page carry them. R3013002: with
-/// the stamps of those cards that wear one, left out when none does.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeatCards {
-    pub seat: PlayerId,
-    pub cards: Vec<CardPicks>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub stamps: Vec<CardStamp>,
+/// What the server reads and writes of a card's [`CardPicks`] by cosmetic kind.
+pub trait CardPicksExt {
+    fn get(&self, kind: CosmeticKind) -> Option<&str>;
+    fn set(&mut self, kind: CosmeticKind, id: Option<String>);
 }
 
-impl CardPicks {
-    pub fn get(&self, kind: CosmeticKind) -> Option<&str> {
+impl CardPicksExt for CardPicks {
+    fn get(&self, kind: CosmeticKind) -> Option<&str> {
         match kind {
             CosmeticKind::Foil => self.foil.as_deref(),
             CosmeticKind::Finish => self.finish.as_deref(),
@@ -269,7 +223,7 @@ impl CardPicks {
         }
     }
 
-    pub fn set(&mut self, kind: CosmeticKind, id: Option<String>) {
+    fn set(&mut self, kind: CosmeticKind, id: Option<String>) {
         match kind {
             CosmeticKind::Foil => self.foil = id,
             CosmeticKind::Finish => self.finish = id,
@@ -322,7 +276,7 @@ pub fn freeze_loadout(
             Some(picked) => owned_pick(kind, Some(picked), None),
             None => owned_pick(kind, account.get(kind), None),
         };
-        seat.set(kind, worn.unwrap_or_else(|| default(kind)));
+        set_slot(&mut seat, kind, worn.unwrap_or_else(|| default(kind)));
     }
 
     let distinct: BTreeSet<&str> = deck_cards.iter().map(String::as_str).collect();
@@ -460,94 +414,6 @@ impl SeatPicks {
             )
         }
     }
-}
-
-/// The cards a side of a view shows face up, each `(instance id, def id)`. A face-down card, the
-/// opponent's hand, a library, the events and the prompts name nothing here.
-fn shown_cards(side: &SideView) -> impl Iterator<Item = (&str, &str)> {
-    let units = side
-        .units
-        .iter()
-        .flatten()
-        .chain(side.carried.iter().flatten().flatten())
-        .map(|unit| (unit.instance_id.as_str(), unit.def_id.as_str()));
-    let backrow = side.backrow.iter().flatten().filter_map(|card| match card {
-        BackrowView::Public(card) => Some((card.instance_id.as_str(), card.def_id.as_str())),
-        BackrowView::FaceDown(_) => None,
-    });
-    let hand = match &side.hand {
-        HandView::Cards(cards) => cards.as_slice(),
-        HandView::Count { .. } => &[],
-    };
-    let piles = hand
-        .iter()
-        .chain(&side.graveyard)
-        .chain(&side.exile)
-        .chain(&side.resolving)
-        .map(|card| (card.instance_id.as_str(), card.def_id.as_str()));
-    units.chain(backrow).chain(piles)
-}
-
-/// R1834003: the `(seat, card)` pairs `view` shows: each card in it dealt from `seat`'s deck (`dealt`,
-/// `actor::engine::dealt_cards`) and still shown as the card it was dealt as, wherever it is now (a card
-/// that changed hands counts for the deck that dealt it). A card minted later or transformed names no
-/// pair, so a pair never says more than the view it is read from: a card of that deck, seen.
-pub fn shown_defs(
-    view: &PlayerView,
-    dealt: &BTreeMap<String, (PlayerId, String)>,
-) -> BTreeSet<(PlayerId, String)> {
-    [&view.you, &view.opponent]
-        .into_iter()
-        .flat_map(shown_cards)
-        .filter_map(|(instance, def)| {
-            let (seat, dealt_as) = dealt.get(instance)?;
-            (dealt_as == def).then(|| (*seat, def.to_string()))
-        })
-        .collect()
-}
-
-/// R1834003: the cards' own picks `shown` makes due to a receiver that has been sent `sent`
-/// already: each new pair's entry in its seat's loadout (`loadouts`, seat order), by seat, the
-/// pairs then marked sent. A pair whose card has no entry of its own is marked and sends nothing.
-/// R3013002: a pair's stamp, when its card wears one, goes with it by the same rule.
-pub fn cards_due(
-    shown: &BTreeSet<(PlayerId, String)>,
-    loadouts: &(Loadout, Loadout),
-    sent: &mut BTreeSet<(PlayerId, String)>,
-) -> Vec<SeatCards> {
-    let mut due: Vec<SeatCards> = Vec::new();
-    for pair in shown {
-        if !sent.insert(pair.clone()) {
-            continue;
-        }
-        let (seat, card) = pair;
-        let loadout = match seat {
-            PlayerId::P1 => &loadouts.0,
-            PlayerId::P2 => &loadouts.1,
-        };
-        let (entry, stamp) = (loadout.card(card), loadout.stamp(card));
-        if entry.is_none() && stamp.is_none() {
-            continue;
-        }
-        let at = match due.iter().position(|cards| cards.seat == *seat) {
-            Some(at) => at,
-            None => {
-                due.push(SeatCards {
-                    seat: *seat,
-                    cards: Vec::new(),
-                    stamps: Vec::new(),
-                });
-                due.len() - 1
-            }
-        };
-        let Some(cards) = due.get_mut(at) else {
-            continue;
-        };
-        cards.cards.extend(entry.cloned());
-        cards.stamps.extend(stamp.cloned());
-    }
-    due.sort_by_key(|cards| PLAYER_IDS.iter().position(|seat| *seat == cards.seat));
-    due
 }
 
 #[cfg(test)]
@@ -1158,104 +1024,6 @@ mod tests {
         assert!(!picks.full_art);
     }
 
-    #[test]
-    fn r1834003_shown_defs_follow_the_deal_and_skip_hidden() {
-        use crate::actor::engine::{self, Pinned};
-        let decks = (
-            engine::deal_random_deck("loadout-test:p1-deck", None),
-            engine::deal_random_deck("loadout-test:p2-deck", None),
-        );
-        let args = engine::create_game_args("loadout-test", &decks, None, None, None);
-        let state =
-            engine::begin_game(Pinned::default(), &engine::create_game(Pinned::default(), &args)).state;
-        let dealt = engine::dealt_cards(&state);
-        // Every card of both decks was dealt, each to its own seat.
-        assert_eq!(dealt.len(), decks.0.len() + decks.1.len());
-        for (seat, deck) in [(PlayerId::P1, &decks.0), (PlayerId::P2, &decks.1)] {
-            let mut of_seat: Vec<&str> = dealt
-                .values()
-                .filter(|(owner, _)| *owner == seat)
-                .map(|(_, def)| def.as_str())
-                .collect();
-            let mut listed: Vec<&str> = deck.iter().map(String::as_str).collect();
-            of_seat.sort_unstable();
-            listed.sort_unstable();
-            assert_eq!(of_seat, listed, "{seat}");
-        }
-        let view = engine::view_for(Pinned::default(), &state, PlayerId::P1);
-        let HandView::Cards(hand) = &view.you.hand else {
-            panic!("p1 reads its own hand");
-        };
-        assert!(!hand.is_empty());
-        let shown = shown_defs(&view, &dealt);
-        // p1's hand shows, p2's hand and both libraries do not.
-        let expected: BTreeSet<(PlayerId, String)> = hand
-            .iter()
-            .map(|card| (PlayerId::P1, card.def_id.clone()))
-            .collect();
-        assert_eq!(shown, expected);
-        // A card that shows as something it was not dealt as (a transform), or that was not dealt
-        // at all, names nothing.
-        let first = hand[0].def_id.clone();
-        let mut changed = dealt.clone();
-        for card in hand.iter().filter(|card| card.def_id == first) {
-            changed.insert(card.instance_id.clone(), (PlayerId::P1, "core-999".to_owned()));
-        }
-        let transformed = shown_defs(&view, &changed);
-        assert!(!transformed.contains(&(PlayerId::P1, first)));
-        assert_eq!(transformed.len() + 1, shown.len());
-        assert!(shown_defs(&view, &BTreeMap::new()).is_empty());
-    }
-
-    #[test]
-    fn r1834003_cards_due_sends_each_pair_once_and_only_entries() {
-        let mut first = Loadout::defaults();
-        first.cards.push(CardPicks {
-            card_id: "core-001".to_owned(),
-            full_art: Some(FullArtPick::On(true)),
-            ..CardPicks::default()
-        });
-        let mut second = Loadout::defaults();
-        second.cards.push(CardPicks {
-            card_id: "core-002".to_owned(),
-            foil: Some("foil-cracked-ice".to_owned()),
-            ..CardPicks::default()
-        });
-        let loadouts = (first, second);
-        let mut sent = BTreeSet::new();
-        let shown: BTreeSet<(PlayerId, String)> = [
-            (PlayerId::P2, "core-002".to_owned()),
-            (PlayerId::P1, "core-001".to_owned()),
-            (PlayerId::P1, "core-003".to_owned()),
-        ]
-        .into_iter()
-        .collect();
-        let due = cards_due(&shown, &loadouts, &mut sent);
-        assert_eq!(
-            due,
-            vec![
-                SeatCards {
-                    seat: PlayerId::P1,
-                    cards: vec![loadouts.0.cards[0].clone()],
-                    stamps: Vec::new(),
-                },
-                SeatCards {
-                    seat: PlayerId::P2,
-                    cards: vec![loadouts.1.cards[0].clone()],
-                    stamps: Vec::new(),
-                },
-            ]
-        );
-        assert_eq!(sent.len(), 3);
-        // Nothing twice.
-        assert!(cards_due(&shown, &loadouts, &mut sent).is_empty());
-        // The seat's picks for core-002 never travel for p1's core-002.
-        let mut fresh = BTreeSet::new();
-        let theirs_only: BTreeSet<(PlayerId, String)> =
-            [(PlayerId::P1, "core-002".to_owned())].into_iter().collect();
-        assert!(cards_due(&theirs_only, &loadouts, &mut fresh).is_empty());
-    }
-
     fn stamp(card: &str, stamp: i64) -> CardStamp {
         CardStamp {
             card_id: card.to_owned(),
@@ -1264,7 +1032,7 @@ mod tests {
     }
 
     #[test]
-    fn r3013002_a_stamp_is_frozen_for_a_dealt_card_and_due_once_shown() {
+    fn r3013002_a_stamp_is_frozen_for_a_dealt_card() {
         // R3013001: only a stamp the row's level reached is worn.
         let rows = [
             CardProficiency {
@@ -1307,59 +1075,9 @@ mod tests {
         assert_eq!(frozen.stamps, vec![stamp("core-001", 2)]);
         assert_eq!(frozen.stamp("core-001"), Some(&stamp("core-001", 2)));
         assert_eq!(frozen.stamp("core-004"), None);
-        // A stamp with no picks of its own travels alone, once, and only once its card is shown.
-        let loadouts = (frozen, Loadout::defaults());
-        let mut sent = BTreeSet::new();
-        let unshown: BTreeSet<(PlayerId, String)> =
-            [(PlayerId::P1, "core-002".to_owned())].into_iter().collect();
-        assert!(cards_due(&unshown, &loadouts, &mut sent).is_empty());
-        let shown: BTreeSet<(PlayerId, String)> = [
-            (PlayerId::P1, "core-001".to_owned()),
-            (PlayerId::P2, "core-001".to_owned()),
-        ]
-        .into_iter()
-        .collect();
-        assert_eq!(
-            cards_due(&shown, &loadouts, &mut sent),
-            vec![SeatCards {
-                seat: PlayerId::P1,
-                cards: Vec::new(),
-                stamps: vec![stamp("core-001", 2)],
-            }]
-        );
-        assert!(cards_due(&shown, &loadouts, &mut sent).is_empty());
+        // That it travels alone, once, and only once its card is shown is `jackioh-shared`'s rule
+        // (`tests/loadout.rs`).
         // A bot's seat wears none (R1454): its picks are read off its row, with no stamps.
         assert!(SeatPicks::default().freeze(None, &deck).stamps.is_empty());
-    }
-
-    #[test]
-    fn r3013002_a_frame_without_stamps_is_unchanged() {
-        let loadout = Loadout::defaults();
-        let json = serde_json::to_value(&loadout).expect("a loadout serializes");
-        assert!(json.get("stamps").is_none(), "{json}");
-        let cards = SeatCards {
-            seat: PlayerId::P1,
-            cards: Vec::new(),
-            stamps: Vec::new(),
-        };
-        let json = serde_json::to_value(&cards).expect("a seat's cards serialize");
-        assert!(json.get("stamps").is_none(), "{json}");
-        // A loadout frozen before #3013 reads back with none.
-        let mut old = serde_json::to_value(Loadout::defaults()).expect("a loadout serializes");
-        if let Some(fields) = old.as_object_mut() {
-            fields.remove("stamps");
-        }
-        let read: Loadout = serde_json::from_value(old).expect("an older loadout reads");
-        assert!(read.stamps.is_empty());
-        // One with a stamp carries it.
-        let worn = Loadout {
-            stamps: vec![stamp("core-001", 3)],
-            ..Loadout::defaults()
-        };
-        let json = serde_json::to_value(&worn).expect("a loadout serializes");
-        assert_eq!(
-            json.get("stamps"),
-            Some(&serde_json::json!([{ "cardId": "core-001", "stamp": 3 }]))
-        );
     }
 }
