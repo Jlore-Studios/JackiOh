@@ -15046,19 +15046,27 @@
       "action": "build",
       "asks": [],
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3000",
       "owner": "claude-1",
       "owner_since": "2026-11-05T00:22:47Z",
       "owner_why": "it took it up",
       "part_of": 3000,
+      "paused": {
+        "at": "2026-11-05T00:31:08Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "provider": "claude-1",
+      "round_tier": "",
       "run_id": "41940888875",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-05T00:22:47Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3045": {
       "onto": "bot/issue-3000",
