@@ -84,7 +84,8 @@ button,
   background: var(--primary-face-hover);
 }
 
-/* Not ready yet: the same button, unlit, its label still legible. */
+/* Not ready yet: the same button, unlit, its label still legible. A locked End turn is one (it is
+   `disabled`, so it was the bare button's raised face before #3219 too; Board.test.tsx holds it). */
 .button-primary:is(:disabled, [aria-disabled="true"]) {
   border-color: var(--line-bright);
   background: var(--bg-raised);
