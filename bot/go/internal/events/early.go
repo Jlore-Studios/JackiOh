@@ -170,8 +170,9 @@ func StopRedCI(ctx *hctx.Context, run *pyjson.Object, jobs []*pyjson.Object) str
 	}
 	names := queue.LabelNames(pull)
 	record := s.Obj("items").Obj(strconv.Itoa(number))
-	if names[config.LabelBlocked] || queue.IsHuman(names) || record.Truthy("stop_requested") {
-		return "" // left to a person, as `OnCI` leaves it
+	if names[config.LabelBlocked] || queue.IsHuman(names) || record.Truthy("stop_requested") ||
+		queue.ArchivedOf(record) != nil {
+		return "" // left to a person, as `OnCI` leaves it (an archived hand-over among them, #3009)
 	}
 	now := ctx.Now()
 	sha := py.Str(run.Get("head_sha"))

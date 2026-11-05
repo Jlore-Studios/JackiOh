@@ -87,7 +87,6 @@ Drawn so far, the damage and removal family (#2784):
 | `bolt` | damage, destroyed | damage | a gather at the source, one glowing bolt into the first target, a hit on every target, a ring lingering on the first |
 | `volley` | damage, destroyed | damage | one gather, then a fan of bolts that leave together, one per target up to `FX_MOTIF_VOLLEY_MAX` a play |
 | `barrage` | damage, destroyed | damage | bolts raining in one after another, `FX_MOTIF_BARRAGE_STEP` of D apart, at most `FX_MOTIF_BARRAGE_MAX` one by one, never past linger |
-| `chain` | damage, destroyed | damage | one bolt hopping target to target, each hop an equal share of travel to linger, on from the play's last hit when the queue split the run |
 | `lance` | damage, destroyed, exiled | damage | **JackiOh's lane:** a beam down the target's whole lane, from the far side's backrow through both unit rows into its own side's backrow, every zone of the lane flaring as it lands, one beam a lane a play (a later hit in that lane flares it again); a target in no lane (a hero) takes bolt's cues |
 | `nova` | damage, destroyed | damage | a blast gathering at one centre (its one target, the middle of the one side all targets are on, else the board) and bursting over every target at once |
 | `scorch` | damage, destroyed | damage | each target heats, flares and burns down to embers and smoke where it stood |
@@ -103,17 +102,14 @@ and three parameters:
 | `drain` | healthLost, healthSet | healthLost, healthSet | a liquid stream from the victim to the gainer (the entry's healed target, else the resolving play's hero), pooling where it lands; the loss's number only in place of the row |
 | `bless` | buffed, upgraded, keywordGranted | all three | arrows up, a sheen and a burst over a card made better |
 | `curse` | degraded, buffed, keywordGranted | all three | arrows down and a void burst over a card made worse |
-| `ward` | damageAbsorbed, divineShieldLost | both | Armor's full shield over a hit it took whole (under `keep` a burst, the armor row drawing the flash); gold and shards where a Divine Shield broke |
 | `conjure` | summoned | nothing | a summoning circle where the card arrives: a gather, a landing and an afterglow |
 | `rise` | summoned, animated, awakened | nothing | the card rising out of its zone, from below to where it stands |
 | `offering` | destroyed | nothing | the unit sinking under a glyph in its lane: a cost paid, never a kill |
 | `shift` | swapped, rotated, positionSwitched, flickered | nothing | the path of every unit that moved; a board swap or a rotation walks both rows, a rotation along R14's ring from the resolving play's seat |
 | `bind` | locked, unlocked | both | frost and chains over a Locked unit; gold shards when it releases |
 | `tether` | stolen, controlChanged, held | nothing | an arcane line from where the card was to whose it is now |
-| `mirror` | transformed | nothing | a translucent double peeling off the source toward the copy |
 | `transmute` | transformed, fused, upgraded, degraded | all four | smoke and sparks as one card becomes another, landing on the card a fusion makes (an Equip fusing into its host, #2797), with a ring and rays for an upgrade and a crack for a degrade (#2908) |
 | `flight` | drawn | drawn | a card back flying from the library into the hand, landing with its sparkle |
-| `glimpse` | predicted, secretRevealed | nothing | a sheen and a small flare on the hero's badge |
 | `mana` | manaChanged, manaSpent | manaChanged | one sparkle per crystal gained spread across Travel to Land, landing together; a soft pulse where a spend drained |
 | `tithe` | costChanged, modifierChanged | costChanged | a glint on the cost gem of each changed hand card; by count on backs for cards the viewer may not read (R202); a price added for a player glints on their modifier badges and on their Dormant Starship, whose launch it may price (R2801000) |
 | `tally` | counterChanged, questProgressed | nothing | a sparkle tick where the card stands |
@@ -336,7 +332,7 @@ their row recipe. It never keys on an event's own `defId` (a destroyed card's is
 the caster's), draws nothing on a damage another card dealt while the play resolved (a Trap
 answering it keeps its own row) and leaves a run over a whole pile to its one wave. The runner gives
 each hit of a run that sweeps no whole side its own entry, so the play remembers the ids its hits
-landed on (`FxPlay.hits`): a volley gathers once, a chain hops on from its last hit, a lance beams a lane once,
+landed on (`FxPlay.hits`): a volley gathers once, a lance beams a lane once,
 and a card its hits already reached dies under its own row, so a lethal bolt flies once.
 
 A card's hook is an entry too (R2797000): a Death's, a start-of-turn or end-of-turn hook's, a
@@ -504,7 +500,7 @@ Twelve cards across the sets wear the first motifs, as the pattern for the passe
 | Classic+ #21 Whirlwind | `cast: nova` |
 | Classic+ #25 Soul Shot | `cast: bolt` |
 | Meditative #78 Occidentless Mandate | `cast: vanish` |
-| Meditative+ #5 Spirit Lash | `cast: chain` |
+| Meditative+ #5 Spirit Lash | `cast: nova` |
 | Stinkyscape #3 Meteor | `cast: nova` |
 | Stinkyscape #97 Asteroid Field | `cast: barrage` |
 | Training Grounds #10 Fan of Knives | `cast: volley` |
@@ -520,6 +516,47 @@ sub-look (#2792): `Tech/rocket` for the Drone Cores, Cannons and Flaks, `Tech/la
 Repeaters and Weapon Equips, `Tech/hologram` for the MAGI and the Prototypes and `Tech/starfield` for
 the Warp Disruptors, Imprisoned Cosmality and the Battleship. The second half (#2798) uses the same
 names.
+
+## Audit
+
+Issue #2803's audit (R2803000) closes the work above and holds it:
+
+- **Coverage:** 551 of the catalog's 634 non-token cards wear an entry other than `none`, past the
+  audit's floor of half (`FX_COVERAGE_FLOOR`, `fx/cards/coverage.test.ts`). By set: Core 87/100,
+  Classic 79/90, Classic+ 74/78, Meditative 94/102, Meditative+ 24/26, Stinkyscape 142/178,
+  Training Grounds 51/60. By type: Unit 195/277, Spell 235/236, Field Spell 87/87, Trap 24/24,
+  Field Trap 10/10. By rarity: Common 138/181, Rare 181/198, Epic 132/144, Legendary 72/81,
+  Mythic 28/30. Every Spell, Field Spell, Trap and Field Trap wears a `cast`, a recipe, a set piece
+  or the one `none` a Starship part may wear (Stinkyscape #176 Preemptive Strike, "Starship part"),
+  and every Field Spell an `aura`.
+- **Tiers:** every table entry's gallery play is planned through the board's effects layer, and every
+  cue it plans ends within its entry plus `FX_MAX_TAIL_MS` (`fx/cards/tiers.test.ts`); every set
+  piece's hold stays within `SET_PIECE_HOLD_CAP_MS`, one hold per action.
+- **Motif use:** 31 drawn motifs remain, every one used by at least `FX_MOTIF_MIN_CARDS` (3)
+  cards, and every sub-look is used. The audit folds the four below the floor: `chain` into
+  `nova` (Spirit Lash hits every Unit at once; amends R2784000's Examples-table citation),
+  `mirror` into `transmute` (Rewind, Juhan Biggest Bat), `ward` into the rows (Armor's shield
+  and the Divine Shield break draw in `cues.ts` in Holy, shaking `FX_ARMOR_TRAUMA`; Argusland
+  and Fortify Flesh name `bless`), `glimpse` into bespoke `mindJudge` (Fortify Mind keeps its
+  judgment's sheen and flare on the hero's badge, shaking `FX_MIND_JUDGE_TRAUMA`) and `bless`
+  (Feng Shui).
+- **Frame rate:** at the phone particle cap with a phone viewport, all five scenes hold
+  their mean frame time within `FX_PHONE_FRAME_BUDGET_MS`
+  (`e2e/cypress/component/fx-phone-frame.cy.tsx`): the cap check, Twisting Nether, the
+  Starship launch, a Mythic takeover and a board with 4 auras. The two misses were scaled
+  back with their composition untouched: Nether throws fewer pull/implode particles and
+  shakes softer with a smaller-same-arms vortex spiral, the takeover fewer Mythic-burst
+  particles and a softer shake with same-disc takeover rays; a follow-up issue tracks
+  measuring them on a real phone.
+- **Entrances:** the shared Mythic takeover, the Legendary entrance and the reduced-motion still
+  land in the motif language's two-wave landing: a summoned or cast Legendary's ring carries its
+  echo, the shared prismatic sweep has its own keyframes, the board recoils in two steps, and the
+  still echoes the takeover at rest. The music, the entrances' timing and the one capped hold are
+  unchanged (R2722000, R2722001, R2722002).
+- **Captures:** the gallery spec plays every drawn motif mid-flight — `shift` proving its
+  DOM ghosts at 0.25× speed (its canvas bursts age out in software rendering; the tier
+  test proves their timing) — and every set piece mid-flight and at rest
+  (`e2e/cypress/component/fx-gallery-captures.cy.tsx`).
 
 ## Open
 

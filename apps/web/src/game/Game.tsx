@@ -10,6 +10,8 @@
 // (Marketplace.tsx, #2645) come from the view, each live as `legal` lists its moves. `legal` belongs to
 // `props.view`, so every consumer gets none until the board SHOWS that view: else the newer position's moves
 // lit End turn before the player saw the turn was theirs.
+// One intent is sent once per view: `dispatch` drops an endTurn, answer or mulligan equal to the last one sent
+// against the same view (R3060000).
 
 import {
   useCallback,
@@ -81,6 +83,8 @@ import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
+import type { GameSideline } from "../sideline/useSideline.ts";
 
 /** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
 function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
@@ -144,6 +148,8 @@ export type GameProps = {
   boardNotice?: ReactNode;
   /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
   emotes?: GameEmotes;
+  /** R2990004: the watchers' emotes, a networked route's `useSideline`. Absent, no sideline strip. */
+  sideline?: GameSideline;
   /** R639: log this game in the device's statistics when it ends; not a lesson's or hotseat's. */
   trackStats?: boolean;
   /** R1295000: the viewer's own cards wear the device's card cosmetics; a replay's never do. */
@@ -205,6 +211,13 @@ export type GameEmotes = {
 /** What the board is offered while it is still showing an older view than `legal` describes. */
 const NOTHING_LEGAL: readonly ActionBody[] = [];
 
+/**
+ * R3060000: the intents whose repeat against one view is one press sent twice (a double click on End turn,
+ * a double tap on a one-tap choice or on the mulligan's Ready). Concede, plays, attacks, activations and
+ * buys stay out: a repeat of those can be meant, and the engine refuses what it must.
+ */
+const ONCE_PER_VIEW: ReadonlySet<ActionBody["type"]> = new Set(["endTurn", "answer", "mulligan"]);
+
 export default function Game({
   view,
   legal: offered,
@@ -224,6 +237,7 @@ export default function Game({
   heroAside,
   boardNotice,
   emotes,
+  sideline,
   trackStats = false,
   wearCosmetics = false,
   deckCosmetics = null,
@@ -537,8 +551,25 @@ export default function Game({
   // R2102000: and so does the lethal hint, which is the newest view's too.
   const lethalShown = lethalHint && !replay && shown === view && shown.result === null;
 
+  // R3060000: the last End turn, answer or mulligan sent and the view it was sent against. The same body
+  // against the same view is a repeat press, dropped; a new view is a new object, so it needs no clearing.
+  const lastSent = useRef<{ key: string; view: PlayerView } | null>(null);
+  // An `error` that gains text (a refusal, an offline send) means the intent did not land, so a retry goes
+  // through. The line clearing is no refusal: net.ts clears it on every send, so releasing on that would let
+  // the second click of a double click through whenever an old error was showing. A LAYOUT effect, so the
+  // release is in place before the next click.
+  useLayoutEffect(() => {
+    if (error != null && error !== "") lastSent.current = null;
+  }, [error]);
+
   const dispatch = useCallback(
     (body: ActionBody) => {
+      if (ONCE_PER_VIEW.has(body.type)) {
+        const key = JSON.stringify(body);
+        const sent = lastSent.current;
+        if (sent !== null && sent.view === latest.current && sent.key === key) return;
+        lastSent.current = { key, view: latest.current };
+      }
       setInteraction(IDLE);
       onAction(body);
     },
@@ -848,6 +879,7 @@ export default function Game({
       )}
 
       {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {sideline === undefined ? null : <SidelineStrip sideline={sideline} />}
 
       {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}
       {shown.result !== null ? (

@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { manualClock, type ManualClock } from "../game/deckbuilder/testkit.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { UNDO_WINDOW_MS, useUndoHold, type HeldDeletion, type UndoTimer } from "./hold.ts";
+import { UNDO_REPEAT_MS, UNDO_WINDOW_MS, useUndoHold, type HeldDeletion, type UndoTimer } from "./hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO, UndoToast } from "./UndoToast.tsx";
 
 /** Two deletions to hold and a "now" that sends the held one at once, each logging what it does. */
@@ -28,12 +28,25 @@ function Harness({ timer, log }: { timer: UndoTimer; log: string[] }): ReactElem
       log.push(`restore ${name}`);
     },
   });
+  const take = (name: string): void => {
+    if (!hold(deletion(name))) log.push(`refused ${name}`);
+  };
   return (
     <div>
-      <button type="button" onClick={() => hold(deletion("first"))}>
+      <button
+        type="button"
+        onClick={() => {
+          take("first");
+        }}
+      >
         first
       </button>
-      <button type="button" onClick={() => hold(deletion("second"))}>
+      <button
+        type="button"
+        onClick={() => {
+          take("second");
+        }}
+      >
         second
       </button>
       <button type="button" onClick={sendNow}>
@@ -182,5 +195,60 @@ describe("R2119000 the undo hold", () => {
     expect(css).toContain('.undo-toast[data-motion="reduced"] { animation: none; }');
     expect(css).toContain("@media (prefers-reduced-motion: reduce) { .undo-toast { animation: none; } }");
     for (const side of ["left", "right", "bottom"]) expect(css).toContain(`env(safe-area-inset-${side})`);
+  });
+});
+
+describe("R3059000 a double click", () => {
+  it("R3059000 a second hold inside UNDO_REPEAT_MS is refused: it sends nothing and the first stays held", async () => {
+    const { log, tick } = mount();
+    fireEvent.click(screen.getByText("first"));
+    await tick(UNDO_REPEAT_MS - 1);
+    fireEvent.click(screen.getByText("second"));
+    expect(log).toEqual(["refused second"]);
+    expect(screen.getAllByTestId(UNDO_TOAST)).toHaveLength(1);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("first deleted · Undo");
+    await tick(UNDO_WINDOW_MS - UNDO_REPEAT_MS);
+    expect(log, "the window is the first's own").toEqual(["refused second"]);
+    await tick(1);
+    expect(log).toEqual(["refused second", "send first false"]);
+  });
+
+  it("R3059000 Undo after a refused second hold restores the one deletion held", () => {
+    const { log } = mount();
+    fireEvent.click(screen.getByText("first"));
+    fireEvent.click(screen.getByText("second"));
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(log).toEqual(["refused second", "restore first"]);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+  });
+
+  it("R3059000 a hold at UNDO_REPEAT_MS sends the first and holds the second", async () => {
+    const { log, tick } = mount();
+    fireEvent.click(screen.getByText("first"));
+    await tick(UNDO_REPEAT_MS);
+    fireEvent.click(screen.getByText("second"));
+    expect(log).toEqual(["send first false"]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("second deleted · Undo");
+  });
+
+  it("R3059000 a refused hold does not extend the guard", async () => {
+    const { log, tick } = mount();
+    fireEvent.click(screen.getByText("first"));
+    await tick(UNDO_REPEAT_MS - 100);
+    fireEvent.click(screen.getByText("second"));
+    await tick(100);
+    fireEvent.click(screen.getByText("second"));
+    expect(log).toEqual(["refused second", "send first false"]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("second deleted · Undo");
+  });
+
+  it("R3059000 Undo ends the guard, so a deletion right after it is taken", () => {
+    const { log, clock } = mount();
+    fireEvent.click(screen.getByText("first"));
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(clock.pending(), "the guard's timer is gone with the hold's").toBe(0);
+    fireEvent.click(screen.getByText("second"));
+    expect(log).toEqual(["restore first"]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("second deleted · Undo");
   });
 });

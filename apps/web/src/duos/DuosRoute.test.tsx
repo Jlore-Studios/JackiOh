@@ -17,6 +17,8 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { navigate, paths, usePathname } from "../net/navigate.ts";
 import { navTestid } from "../routes/nav.tsx";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { writeSettings } from "../settings/index.ts";
+import { sidelineTestid } from "../sideline/testids.ts";
 import { baseView, duosTeamView, duosView, pendingFor } from "../test/fixtures.ts";
 import { at, must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -398,6 +400,65 @@ describe("R2881000 the co-op seat's watcher count", () => {
     expect(screen.getByTestId(duosTestid.watchers)).toHaveAttribute("data-count", "3");
     deliver({ type: "watchers", count: 0 });
     expect(screen.queryByTestId(duosTestid.watchers)).toBeNull();
+  });
+});
+
+describe("R2990004 the watchers' emotes on the co-op board", () => {
+  function deliver(frame: Record<string, unknown>): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify(frame) });
+    });
+  }
+
+  function joined(): void {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+    deliver({ type: "view", view: duosView(1), legal: [] });
+  }
+
+  function watchers(): (string | null)[] {
+    return screen.queryAllByTestId(sidelineTestid.emote).map((show) => show.getAttribute("data-watcher"));
+  }
+
+  afterEach(() => {
+    writeSettings({ muteSpectatorEmotes: false });
+  });
+
+  it("R2990000 a relayed spectatorEmote shows in the sideline strip by name, on whichever board the portal shows", () => {
+    joined();
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
+
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "salute" });
+
+    expect(screen.getAllByTestId(sidelineTestid.strip)).toHaveLength(1);
+    expect(screen.getByTestId(sidelineTestid.emote)).toHaveAttribute("data-emote", "salute");
+    expect(screen.getByTestId(sidelineTestid.strip)).toHaveTextContent("Wes#13");
+    expect(screen.queryByTestId(sidelineTestid.menu)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(duosTestid.portal));
+    expect(screen.getAllByTestId(sidelineTestid.strip)).toHaveLength(1);
+    expect(watchers()).toEqual(["Wes#13"]);
+  });
+
+  it("R2990004 Mute hides the watchers' emotes for the rest of the game", () => {
+    joined();
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "salute" });
+    fireEvent.click(screen.getByTestId(sidelineTestid.mute));
+
+    expect(watchers()).toEqual([]);
+    deliver({ type: "spectatorEmote", watcher: "Ann#2", emote: "gasp" });
+    expect(watchers()).toEqual([]);
+    expect(screen.getByTestId(sidelineTestid.mute)).toBeDisabled();
+  });
+
+  it("R2990004 with muteSpectatorEmotes on, a watcher's emote never shows on the co-op board", () => {
+    writeSettings({ muteSpectatorEmotes: true });
+    joined();
+    deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "salute" });
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
   });
 });
 

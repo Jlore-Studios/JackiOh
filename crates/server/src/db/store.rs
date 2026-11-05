@@ -1098,6 +1098,11 @@ pub struct SeasonStanding {
     /// the rows without it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub bot: bool,
+    /// R3074001: the player holds a hand-set rating on this ladder (migration 0080's
+    /// `hand_set_ratings`); never serialized when false. On a strict server (`DEV_STRICT`) the public
+    /// ladder, the percentiles and Jlorious read the rows without it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hand_set: bool,
 }
 
 /// R610: an AI bot's own Glicko-2 rating. Its ladder rank is a season row like a person's, read

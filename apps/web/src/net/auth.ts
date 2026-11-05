@@ -37,7 +37,8 @@ export type AuthEndpoint =
   /** R665: an authenticator app's code (enrolling, or signing in). */
   | "mfaVerify"
   /** R665: enrolling, listing or removing a factor. */
-  | "mfa";
+  | "mfa"
+  | "identities";
 
 export type AuthFailure =
   | "credentials"
@@ -67,7 +68,11 @@ export type AuthFailure =
   | "mfaCodeInvalid"
   | "mfaUnavailable"
   | "oauthUnavailable"
-  | "oauthFailed";
+  | "oauthFailed"
+  /** R3025000: the project does not allow linking, or the provider's account is another JackiOh account's. */
+  | "linkRefused"
+  /** R3025000: the account's only way in is not removed. */
+  | "lastIdentity";
 
 /** R160: account-dependent sign-in and sign-up outcomes use one refusal per endpoint. */
 export const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an account.";
@@ -116,6 +121,8 @@ export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
   mfaUnavailable: "Two-step sign-in isn't available on this site right now.",
   oauthUnavailable: "That sign-in option doesn't work in this browser. Sign in with your email instead.",
   oauthFailed: "Signing in with that account didn't finish. Try again, or sign in with your email.",
+  linkRefused: "That account couldn't be linked. It may already be linked to another JackiOh account.",
+  lastIdentity: "That is this account's only way to sign in, so it stays linked.",
 };
 
 /** Unit conversion, not configuration. */
@@ -283,6 +290,8 @@ function genericRefusal(endpoint: AuthEndpoint): AuthFailure {
       return "codeInvalid";
     case "mfaVerify":
       return "mfaCodeInvalid";
+    case "identities":
+      return "service";
   }
 }
 
@@ -306,6 +315,11 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
   if (endpoint === "verifyOtp") return "codeInvalid";
   if (endpoint === "mfaVerify" || endpoint === "mfa") {
     if (code !== null && MFA_DISABLED_CODES.has(code)) return "mfaUnavailable";
+    if (status === 401 || status === 403 || (code !== null && SESSION_CODES.has(code))) return "sessionEnded";
+    return genericRefusal(endpoint);
+  }
+  if (endpoint === "identities") {
+    // R3025000: a token the provider refuses ended the session; anything else is the service's.
     if (status === 401 || status === 403 || (code !== null && SESSION_CODES.has(code))) return "sessionEnded";
     return genericRefusal(endpoint);
   }
@@ -666,6 +680,39 @@ export async function exchangeAuthCode(code: string): Promise<CodeExchange> {
     return { kind: "refused" };
   }
   return { kind: "elsewhere" };
+}
+
+// An emailed link that waits for a press (R3024000)
+
+/** The links a template mails. An invite is the dashboard's, and goes straight to the provider. */
+const EMAIL_LINK_TYPES: ReadonlySet<string> = new Set(["signup", "recovery", "magiclink", "email_change"]);
+
+export type EmailLinkType = "signup" | "recovery" | "magiclink" | "email_change";
+
+export function isEmailLinkType(type: string): type is EmailLinkType {
+  return EMAIL_LINK_TYPES.has(type);
+}
+
+/** GoTrue's token hash: hex, with `pkce_` before it on a PKCE link. Anything else is never sent. */
+const EMAIL_LINK_TOKEN_PATTERN = /^[A-Za-z0-9_-]{1,128}$/u;
+
+export function isEmailLinkToken(token: string): boolean {
+  return EMAIL_LINK_TOKEN_PATTERN.test(token);
+}
+
+/**
+ * R3024000: the provider's own link, which confirms on arrival. It is built here from the link's token
+ * and type alone, on this site's project, so a link cannot send the player anywhere else (B35).
+ */
+export function emailLinkUrl(token: string, type: EmailLinkType): string {
+  const config = requireConfig();
+  const params = new URLSearchParams({ token, type, redirect_to: authRedirectUrl() });
+  return `${config.url}/auth/v1/verify?${params.toString()}`;
+}
+
+/** R3024000: the player pressed the button. A navigation, as R666's is; R323's code comes back to `/login`. */
+export function followEmailLink(token: string, type: EmailLinkType): void {
+  window.location.assign(emailLinkUrl(token, type));
 }
 
 // Session calls
@@ -1053,4 +1100,89 @@ export async function signInWithGoogleIdToken(
   const session = sessionFromTokens(body, null);
   if (session === null) throw new AuthError("oauthFailed");
   return { session, secondFactor: secondFactorIn(body, session.accessToken) };
+}
+
+// Linking a provider to the signed-in account (R3025000)
+
+export type LinkedIdentity = { id: string; provider: string };
+
+function identitiesOf(body: unknown): LinkedIdentity[] {
+  if (typeof body !== "object" || body === null) return [];
+  const identities = (body as { identities?: unknown }).identities;
+  if (!Array.isArray(identities)) return [];
+  return identities.flatMap((entry: unknown): LinkedIdentity[] => {
+    if (typeof entry !== "object" || entry === null) return [];
+    const record = entry as { identity_id?: unknown; provider?: unknown };
+    if (typeof record.identity_id !== "string" || record.identity_id.length === 0) return [];
+    if (typeof record.provider !== "string" || record.provider.length === 0) return [];
+    return [{ id: record.identity_id, provider: record.provider }];
+  });
+}
+
+/** R3025000: the account's ways in (`email` among them). Throws `sessionEnded` for a token the provider refuses. */
+export async function listIdentities(accessToken: string): Promise<LinkedIdentity[]> {
+  const config = requireConfig();
+  const { status, json } = await send(config, { method: "GET", path: "/auth/v1/user", bearer: accessToken });
+  if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("identities", status, json));
+  return identitiesOf(json);
+}
+
+/** GoTrue's answers when the project does not allow linking, or the account is someone else's already. */
+const LINK_REFUSED_CODES: ReadonlySet<string> = new Set(["manual_linking_disabled", "identity_already_exists"]);
+
+/**
+ * R3025000, R323: the provider's page that links it to this session's account. Asked for with the session
+ * (so it is never a URL anyone could start), with a PKCE challenge of its own flow, and back to `/login`.
+ */
+export async function identityLinkUrl(provider: OAuthProvider, accessToken: string): Promise<string> {
+  const config = requireConfig();
+  let challenge: PkceChallenge;
+  try {
+    challenge = await challengeForRequest("link");
+  } catch {
+    throw new AuthError("oauthUnavailable");
+  }
+  const params = new URLSearchParams({
+    provider,
+    redirect_to: authRedirectUrl(),
+    code_challenge: challenge.code_challenge,
+    code_challenge_method: challenge.code_challenge_method,
+    skip_http_redirect: "true",
+  });
+  const { status, json } = await send(config, {
+    method: "GET",
+    path: `/auth/v1/user/identities/authorize?${params.toString()}`,
+    bearer: accessToken,
+  });
+  if (!isSuccess(status)) {
+    forgetVerifier("link");
+    const code = providerCode(json);
+    if (status !== 429 && status < 500 && code !== null && LINK_REFUSED_CODES.has(code)) throw new AuthError("linkRefused");
+    throw new AuthError(classifyProviderRefusal("identities", status, json));
+  }
+  const url = (json as { url?: unknown } | null)?.url;
+  if (typeof url !== "string" || !url.startsWith("https://")) {
+    forgetVerifier("link");
+    throw new AuthError("service");
+  }
+  return url;
+}
+
+/** R3025000: leave for the provider's page. A navigation, as R666's sign-in is. */
+export async function startIdentityLink(provider: OAuthProvider, accessToken: string): Promise<void> {
+  const url = await identityLinkUrl(provider, accessToken);
+  window.location.assign(url);
+}
+
+/** R3025000: takes a provider off the account. The provider refuses the account's last way in. */
+export async function unlinkIdentity(accessToken: string, identityId: string): Promise<void> {
+  const config = requireConfig();
+  const { status, json } = await send(config, {
+    method: "DELETE",
+    path: `/auth/v1/user/identities/${encodeURIComponent(identityId)}`,
+    bearer: accessToken,
+  });
+  if (isSuccess(status)) return;
+  if (providerCode(json) === "single_identity_not_deletable") throw new AuthError("lastIdentity");
+  throw new AuthError(classifyProviderRefusal("identities", status, json));
 }

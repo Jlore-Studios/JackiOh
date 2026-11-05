@@ -113,17 +113,49 @@ function idSet(id: string): string {
   return dash === -1 ? id : id.slice(0, dash);
 }
 
+/** R1369000, R3012000: a patch's tier, as patches.json records it: a major opens a line, a micro is a letter after a version. */
+export type Tier = "major" | "patch" | "micro";
+
 /**
- * R1369000: which patches are majors, a Z's first version: those whose recorded `tier` says so, and
- * one with no tier that adds a card of a set no earlier patch held.
+ * R1369000: each patch's tier: its recorded `tier`, and for one with none, a major when it adds a card of
+ * a set no earlier patch held and a patch otherwise (an untiered patch keeps an entry of its own).
  */
-export function majors(patches: readonly Patch[]): boolean[] {
+export function tiers(patches: readonly Patch[]): Tier[] {
   const seen = new Set<string>();
   return patches.map((patch) => {
     const fresh = patch.changes.some((change) => change.kind === "added" && !seen.has(idSet(change.id)));
     for (const change of patch.changes) seen.add(idSet(change.id));
-    return patch.tier === undefined ? fresh : patch.tier === "major";
+    return patch.tier ?? (fresh ? "major" : "patch");
   });
+}
+
+/** R1369000: which patches are majors, a Z's first version (`tiers`). */
+export function majors(patches: readonly Patch[]): boolean[] {
+  return tiers(patches).map((tier) => tier === "major");
+}
+
+/** R3012000: a major or a patch, with the micro patches that follow it in patches.json's order. */
+export type PatchNest = { readonly patch: Patch; readonly tier: Tier; readonly micros: readonly Patch[] };
+
+/**
+ * R3012000: a release line's patches as the page nests them: a micro sits under the nearest major or
+ * patch before it in patches.json's order (R105), oldest micro first; one with none before it in its
+ * line is an entry of its own. `group` is `releaseGroups`'s newest-first list; the nests come newest first.
+ */
+export function nestMicros(group: readonly Patch[], tierOf: ReadonlyMap<string, Tier>): PatchNest[] {
+  const nests: { patch: Patch; tier: Tier; micros: Patch[] }[] = [];
+  let host: { patch: Patch; tier: Tier; micros: Patch[] } | undefined;
+  for (const patch of [...group].reverse()) {
+    const tier = tierOf.get(patch.version) ?? "patch";
+    if (tier === "micro" && host !== undefined) {
+      host.micros.push(patch);
+      continue;
+    }
+    const nest = { patch, tier, micros: [] };
+    nests.push(nest);
+    if (tier !== "micro") host = nest;
+  }
+  return nests.reverse();
 }
 
 /** A line for a major whose line `RELEASES` does not write yet, named by its note. */

@@ -1,5 +1,5 @@
-# GitHub: `main`'s branch protection with its five required checks, `main`'s merge queue, and the
-# `production` ruleset.
+# GitHub: `main`'s branch protection with its five required checks, `main`'s merge queue, the
+# `production` ruleset, and the repository's Actions policy and workflow-token settings.
 # Not the labels: bot/go/internal/config `Labels` owns them, and the sweep restores them. Not the
 # Actions secrets: state would hold them.
 #
@@ -94,4 +94,41 @@ resource "github_repository_ruleset" "production" {
     deletion         = true
     non_fast_forward = true
   }
+}
+
+# The repository's Actions policy and its workflow token's defaults, set by hand on 2026-11-04 and
+# held here since.
+#
+# `allowed_actions` stays `all`. Every workflow here uses actions from outside the repository. From
+# 18:47Z to 19:49Z on 2026-11-04 it was `local_only`, set while the organization's page was being
+# changed, and every workflow failed at startup.
+#
+# `can_approve_pull_request_reviews` stays on. promote-production.yml's daily path opens its pull
+# request into `production` with the workflow's own token and merges it with PROMOTE_TOKEN, which
+# GitHub allows only with this on. It was off until 2026-11-04, and every daily promotion before
+# #3054 failed on it (#3029).
+#
+# The token's default stays `read`: each workflow asks for what it writes in its own
+# `permissions:`. The organization's setting of the same name must be on as well; the organization
+# is not this file's to hold.
+resource "github_actions_repository_permissions" "jackioh" {
+  repository      = "JackiOh"
+  enabled         = true
+  allowed_actions = "all"
+}
+
+import {
+  to = github_actions_repository_permissions.jackioh
+  id = "JackiOh"
+}
+
+resource "github_workflow_repository_permissions" "jackioh" {
+  repository                       = "JackiOh"
+  default_workflow_permissions     = "read"
+  can_approve_pull_request_reviews = true
+}
+
+import {
+  to = github_workflow_repository_permissions.jackioh
+  id = "JackiOh"
 }

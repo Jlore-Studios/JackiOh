@@ -13,6 +13,9 @@
 // Signature look's, R2949000), so Alt art and the Sketch draw the painter's.
 // R2942001: Pixel ("pixel") and Comic ("comic") restyle the window's picture as the Sketch does (pictures.ts
 // `restyleOf`), a Starship's and a Legacy card's too, and draw the painter's in place of a delivered file.
+// R2943001: a Set showcase restyle ("showcase-…") does the same. Given a `part` other than "whole" (Out of frame's),
+// the procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop or its subject alone
+// (`data-art-part`), and a delivered file, which has no parts, gives way to the painter.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -23,7 +26,7 @@ import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
-import { artSeedOf, restyleOf, type ArtPicture } from "./pictures.ts";
+import { artSeedOf, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
 import { legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
@@ -50,7 +53,17 @@ export type CardArtProps = {
   motion?: ArtMotion | null;
   /** R2949000, R2940001, R2942001: which of the card's pictures its painter draws (pictures.ts); "normal" by default. */
   picture?: ArtPicture;
+  /** R2943001: which part of the picture the window draws (pictures.ts `ArtPart`); "whole" by default. */
+  part?: ArtPart;
 };
+
+/**
+ * R2943001: whether a window draws a card's picture in parts (`ArtPart`): its painter's own, which a Starship in play
+ * and a Legacy card do not have, their painters drawing one picture.
+ */
+export function hasArtParts(defId: string, starship: CardArtProps["starship"]): boolean {
+  return starship == null && snapshotArtOf(defId) === null;
+}
 
 function classes(shape: ArtShape, className: string | undefined): string {
   const base = `cf-art cf-art--${shape}`;
@@ -70,6 +83,7 @@ export function CardArt({
   starship = null,
   motion = null,
   picture = "normal",
+  part = "whole",
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -96,7 +110,9 @@ export function CardArt({
   const variant = radiant ? "radiant" : "base";
   // R2940001: the Sketch pencils the window's picture, whatever draws it; R2942001: Pixel and Comic restyle it so.
   const restyle = restyleOf(picture);
-  const real = starship === null && picture !== "alt" && restyle === null ? artUrl(defId, radiant, manifest) : null;
+  // R2943001: a part is the painter's, so a delivered file gives way to it; a Starship and a Legacy card draw it whole.
+  const split = hasArtParts(defId, starship) ? part : "whole";
+  const real = starship === null && picture !== "alt" && restyle === null && split === "whole" ? artUrl(defId, radiant, manifest) : null;
   // R2949000: the seed the painter grows this picture from; a Starship and a Legacy card draw one picture.
   const ownPicture = picture !== "normal" && restyle === null && starship === null && coreId === null;
   const seedId = ownPicture ? artSeedOf(defId, picture) : defId;
@@ -130,12 +146,12 @@ export function CardArt({
     : starship !== null
       ? starshipArtUri(starship.pieces, starship.launched, radiant, restyle)
       : stinky
-        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle)
+        ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
         : yard
-          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle)
+          ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
           : coreId !== null
             ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-            : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, restyle);
+            : proceduralArtUri(seedId, theme, compositionFor(type), radiant, motif, motion, restyle, split);
   const family =
     starship !== null
       ? "starship"
@@ -157,6 +173,7 @@ export function CardArt({
       data-art-motif={motif ?? undefined}
       data-art-family={family}
       data-art-picture={ownPicture || restyle !== null ? picture : undefined}
+      data-art-part={split === "whole" ? undefined : split}
       data-art-pending={uri === null ? "true" : undefined}
       data-art-moving={uri !== null && starship === null && coreId === null && motion !== null ? "true" : undefined}
       aria-hidden="true"

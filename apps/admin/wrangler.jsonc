@@ -1,0 +1,45 @@
+// The dev dashboard on Cloudflare Workers (#3074, apps/admin/README.md), one Worker per environment.
+// The top level is production: `jackioh-admin`, at admin.jackioh.com. `env.staging` is staging:
+// `jackioh-admin-staging`, at admin-staging.jackioh.com. Both hostnames, and the Cloudflare Access
+// application in front of each, are infra/cloudflare.tf's, not this file's: no route or custom domain here.
+//
+// Each serves apps/admin/dist as static assets, which no Worker code runs for, and sends `/api/*`
+// (`run_worker_first`) to worker/index.ts, which hands the dashboard's own routes to the site's Worker of
+// its environment (`SITE`) and refuses the rest. Paths here are relative to this file.
+//
+// No workers.dev or preview address: Access guards the hostname, and either would be a way around it.
+// `services` is not inherited by a named environment, so staging repeats it (with the rest, to be plain).
+// wrangler.test.ts holds this file in place.
+//
+// Deploy (from the repository root, with the dashboard built into apps/admin/dist):
+//   pnpm --dir apps/edge exec wrangler deploy --config ../admin/wrangler.jsonc --env=""
+//   pnpm --dir apps/edge exec wrangler deploy --config ../admin/wrangler.jsonc --env staging
+{
+  "$schema": "../edge/node_modules/wrangler/config-schema.json",
+  "name": "jackioh-admin",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "services": [{ "binding": "SITE", "service": "jackioh" }],
+  "env": {
+    "staging": {
+      "name": "jackioh-admin-staging",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "assets": {
+        "directory": "./dist",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
+      },
+      "services": [{ "binding": "SITE", "service": "jackioh-staging" }]
+    }
+  }
+}

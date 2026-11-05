@@ -1,14 +1,13 @@
 // R2784000: the life and stats motifs (docs/polish/9-card-animations.md): drain, bless, curse,
-// ward, and radiance and mend (#2793). Like the damage motifs (damage.ts) each plays in the entry's
-// phases (build.ts) and plans nothing without an event it reads.
+// and radiance and mend (#2793; R2803000 folds `ward` into the rows). Like the damage motifs
+// (damage.ts) each plays in the entry's phases (build.ts) and plans nothing without an event it reads.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { sideOf, testid } from "../../game/contract.ts";
-import { raysCue, ringCue, tid } from "../build.ts";
+import { raysCue, tid } from "../build.ts";
 import { projectile } from "../cards/recipe.ts";
 import { FX_ARROWS_TAIL_MS, FX_SPLAT_HOLD_MS } from "../constants.ts";
-import { shieldCues } from "../shield.ts";
 import type { FxAnchor, FxCue } from "../types.ts";
 import {
   flies,
@@ -21,7 +20,6 @@ import {
   readEvents,
   timesOf,
   type MotifPlanner,
-  type MotifSpec,
 } from "./build.ts";
 import type { AnimationEntry } from "../../game/animations.ts";
 import type { FxPlanEnv } from "../types.ts";
@@ -139,36 +137,6 @@ export const curse: MotifPlanner = {
     for (const h of hits) {
       cues.push({ kind: "arrows", direction: "down", at: h.at, delayMs: t.G, durationMs: t.D - t.G + FX_ARROWS_TAIL_MS });
       cues.push(motifBurst(spec, h.at, "area", t.L, MOTIF_TUNING.land, "void"));
-    }
-    cues.push(...motifShake(spec, t.L));
-    return cues;
-  },
-};
-
-const WARD_READS = ["damageAbsorbed", "divineShieldLost"] as const;
-
-/** ward: Armor's full shield over a hit it took whole (under `keep`, a burst over the row's flash), gold and shards where a Divine Shield broke. */
-export const ward: MotifPlanner = {
-  reads: WARD_READS,
-  replaces: [...WARD_READS],
-  plan(spec: MotifSpec, entry: AnimationEntry, view: PlayerView, env: FxPlanEnv) {
-    const hits = readEvents(entry, view, env, WARD_READS);
-    if (hits.length === 0) return [];
-    const t = timesOf(entry.durationMs);
-    const cues: FxCue[] = [];
-    for (const h of hits) {
-      if (h.event.type === "damageAbsorbed" && spec.row === "keep") {
-        // Armor's flash is a number of the row's (R2784000): under keep the armor row draws it, so the motif only lands.
-        cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.land, "spark"));
-      } else if (h.event.type === "damageAbsorbed") {
-        // shieldCues throws colorless bursts; the motif recolors them into its look.
-        for (const cue of shieldCues("full", h.at, t.D, t.L, spec.scale)) {
-          cues.push(cue.kind === "burst" ? { ...cue, colors: spec.look.colors } : cue);
-        }
-      } else {
-        cues.push(ringCue(t.D, "gold", h.at, t.G));
-        cues.push(motifBurst(spec, h.at, "ring", t.L, MOTIF_TUNING.small, "shard"));
-      }
     }
     cues.push(...motifShake(spec, t.L));
     return cues;

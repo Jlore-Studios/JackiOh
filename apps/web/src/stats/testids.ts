@@ -38,6 +38,9 @@ export const statsTestid = {
   modeSelect: "stats-mode-select",
   /** R2777000: a card row's adjusted win rate. */
   adjustedCell: "stats-adjusted-cell",
+  /** R3022000: a card's tier (a table row's or a grid item's) and the line under the cards that says what tiers mean. */
+  tierCell: "stats-tier-cell",
+  tiersNote: "stats-tiers-note",
   /** R2895000: the Cards tab's Show 95% ranges toggle, a row's two ranges and the line that says what they mean. */
   rangesToggle: "stats-ranges-toggle",
   adjustedRange: "stats-adjusted-range",
@@ -51,8 +54,6 @@ export const statsTestid = {
   drillDownClose: "stats-drill-down-close",
   drillDownRadiantToggle: "stats-drill-down-radiant-toggle",
   drillDownRadiantFace: "stats-drill-down-radiant-face",
-  /** R2756000: the drill-down's art choice (No full art and each full art's tier), shown on a full-art card alone. */
-  drillDownArt: "stats-drill-down-art",
   drillDownAlmanac: "stats-drill-down-almanac",
   drillDownTokens: "stats-drill-down-tokens",
 } as const;

@@ -33,7 +33,7 @@ Every issue carries at least one type label:
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
 | `tracking` | A tracker, the production issue (beside `production merge`) and the status issues (the night bot's status issue, #148, and its usage issue, #2749): the bots may comment on one and rewrite their own, but never queue, plan, build or split it, nor adopt it as a fullsend tree, whatever else it is labelled. The night bot puts it on its status issue and on the open production issue itself (#2748) |
-| `production merge` | The production issue `promote-production.yml` keeps open for good (`Production: …`, with the queue of what is not live yet) and the pull requests that promote main into production, which the super run tests. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Production moves only on a comment: `/promote [sha]`, `/skip-super <reason>` (the emergency way, past the super run) and `/cancel` (`docs/deploy-cloudflare.md`, section 2.1); staging deploys every green commit of main by itself |
+| `production merge` | The production issue `promote-production.yml` keeps open (`Production: …`, with the queue of what is not live yet; a fresh one takes over each week, and the closed ones are its history) and the pull requests that promote main into production, which the super run tests. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Production moves only on a comment: `/promote [sha]`, `/skip-super <reason>` (the emergency way, past the super run) and `/cancel` (`docs/deploy-cloudflare.md`, section 2.1); staging deploys every green commit of main by itself |
 
 A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
 (`cargo jackioh classify`, R1365000), which CI's `rust (classify)` puts on and keeps up to date with
@@ -56,10 +56,10 @@ The bots put these on for a person to act on; both bots share them (no `squishy:
 
 | Label | For |
 |---|---|
-| `ready for merge` | A bot pull request its reviews approved that waits for a person to merge it: a path only a person reviews (`review_paths`), a migration that loses data or changes access, a new package, `main`'s protection, or GitHub refusing auto-merge; its comment names why (#2986) |
+| `ready for merge` | A bot pull request its reviews approved that waits for a person to merge it: a path only a person reviews (`review_paths`), a migration that loses data (an `UPDATE` with no `WHERE` counts, #3009) or changes access, a new package, `main`'s protection, or GitHub refusing auto-merge; its comment names why (#2986) |
 | `person merges` | The bot builds and reviews it, but a person merges its pull request |
-| `needs decision` | A bot stopped on what only a person can unblock (#2986): a question (beside `bot:blocked`), whose comment lists the options and the default and says when the bot goes ahead on the default (`decision_wait_hours`, 24 hours; a question with no default never does), or a hand-over (beside `human required`), which never goes ahead. It comes off when a trusted person answers and queues it again (`/harness build`, `/harness revise <answer>` or a mention), when the bot goes ahead on the default (it files each other option as an issue for a person to approve), and when the item closes. The status issue (#148) lists each at its top |
-| `human required` | The bot found it cannot do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account): people do it, and taking the label off hands it back |
+| `needs decision` | A bot asks a person to decide, and carries the answer out (#2986, #3009): a question, beside `bot:blocked`, whose comment explains the problem, numbers the options with their trade-offs, names the one it suggests and says how to answer. Setting it assigns `decision_assignees` (both people). A trusted person's reply (a number, or their own words; not a command) queues it again on the lane that asked, with the reply as the decision; with none, the bot goes ahead on its suggestion after `decision_wait_hours` (24 hours; a question with no suggestion never does), filing each other option as an issue for a person to approve. It comes off, with the people it assigned, then, when a person queues it with a command, and when the item closes. Never on a hand-over (`human required`). The status issue (#148) lists each at its top |
+| `human required` | The bot decided it cannot do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account): people do it. The bot archives its work on it (its pull request goes back to a draft with auto-merge off, and nothing of the bot's takes the item up), and its summary says why, where the work is and what a person must do; taking the label off and queueing it hands it back. The status issue (#148) lists each below the decisions |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (the codebase pass) is `patch` and `architecture`. The
@@ -382,20 +382,24 @@ part that narrows the task shows the gap instead of hiding it.
   pre-release while only main (staging) holds the version, a release once production does, each
   tagged at the commit `shipped.json` records. Nothing there is written by hand: the next run puts
   back a release edited on GitHub, so a release reads better only when the note it is written from does.
-- **Release art.** Every shipped patch has a 1920×1080 picture (#2681), drawn by
-  `apps/web/src/patches/releaseArt.ts` from the patch's snapshots and nothing else: the cards behind
-  it are the ones its `changes` name (an added or changed card as the patch's own snapshot holds it, a
-  removed one as the snapshot before it held it), at most seven, sampled evenly from a longer list;
-  Glitch is never shown (R674). A patch whose record names no card to show gets card backs instead. A
-  major version (R1369000: its recorded `tier`, the sets it adds before tiers were recorded), never a
-  count of changed cards, also gets an animated file, a slow drift of the picture that holds still
-  under the system's reduced motion; Patch notes loads its `-still` companion and moves it in CSS only
-  while the app's Reduce motion is off too. The build writes every file to `/release-art/<version>.svg`
-  (and `<version>-still.svg` for a major) and the dev server draws one when asked; `github.ts` puts the
-  normal file, on the host the release already names (staging while a pre-release, production after),
-  at the head of each release's notes. Nobody adds an image per version or edits a release's art: the
-  next `patches ship` adds the patch to `patches.json`, and the page, the build and the next release run
-  have its picture, which `releaseArt.test.ts` fails without.
+- **Release art.** A picture follows a patch's tier (#2681, R3012001; the tier is the record's `tier`,
+  R1369000, never a parsed version). A major version has a poster and a patch has release art in the same
+  style at a patch's scale: a 1920×1080 SVG drawn by `apps/web/src/patches/releaseArt.ts` from the
+  patch's snapshots and nothing else, the cards behind it the ones its `changes` name (an added or
+  changed card as the patch's own snapshot holds it, a removed one as the snapshot before it held it).
+  A patch shows at most seven, sampled evenly from a longer list; a major's poster shows its eleven rarest
+  (the Mythic in the middle), the line's name large, and a frame. Glitch is never shown (R674). A patch
+  whose record names no card to show gets card backs instead. Nothing moves, in the file or on the page:
+  no animation, and a major's `<version>-still.svg` is the same bytes as its `<version>.svg`, kept for
+  the links published while the art drifted. A micro patch (a letter after a version) gets no art: its
+  notes sit under the patch it follows on Patch notes (R3012000), and its GitHub release carries no
+  image. The micros shipped up to `RELEASE_ART_LEGACY_MICRO_LAST` keep the file their published links
+  name (CLAUDE.md rule 13), drawn at a patch's scale; a micro after it has none. The build writes
+  every file to `/release-art/<version>.svg` and the dev server draws one when asked; `github.ts` puts
+  the file, on the host the release already names (staging while a pre-release, production after), at
+  the head of each major's and patch's notes. Nobody adds an image per version or edits a release's
+  art: the next `patches ship` adds the patch to `patches.json`, and the page, the build and the next
+  release run have its picture (or, for a micro, none), which `releaseArt.test.ts` fails without.
 
 ## Win rates in a balance patch
 

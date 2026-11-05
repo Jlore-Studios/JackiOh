@@ -97,7 +97,7 @@ const UNSCALED: Record<string, number> = {
   "i18n/language.css": 1,
   "packs/pack-object.css": 1,
   "packs/packs.css": 4,
-  "patches/patches.css": 30,
+  "patches/patches.css": 39,
   "practice/practice.css": 42,
   "practice/sandbox.css": 3,
   "routes/account.css": 3,

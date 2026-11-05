@@ -335,6 +335,18 @@ pub(crate) struct ArenaGame {
     pub self_budget: SearchBudget,
 }
 
+/// The budget a test decides at when it plays whole games to prove how a game is dealt, seated,
+/// replayed or filed, not how well it is played: `AI_GATE_BUDGET`'s search at about a quarter of its
+/// nodes and one determinization. At 60 nodes a seat falls back on two dozen decisions of a game,
+/// which R1489000 faults; 80 was the least that filed clean, and 150 leaves room.
+#[cfg(test)]
+pub(crate) const TEST_BUDGET: SearchBudget = SearchBudget {
+    nodes: 150,
+    lethal_nodes: 40,
+    determinizations: 1,
+    ..AI_GATE_BUDGET
+};
+
 /// What a game came to, with its seats' fallbacks and caught panics and each seat's decision times.
 #[derive(Clone, Debug)]
 pub(crate) struct ArenaOutcome {
@@ -1460,7 +1472,10 @@ mod tests {
         jackioh_cards::register_all();
         let a = self_entrant();
         let b = self_entrant();
-        let games = setups(&a, &b, 2, true, |d| format!("r850000-split:{d}")).unwrap();
+        let mut games = setups(&a, &b, 2, true, |d| format!("r850000-split:{d}")).unwrap();
+        for game in &mut games {
+            game.self_budget = TEST_BUDGET;
+        }
         let outcomes = play_games(&games).unwrap();
         // The same AI on the same deal plays the same game whichever agent sits where.
         assert_eq!(outcomes[0].hash, outcomes[1].hash);
@@ -1670,7 +1685,10 @@ mod tests {
         jackioh_cards::register_all();
         let a = entrant_at(&AgentSpec::SelfAi, 0.5).unwrap();
         let b = entrant(&AgentSpec::Random).unwrap();
-        let games = setups(&a, &b, 2, false, |n| format!("r747000-mid:{n}")).unwrap();
+        let mut games = setups(&a, &b, 2, false, |n| format!("r747000-mid:{n}")).unwrap();
+        for game in &mut games {
+            game.self_budget = TEST_BUDGET;
+        }
         let first = play_games(&games).unwrap();
         let second = play_games(&games).unwrap();
         for (first, second) in first.iter().zip(&second) {

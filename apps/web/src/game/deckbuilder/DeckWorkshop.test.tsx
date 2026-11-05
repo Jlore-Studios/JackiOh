@@ -18,7 +18,7 @@ import { navigate, newDeckPath } from "../../net/navigate.ts";
 import { expectEmptyState } from "../../test/empty.ts";
 import { pressBack } from "../../test/history.ts";
 import { at } from "../../test/stubServer.ts";
-import { UNDO_WINDOW_MS } from "../../undo/hold.ts";
+import { UNDO_REPEAT_MS, UNDO_WINDOW_MS } from "../../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../../undo/UndoToast.tsx";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
 import { decodeDeckCode, encodeDeckCode } from "./deckCode.ts";
@@ -839,9 +839,10 @@ describe("undoing a deletion (R2119000)", () => {
   });
 
   it("R2119000 a second delete sends the first's DELETE at once and takes the toast", async () => {
-    const { server } = mount({ decks: full, initialOpen: { kind: "deck", id: "a" } });
+    const { server, tick } = mount({ decks: full, initialOpen: { kind: "deck", id: "a" } });
     fireEvent.click(screen.getByTestId(DECK_DELETE));
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
+    await tick(UNDO_REPEAT_MS);
     fireEvent.click(screen.getByTestId(DECK_DELETE));
     await act(async () => {
       await settle();
@@ -852,6 +853,38 @@ describe("undoing a deletion (R2119000)", () => {
 
     fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
     expect(rows(DECK_LIST)).toEqual([deckRowId("c"), deckRowId("m")]);
+  });
+
+  it("R3059000 two quick Delete deck presses hide one deck: the neighbour stays listed and open, and nothing is sent until the window ends", async () => {
+    const { server, tick } = mount({ decks: full, initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
+    await tick(UNDO_REPEAT_MS - 1);
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    expect(rows(DECK_LIST)).toEqual([deckRowId("c"), deckRowId("m")]);
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
+    expect(screen.getAllByTestId(UNDO_TOAST)).toHaveLength(1);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("Deck deleted · Undo");
+    expect(server.calls).toEqual([]);
+
+    await tick(UNDO_WINDOW_MS - UNDO_REPEAT_MS);
+    expect(server.calls, "the window is the first deletion's own").toEqual([]);
+    await tick(1);
+    expect(server.calls).toEqual([{ op: "deleteDeck", id: "a" }]);
+    expect(rows(DECK_LIST)).toEqual([deckRowId("c"), deckRowId("m")]);
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "c");
+  });
+
+  it("R3059000 Undo after two quick Delete deck presses brings back the one deck", async () => {
+    const { server, tick } = mount({ decks: full, initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    await tick(UNDO_REPEAT_MS - 1);
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    expect(rows(DECK_LIST)).toEqual([deckRowId("a"), deckRowId("c"), deckRowId("m")]);
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "a");
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(server.calls).toEqual([]);
   });
 
   it("R2119000 New deck at the cap sends the held DELETE first", async () => {

@@ -1,4 +1,4 @@
-# `e2e/` — the forty-eight specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the phone's tap areas' `47` and the tutorial's final exam's `48`, plus twenty-one component specs
+# `e2e/` — the forty-nine specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the phone's tap areas' `47`, the tutorial's final exam's `48` and the dev dashboard's `49`, plus twenty-one component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,8 +35,11 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44, 45, 46, 47, 49
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
+
+# 2b. spec 49 only: the dev dashboard's own client (apps/admin/README.md), proxying /api to the server
+pnpm --dir apps/admin build:e2e && pnpm --dir apps/admin exec vite preview   # http://localhost:5174 (E2E_ADMIN_URL)
 
 # 3. the suite
 cd e2e
@@ -138,7 +141,8 @@ for contract reasons rather than rules reasons.
    are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
    sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host. Spec 44 watches a
    friend's live game over `/ws/watch`. A watcher holds no seat, so it reseeds and activates
-   `e2e-pending` (R144) for the other seat.
+   `e2e-pending` (R144) for the other seat, whose Node socket hears the watcher's emote from the
+   sideline strip (`sideline-*`, R2990000).
 
 Every one of these is either an ask on another team or a convention this suite invented because
 BUILD does not fix it. They are all made in `support/`, never in a spec, so each has exactly one

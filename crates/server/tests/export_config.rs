@@ -1,6 +1,6 @@
 //! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
 //! Ensures client reads server constants (CLAUDE.md rule 9).
-//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R915008, R2101000.
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R915008, R2101000, R2990001, R2990002.
 
 use serde_json::{Value, json};
 
@@ -193,6 +193,13 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SOCIAL_POLL_MS", json!(c::SOCIAL_POLL_MS)),
         ("SPECTATE_DELAY_MS", json!(c::SPECTATE_DELAY_MS)),
         ("SPECTATORS_PER_MATCH", json!(c::SPECTATORS_PER_MATCH)),
+        ("SPECTATOR_EMOTE_HAND_SIZE", json!(c::SPECTATOR_EMOTE_HAND_SIZE)),
+        (
+            "SPECTATOR_EMOTE_COOLDOWN_MS",
+            json!(c::SPECTATOR_EMOTE_COOLDOWN_MS),
+        ),
+        ("SPECTATOR_EMOTE_WINDOW_MS", json!(c::SPECTATOR_EMOTE_WINDOW_MS)),
+        ("SPECTATOR_EMOTE_WINDOW_MAX", json!(c::SPECTATOR_EMOTE_WINDOW_MAX)),
         // end Social
         // Duos co-op (#946)
         ("DUOS_AI_STEP_DELAY_MS", json!(c::DUOS_AI_STEP_DELAY_MS)),
@@ -297,6 +304,18 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::NEWS_REWARD_COSMETIC_TOKENS),
         ),
         ("NEWS_REWARD_COSMETIC_PACKS", json!(c::NEWS_REWARD_COSMETIC_PACKS)),
+        // #3074's dev dashboard (R3074000, R3074001, R3074003): each dev grant's cap, the hand-set
+        // rating's range, and a post's caps beside the news summary's sentences.
+        ("DEV_JLORE_PER_REQUEST_MAX", json!(c::DEV_JLORE_PER_REQUEST_MAX)),
+        ("DEV_XP_PER_REQUEST_MAX", json!(c::DEV_XP_PER_REQUEST_MAX)),
+        ("DEV_RATING_MIN", json!(c::DEV_RATING_MIN)),
+        ("DEV_RATING_MAX", json!(c::DEV_RATING_MAX)),
+        ("NEWS_POST_TITLE_MAX_CHARS", json!(c::NEWS_POST_TITLE_MAX_CHARS)),
+        (
+            "NEWS_POST_SUMMARY_MAX_CHARS",
+            json!(c::NEWS_POST_SUMMARY_MAX_CHARS),
+        ),
+        ("NEWS_SUMMARY_MAX_SENTENCES", json!(c::NEWS_SUMMARY_MAX_SENTENCES)),
         // The going live's (#1310): the starter cards a new account owns (R1310000).
         ("STARTER_CARDS", json!(c::STARTER_CARDS)),
         // The pack roll's (#1301): the global pack's name.
@@ -370,8 +389,9 @@ fn every_name_is_listed_once() {
         // Count verified across features: #936, S7, Duos (#946), SPEC §14 economy (#1298, #1333, #1483, #1339, R1313000, #1301, #1306, R1310000, #1661, R1661001, R1935000, R2101000, R2210000).
         // #2728: four per-step cosmetic bar sizes and four targets in place of COSMETIC_TOKEN_BAR_SIZE and
         // COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000). #2875: NEWS_TTL_DAYS and five news rewards.
+        // #3074: the dev dashboard's seven (R3074000, R3074001, R3074003).
         listed,
-        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6,
+        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -390,7 +410,10 @@ fn every_name_is_listed_once() {
          (R1661001), CI_RUNS_CACHE_TTL_SECONDS (R1935000), RANK_STREAK_FLAME_LENGTH (R2101000), \
          QUEST_REPLACES_PER_DAY (R2210000) and #2728's four per-step cosmetic bar sizes and four \
          targets in place of COSMETIC_TOKEN_BAR_SIZE and COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000), \
-         and #2875's NEWS_TTL_DAYS and five NEWS_REWARD_* amounts (R2875001, R2875003)"
+         #2875's NEWS_TTL_DAYS and five NEWS_REWARD_* amounts (R2875001, R2875003), and #2990's four \
+         SPECTATOR_EMOTE_* numbers (R2990001, R2990002), and #3074's DEV_JLORE_PER_REQUEST_MAX, \
+         DEV_XP_PER_REQUEST_MAX, DEV_RATING_MIN, DEV_RATING_MAX, NEWS_POST_TITLE_MAX_CHARS, \
+         NEWS_POST_SUMMARY_MAX_CHARS and NEWS_SUMMARY_MAX_SENTENCES (R3074000, R3074001, R3074003)"
     );
 }
 

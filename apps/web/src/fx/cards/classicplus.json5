@@ -14,7 +14,7 @@
   "classicplus-001": { setPiece: "vortex" }, // Doom Shroom
   "classicplus-002": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Groom Shroom
   "classicplus-003": { death: { motif: "barrage" }, trigger: { motif: "tally" } }, // Second Amendment Snake
-  "classicplus-004": { cry: { motif: "mirror" } }, // Juhan Biggest Bat
+  "classicplus-004": { cry: { motif: "transmute" } }, // Juhan Biggest Bat
   "classicplus-005": { cry: { motif: "bolt" } }, // Guy Att
   "classicplus-006": "none: vanilla", // Wrong-House Attacker
   "classicplus-007": { cast: { motif: "tally" }, activate: { motif: "conjure" }, aura: { look: "toxic", scope: "zone" } }, // The House

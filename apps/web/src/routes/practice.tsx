@@ -16,7 +16,7 @@
 // with any carries them (R915006), runs on the Luau module (R915009) and records no statistics (§12.10).
 // Earning (SPEC §14.8, R1303000): an active account's free game from the setup or Play again plays
 // on a server seed, with the last board the server kept (R1303003). Lessons, `?try=`, `?seed=` and
-// the other URL games never ask.
+// the other URL games never ask. Nor does today's deal (R2882000), on its UTC day's own seed and seat.
 
 import {
   useCallback,
@@ -68,7 +68,7 @@ import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue
 import { earningText, seedRequestOf, type PracticeEarning } from "../practice/earning.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
 import { usePracticeEmotes } from "../practice/emotes.ts";
-import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
+import { randomDeckLean, type PracticeDebug, type PracticeDeckChoice, type PracticeStartConfig } from "../practice/protocol.ts";
 import { clearPracticeResume, readPracticeResumeState, writePracticeResume } from "../practice/resume.ts";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { SANDBOX_HOLD, sandboxAction } from "../practice/sandbox.ts";
@@ -79,6 +79,7 @@ import ReplayPlayer from "../replay/ReplayPlayer.tsx";
 import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../practice/PracticeSetup.tsx";
 import { practiceTestid } from "../practice/testids.ts";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
+import { dailyDealConfig } from "../practice/todaysDeal.ts";
 import { DIFFICULTY_LABEL } from "../practice/Tier.tsx";
 import { talliesPractice } from "../practice/tally.ts";
 import "../auth/tavern.css";
@@ -230,6 +231,9 @@ function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, lean
 }
 
 function configFor(choice: PracticeSetupChoice, params: PracticeParams): PracticeStartConfig {
+  // R2882000: today's deal is the UTC day's seed and seat on a random deck, whatever the URL or the deck picked;
+  // never a sandbox, custom cards or the fixture pool.
+  if (choice.dailyDeal === true) return dailyDealConfig(Date.now(), choice.difficulty, choice.leanSet ?? null);
   return {
     seed: params.seed ?? randomPracticeSeed(),
     difficulty: choice.difficulty,
@@ -830,14 +834,17 @@ function PracticeScreen({
     };
   }, [inProgress]);
 
-  /** The same difficulty and deck again, with a fresh seed and seat (unless the URL fixes them). */
+  /** The same difficulty and deck again, with a fresh seed and seat (unless the URL fixes them); R2882000: today's deal deals today's again. */
   const onPlayAgain = useCallback(() => {
     if (game === null) return;
+    const deck = game.deck;
     launch(
       configFor(
         {
           difficulty: game.difficulty,
-          deck: game.deck,
+          deck,
+          // R2882000: today's deal again, the day's at the click, so past UTC midnight the new day's, on the same pick.
+          ...(game.dailyDeal !== undefined && deck.kind === "random" ? { dailyDeal: true as const, leanSet: randomDeckLean(deck) } : {}),
           ...(game.sandbox === true ? { sandbox: true } : {}),
           // R915006: a game with custom cards deals them again.
           ...(game.customCards === undefined ? {} : { customCards: game.customCards }),

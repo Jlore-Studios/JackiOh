@@ -171,7 +171,7 @@ export function placeOf(view: PlayerView, id: string): { side: Side; lane: numbe
 /**
  * The ids the resolving play's hits landed on before this entry, oldest first. The runner gives each
  * hit of a run that sweeps no whole side its own entry, so a motif that strings its hits together (a
- * chain's hops, a volley's one gather) reads the ones before from here; none with no play.
+ * volley's one gather) reads the ones before from here; none with no play.
  */
 export function earlierHits(env: FxPlanEnv, entry: AnimationEntry): readonly string[] {
   const hits = env.memory.resolving()?.hits ?? [];

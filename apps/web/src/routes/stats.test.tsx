@@ -10,7 +10,6 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readCardPicks } from "../cards/cosmetics.ts";
-import { FULL_ART_TIERS } from "../cards/fullArt.ts";
 import { writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
@@ -731,9 +730,9 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("-15%")).toBeInTheDocument();
     expect(screen.getByText("(25 / 5)")).toBeInTheDocument();
 
-    // Lava Hound (below sample floor: 10 games < 20): its Adjusted (R2777000) and When drawn render "—"
+    // Lava Hound (below sample floor: 10 games < 20): its Tier (R3022000), Adjusted (R2777000) and When drawn render "—"
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(5);
 
     await user.click(screen.getByLabelText(/Drawn vs not drawn/i));
     expect(screen.queryByRole("columnheader", { name: /Drawn vs not drawn/i })).not.toBeInTheDocument();
@@ -802,9 +801,9 @@ describe("R654 public statistics route", () => {
     const wardenRow = screen.getByText("Aqua Warden").closest("tr")!;
     expect(within(wardenRow).getByText("40%")).toBeInTheDocument();
 
-    // Lava Hound (<20 games total => — for both, and for its Adjusted, R2777000)
+    // Lava Hound (<20 games total => — for both, and for its Adjusted, R2777000, and its Tier, R3022000)
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(5);
 
     await user.click(radiantHeader);
     expect(radiantHeader).toHaveAttribute("aria-sort", "descending");
@@ -947,21 +946,22 @@ describe("R377 public statistics match type", () => {
       .filter((url) => url.pathname === "/api/stats/cards");
   }
 
-  it("R377 R2777001 mode picker opens on Constructed, offers no mix of modes, asks the server for each match type and keeps any other in the URL", async () => {
+  it("R377 R2777001 R2777004 mode picker opens on All modes, offers Constructed and each match type, asks the server for each match type and keeps any other in the URL", async () => {
     const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
     const select = screen.getByTestId(statsTestid.modeSelect) as HTMLSelectElement;
-    expect(select).toHaveValue("constructed");
+    expect(select).toHaveValue("all");
     expect([...select.options].map((option) => option.textContent)).toEqual([
+      "All modes",
       "Constructed",
       "All Random",
       "Best of 1",
       "Conquest",
     ]);
     expect(cardsCalls().length).toBeGreaterThan(0);
-    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "all")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
 
     await user.selectOptions(select, "bo1");
@@ -978,19 +978,26 @@ describe("R377 public statistics match type", () => {
     await user.selectOptions(select, "constructed");
     await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
     expect(cardsCalls().every((url) => url.searchParams.get("mode") === "constructed")).toBe(true);
+    expect(window.location.search).toContain("mode=constructed");
+
+    vi.mocked(fetch).mockClear();
+    await user.selectOptions(select, "all");
+    await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
+    expect(cardsCalls().every((url) => url.searchParams.get("mode") === "all")).toBe(true);
     expect(window.location.search).not.toContain("mode=");
   });
 
-  it("R2777001 an old address's mode=all, which the page no longer offers, opens on Constructed", async () => {
-    at("/stats?mode=all");
-    render(<StatsRoute />);
+  it("R2777004 an address's mode=all, or a mode the page does not offer, reads every mode", async () => {
+    for (const address of ["/stats?mode=all", "/stats?mode=nonsense"]) {
+      at(address);
+      const { unmount } = render(<StatsRoute />);
 
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-    expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("constructed");
-    await waitFor(() =>
-      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(true),
-    );
-    expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(false);
+      expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+      expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("all");
+      await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "all")).toBe(true));
+      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "constructed")).toBe(false);
+      unmount();
+    }
   });
 
   it("R2777000 lists the cards by their adjusted win rate, shown to a tenth of a point, a card below the floor last with none shown", async () => {
@@ -1017,6 +1024,91 @@ describe("R377 public statistics match type", () => {
     // The raw win rate is still a column, and sorting by it puts Spark Pup back on top.
     await user.click(within(table).getByRole("columnheader", { name: /^Win rate/ }));
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R3022000 shows each enough-games card's tier, sorts by tier with S first, and says what tiers mean and how far cards differ", async () => {
+    const user = userEvent.setup();
+    const tiered: Record<string, object> = {
+      // Above the band and sure of it, though Aqua Warden's rate is higher: its range still reaches 50%.
+      "core-001": { adjustedWinRate: 0.556, tier: "S" },
+      "core-003": { adjustedWinRate: 0.5612, tier: "A" },
+      // Below the floor: the server's tier is not shown, as its rate is not.
+      "core-002": { tier: "F" },
+    };
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, ...tiered[card.id] }));
+    const tiers = { center: 0.021, spread: 0.034, cards: 412, bandLow: 0.45, bandHigh: 0.55 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const order = (): (string | null)[] =>
+      [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+    const shownTiers = (): (string | null)[] =>
+      within(table).getAllByTestId(statsTestid.tierCell).map((cell) => cell.textContent);
+    // The default order is still the adjusted rate's.
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    expect(shownTiers()).toEqual(["A", "S", "—"]);
+
+    // By tier, S first; ascending puts it last of the cards with a tier, and a card without one stays last.
+    const header = within(table).getByRole("columnheader", { name: /^Tier/ });
+    await user.click(header);
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+    expect(window.location.search).toContain("sort=tier");
+    await user.click(header);
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+
+    // What the tiers mean, from the server's band, and the measured spread.
+    const note = screen.getByTestId(statsTestid.tiersNote);
+    expect(note).toHaveTextContent("Tier S is above 55% with its whole 95% range above 50%: a nerf candidate.");
+    expect(note).toHaveTextContent("Tier F is below 45%");
+    expect(note).toHaveTextContent("Read against 412 cards: the average card reads 50%, and real cards differ by about 3.4 points");
+
+    // The grid shows the tier too.
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const item = (id: string): HTMLElement => grid.querySelector<HTMLElement>(`[data-card-id="${id}"]`)!;
+    expect(within(item("core-001")).getByTestId(statsTestid.tierCell)).toHaveTextContent("S");
+    expect(within(item("core-002")).getByTestId(statsTestid.tierCell)).toHaveTextContent("—");
+  });
+
+  it("R3070000 says what a card always in hand and the Dormant Starship are read against, the average deck's win rate", async () => {
+    const tiers = { center: 0.02, spread: 0.034, cards: 412, baseline: 0.4875, bandLow: 0.45, bandHigh: 0.55 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, tiers }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.tiersNote)).toHaveTextContent(
+      "A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins 48.8% of its games.",
+    );
+  });
+
+  it("R3022000 a field too small to measure says the spread is assumed, and a server without tiers shows none", async () => {
+    const tiers = { center: 0, spread: 0.05, cards: 0, bandLow: 0.45, bandHigh: 0.55 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, tiers }), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.tiersNote)).toHaveTextContent(
+      "Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about 5.0 points.",
+    );
+    cleanup();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }))),
+    );
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(within(table).getAllByTestId(statsTestid.tierCell).map((cell) => cell.textContent)).toEqual(["—", "—", "—"]);
+    expect(screen.queryByTestId(statsTestid.tiersNote)).not.toBeInTheDocument();
   });
 
   it("R2895000 Show 95% ranges puts each enough-games card's Win rate and Adjusted ranges under them, in the table and the grid", async () => {
@@ -1294,16 +1386,15 @@ describe("the card drill-down dialog", () => {
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
-    // R2756000: core-001 is a full-art card, so its art buttons come first, before Show Radiant.
-    const arts = within(screen.getByTestId(statsTestid.drillDownArt)).getAllByRole("button");
-    expect(arts).toHaveLength(FULL_ART_TIERS.length + 1);
+    // R3011000: no art buttons come before Show Radiant: the drill-down offers no art choice.
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(close).toHaveFocus();
 
-    for (const next of [...arts, radiant, almanac, retry, close]) {
+    for (const next of [radiant, almanac, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, almanac, radiant, ...[...arts].reverse(), close]) {
+    for (const previous of [retry, almanac, radiant, close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -1411,96 +1502,68 @@ describe("the drill-down's card preview", () => {
     expect(dialog.querySelectorAll(".cf")).toHaveLength(1);
   });
 
-  it("R2756000 a full-art card's breakdown offers No full art and each tier, opens on the setting's Epic, and prints the art picked on both faces, writing no pick", async () => {
+  it("R3011000 a full-art card's breakdown prints the setting's still Epic, base and Radiant, and offers no art choice", async () => {
     holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
     at("/stats?card=core-004");
     render(<StatsRoute />);
     const dialog = await screen.findByRole("dialog", undefined, SLOW);
-    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
-    const art = (name: string): HTMLElement => within(picker).getByRole("button", { name });
-    const face = (): Element | null => dialog.querySelector(".stats-drilldown-faces .cf");
-    expect(within(picker).getAllByRole("button").map((button) => button.textContent)).toEqual([
-      "No full art",
-      "Animated",
-      "Epic",
-      "Legendary",
-      "Mythic",
-    ]);
-    expect(art("Epic")).toHaveAttribute("aria-pressed", "true");
-    expect(art("No full art")).toHaveAttribute("aria-pressed", "false");
-    expect(face()?.getAttribute("data-full-art-tier")).toBe("Epic");
-
-    fireEvent.click(art("Legendary"));
-    expect(art("Legendary")).toHaveAttribute("aria-pressed", "true");
-    expect(art("Epic")).toHaveAttribute("aria-pressed", "false");
-    expect(face()?.getAttribute("data-full-art-tier")).toBe("Legendary");
+    // The testid is gone with the picker, so the literal string stands in for the deleted constant.
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
 
     fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
-    fireEvent.click(art("Mythic"));
     const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
     expect(faces).toHaveLength(2);
-    for (const each of faces) expect(each.getAttribute("data-full-art-tier")).toBe("Mythic");
-
-    fireEvent.click(art("No full art"));
-    for (const each of dialog.querySelectorAll(".stats-drilldown-faces .cf")) expect(each.hasAttribute("data-full-art")).toBe(false);
+    for (const each of faces) expect(each.getAttribute("data-full-art-tier")).toBe("Epic");
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
 
     // A preview: no pick is written, since every write of one is sent to the account (R1834000).
     expect(readCardPicks("core-004").fullArt).toBeUndefined();
   });
 
-  it("R2756000 with the Full-art cards setting off the breakdown opens on No full art and still prints a tier picked, and a card without full art offers no choice", async () => {
+  it("R3011000 with the Full-art cards setting off the breakdown prints the normal face, base and Radiant, and a token listed under a full-art card prints its parent's Epic", async () => {
     writeCardSettings({ fullArt: false });
     holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
     at("/stats?card=core-004");
     render(<StatsRoute />);
     const dialog = await screen.findByRole("dialog", undefined, SLOW);
-    const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
-    expect(within(picker).getByRole("button", { name: "No full art" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(dialog.querySelector(".stats-drilldown-faces .cf")?.hasAttribute("data-full-art")).toBe(false);
 
-    fireEvent.click(within(picker).getByRole("button", { name: "Epic" }));
-    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
+    expect(faces).toHaveLength(2);
+    for (const each of faces) expect(each.hasAttribute("data-full-art")).toBe(false);
 
-    // core-003 has no full art: its breakdown offers no choice.
+    // core-t-bread is listed under core-018, so it prints its parent's still Epic (R2655002) while the setting is on.
     cleanup();
-    at("/stats?card=core-003");
+    writeCardSettings({ fullArt: true });
+    at("/stats?card=core-t-bread");
     render(<StatsRoute />);
-    await screen.findByRole("dialog", undefined, SLOW);
-    expect(screen.queryByTestId(statsTestid.drillDownArt)).toBeNull();
+    const tokenDialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+    expect(tokenDialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
   });
 
-  it("R2756000 the art picked stays picked when the breakdown is closed and opened again", async () => {
+  it("R3011000 a card without full art draws its breakdown as before", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-003");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    expect(dialog.querySelectorAll(".stats-drilldown-faces .cf")).toHaveLength(2);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
+  });
+
+  it("R2756000 the art choice stays retired: no breakdown offers art buttons", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     fireEvent.click(screen.getByText("Spark Pup"));
-    fireEvent.click(within(screen.getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" }));
-    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
-    expect(screen.queryByRole("dialog")).toBeNull();
-
-    fireEvent.click(screen.getByText("Spark Pup"));
-    const dialog = screen.getByRole("dialog");
-    expect(within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" })).toHaveAttribute("aria-pressed", "true");
-    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Mythic");
-  });
-
-  it("R2715000 the breakdown's Animated prints the card's normal face with its art moving, on both faces, writing no pick", async () => {
-    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
-    at("/stats?card=core-004");
-    render(<StatsRoute />);
-    const dialog = await screen.findByRole("dialog", undefined, SLOW);
-    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
-    const animated = within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Animated" });
-    fireEvent.click(animated);
-    expect(animated).toHaveAttribute("aria-pressed", "true");
-    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
-    expect(faces).toHaveLength(2);
-    for (const each of faces) {
-      expect(each.getAttribute("data-full-art-tier")).toBe("Animated");
-      expect(each.hasAttribute("data-full-art")).toBe(false);
-      expect(each.getAttribute("data-art-motion")).toBe("animated");
-      expect(each.querySelector('.cf-art[data-art-moving="true"]')).not.toBeNull();
-    }
-    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+    await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
   });
 
   it("links the card to its detail in the Almanac, and follows the link in place", async () => {
@@ -1793,6 +1856,7 @@ describe("R2446000 the Cards table's columns", () => {
       "Card",
       "Name",
       "Games",
+      "Tier",
       "Adjusted",
       "Win rate",
       "When drawn",
@@ -1812,6 +1876,7 @@ describe("R2446000 the Cards table's columns", () => {
     ).toEqual([
       "name",
       "games",
+      "tier",
       "adjustedWinRate",
       "winRate",
       "drawnWinRate",
@@ -2083,7 +2148,7 @@ describe("R2370000 the Tokens toggle", () => {
 
 describe("R2125000 the Cards tab opens on its last table", () => {
   it("R2125000 the Cards tab draws its kept table at once and keeps it when the read behind it fails", async () => {
-    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
 
@@ -2102,7 +2167,7 @@ describe("R2125000 the Cards tab opens on its last table", () => {
   });
 
   it("R2125000 a filter with no kept table waits behind its skeleton, a kept one draws at once", async () => {
-    rememberRead(null, cardStatsPath({ mode: "constructed" }), MOCK_CARD_STATS_CLEARED);
+    rememberRead(null, cardStatsPath({ mode: "all" }), MOCK_CARD_STATS_CLEARED);
     const held = holdFetch((url) => url.pathname === "/api/stats/cards");
     render(<StatsRoute />);
     await waitFor(() => expect(held).toHaveLength(1), SLOW);

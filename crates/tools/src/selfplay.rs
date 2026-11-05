@@ -18,7 +18,7 @@ use std::sync::OnceLock;
 use std::time::Instant;
 
 use anyhow::{Context, bail};
-use jackioh_ai::{AI_GATE_BUDGET, ai_generation, dev_game_config};
+use jackioh_ai::{AI_GATE_BUDGET, SearchBudget, ai_generation, dev_game_config};
 use jackioh_engine::{Action, GameResult, PerPlayer, PlayerId};
 use serde::{Deserialize, Serialize};
 
@@ -200,6 +200,18 @@ pub(crate) fn play_chunks(
     from: i32,
     games: i32,
     commit: &str,
+    sink: impl FnMut(&[SelfplayGame]) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
+    play_chunks_at(base, from, games, commit, AI_GATE_BUDGET, sink)
+}
+
+/// `play_chunks` with both seats deciding at `budget`, which only a test lowers.
+fn play_chunks_at(
+    base: &str,
+    from: i32,
+    games: i32,
+    commit: &str,
+    budget: SearchBudget,
     mut sink: impl FnMut(&[SelfplayGame]) -> anyhow::Result<()>,
 ) -> anyhow::Result<()> {
     jackioh_cards::register_all();
@@ -212,7 +224,11 @@ pub(crate) fn play_chunks(
             "{}",
             serde_json::json!({ "selfplay": "chunk", "from": start, "to": start + count - 1, "of": end - 1 })
         );
-        let played: Vec<(ArenaOutcome, f64)> = setups(base, start, count)
+        let mut batch = setups(base, start, count);
+        for game in &mut batch {
+            game.self_budget = budget;
+        }
+        let played: Vec<(ArenaOutcome, f64)> = batch
             .par_iter()
             .map(|game| {
                 let clock = Instant::now();
@@ -241,8 +257,21 @@ pub(crate) fn play_chunks(
 /// Plays the games and returns their lines, in game order (the tests' way in; `run` streams).
 #[cfg(test)]
 pub(crate) fn play(base: &str, from: i32, games: i32, commit: &str) -> anyhow::Result<Vec<SelfplayGame>> {
+    play_at(base, from, games, commit, AI_GATE_BUDGET)
+}
+
+/// `play` with both seats deciding at `budget`, for a test that proves how a game files, not how
+/// well it is played.
+#[cfg(test)]
+pub(crate) fn play_at(
+    base: &str,
+    from: i32,
+    games: i32,
+    commit: &str,
+    budget: SearchBudget,
+) -> anyhow::Result<Vec<SelfplayGame>> {
     let mut all = Vec::new();
-    play_chunks(base, from, games, commit, |chunk| {
+    play_chunks_at(base, from, games, commit, budget, |chunk| {
         all.extend_from_slice(chunk);
         Ok(())
     })?;

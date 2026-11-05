@@ -48,6 +48,7 @@ import {
 import { FLAVOR_LOOKS, chaosFlavor, type FlavorLook } from "./flavors.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
+import { entranceEchoMs } from "./takeover.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
 /* Fixture ids, read off the M5-T1 board rather than guessed */
@@ -777,7 +778,7 @@ describe("B14 summon", () => {
     });
   });
 
-  it("B14 R2722001 a Legendary adds legendary rays from 0, a gold burst and ring at the slam and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 R2803000 a Legendary adds legendary rays from 0, a gold burst and ring with its echo at the slam and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Legendary", attack: 1, health: 1 }, D), [
@@ -786,6 +787,8 @@ describe("B14 summon", () => {
         rays("legendary", tid(ZONE), 0, D),
         burst("gold", tid(ZONE), "area", slam),
         ring("gold", tid(ZONE), slam, D),
+        // R2803000: the ring carries its echo, the same wave behind as the takeover's second shockwave.
+        ring("gold", tid(ZONE), entranceEchoMs(D, slam), D),
         shake(0.7, slam),
       ]);
     });
@@ -1020,7 +1023,7 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as ward, plus the Divine Shield callout", () => {
+  it("B16 divineShieldLost: a gold ring at gather and a shard burst where it lands, as the folded ward, plus the Divine Shield callout", () => {
     forDs("divineShieldLost", (D) => {
       const land = r(FX_MOTIF_PHASES.land * D);
       expectCues(plan([{ type: "divineShieldLost", instanceId: ENEMY }], D), [
