@@ -13,7 +13,8 @@
 // (#38's did until issue #3139 made its text one short line).
 // #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Issue #3139: Core #65 and #89, whose new last lines put
 // both their faces over the limit. Issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry
-// and draw lines put them over. Only a face printing its catalog text takes a
+// and draw lines put them over. Issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose new
+// keyword line (Divine Shield, Tradable) makes a seventh line. Only a face printing its catalog text takes a
 // short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
 // only its header and the next Ascent line (#814, R280, c008_reach_the_summit.rs); a face in play past the
 // preview's limit clamps rather than shrinking its art.
@@ -42,10 +43,12 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "classicplus-019-2": { base: "clamp", radiant: "clamp" },
   "classicplus-042-1": { radiant: "clamp" },
   "classicplus-034": { base: "clamp" },
+  "classicplus-037": { base: "clamp", radiant: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
   // R3134001: its Radiant Cry and Aura run to seven lines.
   "meditative-009": { radiant: "clamp" },
+  "meditative-020": { base: "clamp", radiant: "clamp" },
   "meditative-022": { base: 1, radiant: 1 },
   "meditative-022-1": { base: 3, radiant: 2 },
   "meditative-039-5": { base: 3, radiant: 3 },

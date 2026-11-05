@@ -1,4 +1,4 @@
-//! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001, R2521007): (1) Spell, Epic.
+//! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001, R2521007): (0) Spell ((1) until issue #3138), Epic.
 //!
 //! Base:    "Fuse the card with the lowest win rate and the card with the highest win rate, and add
 //!          it to your hand. It costs ({setCost})."
@@ -139,6 +139,20 @@ mod tests {
 
     mod mp2_na_tech {
         use super::*;
+
+        /// Issue #3138: it costs (0), from (1), on both faces: played with no mana at all, and the fused
+        /// card is still added at its own price (the `setCost`, (2) and (0)).
+        #[test]
+        fn issue_3138_it_costs_0_and_plays_for_no_mana_on_both_faces() {
+            for (radiant, set_cost) in [(false, 2), (true, 0)] {
+                register_win_rates(the_table());
+                let mut s = casting("na-tech-free", radiant, 1);
+                s.state_mut().players.p1.mana.current = 0;
+                let card = fused(&mut s);
+                s.expect_mana(P1, 0);
+                assert_eq!(card.cost_override, Some(set_cost), "radiant {radiant}");
+            }
+        }
 
         #[test]
         fn r1183001_fuses_the_trailer_and_the_leader_into_one_card_at_2() {

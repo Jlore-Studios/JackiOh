@@ -30,7 +30,7 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-005` | Guy Att | Unit | cry bolt | 1.16 | bolt | the census agrees |
 | `classicplus-006` | Wrong-House Attacker | Unit | none: vanilla | — | none: vanilla | the census agrees |
 | `classicplus-007` | The House | Field Spell | cast tally; activate conjure; aura toxic zone | 1.36 | bolt | cast: its Cry's Plague Counters (counterChanged), which tally reads; activate: the Unit it summons, which conjure reads; its activate plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
-| `classicplus-008` | Withering Storm | Spell | cast flight Dark/curse | 1.28 | bolt | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which flight reads |
+| `classicplus-008` | Withering Storm | Spell | cast flight Dark/curse | 1.19 | bolt | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which flight reads |
 | `classicplus-009` | Silence | Spell | cast transmute | 1.00 | none: no motif reads transformed | the census predates the motifs of #2786 and #2793; transmute reads the hook's commonest own event |
 | `classicplus-010` | New Wraps | Spell | cast bless | 1.00 | none: no motif reads keywordGranted | the census predates the motifs of #2786 and #2793; bless reads the hook's commonest own event |
 | `classicplus-011` | Anime Armor | Unit | none: no hook (its Aura is static; the damage rows show the cap) | — | bolt | no hook: its Aura is static, and a Unit wears no aura on the board |
@@ -76,7 +76,7 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-035` | Rollback | Spell | bespoke rollbackSweep | 1.85 | vanish | Flourish: no motif reads its one event, rolledBack |
 | `classicplus-036` | Conjure Bones | Spell | cast send | 1.28 | none: no motif reads shuffledIn | no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `classicplus-036-1` | Bone Storm | Spell | cast lance | 0.97 | lance | the census agrees |
-| `classicplus-037` | Wardrum | Unit | trigger conjure | 1.96 | bolt | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which conjure reads; its trigger plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
+| `classicplus-037` | Wardrum | Unit | trigger conjure | 1.85 | bolt | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which conjure reads; its trigger plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
 | `classicplus-038` | Solarius | Unit | death send | 1.45 | none: no motif reads damageAbsorbed | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; its death plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
 | `classicplus-038-1` | Solarius Prime | Unit | none: token (each Spell it casts draws its own) | — | bolt | each Spell it casts draws its own |
 | `classicplus-039` | Book Worm | Unit | death send; trigger tally | 1.08 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; trigger: its start-of-turn Plague Counter is a counterChanged, which tally reads; its death and trigger plan nothing on the board until the marker of #2783 reaches them, so the gallery plays them |

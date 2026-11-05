@@ -137,7 +137,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BREATH: &str = "classic-019";
-    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10): a big
+    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue #3138): a big
     // body no Immutable keeps a Spell off (R781001).
     const BIG: &str = "classicplus-026";
     const FILLER: &str = "core-005";

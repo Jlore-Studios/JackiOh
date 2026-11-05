@@ -2063,7 +2063,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "8",
         "Withering Storm",
-        c(2),
+        c(1),
         T::Spell,
         &[],
         R::Rare,
@@ -2098,8 +2098,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Pancake],
         R::Legendary,
-        st(8, 8),
-        st(16, 16),
+        st(5, 5),
+        st(10, 10),
     ),
     row(
         "12.1",
@@ -2359,8 +2359,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(5, 5),
-        st(10, 10),
+        st(4, 4),
+        st(8, 8),
     ),
     row(
         "27",
@@ -2505,7 +2505,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "37",
         "Wardrum",
-        c(5),
+        c(4),
         T::Unit,
         &[G::Quickdraw, G::Acclaimed],
         R::Legendary,
@@ -3451,7 +3451,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "29",
         "Forbiddenous Factory",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Plague],
         R::Rare,
@@ -3465,8 +3465,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Felinor],
         R::Epic,
-        st(3, 4),
-        st(6, 8),
+        st(5, 5),
+        st(10, 10),
     ),
     row(
         "30.1",
@@ -4151,7 +4151,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "87",
         "Tatches the Totem",
-        c(1),
+        c(0),
         T::Unit,
         &[G::Human, G::Felinor, G::Ky, G::Cn, G::Jlockeed],
         R::Legendary,
@@ -4506,7 +4506,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("2", "NA Tech", c(1), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
+    row("2", "NA Tech", c(0), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
     row(
         "3",
         "Wondrous Wand",
@@ -4741,7 +4741,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "25",
         "KY's Intuition",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Ky],
         R::Rare,
@@ -8798,7 +8798,7 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_3x_3x_and_6x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
+    fn prints_buff_billy_s_2x_3x_and_4x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
      {
         // Buff Billy's X is the one it is played for; Meditative+ #20.1 Lil' Kenny's the one M+ #20
         // summons it with (R1184003).
@@ -8812,11 +8812,11 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         assert_eq!(billy.map(|entry| entry.cost), Some(CardCost::X));
         assert_eq!(
             billy.and_then(|entry| entry.base.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 3, "health": 3 }))
+            Some(serde_json::json!({ "attack": 2, "health": 3 }))
         );
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 6, "health": 6 }))
+            Some(serde_json::json!({ "attack": 4, "health": 6 }))
         );
         let kenny = CATALOG.get("meditativeplus-020-1");
         assert_eq!(

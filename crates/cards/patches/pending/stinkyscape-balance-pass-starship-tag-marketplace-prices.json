@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape balance pass — Starship tag, Marketplace prices, Weapons and twenty cards",
   "sources": "#3000, #3128",
-  "notes": "The owner's balance pass #3000, built as a fullsend tree (#3038 to #3048) and reconciled by a Claude session: Starship becomes a tag with innate Flying and Ranged (R3038000), launches for (4), and the Drone Battleship's layers stop being Starships (R3038002); an awakened card is never Dormant again and a Flashback play keeps Flashback (R3039000, R3039001); every Weapon's Health halved and the Rush Token Launcher reaches a Locked zone (#3040); eight Stinkyscape cards (#3041), five more cards (#3042), True Craft a Card's points (#3043), Twinspell as an Activate (R3044000); a fused Miner or Weapon keeps its host's art and a Starship its name (R3045000), full art on the board (R3046000); the Marketplace's four offers, new prices, (0) buys and Buffed or Nerfed offers (R3047000 to R3047004); Echo's Coin fallback and Death by 1000 cuts' kept targets (R3048000 to R3048002). The AI scores a decision over a Starship by its hand evaluation (R3038003). With it, the owner's Stinkyscape balance pass IV, #3128 (#3134 to #3142), none of its cards one #3000 already moved: part 1 (#3134), Last Hurrah's counted discard (R3134000), Joint Filing's turn-hook pools (R3134001) and Heroic Power's Cry Discover of 3 of its 13 powers (R3134002); part 2 (#3135), the three Calls to Chaos and Appropriations each a step weaker (R3135000 to R3135002); part 3 (#3136), seventeen Core, Classic and Legacy cards' numbers and keywords; part 5 (#3139), eleven Core, Classic and Training Grounds scripts (R3139000 to R3139004), xxFreshJack and Shockwave447 playing differently as the BUSTED and complicated lists they draw from moved; part 6 (#3140), ten Meditative, Meditative+ and Classic+ scripts, Luck given by no card any more (R3140000), Mountaintop Garden's Cry (R3140001) and Conjure Rush Token+'s coin (R3140002); part 7 (#3142), sixteen Stinkyscape cards (Asphyxiants Cloud left as #3041 made it, by the owner's word), with Stimmycheck's Inflation step 5 (R3142000), MELCHIOR's random keywords (R3142001) and two new pictures (R3142002).",
+  "notes": "The owner's balance pass #3000, built as a fullsend tree (#3038 to #3048) and reconciled by a Claude session: Starship becomes a tag with innate Flying and Ranged (R3038000), launches for (4), and the Drone Battleship's layers stop being Starships (R3038002); an awakened card is never Dormant again and a Flashback play keeps Flashback (R3039000, R3039001); every Weapon's Health halved and the Rush Token Launcher reaches a Locked zone (#3040); eight Stinkyscape cards (#3041), five more cards (#3042), True Craft a Card's points (#3043), Twinspell as an Activate (R3044000); a fused Miner or Weapon keeps its host's art and a Starship its name (R3045000), full art on the board (R3046000); the Marketplace's four offers, new prices, (0) buys and Buffed or Nerfed offers (R3047000 to R3047004); Echo's Coin fallback and Death by 1000 cuts' kept targets (R3048000 to R3048002). The AI scores a decision over a Starship by its hand evaluation (R3038003). With it, the owner's Stinkyscape balance pass IV, #3128 (#3134 to #3142), none of its cards one #3000 already moved: part 1 (#3134), Last Hurrah's counted discard (R3134000), Joint Filing's turn-hook pools (R3134001) and Heroic Power's Cry Discover of 3 of its 13 powers (R3134002); part 2 (#3135), the three Calls to Chaos and Appropriations each a step weaker (R3135000 to R3135002); part 3 (#3136), seventeen Core, Classic and Legacy cards' numbers and keywords; part 4 (#3138), twelve Meditative, Meditative+ and Classic+ cards' numbers and keywords, an embiggen card's Flashback offered at both its prices (R3138000); part 5 (#3139), eleven Core, Classic and Training Grounds scripts (R3139000 to R3139004), xxFreshJack and Shockwave447 playing differently as the BUSTED and complicated lists they draw from moved; part 6 (#3140), ten Meditative, Meditative+ and Classic+ scripts, Luck given by no card any more (R3140000), Mountaintop Garden's Cry (R3140001) and Conjure Rush Token+'s coin (R3140002); part 7 (#3142), sixteen Stinkyscape cards (Asphyxiants Cloud left as #3041 made it, by the owner's word), with Stimmycheck's Inflation step 5 (R3142000), MELCHIOR's random keywords (R3142001) and two new pictures (R3142002).",
   "player": {
     "title": "Stinkyscape balance pass",
     "new": [],
@@ -55,7 +55,17 @@
       "Appropriations gives 1 less Attack, Books or Health on both faces, never less than 1, and Culture's chance is 6X% (Radiant 16X%), down from 7X% (17X%).",
       "Feng Shui costs (3), up from (2).",
       "Spiritually 中国's transformed cards keep their own cost instead of costing (1).",
-      "Deadman's Hand draws a card after it shuffles (Radiant 3, up from 1), and is Embiggened for (1), down from (2)."
+      "Deadman's Hand draws a card after it shuffles (Radiant 3, up from 1), and is Embiggened for (1), down from (2).",
+      "Tatches the Totem costs (0), down from (1).",
+      "Forbiddenous Factory costs (2), down from (3).",
+      "Wardrum costs (4), down from (5), and gains Divine Shield.",
+      "NA Tech costs (0), down from (1).",
+      "Withering Storm costs (1), down from (2).",
+      "Fickle E-Kitten is 5/5 (Radiant 10/10), up from 3/4 (6/8).",
+      "Tommy Tempo is 4/4 (Radiant 8/8), down from 5/5 (10/10).",
+      "The Mother Pancake is 5/5 (Radiant 10/10), down from 8/8 (16/16).",
+      "KY's Intuition costs (2), up from (1).",
+      "Buff Billy is a 2X/3X (Radiant 4X/6X), down from 3X/3X (6X/6X)."
     ],
     "changes": [
       "Starship is now a tag, and every Starship, Dormant or launched, has Flying and Ranged.",
@@ -103,7 +113,9 @@
       "Skull of J'Nari summons from your hand at the end of your turn instead of the start.",
       "饕餮 fuses a random enemy Unit into itself, not any enemy permanent.",
       "Money Machine gains a Cry: add a The Coin to your hand (a Radiant one on its Radiant face).",
-      "Mountaintop Garden gains a Cry: add a random Embiggen card to your hand, which costs (0) on its Radiant face."
+      "Mountaintop Garden gains a Cry: add a random Embiggen card to your hand, which costs (0) on its Radiant face.",
+      "Spirit Lash has Flashback.",
+      "Aestheticize the Game has Tradable."
     ],
     "text": [],
     "fixes": []
@@ -136,20 +148,32 @@
     "classic-073",
     "classic-085",
     "classicplus-001",
+    "classicplus-008",
+    "classicplus-012",
     "classicplus-016",
+    "classicplus-026",
+    "classicplus-037",
     "classicplus-047",
     "classicplus-051",
+    "classicplus-069",
     "meditative-005",
     "meditative-007",
     "meditative-009",
+    "meditative-020",
+    "meditative-029",
+    "meditative-030",
     "meditative-032",
     "meditative-040",
     "meditative-047",
     "meditative-054",
     "meditative-063",
     "meditative-081",
+    "meditative-087",
     "meditative-095",
+    "meditativeplus-002",
+    "meditativeplus-005",
     "meditativeplus-022",
+    "meditativeplus-025",
     "stinkyscape-007",
     "stinkyscape-012",
     "stinkyscape-012-3",
@@ -212,7 +236,8 @@
     "classicplus-007",
     "stinkyscape-109",
     "stinkyscape-111",
-    "classicplus-040"
+    "classicplus-040",
+    "meditative-101"
   ],
   "rule": true,
   "visual": true

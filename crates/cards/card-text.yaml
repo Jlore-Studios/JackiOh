@@ -2318,8 +2318,8 @@ classicplus-037: # Wardrum
     death: The drum falls silent.
   zh:
     name: 战鼓
-    base: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
-    radiant: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
+    base: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
+    radiant: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
     previews:
       non-Units in a turn: 在你一个回合内打出的法术、场地法术和陷阱
       non-Unit you played this turn: 你在本回合打出的
@@ -2669,8 +2669,8 @@ classicplus-069: # Buff Billy
     death: Skipped leg day.
   zh:
     name: 肌肉比利
-    base: "此单位为3X/3X。\n战吼：强化此单位X次。"
-    radiant: "此单位为6X/6X。\n战吼：强化此单位2X次。"
+    base: "此单位为2X/3X。\n战吼：强化此单位X次。"
+    radiant: "此单位为4X/6X。\n战吼：强化此单位2X次。"
 classicplus-070: # Chaos Machine
   flavour: The machine hums, and everything near it gets bigger.
   voice:
@@ -3050,8 +3050,8 @@ meditative-020: # Aestheticize the Game
     cast: A win, but make it beautiful.
   zh:
     name: 美学化游戏
-    base: 抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。
-    radiant: 抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。抽{draw}张牌。
+    base: "可交易\n抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。"
+    radiant: "可交易\n抉择。在本局对战的剩余时间内，只要所选条件成立，你也会获胜：你的英雄拥有{health}点或更多的生命值；你的墓地中有{graveyard}张或更多的牌；或者你的单位总计拥有{board}点或更多的攻击力和{board}点或更多的生命值。抽{draw}张牌。"
 meditative-021: # API Key Fishing
   flavour: Dear valued user, please confirm your password to keep your cards.
   voice:
@@ -4149,8 +4149,8 @@ meditativeplus-005: # Spirit Lash
     cast: Feel the sting on both sides now.
   zh:
     name: 灵魂鞭笞
-    base: "对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
-    radiant: "回响1\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
+    base: "闪回\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
+    radiant: "回响1，闪回\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
 meditativeplus-006: # Bloodbloom
   flavour: It blooms brightest in the moment you can least afford it.
   voice:

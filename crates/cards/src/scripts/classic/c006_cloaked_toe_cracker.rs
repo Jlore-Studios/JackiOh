@@ -100,7 +100,7 @@ mod tests {
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
     const STOCKPILE: &str = "core-005"; // (1) Spell
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
-    const WARDRUM: &str = "classicplus-037"; // (5) Unit: "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
+    const WARDRUM: &str = "classicplus-037"; // (4) Unit, Divine Shield: "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
 
     use crate::js;
 
