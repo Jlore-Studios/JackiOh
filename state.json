@@ -15413,6 +15413,14 @@
       "started_at": "2026-11-05T12:15:58Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3179": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-05T12:15:58Z",
+      "issue": 3178,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
