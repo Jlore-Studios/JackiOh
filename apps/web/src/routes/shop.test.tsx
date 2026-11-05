@@ -369,7 +369,7 @@ describe("#1577 the /shop route through the route table", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByTestId(shopRouteTestid.purchases, undefined, SLOW), { button: 0 });
-    expect(await screen.findByTestId(purchasesTestid.pityLine, undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByTestId(purchasesTestid.pity, undefined, SLOW)).toBeInTheDocument();
     expect(window.location.pathname).toBe(paths.purchases);
   });
 

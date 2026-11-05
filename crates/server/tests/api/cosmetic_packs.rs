@@ -22,18 +22,19 @@ use jackioh_server::cosmetics::{
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
-    CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase, buy_chase_once,
-    open_cosmetic_pack, roll_cosmetic_pack,
+    OpenedCosmeticPack, buy_chase, buy_chase_once, open_cosmetic_pack,
 };
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
-use jackioh_server::economy::packs::{BarSettle, BarsSettled};
-use jackioh_server::economy::roll::{PackKind, pack_pool};
 use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
-use jackioh_server::economy::tiers::cosmetic_odds;
-use jackioh_server::economy::tokens::cosmetic_bar_points;
+use jackioh_shared::economy::bars::{BarSettle, BarsSettled, cosmetic_bar_points};
+use jackioh_shared::economy::cosmetic_pack::{
+    CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, roll_cosmetic_pack,
+};
+use jackioh_shared::economy::roll::{PackKind, pack_pool};
+use jackioh_shared::economy::tiers::cosmetic_odds;
 
 use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
 use crate::support::store::{fake, uuid};

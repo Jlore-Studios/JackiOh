@@ -886,14 +886,18 @@ export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
   return `duos-dev-seat-${seat}`;
 }
 
-// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid`, `devToolsTestid`,
-// `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, in `apps/web/src/` routes/account.tsx,
-// routes/DevTools.tsx, shop/shop.ts, packs/packs.ts, routes/QuestsPanel.tsx and collection/collection.ts;
+// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid`, `devButtonTestid`,
+// `devToolsTestid`, `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, in `apps/web/src/`
+// routes/account.tsx, routes/DevButton.tsx, routes/DevTools.tsx, shop/shop.ts, packs/packs.ts,
+// routes/QuestsPanel.tsx and collection/collection.ts;
 // this project can import none of them (each reaches `@jackioh/*`, which only the client's own build resolves).
 
-/** `/account`: the Dev tools toggle (R1300000). */
+/** `/account`'s screen. */
 export const ACCOUNT_SCREEN = "account-screen";
-export const ACCOUNT_DEV_TOGGLE = "account-dev-toggle";
+
+/** R3156000: the front screen's Dev button, for a dev account on a computer, and the dialog it opens. */
+export const LANDING_DEV = "landing-dev";
+export const DEV_PANEL = "dev-panel";
 
 /** §14.10: the Dev tools panel; its status line says "Done." or the server's refusal word for word. */
 export const DEV_TOOLS = "dev-tools";
