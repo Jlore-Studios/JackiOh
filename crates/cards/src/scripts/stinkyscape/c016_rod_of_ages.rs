@@ -7,7 +7,7 @@
 //!            turn: Gain {keywords|random combat keyword|random combat keywords}."
 //! Animated is a catalog keyword (§6.1, R2280000). lends_equip lets first unit equip into it (R1869000, R1086, R77, R102, R64, R2280001).
 //! End of turn grants random combat keywords (R21, R781005). Base becomes Radiant at 12 keywords (R1850005,
-//! R1748003); through v0.5.11o (`script_v0_5_11o`, kept, R767000) at 10, with Flying printed among them.
+//! R1748003); through v0.5.11p (`script_v0_5_11o`, kept, R767000) at 10, with Flying printed among them.
 
 use jackioh_engine::prelude::*;
 
@@ -15,7 +15,7 @@ pub const ID: &str = "stinkyscape-016";
 
 /// "Upon reaching 12 keywords, make this Radiant": printed data (R1748003), the base face's only.
 const RADIANT_AT_KEYWORDS: i32 = 12;
-/// Through v0.5.11o it was 10.
+/// Through v0.5.11p it was 10.
 const RADIANT_AT_KEYWORDS_V0_5_11O: i32 = 10;
 
 fn face(radiant_at_keywords: Option<i32>) -> Script {
@@ -42,7 +42,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o the base face became Radiant at 10 keywords (R1850005); `KEPT_SCRIPTS`
+/// R767000: through v0.5.11p the base face became Radiant at 10 keywords (R1850005); `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -248,7 +248,7 @@ mod tests {
             assert!(!s.card(&rod.id).radiant);
         }
 
-        /// R767000: through v0.5.11o the base face became Radiant at 10 keywords, Flying among them.
+        /// R767000: through v0.5.11p the base face became Radiant at 10 keywords, Flying among them.
         #[test]
         fn r1850005_r767000_the_kept_script_becomes_radiant_at_10() {
             crate::under_kept(ID, script_v0_5_11o(), || {

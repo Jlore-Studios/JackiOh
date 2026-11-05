@@ -61,7 +61,7 @@ const QUESTS: QuestNumbers = QuestNumbers {
     exiles: 4,
     grave_units: 9,
 };
-/// R767000: the goals through v0.5.11o.
+/// R767000: the goals through v0.5.11p.
 const QUESTS_V0_5_11O: QuestNumbers = QuestNumbers {
     draws: 2,
     kills: 2,
@@ -428,7 +428,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11o and the versions back to v0.4.0f's ran, kept for their replays: the
+/// R767000: the scripts v0.5.11p and the versions back to v0.4.0f's ran, kept for their replays: the
 /// goals of #1704 (4 permanents, 15 damage, totals of 13) and the others as they stood before #3042
 /// (2 draws, 2 kills, a float of 3, a float of 5, 3 exiles, 6 Units in the graveyard).
 pub fn script_v0_5_11o() -> CardScripts {
@@ -2090,7 +2090,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.11o and before, at the goals before #3042.
+    /// R767000: the script kept for the replays of v0.5.11p and before, at the goals before #3042.
     mod v0_5_11o {
         use super::*;
 

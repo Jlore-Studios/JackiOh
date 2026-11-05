@@ -6,7 +6,7 @@
 //!
 //! End of turn (R62): one hit of ⌈Attack ÷ divisor⌉ to the enemy hero and every enemy Unit, one effect
 //! (`damage_all`, R59). R1878002: its Attack is the card's as it stands then, through the layers, buffs and
-//! auras included (§10.4); a hit of 0 (an Attack of 0) is no hit (R63). Through v0.5.11o (`script_v0_5_11o`,
+//! auras included (§10.4); a hit of 0 (an Attack of 0) is no hit (R63). Through v0.5.11p (`script_v0_5_11o`,
 //! kept, R767000) the quotient was rounded down, so a 2/1 Pod hit nothing. Equipped, its text runs on its host and reads the
 //! host's Attack (R102, R1086). R1878001: the Embiggened version is a Starship Piece and Equip, both lent by
 //! its text to the card stamped embiggened, so Equip is a play option only at (2), as Core #56 Jilliax's
@@ -26,7 +26,7 @@ fn embiggened_piece_and_equip(args: HookArgs<'_>) -> Vec<Keyword> {
     }
 }
 
-/// R1878002: "its Attack divided by {divisor}, rounded up" (`round_up`; through v0.5.11o rounded down),
+/// R1878002: "its Attack divided by {divisor}, rounded up" (`round_up`; through v0.5.11p rounded down),
 /// read as the turn ends.
 fn barrage(ctx: &mut EffectContext<'_>, round_up: bool) -> Vec<Effect> {
     let Some(attack) = ctx.live_self().map(|me| unit_view(&*ctx.state, me).attack) else {
@@ -55,7 +55,7 @@ pub fn script() -> CardScripts {
     missile_pod(true)
 }
 
-/// R767000: through v0.5.11o the hit was the Attack divided by the divisor rounded down (R1878002);
+/// R767000: through v0.5.11p the hit was the Attack divided by the divisor rounded down (R1878002);
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     missile_pod(false)
@@ -132,7 +132,7 @@ mod tests {
         s.expect_health(PlayerId::P2, 28);
     }
 
-    /// R767000: through v0.5.11o the quotient was rounded down.
+    /// R767000: through v0.5.11p the quotient was rounded down.
     #[test]
     fn r1878002_r767000_the_kept_script_rounds_down_so_a_2_attack_pod_hits_nothing_and_a_5_attack_one_for_1() {
         crate::under_kept(ID, script_v0_5_11o(), || {

@@ -1,6 +1,6 @@
 //! What became of #79 Twinspell's lasting effect (SPEC §5.1, §5.2, R209, R384, R3044000).
 //! Found by the polish-4 edge-case hunt, rounds 2 and 4 (docs/polish/4-edge-cases.md, lenses L1, L2, L8).
-//! Through v0.5.11o Twinspell's "the next Spell you play gains Echo +1" was a player modifier the
+//! Through v0.5.11p Twinspell's "the next Spell you play gains Echo +1" was a player modifier the
 //! permanent installed standing on the field, which ended when it left (R209). Since #3044 it is an
 //! Activate, once a turn (R384), whose grant is its player's for that turn, a rider with no source
 //! (R3044000): it outlives the Twinspell that gave it (bounced by radiant #52), and Twinspell standing on

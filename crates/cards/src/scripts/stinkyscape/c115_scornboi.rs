@@ -43,7 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o "a Starship" was the Starship keyword (R3038001), which the Drone
+/// R767000: through v0.5.11p "a Starship" was the Starship keyword (R3038001), which the Drone
 /// Battleships printed, so the aura spared them; `KEPT_SCRIPTS` folds those replays under it.
 fn scornboi_v0_5_11o(side: &str) -> Script {
     Script {
@@ -60,7 +60,7 @@ fn scornboi_v0_5_11o(side: &str) -> Script {
     }
 }
 
-/// R767000: the script through v0.5.11o (`scornboi_v0_5_11o`).
+/// R767000: the script through v0.5.11p (`scornboi_v0_5_11o`).
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: scornboi_v0_5_11o("any"),
@@ -207,7 +207,7 @@ mod tests {
         )));
         assert!(s.unit(P2, 1).is_none(), "the Meltdown Layer is gone");
         assert_eq!(s.unit_at(P2, 2).def_id, CHASSIS, "a Starship Piece stays");
-        // R767000: the script through v0.5.11o spared it by the Starship keyword it printed then.
+        // R767000: the script through v0.5.11p spared it by the Starship keyword it printed then.
         let old = super::script_v0_5_11o();
         for face in [&old.base, &old.radiant] {
             assert_eq!(

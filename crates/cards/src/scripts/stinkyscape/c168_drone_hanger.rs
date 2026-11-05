@@ -6,7 +6,7 @@
 //!   Interceptor into their leftmost open unit zone (R64), no Cry (R1), with a full unit row their
 //!   leftmost open backrow zone (R2248000); with no open zone nothing, and the use is spent all the same.
 //!   The Interceptor draws its own combat keyword as it arrives (R781004). Radiant: a Radiant Interceptor.
-//!   Through v0.5.11o (`script_v0_5_11o`, kept, R767000) it summoned one at its controller's start of turn
+//!   Through v0.5.11p (`script_v0_5_11o`, kept, R767000) it summoned one at its controller's start of turn
 //!   (R62), the opponent's summoning none.
 
 use jackioh_engine::prelude::*;
@@ -51,7 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// Through v0.5.11o: "Start of turn: Summon a Drone Interceptor.", the same summon with no Activate.
+/// Through v0.5.11p: "Start of turn: Summon a Drone Interceptor.", the same summon with no Activate.
 fn start_of_turn_face(radiant: bool) -> Script {
     Script {
         start_of_turn: Some(hook(move |_ctx| vec![summons(radiant)])),
@@ -59,7 +59,7 @@ fn start_of_turn_face(radiant: bool) -> Script {
     }
 }
 
-/// R767000: through v0.5.11o the Hanger summoned its Interceptor at its controller's start of turn;
+/// R767000: through v0.5.11p the Hanger summoned its Interceptor at its controller's start of turn;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(units(&s, P1), vec![(INTERCEPTOR.to_string(), true)]);
     }
 
-    /// R767000: through v0.5.11o its controller's start of turn summoned the Interceptor, and it had no
+    /// R767000: through v0.5.11p its controller's start of turn summoned the Interceptor, and it had no
     /// Activate.
     #[test]
     fn r62_r767000_the_kept_script_summons_at_its_controllers_start_of_turn_only() {

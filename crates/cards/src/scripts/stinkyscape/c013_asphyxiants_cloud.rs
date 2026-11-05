@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o the Cloud had Poisonous of its own, gave the modifier first, dealt its
+/// R767000: through v0.5.11p the Cloud had Poisonous of its own, gave the modifier first, dealt its
 /// damage and drew `draw`, and its Radiant face had Echo 1; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
@@ -259,7 +259,7 @@ mod tests {
             assert_eq!(hero_health(&s, P2), HERO_HEALTH - 2);
         }
 
-        /// R767000: through v0.5.11o the Cloud had Poisonous of its own, drew 1 and gave the modifier
+        /// R767000: through v0.5.11p the Cloud had Poisonous of its own, drew 1 and gave the modifier
         /// first. Its definition then had `draw` and Poisonous in place of Flashback.
         #[test]
         fn r767000_the_kept_script_hits_poisonously_and_draws() {
@@ -297,7 +297,7 @@ mod tests {
         }
     }
 
-    /// The Cloud's definition through v0.5.11o: Poisonous, `draw` 1 and `damage` 1 on both faces.
+    /// The Cloud's definition through v0.5.11p: Poisonous, `draw` 1 and `damage` 1 on both faces.
     fn old_definition(def: &mut CardDef) {
         for face in [&mut def.base, &mut def.radiant] {
             face.keywords = vec![Keyword::Poisonous];
@@ -355,7 +355,7 @@ mod tests {
             assert_eq!(hero_health(&s, P2), HERO_HEALTH - 4);
         }
 
-        /// R767000: through v0.5.11o it all happened twice (Echo 1) and drew 1 each time.
+        /// R767000: through v0.5.11p it all happened twice (Echo 1) and drew 1 each time.
         #[test]
         fn r767000_the_kept_script_all_happens_twice() {
             crate::under_kept_as(ID, script_v0_5_11o(), old_definition, || {

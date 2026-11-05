@@ -3,7 +3,7 @@
 //!            graveyard." — 1
 //!   Radiant: "Activate: The next Spell you play this turn gains Echo +{echoGain}." — 1; it stays on the
 //!            field, so it serves once each turn.
-//!   Through v0.5.11o: a lasting grant with no Activate, "Your next Spell gains Echo +{echoGain}. Then this
+//!   Through v0.5.11p: a lasting grant with no Activate, "Your next Spell gains Echo +{echoGain}. Then this
 //!   goes to the graveyard." (1, Radiant 2): the engine's `staticFlags.echoGrant` rider, which waited past
 //!   cleanup and buried its Twinspell when a Spell took it (R30, R209; `script_v0_5_11o`, kept, R767000).
 //!   Engine:  "An Activate, once a turn (R384). Its effect puts a this-turn `echoNextSpell` rider with no
@@ -62,7 +62,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000, R30, R209: through v0.5.11o Twinspell was a lasting grant. The engine reads the amount off
+/// R767000, R30, R209: through v0.5.11p Twinspell was a lasting grant. The engine reads the amount off
 /// the face the card wears when a Spell takes it, as its declared `echoGain` (R386), and buries the
 /// Twinspell that granted it; `KEPT_SCRIPTS` folds those replays under it.
 fn twinspell_v0_5_11o(amount: i32) -> Script {
@@ -75,7 +75,7 @@ fn twinspell_v0_5_11o(amount: i32) -> Script {
     }
 }
 
-/// R767000: the script v0.5.11o and the versions before it ran, kept for their replays.
+/// R767000: the script v0.5.11p and the versions before it ran, kept for their replays.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: twinspell_v0_5_11o(1),

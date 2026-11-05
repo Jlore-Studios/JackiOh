@@ -13,7 +13,7 @@
 //! the leftmost open unit zone, else the leftmost empty Locked one (R64, R688), and makes a forced
 //! attack on that Unit (R53), which strikes back, as Core #60 Bear Honeypot's tokens attack; one the
 //! token may not attack (§4.2 step 2) takes none. The Activate is offered while the token has such a
-//! zone, a Locked one included (R1862003, since #3040); through v0.5.11o only an open one counted.
+//! zone, a Locked one included (R1862003, since #3040); through v0.5.11p only an open one counted.
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;
@@ -45,7 +45,7 @@ fn has_entry_zone(state: &GameState, player: PlayerId) -> bool {
     first_entry_zone(state, player, Row::Units).is_some()
 }
 
-/// R767000: through v0.5.11o the Activate wanted an open (unlocked) unit zone, so a Locked one left it
+/// R767000: through v0.5.11p the Activate wanted an open (unlocked) unit zone, so a Locked one left it
 /// not offered; `KEPT_SCRIPTS` folds those versions' replays under `script_v0_5_11o`.
 fn has_open_zone(state: &GameState, player: PlayerId) -> bool {
     !open_zones(state, player, Row::Units).is_empty()
@@ -107,7 +107,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11o and every version before it ran, the Activate offered only while an
+/// R767000: the scripts v0.5.11p and every version before it ran, the Activate offered only while an
 /// open (unlocked) unit zone stood free; `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {

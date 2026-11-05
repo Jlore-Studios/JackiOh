@@ -2,7 +2,7 @@
 //!   Base:    "This has the text of the last Spell either player played, or of The Coin if none has been."
 //!   Radiant: "Echo 1 / This has the text of the last Spell either player played, or of The Coin if none
 //!            has been."
-//!   Through v0.5.11o: with no Spell played yet it had no text and did nothing (`script_v0_5_11o`, kept,
+//!   Through v0.5.11p: with no Spell played yet it had no text and did nothing (`script_v0_5_11o`, kept,
 //!   R767000).
 //!
 //! The card is a flag and a record; the text it has is B5 E14's subsystem, with its own engine tests
@@ -50,7 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base: echo(false, true), radiant: echo(true, true) }
 }
 
-/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: with no Spell
+/// R767000: the scripts v0.5.11p and the versions before it ran, kept for their replays: with no Spell
 /// played yet Echo had no text, played nothing and recorded nothing (R399).
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts { base: echo(false, false), radiant: echo(true, false) }

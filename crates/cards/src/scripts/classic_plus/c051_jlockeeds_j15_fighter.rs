@@ -1,7 +1,7 @@
 //! C+ #51 Jlockeed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
 //!   Base:    "Ranged, Flying, Rush, Can't Defend. Can't be attacked."
 //!   Radiant: "Ranged, Flying, Rush, Divine Shield, Can't Defend" and the same.
-//!   Through v0.5.11o: the same without Can't Defend, so it could switch to Defense Position (catalog data).
+//!   Through v0.5.11p: the same without Can't Defend, so it could switch to Defense Position (catalog data).
 //!   Through v0.5.9f: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
 //!   be attacked." (`script_v0_5_9f`, kept, R767000)
 //!   Engine:  "Can't be attacked" (§6.1, §4.2 step 2): no attack may name it, a forced one included; it is

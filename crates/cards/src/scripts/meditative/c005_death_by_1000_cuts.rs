@@ -2,7 +2,7 @@
 //!   Base:    "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your mana left after
 //!            paying for this." (1; 2)
 //!   Radiant: "Echo X, Lifesteal, Pierce\n…" (1; 4)
-//!   Through v0.5.11o: "X is {echo} times your max mana", and every repeat asked a fresh target
+//!   Through v0.5.11p: "X is {echo} times your max mana", and every repeat asked a fresh target
 //!   (`script_v0_5_11o`, kept, R767000).
 //!
 //! A computed Echo X (R802, R3048001): `Script.echo_x` reads `param(echo) × unspent_mana_of(controller)`
@@ -28,13 +28,13 @@ fn cuts(v0_5_11o: bool) -> Script {
     Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))],
         echo_x: Some(if v0_5_11o {
-            // Through v0.5.11o: `echo` times the caster's max mana (R802).
+            // Through v0.5.11p: `echo` times the caster's max mana (R802).
             read_hook(|args| param(&args, "echo") * max_mana_of(args.state, args.self_.controller))
         } else {
             // R3048001: `echo` times the mana left once the card is paid for.
             read_hook(|args| param(&args, "echo") * unspent_mana_of(args.state, args.self_.controller))
         }),
-        // R3048002: every Echo repeat hits the first resolution's pick, where through v0.5.11o each
+        // R3048002: every Echo repeat hits the first resolution's pick, where through v0.5.11p each
         // repeat asked a fresh target prompt (§6.2 Echo, R81).
         echo_keeps_targets: !v0_5_11o,
         cry: Some(hook(|ctx| {
@@ -55,7 +55,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays.
+/// R767000: the scripts v0.5.11p and the versions before it ran, kept for their replays.
 pub fn script_v0_5_11o() -> CardScripts {
     let both = cuts(true);
     CardScripts {
@@ -345,7 +345,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.11o and before.
+    /// R767000: the script kept for the replays of v0.5.11p and before.
     mod v0_5_11o {
         use super::*;
 

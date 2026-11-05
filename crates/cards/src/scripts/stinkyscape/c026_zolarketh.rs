@@ -9,7 +9,7 @@
 //! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the End of turn
 //! is its own from then on, at its controller's end of turn (R62), while it stays on the field (R78 resets
 //! the memory): a random non-token Starship Piece Unit summoned (`query::starship_pieces()`, R1878000,
-//! narrowed to Units, R380), Radiant from the Radiant face. Through v0.5.11o (`script_v0_5_11o`, kept,
+//! narrowed to Units, R380), Radiant from the Radiant face. Through v0.5.11p (`script_v0_5_11o`, kept,
 //! R767000) the memory gave it an Activate for the same summon, once a turn (R384).
 //!
 //! Through v0.5.9f (`script_v0_5_9f`, kept, R767000) its Cry summoned a base University that couldn't
@@ -159,7 +159,7 @@ fn gained_end_of_turn(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect>
     if chose_it { vec![summon_piece(radiant)] } else { vec![] }
 }
 
-/// #2657: "Activate: Summon a random Starship Piece", ZolarKeth's once its Cry chose it; through v0.5.11o.
+/// #2657: "Activate: Summon a random Starship Piece", ZolarKeth's once its Cry chose it; through v0.5.11p.
 fn gained_ability(radiant: bool) -> ActivationDecl {
     ActivationDecl {
         id: "piece".to_string(),
@@ -181,7 +181,7 @@ fn gained_ability(radiant: bool) -> ActivationDecl {
 }
 
 /// #2657: "Cry: Choose one: summon a University, or this gains '…'": `end_of_turn` is #3041's End of turn,
-/// else v0.5.11o's Activate.
+/// else v0.5.11p's Activate.
 fn chooses(radiant: bool, end_of_turn: bool) -> Script {
     Script {
         modes: vec![ModeDecl {
@@ -211,7 +211,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11o the Cry's `piece` mode gave ZolarKeth an Activate, once a turn, that summoned
+/// R767000: through v0.5.11p the Cry's `piece` mode gave ZolarKeth an Activate, once a turn, that summoned
 /// the random Starship Piece; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -360,7 +360,7 @@ mod tests {
         assert!(pieces[0].radiant);
     }
 
-    /// R767000: through v0.5.11o its Cry's `piece` mode gave it an Activate, not an End of turn.
+    /// R767000: through v0.5.11p its Cry's `piece` mode gave it an Activate, not an End of turn.
     #[test]
     fn r384_r767000_the_kept_script_gives_an_activate_that_summons_a_random_starship_piece_once_a_turn() {
         crate::under_kept(ID, script_v0_5_11o(), || {
