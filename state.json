@@ -17546,15 +17546,8 @@
       }
     },
     "3158": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41988416140",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-05T09:11:16Z",
-        "until": "2026-11-05T09:41:16Z"
-      },
       "handoff": {
         "at": "2026-11-05T09:09:55Z",
         "family": "claude",
@@ -17564,9 +17557,8 @@
         "reason": "planned on opus",
         "trail": "ead -20\", \"description\": \"List thread-locals in the game crates and tools\"}\n- Bash: {\"command\": \"until [ \\\"$(grep -c 'rc=' /tmp/claude-1001/-home-runner-work--temp-work-item-3158/5185b27f-0039-471e-aa82-b2da4841ad9c/tasks/bfi1vmm3q.output)\\\" -ge 6 ]; do sleep 10; done; cat /tmp/clau\u2026\n- Bash: {\"command\": \"grep -rn \\\"LazyLock<\\\\|OnceLock<\\\\|static .*: Once\\\\b\\\\|lazy_static\\\" crates/engine/src crates/cards/src crates/ai/src crates/tools/src/fuzz.rs crates/tools/src/duos_fuzz.rs | grep -v \\\"\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3158/.bot-plan.md\", \"old_string\": \"## Next\", \"new_string\": \"- Full local repro of the failed shards' own commands (binary at f18\u2026\n- Bash: {\"command\": \"sed -n 520,620p crates/cards/src/history.rs; grep -n \\\"fn fold_args\\\" -A25 crates/tools/src/fuzz.rs\", \"description\": \"Read shipped catalog building and fuzz fold args\"}\n- Bash: {\"command\": \"ls .github/actions/setup; cat .github/actions/setup/action.yml | head -120\", \"description\": \"Read the shared setup action\"}\n- Bash: {\"command\": \"git log --oneline --no-merges origin/production --not 02343deae9 | head; git diff --stat 02343deae9 8f053a42f4 | tail -3; git diff --stat 02343deae9 f18823b01e | tail -3\", \"description\":\u2026\n- Bash: {\"command\": \"echo A; git diff --stat 02343deae9 8f053a42f4 | tail -2; echo B; git diff --stat 02343deae9 f18823b01e | tail -2; echo C; git log --format='%h %p %s' -1 8f053a42f4 | cat\", \"description\":\u2026\n- Bash: {\"command\": \"git diff --stat 02343deae9 f18823b01e -- crates/engine crates/cards/src crates/tools crates/ai Cargo.toml Cargo.lock | tail -15\", \"description\": \"Check fuzz-relevant changes since the ca\u2026\n- Bash: {\"command\": \"cd /tmp && /usr/bin/time -f \\\"%e s wall, maxrss %M KB\\\" /tmp/jackioh-3158 fuzz --from 1 --seeds 400 2>&1 | tail -1\", \"description\": \"Measure peak memory for 400 seeds\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -rn -i \\\"fuzz\\\" reviews/ docs/ 2>/dev/null | grep -i -E \\\"min(ute)?s?\\\\b|[0-9]+ ?s\\\\b|timeout|took\\\" | head -20\", \"description\": \"Search reviews and docs for fuzz timing records\"}\n- Bash: {\"command\": \"sed -n 340,440p crates/engine/src/catalog.rs\", \"description\": \"Read the catalog thread-locals and their guards\"}\n- Bash: {\"command\": \"grep -n \\\"10.7\\\" spec/10-engine-guide.md | head -5; grep -rn \\\"eprintln!\\\\|stderr\\\" crates/tools/src/fuzz.rs crates/tools/src/duos_fuzz.rs | head; ls crates/tools/src/ | head -80 | tr '\\\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"fuzz\\\\\\\"\\\" crates/tools/tests/*.rs crates/tools/src/main.rs scripts/ e2e/ apps/web/src 2>/dev/null | head; grep -rn \\\"jackioh fuzz\\\\|jackioh-tools -- fuzz\\\" scripts/ bot/g\u2026\n- Bash: {\"command\": \"grep -n \\\"fuzz\\\" bot/go/internal/work/item.go | head; grep -rn \\\"Command\\\\|fuzz\\\" crates/tools/tests/acceptance.rs | grep -i fuzz | head\", \"description\": \"Check how bot and acceptance te\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3158/crates/tools/src/fuzz.rs\", \"offset\": 2453, \"limit\": 40}\n- Bash: {\"command\": \"sed -n 830,850p crates/tools/src/duos_fuzz.rs; grep -n \\\"fn fuzz_duos_seed\\\\|struct DuosSeedOutcome\\\" -A6 crates/tools/src/duos_fuzz.rs | head -20; grep -n \\\"play_seeds\\\\|play_wave(\\\\|pl\u2026\n- Bash: {\"command\": \"cat crates/tools/clippy.toml 2>/dev/null; cat clippy.toml 2>/dev/null | head -20; grep -n \\\"rayon\\\\|indexmap\\\\|anyhow\\\" crates/tools/Cargo.toml\", \"description\": \"Check tools clippy confi\u2026\n- Bash: {\"command\": \"grep -n \\\"reproduce\\\" crates/tools/src/fuzz.rs | head -20; grep -n \\\"reproduce\\\\|--duos --from\\\" crates/tools/src/duos_fuzz.rs | head\", \"description\": \"Find existing reproduce-line build\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3158/crates/tools/src/fuzz.rs\", \"offset\": 2105, \"limit\": 30}\n- Bash: {\"command\": \"grep -n \\\"struct Forcing\\\" -A12 crates/tools/src/fuzz.rs; grep -n \\\"fn ids\\\\|fn cards_arg\\\\|impl Forcing\\\" -A3 crates/tools/src/fuzz.rs | head -30\", \"description\": \"Read the Forcing type\u2026\n- Bash: {\"command\": \"sed -n 1849,1856p crates/tools/src/fuzz.rs; sed -n 40,50p crates/tools/src/fuzz.rs; sed -n 1,40p crates/tools/src/duos_fuzz.rs | head -40\", \"description\": \"Read wave_name and module head\u2026\n- Bash: {\"command\": \"sed -n 30,40p crates/tools/src/fuzz.rs; sed -n 96,118p crates/tools/src/fuzz.rs\", \"description\": \"Read fuzz header around the clock note\"}\n- Bash: {\"command\": \"grep -n \\\"README\\\\|read_dir(.*src\\\\|\\\\.rs\\\\\\\"\\\" crates/tools/tests/acceptance.rs | head -20; grep -rn \\\"crates/tools/src\\\" scripts/ci-scope.sh | head -5\", \"description\": \"Check tests tha\u2026\n- Bash: {\"command\": \"sed -n 14,30p crates/tools/tests/acceptance.rs; grep -n \\\"fn .*readme\\\\|Module\\\\b\\\\|module column\\\\|\\\\| Module\\\" crates/tools/tests/acceptance.rs | head\", \"description\": \"Read the README\u2026\n- Bash: {\"command\": \"grep -n \\\"fn readme\\\\|fn the_readme\\\\|command table\\\\|fn row_words\\\\|fn cli_\\\" crates/tools/tests/acceptance.rs | head\", \"description\": \"Locate the README command-table test\"}\n- Bash: {\"command\": \"ls crates/tools/src/lib.rs 2>/dev/null; sed -n 1,4p crates/tools/src/main.rs; sed -n 36,40p crates/tools/src/main.rs; grep -n \\\"rayon\\\" crates/tools/src/duos_fuzz.rs\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"grep -n \\\"fn forcing_of\\\\|mod .* {$\\\" crates/tools/src/fuzz.rs | sed -n 1,60p | grep -n \\\"forcing_of\\\\|mod \\\" | tail -30\", \"description\": \"Locate test modules and forcing_of helper\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3158/.bot-plan.md\", \"content\": \"# Draft plan for #3158 (planner notes)\\n\\n## Findings\\n- super.yml `fuzz`: 4 shards, timeout-minutes 90; each runs `fu\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[workspace.lints\\\" -A30 Cargo.toml | head -40; grep -n \\\"lints\\\" crates/tools/Cargo.toml\", \"description\": \"Check workspace lint settings\"}\n- said: **Goal.** I couldn't reproduce the timeout, so this plan does not root-cause it or fix it. It makes the next overrun show up in the log, with the seed named. Shards 1 and 3 of super.yml's `fuzz` job were cut off at their 90-minute `timeout-minutes`. The run as a whole was not cancelled, because `re\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-05T07:36:18Z",
       "owner_why": "it plans it",
@@ -17577,18 +17569,18 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "run_id": "41988416140",
+      "run_id": "pending:5b1e6752-1793869919",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T07:36:18Z",
+      "started_at": "2026-11-05T09:12:33Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T09:02:02Z",
+    "at": "2026-11-05T09:12:33Z",
     "url": "",
-    "what": "spot-check #3123 on claude-6"
+    "what": "build #3158 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-05T08:59:04Z",
