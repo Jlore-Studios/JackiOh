@@ -31,6 +31,11 @@ use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::economy::practice::{ClaimBucket, ClaimedResult};
 
+// The rows an opening names and the cosmetics an account owns are `jackioh-shared`'s (#3104): the pure economy
+// decides over them and the store keeps them.
+pub use jackioh_shared::cosmetics::{CardCosmetic, FullArtPick, OwnedCosmetics};
+pub use jackioh_shared::economy::ledger::{Counter, InventoryItem};
+
 // The literals
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
@@ -76,44 +81,6 @@ pub enum EconomyReason {
     /// R2875000: a news entry's reward claimed (§14.13), its `ref` the entry's id; migration 0077
     /// lets the inventory ledger take it.
     News,
-}
-
-/// What an inventory row counts (§14.3, §14.5, §14.6). A set's card pack is keyed by its set, the
-/// global card pack and a cosmetic pack by nothing (`""`), a card token by nothing (any new card) or
-/// a rarity, and a cosmetic token by its rarity.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum InventoryItem {
-    SetPack,
-    GlobalPack,
-    CosmeticPack,
-    CardToken,
-    CosmeticToken,
-}
-
-/// One of an account's counters (§14.4–§14.6): a pity counter per rarity, each token bar's points,
-/// the cosmetic token cycle's steps paid, and the Chase Shard bar's cosmetic packs opened.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum Counter {
-    PityEpic,
-    PityLegendary,
-    PityMythic,
-    CardTokenBar,
-    CosmeticTokenBar,
-    CosmeticTokenCycle,
-    ChaseShardBar,
-}
-
-impl Counter {
-    /// A pity counter (§14.4), the only kind a pack key may name: its account keeps one over all
-    /// its card packs (`""`) or one per kind of pack, as the pity math's sub-issue rules.
-    pub fn is_pity(self) -> bool {
-        matches!(
-            self,
-            Counter::PityEpic | Counter::PityLegendary | Counter::PityMythic
-        )
-    }
 }
 
 /// What befell a held quest (§14.9; `quest_grants.change`).
@@ -185,64 +152,6 @@ pub struct HeldQuest {
 pub struct QuestBook {
     pub held: Vec<HeldQuest>,
     pub next_due_at: Option<i64>,
-}
-
-/// One row of `public.card_cosmetics` (§14.2): a per-card cosmetic owned on one card.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CardCosmetic {
-    pub card_id: String,
-    pub cosmetic_id: String,
-}
-
-/// An account's cosmetics (§14.2): per card, and the account cosmetics by id. The starter
-/// cosmetics, owned by every account, have no row.
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct OwnedCosmetics {
-    pub cards: Vec<CardCosmetic>,
-    pub account: Vec<String>,
-}
-
-/// R2655000: a card's own full-art pick: `false` (no full art), `true` (its Epic full art, as every
-/// pick before #2655 named it) or a full art's registry id, which travels as the id's text. An id
-/// is kept as written and judged where it is worn, as a foil's is (`cosmetics::full_art_picked`).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum FullArtPick {
-    On(bool),
-    Id(String),
-}
-
-impl From<bool> for FullArtPick {
-    fn from(on: bool) -> FullArtPick {
-        FullArtPick::On(on)
-    }
-}
-
-impl FullArtPick {
-    /// Whether the pick prints a full art at all: `true` or any id.
-    pub fn prints(&self) -> bool {
-        !matches!(self, FullArtPick::On(false))
-    }
-
-    /// The id the pick names, if it names one rather than a switch.
-    pub fn id(&self) -> Option<&str> {
-        match self {
-            FullArtPick::Id(id) => Some(id),
-            FullArtPick::On(_) => None,
-        }
-    }
-
-    /// The pick a row of `public.card_cosmetic_picks` holds: its `full_art` switch, and the id
-    /// migration 0072 keeps beside a switch that is on.
-    pub fn of_row(full_art: Option<bool>, id: Option<String>) -> Option<FullArtPick> {
-        match (full_art, id) {
-            (Some(true), Some(id)) => Some(FullArtPick::Id(id)),
-            (Some(on), _) => Some(FullArtPick::On(on)),
-            (None, _) => None,
-        }
-    }
 }
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account

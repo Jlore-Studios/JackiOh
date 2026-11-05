@@ -585,7 +585,7 @@ export async function replaceQuest(token: string, questId: string): Promise<Ques
 
 export type PackCounters = { epic: number; legendary: number; mythic: number };
 
-/** One tiered roll's chance of each tier, fallback included (`TierOdds`, `crates/server/src/economy/tiers.rs`, R1339000). */
+/** One tiered roll's chance of each tier, fallback included (`TierOdds`, `crates/shared/src/economy/tiers.rs`, R1339000). */
 export type TierOdds = Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
 
 export type PacksResponse = {
@@ -678,7 +678,7 @@ export function getWallet(token: string): Promise<WalletResponse> {
   return keptGet<WalletResponse>(keptPaths.wallet, token);
 }
 
-/** What reaching a set-track level pays (`LevelReward`, `crates/server/src/economy/track_rewards.rs`). */
+/** What reaching a set-track level pays (`LevelReward`, `crates/shared/src/economy/track_rewards.rs`). */
 export type TrackRewards = { jlore: number; setPacks: number; cardTokens: number };
 
 /** One shipped set's track (§14.7): `xp` is its total; `levelXp`, `xpToNext` and `nextRewards` are null on the last level (R1302005). */

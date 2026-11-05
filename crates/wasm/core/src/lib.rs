@@ -772,6 +772,20 @@ pub fn host(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::host::boundary::apply(call))
 }
 
+// The collection economy's decisions (SPEC §14.3 to §14.7; #3104)
+
+/// One call of `jackioh_shared::economy`, the economy's decisions the server calls natively: the input is an
+/// `EconomyCall` (`{ "call": "openCardPack", "records": …, "pack": "global", "seed": "…", "now": … }`), the
+/// output an `EconomyAnswer` (`{ "opened": … }`, `{ "cosmeticOpened": … }`, `{ "filled": … }`,
+/// `{ "reward": … }` or `{ "refused": … }`). The host reads the records from its store, passes the seed and
+/// the time in, and writes the answer's grants back (`crates/shared/README.md`, the host contract). A pool,
+/// a registry or a catalog version a call leaves out is the one compiled in. A rules refusal is the returned
+/// `refused`, never an error: only a call that does not parse is one. No decision is made here.
+pub fn economy(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::economy::boundary::EconomyCall = parse("economy: the call", call_json)?;
+    to_json(&jackioh_shared::economy::boundary::apply(&call))
+}
+
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
 // mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
 // feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only
@@ -1243,6 +1257,49 @@ mod series_body_tests {
         for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
             let error = series(call).unwrap_err();
             assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod economy_body_tests {
+    use super::*;
+
+    fn records(held: i64) -> Value {
+        json!({
+            "held": held, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+            "counters": {
+                "pity": { "epic": 0, "legendary": 0, "mythic": 0 },
+                "cardBar": 0, "cosmeticBar": 0, "cosmeticCycle": 0, "chaseShard": 0,
+            },
+        })
+    }
+
+    /// The body is `jackioh_shared::economy::boundary::apply` over JSON: the opening it answers holds the
+    /// grants a store writes, and a pack not held is a refusal the host reads, not an error.
+    #[test]
+    fn economy_body_answers_an_opening_and_a_refusal() {
+        let call =
+            json!({ "call": "openCardPack", "records": records(1), "pack": "global", "seed": "s", "now": 1 });
+        let opened: Value = serde_json::from_str(&economy(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(opened["opened"]["slots"].as_array().map(Vec::len), Some(5));
+        assert_eq!(opened["opened"]["grants"][0]["kind"], "inventory");
+        assert_eq!(opened["opened"]["grants"][0]["delta"], -1);
+        // The same call, the same opening.
+        assert_eq!(
+            economy(&call.to_string()).unwrap(),
+            economy(&call.to_string()).unwrap()
+        );
+        let call = json!({ "call": "openCosmeticPack", "records": records(0), "seed": "s", "now": 1 });
+        let refused: Value = serde_json::from_str(&economy(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(refused["refused"]["reason"], "no_pack_held");
+    }
+
+    #[test]
+    fn economy_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"fillBar"}"#] {
+            let error = economy(call).unwrap_err();
+            assert!(error.starts_with("economy: the call"), "{call:?}: {error}");
         }
     }
 }

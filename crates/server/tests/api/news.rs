@@ -16,8 +16,8 @@ use jackioh_server::config::{
 };
 use jackioh_server::cosmetics::CosmeticRarity;
 use jackioh_server::economy::news::{NewsEntry, NewsKind, NewsReward};
-use jackioh_server::economy::roll::PackKind;
 use jackioh_server::economy::store::{EconomyReason, EconomyTables, JloreReason};
+use jackioh_shared::economy::roll::PackKind;
 
 use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
 use crate::support::store::{fake, uuid};

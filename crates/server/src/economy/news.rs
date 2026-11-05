@@ -21,14 +21,13 @@
 
 use std::collections::BTreeSet;
 
+use jackioh_shared::economy::roll::PackKind;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use super::idempotency::{RequestKey, Spent, keep, replayed};
-use super::packs::inventory_of;
-use super::roll::PackKind;
 use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason};
 use crate::admin::store::{NEWS_POST_ID_PREFIX, NewsPost};
 use crate::api::catalog::PATCHES_JSON;
@@ -463,7 +462,7 @@ async fn pay(tx: &mut Tx<'_>, profile_id: &str, entry: &NewsEntry, at: i64) -> R
             .ok_or_else(|| ApiError::internal("the wallet refused a news reward"))?;
             return Ok(());
         }
-        NewsReward::CardPack(pack) => inventory_of(pack),
+        NewsReward::CardPack(pack) => pack.inventory(),
         NewsReward::CardToken => (InventoryItem::CardToken, String::new()),
         NewsReward::CosmeticToken(tier) => (InventoryItem::CosmeticToken, tier.as_str().to_string()),
         NewsReward::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),

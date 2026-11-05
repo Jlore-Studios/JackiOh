@@ -9,14 +9,21 @@ use serde::{Deserialize, Serialize};
 
 /// What one set-track level pays when its track reaches it (SPEC §14.7).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct LevelReward {
-    /// Jlore granted with [`crate::economy::store::JloreReason::Track`].
+    /// Jlore granted with the ledger's `Track` Jlore reason.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub jlore: i64,
-    /// Card packs of the track's own set, granted with
-    /// [`crate::economy::store::EconomyReason::Track`].
+    /// Card packs of the track's own set, granted with the ledger's `Track` reason.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub set_packs: i64,
-    /// Card tokens (any new card), granted with [`crate::economy::store::EconomyReason::Track`].
+    /// Card tokens (any new card), granted with the ledger's `Track` reason.
+    #[cfg_attr(feature = "ts", ts(type = "number"))]
     pub card_tokens: i64,
 }
 

@@ -60,8 +60,9 @@ const SHARED: &[&str] = &[
 /// `series`, the Conquest series rules of `jackioh-shared`, which no custom-card practice game or card
 /// creator plays, so the Luau module that leaves with #3097 never binds it, and #3101's `host`, the
 /// match host's machine, which no custom-card practice game plays on (practice runs on it after the Luau
-/// module is gone, #3099). Their other wrapper is the C module's (#3093), as the host contract of
-/// `crates/shared/README.md` says.
+/// module is gone, #3099), and #3104's `economy`, the collection economy's decisions (pack rolls, pity, the
+/// token bars), which no custom-card practice game or card creator makes. Their other wrapper is the C
+/// module's (#3093), as the host contract of `crates/shared/README.md` says.
 const NORMAL_ONLY: &[&str] = &[
     "learned_parity",
     "duos_create",
@@ -71,6 +72,7 @@ const NORMAL_ONLY: &[&str] = &[
     "duos_view_for",
     "series",
     "host",
+    "economy",
 ];
 
 /// What only the Luau module binds, and why: the creator's check (#913, #919) and the C

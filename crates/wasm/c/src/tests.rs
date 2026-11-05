@@ -338,6 +338,49 @@ fn host_export_answers_what_the_core_body_answers() {
 }
 
 #[test]
+fn economy_export_answers_what_the_core_body_answers() {
+    init();
+    // A set track's level reward and a dev bar fill are data in, data out (#3104).
+    let reward = r#"{ "call": "levelReward", "level": 10 }"#;
+    let answer = call!(economy; reward;);
+    assert_eq!(answer, expect(wasm_core::economy(reward)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    assert_eq!(
+        serde_json::from_str::<Value>(&answer.text).expect("JSON")["reward"]["cardTokens"],
+        1
+    );
+    // A pack opening: the records in, the grants out, and no pack held a refusal that is an answer.
+    let records = json!({
+        "held": 0, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+        "counters": { "pity": { "epic": 0, "legendary": 0, "mythic": 0 },
+                      "cardBar": 0, "cosmeticBar": 0, "cosmeticCycle": 0, "chaseShard": 0 },
+    });
+    let open = json!({ "call": "openCardPack", "records": records, "pack": "global", "seed": "s", "now": 1 })
+        .to_string();
+    let refused = call!(economy; open;);
+    assert_eq!(refused, expect(wasm_core::economy(&open)));
+    assert_eq!(refused.status, STATUS_OK, "{}", refused.text);
+    assert!(refused.text.contains("no_pack_held"), "{}", refused.text);
+    let mut held = records.clone();
+    held["held"] = json!(1);
+    let open = json!({ "call": "openCardPack", "records": held, "pack": "global", "seed": "s", "now": 1 })
+        .to_string();
+    let opened = call!(economy; open;);
+    assert_eq!(opened, expect(wasm_core::economy(&open)));
+    assert_eq!(opened.status, STATUS_OK, "{}", opened.text);
+    assert_eq!(
+        serde_json::from_str::<Value>(&opened.text).expect("JSON")["opened"]["slots"]
+            .as_array()
+            .map(Vec::len),
+        Some(5)
+    );
+    // A call that does not parse is the one failure.
+    let broken = call!(economy; "{}";);
+    assert_eq!(broken, expect(wasm_core::economy("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
 fn run_exports_answer_what_the_core_bodies_answer() {
     init();
     let content = call!(run_content; "[]";);

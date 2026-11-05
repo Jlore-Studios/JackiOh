@@ -131,6 +131,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `choose_action(state, seat, rng_seed, rng_cursor)` | strings, then `rng_cursor: f64` | `{ action, rngCursor }` |
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
+| `economy(call)` | string | #3104: one call of `jackioh-shared`'s collection economy, an `EconomyCall` in and an `EconomyAnswer` out (`openCardPack` and `openCosmeticPack` take the records the store read, the seed and the time, and answer the slots, the `grants` to write in order and the `log` every row's `ref` carries; `fillBar` and `levelReward` are reads); the host reads the records from its store and writes the grants back (`crates/shared/README.md`, the host contract) |
 | `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; the rematch book's calls answer its next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
@@ -159,7 +160,8 @@ that differs by one byte is parsed again, so an answer never depends on the cach
 `FIXTURE_BANNED_IDS` and `AI_DECK`; `RUN`, the dungeon run's numbers; and each constant of
 `apps/web/src/wire/engineConfig.ts` under its own name (`DECK_SIZE`, `MAX_COPIES`, `DIFFICULTIES`, …),
 so a host reads `constants.DECK_SIZE` as the web does; and each constant of `jackioh-shared`'s `config.rs`
-(`SERIES_WINS_NEEDED`, `SERIES_MAX_GAMES`, `SERIES_PICK_SECONDS`, `MS_PER_SECOND`, #3098). A host restates
+(`SERIES_WINS_NEEDED`, `SERIES_MAX_GAMES`, `SERIES_PICK_SECONDS`, `MS_PER_SECOND`, #3098, and the economy's
+`PACK_SLOTS`, `CARD_TIER_WEIGHTS`, `PITY_EPIC_PACKS`, `COSMETIC_TOKEN_CYCLE` and the rest of its tables, #3104). A host restates
 none of them. Later shared modules add theirs here.
 
 ## Determinism, the clock and threading

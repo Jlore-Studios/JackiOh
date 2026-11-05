@@ -783,5 +783,16 @@ pub extern "C" fn host(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::host(arg("host: the call", call_json_ptr, call_json_len)?))
 }
 
+// The collection economy's decisions (SPEC §14, #3104: `jackioh-shared`, which the server calls natively)
+
+/// One call of the economy's decisions: an `EconomyCall` as JSON in, an `EconomyAnswer` as JSON out. The
+/// host reads the records from its store, passes the seed and the time in, and writes the answer's grants
+/// back (`crates/shared/README.md`, the host contract). A rules refusal is an answer's data, never a failed
+/// status: only a call that does not parse is one.
+#[unsafe(no_mangle)]
+pub extern "C" fn economy(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::economy(arg("economy: the call", call_json_ptr, call_json_len)?))
+}
+
 #[cfg(test)]
 mod tests;

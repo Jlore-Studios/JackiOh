@@ -23,12 +23,12 @@ use jackioh_server::cosmetics::{
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
 use jackioh_server::economy::packs::open_pack;
-use jackioh_server::economy::roll::PackKind;
 use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
 use jackioh_server::economy::tokens::{redeem_cosmetic_token, redeem_cosmetic_token_once};
+use jackioh_shared::economy::roll::PackKind;
 
 use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
 use crate::support::store::{fake, uuid};

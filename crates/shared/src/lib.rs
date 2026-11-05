@@ -7,9 +7,16 @@
 //! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. Next is the
 //! match host's decisions (#3101): [`host`] holds the clocks, the disconnect grace, the rematch offers and
 //! the relays as one state machine, `step(host, event, now) -> (host, outputs)`.
+//!
+//! Then the collection economy's rolls (#3104): [`cosmetics`] is the cosmetics registry (data compiled in,
+//! SPEC §14.2) and [`economy`] what is decided over plain records: a card pack's and a cosmetic pack's
+//! roll, pity, the token bars, the set-track curve and its reward table (SPEC §14.3 to §14.7), each
+//! `decide(records, inputs, seed, now_ms) -> outcome`, the grants and the new records as data.
 
 pub mod config;
+pub mod cosmetics;
 pub mod deck;
+pub mod economy;
 pub mod host;
 pub mod series;
 

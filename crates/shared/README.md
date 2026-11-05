@@ -9,7 +9,9 @@ comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
-actor and the later practice and ladder-bot hosts (#3099, #3103) run on.
+actor and the later practice and ladder-bot hosts (#3099, #3103) run on; the third is the collection
+economy's rolls (SPEC §14, #3104): the cosmetics registry, the card and cosmetic pack rolls, pity, the
+token bars and the set-track curve and rewards, each `decide(records, inputs, seed, now_ms) -> outcome`.
 
 ## Host contract
 
@@ -50,10 +52,10 @@ Every Part B issue follows it, and review holds each one to it.
 No clock, no I/O, no environment, no threads, no OS randomness, no hash-ordered collection, no mutable
 static. Two things hold it, as in the other pure crates:
 
-- `Cargo.toml` takes `serde`, `indexmap`, the engine and the AI (the host machine asks it who owes a
-  move) and, behind the off-by-default `ts` feature, `ts-rs` (`serde_json` and the cards only as
-  dev-dependencies: the machine's tests play on the real catalog). It may also take `serde_json`, the
-  cards and the run, never `jackioh-luau`, and none of them takes it.
+- `Cargo.toml` takes `serde`, `serde_json`, `indexmap`, the engine, the AI (the host machine asks it who
+  owes a move), the cards (the cosmetics registry judges an offer against the shipped catalog) and, behind
+  the off-by-default `ts` feature, `ts-rs`. It may also take the run, never `jackioh-luau`, and none of
+  them takes it.
 - `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
   the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
@@ -66,7 +68,11 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 (R333), and the match host's: `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS`
 (R268), `DISCONNECT_GRACE_SECONDS`, `MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000),
 `BOT_WRITE_RETRY_MS` (R1452), `AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and
-the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672). The server re-exports them from its own
+the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672), and the economy's (#3104): the drop tables
+(`CARD_TIER_WEIGHTS`, `COSMETIC_TIER_WEIGHTS`, `TIER_WEIGHT_TOTAL`, `PACK_SLOTS`, the floors, the global
+cosmetic roll), pity (`PITY_*_PACKS`), the token bars (`CARD_TOKEN_BAR_SIZE`, `COSMETIC_TOKEN_CYCLE` and the
+points per rarity), the cosmetic pack and Chase Shard bar, and the set track's `SET_TRACK_XP_PER_LEVEL`. The
+server re-exports them from its own
 `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants`
 carries them, which the browser and the C module (`crates/wasm/c`) both bind.
 
@@ -216,6 +222,64 @@ holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s
 Duos co-op (`crates/server/src/duos/actor.rs`) runs on the same event and output shapes in a second
 part of #3101; until then its clocks and grace are the server's.
 
+## `src/cosmetics.rs` and `cosmetics.json`: the registry
+
+Every cosmetic a player can pick (SPEC §14.2, R1295000), compiled in (`include_str!("../cosmetics.json")`):
+`Cosmetic`, its kinds and rarities, the registry's check (`problems`, `parse`, `registry`, `shipped`), the
+offers a version or augment makes (`offered`, R2725001), ownership (`owns`, `row_owns`, `check_pick`) and the
+lists a pack may drop (`pack_cosmetics`, `global_cosmetics`, `cosmetic_pack_cosmetics`). A cosmetic's offer is
+judged against the shipped catalog (`shipped_defs`, `jackioh_cards::catalog_json`). The rows an account owns
+(`CardCosmetic`, `OwnedCosmetics`, `FullArtPick`) are here because the registry's rules read them. The server's
+`cosmetics` module re-exports all of it, and `crates/server/tests/export_cosmetics.rs` writes the registry into
+`apps/web/src/wire/generated/cosmetics.ts`.
+
+## `src/economy/`: the collection economy
+
+What a pack opening grants, how pity and the token bars move, and what a set-track level pays (SPEC §14.3 to
+§14.7), over plain records. The server's store code reads the records, calls the decision and writes the
+outcome (`crates/server/src/economy/grants.rs`); a Roblox script would write the same outcome to DataStores.
+
+| Decision | Records in | Outcome |
+| --- | --- | --- |
+| `open_card_pack(&PackRecords, &PackInputs, seed, now_ms)` | the packs of the kind held, the account's copies of each card, its cosmetics and its counters | the slots, the pity after, what both bars did, the `grants` in the order to write them and the `log` every row's `ref` carries (R1301003, R1339002); `EconomyRefusal` for no pack held or a pool of no card |
+| `open_cosmetic_pack(&PackRecords, &CosmeticPackInputs, seed, now_ms)` | the same | the slots, the Chase Shard bar before and after (R1306002), both bars, the `grants` and the `log` (R1306003) |
+| `bars::fill_bar(kind, &AccountCounters)` | a dev account's counters | the writes of a fill (R1310003), all `Cause::Dev` |
+| `track_rewards::reward_for_level(level)` | a level | what reaching it pays (R1302) |
+
+- **The inputs are what the roll draws from, not what the store holds:** the pool in catalog order
+  (`roll::pack_pool` over a `CardDefs`), the cosmetics registry and the catalog version, which the log keeps so
+  an opening replays however the live catalog or registry has moved (R1301003). A call across the boundary that
+  leaves them out gets the compiled-in ones.
+- **Every draw is the roll's, in the order its docs state (R1339002):** `Rng::new(seed, 0)`, the slot tiers first
+  (pity adds none), then slot by slot the card's, the global roll's, the cosmetic tier's and the pick's. A replayed
+  opening grants the same.
+- **`LedgerGrant`s are the writes:** an inventory change (the pack spent first, a token paid), the cards unlocked
+  (the copies each adds and the quantity then held), a cosmetic now owned, a counter's change (never a zero one).
+  Each carries its `Cause` (`PackOpen`, `TokenBar`, `Dev`), which the store's ledger reason names. A store refuses
+  a grant its holding cannot take and writes nothing more.
+- **`roll`, `cosmetic_pack`, `tiers`, `math`** are the rolls themselves (tiered rolls, the dupe chain, pity and the
+  level curve), moved from `crates/server/src/economy/` with their tests; `bars` is the token bars (R1305000,
+  R1953000, R2728000).
+
+### The boundary
+
+`jackioh-wasm-core`'s `economy(call)` takes one `EconomyCall` as JSON and answers one `EconomyAnswer`:
+
+```json
+{ "call": "openCardPack", "records": { "held": 1, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+  "counters": { "pity": { "epic": 0, "legendary": 0, "mythic": 0 }, "cardBar": 0, "cosmeticBar": 0,
+  "cosmeticCycle": 0, "chaseShard": 0 } }, "pack": "global", "seed": "…", "now": 1700000000000 }
+{ "opened": { "pack": "global", "slots": [ … ], "pity": { … }, "bars": { … }, "grants": [ … ], "log": { … }, "at": 1700000000000 } }
+{ "refused": { "reason": "no_pack_held", "message": "no unopened pack of that kind" } }
+```
+
+The calls are `openCardPack`, `openCosmeticPack`, `fillBar` and `levelReward`; the answers are `opened`,
+`cosmeticOpened`, `filled`, `reward` and `refused`. `boundary::apply` is the one function behind it. Not in the
+Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+
+The rest of #3104 (what a finished game counts toward a quest, the daily Jlore cap's partial pay, and the quest
+pool as data) moves in its second part.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:
@@ -225,7 +289,9 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 ## Tests
 
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
-unchanged, and `tests/boundary.rs` the JSON boundary. The host machine's: `tests/clock.rs` (the clock's
+unchanged, and `tests/boundary.rs` the JSON boundary. The economy's rolls carry their tests in their modules
+(moved from `crates/server/src/economy/` and `crates/server/src/cosmetics.rs`), and `tests/economy.rs` holds the
+decisions over records and their boundary. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book) and `tests/host_boundary.rs`. The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.

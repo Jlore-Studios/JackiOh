@@ -34,7 +34,6 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{CallOutcome, E2eStoreOptions, FakeCatalog, FakeTables, create_e2e_store};
 use jackioh_server::db::store::{LastBoardKind, ProfileStatus, StoreError};
-use jackioh_server::economy::math::{level_span_xp, xp_to_next_level};
 use jackioh_server::economy::practice::{self, ClaimBucket, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action, track_level};
@@ -42,7 +41,8 @@ use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, JloreGrant, JloreReason, PracticeClaim, PracticeDeck, PracticeOutcome,
     PracticeSeed, PracticeSettled, PracticeSetup, QuestChange, QuestGrant,
 };
-use jackioh_server::economy::track_rewards::reward_for_level;
+use jackioh_shared::economy::math::{level_span_xp, xp_to_next_level};
+use jackioh_shared::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{RecordingLogger, add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};

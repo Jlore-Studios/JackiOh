@@ -411,6 +411,15 @@ pub fn host(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::host(call_json))
 }
 
+// The collection economy's decisions (SPEC §14, #3104: `jackioh-shared`, which the server calls natively)
+
+/// One call of the economy's decisions: an `EconomyCall` as JSON in, an `EconomyAnswer` as JSON out. The host
+/// reads the records from its store and writes the answer's grants back (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn economy(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::economy(call_json))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

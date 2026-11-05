@@ -1,6 +1,6 @@
 [package]
 name = "jackioh-shared"
-description = "The logic the JackiOh server and its clients share, pure (CLAUDE.md rule 4): first, the Conquest series rules (SPEC §9.5)."
+description = "The logic the JackiOh server and its clients share, pure (CLAUDE.md rule 4): the Conquest series rules, the match host's machine and the collection economy's rolls."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,7 +12,11 @@ publish.workspace = true
 jackioh-engine = { workspace = true }
 # The host machine asks the AI who owes a move (`ai_to_act`) and reads a panic's text (`panic_message`).
 jackioh-ai = { workspace = true }
+# The cosmetics registry is parsed here (`cosmetics.json`, compiled in), and an offer is judged against the
+# shipped catalog (`jackioh_cards::catalog_json`).
+jackioh-cards = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 indexmap = { workspace = true }
 # Off by default, as the engine's and the run's `ts` are: the types that cross the boundary (README.md, the
 # host contract) are written to `apps/web/src/wire/generated/` by `cargo test -p jackioh-shared --features ts`,
@@ -22,7 +26,3 @@ ts-rs = { workspace = true, optional = true }
 [features]
 ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
-[dev-dependencies]
-serde_json = { workspace = true }
-# The host machine's tests play whole games under the real catalog.
-jackioh-cards = { workspace = true }

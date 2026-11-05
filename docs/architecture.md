@@ -830,7 +830,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `cargo jackioh catalog check` counts on its second line (`<n> entries (<cards> cards + <tokens> tokens)`:
    every card and token of the seven shipped sets, spec §8) and `select app.catalog_version();` → your
    `CATALOG_VERSION`, the latest card patch's version (R388).
-   In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`
+   In the same transaction it writes the cosmetics registry compiled in, `crates/shared/cosmetics.json`
    (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its
    stamp it writes the starter cards (`STARTER_CARDS`, R1310000) into `app.settings`:
    `select jsonb_array_length(value) from app.settings where key = 'starter_cards';` → 39.

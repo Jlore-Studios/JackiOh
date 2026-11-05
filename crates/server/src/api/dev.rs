@@ -33,19 +33,18 @@ use crate::api::e2e::is_e2e_dev;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, str};
 use crate::app::{App, now_ms};
 use crate::config::{
-    CARD_TOKEN_BAR_SIZE, DEV_JLORE_PER_REQUEST_MAX, DEV_XP_PER_REQUEST_MAX, SET_TRACK_FIRST_LEVEL,
-    SET_TRACK_LEVELS,
+    DEV_JLORE_PER_REQUEST_MAX, DEV_XP_PER_REQUEST_MAX, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
 };
 use crate::cosmetics::offered;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
-use crate::economy::math::level_for_xp;
-use crate::economy::packs::{bar_before, cycle_at, cycle_step, delta_of};
+use crate::economy::grants::{Writing, counters_of, write_grants};
 use crate::economy::proficiency::{top_level, top_level_plays};
 use crate::economy::store::{
-    CardProficiency, CosmeticGrant, Counter, CounterGrant, EconomyReason, InventoryGrant, InventoryItem,
-    JloreGrant, JloreReason, SetTrack, TrackGrant,
+    CardProficiency, CosmeticGrant, CounterGrant, EconomyReason, JloreGrant, JloreReason, SetTrack,
+    TrackGrant,
 };
-use crate::economy::tokens::{settle_bar, settle_cosmetic_bar};
+use jackioh_shared::economy::bars::{BarKind, fill_bar as fill_bar_for};
+use jackioh_shared::economy::math::level_for_xp;
 
 /// R1300000: `collection_grants.reason` for a dev account's own card grant or clear (migration
 /// 0046), which its `collection_grants_dev_check` writes only with the `dev` mark.
@@ -360,128 +359,47 @@ pub async fn clear(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(json(200, json!({ "written": written })))
 }
 
-/// The token bar a fill's `:bar` names (§14.5), or `None` for no bar.
-fn bar_of(bar: &str) -> Option<Counter> {
-    match bar {
-        "card" => Some(Counter::CardTokenBar),
-        "cosmetic" => Some(Counter::CosmeticTokenBar),
-        _ => None,
-    }
-}
-
 /// `POST /api/dev/bar/:bar` (R1310003): 200 `{ written }`, the rows written; 404 for a `:bar` that
 /// names no bar. Under the account's lock (R1301003) the bar gains what it lacks of its size, the
 /// cosmetic bar's its current step's (R2728000), and pays as a pack's duplicates filling it would
-/// (`economy::packs::settle_bars`), every row marked `dev`. A bar already past its size pays every size
-/// it holds first, as an opening would, and the fill tops up the rest.
+/// (`jackioh_shared::economy::bars::fill_bar` decides it), every row marked `dev`. A bar already past its
+/// size pays every size it holds first, as an opening would, and the fill tops up the rest.
 pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = dev_caller(app, &req)?;
     let bar = req.params.get("bar").map(String::as_str).unwrap_or("");
-    let Some(counter) = bar_of(bar) else {
+    let Some(kind) = BarKind::named(bar) else {
         return Err(ApiError::new(ApiErrorCode::NotFound, "no such bar"));
     };
     let at = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.economy_lock_account(&profile.id).await?;
-    let counters = tx.economy_counters_get(&profile.id).await?;
-    let held = bar_before(&counters, counter);
-    let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);
-    let (pays, remainder) = if counter == Counter::CardTokenBar {
-        let size = CARD_TOKEN_BAR_SIZE;
-        settle_bar(held, size - held % size, size)
-    } else {
-        // The step the bar stands at once what it holds is paid, and what it lacks of that step's
-        // size (R2728000).
-        let (owed, kept) = settle_cosmetic_bar(held, 0, cycle);
-        let lacks = cycle_at(cycle + delta_of(owed.len())?).bar_size() - kept;
-        let (paid, remainder) = settle_cosmetic_bar(held, lacks, cycle);
-        (delta_of(paid.len())?, remainder)
-    };
-    let mut written = 0;
-    if remainder != held {
-        grant_dev_counter(&mut tx, &profile.id, counter, remainder - held, at).await?;
-        written += 1;
-    }
-    if counter == Counter::CardTokenBar {
-        grant_dev_item(
-            &mut tx,
-            &profile.id,
-            InventoryItem::CardToken,
-            String::new(),
-            pays,
+    let fill = fill_bar_for(kind, &counters_of(&tx.economy_counters_get(&profile.id).await?));
+    write_grants(
+        &mut tx,
+        &Writing {
+            profile_id: &profile.id,
+            reference: &None,
+            dev: true,
             at,
-        )
-        .await?;
-        written += 1;
-    } else {
-        for paid in 0..pays {
-            let (item, key) = cycle_step(cycle + paid);
-            grant_dev_item(&mut tx, &profile.id, item, key, 1, at).await?;
-            written += 1;
-        }
-        grant_dev_counter(&mut tx, &profile.id, Counter::CosmeticTokenCycle, pays, at).await?;
-        written += 1;
-    }
+        },
+        &fill.grants,
+        |_| bad_request(TOO_MUCH_MESSAGE),
+    )
+    .await?;
+    let written = fill.grants.len();
     audit(
         &mut tx,
         &profile.id,
         format!("POST /api/dev/bar/{bar}"),
         json!({ "bar": bar }),
-        json!({ "held": held }),
-        json!({ "held": remainder, "pays": pays, "written": written }),
+        json!({ "held": fill.held }),
+        json!({ "held": fill.remainder, "pays": fill.pays, "written": written }),
         at,
     )
     .await?;
     tx.commit().await?;
     log_dev(&profile, bar, written);
     Ok(json(200, json!({ "written": written })))
-}
-
-/// A dev tool's `economy_counter_grants` row: `delta` to the account-wide `counter`.
-async fn grant_dev_counter(
-    tx: &mut Tx<'_>,
-    profile_id: &str,
-    counter: Counter,
-    delta: i64,
-    at: i64,
-) -> Result<(), ApiError> {
-    tx.economy_counters_grant(&CounterGrant {
-        profile_id: profile_id.to_string(),
-        counter,
-        pack: String::new(),
-        delta,
-        reason: EconomyReason::Dev,
-        reference: None,
-        dev: true,
-        at,
-    })
-    .await?
-    .ok_or_else(|| bad_request(TOO_MUCH_MESSAGE))?;
-    Ok(())
-}
-
-/// A dev tool's `inventory_grants` row: `delta` of `item` under `key`.
-async fn grant_dev_item(
-    tx: &mut Tx<'_>,
-    profile_id: &str,
-    item: InventoryItem,
-    key: String,
-    delta: i64,
-    at: i64,
-) -> Result<(), ApiError> {
-    tx.economy_inventory_grant(&InventoryGrant {
-        profile_id: profile_id.to_string(),
-        item,
-        key,
-        delta,
-        reason: EconomyReason::Dev,
-        reference: None,
-        dev: true,
-        at,
-    })
-    .await?
-    .ok_or_else(|| bad_request(TOO_MUCH_MESSAGE))?;
-    Ok(())
 }
 
 /// Every card owned to 0, each by its offsetting row.

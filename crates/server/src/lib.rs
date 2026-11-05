@@ -16,11 +16,12 @@
 //! - `loops`: the loops' supervisor, logging and restarting one that panics (#842) or returns (#1093).
 //! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
 //! - `bug_reports`: a match its own log does not reproduce, filed as a GitHub issue for the night bot.
-//! - `cosmetics`: the cosmetics registry, `cosmetics.json`, and its check (#1295, R1295000).
+//! - `cosmetics`: the cosmetics registry and its check (#1295, R1295000), which `jackioh_shared::cosmetics` holds (#3104).
 //! - `loadout`: the cosmetics each seat of a match wears, frozen as it starts, and when a card's own
 //!   picks may be sent (#1834, R1834002, R1834003).
-//! - `economy`: the economy's holdings and ledgers (SPEC §14.11, #1299), its math, level curve and pity
-//!   (#1298), and the card packs (#1301).
+//! - `economy`: the economy's holdings and ledgers (SPEC §14.11, #1299) and the writing of an outcome
+//!   `jackioh_shared::economy` decides (the rolls, pity, the token bars and the level curve, #1298, #1301,
+//!   #3104), and the card packs (#1301).
 //! - `admin`: the dev dashboard's store (#3074): the audit of every dev and admin action, the
 //!   hand-set ratings and their ledger, and the news posts (R3074000, R3074001, R3074003).
 
