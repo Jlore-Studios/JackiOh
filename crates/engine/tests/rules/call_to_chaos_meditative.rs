@@ -2,7 +2,7 @@
 //! rolled by Core #95's subsystem (R28, R87, R423, R436), on fixture pools: the third edition in the pool
 //! (R1240, R1420), the rest-of-game entry and its cap (R1241), the hand fusion and `add_to_hand { copyOf }`
 //! (R1242), the Acclaimed pool (R1243), Bounce then Nerf (R1244), `shuffle_into { memory }` through JSON
-//! (R1246) and the Radiant's three different entries in list order.
+//! (R1246), the Radiant's three different entries in list order and the three tuned numbers (R3135001).
 
 use jackioh_engine::catalog::query;
 use jackioh_engine::effects::add_to_hand::{AddToHandArgs, add_to_hand};
@@ -210,17 +210,40 @@ mod r1240_meditative_95s_table {
         assert_eq!(
             labels_of(CHAOS_MED_EFFECTS),
             vec![
-                "Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0)",
+                "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
                 "Add 2 random CN cards to your hand, which cost (0)",
                 "Add 2 random Prime cards to your hand, which cost (0)",
-                "Your hero gains 6 Armor and you heal it 6",
+                "Your hero gains 5 Armor and you heal it 5",
                 "Summon a Jade Beauty",
-                "Summon 3 random Acclaimed cards",
+                "Summon 2 random Acclaimed cards",
                 "Bounce every enemy permanent, then Nerf each card bounced",
                 "Summon a CN Golem",
                 "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos",
                 "Cast a random Call to Chaos",
             ]
+        );
+    }
+
+    #[test]
+    fn r3135001_the_three_tuned_numbers_and_the_seven_modes_left_alone() {
+        assert_eq!(
+            (
+                CHAOS_MED_FUSE_COPIES,
+                CHAOS_MED_HERO_ARMOR,
+                CHAOS_MED_HEAL,
+                CHAOS_MED_ACCLAIMED
+            ),
+            (1, 5, 5, 2)
+        );
+        assert_eq!(
+            (
+                CHAOS_MED_CN_CARDS,
+                CHAOS_MED_PRIME_CARDS,
+                CHAOS_MED_NERFS,
+                CHAOS_MED_COST,
+                CALL_TO_CHAOS_ETERNAL_CAP
+            ),
+            (2, 2, 1, 0, 3)
         );
     }
 
@@ -462,7 +485,8 @@ mod r1242_the_hand_fusion {
     use super::*;
 
     #[test]
-    fn r1242_fuses_every_hand_card_but_immutable_ones_into_one_fresh_card_and_adds_two_copies_all_at_zero() {
+    fn r1242_r3135001_fuses_every_hand_card_but_immutable_ones_into_one_fresh_card_and_adds_one_copy_both_at_zero()
+     {
         let mut state = game("fuse", None, None);
         let first = in_hand(&mut state, "fx-1", P1, 1);
         let kept = in_hand(&mut state, &immutable.id, P1, 1);
@@ -478,7 +502,8 @@ mod r1242_the_hand_fusion {
         );
         let result = fused["resultInstanceId"].as_str().unwrap_or_default().to_string();
         let hand = state.players.p1.hand.clone();
-        assert_eq!(hand.len(), 1 + 1 + CHAOS_MED_FUSE_COPIES as usize);
+        // The Immutable card, the fusion and its one copy.
+        assert_eq!(hand.len(), 3);
         assert_eq!(hand[0].id, kept[0].id);
         assert_eq!(hand[1].id, result);
         let fusion = &hand[1];
@@ -518,7 +543,7 @@ mod r1242_the_hand_fusion {
     }
 
     #[test]
-    fn r1242_one_fusable_card_takes_the_zero_and_two_copies() {
+    fn r1242_r3135001_one_fusable_card_takes_the_zero_and_one_copy() {
         let mut state = game("fuse-one", None, None);
         let kept = in_hand(&mut state, &immutable.id, P1, 1);
         let only = in_hand(&mut state, "fx-3", P1, 1).remove(0);
@@ -529,7 +554,7 @@ mod r1242_the_hand_fusion {
         assert!(events_of_type(&events, GameEventType::Fused).is_empty());
         let hand = state.players.p1.hand.clone();
         assert_eq!(ids_of(&hand[..2]), vec![kept[0].id.clone(), only.id.clone()]);
-        assert_eq!(hand.len(), 2 + CHAOS_MED_FUSE_COPIES as usize);
+        assert_eq!(hand.len(), 3);
         assert_eq!(hand[1].cost_override, Some(CHAOS_MED_COST));
         for copy in &hand[2..] {
             assert_eq!(copy.def_id, "fx-3");
@@ -638,12 +663,12 @@ mod the_other_entries {
     }
 
     #[test]
-    fn entry_armor_gives_8_hero_armor_and_heals_8_past_30() {
+    fn r3135001_entry_armor_gives_5_hero_armor_and_heals_5_past_30() {
         let mut state = game("armor", None, None);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
         run(&mut state, entry("armor"), None);
-        assert_eq!(state.players.p1.hero.armor, CHAOS_MED_HERO_ARMOR);
-        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + CHAOS_MED_HEAL);
+        assert_eq!(state.players.p1.hero.armor, 5);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH + 5);
         assert_eq!(state.players.p2.hero.armor, 0);
     }
 
@@ -667,12 +692,12 @@ mod the_other_entries {
     }
 
     #[test]
-    fn r1243_three_acclaimed_permanents_never_an_acclaimed_token() {
+    fn r1243_r3135001_two_acclaimed_permanents_never_an_acclaimed_token() {
         for i in 0..4 {
             let mut state = game(&format!("acclaimed-{i}"), None, None);
             let events = run(&mut state, entry("acclaimed"), None);
             let summoned = strings_of(&field_of(&events, GameEventType::Summoned, "defId"));
-            assert_eq!(summoned.len() as i32, CHAOS_MED_ACCLAIMED);
+            assert_eq!(summoned.len(), 2);
             assert!(summoned.iter().all(|id| *id == ACCLAIMED.id));
             assert!(
                 !summoned
@@ -773,7 +798,7 @@ mod r874000_the_fusion_cap {
     use jackioh_engine::subsystems::fuse::fused_card_count;
 
     /// Fuse p1's hand `times` times, starting from two plain cards: each fusion takes the last one
-    /// and its two copies (R1242), so it holds 2, then 6, 18, 54 cards.
+    /// and its one copy (R1242, R3135001), so it holds 2, then 4, 8, 16, 32 cards.
     fn fused_again(seed: &str, times: usize) -> GameState {
         let mut state = game(seed, None, None);
         in_hand(&mut state, "fx-1", P1, 1);
@@ -811,12 +836,12 @@ mod r874000_the_fusion_cap {
     }
 
     #[test]
-    fn r874000_a_fusion_of_exactly_the_cap_is_made_and_one_card_more_is_not() {
-        // Four fusions leave three cards of 54 each; one of them and ten plain cards make 64.
-        for (extra, made) in [(FUSED_CARDS_CAP - 54, true), (FUSED_CARDS_CAP - 54 + 1, false)] {
-            let mut state = fused_again(&format!("fuse-edge-{extra}"), 4);
+    fn r874000_r3135001_a_fusion_of_exactly_the_cap_is_made_and_one_card_more_is_not() {
+        // Five fusions leave two cards of 32 each; one of them and thirty-two plain cards make 64.
+        for (extra, made) in [(FUSED_CARDS_CAP - 32, true), (FUSED_CARDS_CAP - 32 + 1, false)] {
+            let mut state = fused_again(&format!("fuse-edge-{extra}"), 5);
             state.players.p1.hand.truncate(1);
-            assert_eq!(fused_card_count(&state, &state.players.p1.hand[0].def_id), 54);
+            assert_eq!(fused_card_count(&state, &state.players.p1.hand[0].def_id), 32);
             in_hand(&mut state, "fx-3", P1, extra as i32);
             let events = run(&mut state, entry("fuse"), None);
             assert_eq!(!events_of_type(&events, GameEventType::Fused).is_empty(), made);

@@ -1,4 +1,5 @@
-//! Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244):
+//! Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244,
+//! R3135001):
 //! its table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls, announces and
 //! resolves, so one rule serves every edition.
 //!
@@ -107,9 +108,9 @@ pub fn eternal_step() -> Hook {
     hook(|_ctx| vec![cast_random_call_to_chaos()])
 }
 
-/// 1. R1242: every non-Immutable card in your hand (R23), in hand order, fused into one fresh hand card
-///    (R77, R102, R469) plus copies (R57's riders), all costing (0); a lone card is not fused but takes
-///    the (0) and the copies. Its `fused` event is hidden as the hand is (R470).
+/// 1. R1242, R3135001: every non-Immutable card in your hand (R23), in hand order, fused into one fresh hand
+///    card (R77, R102, R469) plus `CHAOS_MED_FUSE_COPIES` copy (R57's riders), both costing (0); a lone card
+///    is not fused but takes the (0) and the copy. Its `fused` event is hidden as the hand is (R470).
 fn build_fuse() -> Effect {
     entry("fuse", |_ctx| {
         vec![Effect::new("callToChaosMeditative:fuseHand", |ctx| {
@@ -171,7 +172,8 @@ fn build_prime() -> Effect {
     add_free("prime", json!({ "tags": ["Prime"] }), CHAOS_MED_PRIME_CARDS)
 }
 
-/// 4. §6.1's Armor kept for the rest of the game (C+ #46's, R124), then an uncapped hero heal (§6.3).
+/// 4. §6.1's Armor kept for the rest of the game (C+ #46's, R124), then an uncapped hero heal (§6.3), both
+///    5 since R3135001.
 fn build_armor() -> Effect {
     entry("armor", |_ctx| {
         vec![
@@ -189,7 +191,7 @@ fn build_jade() -> Effect {
     summon_token("jade", JADE_BEAUTY_INDEX)
 }
 
-/// 6. R1243: three independent picks (R60) of the non-token Acclaimed permanents, each summoned per R64
+/// 6. R1243, R3135001: two independent picks (R60) of the non-token Acclaimed permanents, each summoned per R64
 ///    with no Cry and no Tribute (R1); the Acclaimed tokens are not in the pool (§5.1).
 fn build_acclaimed() -> Effect {
     entry("acclaimed", |_ctx| {
@@ -263,7 +265,7 @@ fn build_eternal() -> Effect {
 pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "fuse",
-        label: "Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0)",
+        label: "Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0)",
         build: build_fuse,
     },
     ChaosEffectDef {
@@ -278,7 +280,7 @@ pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "armor",
-        label: "Your hero gains 6 Armor and you heal it 6",
+        label: "Your hero gains 5 Armor and you heal it 5",
         build: build_armor,
     },
     ChaosEffectDef {
@@ -288,7 +290,7 @@ pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "acclaimed",
-        label: "Summon 3 random Acclaimed cards",
+        label: "Summon 2 random Acclaimed cards",
         build: build_acclaimed,
     },
     ChaosEffectDef {

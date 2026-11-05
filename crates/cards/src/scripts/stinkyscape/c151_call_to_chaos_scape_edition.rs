@@ -1,14 +1,18 @@
-//! SPEC §8.10 Stinkyscape 151 Call to Chaos (Scape Edition) (R28, R87, R423, R436, R1882005–R1882009).
-//! (4) Spell, Call to Chaos, Legendary.
+//! SPEC §8.10 Stinkyscape 151 Call to Chaos (Scape Edition) (R28, R87, R423, R436, R1882005–R1882009,
+//! R3135001). (4) Spell, Call to Chaos, Legendary.
 //!   Base:    "One random effect: Replace your side of the field with a random Anomaly, any of the ten;
-//!            summon 3 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System,
-//!            Secure System, Unsecure System and Wild System, picked at random; add 4 random Starship
+//!            summon 2 Drone Corvettes; summon the Drone Battleship; cast 2 different cards of Core System,
+//!            Secure System, Unsecure System and Wild System, picked at random; add 3 random Starship
 //!            Pieces to your hand, which cost (0); summon a Drone Interceptor into each of your unit zones,
-//!            on top of any Unit there; fuse 4 random Starship Pieces into your Dormant Starship, then
+//!            on top of any Unit there; fuse 3 random Starship Pieces into your Dormant Starship, then
 //!            launch it; add 2 random Radiant Weapons to your hand, which cost (0); for the rest of the
 //!            game, the Marketplace offers you a Call to Chaos for 20 Credits each turn; cast a random
 //!            Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
+//!
+//! Through v0.5.11p it summoned 3 Corvettes, added 4 Pieces to the hand and fused 4 Pieces; those numbers are
+//! the engine's (`config.rs`) and the labels below are the only words of this file that moved, so it keeps no
+//! old script (R3135001, R767000).
 //!
 //! Subsystem call_to_chaos (Core #95) with CHAOS_SCAPE_EFFECTS: announcement (R436), chain cap across editions (R28) and resolution order (R423).
 //! First entry lays Anomaly board (ALL_BOARDS, S20); nine builders in subsystems/call_to_chaos_scape.rs (C+ #73).
@@ -36,7 +40,7 @@ pub const CHAOS_SCAPE_EFFECTS: &[subsystems::ChaosEffectDef] = &[
     },
     subsystems::ChaosEffectDef {
         name: "corvettes",
-        label: "Summon 3 Drone Corvettes",
+        label: "Summon 2 Drone Corvettes",
         build: subsystems::scape_corvettes,
     },
     subsystems::ChaosEffectDef {
@@ -51,7 +55,7 @@ pub const CHAOS_SCAPE_EFFECTS: &[subsystems::ChaosEffectDef] = &[
     },
     subsystems::ChaosEffectDef {
         name: "pieces",
-        label: "Add 4 random Starship Pieces to your hand, which cost (0)",
+        label: "Add 3 random Starship Pieces to your hand, which cost (0)",
         build: subsystems::scape_pieces,
     },
     subsystems::ChaosEffectDef {
@@ -61,7 +65,7 @@ pub const CHAOS_SCAPE_EFFECTS: &[subsystems::ChaosEffectDef] = &[
     },
     subsystems::ChaosEffectDef {
         name: "launch",
-        label: "Fuse 4 random Starship Pieces into your Dormant Starship, then launch it",
+        label: "Fuse 3 random Starship Pieces into your Dormant Starship, then launch it",
         build: subsystems::scape_launch,
     },
     subsystems::ChaosEffectDef {
@@ -249,6 +253,29 @@ mod tests {
     }
 
     #[test]
+    fn r3135001_the_three_tuned_modes_name_their_new_numbers_and_the_other_seven_keep_theirs() {
+        crate::register_all();
+        let labels: Vec<&str> = CHAOS_SCAPE_EFFECTS.iter().map(|entry| entry.label).collect();
+        assert_eq!(
+            labels,
+            vec![
+                "Replace your side of the field with a random Anomaly, any of the ten",
+                "Summon 2 Drone Corvettes",
+                "Summon the Drone Battleship",
+                "Cast 2 different cards of Core System, Secure System, Unsecure System and Wild System, picked at random",
+                "Add 3 random Starship Pieces to your hand, which cost (0)",
+                "Summon a Drone Interceptor into each of your unit zones, on top of any Unit there",
+                "Fuse 3 random Starship Pieces into your Dormant Starship, then launch it",
+                "Add 2 random Radiant Weapons to your hand, which cost (0)",
+                "For the rest of the game, the Marketplace offers you a Call to Chaos for 20 Credits each turn",
+                "Cast a random Call to Chaos",
+            ]
+        );
+        assert_eq!((CHAOS_SCAPE_CORVETTES, CHAOS_SCAPE_HAND_PIECES, CHAOS_SCAPE_FUSED_PIECES), (2, 3, 3));
+        assert_eq!((CHAOS_SCAPE_SYSTEMS, CHAOS_SCAPE_WEAPONS, CHAOS_SCAPE_LOT_PRICE), (2, 2, 20));
+    }
+
+    #[test]
     fn each_of_the_ten_entries_is_rolled_over_the_seeds() {
         let mut seen: Vec<&str> = Vec::new();
         for cursor in 0..SWEEP {
@@ -352,12 +379,12 @@ mod tests {
         }
 
         #[test]
-        fn entry_corvettes_summons_three_drone_corvettes() {
+        fn r3135001_entry_corvettes_summons_two_drone_corvettes() {
             let s = chaos("corvettes", side(false, json!([])), json!({ "hand": [VANILLA] }));
-            for lane in 1..=CHAOS_SCAPE_CORVETTES {
+            for lane in 1..=2 {
                 assert_eq!(s.unit(P1, lane).map(|unit| unit.def_id), Some(CORVETTE.to_string()));
             }
-            assert!(s.unit(P1, CHAOS_SCAPE_CORVETTES + 1).is_none());
+            assert!(s.unit(P1, 3).is_none());
         }
 
         #[test]
@@ -400,10 +427,10 @@ mod tests {
         }
 
         #[test]
-        fn entry_pieces_adds_four_starship_pieces_at_zero() {
+        fn r3135001_entry_pieces_adds_three_starship_pieces_at_zero() {
             let s = chaos("pieces", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s, P1);
-            assert_eq!(added.len() as i32, CHAOS_SCAPE_HAND_PIECES);
+            assert_eq!(added.len(), 3);
             for card in &added {
                 assert!(is_piece(&card.def_id), "{}", card.def_id);
                 assert_eq!(cost_of(&s, card), CHAOS_STINKYSCAPE_COST);
@@ -428,10 +455,10 @@ mod tests {
         }
 
         #[test]
-        fn r1882008_entry_launch_summons_a_starship_fuses_four_pieces_and_launches_it() {
+        fn r1882008_r3135001_entry_launch_summons_a_starship_fuses_three_pieces_and_launches_it() {
             let s = chaos("launch", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let fused = events_of(&s, "starshipFused");
-            assert_eq!(fused.len() as i32, CHAOS_SCAPE_FUSED_PIECES);
+            assert_eq!(fused.len(), 3);
             for event in &fused {
                 assert_eq!(event["player"], json!("p1"));
                 assert!(is_piece(event["defId"].as_str().unwrap_or("")));
@@ -439,10 +466,7 @@ mod tests {
             let launched = events_of(&s, "starshipLaunched");
             assert_eq!(launched.len(), 1);
             assert_eq!(launched[0]["player"], json!("p1"));
-            assert_eq!(
-                launched[0]["pieces"].as_array().map(Vec::len),
-                Some(CHAOS_SCAPE_FUSED_PIECES as usize)
-            );
+            assert_eq!(launched[0]["pieces"].as_array().map(Vec::len), Some(3));
             assert_eq!(events_of(&s, "summoned")[0]["defId"], json!(DORMANT_STARSHIP));
             let ship = launched_starship_of(s.state(), PlayerId::P1)
                 .cloned()
@@ -451,7 +475,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882008_an_existing_dormant_starship_takes_four_more_pieces() {
+        fn r1882008_r3135001_an_existing_dormant_starship_takes_three_more_pieces() {
             let mut p1 = side(false, json!([]));
             p1["field"] = json!([{
                 "def": DORMANT_STARSHIP,
@@ -470,7 +494,7 @@ mod tests {
             s.play(ID, json!({}));
             assert!(events_of(&s, "summoned").is_empty(), "no second Starship");
             let fused = events_of(&s, "starshipFused");
-            assert_eq!(fused.len() as i32, CHAOS_SCAPE_FUSED_PIECES);
+            assert_eq!(fused.len(), 3);
             assert!(fused.iter().all(|event| event["instanceId"] == json!(ship)));
             assert_eq!(events_of(&s, "starshipLaunched").len(), 1);
         }
@@ -539,7 +563,8 @@ mod tests {
             );
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(CORVETTE.to_string()));
             let added = added_to(&s, P1);
-            assert_eq!(added.len() as i32, CHAOS_SCAPE_HAND_PIECES + CHAOS_SCAPE_WEAPONS);
+            // Three Pieces, then two Weapons.
+            assert_eq!(added.len(), 3 + 2);
             let order: Vec<&str> = CHAOS_SCAPE_EFFECTS.iter().map(|entry| entry.name).collect();
             for at in 0..SWEEP {
                 let names = rolled_names(SEED, at, true);

@@ -51,10 +51,10 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // C+ #40 Appropriations (X spell): the effects the Discover menu shows, X filled in on play.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 2X−1 random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 7X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Health and Armor X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−2) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 2X−2 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 6X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−2) Health and Armor X." },
   },
   // C+ #7 The House: the twin is the Activate's mode (R1704002).
   "classicplus-007": {
@@ -255,10 +255,10 @@ function combatKeywords(): Record<string, ModeText> {
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
   // C+ #40 Appropriations, radiant.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−2) Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 4X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 17X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +5X Health and Armor 2X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−3) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 4X−1 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 16X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(5X−1) Health and Armor 2X." },
   },
   // C+ #7 The House, radiant: the twins it summons are Radiant.
   "classicplus-007": {

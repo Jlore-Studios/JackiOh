@@ -784,8 +784,8 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 _ => None,
             })
             .collect();
-        // 2X − 1 Books at X = 2 (#1704).
-        assert_eq!(refused.len(), 3);
+        // 2X − 2 Books at X = 2 (#3135, R3135002; 2X − 1 through v0.5.11p).
+        assert_eq!(refused.len(), 2);
         for seat in [PlayerId::P1, PlayerId::P2] {
             let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialize");
             for id in &refused {
