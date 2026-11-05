@@ -16,8 +16,18 @@
 #     keeps the built module.
 #
 # The output is apps/web/src/wasm/pkg/{jackioh_wasm.js, jackioh_wasm.d.ts, jackioh_wasm_bg.wasm,
-# jackioh_wasm_bg.wasm.d.ts}, gitignored; `--target web` makes the glue an ES module whose default
-# export fetches the .wasm and whose `initSync` takes its bytes (apps/web/src/wasm/index.ts).
+# jackioh_wasm_bg.wasm.br, jackioh_wasm_bg.wasm.d.ts}, gitignored; `--target web` makes the glue an ES
+# module whose default export instantiates the module from the Response it is handed and whose
+# `initSync` takes its bytes (apps/web/src/wasm/index.ts). #3183: the page loads the .br alone, the
+# module brotli-compressed ahead of time (below), so the built site carries no
+# uncompressed module, the one file that came near Cloudflare Workers' 25 MiB cap on one asset. The site
+# Worker serves it with `Content-Encoding: br` (apps/edge), so the browser decodes it as it arrives and
+# compiles it while it downloads; Vite's dev and preview servers label a .br file so themselves.
+# `--omit-default-module-path` leaves out the glue's own `new URL('jackioh_wasm_bg.wasm',
+# import.meta.url)`, which Vite would emit as an asset beside the .br. The .wasm stays in pkg/ for the
+# unit tests (`initSync` over its bytes, apps/web/src/test/setup.ts). The player's module
+# (JACKIOH_WASM_PREVIEW=0) is compressed at BROTLI_QUALITY_PLAYER, which takes about a minute and makes
+# the smallest download; every other build at BROTLI_QUALITY_DEV, under a second.
 #
 # Needs a Rust toolchain (rust-toolchain.toml pins it). A shell that installed rustup in an earlier
 # step but never re-read its profile is covered by sourcing ~/.cargo/env below.
@@ -60,6 +70,10 @@ set -eu
 
 WASM_BINDGEN_VERSION="0.2.129"
 WASM_TARGET="wasm32-unknown-unknown"
+# #3183: brotli's qualities for the .br the page loads: the player's (JACKIOH_WASM_PREVIEW=0), its
+# smallest, about a minute; every other build's, under a second for about a quarter more bytes.
+BROTLI_QUALITY_PLAYER=11
+BROTLI_QUALITY_DEV=5
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
@@ -143,9 +157,13 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
 
   FEATURES=""
   BINDGEN_FLAGS=""
+  BROTLI_QUALITY="$BROTLI_QUALITY_DEV"
   case "${JACKIOH_WASM_PREVIEW:-1}" in
     1) FEATURES="preview" ;;
-    0) BINDGEN_FLAGS="--remove-name-section" ;;
+    0)
+      BINDGEN_FLAGS="--remove-name-section"
+      BROTLI_QUALITY="$BROTLI_QUALITY_PLAYER"
+      ;;
     *)
       echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
       exit 1
@@ -166,7 +184,27 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
   fi
   mkdir -p "$OUT_DIR"
   # shellcheck disable=SC2086 # BINDGEN_FLAGS is empty or one flag, split on purpose.
-  "$WASM_BINDGEN" --target web $BINDGEN_FLAGS --out-dir "$OUT_DIR" "$MODULE"
+  "$WASM_BINDGEN" --target web --omit-default-module-path $BINDGEN_FLAGS --out-dir "$OUT_DIR" "$MODULE"
+  # #3183: what the page fetches (the header's output note), at the quality its build calls for.
+  if ! command -v node >/dev/null 2>&1; then
+    echo "build-wasm: node is needed to write jackioh_wasm_bg.wasm.br, the module the page loads" >&2
+    exit 1
+  fi
+  # Inline, so the deploys' WASM cache key (which hashes this script) covers it. The window is brotli's
+  # largest a browser decodes (24 bits); the same module always compresses to the same bytes.
+  node --input-type=module -e '
+    import { readFileSync, writeFileSync } from "node:fs";
+    import { brotliCompressSync, constants } from "node:zlib";
+    const [input, output, quality] = process.argv.slice(1);
+    const bytes = readFileSync(input);
+    const compressed = brotliCompressSync(bytes, { params: {
+      [constants.BROTLI_PARAM_QUALITY]: Number(quality),
+      [constants.BROTLI_PARAM_LGWIN]: constants.BROTLI_MAX_WINDOW_BITS,
+      [constants.BROTLI_PARAM_SIZE_HINT]: bytes.length,
+    } });
+    writeFileSync(output, compressed);
+    console.log(`build-wasm: ${output}: ${bytes.length} B to ${compressed.length} B (brotli ${quality})`);
+  ' "$OUT_DIR/jackioh_wasm_bg.wasm" "$OUT_DIR/jackioh_wasm_bg.wasm.br" "$BROTLI_QUALITY"
   echo "build-wasm: wrote $OUT_DIR"
 fi
 

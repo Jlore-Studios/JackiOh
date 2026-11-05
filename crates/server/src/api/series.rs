@@ -24,7 +24,6 @@ use crate::api::ranked::{
     RankedGameInput, RankedPlan, RankedSideInput, commit_ranked_game, plan_ranked_game,
 };
 use crate::app::{App, now_ms};
-use crate::bots::pick::{bot_pick, pick_is_due};
 use crate::config::{
     MS_PER_SECOND, SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
     SERIES_WRITE_ATTEMPTS,
@@ -35,6 +34,7 @@ use crate::db::store::{
 };
 use crate::ranked::ladder::Ladder;
 use crate::seats::Seat;
+use jackioh_shared::bots::pick::{bot_pick, pick_is_due};
 use jackioh_shared::series::{
     RatingMove, SeriesRefusal, SeriesRefusalReason, abandon_unstarted, already_picked, forfeit_series,
     game_ended, game_seats, new_series, pick_deck, project_series, rate_series, seat_of, series_score,

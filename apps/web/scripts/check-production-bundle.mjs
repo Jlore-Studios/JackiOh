@@ -18,7 +18,8 @@
 // variable in the environment that differs from the committed file's is refused too: one held
 // staging's publishable key, so production's pages could not sign in (2026-11-04).
 // #3127, R3127000: 404.html, which Cloudflare serves with a 404 status, is the client's own page: it must
-// load index.html's entry script, ask not to be indexed and name no canonical address.
+// load index.html's entry script, ask not to be indexed and name no canonical address. #3183: and no file
+// may come near Cloudflare Workers' cap on one asset, nor ship the engine uncompressed (check-assets.mjs).
 //
 // Exits 1, listing every problem, when anything is missing.
 
@@ -28,6 +29,8 @@ import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 
 import { loadEnv } from "vite";
+
+import { assetProblems } from "./check-assets.mjs";
 
 const WEB = fileURLToPath(new URL("..", import.meta.url));
 const args = process.argv.slice(2);
@@ -101,6 +104,9 @@ for (const name of ["VITE_SUPABASE_URL", "VITE_SERVER_WS_URL"]) {
 }
 const left = /%[A-Z][A-Z0-9_]*%/u.exec(headers)?.[0];
 if (left !== undefined) problems.push(`_headers still holds ${left}, which the build did not fill`);
+
+// #3183: what `wrangler deploy` would refuse (a file over Workers' cap on one asset), or an uncompressed module.
+if (existsSync(dist)) problems.push(...assetProblems(dist));
 
 if (problems.length > 0) {
   console.error(`check-production-bundle: this build must not be deployed (${problems.length} problem(s)):`);

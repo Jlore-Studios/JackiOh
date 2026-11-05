@@ -783,8 +783,8 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # The two WASM modules (scripts/build-wasm.sh, SURFACE §10.2), each in a job of its own and side
-  # by side: the browser module, and the C module. Neither installs Node; the C one's import check
-  # uses the runner's own.
+  # by side: the browser module, and the C module. Neither installs Node; both use the runner's own
+  # (the browser one's brotli step, the C one's import check).
   wasm:
     name: web (wasm module)
     needs: changes

@@ -8,9 +8,12 @@
 //! match host's decisions (#3101): [`host`] holds the clocks, the disconnect grace, the rematch offers and
 //! the relays as one state machine, `step(host, event, now) -> (host, outputs)`. Then the loadout
 //! visibility rule (SPEC §10.8, R1834003, #3102): [`loadout`] decides when a card's cosmetics may be shown
-//! without leaking a decklist. Last the ranked ladder (#3105): [`ranked`] holds the Glicko-2 ratings, the
-//! visible ladder, the seasons, one rated game decided as data and the leaderboard's sort key.
+//! without leaking a decklist. Then the ranked ladder (#3105): [`ranked`] holds the Glicko-2 ratings, the
+//! visible ladder, the seasons, one rated game decided as data and the leaderboard's sort key. Last are the
+//! ladder bots (#3103): a bot is a seat of that machine, and [`bots`] holds what its moves, pace, aim, emotes
+//! and habits are made of and the queue's and the pool's decisions around it.
 
+pub mod bots;
 pub mod config;
 pub mod deck;
 pub mod host;

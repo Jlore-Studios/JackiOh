@@ -21,7 +21,7 @@ use jackioh_server::config::{
 use jackioh_server::db::store::{BotRow, RatedGameRow};
 
 /// The file `bot-calibrate --write` rewrites, as this build was compiled from it.
-const CONFIG: &str = include_str!("../../src/config.rs");
+const CONFIG: &str = include_str!("../../../shared/src/config.rs");
 
 fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_string()).collect()

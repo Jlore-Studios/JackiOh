@@ -1,17 +1,25 @@
-// `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000). Public
-// like `/terms` (main.tsx serves it ungated); it reads the session itself (`readSession`), so a visitor
-// with none makes no request. The client computes nothing (CLAUDE.md rule 7): every figure is the
-// server's, only formatted. A failed read offers Try again in its place (#1774), as elsewhere (#1691).
+// `/purchases`: the odds and the pity of every pack (#1665, part of #1651, SPEC §14.4, R1665000), every
+// figure in a table (#3188). Public like `/terms` (main.tsx serves it ungated); it reads the session
+// itself (`readSession`), so a visitor with none makes no request. The client computes nothing (CLAUDE.md
+// rule 7): every figure is the server's, only formatted, and a rate of 0 shows as a dash. A failed read
+// offers Try again in its place (#1774), as elsewhere (#1691).
 
+import { COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS, PACK_FLOOR_RARITY } from "@jackioh/server-config";
 import { useEffect, useState, type ReactElement } from "react";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { getCosmeticPacks, getPacks, type CosmeticPacksResponse, type PacksResponse } from "../net/api.ts";
+import {
+  getCosmeticPacks,
+  getPacks,
+  type CosmeticPacksResponse,
+  type PacksResponse,
+  type TierOdds,
+} from "../net/api.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import { ODDS_RARITIES, PITY_RARITIES, percent, tierPercents } from "../packs/packs.ts";
+import { ODDS_RARITIES, PITY_RARITIES, percent } from "../packs/packs.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import type { SkeletonVariant } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -28,20 +36,23 @@ export const purchasesTestid = {
   loadError: (place: PurchasesPlace) => `purchases-${place}-load-error`,
   retry: (place: PurchasesPlace) => `purchases-${place}-retry`,
   cardPacks: "purchases-card-packs",
+  cardPacksSummary: "purchases-card-packs-summary",
   odds: "purchases-odds",
   oddsRow: (key: string) => `purchases-odds-${key}`,
+  duplicates: "purchases-duplicates",
   duplicate: "purchases-duplicate",
-  globalCosmetic: "purchases-global-cosmetic",
+  duplicateRow: (key: string) => `purchases-duplicate-${key}`,
+  duplicateNote: "purchases-duplicate-note",
   cosmeticPacks: "purchases-cosmetic-packs",
-  cosmeticSlot: "purchases-cosmetic-slot",
-  cosmeticFloored: "purchases-cosmetic-floored",
+  cosmeticPacksSummary: "purchases-cosmetic-packs-summary",
+  cosmetic: "purchases-cosmetic",
+  cosmeticRow: (key: string) => `purchases-cosmetic-${key}`,
   pity: "purchases-pity",
   pityRow: (key: string) => `purchases-pity-${key}`,
-  pityLine: "purchases-pity-line",
 } as const;
 
-/** Where a read's wait or failure shows: the card packs' and the pity's both read `GET /api/packs`. */
-export type PurchasesPlace = "card-packs" | "cosmetic-packs" | "pity";
+/** Where a read's wait or failure shows: the card packs', the duplicates' and the pity's all read `GET /api/packs`. */
+export type PurchasesPlace = "card-packs" | "duplicates" | "cosmetic-packs" | "pity";
 
 type Read<T> =
   | { kind: "loading" }
@@ -110,23 +121,40 @@ function Answered<T>({
   }
 }
 
-/** A slot's odds and the guaranteed slot's, a rarity to a row, as `GET /api/packs` states them (R1339000). */
-function SlotOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement {
+/** What a rate with no chance shows in a table (a rarity a roll never lands on). */
+const NO_ODDS = "—";
+
+function oddsCell(rate: number): string {
+  return rate === 0 ? NO_ODDS : percent(rate);
+}
+
+/** A table of two rolls' odds, a rarity to a row: Common to Mythic, each roll's chance in its own column. */
+function RarityTable({
+  testId,
+  rowTestId,
+  first,
+  second,
+}: {
+  testId: string;
+  rowTestId: (key: string) => string;
+  first: { head: string; rates: TierOdds };
+  second: { head: string; rates: TierOdds };
+}): ReactElement {
   return (
-    <table className="purchases-odds" data-testid={purchasesTestid.odds}>
+    <table className="purchases-odds" data-testid={testId}>
       <thead>
         <tr>
           <th scope="col">{t("Rarity")}</th>
-          <th scope="col">{t("Each slot")}</th>
-          <th scope="col">{t("Guaranteed slot")}</th>
+          <th scope="col">{first.head}</th>
+          <th scope="col">{second.head}</th>
         </tr>
       </thead>
       <tbody>
         {ODDS_RARITIES.map(({ key, rarity }) => (
-          <tr key={key} data-testid={purchasesTestid.oddsRow(key)}>
+          <tr key={key} data-testid={rowTestId(key)}>
             <th scope="row">{t(rarity)}</th>
-            <td>{percent(odds.slot[key])}</td>
-            <td>{percent(odds.flooredSlot[key])}</td>
+            <td>{oddsCell(first.rates[key])}</td>
+            <td>{oddsCell(second.rates[key])}</td>
           </tr>
         ))}
       </tbody>
@@ -134,23 +162,32 @@ function SlotOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement {
   );
 }
 
+/** A card pack slot's odds and the guaranteed slot's, as `GET /api/packs` states them (R1339000). */
+function SlotOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement {
+  return (
+    <RarityTable
+      testId={purchasesTestid.odds}
+      rowTestId={purchasesTestid.oddsRow}
+      first={{ head: t("Each card"), rates: odds.slot }}
+      second={{ head: t("Guaranteed card"), rates: odds.flooredSlot }}
+    />
+  );
+}
+
 /** What a duplicate becomes: a cosmetic of the table's rarity, or, on the global roll, an account cosmetic (R1661001). */
 function DuplicateOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement {
   const { chance, tiers } = odds.globalCosmetic;
-  const global = tierPercents(tiers);
   return (
     <>
-      <p data-testid={purchasesTestid.duplicate}>
-        {t(
-          "A duplicate becomes a cosmetic: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}. With none of that rarity left to own, it fills both token bars.",
-          tierPercents(odds.duplicateCosmetic),
-        )}
-      </p>
-      <p data-testid={purchasesTestid.globalCosmetic}>
-        {t(
-          "While an account cosmetic is left to own, a duplicate becomes one {chance} of the time: Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
-          { chance: percent(chance), epic: global.epic, legendary: global.legendary, mythic: global.mythic },
-        )}
+      <p>{t("A card you already own becomes a cosmetic.")}</p>
+      <RarityTable
+        testId={purchasesTestid.duplicate}
+        rowTestId={purchasesTestid.duplicateRow}
+        first={{ head: t("Cosmetic"), rates: odds.duplicateCosmetic }}
+        second={{ head: t("Account cosmetic ({chance} of duplicates)", { chance: percent(chance) }), rates: tiers }}
+      />
+      <p data-testid={purchasesTestid.duplicateNote}>
+        {t("If you already own every cosmetic of that rarity, the duplicate fills both token bars instead.")}
       </p>
     </>
   );
@@ -159,20 +196,12 @@ function DuplicateOdds({ odds }: { odds: PacksResponse["odds"] }): ReactElement 
 /** A cosmetic pack's slot and its guaranteed slot, as `GET /api/cosmetic-packs` states them (R1339000). */
 function CosmeticOdds({ odds }: { odds: CosmeticPacksResponse["odds"] }): ReactElement {
   return (
-    <>
-      <p data-testid={purchasesTestid.cosmeticSlot}>
-        {t(
-          "Each slot: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
-          tierPercents(odds.slot),
-        )}
-      </p>
-      <p data-testid={purchasesTestid.cosmeticFloored}>
-        {t(
-          "Guaranteed slot: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
-          tierPercents(odds.flooredSlot),
-        )}
-      </p>
-    </>
+    <RarityTable
+      testId={purchasesTestid.cosmetic}
+      rowTestId={purchasesTestid.cosmeticRow}
+      first={{ head: t("Each slot"), rates: odds.slot }}
+      second={{ head: t("Guaranteed slot"), rates: odds.flooredSlot }}
+    />
   );
 }
 
@@ -181,23 +210,25 @@ function Pity({ info }: { info: PacksResponse }): ReactElement {
   const { pity, thresholds } = info;
   return (
     <>
-      <p>{t("Every card pack counts toward the same pity.")}</p>
-      <ul className="purchases-pity__list" data-testid={purchasesTestid.pity}>
-        {PITY_RARITIES.map(({ key, rarity }) => (
-          <li key={key} className="purchases-pity__row">
-            <span>{t(rarity)}</span>
-            <span data-testid={purchasesTestid.pityRow(key)}>
-              {t("{count} / {threshold} packs", { count: pity[key], threshold: thresholds[key] })}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p data-testid={purchasesTestid.pityLine}>
-        {t(
-          "Pity guarantees an Epic within {epic} packs, a Legendary within {legendary} packs and a Mythic within {mythic} packs.",
-          thresholds,
-        )}
-      </p>
+      <p>{t("All card packs count toward the same pity.")}</p>
+      <table className="purchases-odds" data-testid={purchasesTestid.pity}>
+        <thead>
+          <tr>
+            <th scope="col">{t("Rarity")}</th>
+            <th scope="col">{t("Guaranteed within")}</th>
+            <th scope="col">{t("Your progress")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {PITY_RARITIES.map(({ key, rarity }) => (
+            <tr key={key} data-testid={purchasesTestid.pityRow(key)}>
+              <th scope="row">{t(rarity)}</th>
+              <td>{t("{count} packs", { count: thresholds[key] })}</td>
+              <td>{`${String(pity[key])} / ${String(thresholds[key])}`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
   );
 }
@@ -211,18 +242,40 @@ function Published({ token }: { token: string }): ReactElement {
       <section aria-labelledby="purchases-card-packs-title" data-testid={purchasesTestid.cardPacks}>
         <h3 id="purchases-card-packs-title">{t("Card packs")}</h3>
         <Answered read={packs} place="card-packs" loading={t("Loading your packs…")} skeleton="table">
-          {({ odds }) => (
+          {({ odds, price, slots }) => (
             <>
+              <p data-testid={purchasesTestid.cardPacksSummary}>
+                {t("{price} Jlore · {slots} cards · one card is always {rarity} or better", {
+                  price,
+                  slots,
+                  rarity: t(PACK_FLOOR_RARITY),
+                })}
+              </p>
               <SlotOdds odds={odds} />
-              <DuplicateOdds odds={odds} />
             </>
           )}
+        </Answered>
+      </section>
+      <section aria-labelledby="purchases-duplicates-title" data-testid={purchasesTestid.duplicates}>
+        <h3 id="purchases-duplicates-title">{t("Duplicates")}</h3>
+        <Answered read={packs} place="duplicates" loading={t("Loading your packs…")} skeleton="table">
+          {({ odds }) => <DuplicateOdds odds={odds} />}
         </Answered>
       </section>
       <section aria-labelledby="purchases-cosmetic-packs-title" data-testid={purchasesTestid.cosmeticPacks}>
         <h3 id="purchases-cosmetic-packs-title">{t("Cosmetic packs")}</h3>
         <Answered read={cosmetic} place="cosmetic-packs" loading={t("Loading your cosmetic packs…")} skeleton="panel">
-          {({ odds }) => <CosmeticOdds odds={odds} />}
+          {({ odds }) => (
+            <>
+              <p data-testid={purchasesTestid.cosmeticPacksSummary}>
+                {t("{slots} cosmetics · one is always {rarity} or better", {
+                  slots: COSMETIC_PACK_SLOTS,
+                  rarity: t(COSMETIC_PACK_FLOOR_RARITY),
+                })}
+              </p>
+              <CosmeticOdds odds={odds} />
+            </>
+          )}
         </Answered>
       </section>
       <section aria-labelledby="purchases-pity-title">
@@ -250,9 +303,7 @@ export default function PurchasesRoute(): ReactElement {
         </div>
         <h2>{t("Purchases")}</h2>
         <p data-testid={purchasesTestid.disclaimer}>
-          {t(
-            "Jlore is earned by playing and never sold: nothing here is bought with money. What a pack holds is the server's seeded, logged roll, and every figure on this page is the server's.",
-          )}
+          {t("You buy packs with Jlore, which you earn by playing. Jlore is never sold for real money.")}
         </p>
         {token === null ? (
           <p data-testid={purchasesTestid.signIn}>
