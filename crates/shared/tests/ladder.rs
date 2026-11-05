@@ -2,11 +2,11 @@
 
 use std::collections::BTreeMap;
 
-use jackioh_server::config::{
+use jackioh_shared::config::{
     JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_DIVISIONS_PER_TIER, RANK_PIPS_PER_DIVISION,
     RANK_PLACEMENT_GAMES, RANK_STREAK_LENGTH, RANK_TIER_PERCENTS,
 };
-use jackioh_server::ranked::ladder::{
+use jackioh_shared::ranked::ladder::{
     ApplyRankedGameInput, GRAPE_TIERS, GameResult, LADDER_TOP, PIPS_PER_TIER, Percentile, PipDeltaInput,
     SeasonRank, Standing, apply_ranked_game, fresh_rank, jlorious_floor, jlorious_order, peak_badge,
     percentile_of, pip_delta, place_of, target_ladder, tier_bottom, tier_index_of, visible_rank,
@@ -186,7 +186,7 @@ mod r605_the_ladders_shape {
 
     #[test]
     fn r605_counts_every_rated_game_of_the_season_placements_included() {
-        use jackioh_server::ranked::ladder::GameResult::{Draw, Loss, Win};
+        use jackioh_shared::ranked::ladder::GameResult::{Draw, Loss, Win};
         let rank = play(
             &fresh_rank("v0.1", "p", AT),
             &[Win, Loss, Draw, Win, Win, Win],
@@ -290,7 +290,7 @@ mod r606_the_rank_the_hidden_rating_calls_for {
 
 mod r606_how_one_game_moves_a_placed_player {
     use super::*;
-    use jackioh_server::ranked::ladder::GameResult::{Draw, Loss, Win};
+    use jackioh_shared::ranked::ladder::GameResult::{Draw, Loss, Win};
 
     /// Normal Grape II, 1 pip.
     fn mid() -> i32 {
@@ -391,7 +391,7 @@ mod r606_how_one_game_moves_a_placed_player {
 
 mod r607_the_tier_floor_and_the_seasons_peak {
     use super::*;
-    use jackioh_server::ranked::ladder::GameResult::{Loss, Win};
+    use jackioh_shared::ranked::ladder::GameResult::{Loss, Win};
 
     #[test]
     fn r607_a_player_cannot_drop_below_the_grape_tier_they_have_reached_this_season_but_divisions_inside_it_can_drop()

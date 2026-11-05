@@ -772,6 +772,18 @@ pub fn host(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::host::boundary::apply(call))
 }
 
+// The ranked ladder (SPEC §9.12, R603–R612; #3105)
+
+/// One call of `jackioh_shared::ranked`, the ranked ladder's rules the server calls natively: the input is a
+/// `RankedCall` (`{ "call": "rateGame", "game": { "standings": …, "sides": …, … } }`, `planSeason`, `softReset`,
+/// `visibleRank`, `peakBadge` or `jloriousOrder`), the output a `RankedAnswer` (`{ "game": … }`, `{ "season":
+/// … }`, …). The host holds the ladder's records, passes the time and the season's dates in, and writes what
+/// the answer says (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn ranked(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::ranked::RankedCall = parse("ranked: the call", call_json)?;
+    to_json(&jackioh_shared::ranked::apply(&call))
+}
+
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
 // mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
 // feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only
@@ -1243,6 +1255,50 @@ mod series_body_tests {
         for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
             let error = series(call).unwrap_err();
             assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod ranked_body_tests {
+    use super::*;
+
+    /// The body is `jackioh_shared::ranked::apply` over JSON.
+    #[test]
+    fn ranked_body_plans_a_season_and_rates_a_game() {
+        let plan = json!({ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [], "nowMs": 1_700_000_000_000_i64 });
+        let planned: Value = serde_json::from_str(&ranked(&plan.to_string()).unwrap()).unwrap();
+        assert_eq!(planned["season"]["plan"], "new");
+        assert_eq!(planned["season"]["first"], true);
+        assert_eq!(planned["season"]["season"]["id"], "v0.3");
+
+        let side = |id: &str| {
+            json!({
+                "side": { "kind": "player", "profileId": id },
+                "glicko": { "rating": 1000.0, "deviation": 350.0, "volatility": 0.06 },
+            })
+        };
+        let game = json!({
+            "call": "rateGame",
+            "game": {
+                "standings": [], "sides": [side("a"), side("b")], "winnerSide": 0, "reason": "hero-death",
+                "season": planned["season"]["season"], "ladder": "constructed", "nowMs": 1_700_000_000_000_i64,
+            },
+        });
+        let rated: Value = serde_json::from_str(&ranked(&game.to_string()).unwrap()).unwrap();
+        let after = &rated["game"]["sides"];
+        assert!(after[0]["after"]["rating"].as_f64().unwrap() > 1000.0);
+        assert!(after[1]["after"]["rating"].as_f64().unwrap() < 1000.0);
+        // Both season rows were made from nothing, a game each.
+        assert_eq!(rated["game"]["ranks"][0]["games"], 1);
+        assert_eq!(rated["game"]["ranks"][1]["losses"], 1);
+    }
+
+    #[test]
+    fn ranked_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"rateGame"}"#] {
+            let error = ranked(call).unwrap_err();
+            assert!(error.starts_with("ranked: the call"), "{call:?}: {error}");
         }
     }
 }

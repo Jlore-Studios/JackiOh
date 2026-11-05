@@ -132,6 +132,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
 | `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; the rematch book's calls answer its next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
+| `ranked(call)` | string | #3105: one call of `jackioh-shared`'s ranked ladder, a `RankedCall` in and a `RankedAnswer` out (`{ "game": … }`, `{ "season": … }`, `{ "reset": … }`, `{ "rank": … }`, `{ "badge": … }` or `{ "jlorious": … }`); the host holds the ladder's records and passes the time and the season's dates in (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |

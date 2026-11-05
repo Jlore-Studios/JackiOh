@@ -10,7 +10,7 @@
 //! - `auth`: the `Auth` enum, Supabase and the E2E fixtures.
 //! - `api`: the routes. `actor`: the match lifecycle.
 //! - `bots`: the ladder bots' personas, seat, fallback, pool (§9.12, R1451, R1452, R1453, R1454; #638).
-//! - `ranked`: the ladder's pure rules. `db`: the store and migrations.
+//! - `ranked`: the ladder's pure rules, `jackioh-shared`'s. `db`: the store and migrations.
 //! - `seats`: the seat ledger, the one game each profile holds (R1523000; #1523).
 //! - `cli`: the command-line tools `main.rs` dispatches to.
 //! - `loops`: the loops' supervisor, logging and restarting one that panics (#842) or returns (#1093).
@@ -45,7 +45,8 @@ pub mod duos;
 pub mod env;
 pub mod loadout;
 pub mod loops;
-pub mod ranked;
+/// The ranked ladder's rules are `jackioh-shared`'s (#3105); the old paths (`ranked::ladder::…`) name them.
+pub use jackioh_shared::ranked;
 pub mod seats;
 // Social: friends, presence, challenges, chat (#937, #938, #941); SPEC S7 (#936).
 pub mod social;

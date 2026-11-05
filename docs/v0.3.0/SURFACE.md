@@ -782,6 +782,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn host(call_json: &str) -> String;
     // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
     // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn ranked(call_json: &str) -> String;
+    // #3105: jackioh-shared's ranked ladder (SPEC §9.12, R603–R612). A RankedCall in ({ call: "rateGame", game: { standings, sides, winnerSide?, reason, stake?, season, ladder, strict?, nowMs } } | planSeason | softReset | visibleRank | peakBadge | jloriousOrder),
+    // a RankedAnswer out ({ game: { sides, ranks, peaks, jlorious, records } } | { season } | { reset } | { rank } | { badge } | { jlorious }); each record carries sortKey, the integer a leaderboard sorts by
 ```
 
 ### 10.2 Build
@@ -871,7 +874,7 @@ app.rs         ← src/index.ts (part 18): App, the route table, boot, backgroun
 auth.rs        (part 18) the Auth enum (from src/api/auth.ts's provider half and src/api/e2e.ts's fixture auth)
 api/<x>.rs     ← src/api/<x>.ts (parts 18 and 19, by PORT-MAP)
 actor/<x>.rs   ← src/match/<x>.ts (part 19); actor.ts → match_actor.rs (clippy's module_inception)
-ranked/<x>.rs  ← src/ranked/<x>.ts (part 18), pure
+ranked/<x>.rs  ← src/ranked/<x>.ts (part 18), pure; since #3105 `jackioh-shared`'s (crates/shared/src/ranked/), which the server re-exports as `ranked`
 db/store.rs    (part 20) the Db and Tx enums and every store method (← src/api/ports.ts's Store half)
 db/pg.rs       (part 20) ← src/db/store.ts: one free async fn per store method over sqlx
 db/fake.rs     (part 20) ← src/api/memory-stores.ts + e2e-store.ts: one free fn per store method over FakeData

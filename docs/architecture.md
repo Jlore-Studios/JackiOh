@@ -54,7 +54,7 @@ deployment decision that can be made later without touching the code.
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock (its deadlines decided by the pure host machine of `crates/shared`, #3101), the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays, and the watchers of a person's seat (§5.4, R2881000) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
-| `crates/shared` | Linked into the HTTP routes, and into the WASM module the clients load | No (pure) | The logic the server and the client share (#2956): first, the Conquest series rules (SPEC §9.5, R330–R337) |
+| `crates/shared` | Linked into the HTTP routes, and into the WASM module the clients load | No (pure) | The logic the server and the client share (#2956): first, the Conquest series rules (SPEC §9.5, R330–R337), then the ranked ladder (Glicko-2, tiers, seasons, SPEC §9.12, R603–R612) |
 
 ---
 

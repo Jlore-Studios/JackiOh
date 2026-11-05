@@ -1,7 +1,7 @@
 //! Hidden rating maths (SPEC §9.12, R603): Glicko-2 against reference values.
 
-use jackioh_server::config::{GLICKO_TAU, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
-use jackioh_server::ranked::glicko2::{
+use jackioh_shared::config::{GLICKO_TAU, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
+use jackioh_shared::ranked::glicko2::{
     Glicko, RatedOpponent, START_GLICKO, Score, glicko2_period, rate_game,
 };
 

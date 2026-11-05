@@ -943,32 +943,10 @@ pub use jackioh_shared::series::{SeriesEnd, SeriesGame, SeriesRow, SeriesSeat, S
 // ratings, and the record of every rated game. The rules are `ranked/*`, pure; `api/ranked.rs`
 // reads and writes through this port.
 
-/// R609: a season, named by the minor version of the game (`v0.2`), and the patch that opened it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Season {
-    pub id: String,
-    pub patch_version: String,
-    pub started_at: i64,
-}
-
-/// One player's season row with their current hidden rating: what percentiles and Jlorious read.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SeasonStanding {
-    #[serde(flatten)]
-    pub rank: SeasonRank,
-    pub rating: f64,
-    /// R640000: a ladder bot's row; never serialized when false. Jlorious and the percentiles read
-    /// the rows without it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub bot: bool,
-    /// R3074001: the player holds a hand-set rating on this ladder (migration 0080's
-    /// `hand_set_ratings`); never serialized when false. On a strict server (`DEV_STRICT`) the public
-    /// ladder, the percentiles and Jlorious read the rows without it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub hand_set: bool,
-}
+/// R609: a season and the patch that opened it, and one player's season row with their current hidden
+/// rating (what percentiles and Jlorious read): `jackioh-shared`'s (#3105), which decides over them.
+pub use jackioh_shared::ranked::board::SeasonStanding;
+pub use jackioh_shared::ranked::season::Season;
 
 /// R610: an AI bot's own Glicko-2 rating. Its ladder rank is a season row like a person's, read
 /// against people's ratings and never in Jlorious (R640000).
@@ -1137,13 +1115,8 @@ store_union! {
     }
 }
 
-/// How a rated game ended: the match's reason, or the series' (R334), whose literals are disjoint.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum RatedReason {
-    Game(GameOverReason),
-    Series(SeriesEnd),
-}
+/// How a rated game ended: the match's reason, or the series' (R334): `jackioh-shared`'s (#3105).
+pub use jackioh_shared::ranked::game::RatedReason;
 
 /// R611: the record of one rated game: a ranked match, or a ranked series, which is rated once as
 /// a whole (R262). Kept for good (account deletion empties a side's `profile_id`, as for

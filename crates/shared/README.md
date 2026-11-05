@@ -9,7 +9,8 @@ comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
-actor and the later practice and ladder-bot hosts (#3099, #3103) run on.
+actor and the later practice and ladder-bot hosts (#3099, #3103) run on; the third is the ranked ladder
+(#3105): Glicko-2, the visible ladder, the seasons and one rated game decided as data.
 
 ## Host contract
 
@@ -66,7 +67,13 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 (R333), and the match host's: `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS`
 (R268), `DISCONNECT_GRACE_SECONDS`, `MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000),
 `BOT_WRITE_RETRY_MS` (R1452), `AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and
-the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672). The server re-exports them from its own
+the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672), and the ranked ladder's (#3105): the hidden
+rating's (`RATING_START`, `RATING_DEVIATION_START`, `RATING_VOLATILITY_START`, `GLICKO_TAU`, `GLICKO_SCALE`,
+`GLICKO_CONVERGENCE`, `GLICKO_MAX_ITERATIONS`; R603), the visible ladder's (`RANK_TIER_PERCENTS` and the
+`RANK_*` pips, divisions and placements, `JLORIOUS_SIZE`; R605 to R608), the seasons' (`SEASON_RESET_STRENGTH`,
+`SEASON_RESET_DEVIATION_BOOST`; R609), `BOT_PROMOTION_DEVIATION_BOOST` (R1560000) and the leaderboard key's
+(`SORT_KEY_GRAPE_BASE`, `SORT_KEY_JLORIOUS_BASE`, `SORT_KEY_RATING_BITS`). `RANK_STREAK_FLAME_LENGTH` is only the
+client's and stays in the server. The server re-exports them from its own
 `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants`
 carries them, which the browser and the C module (`crates/wasm/c`) both bind.
 
@@ -216,6 +223,63 @@ holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s
 Duos co-op (`crates/server/src/duos/actor.rs`) runs on the same event and output shapes in a second
 part of #3101; until then its clocks and grace are the server's.
 
+## `src/ranked/`: the ranked ladder
+
+The ranked ladder's rules (SPEC §9.12, R603 to R612), from `crates/server/src/ranked/` and the deciding half of
+`crates/server/src/api/ranked.rs` (#3105). The server keeps the store, the leaderboards' queries and the timers; it
+reads the standings, calls these natively and writes what they return. A Roblox host keeps the same records in an
+OrderedDataStore and a MemoryStore and calls the same code through the `ranked` body.
+
+| Module | Holds | Rulings |
+| --- | --- | --- |
+| `glicko2` | the hidden rating: `glicko2_period`, `rate_game`, `rate_game_scored`, `widen_for_promotions`, Glickman's steps in his order | R603, R1843004, R1560000 |
+| `ladder` | the visible ladder: `place_of`, `percentile_of`, `target_ladder`, `pip_delta`, `apply_ranked_game`, `jlorious_order`, `visible_rank`, `peak_badge` and the shapes `SeasonRank`, `Standing`, `VisibleRank`, `PeakBadge`, `Ladder` | R605 to R608, R2778000 |
+| `season` | `season_id_of`, `plan_season` (which season a build plays in, from the seasons that exist and the time), `soft_reset` | R609 |
+| `game` | `decide(&RateGameInput) -> RatedDecision`: one rated game, as data | R603 to R611, R640000, R672, R1560000, R1843004, R3074001 |
+| `board` | `SeasonStanding`, `RatingRecord`, `sort_key`: the leaderboard's integer | R608, R612, R1436, R3074001 |
+
+- **`decide`** takes `ratings, result, season, now_ms` as one `RateGameInput`: the ladder's standings (every
+  season row with its rating), the two sides (their rating going in, a bot's last-rated AI generation), the winner and the
+  reason (R1843004), the stake (R672), the season, the ladder, `strict` (the server's `DEV_STRICT`, R3074001) and `now_ms`.
+  It returns a `RatedDecision`: each side's rating and visible rank before and after, the season rows to write, the
+  bystanders' Jlorious peaks, the people who may be owed the Jlorious card back, and the rating records. It reads no
+  store, clock or environment, and its floating point is the server's own to the bit (same functions, same order of
+  operations): ratings are stored.
+- **The season's dates come in.** `plan_season(seasons, patch_version, now_ms)` names the season and when it starts;
+  the first season of all resets nothing, every later one soft-resets each ladder's rated players (`soft_reset`) in
+  the transaction that creates it. Seasons are the only thing that ages a rating: there is no separate decay, only
+  the deviation widening R609 adds at a reset and R1560000 adds for an AI promotion.
+- **The sort key** (`board.rs`) is one integer on each rating record that a store sorts as it is. It is `0` for a
+  player not on the board (unplaced, or a hand-set rating on a strict server), `SORT_KEY_GRAPE_BASE` plus the ladder
+  position for a Grape player (it rises with the position, so across tiers), and `SORT_KEY_JLORIOUS_BASE` plus the
+  rating in fixed point (`SORT_KEY_RATING_BITS` fractional bits) for a Jlorious player: so descending order is the
+  public leaderboard's, Jlorious by rating and then Mythic Grape down to Rotten by position, equal keys by profile id
+  (R1436). It stays under `2^51`, so a Luau number holds it exactly. The two orders part only between two Jlorious
+  ratings closer than `2^-36` (about `1.5e-11` of a point), which the key ties and the board tells apart.
+  `tests/board.rs` holds the key's order to the leaderboard's on ladders of hundreds, and the server's
+  `tests/api/ranked.rs` holds it to its real `GET /api/leaderboard`. Whether a record is Jlorious depends on the others'
+  ratings, so a game that brings a player into Jlorious or pushes one out also returns that player's record, with the
+  key that moved: `RatedDecision::records` is what to write to the board, and any record it leaves out keeps its key.
+- **The server's types.** `Season`, `SeasonStanding`, `RatedReason`, `RankedSideInput`, `PeakWrite` and the ladder's
+  shapes are stored or sent (`seasons`, `season_ranks`, `rated_games`, the `/api/ranked` and `/api/leaderboard` bodies),
+  so changing a field, a rename or a `skip_serializing_if` is a store or wire change. `crates/server/src/lib.rs`
+  re-exports the module as `ranked`, so `crate::ranked::ladder::…` names these still.
+
+### The boundary
+
+`jackioh-wasm-core`'s `ranked(call)` takes one `RankedCall` as JSON and answers one `RankedAnswer`:
+
+```json
+{ "call": "rateGame", "game": { "standings": [], "sides": [ … ], "winnerSide": 0, "reason": "hero-death", "season": { … }, "ladder": "constructed", "nowMs": 1700000000000 } }
+{ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [ … ], "nowMs": 1700000000000 }
+{ "game": { "sides": [ … ], "ranks": [ … ], "peaks": [], "jlorious": [], "records": [ … ] } }
+{ "season": { "plan": "new", "season": { … }, "first": false } }
+```
+
+The calls are `rateGame`, `planSeason`, `softReset`, `visibleRank`, `peakBadge` and `jloriousOrder`; the answers are `game`,
+`season`, `reset`, `rank`, `badge` and `jlorious`. A call that does not parse is refused by the body as an error.
+`apply` is the one function behind it, and `tests/ranked_game.rs` holds it to the functions it names.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:
@@ -227,7 +291,8 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
 unchanged, and `tests/boundary.rs` the JSON boundary. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
-the real catalog), `tests/rematch.rs` (the book) and `tests/host_boundary.rs`. The `ts` feature writes the types that cross to
+the real catalog), `tests/rematch.rs` (the book) and `tests/host_boundary.rs`. The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
+with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.
 
 ```

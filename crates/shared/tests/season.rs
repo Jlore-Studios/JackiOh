@@ -1,9 +1,9 @@
 //! Ranked season boundaries and soft resets (SPEC §9.12, §4.4.9, R609).
 
 use indexmap::IndexMap;
-use jackioh_server::config::{RATING_DEVIATION_START, SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};
-use jackioh_server::ranked::glicko2::Glicko;
-use jackioh_server::ranked::season::{
+use jackioh_shared::config::{RATING_DEVIATION_START, SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};
+use jackioh_shared::ranked::glicko2::Glicko;
+use jackioh_shared::ranked::season::{
     ResetChange, ResetPlayer, ResetReport, reset_glicko, season_id_of, soft_reset,
 };
 

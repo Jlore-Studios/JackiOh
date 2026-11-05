@@ -15,6 +15,11 @@ use crate::config::{
 
 /// One side's hidden rating: Glicko-2's r, RD and σ, on the displayed scale.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Glicko {
     pub rating: f64,

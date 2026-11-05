@@ -338,6 +338,35 @@ fn host_export_answers_what_the_core_body_answers() {
 }
 
 #[test]
+fn ranked_export_answers_what_the_core_body_answers() {
+    init();
+    let plan =
+        json!({ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [], "nowMs": 1700000000000_i64 })
+            .to_string();
+    let planned = call!(ranked; plan;);
+    assert_eq!(planned, expect(wasm_core::ranked(&plan)));
+    assert_eq!(planned.status, STATUS_OK, "{}", planned.text);
+    let planned: Value = serde_json::from_str(&planned.text).expect("JSON");
+    assert_eq!(planned["season"]["season"]["id"], "v0.3");
+    // The season it answered is the next call's argument, with the sides it rates.
+    let side = |id: &str| json!({ "side": { "kind": "player", "profileId": id }, "glicko": { "rating": 1000.0, "deviation": 350.0, "volatility": 0.06 } });
+    let game = json!({ "call": "rateGame", "game": {
+        "standings": [], "sides": [side("a"), side("b")], "winnerSide": 1, "reason": "hero-death",
+        "season": planned["season"]["season"], "ladder": "random", "nowMs": 1700000000000_i64 } })
+    .to_string();
+    let rated = call!(ranked; game;);
+    assert_eq!(rated, expect(wasm_core::ranked(&game)));
+    assert_eq!(rated.status, STATUS_OK, "{}", rated.text);
+    let rated: Value = serde_json::from_str(&rated.text).expect("JSON");
+    assert_eq!(rated["game"]["ranks"][1]["wins"], 1);
+    assert_eq!(rated["game"]["ranks"][0]["format"], "random");
+    // A call that does not parse is the one failure.
+    let broken = call!(ranked; "{}";);
+    assert_eq!(broken, expect(wasm_core::ranked("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
 fn run_exports_answer_what_the_core_bodies_answer() {
     init();
     let content = call!(run_content; "[]";);

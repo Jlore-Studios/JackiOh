@@ -783,5 +783,15 @@ pub extern "C" fn host(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::host(arg("host: the call", call_json_ptr, call_json_len)?))
 }
 
+// The ranked ladder (SPEC §9.12, #3105: `jackioh-shared`, which the server calls natively)
+
+/// One call of the ranked ladder's rules: a `RankedCall` as JSON in, a `RankedAnswer` as JSON out. The host
+/// holds the ladder's records and passes the time in (`crates/shared/README.md`, the host contract). Only a
+/// call that does not parse is a failed status.
+#[unsafe(no_mangle)]
+pub extern "C" fn ranked(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::ranked(arg("ranked: the call", call_json_ptr, call_json_len)?))
+}
+
 #[cfg(test)]
 mod tests;
