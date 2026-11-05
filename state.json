@@ -16676,15 +16676,8 @@
       "stop_requested": false
     },
     "3114": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41958258456",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-05T03:27:28Z",
-        "until": "2026-11-05T03:57:28Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16696,25 +16689,24 @@
         "reason": "planned on opus",
         "trail": "m-3114; grep -n \\\"^#\\\" docs/ADDING_CARDS.md | head -30; sed -n 40,56p docs/ADDING_CARDS.md\", \"description\": \"Read ADDING_CARDS sections\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -n \\\"FIXTURES\\\" crates/cards/tests/cross/catalog.rs | head -12; sed -n 7520,7540p crates/cards/tests/cross/catalog.rs\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 7745,7760p crates/cards/tests/cross/catalog.rs; sed -n 7925,7950p crates/cards/tests/cross/catalog.rs\", \"description\": \"Read FIXTURES lo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -rn \\\"CatalogNumberSetOffsets\\\\|CATALOG_NUMBER_SET_OFFSETS\\\" --include=*.rs --include=*.md --include=*.ts . 2>/dev/null | grep -v \\\"^./tar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 795,836p crates/tools/src/sweep.rs; sed -n 1064,1080p crates/tools/src/sweep.rs; sed -n 1980,1995p crates/tools/src/sweep.rs; sed -n 40,\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 1636,1660p crates/tools/src/classify.rs; sed -n 2015,2050p crates/tools/src/sweep.rs; grep -n \\\"Stinkyscape and Training Grounds cards o\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 814,822p docs/v0.3.0/SURFACE.md; sed -n 5,12p crates/cards/README.md; sed -n 1,30p crates/engine/tests/export_config.rs | head -32\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; cat apps/web/src/wire/generated/SetName.ts; grep -n \\\"ts-rs\\\" Cargo.toml\", \"description\": \"Check generated SetName.ts doc handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -rln \\\"STINKYSCAPE_BAN_CEILING\\\\|BAN_DIVISOR\\\\|BAN_SETS\\\" --exclude-dir=target --exclude-dir=node_modules --exclude-dir=.git . | grep -v \\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -on \\\"[^.]*\\\\(STINKYSCAPE_BAN_CEILING\\\\|BAN_DIVISOR\\\\|BAN_SETS\\\\)[^.]*\\\" crates/tools/README.md spec/rulings/R732000.md spec/rulings/R1186\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 30p crates/tools/README.md | grep -o \\\".\\\\{120\\\\}\\\\(STINKYSCAPE_BAN_CEILING\\\\|BAN_DIVISOR\\\\|BAN_SETS\\\\).\\\\{120\\\\}\\\"\", \"description\": \"Sh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -rn \\\"\\\\[SetName; [0-9]\\\\]\\\" crates apps --include=*.rs | grep -v \\\"catalog_types.rs\\\\|sweep.rs:103\\\\|shadow_ban.rs:1693\\\" | cut -c1-160\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -n \\\"cfg(test)\\\\|fn r[0-9]\\\\|#\\\\[test\\\\]\\\" crates/cards/src/census.rs | head; grep -n \\\"^mod \\\\|^pub mod \\\\|census\\\" crates/cards/tests/cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -n \\\"mod \\\\|path\\\" crates/cards/tests/cards.rs | head -50 | grep -n \\\"catalog\\\\|census\\\" ; grep -n \\\"CENSUS\\\" crates/cards/tests/cross/cat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 1880,1905p crates/tools/src/fuzz.rs\", \"description\": \"Read fuzz blank_card_ids\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -n \\\"blank_card_ids\\\" crates/tools/src/fuzz.rs | head; sed -n 1990,2012p crates/tools/src/fuzz.rs\", \"description\": \"See blank_card_ids pur\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; sed -n 1905,1925p crates/tools/src/fuzz.rs; grep -n \\\"fn starts_with_at\\\\|fn boundary_at\\\" crates/tools/src/fuzz.rs; grep -n \\\"signature_of(\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -n \\\"gen-voice\\\\|--check\\\\|shippedSets\\\\|catalog.ts\\\" apps/web/src/audio/voice-assets.test.ts | head -8; grep -n \\\"fn show\\\\b\\\\|pub(crate)\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery per-set fact the code reads comes from one table, `set_table![\\u2026]` in `crates/engine/src/wire/cat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -n \\\"SET_PREFIXES\\\\|DEFAULT_SET\\\" crates/tools/src/spec.rs; wc -w .bot-plan.md; grep -n \\\"fn ai_pool\\\\|use jackioh_engine\\\\|use super\\\" cr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/.bot-plan.md\", \"content\": \"## Goal\\n\\nOne table, `set_table![\\u2026]` in `crates/engine/src/wire/catalog_types.rs`, holds every per-set fact the \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; wc -w .bot-plan.md; wc -c .bot-plan.md; rm -rf /tmp/p3114\", \"description\": \"Check plan length and clean scratch\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"One table, `set_table![\\u2026]` in `crates/engine/src/wire/catalog_types.\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/.bot-plan.md\", \"limit\": 40}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3114/.bot-plan.md\", \"content\": \"## Goal\\n\\nOne table, `set_table![\\u2026]` in `crates/engine/src/wire/catalog_types.rs`, holds every per-set fact. For\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; wc -w .bot-plan.md; head -5 .bot-plan.md | cut -c1-120\", \"description\": \"Check plan word count\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3114; grep -c \\\"\\\" .bot-plan.md; sed -n 1,20p .bot-plan.md | cut -c1-200\", \"description\": \"Inspect saved plan head\"}\n- Bash: {\"command\": \"mkdir -p /tmp/wc3114 && cat > /tmp/wc3114/p.md <<'PLAN'\\n## Goal\\n\\nOne table, `set_table![\\u2026]` in `crates/engine/src/wire/catalog_types.rs`, holds every per-set fact. Each row gives\u2026\n- Bash: {\"command\": \"cp /tmp/wc3114/p.md /home/runner/work/_temp/work/item-3114/.bot-plan.md && rm -rf /tmp/wc3114 && wc -w /home/runner/work/_temp/work/item-3114/.bot-plan.md\", \"description\": \"Save compact \u2026\n- said: ## Goal One table, `set_table![\u2026]` in `crates/engine/src/wire/catalog_types.rs`, holds every fact the code reads per set. Each row gives a set's variant, wire name, stage, id segment, the abbreviation ruling notes use, and its shadow-ban share. - `SetName` stays an enum, now generated from the rows\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-05T02:54:57Z",
-      "owner_why": "it plans it; released from its hold: `claude-8` has no runner free where it runs",
+      "live": "building",
+      "owner": "claude-6",
+      "owner_since": "2026-11-05T03:30:20Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-05T03:27:21Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-05T01:44:33Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41958258456",
+      "run_id": "pending:761b8a9c-1793849383",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T02:54:57Z",
+      "started_at": "2026-11-05T03:30:20Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6648218890
@@ -17057,9 +17049,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T03:19:06Z",
+    "at": "2026-11-05T03:30:20Z",
     "url": "",
-    "what": "build #3121 on claude-1"
+    "what": "build #3114 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T03:15:20Z",
