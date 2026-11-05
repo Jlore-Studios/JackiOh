@@ -16020,6 +16020,13 @@
     "3219": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42078946147",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-05T18:41:11Z",
+        "until": "2026-11-05T19:11:11Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
