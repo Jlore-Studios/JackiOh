@@ -28,7 +28,7 @@ use serde_json::Value;
 
 use jackioh_engine::wire::{
     Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick, ListTotal,
-    PerPlayer, PlayerId, PortraitId, SourceFilter, StatsTotals,
+    PlayerId, PortraitId, SourceFilter, StatsTotals,
 };
 
 use super::{fake, pg};
@@ -689,18 +689,9 @@ pub struct ReplayWithMode {
     pub mode: Option<QueueMode>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct MatchClocks {
-    /// Epoch ms the active player's turn clock expires, or null while it is paused.
-    pub turn_deadline: Option<i64>,
-    /// Epoch ms the open prompt's own clock expires (R79), or null.
-    pub prompt_deadline: Option<i64>,
-    /// Per-player disconnect grace deadlines (§9.5).
-    pub grace_deadline: PerPlayer<Option<i64>>,
-    /// Epoch ms the hard ceiling is reached (R79).
-    pub ceiling_at: i64,
-}
+// The deadlines both clients render and `matches.clocks` stores: the match host's (#3101), whose clock
+// states them.
+pub use jackioh_shared::host::clock::MatchClocks;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]

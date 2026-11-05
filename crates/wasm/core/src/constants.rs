@@ -71,7 +71,13 @@ pub fn constants() -> Result<String, String> {
         TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
         VOTE_TALLY_SIZE,
     );
-    put_shared!(all; MS_PER_SECOND, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED);
+    put_shared!(
+        all;
+        MS_PER_SECOND, SERIES_WINS_NEEDED, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, TURN_CLOCK_SECONDS,
+        PROMPT_CLOCK_SECONDS, MULLIGAN_CLOCK_SECONDS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES,
+        MATCH_SERVER_ACTION_RETRY_MS, BOT_WRITE_RETRY_MS, AIM_RELAY_INTERVAL_MS, REMATCH_OFFER_TTL_MS,
+        STAKE_NORMAL, STAKE_DOUBLE,
+    );
     to_json(&Value::Object(all))
 }
 
@@ -157,41 +163,46 @@ mod tests {
         );
     }
 
-    /// The shared logic's numbers (#3098), by the names its `config.rs` and the server's hold them under.
+    /// The shared logic's numbers (#3098, #3101), by the names its `config.rs` and the server's hold them
+    /// under.
     #[test]
     fn constants_carry_the_shared_logics_numbers() {
         let all = object();
         let names = shared_config_names();
+        let mut expected = Vec::new();
+        macro_rules! shared_numbers {
+            ($($name:ident),+ $(,)?) => {
+                $(
+                    expected.push(stringify!($name).to_owned());
+                    assert_eq!(
+                        all.get(stringify!($name)),
+                        Some(&serde_json::to_value(jackioh_shared::config::$name).expect("serializes")),
+                        stringify!($name)
+                    );
+                )+
+            };
+        }
+        shared_numbers!(
+            MS_PER_SECOND,
+            SERIES_WINS_NEEDED,
+            SERIES_MAX_GAMES,
+            SERIES_PICK_SECONDS,
+            TURN_CLOCK_SECONDS,
+            PROMPT_CLOCK_SECONDS,
+            MULLIGAN_CLOCK_SECONDS,
+            DISCONNECT_GRACE_SECONDS,
+            MATCH_CEILING_MINUTES,
+            MATCH_SERVER_ACTION_RETRY_MS,
+            BOT_WRITE_RETRY_MS,
+            AIM_RELAY_INTERVAL_MS,
+            REMATCH_OFFER_TTL_MS,
+            STAKE_NORMAL,
+            STAKE_DOUBLE,
+        );
         assert_eq!(
-            names,
-            [
-                "MS_PER_SECOND",
-                "SERIES_WINS_NEEDED",
-                "SERIES_MAX_GAMES",
-                "SERIES_PICK_SECONDS"
-            ],
+            names, expected,
             "config.rs gained or lost a constant: put it in `constants` (put_shared!) and here"
         );
-        for (name, value) in [
-            (
-                "MS_PER_SECOND",
-                serde_json::to_value(jackioh_shared::config::MS_PER_SECOND),
-            ),
-            (
-                "SERIES_WINS_NEEDED",
-                serde_json::to_value(jackioh_shared::config::SERIES_WINS_NEEDED),
-            ),
-            (
-                "SERIES_MAX_GAMES",
-                serde_json::to_value(jackioh_shared::config::SERIES_MAX_GAMES),
-            ),
-            (
-                "SERIES_PICK_SECONDS",
-                serde_json::to_value(jackioh_shared::config::SERIES_PICK_SECONDS),
-            ),
-        ] {
-            assert_eq!(all.get(name), Some(&value.expect("serializes")), "{name}");
-        }
     }
 
     #[test]
