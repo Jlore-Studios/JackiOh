@@ -43,10 +43,10 @@
   position: fixed;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   box-sizing: border-box;
   margin: 0;
-  padding: 6px 10px;
+  padding: var(--space-3) var(--space-5);
   translate: 0 -50%;
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-md);
