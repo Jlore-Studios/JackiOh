@@ -6,7 +6,8 @@
 //! Meditative+ (#1182): the potion frame (`CraftFrame`, R1182000, R1182001), a Potion-tagged Spell
 //! whose one hat is When cast (R1563008); Scratch Pad's from-scratch mode (R1182002). The offer
 //! (#1563, R1563007): every other `craft` prompt draws its blocks from the match rng, and its presets
-//! and answer use no other; "give your hero Armor" is retired (R1563009).
+//! and answer use no other; "give your hero Armor" is retired (R1563009). The prompt's mode keys an
+//! unframed recipe's points: Meditative #17's (no mode) has about 20% fewer than Scratch Pad's (R3043000).
 //!
 //! Pure (CLAUDE.md rule 4): the compiler is a total function of the recipe, the presets read only the
 //! match rng, and the id hashes JSON of fixed field order.
@@ -22,7 +23,7 @@ use crate::config::{
     CRAFT_MAX_COST, CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_OFFER_HATS, CRAFT_OFFER_KEYWORDS,
     CRAFT_OFFER_VERBS, CRAFT_POTION_COST, CRAFT_POTION_POINTS, CRAFT_PRESET_BASE_HEALTH,
     CRAFT_PRESET_KEYWORD_MIN_POINTS, CRAFT_PRESETS, CRAFT_RADIANT_MULTIPLIER, CRAFT_RETIRED_VERBS,
-    CRAFT_VERB_PRICES, craft_points_budget,
+    CRAFT_VERB_PRICES, craft_points_budget, true_craft_points_budget,
 };
 use indexmap::IndexMap;
 
@@ -69,11 +70,15 @@ pub fn frame_cost(frame: CraftFrame) -> i32 {
     }
 }
 
-/// The points a recipe may spend: Meditative #17's budget at the cost (R880); a Potion's, below the
-/// crafter's at its cost since a Spell has no stats (R1563008); a HUGE Potion's, a multiple (R1182001).
-pub fn points_budget(frame: Option<CraftFrame>, cost: i32) -> i32 {
+/// The points a recipe may spend: a Potion's, below the crafter's at its cost since a Spell has no
+/// stats (R1563008); a HUGE Potion's, a multiple (R1182001); with no frame, the crafter's budget at the
+/// cost (R880), which the prompt's mode keys (R3043000): Meditative #17's prompt, of no mode, has
+/// `TRUE_CRAFT_POINTS_PERCENT` of it, and Scratch Pad's the whole (R1182002).
+pub fn points_budget(frame: Option<CraftFrame>, mode: Option<CraftMode>, cost: i32) -> i32 {
+    let cost = cost.clamp(0, CRAFT_MAX_COST);
     match frame {
-        None => craft_points_budget(cost.clamp(0, CRAFT_MAX_COST)),
+        None if mode.is_none() => true_craft_points_budget(cost),
+        None => craft_points_budget(cost),
         Some(CraftFrame::Potion) => CRAFT_POTION_POINTS,
         Some(CraftFrame::HugePotion) => CRAFT_HUGE_POTION_BUDGET_MULTIPLE * CRAFT_POTION_POINTS,
     }
@@ -166,9 +171,10 @@ fn is_reveal_hat(hat: CraftHatKind) -> bool {
 }
 
 /// One sentence for each problem; empty is valid. `cost` is the `number` prompt's choice, which the
-/// recipe's must match. A framed recipe (R1182000, R1182001, R1563008) is a Spell at its frame's cost
-/// whose one hat is When cast; a retired verb (R1563009) is no block.
-pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String>> {
+/// recipe's must match, and `mode` the prompt's, which keys an unframed recipe's points (R3043000). A
+/// framed recipe (R1182000, R1182001, R1563008) is a Spell at its frame's cost whose one hat is When
+/// cast; a retired verb (R1563009) is no block.
+pub fn validate_recipe(recipe: &CraftRecipe, cost: i32, mode: Option<CraftMode>) -> Result<(), Vec<String>> {
     let mut reasons: Vec<String> = Vec::new();
     if !(0..=CRAFT_MAX_COST).contains(&cost) {
         reasons.push(format!("the cost is {cost}, outside 0 to {CRAFT_MAX_COST}"));
@@ -348,7 +354,7 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String
             }
         }
     }
-    let budget = points_budget(recipe.frame, cost);
+    let budget = points_budget(recipe.frame, mode, cost);
     let points = recipe_points(recipe);
     if points > budget {
         reasons.push(format!("it costs {points} points, over the budget of {budget}"));
@@ -362,16 +368,17 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String
     if reasons.is_empty() { Ok(()) } else { Err(reasons) }
 }
 
-/// A `craft` prompt's answer (R880): `validate_recipe` at the prompt's cost, in the frame its mode
-/// names (R1182000, R1182002; none for Meditative #17's and Scratch Pad's), and with an offer, using
-/// only keywords (granted ones included), hats and verbs it offered (R1563007).
+/// A `craft` prompt's answer (R880): `validate_recipe` at the prompt's cost and within its mode's
+/// points (R3043000), in the frame its mode names (R1182000, R1182002; none for Meditative #17's and
+/// Scratch Pad's), and with an offer, using only keywords (granted ones included), hats and verbs it
+/// offered (R1563007).
 pub fn validate_answer(
     recipe: &CraftRecipe,
     cost: i32,
     mode: Option<CraftMode>,
     offer: Option<&CraftOffer>,
 ) -> Result<(), Vec<String>> {
-    let mut reasons = validate_recipe(recipe, cost).err().unwrap_or_default();
+    let mut reasons = validate_recipe(recipe, cost, mode).err().unwrap_or_default();
     let wanted = mode.and_then(CraftMode::frame);
     if recipe.frame != wanted {
         reasons.push(match wanted {
@@ -1149,12 +1156,17 @@ fn preset_effect(
     ))
 }
 
-/// The seeded presets, in Unit, Spell, Field Spell and Trap order: complete recipes within the budget,
-/// every word, hat and verb a match-rng draw (R881) from the prompt's offer (R1563007), so a type the
-/// offer cannot build has none.
-pub fn craft_presets(rng: &mut Rng, cost: i32, offer: &CraftOffer) -> Vec<CraftRecipe> {
+/// The seeded presets, in Unit, Spell, Field Spell and Trap order: complete recipes within the budget
+/// the prompt's mode keys (R3043000), every word, hat and verb a match-rng draw (R881) from the
+/// prompt's offer (R1563007), so a type the offer cannot build has none.
+pub fn craft_presets(
+    rng: &mut Rng,
+    mode: Option<CraftMode>,
+    cost: i32,
+    offer: &CraftOffer,
+) -> Vec<CraftRecipe> {
     let cost = cost.clamp(0, CRAFT_MAX_COST);
-    let budget = craft_points_budget(cost);
+    let budget = points_budget(None, mode, cost);
     let mut out = vec![preset_unit(rng, cost, budget, offer)];
     out.extend(preset_effect(
         rng,
@@ -1196,7 +1208,7 @@ pub fn craft_presets(rng: &mut Rng, cost: i32, offer: &CraftOffer) -> Vec<CraftR
 /// offered verb that fits the frame's points, at the largest N that fits; drawn as R881's are.
 pub fn craft_potion_presets(rng: &mut Rng, frame: CraftFrame, offer: &CraftOffer) -> Vec<CraftRecipe> {
     let cost = frame_cost(frame);
-    let budget = points_budget(Some(frame), cost);
+    let budget = points_budget(Some(frame), None, cost);
     let mut verbs: Vec<CraftVerb> = offer
         .verbs
         .iter()
@@ -1256,13 +1268,13 @@ fn draw_some<T: Copy + PartialEq>(rng: &mut Rng, pool: &[T], count: usize) -> Ve
 
 /// R1563007: a `craft` prompt's offer, drawn from the match rng as it opens; `None` for Scratch Pad's.
 /// Keywords come from the whole table (one serves the card or a Give a unit a keyword block), hats
-/// from those a type takes, verbs from those that fit its budget alone.
+/// from those a type takes, verbs from those that fit its budget alone (its mode's, R3043000).
 pub fn roll_offer(rng: &mut Rng, mode: Option<CraftMode>, cost: i32) -> Option<CraftOffer> {
     if mode == Some(CraftMode::Scratch) {
         return None;
     }
     let frame = mode.and_then(CraftMode::frame);
-    let budget = points_budget(frame, cost);
+    let budget = points_budget(frame, mode, cost);
     let keywords: Vec<KeywordKind> = CRAFT_KEYWORD_PRICES.iter().map(|row| row.kind).collect();
     let hats = match frame {
         Some(_) => vec![CraftHatKind::WhenCast],
@@ -1290,8 +1302,8 @@ pub fn roll_offer(rng: &mut Rng, mode: Option<CraftMode>, cost: i32) -> Option<C
     })
 }
 
-/// A `craft` prompt's presets: Meditative #17's (R881) or the frame's Potions (R1182000), from the
-/// offer (R1563007), or with none (R1182002) from the whole palette.
+/// A `craft` prompt's presets: Meditative #17's (R881), within the mode's points (R3043000), or the
+/// frame's Potions (R1182000), from the offer (R1563007), or with none (R1182002) from the whole palette.
 pub fn presets_for(
     rng: &mut Rng,
     mode: Option<CraftMode>,
@@ -1302,7 +1314,7 @@ pub fn presets_for(
     let offer = offer.unwrap_or(&whole);
     match mode.and_then(CraftMode::frame) {
         Some(frame) => craft_potion_presets(rng, frame, offer),
-        None => craft_presets(rng, cost, offer),
+        None => craft_presets(rng, mode, cost, offer),
     }
 }
 
@@ -1321,14 +1333,15 @@ pub fn whole_palette() -> CraftOffer {
 
 // The preview (R880)
 
-/// The engine's own verdict on a recipe at the chosen cost, with its budgets and the card it would
-/// make: the editor shows this, so the client decides nothing (CLAUDE.md rule 7).
-pub fn craft_preview(recipe: &CraftRecipe, cost: i32) -> CraftPreview {
+/// The engine's own verdict on a recipe at the chosen cost in the prompt's mode, with its budgets
+/// (the mode's points, R3043000) and the card it would make: the editor shows this, so the client
+/// decides nothing (CLAUDE.md rule 7).
+pub fn craft_preview(recipe: &CraftRecipe, cost: i32, mode: Option<CraftMode>) -> CraftPreview {
     CraftPreview {
-        valid: validate_recipe(recipe, cost).is_ok(),
-        reasons: validate_recipe(recipe, cost).err().unwrap_or_default(),
+        valid: validate_recipe(recipe, cost, mode).is_ok(),
+        reasons: validate_recipe(recipe, cost, mode).err().unwrap_or_default(),
         points: recipe_points(recipe),
-        points_budget: points_budget(recipe.frame, cost),
+        points_budget: points_budget(recipe.frame, mode, cost),
         loc: recipe_loc(recipe),
         loc_budget: CRAFT_LOC_BUDGET,
         def: compile_crafted_def(recipe),
@@ -1346,6 +1359,6 @@ pub fn craft_preview_for(
     CraftPreview {
         valid: verdict.is_ok(),
         reasons: verdict.err().unwrap_or_default(),
-        ..craft_preview(recipe, cost)
+        ..craft_preview(recipe, cost, mode)
     }
 }

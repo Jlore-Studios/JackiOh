@@ -246,7 +246,7 @@
     {
       "id": "Starship",
       "label": "Starship",
-      "rule": "A launched Starship, built from the Starship Pieces fused into it",
+      "rule": "A tag: your Starship, Dormant or launched, built from the Starship Pieces fused into it. Every Starship has Flying and Ranged",
       "section": "§6.1",
       "aliases": []
     },
@@ -288,7 +288,7 @@
     {
       "id": "Dormant",
       "label": "Dormant",
-      "rule": "On the field and filling its zone, but out of play until it awakens: it can't attack, be attacked or be targeted, no effect reaches it, and its auras and triggers are off",
+      "rule": "On the field and filling its zone, but out of play until it awakens: it can't attack, be attacked or be targeted, no effect reaches it, and its auras and triggers are off. An awakened card is never Dormant again",
       "section": "§6.1",
       "aliases": []
     },
@@ -333,14 +333,6 @@
       "aliases": [
         "end of turn"
       ]
-    },
-    {
-      "id": "Start of game",
-      "label": "Start of game",
-      "rule": "After mulligan, before turn 1",
-      "section": "§6.2",
-      "aliases": [],
-      "row": "Start of Game"
     },
     {
       "id": "Once per turn",

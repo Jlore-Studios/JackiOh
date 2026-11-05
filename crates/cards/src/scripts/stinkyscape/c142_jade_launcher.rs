@@ -1,4 +1,4 @@
-//! Stinkyscape #142 Jade Launcher (SPEC §8.10 row 142). Unit 0/6 → 0/12, CN, Weapon, cost 3, Epic.
+//! Stinkyscape #142 Jade Launcher (SPEC §8.10 row 142). Unit 0/3 → 0/6, CN, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy, then gain the reward an Auspicious Rock gives."
 //!            — damage 2
@@ -147,9 +147,9 @@ mod tests {
         }
 
         #[test]
-        fn r987_its_controllers_luck_rolls_the_reward_again_keeping_the_best() {
-            // M #40 Feng Shui's Luck 1 gives the Launcher's roll a second roll, keeping the better.
-            const FENG_SHUI: &str = "meditative-040";
+        fn r987_a_lucky_1_given_to_it_rolls_the_reward_again_keeping_the_best() {
+            // Lucky 1 given to the Launcher (R1438) gives its roll a second roll, keeping the better: the
+            // best-of path M #40 Feng Shui's Luck 1 took through v0.5.11r (R3140000: no card gives Luck now).
             // Worst to best (R960): Dud < Jade < Red Jade.
             const RANKED: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
             const SEEDS: u32 = 30;
@@ -164,18 +164,14 @@ mod tests {
                 let field = json!([{ "def": ID }]);
                 let mut plain = weapon_board(&seed, json!({ "field": field }), json!({ "field": [VANILLA] }));
                 plain.activate(ID, at_hero());
-                let mut lucky = weapon_board(
-                    &seed,
-                    json!({ "field": field, "backrow": [FENG_SHUI] }),
-                    json!({ "field": [VANILLA] }),
-                );
-                assert_eq!(luck_of(lucky.state(), P1), 1);
+                let mut lucky = weapon_board(&seed, json!({ "field": field }), json!({ "field": [VANILLA] }));
+                crate::give_lucky(&mut lucky, ID, 1);
                 lucky.activate(ID, at_hero());
                 let (without, with) = (rank(&plain), rank(&lucky));
                 worse_never &= with >= without;
                 better_once |= with > without;
             }
-            assert!(worse_never, "Luck keeps the best of the rolls");
+            assert!(worse_never, "Lucky keeps the best of the rolls");
             assert!(better_once, "over {SEEDS} seeds some roll improves");
         }
 
@@ -210,7 +206,7 @@ mod tests {
         fn its_health_is_doubled() {
             let s = launcher_on(true, json!({}));
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, 12));
+            assert_eq!((view.attack, view.health), (0, 6));
         }
     }
 }

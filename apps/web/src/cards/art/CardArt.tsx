@@ -16,12 +16,15 @@
 // R2943001: a Set showcase restyle ("showcase-…") does the same. Given a `part` other than "whole" (Out of frame's),
 // the procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop or its subject alone
 // (`data-art-part`), and a delivered file, which has no parts, gives way to the painter.
+// R3045000: a fused definition holding a Miner or a Weapon draws the art of the card it was fused onto
+// (fusedArt.ts), its id, name and tags standing for the fusion's wherever the art reads them.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { CardType, Tag } from "@jackioh/shared";
 
 import { useDefResolver } from "../refContext.tsx";
+import { artSubjectOf } from "./fusedArt.ts";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
@@ -71,12 +74,12 @@ function classes(shape: ArtShape, className: string | undefined): string {
 }
 
 export function CardArt({
-  defId,
+  defId: shownId,
   radiant,
-  tags,
+  tags: shownTags,
   type,
   shape,
-  name,
+  name: shownName,
   manifest = ART_MANIFEST,
   className,
   lazy = false,
@@ -97,6 +100,8 @@ export function CardArt({
     });
   }, [near]);
   const resolve = useDefResolver();
+  // R3045000: a Miner or a Weapon fused onto a card leaves that card's art; its id, name and tags stand for the fusion's.
+  const { defId, name, tags } = artSubjectOf({ defId: shownId, name: shownName, tags: shownTags }, resolve);
   const theme = themeFor(tags, type);
   // R2170000, R2202000 and R2724000: the Stinkyscape and Training Grounds sets draw their own
   // families, and a Training Grounds Legacy card its own yard picture with its Core card's subject,

@@ -84,6 +84,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
   ],
   "§6.2": [
     "Cry and Death",
+    // R3134002: Heroic Power's Cry took its place, so no card prints it; the engine still runs the hook.
+    "Start of Game",
     "After this is attacked",
     "Trigger multiplier",
     "Hand and deck triggers",
@@ -215,7 +217,6 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Death",
   "Start of turn",
   "End of turn",
-  "Start of game",
   "Once per turn",
   "Aura",
   "Combo",
@@ -409,9 +410,13 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect(termsIn(played("classic-065"))[0]).toBe("End of turn");
   });
 
-  it("B10 'Start of game' and 'Once per turn' match their exact labels", () => {
-    expect(termsOf("Start of game: gain a power")).toEqual([{ text: "Start of game:", term: "Start of game" }]);
+  it("B10 'Once per turn' matches its exact label", () => {
     expect(termsOf('each "Once per turn, spend X"')).toEqual([{ text: "Once per turn", term: "Once per turn" }]);
+  });
+
+  it("R3134002 'Start of game' is no term: no card prints it, so its §6.2 row is rules-only", () => {
+    expect(termsOf("Start of game: gain a power")).toEqual([]);
+    expect("Start of game" in GLOSSARY).toBe(false);
   });
 
   it("B10 matching is case-sensitive: 'taunt', 'cry:' and 'choose one' stay text", () => {
@@ -889,8 +894,9 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     );
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
-    // Jlockeed's J15 Fighter no longer has it at all.
-    expect(termsIn(played("classicplus-051"))).not.toContain("Can't Defend");
+    // Jlockeed's J15 Fighter prints it again on both faces since #3042 (part 5 of #3000).
+    expect(termsIn(played("classicplus-051"))).toContain("Can't Defend");
+    expect(termsIn(played("classicplus-051", "radiant"))).toContain("Can't Defend");
   });
 
   it("R2657000 the status's spellings are plain words now, and Warp Disruptor's aura stays plain words", () => {

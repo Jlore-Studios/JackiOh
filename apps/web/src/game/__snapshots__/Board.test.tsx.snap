@@ -760,8 +760,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
             data-rarity="Common"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -771,7 +773,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-theme="human"
                   data-art-variant="base"
@@ -891,9 +893,11 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
             data-rarity="Common"
             data-taunt="true"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -903,7 +907,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-motif="dice"
                   data-art-theme="human"
@@ -1243,8 +1247,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             class="cf cf--minion"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
             data-rarity="Common"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -1254,7 +1260,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-motif="blades"
                   data-art-theme="unit"
@@ -1358,10 +1364,12 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             data-card-type="Unit"
             data-flying="true"
             data-foil="animated"
+            data-full-art="true"
             data-layout="minion"
             data-radiant-face="true"
             data-rarity="Common"
             data-taunt="true"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"
@@ -1371,7 +1379,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   aria-hidden="true"
-                  class="cf-art cf-art--oval"
+                  class="cf-art cf-art--full"
                   data-art="procedural"
                   data-art-motif="clock"
                   data-art-theme="human"
@@ -2438,7 +2446,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               <span
                 class="cost-gem"
                 data-cost="3"
-                data-tone="base"
+                data-tone="up"
               >
                 3
               </span>
@@ -2452,10 +2460,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   class="stat stat-attack"
-                  data-attack="6"
+                  data-attack="3"
                   data-tone="reduced"
                 >
-                  6
+                  3
                 </span>
                 <span
                   class="stat stat-health"

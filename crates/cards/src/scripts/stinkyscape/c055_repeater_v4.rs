@@ -1,4 +1,4 @@
-//! Stinkyscape #55 Repeater v4 (SPEC §8.10 row 55). Unit 0/6 → 0/12, Weapon, cost 3, Epic.
+//! Stinkyscape #55 Repeater v4 (SPEC §8.10 row 55). Unit 0/3 → 0/6, Weapon, cost 3, Epic.
 //!   Base:    "Starship Piece, Equip
 //!            Activate 3: Deal {damage} damage to an enemy Unit, with Pierce." — damage 2
 //!   Radiant: the same text — damage 4
@@ -117,7 +117,7 @@ mod tests {
     /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 2;
     const RADIANT_DAMAGE: i32 = 4;
-    const RADIANT_HEALTH: i32 = 12;
+    const RADIANT_HEALTH: i32 = 6;
 
     fn at(target: &str) -> Value {
         json!({ "ability": "repeater", "targets": pick::id(target) })

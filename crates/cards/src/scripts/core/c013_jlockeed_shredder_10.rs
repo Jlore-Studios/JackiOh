@@ -1,4 +1,4 @@
-//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 12/20 Unit, cost 3. Base "End of turn: deal 2 damage
+//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/8 → 12/16 Unit, cost 3 (6/10 → 12/20 until issue #3136). Base "End of turn: deal 2 damage
 //! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
 //! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
 //! target, controller's end of turn".
@@ -76,7 +76,7 @@ mod tests {
 
                 s.end_turn();
 
-                s.expect_in_zone(&pointmaster, "graveyard"); // 7/2 took 2
+                s.expect_in_zone(&pointmaster, "graveyard"); // 6/1 took 2
                 s.expect_stats("core-008", json!({ "health": 2, "maxHealth": 4 })); // 4/4 took 2
                 s.expect_health(PlayerId::P2, 28);
                 s.expect_health(PlayerId::P1, 30); // "each ENEMY unit and the enemy hero": nothing of its own
@@ -144,7 +144,7 @@ mod tests {
 
                 s.end_turn();
 
-                s.expect_in_zone(&pointmaster, "graveyard"); // 7/2
+                s.expect_in_zone(&pointmaster, "graveyard"); // 6/1
                 s.expect_in_zone(&vanilla, "graveyard"); // 4/4, which 2 would have survived
                 s.expect_health(PlayerId::P2, 26);
                 assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![4, 4, 4]);
@@ -152,8 +152,8 @@ mod tests {
         }
 
         #[test]
-        fn enters_as_a_6_10_and_radiant_a_12_20() {
-            for (radiant, attack, health, amount) in [(false, 6, 10, 2), (true, 12, 20, 4)] {
+        fn issue_3136_enters_as_a_6_8_and_radiant_a_12_16() {
+            for (radiant, attack, health, amount) in [(false, 6, 8, 2), (true, 12, 16, 4)] {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": "core-013", "radiant": radiant }, "core-005"],

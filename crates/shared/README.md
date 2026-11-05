@@ -189,6 +189,11 @@ never state, so a hidden card cannot be named by it.
 - **What the rules box prints** is decided here too: `text` (the whole), `short` (a card's short form, issues
   #814 and #1017: `data/short-forms.json`), `summit` (the Summit's header and the next Ascent line), `questBox`
   (a Quest's one stage, R2450000) and `clamp`. Whether the text fits its box is the client's layout.
+- **A Starship's name** is the hull's (R3045000): the engine joins a fused card's names ("Dormant Starship +
+  Miner v1"), and the face prints the name the Starship launched under, else the Dormant Starship's, in Chinese
+  on a Chinese face, whenever the view says the unit is a Starship or the definition holds the hull among its
+  ingredients (`fused.rs` walks them, a fusion of fusions to its leaves, from the definition or the id it
+  spells). The web's art code reads the same ids in `apps/web/src/cards/fused.ts`.
 - **Locale and catalog come in as arguments.** The catalog is the engine's registered one, with the
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web

@@ -22,12 +22,12 @@ use super::support::{
 };
 
 /// p1 (the AI), 4 crystals, holds a Radiant Lava Golem and two cheap spells; p2 is at 10 behind two Taunts.
-/// The lethal: the Golem tributes both enemy Taunts and one of p1's two smaller units, then Pointmaster
-/// and the other hit the face for 10 or more. The Golem is Radiant because the base face paid with
+/// The lethal: the Golem tributes both enemy Taunts and one of p1's two smaller units, then the 4-mana 7/7
+/// (Pointmaster, a 7/1 until issue #3136, is a 6/1 now) and the other hit the face for 10 or more. The Golem is Radiant because the base face paid with
 /// opposing units is summoned for the opponent (R360), where its Taunt would wall the face again.
 fn wide() -> Value {
     json!({
-        "p1": { "hand": [{ "def": "core-055", "radiant": true }, "core-035", "core-031"], "mana": 4, "field": ["core-020", "core-008", "core-011"] },
+        "p1": { "hand": [{ "def": "core-055", "radiant": true }, "core-035", "core-031"], "mana": 4, "field": ["core-025", "core-008", "core-011"] },
         "p2": { "field": ["core-019", "core-055"], "health": 10 },
     })
 }
@@ -106,13 +106,13 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
     f64::from(state.players[opp].hero.health - damage_past_taunts(state, opp, &attacks))
 }
 
-/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside Pointmaster 7/1 and Mr. Vanilla 4/4; p2
+/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside a 4-mana 7/7 and Mr. Vanilla 4/4; p2
 /// stands behind Midrange Menace, a 9/9 Taunt, at 10 health. Silence on the Taunt and both attacks to the
 /// face win; Silence on an own unit reaches a position that differs only in which unit is Vanilla. Both
 /// sides hold a library, so ending the turn decks nobody out.
 fn silence_board() -> Value {
     json!({
-        "p1": { "hand": ["classicplus-009"], "field": ["core-020", "core-008"], "library": ["core-008", "core-011"] },
+        "p1": { "hand": ["classicplus-009"], "field": ["core-025", "core-008"], "library": ["core-008", "core-011"] },
         "p2": { "field": ["core-019"], "health": 10, "library": ["core-008", "core-011"] },
     })
 }
@@ -415,7 +415,7 @@ mod the_positions_the_search_merges {
             }))
         };
         let on_taunt = silencing(&mine(&state, HUMAN, "core-019"));
-        let on_own = silencing(&mine(&state, AI, "core-020"));
+        let on_own = silencing(&mine(&state, AI, "core-025"));
         assert_ne!(
             search_signature(&play_out(&state, std::slice::from_ref(&on_taunt)), AI),
             search_signature(&play_out(&state, &[on_own]), AI)
@@ -534,7 +534,7 @@ mod duos_life_r964000 {
             "seed": "lethal-duos",
             "active": AI,
             "turn": 9,
-            "p1": { "field": ["core-020", "core-008", "core-011"] },
+            "p1": { "field": ["core-025", "core-008", "core-011"] },
             "p2": { "health": 20 },
         }))
         .state()

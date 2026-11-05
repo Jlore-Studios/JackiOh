@@ -17,6 +17,7 @@ use super::data::{
     CHINESE_ALL_TRIBES, CHINESE_CARDS, CHINESE_CREATED, CHINESE_GLOSSARY, CHINESE_KEYWORDS, CHINESE_RADIANT,
     CHINESE_RARITIES, CHINESE_TAGS, CHINESE_TYPES, ChineseRow, find,
 };
+use super::fused::{DORMANT_STARSHIP_ID, holds_dormant_starship};
 use super::tuning::fill_params_text;
 use super::words::Words;
 
@@ -91,9 +92,20 @@ fn ingredient_entries(def: &CardDef) -> Option<Vec<(&'static ChineseRow, bool)>>
         .collect()
 }
 
+/// R3045000: the Dormant Starship's name in Chinese, for a fusion that holds its hull: a Starship keeps the
+/// hull's name whatever was fused into it, as the English face does (`model.rs`); `None` for any other definition.
+fn hull_name_of(def: &CardDef) -> Option<&'static str> {
+    if holds_dormant_starship(def) {
+        entry_of(DORMANT_STARSHIP_ID).map(|entry| entry.name)
+    } else {
+        None
+    }
+}
+
 /// R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its ingredients'
 /// joined as the engine joins the English (R469: one fused on its Radiant face puts that face in the base
-/// text too). Any other with no entry, and Glitch, comes back as given.
+/// text too), but a fused Dormant Starship's name is the hull's (R3045000). Any other with no entry, and
+/// Glitch, comes back as given.
 pub fn chinese_def(def: &CardDef) -> CardDef {
     if is_glitch(&def.id) {
         return def.clone();
@@ -105,14 +117,21 @@ pub fn chinese_def(def: &CardDef) -> CardDef {
         out.radiant.text = own.radiant.to_string();
         return out;
     }
+    let hull = hull_name_of(def);
     let Some(parts) = ingredient_entries(def) else {
+        if let Some(hull) = hull {
+            out.name = hull.to_string();
+        }
         return out;
     };
-    out.name = parts
-        .iter()
-        .map(|(entry, _)| entry.name)
-        .collect::<Vec<_>>()
-        .join(FUSED_NAME);
+    out.name = match hull {
+        Some(hull) => hull.to_string(),
+        None => parts
+            .iter()
+            .map(|(entry, _)| entry.name)
+            .collect::<Vec<_>>()
+            .join(FUSED_NAME),
+    };
     out.base.text = parts
         .iter()
         .map(|(entry, radiant)| if *radiant { entry.radiant } else { entry.base })
@@ -192,7 +211,7 @@ pub fn list_separator(words: Words) -> &'static str {
 }
 
 /// R1301: the Chinese name of the card `def_id` names: its entry's, or, given the definition, a fused
-/// card's (`chinese_def`); else `english`, as given.
+/// card's (`chinese_def`, a fused Dormant Starship's the hull's, R3045000); else `english`, as given.
 pub fn chinese_name(def_id: &str, english: &str, def: Option<&CardDef>) -> String {
     if is_glitch(def_id) {
         return english.to_string();
@@ -201,7 +220,9 @@ pub fn chinese_name(def_id: &str, english: &str, def: Option<&CardDef>) -> Strin
         return own.name.to_string();
     }
     match def {
-        Some(def) if ingredient_entries(def).is_some() => chinese_def(def).name,
+        Some(def) if ingredient_entries(def).is_some() || hull_name_of(def).is_some() => {
+            chinese_def(def).name
+        }
         _ => english.to_string(),
     }
 }
