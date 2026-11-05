@@ -222,6 +222,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
   const ctxOf = (snap: PracticeSnapshot): CoachCtx => ({
     view: snap.view,
     legal: snap.legal,
+    ...(snap.forecast === undefined ? {} : { forecast: snap.forecast }),
     fresh: previous === null ? [] : newEventsSince(previous.events, snap.view.events),
     aiToAct: snap.aiToAct,
     nameOf: (defId) => snap.view.defs?.[defId]?.name ?? defs[defId]?.name,

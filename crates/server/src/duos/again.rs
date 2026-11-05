@@ -5,7 +5,7 @@
 //!
 //! Only seats of finished matches offer. Deleted accounts (R1497000) and other catalog versions
 //! (R1638000) are refused. Offers live in memory and lapse after `REMATCH_OFFER_TTL_MS` (§13.9, R1398000).
-//! Custom cards (R915005) and players already in matches (R1065000, R1523000) refuse creation.
+//! Players already in matches (R1065000, R1523000) refuse creation.
 
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -19,7 +19,7 @@ use tokio::sync::futures::OwnedNotified;
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{already_in_match, assert_free_to_play, assert_no_custom_cards, lean_of};
+use crate::api::decks::{already_in_match, assert_free_to_play, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::new_uuid;
 use crate::api::rematch::cards_changed;
@@ -283,16 +283,6 @@ async fn create_again(
     leans: (Option<LeanPick>, Option<LeanPick>),
     match_id: &str,
 ) -> Result<(), ApiError> {
-    // R915005: validates that replayed frozen decks contain no custom cards.
-    let mut frozen: Vec<&[String]> = Vec::new();
-    if !finished.options.dealt.contains(&DuosSeat::A1) {
-        frozen.push(&finished.options.decks.a1);
-    }
-    if !finished.options.dealt.contains(&DuosSeat::A2) {
-        frozen.push(&finished.options.decks.a2);
-    }
-    assert_no_custom_cards(&frozen)?;
-
     // R1523000, R1065000: refuse without details if either player is already in a match.
     assert_free_to_play(app, &finished.a1)
         .await

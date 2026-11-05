@@ -11,6 +11,8 @@
 // Classic's temple stone, Meditative's ink wash, Stinkyscape's deep space and Training Grounds' carved wood, Classic+
 // and Meditative+ drawn as their parents are (`showcaseFamilyOf`). The Out of frame version draws the normal picture in
 // two parts (`ArtPart`): its backdrop in the window and its subject cut out over the frame (CardFace).
+// R2944001 (#2944): the Immersive version draws its backdrop hazed as far off (`depthSvg`) under a near layer of its
+// subject (CardFace), and the Prismatic version its picture in mirror chrome under an iridescent sheen (`prismaticSvg`).
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
 import { fmt, hashId } from "./hash.ts";
@@ -39,9 +41,10 @@ export function showcaseFamilyOf(set: string | null): ShowcaseFamily | null {
 
 /**
  * R2942001: a restyle of the card's normal picture, a filter over it: the Sketch's pencil (R2940001), Pixel's cells
- * or Comic's pop art; R2943001: or a set's own Set showcase treatment.
+ * or Comic's pop art; R2943001: or a set's own Set showcase treatment; R2944001: or Immersive's hazed depth or
+ * Prismatic's chrome.
  */
-export type ArtRestyle = "sketch" | "pixel" | "comic" | `showcase-${ShowcaseFamily}`;
+export type ArtRestyle = "sketch" | "pixel" | "comic" | `showcase-${ShowcaseFamily}` | "depth" | "prismatic";
 
 /** R2943001: what a Set showcase restyle's name starts with, its family after it. */
 const SHOWCASE_PREFIX = "showcase-";
@@ -58,13 +61,15 @@ export type ArtPart = "whole" | "backdrop" | "subject";
 /**
  * R2949000: which of a card's pictures a face draws: its normal one, or the Signature look's own. R2940001: or Alt
  * art's own, or the normal one sketched; R2942001: or pixelled, or drawn as a comic; R2943001: or in its set's Set
- * showcase treatment.
+ * showcase treatment; R2944001: or hazed as far off, or in chrome.
  */
 export type ArtPicture = "normal" | "signature" | "alt" | ArtRestyle;
 
 /** R2942001: the restyle `picture` is, or null for a picture of its own (normal, Signature's, Alt art's). */
 export function restyleOf(picture: ArtPicture): ArtRestyle | null {
-  return picture === "sketch" || picture === "pixel" || picture === "comic" || SHOWCASE_RESTYLES.has(picture) ? (picture as ArtRestyle) : null;
+  return picture === "sketch" || picture === "pixel" || picture === "comic" || picture === "depth" || picture === "prismatic" || SHOWCASE_RESTYLES.has(picture)
+    ? (picture as ArtRestyle)
+    : null;
 }
 
 /** What joins a card's id to a picture's name in its seed: no catalog id holds it. */
@@ -500,13 +505,94 @@ export function showcaseSvg(picture: string, family: ShowcaseFamily, radiant: bo
   return restyledRoot(id, filter, picture, over);
 }
 
+/** R2944001: how far Immersive's far backdrop is softened, in the picture's 100 units: a little, as distance blurs. */
+export const DEPTH_BLUR = 0.5;
+/** R2944001: how much of its colour Immersive's far backdrop keeps, below 1, as distant things grey. */
+export const DEPTH_SATURATE = 0.7;
+/** R2944001: the air Immersive's far backdrop is seen through, palette.css's `--pal-sky-300`. */
+export const DEPTH_HAZE = "#7dd3fc";
+/** R2944001: the share of the air in Immersive's far backdrop, the rest the softened, dulled picture. */
+export const DEPTH_HAZE_MIX = 0.25;
+/** R2944001: the share of a Radiant face's painted picture washed back over its Immersive backdrop, so its Radiant paint shows. */
+export const DEPTH_RADIANT_WASH = 0.45;
+/** R2944001: Prismatic's chrome, from its dark to its light, palette.css's `--pal-slate-900` and `--pal-slate-100`. */
+export const PRISMATIC_CHROME_DARK = "#141a2e";
+export const PRISMATIC_CHROME_LIGHT = "#e8eaf2";
+/**
+ * R2944001: the tone curve Prismatic's chrome maps the picture's grey through, from its darkest to its lightest: not
+ * rising evenly but banded, light and dark in turn, as a mirror's polish catches what is round it.
+ */
+export const PRISMATIC_CHROME_TABLE: readonly number[] = [0.1, 0.85, 0.35, 1, 0.6];
+/**
+ * R2944001: Prismatic's spectrum, palette.css's `--pal-red-400`, `--pal-purple-400`, `--pal-violet-500`, `--pal-sky-400`,
+ * `--pal-cyan-400` and `--pal-green-400`: a rainbow with no yellow or orange, so none of it is Radiant's gold.
+ */
+export const PRISMATIC_SPECTRUM: readonly string[] = ["#f87171", "#c084fc", "#8b5cf6", "#38bdf8", "#22d3ee", "#4ade80"];
+/**
+ * R2944001: the iridescent sheen across Prismatic's picture: its spectrum there and back, so each colour's neighbours
+ * are its spectrum's own and no two of them mix to gold. Mirrored in cards.css's Prismatic edge.
+ */
+export const PRISMATIC_SHEEN: readonly string[] = [...PRISMATIC_SPECTRUM, ...PRISMATIC_SPECTRUM.slice(0, -1).reverse()];
+/** R2944001: how strongly the sheen lies over Prismatic's chrome, from 0 to 1. */
+export const PRISMATIC_SHEEN_OPACITY = 0.4;
+/** R2944001: the share of a Radiant face's painted picture washed back over its Prismatic chrome, so its Radiant paint shows. */
+export const PRISMATIC_RADIANT_WASH = 0.45;
+
+/**
+ * R2944001: `picture` (a painter's whole SVG document, 100 units square; on Immersive's window its backdrop alone) as
+ * far off: softened (`DEPTH_BLUR`), its colour dulled (`DEPTH_SATURATE`) and seen through `DEPTH_HAZE` at
+ * `DEPTH_HAZE_MIX`, so the near layer CardFace lays over it stands out. On a Radiant face (`radiant`) the painted
+ * picture is washed back over it at `DEPTH_RADIANT_WASH`, so its Radiant paint shows. One `<svg>`, as `pixelSvg`.
+ */
+export function depthSvg(picture: string, radiant: boolean): string {
+  const filter =
+    `<feGaussianBlur in="SourceGraphic" stdDeviation="${fmt(DEPTH_BLUR)}" result="dp-soft"/>` +
+    `<feColorMatrix in="dp-soft" type="saturate" values="${fmt(DEPTH_SATURATE)}" result="dp-dull"/>` +
+    `<feFlood flood-color="${DEPTH_HAZE}" result="dp-air"/>` +
+    `<feComposite in="dp-air" in2="dp-dull" operator="arithmetic" k1="0" k2="${fmt(DEPTH_HAZE_MIX)}" k3="${fmt(1 - DEPTH_HAZE_MIX)}" k4="0" result="dp-far"/>` +
+    (radiant
+      ? `<feComposite in="SourceGraphic" in2="dp-far" operator="arithmetic" k1="0" k2="${fmt(DEPTH_RADIANT_WASH)}" ` +
+        `k3="${fmt(1 - DEPTH_RADIANT_WASH)}" k4="0" result="dp-wash"/>`
+      : "");
+  return restyledRoot("dp-haze", filter, picture);
+}
+
+/**
+ * R2944001: `picture` (a painter's whole SVG document, 100 units square) in mirror chrome: greyed, its grey banded
+ * through `PRISMATIC_CHROME_TABLE` and mapped from `PRISMATIC_CHROME_DARK` to `PRISMATIC_CHROME_LIGHT`, under an
+ * iridescent sheen of `PRISMATIC_SHEEN` at `PRISMATIC_SHEEN_OPACITY`, corner to corner. On a Radiant face (`radiant`)
+ * the painted picture is washed back over the chrome at `PRISMATIC_RADIANT_WASH`, so its Radiant paint shows. One
+ * `<svg>`, as `pixelSvg`.
+ */
+export function prismaticSvg(picture: string, radiant: boolean): string {
+  const table = PRISMATIC_CHROME_TABLE.map(fmt).join(" ");
+  const func = (name: string): string => `<feFunc${name} type="table" tableValues="${table}"/>`;
+  const filter =
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="0" result="pr-grey"/>` +
+    `<feComponentTransfer in="pr-grey" result="pr-banded">${func("R")}${func("G")}${func("B")}</feComponentTransfer>` +
+    mapOnto(PRISMATIC_CHROME_DARK, PRISMATIC_CHROME_LIGHT, "pr-mirror", "pr-banded") +
+    (radiant
+      ? `<feComposite in="SourceGraphic" in2="pr-mirror" operator="arithmetic" k1="0" k2="${fmt(PRISMATIC_RADIANT_WASH)}" ` +
+        `k3="${fmt(1 - PRISMATIC_RADIANT_WASH)}" k4="0" result="pr-wash"/>`
+      : "");
+  const last = PRISMATIC_SHEEN.length - 1;
+  const stops = PRISMATIC_SHEEN.map((color, at) => `<stop offset="${fmt(at / last)}" stop-color="${color}"/>`).join("");
+  const over =
+    `<linearGradient id="pr-sheen" x1="0" y1="0" x2="1" y2="1">${stops}</linearGradient>` +
+    `<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#pr-sheen)" opacity="${fmt(PRISMATIC_SHEEN_OPACITY)}"/>`;
+  return restyledRoot("pr-chrome", filter, picture, over);
+}
+
 /**
  * R2942001: `picture` as the restyle `restyle` draws it: the Sketch's pencil (seeded by `seedId`, R2940001), Pixel's
- * cells or Comic's pop art, base or Radiant (`radiant`); R2943001: or its set's Set showcase treatment.
+ * cells or Comic's pop art, base or Radiant (`radiant`); R2943001: or its set's Set showcase treatment; R2944001: or
+ * Immersive's depth or Prismatic's chrome.
  */
 export function restyledSvg(picture: string, restyle: ArtRestyle, radiant: boolean, seedId: string): string {
   if (restyle === "sketch") return sketchSvg(picture, radiant, seedId);
   if (restyle === "pixel") return pixelSvg(picture, radiant);
   if (restyle === "comic") return comicSvg(picture, radiant);
+  if (restyle === "depth") return depthSvg(picture, radiant);
+  if (restyle === "prismatic") return prismaticSvg(picture, radiant);
   return showcaseSvg(picture, restyle.slice(SHOWCASE_PREFIX.length) as ShowcaseFamily, radiant);
 }

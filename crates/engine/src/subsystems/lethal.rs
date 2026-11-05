@@ -130,7 +130,11 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
 /// §4.3 step 1 and R93, projected: a defender with First Strike, against an attacker without it,
 /// strikes first, and an attacker that falls there never lands its own hit. §4.4's stops apply to the
 /// strike back, and a Poisonous defender destroys with any damage at all (step 7).
-fn falls_to_first_strike(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> bool {
+pub(crate) fn falls_to_first_strike(
+    state: &GameState,
+    attacker: &CardInstance,
+    defender: &CardInstance,
+) -> bool {
     let mine = unit_view(state, attacker);
     let theirs = unit_view(state, defender);
     if !has_keyword(&theirs.keywords, KeywordKind::FirstStrike)

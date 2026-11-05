@@ -937,7 +937,8 @@ pub fn pair_key(def: &CardDef) -> &str {
 /// §5.1's single source of random pools and Discover: every definition the filters allow, in a strict
 /// total order (set by `CATALOG_SETS`, §5 index as a number, the index, then the catalog id), so a
 /// seeded `rng.pick`/`rng.shuffle` over it replays identically (R58, R60, §9.3). Only the registered
-/// catalog is searched, so no pool can generate a fused or crafted definition.
+/// catalog is searched, so no pool can generate a fused or crafted definition. Under the testkit's
+/// `pool-probe` each pool comes back rotated (`testkit/pool_probe.rs`, #3117).
 pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
     let tokens_allowed = asks_for_tokens(args);
     let mut pool: Vec<&'static CardDef> = registered()
@@ -966,6 +967,8 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
         }
         a.id.cmp(&b.id)
     });
+    #[cfg(feature = "testkit")]
+    crate::testkit::pool_probe::shift_pool(&mut pool);
     pool
 }
 

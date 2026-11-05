@@ -48,9 +48,9 @@ deployment decision that can be made later without touching the code.
 | --- | --- | --- | --- |
 | `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server, and a practice game with custom cards and the card creator load a second module, `crates/wasm/luau`, with the card kit (SPEC §12.10, R915009) |
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
-| Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320), `game_records` (R376) and `custom_cards` (R915008), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
+| Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
-| `jackioh-server` HTTP routes | One process (a Docker image in a Cloudflare container behind the site's Worker) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
+| `jackioh-server` HTTP routes | One process (a Docker image in a Cloudflare container behind the site's Worker) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock (its deadlines decided by the pure host machine of `crates/shared`, #3101), the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays, and the watchers of a person's seat (§5.4, R2881000) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
@@ -131,7 +131,6 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `loadout_deck_cards` | own rows | `profile_id = auth.uid()` | none |
 | `decks` | own rows | `profile_id = auth.uid()` | **none** — the server upserts a draft by the id the client minted (R250, R256) |
 | `trios` | own rows | `profile_id = auth.uid()` | none (R252) |
-| `custom_cards` | own rows | `profile_id = auth.uid()` | **none** — the server writes a card only once the engine's validator passes it (R915008, R915001) |
 | `tickets` | own rows | `profile_id = auth.uid()` | none — enqueue freezes a deck (§9.5) |
 | `matches` | **none** | no policy | none — holds `seed` and both decks (§3.1) |
 | `match_actions` | **none** | no policy | none — append-only by trigger (§9.3) |
@@ -265,8 +264,14 @@ things in it are not obvious:
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
 is a 404 on a cold load. `apps/web/public/_redirects` lists them, each with and without a trailing
-slash, and every other path gets `404.html` with a 404, so a missing bundle stays a 404 rather than
-being served `index.html` as JavaScript.
+slash, and every other path gets `404.html` with a 404 status, so a missing bundle stays a 404 rather than
+being served `index.html` as JavaScript. That `404.html` is the app's own page, no hand-made one:
+`apps/web/static-pages.ts` writes it from the built `index.html` (R3127000, #3127), with its entry script,
+`noindex`, the title "Page not found · JackiOh" and no canonical link. Cloudflare answers with the 404, the client
+starts, routes on `window.location.pathname` and draws its own 404 with the real path. What shows with no script,
+or until the bundle starts (a stale deploy, a blocked chunk), is a script-free fallback in the app's look (the
+tavern board, the stacked logo and a hand of three placeholder card faces whose cost gems read 4, 0 and 4) that
+the client replaces at startup.
 
 ### 4.2 Where each clock lives
 
@@ -788,10 +793,11 @@ step that is not yet implemented says which BUILD task delivers it.
    0036 lets "More cards from" pick the set (R924000): `tickets.lean_set` and
    `matches.room_lean_set` hold the pick as text, `newest` for every row 0027's boolean had on and
    null for the rest. It only adds: 0027's columns stay, unread, for the deploy before it.
-   0037 adds `custom_cards` (R915008): an active account's custom cards, which their owner reads and
+   0037 adds `custom_cards`: an active account's custom cards, which their owner reads and
    no client role writes, written by the server through `app.create_custom_card` (under the cap,
    `max_custom_cards` in `app.settings`) and `app.update_custom_card` (a compare-and-set on the
    card's version); deleting an account deletes its cards. It needs nothing else from the bring-up.
+   Custom cards were removed (#2956), and 0082 drops the table, the two functions and the cap.
    0038 adds Play together's eight tables (SPEC §9.4, §9.5): `friend_requests`, `friendships`,
    `blocks`, the server-only `presence`, `challenges`, `chat_messages`, `chat_reports` and
    `replay_shares`, each readable only by its own players, and `profiles.allow_spectators`, on by

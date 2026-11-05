@@ -1099,43 +1099,6 @@ fn assert_legal(
     ))
 }
 
-/// R915005: a deck with a custom card plays only in practice, so a path that starts a game from
-/// decks it does not judge again (a rematch replays the frozen decks, §9.4) still asks the shared
-/// validator its L7 and refuses as the queue does (`loadout_invalid`). L7 reads no catalog and no
-/// collection, so the check hands it neither and sets the other rules' verdicts aside.
-pub fn assert_no_custom_cards(decks: &[&[String]]) -> Result<(), ApiError> {
-    let mut issues: Vec<Value> = Vec::new();
-    for cards in decks {
-        let verdict = validator::validate_deck(&validator::DeckInput {
-            deck: validator::LoadoutDeck {
-                name: None,
-                cards: cards.to_vec(),
-            },
-            catalog: validator::CatalogSnapshot {
-                version: String::new(),
-                cards: Default::default(),
-                banned: None,
-            },
-            collection: Default::default(),
-        });
-        for error in verdict
-            .errors
-            .iter()
-            .filter(|error| error.rule == validator::LoadoutRule::L7)
-        {
-            issues.push(to_json(error)?);
-        }
-    }
-    let Some(first) = first_message(&issues) else {
-        return Ok(());
-    };
-    Err(ApiError::with_details(
-        ApiErrorCode::LoadoutInvalid,
-        first,
-        Value::Array(issues),
-    ))
-}
-
 /// A copy, so a frozen deck can never alias the stored one.
 fn freeze(deck: &SavedDeck) -> FrozenDeck {
     // R642: the portrait freezes with the deck, present (a saved deck always has one, or null).
