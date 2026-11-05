@@ -1,12 +1,10 @@
 // DRAFT — needs owner and legal review
 //
-// `/terms`. `TERMS_LAST_UPDATED` and the privacy policy's date make up `TERMS_VERSION`
-// (crates/server/src/config.rs), the version each account agrees to (R757001), so a change to the
-// text changes the date, and every account is asked to agree again; a second change on one day gives
+// `/terms`: the owner's short text (R3110000). `TERMS_LAST_UPDATED` and the privacy policy's date make up
+// `TERMS_VERSION` (crates/server/src/config.rs), the version each account agrees to (R757001), so a change
+// to the text changes the date, and every account is asked to agree again; a second change on one day gives
 // the version a letter (R970001). `privacy.test.tsx` fails on any change to the words until it moves.
-//
-// "AI opponents" is R2614000's disclosure of the ladder bots (SPEC §9.12): a change to what a bot is,
-// wears or does that the section names changes the section too.
+// "AI opponents" is R2614000's disclosure of the ladder bots (SPEC §9.12), cut down by R3110000.
 
 import type { ReactElement } from "react";
 
@@ -44,112 +42,55 @@ export default function TermsRoute(): ReactElement {
           {t("Last updated")} <time dateTime={TERMS_LAST_UPDATED}>{formatDay(TERMS_LAST_UPDATED)}</time>
         </p>
 
-        <section aria-labelledby="terms-agree">
-          <h3 id="terms-agree">Agreeing to these terms</h3>
+        <p>
+          By creating an account, you agree to these Terms and the{" "}
+          <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
+            Privacy Policy
+          </a>
+          . You must be {MIN_ACCOUNT_AGE_YEARS} or older.
+        </p>
+        <section aria-labelledby="terms-fair">
+          <h3 id="terms-fair">Play fair</h3>
           <p>
-            You agree to these terms and to the{" "}
-            <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
-              Privacy Policy
-            </a>{" "}
-            when you create an account, by ticking the box that says so. When either of them changes, we ask
-            you to agree again before you go on, and keep a record of the version you agreed to and when.
-          </p>
-        </section>
-        <section aria-labelledby="terms-age">
-          <h3 id="terms-age">Who can have an account</h3>
-          <p>
-            You must be at least {MIN_ACCOUNT_AGE_YEARS} years old to have an account. Anyone can play against
-            the AI in Practice without one.
-          </p>
-        </section>
-        <section aria-labelledby="terms-use">
-          <h3 id="terms-use">Using JackiOh</h3>
-          <p>
-            You may use JackiOh for personal play. Don&rsquo;t try to break the service, automate abuse,
-            or bypass game rules or access controls.
-          </p>
-        </section>
-        <section aria-labelledby="terms-account">
-          <h3 id="terms-account">Accounts</h3>
-          <p>
-            You are responsible for activity on your account. Keep your sign-in details private. The
-            owner may suspend or ban accounts for abuse, cheating, or violations of these terms.
+            Don&rsquo;t cheat, exploit bugs, use bots, or try to break the service or get into anything that
+            isn&rsquo;t yours. Don&rsquo;t harass, threaten, spam or share anyone&rsquo;s personal info. We may
+            moderate content and suspend or ban accounts that break these rules.
           </p>
         </section>
         <section aria-labelledby="terms-content">
-          <h3 id="terms-content">Content and availability</h3>
+          <h3 id="terms-content">Your content</h3>
           <p>
-            JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game
-            updates can change cards, mechanics, and progression.
-          </p>
-        </section>
-        <section aria-labelledby="terms-submit">
-          <h3 id="terms-submit">What you submit</h3>
-          <p>
-            You keep whatever rights you have in what you submit. By submitting it, you let us store it, and
-            show it to the people named below, for as long as we keep it (the{" "}
-            <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
-              Privacy Policy
-            </a>{" "}
-            says how long):
-          </p>
-          <ul>
-            <li>Your username, which other players see.</li>
-            <li>
-              Your chat messages, which the friend you send them to sees, and the reason you give when you
-              report one, which only we see.
-            </li>
-            <li>The names of your decks, which only you see.</li>
-            <li>The replays you share, which the friends you share them with see.</li>
-          </ul>
-          <p>
-            Don&rsquo;t submit anything that infringes someone else&rsquo;s rights. We remove content that
-            infringes, and close the accounts of players who repeatedly infringe; see{" "}
+            You keep the rights to what you create or post. You let us store it and show it to the players
+            it&rsquo;s meant for. Don&rsquo;t post what you don&rsquo;t have the rights to. We remove infringing
+            content and ban repeat infringers (see{" "}
             <a href={paths.copyright} onClick={followInApp(paths.copyright)}>
               Copyright
-            </a>{" "}
-            for how to report it.
-          </p>
-        </section>
-        <section aria-labelledby="terms-chat">
-          <h3 id="terms-chat">Chat</h3>
-          <p>
-            Be respectful in chat. Don&rsquo;t harass, threaten or bully anyone, use hate speech, send spam,
-            or share anyone&rsquo;s personal details, such as an address, a phone number or an email address,
-            your own included.
-          </p>
-          <p>
-            Before a message is stored, we replace each word on our filter list with asterisks. You can report
-            any message a friend sends you. We review reports, and abuse in chat can get an account suspended or
-            banned.
+            </a>
+            ).
           </p>
         </section>
         <section aria-labelledby="terms-ai">
           <h3 id="terms-ai">AI opponents</h3>
           <p>
-            If no one near your rating is free to play after a short wait, ranked may pair you with an AI
-            opponent that our server plays, so you still get a game. It can happen at any rank, in Best of 1,
-            All Random and Conquest.
+            When no one near your rank is available, ranked may match you against an AI opponent. Nothing in the
+            game marks which opponents are AI.
           </p>
-          <ul>
-            <li>
-              An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, as a
-              player does, though never in Jlorious.
-            </li>
-            <li>
-              It plays at a person&rsquo;s pace, and may emote, concede, answer a draw offer, let a turn run out
-              or offer a rematch.
-            </li>
-            <li>Nothing in the game marks which opponents are AI.</li>
-            <li>It sees only what a player in its seat could see.</li>
-            <li>A game against one counts toward your rank and rating like any other ranked game.</li>
-          </ul>
-          <p>A challenge you send to a friend, or accept from one, is always played against that friend.</p>
+        </section>
+        <section aria-labelledby="terms-guarantees">
+          <h3 id="terms-guarantees">No guarantees</h3>
+          <p>
+            JackiOh is free and provided &ldquo;as is.&rdquo; We may change or end it at any time. As far as the
+            law allows, we aren&rsquo;t liable for damages from using it.
+          </p>
+        </section>
+        <section aria-labelledby="terms-changes">
+          <h3 id="terms-changes">Changes</h3>
+          <p>When these Terms change, we&rsquo;ll ask you to agree again.</p>
         </section>
         <section aria-labelledby="terms-contact">
           <h3 id="terms-contact">Contact</h3>
           <p>
-            Questions about these terms, or a legal notice: email <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
+            <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>
           </p>
         </section>
       </article>
