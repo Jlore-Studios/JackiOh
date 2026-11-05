@@ -19,7 +19,7 @@ import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines } f
 import type { Patch, Snapshot, TechnicalEntry } from "./src/patches/source.ts";
 import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
-import { AUTH_PENDING_ADDRESS_TTL_SECONDS, MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
+import { MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
 import type { CardCost, CardDefs } from "./src/wire/index.ts";
 
 export type PublicPage = { readonly path: string; readonly description: string };
@@ -43,7 +43,7 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   {
     path: paths.privacy,
     description:
-      "JackiOh's privacy policy: what the site collects, what your browser keeps, and how to delete your account.",
+      "JackiOh's privacy policy: what the site collects, why, who sees it, and how to delete your account.",
   },
   { path: paths.terms, description: "The terms of playing JackiOh." },
   {
@@ -71,9 +71,6 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     description: "JackiOh's public statistics: every card's win rate and play rate, and the players' records.",
   },
 ];
-
-/** Unit conversion, not configuration. */
-const SECONDS_PER_HOUR = 3600;
 
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
@@ -126,106 +123,66 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   ),
   [paths.privacy]:
     section(
-      "What we don&rsquo;t do",
-      "<ul><li>We don&rsquo;t sell your data or share it for advertising.</li>" +
-        "<li>We don&rsquo;t show ads, and we use no third-party analytics, tracking pixels or session recording.</li>" +
-        "<li>We don&rsquo;t track you across other sites, and no third party tracks you across sites " +
-        "through JackiOh. So a browser&rsquo;s &ldquo;Do Not Track&rdquo; signal doesn&rsquo;t change " +
-        "anything here.</li></ul>",
+      "What we collect",
+      `<p>Your email and username, confirmation that you&rsquo;re ${String(MIN_ACCOUNT_AGE_YEARS)} or older, your ` +
+        "decks, cards, matches and how you play, your friends, chats and shared replays, and technical info " +
+        "like your IP address and browser.</p>",
     ) +
     section(
-      "What stays on your device",
-      "<p>JackiOh sets no cookies. It keeps these in your browser&rsquo;s own storage, and only to work:</p>" +
-        "<ul><li>The email address of a sign-up or password reset you are waiting on, and a one-time key " +
-        "that lets the emailed link sign in on this browser.</li>" +
-        "<li>While a new account waits for its email to be confirmed: the month and year of birth you gave " +
-        "and the version of the terms you agreed to, until your first sign-in on this browser sends them " +
-        `to us, for ${String(AUTH_PENDING_ADDRESS_TTL_SECONDS / SECONDS_PER_HOUR)} hours at most.</li>` +
-        "<li>If this browser was refused an account: a note saying so, with no age or date in it.</li>" +
-        "<li>Your settings, such as sound and reduced motion.</li>" +
-        "<li>Your tutorial progress.</li>" +
-        "<li>For the open tab only, and gone when you close it: your sign-in session and a password-reset " +
-        "link you opened.</li></ul>" +
-        "<p>Your sign-in session stays in the tab you signed in on. You sign in again in a new tab, or " +
-        "after you close the browser. Signing out removes your session from this browser.</p>",
+      "Why",
+      "<p>To run your account and online games, rank players, balance cards, improve our AI opponents and " +
+        "prevent abuse.</p>",
     ) +
     section(
-      "Deleting your account or getting a copy",
-      "<p>You can delete your account yourself: sign in, open your Account page, and choose " +
-        "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
-        "custom cards, your tutorial progress, your player statistics, the records of how you played, and " +
-        "the record of your age check and of the terms you agreed to. Finished matches and their results stay in " +
-        "the other player&rsquo;s history, with your account removed from them, and so does a finished " +
-        "co-op game in your teammate&rsquo;s, its moves and its result included. You can&rsquo;t delete " +
-        "your account during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.</p>" +
-        "<p>Deleting your account also deletes everything of yours on Play together: your friends, friend " +
-        "requests, blocks, challenges, co-op rooms and replay shares, and your chats, the messages your " +
-        "friends sent you included.</p>" +
-        "<p>To ask for a copy of your data, email us. Please don&rsquo;t put your email address or " +
-        "other personal details in a public GitHub issue.</p>",
-    ),
+      "Who sees it",
+      "<p>Our hosting and sign-in providers process it for us. Other players see your username, rank and " +
+        "moves. Your friends, and your opponent&rsquo;s friends, can watch your online games, remove or block " +
+        "someone to stop that. Your player stats are public.</p>" +
+        "<p>We don&rsquo;t sell your data, show ads or use third-party trackers. We don&rsquo;t track you " +
+        "across sites, so a browser&rsquo;s &ldquo;Do Not Track&rdquo; setting changes nothing here.</p>",
+    ) +
+    section("Your browser", "<p>We store your settings and sign-in in your browser.</p>") +
+    section(
+      "How long",
+      "<p>We keep your data while you have an account. Card statistics that don&rsquo;t identify you may be " +
+        "kept indefinitely.</p>",
+    ) +
+    section(
+      "Your choices",
+      "<p>Delete your account at any time from the Account page. Email us for a copy of your data.</p>",
+    ) +
+    section(
+      "Children",
+      `<p>You must be ${String(MIN_ACCOUNT_AGE_YEARS)} or older to have an account. We delete any account we ` +
+        "learn belongs to someone younger.</p>",
+    ) +
+    section("Changes", "<p>When this policy changes, we&rsquo;ll update the date and ask you to agree again.</p>"),
   [paths.terms]:
+    "<p>By creating an account, you agree to these Terms and the Privacy Policy. You must be " +
+    `${String(MIN_ACCOUNT_AGE_YEARS)} or older.</p>` +
     section(
-      "Agreeing to these terms",
-      "<p>You agree to these terms and to the Privacy Policy when you create an account, by ticking the box " +
-        "that says so. When either of them changes, we ask you to agree again before you go on, and keep a " +
-        "record of the version you agreed to and when.</p>",
+      "Play fair",
+      "<p>Don&rsquo;t cheat, exploit bugs, use bots, or try to break the service or get into anything that " +
+        "isn&rsquo;t yours. Don&rsquo;t harass, threaten, spam or share anyone&rsquo;s personal info. We may " +
+        "moderate content and suspend or ban accounts that break these rules.</p>",
     ) +
     section(
-      "Who can have an account",
-      `<p>You must be at least ${String(MIN_ACCOUNT_AGE_YEARS)} years old to have an account. Anyone can play ` +
-        "against the AI in Practice without one.</p>",
-    ) +
-    section(
-      "Using JackiOh",
-      "<p>You may use JackiOh for personal play. Don&rsquo;t try to break the service, automate abuse, " +
-        "or bypass game rules or access controls.</p>",
-    ) +
-    section(
-      "Accounts",
-      "<p>You are responsible for activity on your account. Keep your sign-in details private. The " +
-        "owner may suspend or ban accounts for abuse, cheating, or violations of these terms.</p>",
-    ) +
-    section(
-      "Content and availability",
-      "<p>JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game " +
-        "updates can change cards, mechanics, and progression.</p>",
-    ) +
-    section(
-      "What you submit",
-      "<p>You keep whatever rights you have in what you submit. By submitting it, you let us store it, and " +
-        "show it to the people named below, for as long as we keep it (the Privacy Policy says how long):</p>" +
-        "<ul><li>Your username, which other players see.</li>" +
-        "<li>Your chat messages, which the friend you send them to sees, and the reason you give when you " +
-        "report one, which only we see.</li>" +
-        "<li>Your custom cards (their names, text and scripts) and the names of your decks, which only you see.</li>" +
-        "<li>The replays you share, which the friends you share them with see.</li></ul>" +
-        "<p>Don&rsquo;t submit anything that infringes someone else&rsquo;s rights. We remove content that " +
-        "infringes, and close the accounts of players who repeatedly infringe; see Copyright for how to report it.</p>",
-    ) +
-    section(
-      "Chat",
-      "<p>Be respectful in chat. Don&rsquo;t harass, threaten or bully anyone, use hate speech, send spam, " +
-        "or share anyone&rsquo;s personal details, such as an address, a phone number or an email address, " +
-        "your own included.</p>" +
-        "<p>Before a message is stored, we replace each word on our filter list with asterisks. You can report " +
-        "any message a friend sends you. We review reports, and abuse in chat can get an account suspended or " +
-        "banned.</p>",
+      "Your content",
+      "<p>You keep the rights to what you create or post. You let us store it and show it to the players " +
+        "it&rsquo;s meant for. Don&rsquo;t post what you don&rsquo;t have the rights to. We remove infringing " +
+        "content and ban repeat infringers (see Copyright).</p>",
     ) +
     section(
       "AI opponents",
-      "<p>If no one near your rating is free to play after a short wait, ranked may pair you with an AI " +
-        "opponent that our server plays, so you still get a game. It can happen at any rank, in Best of 1, " +
-        "All Random and Conquest.</p>" +
-        "<ul><li>An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, " +
-        "as a player does, though never in Jlorious.</li>" +
-        "<li>It plays at a person&rsquo;s pace, and may emote, concede, answer a draw offer, let a turn run " +
-        "out or offer a rematch.</li>" +
-        "<li>Nothing in the game marks which opponents are AI.</li>" +
-        "<li>It sees only what a player in its seat could see.</li>" +
-        "<li>A game against one counts toward your rank and rating like any other ranked game.</li></ul>" +
-        "<p>A challenge you send to a friend, or accept from one, is always played against that friend.</p>",
-    ),
+      "<p>When no one near your rank is available, ranked may match you against an AI opponent. Nothing in " +
+        "the game marks which opponents are AI.</p>",
+    ) +
+    section(
+      "No guarantees",
+      "<p>JackiOh is free and provided &ldquo;as is.&rdquo; We may change or end it at any time. As far as " +
+        "the law allows, we aren&rsquo;t liable for damages from using it.</p>",
+    ) +
+    section("Changes", "<p>When these Terms change, we&rsquo;ll ask you to agree again.</p>"),
   [paths.copyright]:
     section(
       "Reporting content that infringes your copyright",
@@ -252,7 +209,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "player in its seat could see.</p>" +
         "<ul><li>In Practice, at the difficulty you pick, and in the tutorial, an opponent that runs in your browser.</li>" +
         "<li>In ranked, when no one near your rating is free after a short wait, an AI opponent that our server " +
-        "plays. Nothing in the game marks it; the Terms say when it comes, what it looks like and how it plays.</li>" +
+        "plays. Nothing in the game marks it, as the Terms say.</li>" +
         "<li>In co-op, the team you and a friend play against.</li></ul>" +
         "<p>They choose their moves by searching the moves the rules allow, with a game-playing program we wrote " +
         "and tune on games it plays against itself. They are not chatbots, and they say nothing to you but the " +
