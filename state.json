@@ -15722,6 +15722,8 @@
       }
     },
     "3197": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T14:44:13Z",
@@ -15735,8 +15737,11 @@
         "trail": "it: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3189/apps/web/README.md\", \"old_string\": \"measures the board and every menu of `46` at 390x844.\\n\", \"new_string\": \"measures the b\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output\"}\n- Bash: {\"command\": \"grep -rn \\\"link-button\\\" apps/web/src --include=*.css | grep -v \\\"^apps/web/src/auth/tavern.css\\\\|^apps/web/src/collection/collection.css\\\\|top-bar\\\" \", \"description\": \"All remaining lin\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output\"}\n- Bash: {\"command\": \"grep -rn \\\"landing-corner\\\\|screen-nav\\\\|settings-gear--nav\\\\|language-button--nav\\\" --include=*.md . 2>/dev/null | grep -v node_modules | grep -v \\\"^./.bot-\\\\|^./apps/web/README.md\\\" | \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np = \\\".bot-notes.md\\\"\\ns = open(p, encoding=\\\"utf8\\\").read()\\nold_start = s.index(\\\"Done: top-bar.css\\\")\\nold_end = s.index(\\\"## Goal\\\")\\nnew = '''Done: top-bar.css, t\u2026\n- Monitor: {\"command\": \"until curl -s -o /dev/null http://localhost:5173/; do sleep 5; done; echo server-up\", \"description\": \"Wait for the dev server to answer\", \"timeout_ms\": 900000, \"persistent\": \"false\"}\n- tool error: Permission to use Bash with command until curl -s -o /dev/null http://localhost:5173/; do sleep 5; done; echo server-up has been denied.\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"command\": \"until grep -qE \\\"Local:|error|Error\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output; do sleep 5; done; tail -5 /tmp/\u2026\n- Bash: {\"command\": \"cd apps/web/src && grep -n \\\"app-shell\\\\|tavern\\\" routes/patch-notes.tsx routes/almanac.tsx routes/copyright.tsx routes/accessibility.tsx | head\", \"description\": \"Which BackLink screens \u2026\n- Bash: {\"command\": \"grep -n \\\"className=\\\\\\\"app-shell\\\\|className=\\\\\\\"app-shell \\\" routes/*.tsx practice/*.tsx 2>/dev/null | grep -v test | head -20\", \"description\": \"Find non-tavern app-shell roots\"}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output\"}\n- Monitor: {\"command\": \"until grep -qE \\\"Local:|rror\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output; do sleep 5; done; tail -6 /tmp/claude-\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output\"}\n- said: The code and tests are done and green. Tests, typecheck and eslint all pass. I'm now starting the dev server to check the cascade in a real browser, since jsdom can't.\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3189/1082418d-57c4-4bb7-9ea0-ee61fb419a83/tasks/ba3sv18q7.output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3189 && git status --short; sed -n 1,40p scripts/browse.sh | head -50\", \"description\": \"Check git status and browse.sh header\"}\n- Bash: {\"command\": \"timeout 240 sh scripts/browse.sh open \\\"http://localhost:5173/patch-notes\\\" 2>&1 | tail -15\", \"description\": \"Open /patch-notes in the headless browser\", \"timeout\": 300000}\n- Bash: {\"command\": \"cat > /tmp/probe.js <<'EOF'\\n() => {\\n const pick = (el) => {\\n if (!el) return null;\\n const c = getComputedStyle(el), r = el.getBoundingClientRect();\\n return { w: r.width, h: r.height\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh eval \\\"() => { document.querySelector('.app-shell').classList.remove('tavern'); return 'ok'; }\\\" --raw 2>&1 | tail -2; sh scripts/browse.sh eval \\\"$(cat /tmp/probe.j\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh resize 320 640 2>&1 | tail -2; cat > /tmp/fit.js <<'EOF'\\n() => {\\n const nav = document.querySelector('.screen-nav');\\n if (!document.querySelector('.friends-button\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh --help 2>&1 | grep -i \\\"hover\\\\|mouse\\\\|snapshot\\\\|click\\\" | head\", \"description\": \"Find hover command\"}\n- Bash: {\"command\": \"sh scripts/browse.sh resize 1280 720 2>&1 | tail -1; sh scripts/browse.sh eval \\\"() => { const b = document.querySelector('[data-testid=nav-back]').getBoundingClientRect(); const g = doc\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh mousemove 227 54 >/dev/null 2>&1; sh scripts/browse.sh eval \\\"() => { const e = document.querySelector('[data-testid=nav-back]'); const c = getComputedStyle(e); retu\u2026\n- Bash: {\"command\": \"sh scripts/browse.sh goto \\\"http://localhost:5173/\\\" 2>&1 | tail -1; cat > /tmp/land.js <<'EOF'\\n() => {\\n const pick = (el) => { if (!el) return null; const c = getComputedStyle(el), r \u2026\n- Bash: {\"command\": \"sh scripts/browse.sh close 2>&1 | tail -1; git status --short | head -30\", \"description\": \"Close browser, check git status\"}\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"ba3sv18q7\"}\n- TaskStop: {\"task_id\": \"bqwcfpt4s\"}\n- TaskStop: {\"task_id\": \"bvouw17ha\"}\n- Bash: {\"command\": \"sh scripts/build-wasm.sh >/tmp/wasm2.log 2>&1; tail -2 /tmp/wasm2.log; pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exc\u2026\n- Bash: {\"command\": \"pnpm exec eslint apps/web/src/palette.test.ts apps/web/src/routes apps/web/src/settings apps/web/src/together apps/web/src/i18n 2>&1 | tail -5; git status --short -- apps/web/src/wire; g\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np = \\\".bot-notes.md\\\"\\ns = open(p, encoding=\\\"utf8\\\").read()\\na = s.index(\\\"Left: browser check\\\")\\nb = s.index(\\\"## Log\\\")\\ns = s[:a] + '''Browser check done (dev ser\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every screen's top-bar buttons match the home screen's round dark style\"} --> ## What changed The top bars of `BackLink`'s `.screen-nav` and the landing's `.landing-corner` now share one skin. It is a new sheet, `apps/web/src/routes/top-bar.css`. The co\u2026"
       },
       "issue": 3189,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T16:11:27Z",
         "from_run": "42047900590",
         "gates": [
           {
@@ -15828,7 +15833,11 @@
         "source": "build",
         "until": "2026-11-05T16:38:45Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-05T16:08:45Z",
+      "run_id": "pending:19793de8-1793895018",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15847,6 +15856,9 @@
         "provider": "claude-8",
         "run": "42047900590"
       },
+      "started_at": "2026-11-05T16:11:27Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15860,9 +15872,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T15:49:13Z",
+    "at": "2026-11-05T16:11:27Z",
     "url": "",
-    "what": "suggestions on claude-1"
+    "what": "review #3197 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T15:47:39Z",
