@@ -32187,7 +32187,8 @@
       "2026-11-05T03:21:05Z,claude-8,stream,call,41958190019,92,2026-11-05T03:50:00Z,,,allowed_warning,100,,"
     ],
     "runs": [
-      "2026-11-05T03:21:57Z,41958258456,claude-3,opus,plan,3114,hard,planned,,23.7,181,155812,16713227,14.06,22,83,,,70.4,claude-8,fresh,cap,1"
+      "2026-11-05T03:21:57Z,41958258456,claude-3,opus,plan,3114,hard,planned,,23.7,181,155812,16713227,14.06,22,83,,,70.4,claude-8,fresh,cap,1",
+      "2026-11-05T03:21:12Z,41958190019,claude-8,opus,review,3037,hard,approved,,23.1,4,1309,173885,2.8485,86,92,,,1,claude-8,none,,1"
     ]
   },
   "version": 1
