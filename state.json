@@ -30547,7 +30547,10 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-05T11:37:38Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3176,
         "head": "7a94bc08d16d1f2a66ff83772a458c9c90997082",
         "issue": 3065,
         "merged_at": "2026-11-05T11:12:46Z",
@@ -30560,12 +30563,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:8457c770-1793877035",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42017305812",
         "sha": "5a7d4be2fc563e53674fb930099d384586500442",
         "started_at": "2026-11-05T11:14:06Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: `cargo jackioh run-sim` plays whole dungeon runs with the AI in the player's seat and reports how each kind of fight goes",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 76
