@@ -15777,15 +15777,8 @@
       }
     },
     "3205": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42068480079",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-05T16:59:25Z",
-        "until": "2026-11-05T17:29:25Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15797,10 +15790,9 @@
         "reason": "planned on sonnet",
         "trail": "d -n 1,60p apps/web/src/together/polling.test.tsx; grep -n \\\"describe(\\\\| it(\\\" apps/web/src/together/polling.test.tsx | head -60\", \"description\": \"Inspect existing together polling te\u2026\n- Bash: {\"command\": \"cd apps/web/src && ls together/*.test.* routes/Rematch* routes/SeriesBanner* routes/series* routes/play.test.tsx net/liveGame* duos/DuosRoute* duos/CoopPanel* game/net*.test* economy/wal\u2026\n- Bash: {\"command\": \"grep -n \\\"setVisibility\\\" -B4 -A22 routes/Rematch.test.tsx | head -120; grep -n \\\"pageWake\\\" -B3 -A30 game/net.test.ts | head -80\", \"description\": \"See existing setVisibility usage in Re\u2026\n- Bash: {\"command\": \"sed -n 36,70p routes/Rematch.test.tsx; sed -n 296,332p routes/Rematch.test.tsx\", \"description\": \"Read the Rematch test setup and wake test\"}\n- Bash: {\"command\": \"grep -rn \\\"spyOn(window, \\\\\\\"setInterval\\\\\\\"\\\\|spyOn(globalThis, \\\\\\\"setInterval\\\\\\\"\\\\|stubGlobal(\\\\\\\"setInterval\\\\|setInterval\\\" --include=*.test.ts --include=*.test.tsx . | grep -v \\\"^\u2026\n- Bash: {\"command\": \"sed -n 20,130p net/liveGame.test.tsx\", \"description\": \"Read liveGame test structure\"}\n- Bash: {\"command\": \"grep -n \\\"setVisibility\\\\|visibilityState\\\\|online\\\" net/liveGame.test.tsx routes/series.test.tsx routes/play.test.tsx duos/CoopPanel.test.tsx duos/DuosRoute.test.tsx routes/SeriesBanner\u2026\n- Bash: {\"command\": \"sed -n 145,205p net/liveGame.test.tsx; sed -n 320,380p net/liveGame.test.tsx\", \"description\": \"Read liveGame wake tests (useLiveGame and queue follow)\"}\n- Bash: {\"command\": \"sed -n 195,300p routes/play.test.tsx\", \"description\": \"Read play.test.tsx wake test and its helpers\"}\n- Bash: {\"command\": \"sed -n 1,60p together/ChatPanel.test.tsx; sed -n 175,260p together/ChatPanel.test.tsx\", \"description\": \"Read ChatPanel test helpers and poll tests\"}\n- Bash: {\"command\": \"cat test/settle.ts; grep -n \\\"^export\\\" test/stubServer.ts; sed -n 1,60p together/ChallengeToast.test.tsx | head -90; sed -n 340,400p together/ChallengeToast.test.tsx\", \"description\": \"R\u2026\n- Bash: {\"command\": \"sed -n 1,80p test/helpers.test.ts; sed -n 20,50p test/stubServer.ts; sed -n 70,135p test/stubServer.ts\", \"description\": \"Read helpers.test.ts rules and stubServer API\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3205/.bot-plan.md\", \"content\": \"# Draft plan #3205 (in progress)\\n\\n## Findings so far\\n- `pageWake` at apps/web/src/game/net.ts:132 (visible + online\u2026\n- Bash: {\"command\": \"sed -n 255,300p routes/series.test.tsx; grep -n \\\"again\\\\|Again\\\\|setInterval\\\\|useFakeTimers\\\\|advance\\\" duos/DuosRoute.test.tsx | head -40\", \"description\": \"Read series pick wake test \u2026\n- Bash: {\"command\": \"sed -n 196,240p duos/DuosRoute.test.tsx; sed -n 358,385p duos/DuosRoute.test.tsx; grep -n \\\"setInterval\\\\|useFakeTimers\\\\|advance\\\\|useMatchSeries\\\\|describe(\\\\| it(\\\" routes/SeriesBanne\u2026\n- Bash: {\"command\": \"sed -n 60,165p together/polling.test.tsx\", \"description\": \"Read polling.test.tsx cadence tests\"}\n- Bash: {\"command\": \"sed -n 1,75p routes/SeriesBanner.test.tsx; sed -n 98,120p routes/SeriesBanner.test.tsx\", \"description\": \"Read SeriesBanner test host and polling test\"}\n- Bash: {\"command\": \"sed -n 1,75p net/liveGame.test.tsx | head -5; sed -n 240,320p net/liveGame.test.tsx\", \"description\": \"Read Follower helper in liveGame test\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3205 && grep -rn \\\"pageWake\\\\|SOCIAL_POLL_MS\\\\|hidden tab\\\" --include=*.md . 2>/dev/null | grep -v \\\"^./spec/rulings\\\\|node_modules\\\\|^./reviews\\\" | \u2026\n- Bash: {\"command\": \"cat spec/rulings/R897000.md | sed -n 1,30p | cut -c1-700; git log --oneline -3 -- spec/rulings | cat; ls spec/rulings | tail -3; git log -3 --format='%h %s' -- apps/web/src/together/soci\u2026\n- Bash: {\"command\": \"sed -n 52p spec/09-architecture.md | cut -c1-1800; echo ----; sed -n 650,668p apps/web/README.md; grep -n \\\"game/net.ts\\\" apps/web/README.md | head\", \"description\": \"Read presence paragr\u2026\n- Bash: {\"command\": \"cd apps/web/src && grep -rln \\\"game/net.ts\\\" together/ net/ | head; grep -rn \\\"from \\\\\\\"\\\\.\\\\./together\\\\|from \\\\\\\"\\\\./together\\\\|together/\\\" game/net.ts net/api.ts sideline/wire.ts econ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3205 && sed -n 20,80p eslint.config.js\", \"description\": \"Read eslint restricted-syntax rules\"}\n- Bash: {\"command\": \"grep -n \\\"describe(\\\\|^ it(\\\\|pageWake\\\\|visibilit\\\" apps/web/src/game/net.test.ts | head -40; sed -n 1,40p apps/web/src/game/net.test.ts\", \"description\": \"Read net.test.ts structure for\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3205/spec/rulings && ls R0672.md R0765.md R897000.md R0333.md R1566000.md R2092000.md R1441.md R2685000.md R1831000.md R2125000.md R0259.md R1285000.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3205/apps/web/src && grep -n \\\"outgoing\\\\|challengeReads\\\\|useSocialPoll\\\\|navigate\\\\|getMe\\\\|setInterval\\\\|follow\\\" together/ChallengeToast.tsx | he\u2026\n- Bash: {\"command\": \"sed -n 1,30p together/ChallengeToast.tsx; sed -n 100,145p together/ChallengeToast.tsx; sed -n 1,40p together/follow.ts\", \"description\": \"Read the challenge follow logic and its header co\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3205 && grep -n -i \\\"challenge\\\" spec/09-architecture.md | cut -c1-900 | head -12; grep -ln \\\"followChallenge\\\\|challenger's game\\\\|follow.ts\\\" spec/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3205/apps/web/src && sed -n 236,330p duos/CoopPanel.test.tsx; sed -n 1,60p routes/series.test.tsx | grep -n \\\"settleReads\\\\|renderSeries\\\\|useFakeTim\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3205/.bot-plan.md\", \"content\": \"# Plan #3205 (final draft; same text as the final message)\\n\\n## Goal\\nOne helper `pollWhileVisible` in `apps/web/src/\u2026\n- said: ## Goal A hidden tab stops polling for the reads that expire nothing on the server. One helper, `pollWhileVisible`, goes in `apps/web/src/game/net.ts` beside `pageWake`. While `document.visibilityState === \"hidden\"` its timer sends nothing. When the tab shows again it reads once at once and restart\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-05T16:49:48Z",
       "owner_why": "it plans it",
@@ -15813,9 +15805,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-05T16:40:59Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42068480079",
+      "run_id": "pending:05345b24-1793898005",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T16:49:48Z",
+      "started_at": "2026-11-05T17:00:40Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15924,9 +15916,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T16:49:48Z",
+    "at": "2026-11-05T17:00:40Z",
     "url": "",
-    "what": "plan #3205 on claude-4"
+    "what": "build #3205 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-05T16:46:49Z",
