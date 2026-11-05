@@ -73,6 +73,7 @@ import {
 } from "./net/navigate.ts";
 import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
+import { GlitchPath, NotFoundPlay } from "./notfound/NotFoundPlay.tsx";
 import { ChallengeToast } from "./together/ChallengeToast.tsx";
 import { usePresenceHeartbeat } from "./together/presence.ts";
 import { watchCoopOf, watchFriendOf } from "./together/watchLink.ts";
@@ -187,7 +188,10 @@ function SignOutButton(): ReactElement {
   );
 }
 
-/** A path the client serves nothing at. Said in a player's words; the path is shown, never followed. */
+/**
+ * A path the client serves nothing at. Said in a player's words; the path is shown, never followed.
+ * #3119, R3119000: the path glitches and settles, a lost card says its line, three cards turn over into ways out.
+ */
 function NotFound({ path }: { path: string }): ReactElement {
   // Split around the path, so the sentence is one dictionary entry.
   const [nothingBefore = "", nothingAfter = ""] = t("There is nothing at {path}. The link may be wrong or out of date.").split(
@@ -198,9 +202,10 @@ function NotFound({ path }: { path: string }): ReactElement {
       <p className="notice">{t("That page doesn't exist.")}</p>
       <p className="auth-hint">
         {nothingBefore}
-        <code>{path}</code>
+        <GlitchPath key={path} path={path} />
         {nothingAfter}
       </p>
+      <NotFoundPlay key={path} path={path} />
       <div className="row">
         <HomeLink testId={shellTestid.notFoundHome} label={t("Back to the start")} />
       </div>
