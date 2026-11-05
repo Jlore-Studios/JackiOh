@@ -17487,6 +17487,8 @@
       }
     },
     "3154": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T05:53:50Z",
@@ -17500,8 +17502,11 @@
         "trail": "\"Read tail of c\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State (run 2, build, sonnet)\\nPlan above stands. Nothing was built by earlier runs (only the plan). Run 2 is implementing steps 1-9 in order: config.rs\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='crates/server/src/config.rs'\\ns=open(p).read()\\n\\nold_doc='''/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: t\u2026\n- bash: {\"command\": \"true\", \"description\": \"no-op\"}\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/config.rs\", \"offset\": 1328, \"limit\": 60}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/config.rs\", \"old_string\": \"/// counts are. A new best AI, or a set that ships, is measured again by the s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/config.rs\", \"old_string\": \"/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibrat\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/config.rs\", \"old_string\": \"/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibrat\u2026\n- said: Now `bot_calibrate.rs`.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/cli/bot_calibrate.rs'\\ns=open(p).read()\\n\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(old,s.count(old))\\n s=s.replace(old,\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\-\\\\-write\\\" crates/tools/src | head -20\", \"description\": \"Find how sweep --write rewrites config\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/cli/bot_calibrate.rs'\\ns=open(p).read()\\n\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(old,s.count(old))\\n s=s.replace(old,\u2026\n- Bash: {\"command\": \"grep -n \\\"BotCalibrate\\\" -B6 crates/server/src/main.rs | head -40\", \"description\": \"Find BotCalibrate doc in main.rs\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3115/crates/server/src/main.rs\", \"old_string\": \" /// Play the ladder bots' strengths against each other and print their seed rat\u2026\n- Bash: {\"command\": \"grep -rn \\\"bot-calibrate\\\\|BOT_SEED_RATINGS\\\" --include=* -I . --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git -l 2>/dev/null | head -30\", \"description\": \"Find all ref\u2026\n- said: Now the tests.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/bots/calibrate.rs'\\ns=open(p).read()\\n\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(old,s.count(old))\\n s=s.replace(old,n\u2026\n- Bash: {\"command\": \"echo \\\"- run 2: config.rs, bot_calibrate.rs, main.rs, tests/bots/calibrate.rs done; r748000 tests pass (17). Left: docs (server README, docs/bot-calibration.md, R748000.md, training/READ\u2026\n- Bash: {\"command\": \"sed -n 768,784p crates/server/README.md; echo ----; sed -n 816,842p crates/server/README.md; echo ----; sed -n 1,18p docs/bot-calibration.md; echo -----; sed -n 92,112p docs/bot-calibrat\u2026\n- Bash: {\"command\": \"grep -rn \\\"r747000_strength_seed_ratings_match_skill_curve\\\" crates | head; tail -5 /tmp/build-server.log\", \"description\": \"Check r747000 test exists and build status\"}\n- said: Now the docs.\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for old,new in pairs:\\n assert s.count(old)==1,(p,old[:60],s.count(old))\\n s=s.replace(old,new)\\n open(p,'w').write(s)\\n\\nedit\u2026\n- Bash: {\"command\": \"grep -n \\\"BOT_SEED_RATINGS\\\\|bot-calibrate\\\" spec/rulings/R1454.md spec/rulings/R2214000.md | cut -c1-300; tail -3 /tmp/build-server.log\", \"description\": \"Check other ruling mentions\"}\n- Bash: {\"command\": \"sed -n 13p spec/rulings/R1454.md | cut -c280-800; sed -n 16p spec/rulings/R2214000.md | cut -c280-900\", \"description\": \"Read tails of those lines\"}\n- Bash: {\"command\": \"sleep 60; tail -3 /tmp/build-server.log\", \"description\": \"Wait for server build\", \"timeout\": 120000}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -3 /tmp/build-server.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command y\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -5; echo fmt=$?; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -15\", \"description\": \"Run fmt check and clippy on server crate\", \"t\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -v \\\"^test .* ok$\\\" | tail -30\", \"description\": \"Run the whole server crate test suite\", \"timeout\": 600000}\n- Bash: {\"command\": \"echo \\\"- run 2: docs done; server crate suite green (1750+682), clippy -p jackioh-server and fmt green. Left: spec check, patches/catalog check, early-fail check of --write from a non-ro\u2026\n- Bash: {\"command\": \"cd /tmp && /home/runner/work/JackiOh/JackiOh/target/debug/jackioh-server bot-calibrate --write 2>&1 | head -5; echo \\\"exit=$?\\\"; /home/runner/work/JackiOh/JackiOh/target/debug/jackioh-se\u2026\n- Bash: {\"command\": \"grep -rn \\\"SEED_RATINGS\\\\|SKILL_ELO\\\" apps/web/src --include=*.ts --include=*.tsx -l | head; grep -rn \\\"BOT_SEED_RATINGS\\\\|SKILL_ELO_TABLE\\\" crates --include=*.rs -l | head -20; git stat\u2026\n- Bash: {\"command\": \"git diff crates/server/src/cli/bot_calibrate.rs | sed -n 1,400p | grep -n \\\"^[+-]\\\" | sed -n 60,260p\", \"description\": \"Review rustfmt'd diff of bot_calibrate.rs\"}\n- Bash: {\"command\": \"echo \\\"- run 2: ALL DONE. spec check, patches check, catalog check, classify (Internal), clippy server, fmt, server crate tests green. --write from /tmp fails fast with 'run from the rep\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: bot-calibrate writes its results into the server config, and the seed ratings are read from the skill curve\"} --> `BOT_SEED_RATINGS` is now computed in `const` from `SKILL_ELO_TABLE`, and `jackioh-server bot-calibrate --write` rewrites the calibration's\u2026"
       },
       "issue": 3115,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T07:12:59Z",
         "from_run": "41976880324",
         "gates": [
           {
@@ -17593,7 +17598,11 @@
         "source": "build",
         "until": "2026-11-05T07:38:49Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-05T07:08:49Z",
+      "run_id": "pending:2ae8240b-1793862744",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17612,6 +17621,9 @@
         "provider": "claude-8",
         "run": "41976880324"
       },
+      "started_at": "2026-11-05T07:12:59Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17625,9 +17637,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T06:55:28Z",
+    "at": "2026-11-05T07:12:59Z",
     "url": "",
-    "what": "plan #3127 on claude-3"
+    "what": "review #3154 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T06:50:58Z",
