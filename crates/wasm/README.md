@@ -58,7 +58,13 @@ The pure crates never read a clock (CLAUDE.md rule 4). The AI's wall-clock cap i
 ## Build and the client's seams
 
 `scripts/build-wasm.sh` builds the module in release for `wasm32-unknown-unknown` and runs
-`wasm-bindgen --target web` into `apps/web/src/wasm/pkg/` (gitignored). It adds the target and
+`wasm-bindgen --target web --omit-default-module-path` into `apps/web/src/wasm/pkg/` (gitignored), then
+writes `jackioh_wasm_bg.wasm.br`, the module brotli-compressed: at quality 11 for a player's build
+(`JACKIOH_WASM_PREVIEW=0`), at 5 for every other. The page loads only the `.br` (#3183): the site Worker
+serves it with `Content-Encoding: br` (apps/edge), so the browser decodes it as it arrives and
+`instantiateStreaming` compiles it while it downloads, and the built site holds no file near Cloudflare
+Workers' 25 MiB cap on one asset (`apps/web/scripts/check-assets.mjs` refuses one). The `.wasm` stays in
+`pkg/` for the unit tests, which instantiate it from its bytes. It adds the target and
 downloads the pinned `wasm-bindgen-cli` (the same version as the crate, `=0.2.129`) only when they
 are missing. `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:staging`, `prebuild:e2e` and
 `pretest` run it. By default it builds with the `preview` feature (the engine's testkit, for
