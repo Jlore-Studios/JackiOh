@@ -810,8 +810,8 @@ mod no_payout {
     use jackioh_server::actor::contracts::VoidMatchInput;
     use jackioh_server::api::results::void_match;
     use jackioh_server::api::series::{ensure_series_game, start_series};
-    use jackioh_server::api::series_rules::{NewSeriesInput, pick_deck};
     use jackioh_server::db::store::SeriesRow;
+    use jackioh_shared::series::{NewSeriesInput, pick_deck};
 
     /// A slot in whatever integer type the series rules take.
     fn int<T: TryFrom<i64>>(n: i64) -> T

@@ -1,17 +1,16 @@
-//! The seams inside `actor`: socket transport, match clock and results writer.
+//! The seams inside `actor`: socket transport, the match clock's types and results writer.
 //!
-//! Separated so the actor never imports a WebSocket library, the clock never imports a timer,
-//! and the results writer never imports the actor (SURFACE §11.2, §11.3).
+//! Separated so the actor never imports a WebSocket library, the clock never imports a timer
+//! (the machine's timers are data, `jackioh_shared::host::timer`), and the results writer never
+//! imports the actor (SURFACE §11.2, §11.3).
 
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use jackioh_engine::{GameResult, LastBoardEntry, PlayerId};
+use jackioh_engine::{GameResult, LastBoardEntry};
 
 use crate::db::store::MatchSeat;
-
-pub use crate::actor::clock::MatchClock;
 
 /// What the actor installs on a socket when it attaches it to a seat.
 pub struct SocketHandlers {
@@ -23,79 +22,9 @@ pub struct SocketHandlers {
 
 // Clock (SPEC §9.5, R79)
 
-/// Everything the clock needs to know about the game; none of it is hidden information.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ClockView {
-    pub turn: i32,
-    pub active: PlayerId,
-    /// Who owes the open prompt an answer, or null.
-    pub pending_for: Option<PlayerId>,
-    /// R265: the seats that still owe their mulligan while both are open, in seat order; empty
-    /// outside that window. Non-empty with no `pending_for` is the window the mulligan clock runs
-    /// over (R268).
-    pub mulligan_owed: Vec<PlayerId>,
-    pub over: bool,
-    /// R1563006: the question of a sequence open now (Meditative+ #20 KY's Competition), the sequence
-    /// clock's whole input; `None` with none open. Public: who holds it, its streak and its prompt id.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sequence: Option<SequenceClockView>,
-}
-
-/// R1563006: one question of a sequence, as the sequence clock reads it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct SequenceClockView {
-    pub player: PlayerId,
-    /// The right answers so far: 0 on a sequence's first question, where its clock starts.
-    pub streak: i32,
-    pub prompt_id: String,
-}
-
-/// Which clock ran out.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum ClockExpiry {
-    /// R79: the active player's turn clock ran out; `timeout` answers their prompts and ends the turn.
-    Turn { player: PlayerId },
-    /// R79: a prompt held by the non-active player ran out; `timeout` answers only that prompt.
-    Prompt { player: PlayerId },
-    /// R268: the one mulligan clock ran out. It names no player because it belongs to both: the
-    /// actor times out every seat still owing its mulligan at that moment, each with its own
-    /// `timeout`.
-    Mulligan,
-    /// §9.5: grace expired; `disconnectExpired` makes it a loss for that player.
-    Grace { player: PlayerId },
-    /// R79: the hard wall-clock ceiling; `ceilingReached` ends the match in a draw.
-    Ceiling,
-    /// R1563006: a question sequence's clock ran out; its question is answered Stop for its player.
-    Sequence { player: PlayerId },
-}
-
-impl ClockExpiry {
-    /// The literal the server nonce (`srv-<kind>-<seq>`) and the logs carry.
-    pub fn kind(&self) -> &'static str {
-        match self {
-            ClockExpiry::Turn { .. } => "turn",
-            ClockExpiry::Prompt { .. } => "prompt",
-            ClockExpiry::Mulligan => "mulligan",
-            ClockExpiry::Grace { .. } => "grace",
-            ClockExpiry::Ceiling => "ceiling",
-            ClockExpiry::Sequence { .. } => "sequence",
-        }
-    }
-}
-
-/// Called when a deadline passes; handler queues expiry on serialized queue without blocking.
-pub type ExpiryHandler = Arc<dyn Fn(ClockExpiry) + Send + Sync>;
-
-/// Input for creating a match clock (SURFACE §11.3).
-#[derive(Clone)]
-pub struct CreateMatchClockInput {
-    /// When the match started; the ceiling is measured from here (R79). Epoch ms.
-    pub started_at: i64,
-    pub on_expire: ExpiryHandler,
-}
+// The clock is the match host's, pure (`jackioh_shared::host`, #3101): what it reads of a game and which
+// clock ran out are its types, and the actor only names them in its logs and tests.
+pub use jackioh_shared::host::clock::{ClockExpiry, ClockView, SequenceClockView};
 
 // Results (SPEC §9.5, M7-T2)
 

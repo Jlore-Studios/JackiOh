@@ -1,18 +1,38 @@
-//! Conquest series pure rules (`src/api/series_rules.rs`, SPEC §9.5, R330–R337, R259–R263).
+//! Conquest series pure rules (`src/series.rs`, SPEC §9.5, R330–R337, R259–R263).
 //! Verifies state transitions, secret deck privacy in projections, and refusal reasons.
 
 use jackioh_engine::validator::TRIO_DECKS;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
-use jackioh_server::api::series_rules::{
-    NewSeriesInput, RatingMove, SeriesRefusal, SeriesRefusalReason, already_picked, begin_game, both_picked,
-    first_unwon, forfeit_series, game_ended, game_seats, new_series, pick_deck, project_series, rate_series,
-    series_score, timeout_picks, unwon_slots, won_slots,
+use jackioh_shared::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
+use jackioh_shared::deck::FrozenTrio;
+use jackioh_shared::series::{
+    NewSeriesInput, RatingMove, SeriesRefusal, SeriesRefusalReason, SeriesRow, already_picked, begin_game,
+    both_picked, first_unwon, forfeit_series, game_ended, game_seats, new_series, pick_deck, project_series,
+    rate_series, series_score, timeout_picks, unwon_slots, won_slots,
 };
-use jackioh_server::config::{SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED};
-use jackioh_server::db::store::{FrozenTrio, SeriesRow};
 use serde_json::{Value, json};
 
-use crate::support::store::{assert_match, to_json};
+/// A value as its JSON.
+fn to_json<T: serde::Serialize>(value: &T) -> Value {
+    serde_json::to_value(value).expect("a serializable value")
+}
+
+/// Every key `expected` names holds the same value in `actual` (objects partially, arrays element
+/// for element), and nothing else is compared (#2160).
+fn assert_match(actual: &Value, expected: &Value) {
+    fn matches(actual: &Value, expected: &Value) -> bool {
+        match (actual, expected) {
+            (Value::Object(have), Value::Object(want)) => want
+                .iter()
+                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
+            (Value::Array(have), Value::Array(want)) => {
+                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
+            }
+            _ => actual == expected,
+        }
+    }
+    assert!(matches(actual, expected), "expected {actual} to match {expected}");
+}
 
 const NOW: i64 = 1_700_000_000_000;
 const PICK_MS: i64 = SERIES_PICK_SECONDS * 1000;

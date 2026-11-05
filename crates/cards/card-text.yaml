@@ -5,10 +5,10 @@
 # it are apps/web/src/audio/card-audio.json5's.
 #
 # One entry per catalog card and token, keyed by its id in catalog order, with the card's name in a
-# comment on the line of its id. The name is for people; a test checks it against the catalog, so a
-# renamed card's comment changes with it. Every string is trimmed and on one line. Quote one that YAML
-# would read otherwise: one starting with a quote, a bracket, a digit or a symbol, or holding ": " or
-# " #", or a word like yes, no or null.
+# comment on the line of its id. The name is for people; `cargo jackioh names` writes it from the
+# catalog, so a renamed card's comment changes with one command, and a test checks it. Every string is
+# trimmed and on one line. Quote one that YAML would read otherwise: one starting with a quote, a
+# bracket, a digit or a symbol, or holding ": " or " #", or a word like yes, no or null.
 #   flavour  a line of words about the card, 120 characters at most, no rules words
 #   artist   the credited artist of the card's art, 60 characters at most
 #   voice    the card's spoken lines, each in letters, spaces and , . ' ! ? - only: a Unit's play,

@@ -2,16 +2,16 @@
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Winner, query_cost};
-use jackioh_server::api::series_rules::{
-    NewSeriesInput, NewSeriesSide, SeriesRefusalReason, game_ended, new_series, pick_deck, project_series,
-    unwon_slots,
-};
 use jackioh_server::bots::pick::{bot_pick, pick_due_at, pick_is_due, pick_slot, rule_slot};
 use jackioh_server::config::{
     BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, SERIES_PICK_SECONDS,
     SERIES_SWEEP_INTERVAL_SECONDS,
 };
 use jackioh_server::db::store::{FrozenDeck, FrozenTrio, SeriesRow, SeriesStatus};
+use jackioh_shared::series::{
+    NewSeriesInput, NewSeriesSide, SeriesRefusalReason, game_ended, new_series, pick_deck, project_series,
+    unwon_slots,
+};
 
 /// Unit conversion, not configuration: the series constants are stated in seconds.
 const MS_PER_SECOND: i64 = 1000;

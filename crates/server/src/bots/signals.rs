@@ -56,10 +56,7 @@ pub fn standing(state: &GameState, seat: PlayerId, seed: &str, home: PlayerId) -
     }
 }
 
-/// A whole number of ms drawn uniformly between `min` and `max`.
-fn uniform_ms(rng: &mut Rng, min: i64, max: i64) -> i64 {
-    (min as f64 + rng.next() * (max - min) as f64).round() as i64
-}
+use jackioh_shared::host::bot::uniform_ms;
 
 /// R639000, R2660000: whether the bot that began in `home` concedes now, at its own turn start. Its
 /// temper (`share`) is drawn once a match on `{seed}:bot-concede:{home}`; a conceder concedes only when
@@ -86,26 +83,13 @@ pub fn accepts_draw(seed: &str, home: PlayerId, turn: i32, standing: &Standing, 
     standing.behind > 0.0 && rng.next() < fit.accept_share
 }
 
-/// R639000: whether the bot lets its turn clock run out (R79).
+/// R639000: whether the bot lets its turn clock run out (R79): `jackioh_shared::host::bot::idles_turn`,
+/// which the match host's machine asks, at the fit's chance.
 pub fn idles_turn(seed: &str, home: PlayerId, turn: i32, fit: &TimeoutFit) -> bool {
-    let mut rng = Rng::new(&format!("{seed}:bot-idle:{home}:{turn}"), 0);
-    rng.next() < fit.chance_per_turn
+    jackioh_shared::host::bot::idles_turn(seed, home, turn, fit.chance_per_turn)
 }
 
-/// R639000: post-match behavior in ranked play (R672).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct RematchPlan {
-    /// How long it stays on the match, present for a rematch, from the game's end.
-    pub linger_ms: i64,
-    /// Whether it offers a rematch itself.
-    pub offers: bool,
-    /// Whether it meets a rematch the person offers while it is there.
-    pub accepts: bool,
-    /// How long after the game's end it offers.
-    pub offer_after_ms: i64,
-    /// How long after a person's offer it meets it.
-    pub reply_ms: i64,
-}
+pub use jackioh_shared::host::bot::RematchPlan;
 
 /// R639000: draws rematch plan parameters (linger, offer, accept, delays).
 pub fn rematch_plan(seed: &str, home: PlayerId, fit: &RematchFit) -> RematchPlan {
@@ -124,8 +108,8 @@ pub fn rematch_plan(seed: &str, home: PlayerId, fit: &RematchFit) -> RematchPlan
     }
 }
 
-/// R639000, R738: draws aim display duration prior to move dispatch.
+/// R639000, R738: draws aim display duration prior to move dispatch: `jackioh_shared::host::bot::aim_lead_ms`
+/// between the configured bounds.
 pub fn aim_lead_ms(seed: &str, home: PlayerId, seq: i64) -> i64 {
-    let mut rng = Rng::new(&format!("{seed}:bot-aim:{home}:{seq}"), 0);
-    uniform_ms(&mut rng, BOT_AIM_LEAD_MIN_MS, BOT_AIM_LEAD_MAX_MS)
+    jackioh_shared::host::bot::aim_lead_ms(seed, home, seq, BOT_AIM_LEAD_MIN_MS, BOT_AIM_LEAD_MAX_MS)
 }
