@@ -617,7 +617,8 @@ jobs:
   # or never ran (main's runs queue behind each other), it is built here. Only a pull request that
   # touches what stage 2 checks needs it: a card script, the engine, the cards crate's shared code or
   # data, or the AI. The paths here are a superset of the classifier's own (`classify::area`), so a
-  # pull request stage 1 sends to stage 2 always has the base's build.
+  # pull request stage 1 sends to stage 2 always has the base's build. The base is the merge
+  # commit's first parent, as rust-classify's is (#3071).
   rust-base-build:
     name: rust (base build)
     needs: changes
@@ -628,10 +629,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - id: base
+        name: the base, the merge commit's first parent
+        run: |
+          git rev-parse --verify -q HEAD^2 > /dev/null || { echo "::error::the checkout is not the pull request's merge commit"; exit 1; }
+          echo "sha=$(git rev-parse HEAD^1)" >> "$GITHUB_OUTPUT"
       - id: need
         name: whether stage 2 may need the base
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ steps.base.outputs.sha }}
         run: |
           if git diff --no-renames --name-only "$BASE" HEAD | grep -Eq '^crates/(engine/src/|cards/src/|cards/data/|cards/build\.rs$|ai/)'; then
             echo "base=true" >> "$GITHUB_OUTPUT"
@@ -644,7 +650,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/main-jackioh
-          key: jackioh-main-${{ github.event.pull_request.base.sha }}
+          key: jackioh-main-${{ steps.base.outputs.sha }}
       - if: ${{ steps.need.outputs.base == 'true' && steps.cached.outputs.cache-hit != 'true' }}
         uses: ./.github/actions/setup
         with:
@@ -654,7 +660,7 @@ jobs:
       - name: the base built here, since main's run has not cached it
         if: ${{ steps.need.outputs.base == 'true' && steps.cached.outputs.cache-hit != 'true' }}
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ steps.base.outputs.sha }}
           CARGO_PROFILE_RELEASE_LTO: "false"
         run: |
           git worktree add --detach "$RUNNER_TEMP/base" "$BASE"
@@ -678,8 +684,11 @@ jobs:
   # does a fragment claiming a play or a rule the base build does not show. Stage 1 reads the diff
   # alone; only when it leaves something unchecked (a card script, the engine, the AI) does stage 2
   # run, against rust-base-build's jackioh of the base commit. The checkout is the merge commit, the
-  # build the one rust-build made of it. `pull-requests: write` and `issues: write` for its labels
-  # alone; the job runs no code but this repository's own build.
+  # build the one rust-build made of it, and the base its first parent: main as GitHub merged the pull
+  # request onto it, so the diff is what lands. `pull_request.base.sha` can be commits behind, and a
+  # diff from it holds main's own changes too, whose fragments may have shipped since (#3071).
+  # `pull-requests: write` and `issues: write` for its labels alone; the job runs no code but this
+  # repository's own build.
   rust-classify:
     name: rust (classify)
     needs: [changes, rust-build, rust-base-build]
@@ -700,10 +709,15 @@ jobs:
           path: ${{ runner.temp }}
       - name: unpack the binary
         run: tar -xzf "$RUNNER_TEMP/rust-release-jackioh.tgz"
+      - id: base
+        name: the base, the merge commit's first parent
+        run: |
+          git rev-parse --verify -q HEAD^2 > /dev/null || { echo "::error::the checkout is not the pull request's merge commit"; exit 1; }
+          echo "sha=$(git rev-parse HEAD^1)" >> "$GITHUB_OUTPUT"
       - id: stage1
         name: stage 1, from the diff
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ steps.base.outputs.sha }}
         run: |
           set -euo pipefail
           target/release/jackioh classify --base "$BASE" --json | tee "$RUNNER_TEMP/stage1.json"
@@ -720,7 +734,7 @@ jobs:
       - id: classify
         name: the kind, the tier, and the fragments' claims
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ steps.base.outputs.sha }}
           PARENT: ${{ steps.stage1.outputs.parent }}
         run: |
           set -uo pipefail
