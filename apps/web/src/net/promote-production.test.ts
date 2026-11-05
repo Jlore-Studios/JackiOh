@@ -142,6 +142,12 @@ if (a === "run" && b === "list" && f("--workflow") === "super.yml" && f("--commi
     out(issue(m[1]).comments.map((c) => ({ id: c.id, user: { login: c.login, type: c.type }, author_association: c.assoc, created_at: c.at, body: c.body })));
   } else if ((m = /^repos\/[^/]+\/[^/]+\/issues\/comments\/(\d+)\/reactions$/.exec(b))) {
     st.reactions.push({ comment: Number(m[1]), content: f("-f").replace(/^content=/, "") });
+  } else if ((m = /^repos\/[^/]+\/[^/]+\/deployments\?environment=([^&]+)&per_page=(\d+)$/.exec(b))) {
+    // Newest first, as GitHub lists them.
+    out([...(st.deploys || [])].reverse().filter((d) => d.environment === m[1]).slice(0, Number(m[2])).map((d) => ({ id: d.id, sha: d.sha })));
+  } else if ((m = /^repos\/[^/]+\/[^/]+\/deployments\/(\d+)\/statuses\?per_page=1$/.exec(b))) {
+    const d = (st.deploys || []).find((x) => x.id === Number(m[1]));
+    out(d ? [{ state: d.state }] : []);
   } else if ((m = /^repos\/[^/]+\/[^/]+\/git\/refs\/heads\/(.+)$/.exec(b)) && f("-X") === "DELETE") {
     git(origin, "update-ref", "-d", "refs/heads/" + m[1]);
   } else { process.stderr.write("fake gh: unsupported api call " + argv.join(" ") + "\n"); process.exit(2); }
@@ -155,6 +161,8 @@ interface Issue { number: number; title: string; body: string; labels: string[];
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean; comments: string[] }
 interface SuperRun { databaseId: number; attempt: number; status: string; conclusion: string | null; url: string }
 interface MainSuperRun { databaseId: number; headSha: string; conclusion: string; url: string }
+/** A GitHub deployment (deploy-staging.yml's job records one a deploy), its latest status's state. */
+interface Deploy { id: number; environment: string; sha: string; state: string }
 interface Gh {
   next: number;
   nextComment: number;
@@ -168,6 +176,7 @@ interface Gh {
   newestGreen: string;
   super: Record<string, SuperRun>;
   mainSuper: MainSuperRun[];
+  deploys: Deploy[];
   failMerges: number;
   fail: string[];
   log: string[];
@@ -230,7 +239,7 @@ function world(): World {
   git(root, "init", "-q", "--bare", "-b", "main", w.origin);
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
-  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", super: {}, mainSuper: [], failMerges: 0, fail: [], log: [], tokens: [] };
+  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", super: {}, mainSuper: [], deploys: [], failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
   commit(w, "c1", { [PATCHES]: patches("v0.2.0a", "v0.2.0b"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
@@ -285,6 +294,13 @@ const pr = (w: World, number: number): Pr => {
   if (found === undefined) throw new Error(`no pull request ${number}`);
   return found;
 };
+/** The row of "Where things are" for a site: "| **Production**, jackioh.com | `abc1234` | 3 commit(s) |". */
+const site = (i: Issue, name: "Production" | "Staging"): string => i.body.split("\n").find((line) => line.startsWith(`| **${name}**,`)) ?? "";
+/** A deployment of staging, newest last; its id is its place. */
+const deployStaging = (w: World, sha: string, state = "success"): void =>
+  edit(w, (s) => {
+    s.deploys.push({ id: s.deploys.length + 1, environment: "staging", sha, state });
+  });
 const openIssues = (w: World): Issue[] => gh(w).issues.filter((i) => i.state === "open");
 const openPrs = (w: World): Pr[] => gh(w).prs.filter((p) => p.state === "open");
 const marker = (i: Issue): string => /promote-production (last=\d+ reported=[0-9.-]+)/u.exec(i.body)?.[1] ?? "";
@@ -348,7 +364,9 @@ describe("the production issue", () => {
     for (const command of ["`/promote`", "`/promote <sha>`", "`/skip-super <reason>`", "`/cancel`"]) {
       expect(only?.body).toContain(`| ${command} |`);
     }
-    expect(only?.body).toContain("**Production** promotes itself once a day: when the daily super run on `main` passes every job, the commit it tested merges into `production` and deploys.");
+    expect(only?.body).toContain("**Next for production:** the next daily full test run (super) on `main` that passes every job puts the commit it tested live.");
+    expect(only?.body).toContain("### How the sites move");
+    expect(only?.body).toContain("- **Staging** deploys by itself shortly after each commit to `main` whose checks (`ci.yml`) pass. It never waits for the full test run.");
     expect(gh(w).labels).toEqual([LABEL]);
     expect(gh(w).prs).toEqual([]);
     expect(production(w)).toBe(before);
@@ -423,7 +441,7 @@ describe("the production issue", () => {
     expect(fresh).toMatchObject({ number: 2, title: "Production: commits on main are not live yet", labels: [LABEL, "human"], assignees: PEOPLE, comments: [] });
     expect(marker(fresh as Issue)).toBe(`last=${id} reported=-`);
     expect(daily(fresh as Issue)).toBe("-");
-    expect(fresh?.body).toContain("Not live yet, newest first: 3.");
+    expect(site(fresh as Issue, "Production")).toMatch(/\| 3 commit\(s\) \|$/u);
     expect(fresh?.body).toContain(
       "A fresh issue takes over from this one every 7 days, carrying its state, so the thread stays short: [the closed ones](https://github.com/acme/game/issues?q=is%3Aissue+is%3Aclosed+label%3A%22production+merge%22) are the history.",
     );
@@ -463,13 +481,13 @@ describe("a green CI run on main", () => {
   it("only brings the queue up to date, in the body: the title stays, so the timeline gets no retitle a commit", () => {
     const w = started();
     const before = production(w);
-    expect(issue(w, 1).body).toContain("Not live yet, newest first: 2.");
+    expect(site(issue(w, 1), "Production")).toMatch(/\| 2 commit\(s\) \|$/u);
     commit(w, "c4", { "app.txt": "four\n" });
     const r = ok(run(w, "workflow_run"));
     expect(r.output).not.toContain("promoted=true");
     expect(production(w)).toBe(before);
     expect(gh(w).prs).toEqual([]);
-    expect(issue(w, 1).body).toContain("Not live yet, newest first: 3.");
+    expect(site(issue(w, 1), "Production")).toMatch(/\| 3 commit\(s\) \|$/u);
     expect(issue(w, 1).title).toBe("Production: commits on main are not live yet");
   });
 
@@ -615,7 +633,7 @@ describe("/promote", () => {
     expect(reactions(w, id)).toEqual(["+1"]);
     expect(lastReply(w)).toContain(`Opened #2 (@maintainer): 2 commit(s) of \`main\` up to \`${short(w.sha.c3, 12)}\``);
     expect(issue(w, 1).title).toBe(`Production: the super run is testing ${short(w.sha.c3)} (#2)`);
-    expect(issue(w, 1).body).toContain(`**Production:** #2 promotes \`main\` up to \`${short(w.sha.c3, 12)}\`, and the super run is testing it.`);
+    expect(issue(w, 1).body).toContain(`**Next for production:** #2 moves it up to \`${short(w.sha.c3, 12)}\` once the full test run (super) passes on it.`);
   });
 
   it("promotes the commit named, and /fast-forward says the same", () => {
@@ -698,7 +716,7 @@ describe("the super run", () => {
     expect(ok(run(w, "workflow_run")).output).not.toContain("promoted=true");
     expect(pr(w, 2).state).toBe("open");
     expect(issue(w, 1).title).toBe(`Production: the super run is testing ${short(w.sha.c3)} (#2)`);
-    expect(issue(w, 1).body).toContain("is testing it ([run](https://github.com/acme/game/actions/runs/77)).");
+    expect(issue(w, 1).body).toContain("passes on it ([run](https://github.com/acme/game/actions/runs/77)). It then merges and deploys by itself.");
   });
 
   it("says once a run attempt that the run failed, leaves the pull request open, and merges after a re-run passes", () => {
@@ -887,7 +905,7 @@ describe("the queue in the issue", () => {
     return table.split("\n").slice(2);
   };
 
-  it("lists what main has that production does not, by pull request, newest first, with its CI and where it stands", () => {
+  it("lists what main has that production does not, newest first, with where each stands on staging and on production", () => {
     const w = world();
     const four = commit(w, "c4", { "app.txt": "four\n" }, false, "Patch: four | more (#14)");
     edit(w, (s) => s.failed.push(four));
@@ -902,29 +920,67 @@ describe("the queue in the issue", () => {
     const merged = git(w.work, "rev-parse", "HEAD");
     w.sha.c5 = merged;
     edit(w, (s) => s.running.push(merged));
+    // Staging serves c2; its newer deploy of c3 failed, so c3 is still on its way.
+    deployStaging(w, w.sha.c2 as string);
+    deployStaging(w, w.sha.c3 as string, "failure");
     ok(run(w, "workflow_run"));
     const body = issue(w, 1).body;
-    expect(body).toContain(`Production serves \`main\` as of \`${short(w.sha.c1)}\`.`);
-    expect(body).toContain("Not live yet, newest first: 4. `/promote` takes `main` up to its newest commit whose CI passed.");
-    expect(body).toContain("| Pull request | CI | Production |");
+    expect(body).toContain("### Where things are\n\n| Site | Serves `main` up to | Not there yet |\n| --- | --- | --- |\n");
+    expect(site(issue(w, 1), "Production")).toBe(`| **Production**, jackioh.com | \`${short(w.sha.c1)}\` | 4 commit(s) |`);
+    expect(site(issue(w, 1), "Staging")).toBe(`| **Staging**, staging.jackioh.com | \`${short(w.sha.c2)}\` | 3 commit(s) |`);
+    expect(body).toContain("### Not on production yet\n\nNewest first. ✅ live there");
+    expect(body).toContain("| Pull request | Staging | Production |");
     expect(rows(issue(w, 1))).toEqual([
-      "| #15 Patch: the side quest | ⏳ running | waits for CI |",
-      "| #14 Patch: four \\| more | ❌ failed | waits for CI |",
-      `| \`${short(w.sha.c3)}\` change c3 | ✅ passed | next /promote |`,
-      `| \`${short(w.sha.c2)}\` change c2 | ✅ passed | next /promote |`,
+      "| #15 Patch: the side quest | ⏳ checks running | ⏳ checks running |",
+      "| #14 Patch: four \\| more | ❌ checks failed | ❌ checks failed |",
+      `| \`${short(w.sha.c3)}\` change c3 | 🚚 next deploy | 🚚 next promotion |`,
+      `| \`${short(w.sha.c2)}\` change c2 | ✅ live | 🚚 next promotion |`,
+    ]);
+  });
+
+  it("says a commit whose own run a newer push cancelled waits for checks, and a newer green commit takes it along", () => {
+    const w = world();
+    const four = commit(w, "c4", { "app.txt": "four\n" }, false);
+    deployStaging(w, w.sha.c3 as string);
+    ok(run(w, "workflow_run"));
+    expect(rows(issue(w, 1))[0]).toBe(`| \`${short(four)}\` change c4 | ⏳ waits for checks | ⏳ waits for checks |`);
+    commit(w, "c5", { "app.txt": "five\n" });
+    ok(run(w, "workflow_run"));
+    expect(rows(issue(w, 1)).slice(0, 2)).toEqual([
+      `| \`${short(w.sha.c5)}\` change c5 | 🚚 next deploy | 🚚 next promotion |`,
+      `| \`${short(four)}\` change c4 | 🚚 next deploy | 🚚 next promotion |`,
+    ]);
+  });
+
+  it("says when staging's deployments cannot be read, and still lists production's queue", () => {
+    const w = world();
+    edit(w, (s) => s.fail.push("api repos/acme/game/deployments"));
+    ok(run(w, "workflow_run"));
+    expect(site(issue(w, 1), "Staging")).toBe("| **Staging**, staging.jackioh.com | could not be read | |");
+    expect(rows(issue(w, 1))).toEqual([
+      `| \`${short(w.sha.c3)}\` change c3 | — | 🚚 next promotion |`,
+      `| \`${short(w.sha.c2)}\` change c2 | — | 🚚 next promotion |`,
     ]);
   });
 
   it("marks what the open pull request carries, and says when everything is live", () => {
     const w = promoted();
     commit(w, "c4", { "app.txt": "four\n" });
+    deployStaging(w, w.sha.c4 as string);
     ok(run(w, "workflow_run"));
-    expect(rows(issue(w, 1)).map((row) => row.split(" | ").at(-1))).toEqual(["next /promote |", "in #2 |", "in #2 |"]);
+    expect(rows(issue(w, 1)).map((row) => row.split(" | ").slice(1).join(" | "))).toEqual([
+      "✅ live | 🚚 next promotion |",
+      "✅ live | 🧪 being tested in #2 |",
+      "✅ live | 🧪 being tested in #2 |",
+    ]);
     ok(say(w, "/promote").run);
     superRun(w, w.sha.c4 as string, "success");
     ok(run(w, "workflow_run"));
     expect(rows(issue(w, 1))).toEqual([]);
-    expect(issue(w, 1).body).toContain(`Production serves \`main\` as of \`${short(w.sha.c4)}\`. Everything on \`main\` is live.`);
+    expect(site(issue(w, 1), "Production")).toBe(`| **Production**, jackioh.com | \`${short(w.sha.c4)}\` | nothing |`);
+    expect(site(issue(w, 1), "Staging")).toBe(`| **Staging**, staging.jackioh.com | \`${short(w.sha.c4)}\` | nothing |`);
+    expect(issue(w, 1).body).toContain("**Next for production:** nothing to do: everything on `main` is live.");
+    expect(issue(w, 1).body).not.toContain("### Not on production yet");
   });
 });
 
@@ -1121,7 +1177,9 @@ describe("the workflow", () => {
   });
 
   it("asks for the permissions the script uses, and no more", () => {
-    expect(WORKFLOW).toMatch(/^permissions:\n {2}contents: write\n {2}actions: read\n {2}issues: write\n {2}pull-requests: write\n\n/mu);
+    expect(WORKFLOW).toMatch(
+      /^permissions:\n {2}contents: write\n {2}actions: read\n {2}# [^\n]+\n {2}deployments: read\n {2}issues: write\n {2}pull-requests: write\n\n/mu,
+    );
   });
 });
 
