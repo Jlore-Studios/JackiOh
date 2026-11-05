@@ -152,11 +152,10 @@ mod tests {
                 }
             }
 
-            #[test]
-            fn set_cost_reads_through_param() {
-                // `setCost` is the declared number: tuned, the paid cards cost that.
+            /// The tuned, paid cast on `seed`.
+            fn cast_tuned(seed: &str) -> Scenario {
                 let mut s = scenario(json!({
-                    "seed": "intellect-paid-tuned",
+                    "seed": seed,
                     "p1": {
                         "hand": [INTELLECT, FILLER],
                         "library": [FILLER, FILLER, FILLER, FILLER],
@@ -166,7 +165,19 @@ mod tests {
                 }));
                 set_param(s.card_mut(INTELLECT), "setCost", 1);
                 s.play(INTELLECT, json!({ "embiggen": true }));
-                let got = added(&s);
+                s
+            }
+
+            #[test]
+            fn set_cost_reads_through_param() {
+                // `setCost` is the declared number: tuned, the paid cards cost that. A card picked may change as
+                // it reaches the hand (M #37 CN in a Bottle), so the seed is one where all three arrive as they
+                // were added, searched for at run time (#848).
+                let seed = seed_where("intellect-paid-tuned", |seed| {
+                    let got = added(&cast_tuned(seed));
+                    got.len() == 3 && got.iter().all(|card| card.cost_override == Some(1))
+                });
+                let got = added(&cast_tuned(&seed));
                 assert_eq!(got.len(), 3);
                 for card in got {
                     assert_eq!(card.cost_override, Some(1));
