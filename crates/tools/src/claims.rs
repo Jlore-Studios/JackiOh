@@ -171,7 +171,10 @@ mod tests {
         let mut stopped = classified(&["core-002"], false, "ran");
         stopped.unchecked = vec!["script:core-002".to_string(), "play-code".to_string()];
         let fragment = named("pass.json", &[], &["core-002", "core-007"], true);
-        assert_eq!(problems(&stopped, &[fragment.clone()], &[]), Vec::<String>::new());
+        assert_eq!(
+            problems(&stopped, std::slice::from_ref(&fragment), &[]),
+            Vec::<String>::new()
+        );
         stopped.unchecked.pop();
         assert_eq!(
             problems(&stopped, &[fragment], &[]),
