@@ -17180,6 +17180,14 @@
           "claude": "strong"
         }
       }
+    },
+    "3145": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-05T03:19:06Z",
+      "issue": 3121,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
