@@ -39,7 +39,8 @@
 //! stream, so every game plays as it did before them.
 //!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock for a
-//! game (the clock only times the wave). The deck draw, the game and the policy each come from `Rng::new`
+//! game (the clock only times the wave and watches it for a stalled seed, `seed_watch.rs`, #3158).
+//! The deck draw, the game and the policy each come from `Rng::new`
 //! over a seed string derived from the seed number, so a reported seed reproduces its game exactly, in
 //! this process or any other, on any thread. The policy rng is SEPARATE from the game rng: `reduce`
 //! builds its own from `(state.seed, state.rng_cursor)` as `fold` does, so the policy's coin flips are
@@ -1856,6 +1857,21 @@ fn wave_name(handicapped: bool) -> &'static str {
     }
 }
 
+/// The command that plays `seed` of this wave alone, as a stalled seed's report gives it (#3158): its
+/// forced cards as the seed's ids, as a failure's `reproduce:` line names them.
+fn reproduce_command(seed: u32, handicapped: bool, forcing: &Forcing) -> String {
+    let forced = forcing.for_seed(seed);
+    format!(
+        "cargo jackioh fuzz --from {seed} --seeds 1{}{}",
+        if handicapped { " --handicap" } else { "" },
+        if forced.is_empty() {
+            String::new()
+        } else {
+            format!(" --cards {}", forced.join(","))
+        }
+    )
+}
+
 fn is_word_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
@@ -2452,7 +2468,13 @@ fn play_seeds(
     record_panic_locations();
     register_all();
     let started_at = Instant::now();
-    let results: Vec<Result<Passed, Failure>> = (from..from + ran).into_par_iter().map(seed).collect();
+    let results: Vec<Result<Passed, Failure>> = crate::seed_watch::watched(
+        wave_name(handicapped),
+        from,
+        ran,
+        |at| reproduce_command(at, handicapped, forcing),
+        seed,
+    );
     let elapsed_ms = started_at.elapsed().as_secs_f64() * MS_PER_SECOND;
     let setup_of = if handicapped {
         GameSetup::handicapped
@@ -5078,6 +5100,34 @@ pub(crate) mod tests {
                 assert_eq!(again.message, failure.message);
                 assert_eq!(again.forced, failure.forced);
             }
+        }
+
+        /// #3158: a stalled seed's command plays that seed of its wave alone, its forced cards as the
+        /// seed's ids (a token's carrier, a set's slice), as a failure's `reproduce:` line has them.
+        #[test]
+        fn a_stalled_seeds_command_names_its_wave_and_forced_cards() {
+            assert_eq!(
+                reproduce_command(12, false, &Forcing::default()),
+                "cargo jackioh fuzz --from 12 --seeds 1"
+            );
+            assert_eq!(
+                reproduce_command(12, true, &Forcing::default()),
+                "cargo jackioh fuzz --from 12 --seeds 1 --handicap"
+            );
+            let _preview = preview_every_set();
+            let token = forcing_of(&["core-t-felinor"]).unwrap();
+            assert_eq!(
+                reproduce_command(12, true, &token),
+                "cargo jackioh fuzz --from 12 --seeds 1 --handicap --cards classic-032"
+            );
+            let set = forcing_of(&["Training Grounds"]).unwrap();
+            assert_eq!(
+                reproduce_command(12, false, &set),
+                format!(
+                    "cargo jackioh fuzz --from 12 --seeds 1 --cards {}",
+                    set.for_seed(12).join(",")
+                )
+            );
         }
 
         #[test]
