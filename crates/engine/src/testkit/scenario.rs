@@ -180,6 +180,8 @@ pub fn register_code_lines(lines: Vec<(&str, usize)>) {
         busted: over(crate::config::BUSTED_CODE_LINES),
         complicated: over(crate::config::COMPLICATED_CODE_LINES),
         code_lines: Box::leak(owned.into_boxed_slice()),
+        // #3116: fixture code lines carry no script, so no extra-turn card.
+        extra_turn_cards: &[],
     };
     CARD_METRICS_OVERRIDE.with(|cell| cell.set(Some(metrics)));
 }

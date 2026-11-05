@@ -170,3 +170,61 @@ import {
   to = cloudflare_zero_trust_access_application.staging
   id = "accounts/${local.cloudflare_account_id}/e196957e-0899-490e-9471-1f8d84c69d55"
 }
+
+# The dev dashboard (apps/admin, R3074000): a Worker of its own per environment, `jackioh-admin`
+# at admin.jackioh.com and `jackioh-admin-staging` at admin-staging.jackioh.com (one label deep, so
+# the zone's own certificate covers it), each behind Access for the dev accounts' addresses alone,
+# on top of the account's own sign-in and the server's DEV_PROFILE_IDS check. apps/admin/wrangler.jsonc
+# owns the Workers, with no workers.dev or preview address; promote-production.yml and
+# deploy-staging.yml deploy them, so each Worker exists before the apply that gives it its domain
+# (apps/admin/README.md says the order). Each domain waits on its Access application, so it never
+# serves a request Access has not seen.
+variable "admin_emails" {
+  description = "The addresses Access lets into the dev dashboard: the dev accounts' own. Personal data in a public repository, so they live in infra/terraform.tfvars, which git ignores (README.md, Running it)."
+  type        = list(string)
+}
+
+resource "cloudflare_zero_trust_access_policy" "admin_devs" {
+  account_id = local.cloudflare_account_id
+  name       = "JackiOh dev dashboard: the devs"
+  decision   = "allow"
+  include    = [for email in var.admin_emails : { email = { email = email } }]
+}
+
+resource "cloudflare_zero_trust_access_application" "admin" {
+  account_id       = local.cloudflare_account_id
+  name             = "JackiOh dev dashboard"
+  type             = "self_hosted"
+  domain           = "admin.jackioh.com"
+  session_duration = "12h"
+  policies = [
+    { id = cloudflare_zero_trust_access_policy.admin_devs.id, precedence = 1 },
+  ]
+}
+
+resource "cloudflare_zero_trust_access_application" "admin_staging" {
+  account_id       = local.cloudflare_account_id
+  name             = "JackiOh dev dashboard (staging)"
+  type             = "self_hosted"
+  domain           = "admin-staging.jackioh.com"
+  session_duration = "12h"
+  policies = [
+    { id = cloudflare_zero_trust_access_policy.admin_devs.id, precedence = 1 },
+  ]
+}
+
+resource "cloudflare_workers_custom_domain" "admin_jackioh_com" {
+  account_id = local.cloudflare_account_id
+  zone_id    = data.cloudflare_zone.jackioh.id
+  hostname   = "admin.jackioh.com"
+  service    = "jackioh-admin"
+  depends_on = [cloudflare_zero_trust_access_application.admin]
+}
+
+resource "cloudflare_workers_custom_domain" "admin_staging_jackioh_com" {
+  account_id = local.cloudflare_account_id
+  zone_id    = data.cloudflare_zone.jackioh.id
+  hostname   = "admin-staging.jackioh.com"
+  service    = "jackioh-admin-staging"
+  depends_on = [cloudflare_zero_trust_access_application.admin_staging]
+}

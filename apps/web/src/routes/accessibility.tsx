@@ -14,7 +14,7 @@ export const accessibilityTestid = {
   updated: "accessibility-updated",
 } as const;
 
-export const ACCESSIBILITY_LAST_UPDATED = "2026-10-21";
+export const ACCESSIBILITY_LAST_UPDATED = "2026-11-05";
 
 export default function AccessibilityRoute(): ReactElement {
   // Split around the link, so the sentence is one entry and English reads as it always did.
@@ -52,7 +52,7 @@ export default function AccessibilityRoute(): ReactElement {
             <li>{t("Play, Decks, Account and the leaderboard.")}</li>
             <li>{t("The Almanac, Patch notes and Stats.")}</li>
             <li>{t("Practice, its setup and a game, and a game on one device.")}</li>
-            <li>{t("The card creator, Replays, Play together and the Collection.")}</li>
+            <li>{t("Replays, Play together and the Collection.")}</li>
             <li>{t("The Privacy Policy, the Terms, this page and the Copyright page.")}</li>
           </ul>
         </section>

@@ -32,6 +32,7 @@ use crate::db::store::{
     ResultRow, SeriesRow, SeriesStatus, StoreError, Tx, ladder_of_mode,
 };
 use crate::duos::again::sweep_duos_again_offers;
+use crate::economy::proficiency::proficiency_plays;
 use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{
     GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
@@ -370,6 +371,11 @@ async fn write_once(
                     tally: tally_seat(
                         game.map(|game| &game.seats[seat.player]),
                         attacks,
+                        &app.catalog.defs,
+                    ),
+                    // [[R3013000]]: the seat's own plays from hand, counted toward its proficiency.
+                    proficiency: proficiency_plays(
+                        game.map(|game| &game.seats[seat.player]),
                         &app.catalog.defs,
                     ),
                 },

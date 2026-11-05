@@ -328,9 +328,10 @@ so is growing `GATHER_STRIDE` (100,000), which N passes at about 2,000 cards.
 
 To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
 `cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
---totals-only <file>`. The training box has been given back (#682's audit,
-`reviews/2026-10-22-issue-682-subscriptions.md`), so what follows is the lane's contract for a box that
-still runs it.
+--totals-only <file>`. No box runs `loop.sh gather` since 2026-11-04: the training box, the Muse box
+now (`bot/machine/README.md`), ran it until then and filed its games into staging's database alone,
+which R1933001's two databases outgrew, so `jackioh-train@gather` is disabled there. What follows is the
+lane's contract for a box that still runs it.
 
 `loop.sh gather` is the third lane, and it gathers data instead of improving the AI (#749, part of
 #636): it plays AI-against-AI All Random games without end and keeps their card figures, so the card

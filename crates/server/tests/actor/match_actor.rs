@@ -24,7 +24,8 @@ use jackioh_server::config::{
 use jackioh_server::db::store::{
     Db, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput, StartMatchInput,
 };
-use jackioh_server::economy::store::CardPicks;
+use jackioh_server::economy::proficiency::{top_level, top_level_plays};
+use jackioh_server::economy::store::{CardPicks, CardProficiency};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 use serde_json::{Value, json};
 use tracing::subscriber::DefaultGuard;
@@ -450,6 +451,9 @@ struct Options {
     /// starts, which the seat's loadout freezes from.
     account_picks: Vec<(&'static str, Value)>,
     card_picks: Vec<(&'static str, Value)>,
+    /// R3013002: `(profile, card, stamp)`: the card at its top proficiency level, wearing that stamp,
+    /// as the match starts.
+    proficiency: Vec<(&'static str, &'static str, i64)>,
 }
 
 impl Default for Options {
@@ -467,6 +471,7 @@ impl Default for Options {
             economy_live: false,
             account_picks: Vec::new(),
             card_picks: Vec::new(),
+            proficiency: Vec::new(),
         }
     }
 }
@@ -642,6 +647,24 @@ async fn harness(options: Options) -> Harness {
         tx.economy_card_picks_put(profile_id, &picks, now())
             .await
             .expect("economy.cardPicks.put");
+        tx.commit().await.expect("commit");
+    }
+    for (profile_id, card_id, stamp) in &options.proficiency {
+        let row = CardProficiency {
+            card_id: (*card_id).to_string(),
+            plays: top_level_plays(),
+            level: top_level(),
+            stamp: None,
+        };
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        tx.economy_card_proficiency_put(profile_id, &[row], now())
+            .await
+            .expect("economy.cardProficiency.put");
+        assert!(
+            tx.economy_card_proficiency_stamp(profile_id, card_id, Some(*stamp), now())
+                .await
+                .expect("economy.cardProficiency.stamp")
+        );
         tx.commit().await.expect("commit");
     }
 
@@ -4874,7 +4897,7 @@ mod r1834003_the_loadouts_frames {
     }
 
     /// The index of the first frame of `kind` a socket was sent.
-    fn first_of(socket: &Client, kind: &str) -> usize {
+    pub(super) fn first_of(socket: &Client, kind: &str) -> usize {
         socket
             .messages()
             .iter()
@@ -5179,5 +5202,121 @@ mod r1834003_the_loadouts_frames {
         }
         // The game showed each seat some of the other's cards, whose picks then followed.
         assert!(opponents_seen > 0, "no seat was sent a card of the other's deck");
+    }
+}
+
+// R3013000, R3013002 — card proficiency through the actor (§14.14)
+
+/// A finished match counts each seat's plays from hand (R3013000), and each seat's stamps travel by
+/// R1834003's rule (R3013002).
+mod r3013002_card_proficiency_through_the_actor {
+    use super::r1834003_the_loadouts_frames::first_of;
+    use super::*;
+
+    /// The account's proficiency rows, as JSON.
+    async fn proficiency_of(app: &App, profile_id: &str) -> Value {
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        let rows = tx
+            .economy_card_proficiency_get(profile_id)
+            .await
+            .expect("economy.cardProficiency.get");
+        tx.commit().await.expect("commit");
+        serde_json::to_value(rows).expect("rows serialize")
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3013000_a_finished_match_counts_the_card_played_from_hand() {
+        let h = harness(Options {
+            economy_live: true,
+            ..Options::default()
+        })
+        .await;
+        send(&h, &h.p1, "n1", json!({ "type": "endTurn" })).await;
+        send(
+            &h,
+            &h.p2,
+            "n2",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-lethal") }),
+        )
+        .await;
+        assert!(result_row(&h.app, MATCH_ID).await.is_some(), "the match ended");
+        // p2 played one card from hand; p1 played none.
+        assert_eq!(
+            proficiency_of(&h.app, "profile-2").await,
+            json!([{ "cardId": "test-lethal", "plays": 1, "level": 0, "stamp": null }])
+        );
+        assert_eq!(proficiency_of(&h.app, "profile-1").await, json!([]));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3013002_a_stamp_reaches_the_other_seat_only_once_its_card_is_shown() {
+        let h = harness(Options {
+            proficiency: vec![
+                ("profile-1", "test-prompt-self", 3),
+                ("profile-2", "test-lethal", 2),
+                // A card its deck does not hold is never frozen.
+                ("profile-2", "test-prompt-self", 5),
+            ],
+            ..Options::default()
+        })
+        .await;
+        // PREMISE: the row froze each seat's stamps of its own dealt cards.
+        let row = match_row(&h.app, MATCH_ID).await;
+        assert_eq!(
+            row["loadouts"][0]["stamps"],
+            json!([{ "cardId": "test-prompt-self", "stamp": 3 }])
+        );
+        assert_eq!(
+            row["loadouts"][1]["stamps"],
+            json!([{ "cardId": "test-lethal", "stamp": 2 }])
+        );
+        let p1_stamp = json!({
+            "type": "cardLoadouts",
+            "seat": "p1",
+            "cards": [],
+            "stamps": [{ "cardId": "test-prompt-self", "stamp": 3 }],
+        });
+        let p2_stamp = json!({
+            "type": "cardLoadouts",
+            "seat": "p2",
+            "cards": [],
+            "stamps": [{ "cardId": "test-lethal", "stamp": 2 }],
+        });
+        // Each seat's own hand shows its own cards, so each is sent its own stamps after the view;
+        // neither view shows the other's hand, so neither is sent the other's.
+        assert_eq!(h.p1.of_type("cardLoadouts"), vec![p1_stamp.clone()]);
+        assert!(first_of(&h.p1, "view") < first_of(&h.p1, "cardLoadouts"));
+        assert!(
+            h.p2.of_type("cardLoadouts")
+                .iter()
+                .all(|frame| frame["seat"] == json!("p2")),
+            "{:?}",
+            h.p2.of_type("cardLoadouts")
+        );
+        for socket in [&h.p1, &h.p2] {
+            let view = last_view(socket);
+            assert!(view.get("stamps").is_none() && view.get("loadouts").is_none());
+        }
+
+        // Once p2 plays its card, p1's view shows it and p1 is sent its stamp, once.
+        send(&h, &h.p1, "n1", json!({ "type": "endTurn" })).await;
+        assert_eq!(h.p1.of_type("cardLoadouts"), vec![p1_stamp.clone()]);
+        send(
+            &h,
+            &h.p2,
+            "n2",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-lethal") }),
+        )
+        .await;
+        assert_eq!(h.p1.of_type("cardLoadouts"), vec![p1_stamp, p2_stamp.clone()]);
+        assert_eq!(
+            h.p2.of_type("cardLoadouts")
+                .iter()
+                .filter(|frame| frame["seat"] == json!("p2"))
+                .count(),
+            1,
+            "{:?}",
+            h.p2.of_type("cardLoadouts")
+        );
     }
 }

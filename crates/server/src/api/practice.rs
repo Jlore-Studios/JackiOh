@@ -348,6 +348,8 @@ async fn settle(
         at,
         bot: false,
         tally: tally_seat(verified.seat.as_ref(), verified.attacks, &app.catalog.defs),
+        // R3013000: a game against the AI counts no proficiency.
+        proficiency: Vec::new(),
     };
     let board = live.then_some(verified.last_board.as_slice());
     Ok(match pay_with_retries(app, &seed, &summary, board).await? {

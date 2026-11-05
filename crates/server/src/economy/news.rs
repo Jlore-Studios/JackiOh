@@ -11,6 +11,10 @@
 //! - A claim ([`claim_news_once`], [[R2875000]]) pays the reward as ledger rows with the reason
 //!   `news` and writes migration 0077's `news_claims` row, once per account and entry. Unread is
 //!   unclaimed ([[R2875002]]).
+//! - A post a dev wrote from the dev dashboard (migration 0080's `news_posts`, [[R3074003]]) stands
+//!   on the board beside the file's entries for the same days, an alert with no reward: its claim
+//!   marks it read and pays nothing. [`post_problems`] is its check, the file's own rules for a
+//!   title and a summary, and a length cap on each.
 //!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): the claim's route refuses while it is off. Every
 //! number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
@@ -26,12 +30,14 @@ use super::idempotency::{RequestKey, Spent, keep, replayed};
 use super::packs::inventory_of;
 use super::roll::PackKind;
 use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason};
+use crate::admin::store::{NEWS_POST_ID_PREFIX, NewsPost};
 use crate::api::catalog::PATCHES_JSON;
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::app::{App, now_ms};
 use crate::config::{
-    MS_PER_DAY, NEWS_REWARD_CARD_PACKS, NEWS_REWARD_CARD_TOKENS, NEWS_REWARD_COSMETIC_PACKS,
-    NEWS_REWARD_COSMETIC_TOKENS, NEWS_REWARD_JLORE, NEWS_SUMMARY_MAX_SENTENCES, NEWS_TTL_DAYS,
+    MS_PER_DAY, NEWS_POST_SUMMARY_MAX_CHARS, NEWS_POST_TITLE_MAX_CHARS, NEWS_REWARD_CARD_PACKS,
+    NEWS_REWARD_CARD_TOKENS, NEWS_REWARD_COSMETIC_PACKS, NEWS_REWARD_COSMETIC_TOKENS, NEWS_REWARD_JLORE,
+    NEWS_SUMMARY_MAX_SENTENCES, NEWS_TTL_DAYS,
 };
 use crate::cosmetics::{CosmeticRarity, is_slug};
 use crate::db::store::Tx;
@@ -256,6 +262,11 @@ pub fn parse(json: &str) -> Result<Vec<NewsEntry>, String> {
         if !is_slug(id) {
             problem("the id is not a slug".to_string());
         }
+        if id.starts_with(NEWS_POST_ID_PREFIX) {
+            problem(format!(
+                "the id starts with {NEWS_POST_ID_PREFIX:?}, which the dev dashboard's posts take"
+            ));
+        }
         if !seen.insert(id.to_string()) {
             problem("the id is listed twice".to_string());
         }
@@ -333,27 +344,100 @@ pub fn live_at(entry: &NewsEntry, now: i64) -> bool {
     entry.posted_at <= now && now < entry.posted_at.saturating_add(NEWS_TTL_DAYS * MS_PER_DAY)
 }
 
-/// What `GET /api/news` and a claim answer: `{ news }`, the entries live at `now` newest first (of
-/// two posted at once, the one later in the file first), each marked `claimed` when its id is in
-/// `claimed` ([[R2875002]]: the client counts the unclaimed ones and nothing else).
-pub fn board(entries: &[NewsEntry], claimed: &[String], now: i64) -> Value {
-    let mut live: Vec<&NewsEntry> = entries.iter().rev().filter(|entry| live_at(entry, now)).collect();
-    live.sort_by_key(|entry| std::cmp::Reverse(entry.posted_at));
-    let news: Vec<Value> = live
-        .into_iter()
-        .map(|entry| {
-            json!({
-                "id": entry.id,
-                "kind": entry.kind.as_str(),
-                "version": entry.version,
-                "title": entry.title,
-                "summary": entry.summary,
-                "postedAt": entry.posted_at,
-                "reward": entry.reward.view(),
-                "claimed": claimed.contains(&entry.id),
-            })
+/// R3074003: everything wrong with a post's title and summary, one problem each, as `news.json`'s
+/// entries are checked ([[R2875003]]): a title that is not empty, a summary that ends a sentence and
+/// holds 1 to `NEWS_SUMMARY_MAX_SENTENCES` of them, each within its length cap
+/// (`NEWS_POST_TITLE_MAX_CHARS`, `NEWS_POST_SUMMARY_MAX_CHARS`), and no control character in
+/// either, so a post is one line of plain text. Both are read as given, trimmed by the caller.
+pub fn post_problems(title: &str, summary: &str) -> Vec<String> {
+    let mut problems = Vec::new();
+    if title.is_empty() {
+        problems.push("The title is empty.".to_string());
+    }
+    if title.chars().count() > NEWS_POST_TITLE_MAX_CHARS {
+        problems.push(format!(
+            "The title is longer than {NEWS_POST_TITLE_MAX_CHARS} characters."
+        ));
+    }
+    if summary.chars().count() > NEWS_POST_SUMMARY_MAX_CHARS {
+        problems.push(format!(
+            "The summary is longer than {NEWS_POST_SUMMARY_MAX_CHARS} characters."
+        ));
+    }
+    if !summary.ends_with(['.', '!', '?']) {
+        problems.push("The summary does not end a sentence.".to_string());
+    }
+    let count = sentences(summary);
+    if !(1..=NEWS_SUMMARY_MAX_SENTENCES).contains(&count) {
+        problems.push(format!(
+            "The summary holds {count} sentences, not 1 to {NEWS_SUMMARY_MAX_SENTENCES}."
+        ));
+    }
+    if title.chars().chain(summary.chars()).any(char::is_control) {
+        problems.push("A post is one line of plain text: no line breaks or control characters.".to_string());
+    }
+    problems
+}
+
+/// R3074003, R2875001: the earliest `posted_at` a post may have and still stand at `now`, the
+/// first millisecond of the `NEWS_TTL_DAYS` before it: the `from` of `admin_posts_standing`.
+pub fn posts_live_from(now: i64) -> i64 {
+    now.saturating_sub(NEWS_TTL_DAYS * MS_PER_DAY) + 1
+}
+
+/// R3074003: whether a post stands at `now`: live for the days an entry is ([`live_at`]), and not
+/// taken down.
+pub fn post_live_at(post: &NewsPost, now: i64) -> bool {
+    post.taken_down_at.is_none() && posts_live_from(now) <= post.posted_at && post.posted_at <= now
+}
+
+/// What `GET /api/news` and a claim answer: `{ news }`, the entries live at `now` and the posts
+/// standing at `now` ([[R3074003]]), newest first (of two posted at once, the one later in the file
+/// first, a post before an entry), each marked `claimed` when its id is in `claimed` ([[R2875002]]:
+/// the client counts the unclaimed ones and nothing else). A post is an alert whose `reward` is null.
+pub fn board(entries: &[NewsEntry], posts: &[NewsPost], claimed: &[String], now: i64) -> Value {
+    let mut live: Vec<(i64, Value)> = posts
+        .iter()
+        .filter(|post| post_live_at(post, now))
+        .map(|post| {
+            (
+                post.posted_at,
+                json!({
+                    "id": post.id,
+                    "kind": NewsKind::Alert.as_str(),
+                    "version": Value::Null,
+                    "title": post.title,
+                    "summary": post.summary,
+                    "postedAt": post.posted_at,
+                    "reward": Value::Null,
+                    "claimed": claimed.contains(&post.id),
+                }),
+            )
         })
         .collect();
+    live.extend(
+        entries
+            .iter()
+            .rev()
+            .filter(|entry| live_at(entry, now))
+            .map(|entry| {
+                (
+                    entry.posted_at,
+                    json!({
+                        "id": entry.id,
+                        "kind": entry.kind.as_str(),
+                        "version": entry.version,
+                        "title": entry.title,
+                        "summary": entry.summary,
+                        "postedAt": entry.posted_at,
+                        "reward": entry.reward.view(),
+                        "claimed": claimed.contains(&entry.id),
+                    }),
+                )
+            }),
+    );
+    live.sort_by_key(|(posted_at, _)| std::cmp::Reverse(*posted_at));
+    let news: Vec<Value> = live.into_iter().map(|(_, entry)| entry).collect();
     json!({ "news": news })
 }
 
@@ -403,7 +487,8 @@ async fn pay(tx: &mut Tx<'_>, profile_id: &str, entry: &NewsEntry, at: i64) -> R
 /// `Idempotency-Key` (R2124000), in one transaction: right after the account's lock, before any
 /// check, a key already committed answers what it kept. An entry this build does not hold, or not
 /// posted yet, is 404; one past its `NEWS_TTL_DAYS` is 409 ([[R2875001]]), as is a second claim,
-/// which `news_claims`' key refuses whoever races it. A refusal pays nothing. Answers [`board`]
+/// which `news_claims`' key refuses whoever races it. A refusal pays nothing. R3074003: a dev's
+/// post is claimed as an entry is, paying nothing, and one taken down is 404. Answers [`board`]
 /// with the entry claimed.
 pub async fn claim_news_once(
     app: &App,
@@ -417,13 +502,27 @@ pub async fn claim_news_once(
     if let Some(before) = replayed(&mut tx, profile_id, request).await? {
         return Ok(before);
     }
+    let not_posted = || ApiError::new(ApiErrorCode::NotFound, "That news isn't posted.");
+    let expired = || ApiError::new(ApiErrorCode::Conflict, "That news has expired.");
+    // R3074003: a news.json entry pays its reward; a dev's post, which a taken-down one is not, pays
+    // nothing, and its claim only marks it read.
     let entry = app
         .news
         .iter()
-        .find(|entry| entry.id == news_id && entry.posted_at <= now)
-        .ok_or_else(|| ApiError::new(ApiErrorCode::NotFound, "That news isn't posted."))?;
-    if !live_at(entry, now) {
-        return Err(ApiError::new(ApiErrorCode::Conflict, "That news has expired."));
+        .find(|entry| entry.id == news_id && entry.posted_at <= now);
+    match entry {
+        Some(entry) if !live_at(entry, now) => return Err(expired()),
+        Some(_) => {}
+        None => {
+            let post = tx
+                .admin_posts_get(news_id)
+                .await?
+                .filter(|post| post.taken_down_at.is_none() && post.posted_at <= now)
+                .ok_or_else(not_posted)?;
+            if !post_live_at(&post, now) {
+                return Err(expired());
+            }
+        }
     }
     let mut claimed = tx.economy_news_claims_get(profile_id).await?;
     if claimed.iter().any(|id| id == news_id) {
@@ -432,9 +531,12 @@ pub async fn claim_news_once(
     if !tx.economy_news_claim(profile_id, news_id, now).await? {
         return Err(already_claimed());
     }
-    pay(&mut tx, profile_id, entry, now).await?;
+    if let Some(entry) = entry {
+        pay(&mut tx, profile_id, entry, now).await?;
+    }
     claimed.push(news_id.to_string());
-    let answer = board(&app.news, &claimed, now);
+    let posts = tx.admin_posts_standing(posts_live_from(now), now).await?;
+    let answer = board(&app.news, &posts, &claimed, now);
     keep(&mut tx, profile_id, request, &answer).await?;
     tx.commit().await?;
     tracing::info!(event = "news.claimed", "profileId" = %profile_id, news = news_id);
@@ -551,6 +653,7 @@ mod tests {
                 news,
                 entry("future", posted + 1, NewsReward::Jlore),
             ],
+            &[],
             &["expired".to_string()],
             posted,
         );
@@ -572,6 +675,7 @@ mod tests {
                 entry("second", at, NewsReward::Jlore),
                 entry("third", at + 1, NewsReward::CardToken),
             ],
+            &[],
             &["second".to_string()],
             at + 1,
         );
@@ -588,6 +692,88 @@ mod tests {
         );
         assert_eq!(board["news"][0]["kind"], "alert");
         assert_eq!(board["news"][0]["postedAt"], at + 1);
+    }
+
+    /// One post of the dashboard's, posted at `posted_at`.
+    fn post(id: &str, posted_at: i64, taken_down_at: Option<i64>) -> NewsPost {
+        NewsPost {
+            id: id.to_string(),
+            title: "A post".to_string(),
+            summary: "Plain text.".to_string(),
+            posted_at,
+            posted_by: Some("profile-1".to_string()),
+            taken_down_at,
+        }
+    }
+
+    #[test]
+    fn r3074003_a_post_stands_beside_the_entries_for_their_days_with_no_reward() {
+        let at = 1_800_000_000_000;
+        let days = NEWS_TTL_DAYS * MS_PER_DAY;
+        let posts = [
+            post("post-new", at, None),
+            post("post-down", at, Some(at)),
+            post("post-old", at - days, None),
+            post("post-last-day", at - days + 1, None),
+        ];
+        let board = board(
+            &[entry("entry", at, NewsReward::Jlore)],
+            &posts,
+            &["post-last-day".to_string()],
+            at,
+        );
+        let rows: Vec<(&str, bool)> = board["news"]
+            .as_array()
+            .expect("news")
+            .iter()
+            .map(|row| (row["id"].as_str().unwrap_or(""), row["claimed"] == true))
+            .collect();
+        // Posted at once, the post before the entry; one taken down or past its days is gone.
+        assert_eq!(
+            rows,
+            [("post-new", false), ("entry", false), ("post-last-day", true)]
+        );
+        assert_eq!(board["news"][0]["kind"], "alert");
+        assert_eq!(board["news"][0]["reward"], Value::Null);
+        assert_eq!(board["news"][0]["version"], Value::Null);
+        assert_eq!(board["news"][0]["title"], "A post");
+        assert!(post_live_at(&posts[3], at) && !post_live_at(&posts[2], at));
+        assert!(!post_live_at(&posts[1], at), "taken down");
+        assert!(
+            !post_live_at(&post("post-future", at + 1, None), at),
+            "not posted yet"
+        );
+        assert_eq!(posts_live_from(at), at - days + 1);
+    }
+
+    #[test]
+    fn r3074003_a_post_is_checked_as_a_news_entry_is_and_is_one_line_of_plain_text() {
+        assert!(post_problems("Maintenance", "The server restarts at noon.").is_empty());
+        assert!(post_problems("Two", "One sentence. Two sentences!").is_empty());
+        let long_title = "t".repeat(NEWS_POST_TITLE_MAX_CHARS + 1);
+        let long_summary = format!("{}.", "s".repeat(NEWS_POST_SUMMARY_MAX_CHARS));
+        for (title, summary, why) in [
+            ("", "Fine.", "The title is empty."),
+            (long_title.as_str(), "Fine.", "longer than"),
+            ("T", long_summary.as_str(), "The summary is longer than"),
+            ("T", "No end", "does not end a sentence"),
+            ("T", "One. Two. Three.", "holds 3 sentences"),
+            ("T", "Line one.\nLine two.", "no line breaks"),
+            ("T\u{7}", "Fine.", "control characters"),
+        ] {
+            let problems = post_problems(title, summary);
+            assert!(
+                problems.iter().any(|problem| problem.contains(why)),
+                "{title:?} / {summary:?}: {problems:?}"
+            );
+        }
+        // The file's own ids may not take the posts' prefix.
+        let file = r#"{ "news": [ { "id": "post-one", "kind": "alert", "title": "T", "summary": "Fine.", "postedAt": "2026-11-01T00:00:00Z" } ] }"#;
+        let problems = parse(file).expect_err("a post- id");
+        assert!(
+            problems.contains("which the dev dashboard's posts take"),
+            "{problems}"
+        );
     }
 
     #[test]

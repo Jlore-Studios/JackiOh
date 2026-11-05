@@ -10,6 +10,9 @@
 //! R1834003: the seat-level half travels whole, on join and on reconnect (`loadouts`). A card's own
 //! picks travel only once a card dealt from that seat's deck, still showing as dealt, is in the
 //! receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]): no decklist can be read (§10.8).
+//!
+//! R3013002: a card's proficiency stamp (§14.14) is frozen and travels the same way, beside its picks
+//! ([`Loadout::stamps`]), so another seat, a watcher and a replay's viewer see it only once the card is shown.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -22,7 +25,7 @@ use crate::cosmetics::{
     offered, owns, registry, signature_fits,
 };
 use crate::db::store::{BotRow, PlayerSettingValue, PlayerSettingsRow, SavedDeck, StoreResult, Tx};
-use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
+use crate::economy::store::{CardPicks, CardProficiency, FullArtPick, OwnedCosmetics};
 
 /// The settings group the client keeps the account's picks in (R633, R1295000).
 pub const COSMETICS_GROUP: &str = "cosmetics";
@@ -204,14 +207,27 @@ impl SeatLoadout {
     }
 }
 
+/// R3013002: the proficiency stamp one card of a seat's deck wears (§14.14), a stamp its level had
+/// unlocked as the match froze it (R3013001).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CardStamp {
+    pub card_id: String,
+    pub stamp: i64,
+}
+
 /// R1834002: one seat's frozen loadout: its seat-level half, and the cards of its deck that wear
 /// something of their own, by card id. A card left out wears the seat's picks and no full art.
+/// R3013002: and the cards of its deck that wear a stamp, by card id; a loadout frozen before #3013,
+/// and a bot's, has none, and a loadout without one keeps its shape.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Loadout {
     pub seat: SeatLoadout,
     #[serde(default)]
     pub cards: Vec<CardPicks>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stamps: Vec<CardStamp>,
 }
 
 impl Loadout {
@@ -220,20 +236,29 @@ impl Loadout {
         Loadout {
             seat: SeatLoadout::defaults_of(registry()),
             cards: Vec::new(),
+            stamps: Vec::new(),
         }
     }
 
     pub fn card(&self, card_id: &str) -> Option<&CardPicks> {
         self.cards.iter().find(|card| card.card_id == card_id)
     }
+
+    /// R3013002: the stamp `card_id` wears, if any.
+    pub fn stamp(&self, card_id: &str) -> Option<&CardStamp> {
+        self.stamps.iter().find(|stamp| stamp.card_id == card_id)
+    }
 }
 
-/// R1834003: one seat's cards, as the `cardLoadouts` frame and a replay page carry them.
+/// R1834003: one seat's cards, as the `cardLoadouts` frame and a replay page carry them. R3013002: with
+/// the stamps of those cards that wear one, left out when none does.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatCards {
     pub seat: PlayerId,
     pub cards: Vec<CardPicks>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stamps: Vec<CardStamp>,
 }
 
 impl CardPicks {
@@ -351,17 +376,46 @@ pub fn freeze_loadout(
             cards.push(entry);
         }
     }
-    Loadout { seat, cards }
+    Loadout {
+        seat,
+        cards,
+        stamps: Vec::new(),
+    }
+}
+
+/// R3013002: the stamps of `stamps` that cards of the deck (`deck_cards`) wear, one per card, in card
+/// order: a card the deck did not deal is never listed, so no frozen stamp names a card outside it.
+pub fn freeze_stamps(stamps: &[CardStamp], deck_cards: &[String]) -> Vec<CardStamp> {
+    let distinct: BTreeSet<&str> = deck_cards.iter().map(String::as_str).collect();
+    distinct
+        .into_iter()
+        .filter_map(|card| stamps.iter().find(|stamp| stamp.card_id == card).cloned())
+        .collect()
+}
+
+/// R3013001: the stamps the account's proficiency rows wear, each one its level unlocked.
+pub fn worn_stamps(rows: &[CardProficiency]) -> Vec<CardStamp> {
+    rows.iter()
+        .filter_map(|row| {
+            let stamp = row.stamp.filter(|stamp| *stamp <= row.level)?;
+            Some(CardStamp {
+                card_id: row.card_id.clone(),
+                stamp,
+            })
+        })
+        .collect()
 }
 
 /// R1834002: what one seat's loadout is frozen from, read as its match starts. A ladder bot's are
 /// its wardrobe and the picks it drew (R1834005), read off its row, so a bot's seat freezes through
-/// the same function a person's does.
+/// the same function a person's does. R3013002: and the stamps the account's cards wear, which a bot
+/// has none of (R1454).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SeatPicks {
     pub owned: OwnedCosmetics,
     pub account: AccountPicks,
     pub cards: Vec<CardPicks>,
+    pub stamps: Vec<CardStamp>,
 }
 
 impl SeatPicks {
@@ -377,29 +431,36 @@ impl SeatPicks {
                     owned: cosmetics.wardrobe.clone(),
                     account: cosmetics.account.clone(),
                     cards: cosmetics.cards.clone(),
+                    stamps: Vec::new(),
                 })
                 .unwrap_or_default());
         }
         let owned = t.economy_cosmetics_get(profile_id).await?;
         let settings = t.player_settings_get(profile_id).await?;
         let cards = t.economy_card_picks_get(profile_id).await?;
+        let proficiency = t.economy_card_proficiency_get(profile_id).await?;
         Ok(SeatPicks {
             owned,
             account: AccountPicks::of_settings(settings.as_ref()),
             cards,
+            stamps: worn_stamps(&proficiency),
         })
     }
 
-    /// [`freeze_loadout`] against the shipped registry, for the deck `deck` slots and `deck_cards`.
+    /// [`freeze_loadout`] against the shipped registry, for the deck `deck` slots and `deck_cards`,
+    /// with the stamps those cards wear ([`freeze_stamps`]).
     pub fn freeze(&self, deck: Option<&DeckSlots>, deck_cards: &[String]) -> Loadout {
-        freeze_loadout(
-            registry(),
-            &self.owned,
-            &self.account,
-            deck,
-            &self.cards,
-            deck_cards,
-        )
+        Loadout {
+            stamps: freeze_stamps(&self.stamps, deck_cards),
+            ..freeze_loadout(
+                registry(),
+                &self.owned,
+                &self.account,
+                deck,
+                &self.cards,
+                deck_cards,
+            )
+        }
     }
 }
 
@@ -450,6 +511,7 @@ pub fn shown_defs(
 /// R1834003: the cards' own picks `shown` makes due to a receiver that has been sent `sent`
 /// already: each new pair's entry in its seat's loadout (`loadouts`, seat order), by seat, the
 /// pairs then marked sent. A pair whose card has no entry of its own is marked and sends nothing.
+/// R3013002: a pair's stamp, when its card wears one, goes with it by the same rule.
 pub fn cards_due(
     shown: &BTreeSet<(PlayerId, String)>,
     loadouts: &(Loadout, Loadout),
@@ -465,16 +527,26 @@ pub fn cards_due(
             PlayerId::P1 => &loadouts.0,
             PlayerId::P2 => &loadouts.1,
         };
-        let Some(entry) = loadout.card(card) else {
+        let (entry, stamp) = (loadout.card(card), loadout.stamp(card));
+        if entry.is_none() && stamp.is_none() {
+            continue;
+        }
+        let at = match due.iter().position(|cards| cards.seat == *seat) {
+            Some(at) => at,
+            None => {
+                due.push(SeatCards {
+                    seat: *seat,
+                    cards: Vec::new(),
+                    stamps: Vec::new(),
+                });
+                due.len() - 1
+            }
+        };
+        let Some(cards) = due.get_mut(at) else {
             continue;
         };
-        match due.iter_mut().find(|cards| cards.seat == *seat) {
-            Some(cards) => cards.cards.push(entry.clone()),
-            None => due.push(SeatCards {
-                seat: *seat,
-                cards: vec![entry.clone()],
-            }),
-        }
+        cards.cards.extend(entry.cloned());
+        cards.stamps.extend(stamp.cloned());
     }
     due.sort_by_key(|cards| PLAYER_IDS.iter().position(|seat| *seat == cards.seat));
     due
@@ -1167,10 +1239,12 @@ mod tests {
                 SeatCards {
                     seat: PlayerId::P1,
                     cards: vec![loadouts.0.cards[0].clone()],
+                    stamps: Vec::new(),
                 },
                 SeatCards {
                     seat: PlayerId::P2,
                     cards: vec![loadouts.1.cards[0].clone()],
+                    stamps: Vec::new(),
                 },
             ]
         );
@@ -1182,5 +1256,112 @@ mod tests {
         let theirs_only: BTreeSet<(PlayerId, String)> =
             [(PlayerId::P1, "core-002".to_owned())].into_iter().collect();
         assert!(cards_due(&theirs_only, &loadouts, &mut fresh).is_empty());
+    }
+
+    fn stamp(card: &str, stamp: i64) -> CardStamp {
+        CardStamp {
+            card_id: card.to_owned(),
+            stamp,
+        }
+    }
+
+    #[test]
+    fn r3013002_a_stamp_is_frozen_for_a_dealt_card_and_due_once_shown() {
+        // R3013001: only a stamp the row's level reached is worn.
+        let rows = [
+            CardProficiency {
+                card_id: "core-001".to_owned(),
+                plays: 20,
+                level: 2,
+                stamp: Some(2),
+            },
+            CardProficiency {
+                card_id: "core-002".to_owned(),
+                plays: 3,
+                level: 1,
+                stamp: None,
+            },
+            CardProficiency {
+                card_id: "core-003".to_owned(),
+                plays: 3,
+                level: 1,
+                stamp: Some(4),
+            },
+            CardProficiency {
+                card_id: "core-004".to_owned(),
+                plays: 200,
+                level: 5,
+                stamp: Some(5),
+            },
+        ];
+        let worn = worn_stamps(&rows);
+        assert_eq!(worn, vec![stamp("core-001", 2), stamp("core-004", 5)]);
+        // A card the deck did not deal is never frozen, and each dealt card is listed once.
+        let picks = SeatPicks {
+            stamps: worn,
+            ..SeatPicks::default()
+        };
+        let deck: Vec<String> = ["core-001", "core-002", "core-001"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        let frozen = picks.freeze(None, &deck);
+        assert_eq!(frozen.stamps, vec![stamp("core-001", 2)]);
+        assert_eq!(frozen.stamp("core-001"), Some(&stamp("core-001", 2)));
+        assert_eq!(frozen.stamp("core-004"), None);
+        // A stamp with no picks of its own travels alone, once, and only once its card is shown.
+        let loadouts = (frozen, Loadout::defaults());
+        let mut sent = BTreeSet::new();
+        let unshown: BTreeSet<(PlayerId, String)> =
+            [(PlayerId::P1, "core-002".to_owned())].into_iter().collect();
+        assert!(cards_due(&unshown, &loadouts, &mut sent).is_empty());
+        let shown: BTreeSet<(PlayerId, String)> = [
+            (PlayerId::P1, "core-001".to_owned()),
+            (PlayerId::P2, "core-001".to_owned()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            cards_due(&shown, &loadouts, &mut sent),
+            vec![SeatCards {
+                seat: PlayerId::P1,
+                cards: Vec::new(),
+                stamps: vec![stamp("core-001", 2)],
+            }]
+        );
+        assert!(cards_due(&shown, &loadouts, &mut sent).is_empty());
+        // A bot's seat wears none (R1454): its picks are read off its row, with no stamps.
+        assert!(SeatPicks::default().freeze(None, &deck).stamps.is_empty());
+    }
+
+    #[test]
+    fn r3013002_a_frame_without_stamps_is_unchanged() {
+        let loadout = Loadout::defaults();
+        let json = serde_json::to_value(&loadout).expect("a loadout serializes");
+        assert!(json.get("stamps").is_none(), "{json}");
+        let cards = SeatCards {
+            seat: PlayerId::P1,
+            cards: Vec::new(),
+            stamps: Vec::new(),
+        };
+        let json = serde_json::to_value(&cards).expect("a seat's cards serialize");
+        assert!(json.get("stamps").is_none(), "{json}");
+        // A loadout frozen before #3013 reads back with none.
+        let mut old = serde_json::to_value(Loadout::defaults()).expect("a loadout serializes");
+        if let Some(fields) = old.as_object_mut() {
+            fields.remove("stamps");
+        }
+        let read: Loadout = serde_json::from_value(old).expect("an older loadout reads");
+        assert!(read.stamps.is_empty());
+        // One with a stamp carries it.
+        let worn = Loadout {
+            stamps: vec![stamp("core-001", 3)],
+            ..Loadout::defaults()
+        };
+        let json = serde_json::to_value(&worn).expect("a loadout serializes");
+        assert_eq!(
+            json.get("stamps"),
+            Some(&serde_json::json!([{ "cardId": "core-001", "stamp": 3 }]))
+        );
     }
 }

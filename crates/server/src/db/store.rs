@@ -740,7 +740,7 @@ pub struct MatchRow {
     pub final_hash: Option<String>,
     /// R3049000: the win-rate snapshot the match was handed as it started, as the game kept it
     /// (`GameState.winRates`), a `create_game` input frozen on the row (`matches.win_rates`, migration
-    /// 0080) so every rebuild and replay folds the same picks. Absent on every match started before
+    /// 0082) so every rebuild and replay folds the same picks. Absent on every match started before
     /// it, which folds against its version's frozen table (R1266000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rates: Option<WinRateTable>,
@@ -1105,6 +1105,11 @@ pub struct SeasonStanding {
     /// the rows without it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub bot: bool,
+    /// R3074001: the player holds a hand-set rating on this ladder (migration 0080's
+    /// `hand_set_ratings`); never serialized when false. On a strict server (`DEV_STRICT`) the public
+    /// ladder, the percentiles and Jlorious read the rows without it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub hand_set: bool,
 }
 
 /// R610: an AI bot's own Glicko-2 rating. Its ladder rank is a season row like a person's, read

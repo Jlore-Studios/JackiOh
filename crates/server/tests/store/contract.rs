@@ -1941,14 +1941,17 @@ mod decks {
     ) {
         let profile = active_profile(harness, None).await;
         let portraitless = saved_deck(harness, &profile.id, json!({}));
-        // One tick later, so "oldest first" below asks a real ordering question, not a tie.
+        // One tick later, so "oldest first" below asks a real ordering question, not a tie. One
+        // reading of the clock for both: a new deck's row takes `updatedAt` for its `created_at` too
+        // (`app.upsert_deck`), so two readings a millisecond apart came back 1 ms off.
+        let later = harness.now() + 1_000;
         let pictured = saved_deck(
             harness,
             &profile.id,
             json!({
                 "portrait": "gary",
-                "createdAt": harness.now() + 1_000,
-                "updatedAt": harness.now() + 1_000,
+                "createdAt": later,
+                "updatedAt": later,
             }),
         );
         // PREMISE: `saved_deck` really does hold `null` — the pre-portrait default — not undefined.
@@ -1989,7 +1992,9 @@ mod decks {
     async fn r1297000_round_trips_a_deck_s_cosmetics_and_clears_them_in_place(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
         let plain = saved_deck(harness, &profile.id, json!({}));
-        // One tick later, so "oldest first" below asks a real ordering question, not a tie.
+        // One tick later, so "oldest first" below asks a real ordering question, not a tie. One
+        // reading of the clock for both, as in the R641 test above.
+        let later = harness.now() + 1_000;
         let dressed = saved_deck(
             harness,
             &profile.id,
@@ -1997,8 +2002,8 @@ mod decks {
                 "tableCosmetic": "table-felt",
                 "fieldCosmetic": "field-rain",
                 "cardBackCosmetic": "card-back-blueprint",
-                "createdAt": harness.now() + 1_000,
-                "updatedAt": harness.now() + 1_000,
+                "createdAt": later,
+                "updatedAt": later,
             }),
         );
         // PREMISE: a deck that names none holds none, and the keys stay out of its JSON.
@@ -3324,7 +3329,7 @@ mod win_rate_snapshot {
             "the live match",
         );
         assert_eq!(j(found)["winRates"], snapshot);
-        // A match handed none, as every match from before migration 0080, keeps none.
+        // A match handed none, as every match from before migration 0082, keeps none.
         let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
         q!(harness, t => t.matches_create(&plain));
         assert!(absent(
@@ -9627,12 +9632,12 @@ mod duos {
 
 mod economy {
     use super::*;
-    use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
+    use jackioh_server::config::{PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL};
     use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
-        JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled,
-        QuestGrant, TrackGrant,
+        CardProficiency, CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow,
+        InventoryGrant, JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed,
+        PracticeSettled, QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -10777,6 +10782,141 @@ mod economy {
         );
     }
 
+    fn proficiency(card_id: &str, plays: i64, level: i64, stamp: Option<i64>) -> CardProficiency {
+        CardProficiency {
+            card_id: card_id.to_string(),
+            plays,
+            level,
+            stamp,
+        }
+    }
+
+    /// R3013000: a put writes each card's plays and level, inserting a new card and replacing a held
+    /// one's; a read is the account's own, by card (`collate "C"`); a row migration 0081's checks
+    /// refuse (an id that is no slug, no play, a level past the curve, a card listed twice) is refused,
+    /// writing nothing; and a deleted account takes its rows with it.
+    async fn r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            Vec::new()
+        );
+        q!(harness, t => t.economy_card_proficiency_put(
+            &owner.id,
+            &[proficiency("core-009", 2, 0, None), proficiency("core-008", 3, 1, None)],
+            now
+        ));
+        q!(harness, t => t.economy_card_proficiency_put(
+            &owner.id,
+            &[proficiency("core-009", 15, 2, None)],
+            now + 1
+        ));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![
+                proficiency("core-008", 3, 1, None),
+                proficiency("core-009", 15, 2, None)
+            ]
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&other.id)),
+            Vec::new()
+        );
+        let top = i64::try_from(PROFICIENCY_LEVELS).expect("a few levels");
+        for refused in [
+            vec![proficiency("Core-008", 3, 1, None)],
+            vec![proficiency("", 3, 1, None)],
+            vec![proficiency(&"a".repeat(41), 3, 1, None)],
+            vec![proficiency("core-008", 0, 0, None)],
+            vec![proficiency("core-008", 3, -1, None)],
+            vec![proficiency("core-008", 3, top + 1, None)],
+            vec![
+                proficiency("core-001", 3, 1, None),
+                proficiency("core-001", 4, 1, None),
+            ],
+            // One refused row refuses the lot.
+            vec![
+                proficiency("core-001", 3, 1, None),
+                proficiency("core-002", 0, 0, None),
+            ],
+        ] {
+            assert!(
+                call!(harness, t => t.economy_card_proficiency_put(&owner.id, &refused, now)).is_err(),
+                "{}: {refused:?}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)).len(),
+            2
+        );
+        // An empty put writes nothing.
+        q!(harness, t => t.economy_card_proficiency_put(&other.id, &[], now));
+        q!(harness, t => t.economy_card_proficiency_put(&other.id, &[proficiency("core-008", 1, 0, None)], now));
+
+        assert!(q!(harness, t => t.profiles_remove(&other.id)));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&other.id)),
+            Vec::new()
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)).len(),
+            2
+        );
+    }
+
+    /// R3013001: a stamp is kept on a card's row only at or below the row's level, and cleared with
+    /// `None`: one above it, or for a card with no row, answers false and writes nothing; one outside
+    /// `1..=PROFICIENCY_LEVELS` is refused; a put of plays and level keeps the stamp, and one that
+    /// would leave it above the level is refused.
+    async fn r3013001_a_stamp_is_kept_only_at_or_below_its_level(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.economy_card_proficiency_put(&owner.id, &[proficiency("core-008", 15, 2, None)], now));
+        assert!(!q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(3), now)));
+        assert!(!q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-009", Some(1), now)));
+        assert!(!q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-009", None, now)));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![proficiency("core-008", 15, 2, None)]
+        );
+        let top = i64::try_from(PROFICIENCY_LEVELS).expect("a few levels");
+        for refused in [0, -1, top + 1] {
+            assert!(
+                call!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(refused), now))
+                    .is_err(),
+                "{}: {refused}",
+                harness.name
+            );
+        }
+        assert!(q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(2), now)));
+        assert!(q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", Some(1), now + 1)));
+        // A put of plays and level leaves the stamp as it was.
+        q!(harness, t => t.economy_card_proficiency_put(&owner.id, &[proficiency("core-008", 16, 2, None)], now + 2));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![proficiency("core-008", 16, 2, Some(1))]
+        );
+        // A level below the stamp it wears is refused, as migration 0081's stamp check refuses it.
+        assert!(
+            call!(harness, t => t.economy_card_proficiency_put(
+                &owner.id,
+                &[proficiency("core-008", 16, 0, None)],
+                now + 3
+            ))
+            .is_err(),
+            "{}",
+            harness.name
+        );
+        assert!(q!(harness, t => t.economy_card_proficiency_stamp(&owner.id, "core-008", None, now + 4)));
+        assert_eq!(
+            q!(harness, t => t.economy_card_proficiency_get(&owner.id)),
+            vec![proficiency("core-008", 16, 2, None)]
+        );
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -10798,6 +10938,8 @@ mod economy {
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
         practice_claims_count_once_per_bucket_and_utc_day,
+        r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
+        r3013001_a_stamp_is_kept_only_at_or_below_its_level,
     );
 }
 
@@ -11483,4 +11625,319 @@ mod ping {
     }
 
     both_stores!(answers_while_the_store_is_up);
+}
+
+// The dev dashboard (SPEC §14.10, §14.13; issue #3074; migration 0080)
+
+/// Migration 0080: the audit of every dev and admin action (R3074000), the hand-set ratings and
+/// their ledger (R3074001), and the news posts (R3074003).
+mod dev_dashboard {
+    use super::*;
+    use jackioh_server::admin::store::{HandSetRating, NewAdminAction, NewsPost, RatingChange, RatingGrant};
+
+    fn action(profile_id: &str, route: &str, at: i64) -> NewAdminAction {
+        NewAdminAction {
+            profile_id: profile_id.to_string(),
+            route: route.to_string(),
+            request: json!({ "jlore": 5, "note": "kept as sent" }),
+            before: json!({ "jlore": 0 }),
+            after: json!({ "jlore": 5 }),
+            at,
+        }
+    }
+
+    /// R3074000: an audit row is appended with an id that grows, read back newest first (of two at
+    /// once, the later written first) as written, a route that is no dev or admin route is refused,
+    /// and a deleted account's rows stay and forget who.
+    async fn r3074000_an_audit_row_is_kept_newest_first_and_outlives_its_account(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let first = q!(harness, t => t.admin_actions_append(&action(&dev.id, "POST /api/dev/jlore", now)));
+        let second = q!(harness, t => t.admin_actions_append(&action(&dev.id, "PUT /api/admin/rating", now)));
+        let third =
+            q!(harness, t => t.admin_actions_append(&action(&other.id, "POST /api/admin/news", now - 1)));
+        assert!(
+            first < second && first != third,
+            "{}: {first} {second} {third}",
+            harness.name
+        );
+        let recent = q!(harness, t => t.admin_actions_recent(10));
+        let order: Vec<(i64, &str)> = recent.iter().map(|row| (row.id, row.route.as_str())).collect();
+        assert_eq!(
+            order,
+            vec![
+                (second, "PUT /api/admin/rating"),
+                (first, "POST /api/dev/jlore"),
+                (third, "POST /api/admin/news"),
+            ],
+            "{}",
+            harness.name
+        );
+        assert_eq!(recent[0].profile_id.as_deref(), Some(dev.id.as_str()));
+        assert_eq!(recent[0].request, json!({ "jlore": 5, "note": "kept as sent" }));
+        assert_eq!(recent[0].before, json!({ "jlore": 0 }));
+        assert_eq!(recent[0].after, json!({ "jlore": 5 }));
+        assert_eq!(recent[0].at, now);
+        assert_eq!(q!(harness, t => t.admin_actions_recent(1)).len(), 1);
+        for refused in [
+            "GET /api/news",
+            "POST /api/dev",
+            "FETCH /api/dev/jlore",
+            "/api/admin/me",
+        ] {
+            assert!(
+                call!(harness, t => t.admin_actions_append(&action(&dev.id, refused, now))).is_err(),
+                "{}: {refused}",
+                harness.name
+            );
+        }
+
+        assert!(q!(harness, t => t.profiles_remove(&dev.id)));
+        let kept = q!(harness, t => t.admin_actions_recent(10));
+        assert_eq!(kept.len(), 3, "{}: the rows outlive the account", harness.name);
+        let owners: Vec<Option<&str>> = kept.iter().map(|row| row.profile_id.as_deref()).collect();
+        assert_eq!(
+            owners,
+            vec![None, None, Some(other.id.as_str())],
+            "{}",
+            harness.name
+        );
+    }
+
+    fn glicko(rating: f64) -> Glicko {
+        Glicko {
+            rating,
+            deviation: 120.0,
+            volatility: 0.06,
+        }
+    }
+
+    /// R3074001: a ladder is hand-set once, keeping the first earned rating; a second keep writes
+    /// nothing; a clear answers the row once; the rating ledger keeps every change marked `dev` and
+    /// refuses an unmarked one; both go with their account.
+    async fn r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let now = harness.now();
+        let held = |ladder: Ladder, rating: f64| HandSetRating {
+            profile_id: dev.id.clone(),
+            ladder,
+            earned: glicko(rating),
+            set_at: now,
+        };
+        assert!(q!(harness, t => t.admin_hand_set_get(&dev.id)).is_empty());
+        assert!(q!(harness, t => t.admin_hand_set_keep(&held(Ladder::Random, 1100.0))));
+        assert!(q!(harness, t => t.admin_hand_set_keep(&held(Ladder::Constructed, 1000.0))));
+        assert!(!q!(harness, t => t.admin_hand_set_keep(&held(Ladder::Constructed, 2500.0))));
+        assert_eq!(
+            q!(harness, t => t.admin_hand_set_get(&dev.id)),
+            vec![held(Ladder::Constructed, 1000.0), held(Ladder::Random, 1100.0)],
+            "{}: Constructed first, the first earned rating kept",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.admin_hand_set_clear(&dev.id, Ladder::Constructed)),
+            Some(held(Ladder::Constructed, 1000.0))
+        );
+        assert_eq!(
+            q!(harness, t => t.admin_hand_set_clear(&dev.id, Ladder::Constructed)),
+            None
+        );
+        assert_eq!(q!(harness, t => t.admin_hand_set_get(&dev.id)).len(), 1);
+
+        let grant = |change: RatingChange, before: f64, after: f64, at: i64| RatingGrant {
+            profile_id: dev.id.clone(),
+            ladder: Ladder::Constructed,
+            change,
+            before: glicko(before),
+            after: glicko(after),
+            dev: true,
+            at,
+        };
+        q!(harness, t => t.admin_rating_grants_append(&grant(RatingChange::Set, 1000.0, 2000.0, now)));
+        q!(harness, t => t.admin_rating_grants_append(&grant(RatingChange::Reset, 2000.0, 1000.0, now + 1)));
+        assert_eq!(
+            q!(harness, t => t.admin_rating_grants_of(&dev.id)),
+            vec![
+                grant(RatingChange::Set, 1000.0, 2000.0, now),
+                grant(RatingChange::Reset, 2000.0, 1000.0, now + 1),
+            ]
+        );
+        let unmarked = RatingGrant {
+            dev: false,
+            ..grant(RatingChange::Set, 1.0, 2.0, now)
+        };
+        assert!(call!(harness, t => t.admin_rating_grants_append(&unmarked)).is_err());
+
+        assert!(q!(harness, t => t.profiles_remove(&dev.id)));
+        assert!(q!(harness, t => t.admin_hand_set_get(&dev.id)).is_empty());
+        assert!(q!(harness, t => t.admin_rating_grants_of(&dev.id)).is_empty());
+    }
+
+    /// R3074001: a season row on a hand-set ladder reads `hand_set`, on that ladder alone.
+    async fn r3074001_standings_mark_a_hand_set_ladder(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let season: Season = from(json!({ "id": "v9.9", "patchVersion": "v9.9.1", "startedAt": now }));
+        q!(harness, t => t.ranked_create_season(&season));
+        for ladder in Ladder::ALL {
+            for profile in [&dev, &other] {
+                let row = SeasonRank {
+                    format: ladder,
+                    ..fresh_rank(&season.id, &profile.id, now)
+                };
+                q!(harness, t => t.ranked_put_rank(&row));
+            }
+        }
+        let marked = |standings: Vec<SeasonStanding>| -> Vec<(String, bool)> {
+            standings
+                .into_iter()
+                .map(|standing| (standing.rank.profile_id, standing.hand_set))
+                .collect()
+        };
+        let mut expected = vec![(dev.id.clone(), false), (other.id.clone(), false)];
+        expected.sort();
+        assert_eq!(
+            marked(q!(harness, t => t.ranked_standings(&season.id, Ladder::Constructed))),
+            expected
+        );
+
+        q!(harness, t => t.admin_hand_set_keep(&HandSetRating {
+            profile_id: dev.id.clone(),
+            ladder: Ladder::Constructed,
+            earned: glicko(1000.0),
+            set_at: now,
+        }));
+        let mut expected = vec![(dev.id.clone(), true), (other.id.clone(), false)];
+        expected.sort();
+        assert_eq!(
+            marked(q!(harness, t => t.ranked_standings(&season.id, Ladder::Constructed))),
+            expected,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            marked(
+                q!(harness, t => t.ranked_standings_subset(&season.id, Ladder::Constructed, std::slice::from_ref(&dev.id), i32::MAX))
+            ),
+            vec![(dev.id.clone(), true)]
+        );
+        assert!(
+            q!(harness, t => t.ranked_standings(&season.id, Ladder::Random))
+                .iter()
+                .all(|standing| !standing.hand_set),
+            "{}: the other ladder is its own",
+            harness.name
+        );
+    }
+
+    fn post(id: &str, posted_at: i64, posted_by: &str) -> NewsPost {
+        NewsPost {
+            id: id.to_string(),
+            title: format!("Title of {id}"),
+            summary: "Plain text.".to_string(),
+            posted_at,
+            posted_by: Some(posted_by.to_string()),
+            taken_down_at: None,
+        }
+    }
+
+    /// R3074003: a post is kept under a free `post-` id, read back as written, listed newest first
+    /// (of two at once, the lower id first), standing only inside its window and until it is taken
+    /// down, taken down once; a deleted author's posts stay and forget who.
+    async fn r3074003_posts_are_kept_listed_and_taken_down_once(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let now = harness.now();
+        let older = post("post-older", now - 10, &dev.id);
+        let b = post("post-b", now, &dev.id);
+        let a = post("post-a", now, &dev.id);
+        for written in [&older, &b, &a] {
+            q!(harness, t => t.admin_posts_create(written));
+        }
+        assert!(
+            call!(harness, t => t.admin_posts_create(&post("post-a", now, &dev.id))).is_err(),
+            "a taken id"
+        );
+        for refused in [
+            "news-1",
+            "post-",
+            "post-Upper",
+            "post--x",
+            "post-a b",
+            "patch-v0-5-11d",
+        ] {
+            assert!(
+                call!(harness, t => t.admin_posts_create(&post(refused, now, &dev.id))).is_err(),
+                "{}: {refused}",
+                harness.name
+            );
+        }
+        let blank = NewsPost {
+            title: "  ".to_string(),
+            ..post("post-blank", now, &dev.id)
+        };
+        assert!(call!(harness, t => t.admin_posts_create(&blank)).is_err());
+
+        assert_eq!(q!(harness, t => t.admin_posts_get("post-a")), Some(a.clone()));
+        assert_eq!(q!(harness, t => t.admin_posts_get("post-none")), None);
+        let ids = |posts: Vec<NewsPost>| -> Vec<String> { posts.into_iter().map(|post| post.id).collect() };
+        assert_eq!(
+            ids(q!(harness, t => t.admin_posts_recent(10))),
+            vec!["post-a", "post-b", "post-older"],
+            "{}",
+            harness.name
+        );
+        assert_eq!(ids(q!(harness, t => t.admin_posts_recent(1))), vec!["post-a"]);
+        assert_eq!(
+            ids(q!(harness, t => t.admin_posts_standing(now - 5, now))),
+            vec!["post-a", "post-b"]
+        );
+        assert_eq!(
+            ids(q!(harness, t => t.admin_posts_standing(now - 10, now - 10))),
+            vec!["post-older"],
+            "{}: both ends inside",
+            harness.name
+        );
+
+        let down = q!(harness, t => t.admin_posts_take_down("post-a", now + 5));
+        assert_eq!(
+            down,
+            Some(NewsPost {
+                taken_down_at: Some(now + 5),
+                ..a.clone()
+            })
+        );
+        assert_eq!(
+            q!(harness, t => t.admin_posts_take_down("post-a", now + 6)),
+            None,
+            "once"
+        );
+        assert_eq!(q!(harness, t => t.admin_posts_take_down("post-none", now)), None);
+        assert_eq!(
+            ids(q!(harness, t => t.admin_posts_standing(now - 5, now + 10))),
+            vec!["post-b"]
+        );
+        assert_eq!(
+            q!(harness, t => t.admin_posts_recent(10)).len(),
+            3,
+            "a post taken down stays"
+        );
+
+        assert!(q!(harness, t => t.profiles_remove(&dev.id)));
+        let kept = q!(harness, t => t.admin_posts_recent(10));
+        assert_eq!(kept.len(), 3, "{}", harness.name);
+        assert!(
+            kept.iter().all(|post| post.posted_by.is_none()),
+            "{}: {kept:?}",
+            harness.name
+        );
+    }
+
+    both_stores!(
+        r3074000_an_audit_row_is_kept_newest_first_and_outlives_its_account,
+        r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once,
+        r3074001_standings_mark_a_hand_set_ladder,
+        r3074003_posts_are_kept_listed_and_taken_down_once,
+    );
 }

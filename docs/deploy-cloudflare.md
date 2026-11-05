@@ -15,6 +15,7 @@ something goes wrong. Render and Vercel are gone. The database and sign-in stay 
 | Game server | one `jackioh-staging-server` container | one `jackioh-server` container |
 | Database and sign-in | Supabase JackiOh-Staging, `exmjdaswedxhnzmpzqrq` (the original project) | Supabase JackiOh-Production, `fuzpvmjdejvbjcarypyi` (section 8) |
 | Routing and headers | `apps/web/public/_redirects` and `_headers`, `wrangler.jsonc` | the same |
+| Dev dashboard (R3074000) | https://admin-staging.jackioh.com, Worker `jackioh-admin-staging`, behind Access for the devs; `DEV_STRICT` off | https://admin.jackioh.com, Worker `jackioh-admin`, behind Access for the devs; `DEV_STRICT` on, so its routes need the two-step code |
 
 Each site is one Worker at one origin (`apps/edge/README.md`). Every path but `/api/*` and `/ws/*` is
 a static file from the web build, served without running any Worker code. Those two prefixes go to
@@ -142,6 +143,7 @@ holds the rules and the label (`RELEASE_LABEL`).
 | GitHub secret | `BOT_GITHUB_TOKEN` (already set) | moving `production` |
 | GitHub secret | `CODE_PEPPER`: both Workers' pepper, the one copy that can be read back (a Worker's secret cannot), kept from Render's on 2026-11-03 | a person setting it on a new Worker, or `mint-code` |
 | `infra/terraform.tfvars` (git ignores it) | `staging_team_emails`: who Access lets into staging | `terraform apply` |
+| `infra/terraform.tfvars` (git ignores it) | `admin_emails`: who Access lets into the dev dashboard, the dev accounts' addresses (R3074000, `apps/admin/README.md`) | `terraform apply` |
 
 Everything else is in the repo: the Workers, their settings that are not secrets (`vars`), the
 container's size and placement in `wrangler.jsonc`; the custom domains, Access and Supabase's

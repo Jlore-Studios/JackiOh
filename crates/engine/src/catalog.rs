@@ -1058,8 +1058,9 @@ pub fn glitch_or_not<'a>(rng: &mut Rng, def: &'a CardDef, glitch: &GlitchOdds) -
 // R1846000: the card metrics, BUSTED and complicated cards (Stinkyscape #109, #111).
 
 /// R1846000: the card metrics `crates/cards/build.rs` compiles in and `jackioh_cards::register_all`
-/// hands over: each script's code lines (those above its tests that hold code once comments are out)
-/// and the two lists they make, every catalog entry's, a token's included, each sorted by id.
+/// hands over: each script's code lines (those above its tests that hold code once comments are out),
+/// the two lists they make and the extra-turn cards (#3116), every catalog entry's, a token's included,
+/// each sorted by id.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct CardMetrics {
     /// Each catalog entry's script's code lines, by catalog id.
@@ -1068,6 +1069,9 @@ pub struct CardMetrics {
     pub busted: &'static [&'static str],
     /// The complicated cards: more code lines than `COMPLICATED_CODE_LINES`.
     pub complicated: &'static [&'static str],
+    /// #3116, R846: the cards whose script owes an extra turn
+    /// (`jackioh_cards::code_lines::owes_extra_turn`), which the AI prices in hand.
+    pub extra_turn_cards: &'static [&'static str],
 }
 
 /// R1846000: the compiled card metrics, set once by `register_card_metrics`, beside the registry.
@@ -1082,7 +1086,8 @@ pub fn register_card_metrics(metrics: CardMetrics) {
 
 /// R1846000: the card metrics: the testkit's override first, then the compiled ones; none before
 /// anything is registered. R2173000: while a replay folds under a shipped catalog that kept its own
-/// lists, its BUSTED and complicated lists are that version's, beside the code lines above.
+/// lists, its BUSTED and complicated lists are that version's, beside the code lines and the extra-turn
+/// cards above.
 pub fn card_metrics() -> CardMetrics {
     let build = build_card_metrics();
     match folding().and_then(|shipped| shipped.card_lists.as_ref()) {
@@ -1090,6 +1095,7 @@ pub fn card_metrics() -> CardMetrics {
             code_lines: build.code_lines,
             busted: &lists.busted,
             complicated: &lists.complicated,
+            extra_turn_cards: build.extra_turn_cards,
         },
         None => build,
     }
@@ -1128,6 +1134,16 @@ pub fn is_busted(def_id: &str) -> bool {
 /// lines; a custom card never is (R1846002).
 pub fn is_complicated(def_id: &str) -> bool {
     !crate::custom::is_custom_id(def_id) && card_metrics().complicated.binary_search(&def_id).is_ok()
+}
+
+/// #3116, R846: whether a definition's script owes an extra turn (`CardMetrics::extra_turn_cards`), the
+/// build's list whatever a replay folds under. A custom card's Luau script is not the build's, so the
+/// list never holds one.
+pub fn is_extra_turn_card(def_id: &str) -> bool {
+    build_card_metrics()
+        .extra_turn_cards
+        .binary_search(&def_id)
+        .is_ok()
 }
 
 /// R1846001: whether a query's `everySet` takes a card of `set` into a pool that names no set: a

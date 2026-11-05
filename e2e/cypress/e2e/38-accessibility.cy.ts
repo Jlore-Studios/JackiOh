@@ -17,7 +17,6 @@ import {
   BOARD,
   CARD_POOL,
   COLLECTION_SCREEN,
-  CREATOR_SCREEN,
   GAME,
   PLAY_QUEUE,
   PRACTICE_HUD,
@@ -153,7 +152,12 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/patch-notes", () => {
-          checkPublic(at("/patch-notes"), "/patch-notes", patchTestid.screen);
+          cy.visit("/patch-notes");
+          cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          // The screen shows at once; the legend (R3012000) and the entries only once the history has loaded:
+          // checked with them on the page, never against the skeleton that comes first.
+          cy.get(ts(patchTestid.legend), { timeout: timeouts.view }).should("be.visible");
+          expectNoBlockingViolations(at("/patch-notes"));
         });
 
         it("/stats", () => {
@@ -238,10 +242,6 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
 
         it("/leaderboard", () => {
           checkSignedIn(at("/leaderboard"), accounts.p1(), "/leaderboard", SCREEN.leaderboard);
-        });
-
-        it("/creator", () => {
-          checkSignedIn(at("/creator"), accounts.p1(), routes.creator(), CREATOR_SCREEN);
         });
 
         it("/replays", () => {

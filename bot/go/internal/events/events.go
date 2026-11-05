@@ -994,6 +994,14 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 			out = append(out, fmt.Sprintf("#%d: not a bot pull request", number))
 			continue
 		}
+		// People's (`human`, `human required`, `tracking`), as `OnQueueCI` and `StopRedCI` leave it:
+		// no revise to queue, and no comment, since the sweep's `failedCI` replays this every tick and
+		// posted `QueueRevise`'s refusal on #2964 about forty times (#3073). The hand-over said what a
+		// person must do.
+		if queue.IsHuman(names) {
+			out = append(out, fmt.Sprintf("#%d: kept by `%s` for people; left alone", number, queue.KeptBy(names)))
+			continue
+		}
 		record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
 		if intersects(names, config.LabelBlocked, config.LabelRevise) || config.IsLive(names) || record.Truthy("stop_requested") {
 			out = append(out, fmt.Sprintf("#%d: blocked, stopped or already queued; left alone", number))

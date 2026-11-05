@@ -1,5 +1,6 @@
 //! The HTTP API (SURFACE §11.1). This file is written once (SURFACE §1).
 
+pub mod admin;
 pub mod auth;
 pub mod card_picks;
 pub mod catalog;
@@ -20,6 +21,7 @@ pub mod health;
 pub mod http;
 pub mod news;
 pub mod practice;
+pub mod proficiency;
 pub mod quests;
 pub mod queue;
 pub mod ranked;

@@ -9,6 +9,10 @@
 //! (amends R978000): the drill-down's patch history is one kept history per `?pilot=` and `?mode=`
 //! (`KeptHistory`), shared by every card's page.
 //!
+//! R3067000 (amends R978000, R1367000, R2491000): every kept window and history is cut from one
+//! snapshot of every patch's totals (`kept_snapshot`), kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once
+//! however many keys miss it, and a patch the server does not ship reads its own totals alone, never kept.
+//!
 //! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every live
 //! game, kept for `PLAY_RATES_REFRESH_SECONDS`. R1771000: `PUT /api/stats/player` keeps R1142000's summary
 //! inputs alone, for catalog cards, and drops every other key, id and value (`account_copy`).
@@ -36,11 +40,13 @@ use jackioh_engine::wire::stats::{
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter,
     StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
     WindowedReport, add_created, add_stats, adjusted_interval, adjusted_win_rate, card_drills_of,
-    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, drawn_delta, not_drawn,
-    patch_windows, played_delta, seen, sources_of, stats_field, tier_of, wilson_interval, win_rate,
-    windowed_card_stats, windowed_game_figures,
+    card_family, card_stats_of, card_window, collapse_gameless, created_played_delta, drawn_delta,
+    held_adjusted, not_drawn, patch_windows, played_delta, seen, sources_of, stats_field, tier_of,
+    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
 };
-use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot, WinRateTable, win_rates_from_report};
+use jackioh_engine::{
+    CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
+};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
@@ -389,6 +395,18 @@ pub struct PublicStatsCardsResponse {
     pub patches: Vec<PatchWindow>,
 }
 
+/// R3070000: the seats that made a copy of `id` during their games, used or not (R2089000): the games of a
+/// card only a rule makes. `None` when no counted seat made one.
+fn made_games(report: &WindowedReport, id: &str) -> Option<Tally> {
+    let row = report.created.iter().find(|row| row.stats.card == id)?;
+    let (used, unused) = (&row.stats.created_played, &row.stats.created_not_played);
+    Some(Tally {
+        games: used.games + unused.games,
+        wins: used.wins + unused.wins,
+        draws: used.draws + unused.draws,
+    })
+}
+
 /// R3022000: what `GET /api/stats/cards`' tiers are read against: the field (`stats_field`) of every card
 /// in the report, whatever the page's filters show, and the balance band.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -400,6 +418,9 @@ pub struct PublicStatsTiers {
     pub spread: f64,
     /// The cards the field was read from; 0 when too few were, and R2777000's centre and prior are kept.
     pub cards: usize,
+    /// R3070000: the average deck's win rate, which a card with too few never-drawn games, and the Dormant
+    /// Starship, is read against.
+    pub baseline: f64,
     /// The band: tier S is above `band_high`, tier F below `band_low` (`TIER_BAND_HIGH`, `TIER_BAND_LOW`).
     pub band_low: f64,
     pub band_high: f64,
@@ -523,6 +544,20 @@ async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<Stat
         .await?;
     tx.commit().await?;
     Ok(totals)
+}
+
+/// R3067000: every patch's totals as kept: one load when none was made in the last
+/// `CARD_STATS_CACHE_TTL_SECONDS`, once however many requests miss it together. A load that fails is
+/// kept for no one: the next request makes it again.
+async fn kept_snapshot(app: &App) -> Result<KeptTotals, ApiError> {
+    let (made_at, cell) = app.card_stats.totals_cell(now_ms());
+    let totals = cell
+        .get_or_try_init(|| async { totals_for(app, None, false).await.map(Arc::new) })
+        .await?;
+    Ok(KeptTotals {
+        made_at,
+        totals: Arc::clone(totals),
+    })
 }
 
 /// R1451, amended by R807000: the seats of a record the public figures count. Development games
@@ -657,6 +692,15 @@ struct ReportKey {
 /// A kept report, filled by the first request that asks for it; the others wait on it.
 type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
 
+/// R3067000: every patch's totals, filled by the first request that needs them; the others wait on it.
+type KeptTotalsCell = Arc<OnceCell<Arc<StatsTotals>>>;
+
+/// R3067000: every patch's totals, and when their cell was first asked for.
+struct KeptTotals {
+    made_at: i64,
+    totals: Arc<StatsTotals>,
+}
+
 /// R978000: the computed per-patch reports, each with when it was first asked for, the one kept
 /// longest ago first. One per `App`, so a deploy or a test starts with none. The lock is never held
 /// across a computation.
@@ -667,6 +711,9 @@ pub struct KeptReports {
     windows: Kept<ReportKey, Arc<KeptWindow>>,
     /// R2491000: the card drill-downs' patch histories, one per `?pilot=` and `?mode=`.
     histories: Kept<(PublicStatsPilot, PublicStatsMode), Arc<KeptHistory>>,
+    /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
+    /// were first asked for.
+    totals: Mutex<Option<(i64, KeptTotalsCell)>>,
     /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
     play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
 }
@@ -701,6 +748,20 @@ impl KeptReports {
 
     fn history_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptHistoryCell {
         kept_cell(&self.histories, key, now)
+    }
+
+    /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
+    /// `now`, or a new empty one in its place, with when it was made.
+    fn totals_cell(&self, now: i64) -> (i64, KeptTotalsCell) {
+        let mut kept = lock(&self.totals);
+        if let Some((made_at, cell)) = kept.as_ref()
+            && now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
+        {
+            return (*made_at, Arc::clone(cell));
+        }
+        let cell: KeptTotalsCell = Arc::new(OnceCell::new());
+        *kept = Some((now, Arc::clone(&cell)));
+        (now, cell)
     }
 
     /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
@@ -745,7 +806,83 @@ impl KeptWindow {
 
 type KeptWindowCell = Arc<OnceCell<Arc<KeptWindow>>>;
 
-/// R1367000: cached windowed report computation (`CARD_STATS_CACHE_TTL_SECONDS`).
+/// R1367000: the windowed figures at `at` over `totals`: the report and game figures R1367000 and
+/// R1994000 read, each patch's live games, and the patch lists R1973001 and R1973002 read off the
+/// totals' games. Pure, so a kept window is cut from the snapshot as its own load was.
+fn window_over(
+    totals: &StatsTotals,
+    history: &[PatchStep],
+    at: &str,
+    source: SourceParam,
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+) -> KeptWindow {
+    let report = windowed_card_stats(
+        totals,
+        &WindowQuery {
+            history,
+            at,
+            live_pilot: pilot.filter(),
+            mode: mode.filter(),
+            request: source.request(),
+        },
+    );
+    let figures = windowed_game_figures(totals, history, at, mode.filter(), source.request());
+    let mut live_games: IndexMap<String, i64> = IndexMap::new();
+    for key in totals.records.keys() {
+        live_games
+            .entry(key.patch.clone())
+            .or_insert_with(|| totals.live_games(&key.patch));
+    }
+    let games = |version: &str| totals.games(version);
+    KeptWindow {
+        report,
+        games: figures,
+        live_games,
+        history: collapse_gameless(history, games),
+        patches: patch_windows(history, games, |version| totals.live_games(version)),
+    }
+}
+
+/// R3067000: the window of a patch the server ships, kept per `ReportKey` as long as the snapshot it is
+/// cut from: its cell carries the snapshot's `made_at`, so no figure is older than
+/// `CARD_STATS_CACHE_TTL_SECONDS`.
+async fn shipped_window(
+    app: &App,
+    history: &[PatchStep],
+    at: &str,
+    source: SourceParam,
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+) -> Result<Arc<KeptWindow>, ApiError> {
+    let snapshot = kept_snapshot(app).await?;
+    let key = ReportKey {
+        patch: at.to_string(),
+        source,
+        pilot,
+        mode,
+    };
+    let cell = app.card_stats.window_cell(key, snapshot.made_at);
+    let kept = cell
+        .get_or_try_init(|| async {
+            Ok::<_, ApiError>(Arc::new(window_over(
+                &snapshot.totals,
+                history,
+                at,
+                source,
+                pilot,
+                mode,
+            )))
+        })
+        .await?;
+    Ok(Arc::clone(kept))
+}
+
+/// R1367000: the windowed report at `at`, as kept (`CARD_STATS_CACHE_TTL_SECONDS`): cut from every
+/// patch's totals (`kept_snapshot`), loaded once however many keys miss. R978000, amended by R3067000:
+/// a patch the server does not ship is never kept, and its window is that patch alone (the engine's
+/// `resolve`), so it reads that patch's totals only; the patch lists come from the kept window of the
+/// current patch.
 async fn kept_window(
     app: &App,
     history: &[PatchStep],
@@ -754,56 +891,24 @@ async fn kept_window(
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
 ) -> Result<Arc<KeptWindow>, ApiError> {
-    let compute = || async move {
-        let mut tx = app.db.begin(None).await?;
-        let totals = tx
-            .stats_totals_load(&StatsTotalsQuery {
-                source: SourceFilter::All,
-                mode: None,
-                patch: None,
-                drills: false,
-            })
-            .await?;
-        tx.commit().await?;
-        let report = windowed_card_stats(
-            &totals,
-            &WindowQuery {
-                history,
-                at,
-                live_pilot: pilot.filter(),
-                mode: mode.filter(),
-                request: source.request(),
-            },
-        );
-        let figures = windowed_game_figures(&totals, history, at, mode.filter(), source.request());
-        let mut live_games: IndexMap<String, i64> = IndexMap::new();
-        for key in totals.records.keys() {
-            live_games
-                .entry(key.patch.clone())
-                .or_insert_with(|| totals.live_games(&key.patch));
-        }
-        let games = |version: &str| totals.games(version);
-        Ok::<_, ApiError>(Arc::new(KeptWindow {
-            report,
-            games: figures,
-            live_games,
-            history: collapse_gameless(history, games),
-            patches: patch_windows(history, games, |version| totals.live_games(version)),
-        }))
-    };
     let known = at == app.catalog.version || history.iter().any(|step| step.version == at);
-    if !known {
-        return compute().await;
+    if known {
+        return shipped_window(app, history, at, source, pilot, mode).await;
     }
-    let key = ReportKey {
-        patch: at.to_string(),
-        source,
-        pilot,
-        mode,
-    };
-    let cell = app.card_stats.window_cell(key, now_ms());
-    let kept = cell.get_or_try_init(compute).await?;
-    Ok(Arc::clone(kept))
+    let shared = shipped_window(
+        app,
+        history,
+        &app.catalog.version,
+        SourceParam::Default,
+        PublicStatsPilot::Merged,
+        PublicStatsMode::All,
+    )
+    .await?;
+    let own = totals_for(app, Some(at), false).await?;
+    let mut window = window_over(&own, history, at, source, pilot, mode);
+    window.history.clone_from(&shared.history);
+    window.patches.clone_from(&shared.patches);
+    Ok(Arc::new(window))
 }
 
 /// R3049000: the win-rate snapshot a match starts with: each card's in-deck wins and games over its
@@ -927,48 +1032,59 @@ struct KeptHistory {
 
 type KeptHistoryCell = Arc<OnceCell<Arc<KeptHistory>>>;
 
+/// R2491000: the patch history of `versions` for `pilot` and `mode` over `totals`: each version cut
+/// from them by `patch_report` as its own load was (R978000), so the figures are the same.
+fn history_over(
+    totals: &StatsTotals,
+    versions: &[String],
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+) -> KeptHistory {
+    let patches = versions
+        .iter()
+        .filter_map(|version| {
+            let kept = patch_report(
+                totals,
+                version,
+                SourceParam::Default,
+                pilot.filter(),
+                mode.filter(),
+                false,
+            );
+            (kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES).then(|| {
+                // R2777002: under All Random, the decks that saw the card.
+                let cards: IndexMap<String, Tally> = kept
+                    .report
+                    .cards
+                    .into_iter()
+                    .map(|stat| {
+                        let counted = mode.counted(&stat);
+                        (stat.card, counted)
+                    })
+                    .collect();
+                (version.clone(), cards)
+            })
+        })
+        .collect();
+    KeptHistory { patches }
+}
+
 /// R2491000: the patch history of `versions` for `pilot` and `mode`, as kept: read off every
-/// patch's totals in one load when none was made in the last `CARD_STATS_CACHE_TTL_SECONDS`, once
-/// however many requests miss it together, each version cut from it by `patch_report` as its own
-/// load was (R978000), so the figures are the same.
+/// patch's totals (R3067000: `kept_snapshot`, one load however many histories and windows miss it),
+/// kept as long as that snapshot, once however many requests miss it together.
 async fn kept_history(
     app: &App,
     versions: &[String],
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
 ) -> Result<Arc<KeptHistory>, ApiError> {
-    let compute = || async move {
-        let totals = totals_for(app, None, false).await?;
-        let patches = versions
-            .iter()
-            .filter_map(|version| {
-                let kept = patch_report(
-                    &totals,
-                    version,
-                    SourceParam::Default,
-                    pilot.filter(),
-                    mode.filter(),
-                    false,
-                );
-                (kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES).then(|| {
-                    // R2777002: under All Random, the decks that saw the card.
-                    let cards: IndexMap<String, Tally> = kept
-                        .report
-                        .cards
-                        .into_iter()
-                        .map(|stat| {
-                            let counted = mode.counted(&stat);
-                            (stat.card, counted)
-                        })
-                        .collect();
-                    (version.clone(), cards)
-                })
-            })
-            .collect();
-        Ok::<_, ApiError>(Arc::new(KeptHistory { patches }))
-    };
-    let cell = app.card_stats.history_cell((pilot, mode), now_ms());
-    let kept = cell.get_or_try_init(compute).await?;
+    let snapshot = kept_snapshot(app).await?;
+    let cell = app.card_stats.history_cell((pilot, mode), snapshot.made_at);
+    let kept = cell
+        .get_or_try_init(|| async {
+            Ok::<_, ApiError>(Arc::new(history_over(&snapshot.totals, versions, pilot, mode)))
+        })
+        .await?;
     Ok(Arc::clone(kept))
 }
 
@@ -1043,19 +1159,18 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     // R3022000: the field every card's adjusted rate is read against: every deckable card of the report,
-    // whatever the filters show, so a set's page reads its cards as the whole page does, from the cards
-    // whose drawn delta the page shows (R2427000's floor on both its sides).
+    // whatever the filters show, so a set's page reads its cards as the whole page does, its centre and
+    // spread from the cards whose drawn delta the page shows (R2427000's floor on both its sides).
+    // R3070000: every card counts toward the average deck's win rate, which a card with fewer never-drawn
+    // games than the floor is read against.
     let field = stats_field(
         app.catalog
             .defs
             .iter()
             .filter(|(_, def)| !def.token)
             .filter_map(|(id, _)| report.card(id))
-            .map(|card| &card.stats)
-            .filter(|stats| {
-                i64::from(seen(stats).games) >= CARD_STATS_MIN_SAMPLE
-                    && i64::from(not_drawn(stats).games) >= CARD_STATS_MIN_SAMPLE
-            }),
+            .map(|card| &card.stats),
+        i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX),
     );
 
     let mut cards: Vec<PublicCardStat> = Vec::new();
@@ -1072,8 +1187,11 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let stat = held.map(|card| &card.stats);
         let total_decks = held.map(|card| card.decks).unwrap_or(0);
         let window = kept.window_of(id, request);
+        // R3070000: a card only a rule makes, the Dormant Starship (R1857001), is in no deck: its row reads
+        // the seats that made one, its Created games (R2089000).
+        let made = made_by_a_rule(def).then(|| made_games(report, id)).flatten();
         // R2777002: the games the card's own figures count: under All Random, the decks that saw it.
-        let counted = stat.map(|stat| mode.counted(stat)).unwrap_or_default();
+        let counted = made.unwrap_or_else(|| stat.map(|stat| mode.counted(stat)).unwrap_or_default());
         let (counted_games, counted_wins) = tally_of(&counted);
         let rate = win_rate(&counted);
         // R2895000: the rate's 95% range, over the same games.
@@ -1113,9 +1231,16 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         };
         let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
         // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
-        // R3022000: read against the field.
-        let adjusted = stat.and_then(|stat| adjusted_win_rate(stat, &field));
-        let adjusted_range = stat.and_then(|stat| adjusted_interval(stat, &field));
+        // R3022000: read against the field. R3070000: a card a rule makes, against the average deck.
+        let (adjusted, adjusted_range) = match made {
+            Some(made) => {
+                held_adjusted(&made, &field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))
+            }
+            None => (
+                stat.and_then(|stat| adjusted_win_rate(stat, &field)),
+                stat.and_then(|stat| adjusted_interval(stat, &field)),
+            ),
+        };
         // R3022000: the tier, from R654's floor as the rate is shown.
         let tier = adjusted
             .zip(adjusted_range)
@@ -1233,6 +1358,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             center: field.center,
             spread: field.spread,
             cards: field.cards,
+            baseline: field.baseline,
             band_low: TIER_BAND_LOW,
             band_high: TIER_BAND_HIGH,
         },

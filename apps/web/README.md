@@ -94,6 +94,15 @@ wood (`auth/tavern.css`); both are drawn only once the panel shows, so a short w
 `empty/EmptyState.tsx`: the tankard, the words with the old testid, and an optional `action` (`to`
 for a link, `onPress` for a button). The ruling lists what stays text.
 
+The 404 is a small game (R3119000, #3119). `main.tsx`'s `NotFound` keeps its words, its `not-found` and
+`not-found-home` testids and its shell panel, and adds `notfound/NotFoundPlay.tsx`: `GlitchPath` names the path in
+Glitch's glyphs (`cards/glitch.ts`), seeded by the path, settling one character at a time while the element's text
+stays the path; `NotFoundPlay` draws the lost card `notfound/lost.ts` picks by a hash of the path, which says its
+voice line through the audio engine when tapped, beside three face-down `CardBack`s that turn over into
+`ChoiceCard`s for Play, Practice and the Almanac (a tap turns one over and the next follows it; a mouse over it or
+keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. `public/404.html`, which
+Cloudflare serves for a path nothing routes, fans three of the brand's card backs into 4, 0 and 4 in CSS alone.
+
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
 reads are `keptPaths` in `net/api.ts` (collection, cosmetics, quests, packs, wallet, tracks, tokens, cosmetic
@@ -171,6 +180,14 @@ present for exactly that window.
 `concede-confirm` ("Concede") sends `{ type: "concede" }`. `concede-cancel` ("Keep playing") has the
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
+
+**One press is sent once** (R3060000). `Game.tsx`'s `dispatch` remembers the last `endTurn`, `answer` or
+`mulligan` it sent and the view it was sent against, and drops an equal body against the same view, so a
+double click on End turn, a double tap on a one-tap choice or a double press of the mulligan's Ready is one
+intent (after a card that gave an extra turn the second End turn was legal and ended the extra turn unseen).
+A new view or an `error` that gains text releases it; the error line clearing does not. Everything else, the
+board click and drag paths included, goes straight to `onAction`. Hotseat's views are new objects on every
+render, so it never blocks.
 
 **Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
@@ -458,8 +475,8 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
                         line (R2101000)
-routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
-                        Card builder (/creator) as links, Cards and Cosmetics opened in place by
+routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three doors, Decks (/decks) as a
+                        link, Cards and Cosmetics opened in place by
                         `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
                         between them and the hub; the page never scrolls, a section's body does. Cards is
                         the account's cards per shipped set, wallet, set tracks and quests, each panel
@@ -485,7 +502,12 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
-                        the collection is read again;
+                        the collection is read again. An owned card's view also shows its proficiency
+                        (collection/ProficiencyPanel.tsx, §14.14, R3013001): its level, its plays to the
+                        next on serverConfig.ts's curve and a picker of its stamps, a locked one with the
+                        level it needs; the account's copy is cards/stamps.ts's, loaded and each pick sent
+                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp), and
+                        the faces wear the pick (R3013002);
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
@@ -561,14 +583,16 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
 
-**A deletion is undone, not asked** (R2119000, `undo/`). Delete deck, Delete trio, the creator's
-Delete and Remove on a friend's row take the item off the screen at once and show a toast, "Deck
+**A deletion is undone, not asked** (R2119000, `undo/`). Delete deck, Delete trio and
+Remove on a friend's row take the item off the screen at once and show a toast, "Deck
 deleted · Undo" and the like, for `UNDO_WINDOW_MS` (`undo/hold.ts`'s `useUndoHold`, drawn by
 `UndoToast.tsx`: a status that takes no focus, inside the safe-area insets, with no slide under Reduce
 motion). The request waits for the window to close and goes at once when a second deletion takes the
 toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
-goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, and the
-creator before a new card's first save, since the item counts against the server's caps until then.
+goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, since the item
+counts against the server's caps until then.
+A deletion within `UNDO_REPEAT_MS` of the one taken is a double click's second press: `hold` refuses it
+(returns `false`) and every caller leaves the item in place and stays where it is (R3059000).
 Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
 trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
 trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,
@@ -729,7 +753,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- In every game against the AI (each tier, a sandbox game, custom cards, a lesson) the snapshot adds
+- In every game against the AI (each tier, a sandbox game, a lesson) the snapshot adds
   `lethal: true` while the human has a sure win this turn by what they can see (R2102000, R2291000):
   the core asks `lethalHint(state, human, deadlineMs)`, which the Rust AI answers from the human's own
   redaction, so the AI's hidden cards never change it, under a wall-clock cap of its own
@@ -978,33 +1002,6 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   (hotseat's port), `practice/core.ts` (the practice worker's game, and the only caller of the AI's
   `decide`) and `duos/DevDuosRoute.tsx` (the Duos dev hotseat's `DuosState`, opaque, through the WASM
   Duos bindings, which only the normal module carries), with `tutorial/harness.ts` for tests.
-- **The Luau module** (#919, SPEC §12.10, R915009) is a second build of the engine with the card kit,
-  for custom cards: `scripts/build-wasm.sh` writes it into `src/wasm/pkg/luau/`
-  (`crates/wasm/README.md`). Only `src/wasm/luau.ts` imports it, and only `src/wasm/index.ts` imports
-  that, dynamically: `useLuauModule(on)` switches the bindings every engine call goes through, which
-  the practice worker does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it
-  for the creator without switching. A normal game never loads it (`wasm/luau.test.ts` holds that no
-  other file imports it), and the normal module refuses a game with custom cards.
-
-## Custom cards (SPEC §12)
-
-- **The creator**, `/creator` (`routes/creator.tsx`, `creator/`): the account's custom cards, read and
-  saved through `net/customCards.ts` (`/api/custom-cards`, R915008), and an editor for one. The frame is
-  `creator/FrameForm.tsx`; the script is written in the no-code builder (`creator/builder.ts` is its
-  vocabulary and the kit Luau it writes, `BuilderView.tsx` its blocks) or the code view (`CodeView.tsx`,
-  highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
-  the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
-  from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
-  While the editor holds unsaved changes the route registers `net/navigate.ts`'s `guardLeaving`, so every
-  `navigate` off it and the browser's Back wait for its note (R1484000, R1754000).
-- **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
-  under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
-  L7 (R915005), and the play lobby offers it disabled.
-- **Practice** starts a saved deck with its custom cards on the config (`customCards`), and
-  `/practice?try=<id>` (`tryPath`) deals a random deck around one card. Such a game runs in the Luau
-  module, records no card statistics, and keeps its custom cards in its save, its replay and its
-  debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
-  in the log.
 
 ## Player-facing words
 

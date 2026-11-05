@@ -140,6 +140,9 @@ fn e2e_env_defaults() -> Vec<(&'static str, String)> {
         ),
         ("PUBLIC_ORIGINS", VITE_DEV_ORIGINS.join(",")),
         ("CATALOG_VERSION", jackioh_cards::catalog_version().to_string()),
+        // R3074000: no fixture account has an authenticator app, so the dev dashboard is as
+        // staging's: no two-step code.
+        ("DEV_STRICT", "off".to_string()),
     ]
 }
 
@@ -372,6 +375,56 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::quests::dev_complete_quest),
     ),
+    // api/admin.rs (#3074): the dev dashboard (R3074000-R3074003)
+    ("GET", "/api/admin/me", AuthLevel::Active, h!(api::admin::get_me)),
+    (
+        "GET",
+        "/api/admin/rating",
+        AuthLevel::Active,
+        h!(api::admin::get_rating),
+    ),
+    (
+        "PUT",
+        "/api/admin/rating",
+        AuthLevel::Active,
+        h!(api::admin::put_rating),
+    ),
+    (
+        "POST",
+        "/api/admin/rating/reset",
+        AuthLevel::Active,
+        h!(api::admin::post_reset_rating),
+    ),
+    (
+        "GET",
+        "/api/admin/leaderboard",
+        AuthLevel::Active,
+        h!(api::admin::get_leaderboard),
+    ),
+    (
+        "GET",
+        "/api/admin/news",
+        AuthLevel::Active,
+        h!(api::admin::get_posts),
+    ),
+    (
+        "POST",
+        "/api/admin/news",
+        AuthLevel::Active,
+        h!(api::admin::post_post),
+    ),
+    (
+        "DELETE",
+        "/api/admin/news/:postId",
+        AuthLevel::Active,
+        h!(api::admin::delete_post),
+    ),
+    (
+        "GET",
+        "/api/admin/audit",
+        AuthLevel::Active,
+        h!(api::admin::get_audit),
+    ),
     // api/news.rs (#2875)
     ("GET", "/api/news", AuthLevel::Active, h!(api::news::get_news)),
     (
@@ -424,6 +477,19 @@ pub static ROUTES: &[Route] = &[
         "/api/card-picks/upload",
         AuthLevel::Active,
         h!(api::card_picks::upload_card_picks),
+    ),
+    // api/proficiency.rs (R3013001)
+    (
+        "GET",
+        "/api/proficiency",
+        AuthLevel::Active,
+        h!(api::proficiency::get_proficiency),
+    ),
+    (
+        "PUT",
+        "/api/proficiency/stamp",
+        AuthLevel::Active,
+        h!(api::proficiency::put_proficiency_stamp),
     ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),

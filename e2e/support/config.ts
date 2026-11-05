@@ -27,8 +27,6 @@ export const routes = {
   match: (matchId: string) => `${env("matchRoute", "/match")}/${matchId}`,
   /** R259: a Best-of-3 series. */
   series: (seriesId: string) => `${env("seriesRoute", "/series")}/${seriesId}`,
-  /** #920, SPEC §12.11. */
-  creator: () => env("creatorRoute", "/creator"),
   /** SPEC §9.9. */
   practice: () => env("practiceRoute", "/practice"),
   /** R768000. */
@@ -47,6 +45,14 @@ export const routes = {
 export const server = {
   http: () => env("apiUrl", "http://localhost:8787"),
   ws: () => env("wsUrl", "ws://localhost:8787/ws/match"),
+};
+
+/**
+ * Spec 49 (R3074000): the dev dashboard's own client, `apps/admin`'s `vite preview` of its
+ * `build:e2e`, which proxies `/api` to the server (apps/admin/README.md).
+ */
+export const adminClient = {
+  url: () => env("adminUrl", "http://localhost:5174"),
 };
 
 export function apiUrl(path: string): string {

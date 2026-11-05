@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 70 tables of migrations 0001-0079 ==='
+\echo '=== CHECK 2: the 75 tables of migrations 0001-0081 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -86,7 +86,9 @@ declare
   -- per-card picks, card_cosmetic_picks (0061, R1834000), each patch's whole games,
   -- game_totals (0063, R1994000), a saved deck's earlier versions, deck_versions (0066,
   -- R2100000), a spend's idempotency_keys (0067, R2124000), a news entry's claims, news_claims
-  -- (0077, R2875000), and the practice claims' practice_claim_counts (0078, #2884).
+  -- (0077, R2875000), the practice claims' practice_claim_counts (0078, #2884), the dev
+  -- dashboard's admin_actions, hand_set_ratings, rating_grants and news_posts (0080, R3074000),
+  -- and each card's plays, level and stamp, card_proficiency (0081, R3013000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
@@ -94,19 +96,19 @@ declare
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
-    'account_cosmetics', 'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_cosmetic_picks',
-    'card_cosmetics', 'card_totals', 'cards', 'challenges',
+    'account_cosmetics', 'action_timings', 'admin_actions', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_cosmetic_picks',
+    'card_cosmetics', 'card_proficiency', 'card_totals', 'cards', 'challenges',
     'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
     'cosmetics', 'custom_cards',
     'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
     'economy_counters', 'emote_events',
-    'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'held_quests',
+    'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'hand_set_ratings', 'held_quests',
     'idempotency_keys', 'inventory',
     'inventory_grants',
     'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
-    'news_claims', 'player_settings',
-    'player_stats', 'practice_claim_counts', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
+    'news_claims', 'news_posts', 'player_settings',
+    'player_stats', 'practice_claim_counts', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'rating_grants', 'record_totals',
     'replay_shares', 'results',
     'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',
     'trios', 'tutorial_progress', 'wallets'];
@@ -309,10 +311,11 @@ declare
   -- EACH ROW. A listing cannot tell a live guard from a disabled one or from a trigger
   -- that only fires on INSERT, so the flags are asserted, not printed.
   -- SPEC §14.11 (0045) holds the economy's six ledgers to the same rule, and 0077 the news claims
-  -- (R2875000), which go only with their account as a ledger's rows do.
+  -- (R2875000), which go only with their account as a ledger's rows do; 0080 the dev dashboard's
+  -- audit and rating ledger (R3074000, R3074001).
   ledgers constant text[] := array['collection_grants', 'match_actions', 'jlore_grants', 'inventory_grants',
                                    'economy_counter_grants', 'set_track_grants', 'quest_grants',
-                                   'cosmetic_grants', 'news_claims'];
+                                   'cosmetic_grants', 'news_claims', 'admin_actions', 'rating_grants'];
   tbl     text;
   r       record;
 begin

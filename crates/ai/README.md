@@ -14,8 +14,8 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-The Death, the turn-hook, the activation and the attack-hook prices of a decision (R2424000, R2477000,
-R2564000, R2688000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
+The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
+R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them; a call outside a decision passes `Prices::NONE` (plain
 `evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
@@ -121,6 +121,12 @@ target `legal_actions` lists, beside the same attack by the unit's hookless twin
 keywords granted, its text given back before scoring), and prices the controller's evaluation after the
 one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
+A Dormant card's "When this awakens" counts by its awakening (R3064000): `awaken_prices` wakes each Dormant
+card with a wake trigger on either field, and each Unit with one in the seat's own hand, placed first
+(R923001), on a sandbox copy within `AI_AWAKEN_PROBE_NODES`, beside the same wake of its hookless twin, and
+prices the controller's evaluation after the one wake less after the other, each crystal gained at
+`next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
+share, and `GREEDY_EVAL` keeps 0.
 A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
 Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
@@ -359,10 +365,12 @@ and, once a network ships, its inference in the search, so the two never read a 
 
 ```rust
 pub const FEATURES_VERSION: u32;
+pub const FEATURES_READ_SINCE: u32;                                  // the oldest layout a network may be fitted on
 pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
 pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
 pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
 pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
+pub fn card_id_of_key(key: &str) -> Option<(&str, &str)>;           // a key's zone and card id, when it names one
 ```
 
 - It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
@@ -381,8 +389,17 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
   and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
   Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
   know is no input at all.
+- **sparse, what a card is** (R3112000): each card with an id key also has
+  `<zone>.<attribute>:<side>:<value>` keys for its running face's type, its printed cost (`query_cost`)
+  and tags, its running face's keywords (counted as the dense counts count them) and printed attack and
+  health, each number clamped at `ATTRIBUTE_TOP`, and `<zone>.face:<side>:Radiant` when it is Radiant.
+  A card a network has no id row for still moves it through the keys it shares with the cards it was
+  fitted on.
 - `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
-  version they were fitted on.
+  version they were fitted on. `FEATURES_READ_SINCE` is the oldest version a network may be fitted on
+  and still ship: every version since it only added sparse keys, which such a network has no row for,
+  so it reads this build's features as it was fitted (R3112001). A change to the dense layout or to
+  what an existing key means raises it to `FEATURES_VERSION`.
 
 ## The learned evaluation (#466, #1010)
 
@@ -394,6 +411,8 @@ pub enum EvalKind { Hand, Learned }
 pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
 pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
 pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
+impl Learned<'a> { pub fn known_card_ids(&self) -> Vec<&'a str>; }   // the ids its keys name, sorted
+pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards;   // { named, unknown }
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
@@ -406,6 +425,9 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
   turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
   file may be the null network, whose correction is zero everywhere.
+- `unknown_cards` counts the copies of cards a row names by id and how many of them name an id the
+  network has no row for (`known_card_ids`); `cargo jackioh positions` sums them over its rows and
+  prints their share, `unknownShare`, so a refit is asked for by that number (R3112002).
 - Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm, for a float network
   (`"format": 1`, `Learned::Float`), which part 5's native screen measures. The network that ships is
   an integer one (`"format": 2`, `Learned::Int`, `src/learned/int.rs`, #1011): `training/ml`'s

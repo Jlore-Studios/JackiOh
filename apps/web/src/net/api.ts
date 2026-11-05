@@ -522,6 +522,26 @@ export function uploadCardPicks(token: string, cards: CardPicksEntry[]): Promise
   return apiRequest<CardPicksResponse>("/api/card-picks/upload", { method: "POST", token, body: { cards } });
 }
 
+// R3013000, R3013001: each card's proficiency on the account (§14.14), which the server alone counts, and the
+// stamp the card wears. `cards/proficiencySync.ts` is the only caller of these two.
+
+/** One card the account has played in a game that counts: its plays, the level they reached and its stamp, null for none. */
+export type ProficiencyEntry = { cardId: string; plays: number; level: number; stamp: number | null };
+
+export type ProficiencyResponse = { cards: ProficiencyEntry[] };
+
+/** One card's stamp pick: a stamp its level unlocked, or null for none. */
+export type ProficiencyStampPut = { cardId: string; stamp: number | null };
+
+export function getProficiency(token: string): Promise<ProficiencyResponse> {
+  return apiRequest<ProficiencyResponse>("/api/proficiency", { token });
+}
+
+/** `PUT /api/proficiency/stamp` (`active`): 400 for an unknown card, a token, or a stamp the card's level has not unlocked (R3013001). */
+export function putProficiencyStamp(token: string, change: ProficiencyStampPut): Promise<ProficiencyResponse> {
+  return apiRequest<ProficiencyResponse>("/api/proficiency/stamp", { method: "PUT", token, body: change });
+}
+
 /** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
 export type QuestView = {
   questId: string;
@@ -804,7 +824,11 @@ export type NewsReward =
   | { kind: "cosmeticToken"; amount: number; tier: CosmeticTokenTier }
   | { kind: "cosmeticPack"; amount: number };
 
-/** One live news entry (R2875001); `postedAt` is epoch ms, `version` a patch's, null for an alert. */
+/**
+ * One live news entry (R2875001); `postedAt` is epoch ms, `version` a patch's, null for an alert.
+ * R3074003: a dev's post from the dev dashboard is an alert whose `reward` is null: its claim marks
+ * it read and pays nothing.
+ */
 export type NewsEntry = {
   id: string;
   kind: "patch" | "alert";
@@ -812,7 +836,7 @@ export type NewsEntry = {
   title: string;
   summary: string;
   postedAt: number;
-  reward: NewsReward;
+  reward: NewsReward | null;
   claimed: boolean;
 };
 
@@ -838,7 +862,10 @@ const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>>
 export async function claimNews(token: string, id: string): Promise<NewsResponse> {
   const answer = await spendRequest<NewsResponse>(`/api/news/${encodeURIComponent(id)}/claim`, token, {});
   const reward = answer.news.find((entry) => entry.id === id)?.reward;
-  for (const path of reward === undefined ? [] : NEWS_REWARD_READS[reward.kind]) forgetRead(token, path);
+  // R3074003: a post pays nothing, so no kept read changes.
+  for (const path of reward === undefined || reward === null ? [] : NEWS_REWARD_READS[reward.kind]) {
+    forgetRead(token, path);
+  }
   return answer;
 }
 
@@ -1534,6 +1561,8 @@ export type PublicStatsTiers = {
   spread: number;
   /** The cards the field was read from; 0 when too few, and R2777000's prior is kept. */
   cards: number;
+  /** R3070000: the average deck's win rate, which a card always in hand and the Dormant Starship are read against. */
+  baseline?: number;
   bandLow: number;
   bandHigh: number;
 };

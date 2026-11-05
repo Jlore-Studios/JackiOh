@@ -8,8 +8,9 @@
 //! can read by what it leaves behind (#2424; a Starship Piece's by the copy it fuses into, #2566; a
 //! backrow card's, either side's, and a hand Field Spell's, #2687), each turn hook by one firing
 //! (#2477, #2565; the start of the opponent's turn too, #2689), each Activate by one use (#2564; a
-//! face-up backrow card's, #2603) and each attack hook by the unit's next attack against its hookless
-//! twin's (#2688), and the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
+//! face-up backrow card's, #2603), each attack hook by the unit's next attack against its hookless
+//! twin's (#2688) and each Dormant card's wake trigger by its awakening against its hookless twin's
+//! (#3064), and the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
 //! once for each time its controller's turn runs it (Meditative #9 Joint Filing's extra runs, #2689).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
@@ -25,13 +26,14 @@ use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
-    EngineSink, GameEvent, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind, PLAYER_IDS, Phase,
-    PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone,
-    Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag, active_brittle_count,
-    active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
-    board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
-    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
-    first_entry_zone, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of, is_standing_unit,
+    EngineSink, GameEvent, GameEventType, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind,
+    PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
+    Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
+    active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
+    attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
+    card_type_of_face, credit_lapsing, death_hook_of, effective_cost, effective_life, exit_mark, face_of,
+    find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn, has_keyword,
+    heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering, is_standing_unit,
     is_starship_piece, is_temporary_card, left_field_after, legal_actions, lost_refreshes_left,
     modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
     query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
@@ -42,8 +44,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
-    AI_ACTIVATION_PROBE_NODES, AI_ATTACK_HOOK_PROBE_NODES, AI_DEATH_PROBE_NODES, AI_EVAL,
-    AI_EXTRA_TURN_CARDS, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_ACTIVATION_PROBE_NODES, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES, AI_DEATH_PROBE_NODES,
+    AI_EVAL, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -222,14 +224,15 @@ impl TurnHookPrice {
     }
 }
 
-/// R2424000, R2477000, R2564000, R2688000: the prices a decision's root probed, passed by reference
-/// from `decide` through the search to every scorer that reads them.
+/// R2424000, R2477000, R2564000, R2688000, R3064000: the prices a decision's root probed, passed by
+/// reference from `decide` through the search to every scorer that reads them.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prices {
     pub deaths: Vec<DeathPrice>,
     pub turn_hooks: Vec<TurnHookPrice>,
     pub activations: Vec<ActivationPrice>,
     pub attack_hooks: Vec<AttackHookPrice>,
+    pub awakenings: Vec<AwakenPrice>,
 }
 
 impl Prices {
@@ -239,6 +242,7 @@ impl Prices {
         turn_hooks: Vec::new(),
         activations: Vec::new(),
         attack_hooks: Vec::new(),
+        awakenings: Vec::new(),
     };
 }
 
@@ -342,6 +346,39 @@ fn attack_hook_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, pr
         .map(|entry| entry.price);
     match price {
         Some(price) if has_attack_hook(state, unit) => price,
+        _ => 0.0,
+    }
+}
+
+/// R3064000: what a Dormant card's awakening gives its controller through its "When this awakens"
+/// trigger, as a decision's root priced it (`awaken_prices`), keyed as `ActivationPrice` is, its
+/// controller included since each copy wakes onto a different board.
+pub type AwakenPrice = ActivationPrice;
+
+/// R3064000: whether the face `card` runs has a trigger on `awakened` (§6.2 "When this awakens",
+/// `when_this_awakens`; `script_of`: a Vanilla card has none). A Dormant card's script is its own: only
+/// its triggers' registration waits for its awakening (R1839000).
+fn has_wake_trigger(state: &GameState, card: &CardInstance) -> bool {
+    script_of(state, card)
+        .triggers
+        .iter()
+        .any(|trigger| trigger.on.contains(&GameEventType::Awakened))
+}
+
+/// R3064000: what `unit`'s awakening gives its controller through its wake trigger, by `prices`, while
+/// its face has one (`has_wake_trigger`). 0 with `Prices::NONE`, for a card its root did not price, and
+/// at a zero `awaken` weight (no reading).
+fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
+    if w.awaken == 0.0 {
+        return 0.0;
+    }
+    let price = prices
+        .awakenings
+        .iter()
+        .find(|entry| entry.is_for(unit))
+        .map(|entry| entry.price);
+    match price {
+        Some(price) if has_wake_trigger(state, unit) => price,
         _ => 0.0,
     }
 }
@@ -508,8 +545,8 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     } else {
         temporary
     };
-    // #1886: a card that owes an extra turn once cast (R846).
-    let turn = if AI_EXTRA_TURN_CARDS.contains(&card.def_id.as_str()) {
+    // #1886: a card that owes an extra turn once cast (R846), as the build finds it (#3116).
+    let turn = if is_extra_turn_card(&card.def_id) {
         w.extra_turn_in_hand * w.extra_turn
     } else {
         0.0
@@ -679,8 +716,9 @@ fn dormant_worth(
 
 /// R2380000: what a Dormant card on the field (§6.1, R1839000) is worth: the `unit_worth` of the same
 /// card awake, `slumber_turn_share` for each turn left on its countdown, or `slumber_waiting_share`
-/// when it has none and waits for an effect (no call at a zero share). Its status and countdown are
-/// on both seats' views (R185), so the seat prices its enemy's alike.
+/// when it has none and waits for an effect (no call at a zero share). R3064000: plus `awaken` of what
+/// its wake trigger gives (`awaken_price`), inside the same share. Its status and countdown are on both
+/// seats' views (R185), so the seat prices its enemy's alike.
 fn slumber_worth(
     state: &GameState,
     unit: &CardInstance,
@@ -697,7 +735,7 @@ fn slumber_worth(
     }
     let mut awake = unit.clone();
     awake.slumber = None;
-    share * unit_worth(state, &awake, w, prices)
+    share * (unit_worth(state, &awake, w, prices) + w.awaken * awaken_price(state, unit, w, prices))
 }
 
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
@@ -1340,10 +1378,17 @@ const TURN_HOOKS: [HookName; 3] = [
 ];
 
 /// R2477000: `before` after one firing of `holder`'s `hook`, queued as its controller's turn would queue
-/// it (`queue_hook`, R68) and drained by the resolution loop (`settle`), where the decision stands:
-/// under its game's pool hold (R2201001), on the state's own random stream with the cursor written back
-/// (CLAUDE.md rule 4), as `reduce` steps a game.
+/// it (`queue_hook`, R68) and drained by the resolution loop (`settled_after`).
 fn fire_turn_hook(before: &GameState, holder: &TriggerHolder, hook: HookName) -> GameState {
+    settled_after(before, |sink| {
+        queue_hook(sink, holder, hook);
+    })
+}
+
+/// R2477000, R3064000: `before` after `step` and the resolution loop (`settle`) that drains what it
+/// queued, where the decision stands: under its game's pool hold (R2201001), on the state's own random
+/// stream with the cursor written back (CLAUDE.md rule 4), as `reduce` steps a game.
+fn settled_after(before: &GameState, step: impl FnOnce(&mut EngineSink<'_>)) -> GameState {
     with_pool_hold(before, || {
         let mut next = before.clone();
         sync_fused_scripts(&mut next);
@@ -1351,7 +1396,7 @@ fn fire_turn_hook(before: &GameState, holder: &TriggerHolder, hook: HookName) ->
         let mut rng = Rng::new(&next.seed, next.rng_cursor);
         {
             let mut sink = EngineSink::new(&mut next, &mut events, &mut rng);
-            queue_hook(&mut sink, holder, hook);
+            step(&mut sink);
             settle(&mut sink, SettleOptions::default());
         }
         next.rng_cursor = rng.cursor();
@@ -1713,7 +1758,8 @@ pub fn activation_prices(
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
-/// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires, and it is
+/// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires (nor its wake
+/// trigger, R3064000), and it is
 /// granted the keywords it prints, as tuning leaves them (`face_of`), so it fights as itself.
 fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
     let printed = face_of(turn, unit).keywords;
@@ -1859,6 +1905,124 @@ pub fn attack_hook_prices(
     )
 }
 
+/// R3064000: `before` after its Dormant card `instance_id` wakes (`awaken_card`) and `settled_after`
+/// drains its trigger. One node of `counter`: `None` when the counter refuses it; `Some(None)` when the
+/// wake panics (`note_sim_panic`), or leaves a prompt open or the game over, which the probe neither
+/// answers nor prices.
+fn wake_once(before: &GameState, instance_id: &str, counter: &dyn NodeCounter) -> Option<Option<GameState>> {
+    if !counter.take() {
+        return None;
+    }
+    let woken = catch_unwind(AssertUnwindSafe(|| {
+        settled_after(before, |sink| {
+            awaken_card(sink, instance_id);
+        })
+    }));
+    match woken {
+        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            Some(None)
+        }
+    }
+}
+
+/// R3064000: what `unit`'s awakening on `before`, a sandbox (R923000), gives its controller through its
+/// wake trigger: the controller's evaluation after it wakes less after its hookless twin wakes
+/// (`hookless_twin`, its text given back before it is scored, `with_text_back`), plus
+/// `AI_EVAL.next_turn_mana` per crystal gained over the twin, which the evaluation does not count.
+/// Signed: a costly trigger is a debt. Two nodes; `None` when the counter is spent, `Some(None)` when
+/// either wake is not priced (`wake_once`).
+fn awaken_probe(before: &GameState, unit: &CardInstance, counter: &dyn NodeCounter) -> Option<Option<f64>> {
+    let owner = unit.controller;
+    let Some(hooked) = wake_once(before, &unit.id, counter)? else {
+        return Some(None);
+    };
+    let (twin, printed) = hookless_twin(before, unit);
+    let Some(plain) = wake_once(&twin, &unit.id, counter)? else {
+        return Some(None);
+    };
+    let plain = with_text_back(plain, &unit.id, &printed);
+    let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
+    Some(Some(
+        evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
+            - evaluate(&plain, owner, NextSwing::Enemy, &AI_EVAL)
+            + AI_EVAL.next_turn_mana * f64::from(gained),
+    ))
+}
+
+/// R3064000, R923001: `awaken_probe` for `card`, a Unit in `seat`'s hand, placed on its field first
+/// (`spawn_hand_unit`). One that does not enter Dormant prices nothing.
+fn spawned_awaken_probe(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
+        return Some(None);
+    };
+    if !is_slumbering(&unit) {
+        return Some(None);
+    }
+    awaken_probe(&placed, &unit, counter)
+}
+
+/// R3064000: the awakening prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe
+/// world (R185), each card once: every Dormant card on the seat's field with a wake trigger
+/// (`has_wake_trigger`), then every one on the enemy's, whose status and face are public, each as its
+/// controller's, then each Unit in the seat's own hand with one, placed first (R923001). It never reads
+/// the enemy's hand. Each wake is priced against its hookless twin's (`awaken_probe`). On a sandbox copy
+/// (R923000), automatic turn end off (R345), no price passed, at most `AI_AWAKEN_PROBE_NODES` nodes from
+/// `counter`, and none when no card has a wake trigger.
+pub fn awaken_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<AwakenPrice> {
+    if AI_EVAL.awaken == 0.0 || world.pending.is_some() || world.result.is_some() {
+        return Vec::new();
+    }
+    let field = [seat, seat.opponent()]
+        .into_iter()
+        .flat_map(|player| units_on_field_of(world, player))
+        .filter(|unit| is_slumbering(unit) && has_wake_trigger(world, unit))
+        .map(|unit| (unit, false));
+    let hand = world.players[seat]
+        .hand
+        .iter()
+        .filter(|card| {
+            card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit
+                && has_wake_trigger(world, card)
+        })
+        .map(|card| (card, true));
+    let mut candidates: Vec<(AwakenPrice, &CardInstance, bool)> = Vec::new();
+    for (card, in_hand) in field.chain(hand) {
+        if !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
+            candidates.push((AwakenPrice::key(card), card, in_hand));
+        }
+    }
+    if candidates.is_empty() {
+        return Vec::new();
+    }
+    let mut sandbox = world.clone();
+    sandbox.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        sandbox.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, AI_AWAKEN_PROBE_NODES);
+    let mut priced = Vec::new();
+    for (key, card, in_hand) in candidates {
+        let probed = if in_hand {
+            spawned_awaken_probe(&sandbox, seat, card, &probes)
+        } else {
+            awaken_probe(&sandbox, card, &probes)
+        };
+        match probed {
+            None => break,
+            Some(None) => {}
+            Some(Some(price)) => priced.push(AwakenPrice { price, ..key }),
+        }
+    }
+    priced
+}
+
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end
 /// of `seat`'s turn, where the enemy's board attacks before `seat` can answer; "seat" reads it as the
 /// start of `seat`'s turn (the opponent's reply has been played out), where `seat` attacks first and
@@ -1879,7 +2043,7 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
 /// A score for `seat` (higher is better). Pure, cheap (O(cards)), reads only public-or-sampled state.
 /// `w` is the AI's own AI_EVAL unless a caller brings its own weights (the greedy baseline's
 /// GREEDY_EVAL, which tuning the AI never moves); `prices` are the decision's (R2424000, R2477000,
-/// R2564000, R2688000).
+/// R2564000, R2688000, R3064000).
 pub fn evaluate_priced(
     state: &GameState,
     seat: PlayerId,

@@ -1,6 +1,7 @@
 //! Server API integration test suite (SURFACE §1).
 
 pub mod account;
+pub mod admin;
 pub mod auth;
 pub mod bots;
 pub mod card_picks;
@@ -34,6 +35,7 @@ pub mod ladder;
 pub mod news;
 pub mod packs;
 pub mod practice;
+pub mod proficiency;
 pub mod quests;
 pub mod queue;
 pub mod ranked;

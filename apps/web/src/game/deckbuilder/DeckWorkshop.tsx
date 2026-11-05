@@ -52,7 +52,6 @@ import {
   DECK_IMPORT_OPEN,
   DECK_LIST,
   DECK_NEW,
-  DECK_PRACTICE_ONLY,
   DECK_REDO,
   DECK_UNDO,
   SYNC_STATUS,
@@ -69,7 +68,7 @@ import {
   trioRowId,
 } from "./testids.ts";
 import TrioEditor from "./TrioEditor.tsx";
-import { copyName, deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, trioLabel, trioVerdict } from "./workshop.ts";
+import { copyName, deckLabel, deckStatus, deckVerdict, nextName, trioLabel, trioVerdict } from "./workshop.ts";
 
 /** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
 export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
@@ -303,14 +302,12 @@ type DeckRowProps = {
 function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atCap, reasonId, patch, onOpen, onDuplicate }: DeckRowProps): ReactElement {
   const verdict = deckVerdict(deck, catalog, collection, nameLength);
   const status = deckStatus(verdict, collection !== null);
-  // R915005: a deck naming a custom card plays only in practice (L7), whatever else it lacks.
-  const practice = practiceOnly(verdict);
   const label = deckLabel(deck, nameLength);
   const words = {
     deck: label,
     count: deck.cards.length,
     size: DECK_SIZE,
-    status: practice ? t("{status}, practice only", { status: status.label }) : status.label,
+    status: status.label,
   };
   return (
     <li className="ws-list-item">
@@ -320,7 +317,6 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atC
         data-testid={deckRowId(deck.id)}
         data-count={String(deck.cards.length)}
         data-status={status.kind}
-        data-practice-only={practice ? "true" : undefined}
         data-unsynced={unsynced ? "true" : undefined}
         aria-current={current ? "true" : undefined}
         onClick={onOpen}
@@ -338,11 +334,6 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atC
           <span className="ws-chip" data-status={status.kind}>
             {status.label}
           </span>
-          {practice ? (
-            <span className="ws-chip" data-status="practice" data-testid={DECK_PRACTICE_ONLY} aria-hidden="true">
-              {t("Practice only")}
-            </span>
-          ) : null}
         </span>
         {unsynced ? <span className="ws-row-dot" aria-hidden="true" /> : null}
       </button>
@@ -624,18 +615,22 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         onDelete={() => {
           const id = openDeck.id;
           const next = neighbourOf(decks, id);
-          // R2119000: `hold` first, since it sends any deletion held before this one.
-          hold({
-            words: () => t("Deck deleted"),
-            send: (keepalive) => {
-              store.deleteDeck(id);
-              void store.flush({ keepalive });
-            },
-            restore: () => {
-              store.unhide();
-              setOpen({ kind: "deck", id });
-            },
-          });
+          // R2119000: `hold` first, since it sends any deletion held before this one. R3059000: a double click's
+          // second press lands on the neighbour that just opened here, and `hold` refuses it.
+          if (
+            !hold({
+              words: () => t("Deck deleted"),
+              send: (keepalive) => {
+                store.deleteDeck(id);
+                void store.flush({ keepalive });
+              },
+              restore: () => {
+                store.unhide();
+                setOpen({ kind: "deck", id });
+              },
+            })
+          )
+            return;
           store.hide("deck", id);
           setOpen(next === null ? null : { kind: "deck", id: next.id });
           setView("list");
@@ -679,17 +674,20 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         }}
         onDelete={() => {
           const id = openTrio.id;
-          hold({
-            words: () => t("Trio deleted"),
-            send: (keepalive) => {
-              store.deleteTrio(id);
-              void store.flush({ keepalive });
-            },
-            restore: () => {
-              store.unhide();
-              setOpen({ kind: "trio", id });
-            },
-          });
+          if (
+            !hold({
+              words: () => t("Trio deleted"),
+              send: (keepalive) => {
+                store.deleteTrio(id);
+                void store.flush({ keepalive });
+              },
+              restore: () => {
+                store.unhide();
+                setOpen({ kind: "trio", id });
+              },
+            })
+          )
+            return;
           store.hide("trio", id);
           setOpen(null);
           setView("list");

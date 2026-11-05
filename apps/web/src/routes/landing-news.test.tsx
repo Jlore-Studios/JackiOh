@@ -1,6 +1,7 @@
 // R2875002: the landing's news bookmark (SPEC §14.13, issue #2875): beside the quests' bookmark, its red
 // count of the entries the server says are unclaimed, a claim's answer moving it, and who gets none of
-// it; R2875001 no live entry, no bookmark; R2875003 each reward in its words.
+// it; R2875001 no live entry, no bookmark; R2875003 each reward in its words; R3074003 a dev's post,
+// which pays no reward.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -304,6 +305,54 @@ describe("R2875002 the landing's news bookmark", () => {
     expect(panel).toHaveAttribute("data-state", "closed");
     expect(panel).toHaveAttribute("hidden");
     expect(screen.queryByTestId(newsTestid.entry)).toBeNull();
+  });
+});
+
+describe("R3074003 a dev's post on the news", () => {
+  const POST = entry({
+    id: "post-0a1b2c3d4e5f",
+    kind: "alert",
+    version: null,
+    title: "Maintenance tonight",
+    summary: "The server restarts at midnight UTC.",
+    reward: null,
+  });
+
+  it("R3074003 a post shows no reward, counts as unread, and Mark read claims it, paying nothing", async () => {
+    signIn();
+    const server = serve([POST, entry()]);
+    render(<LandingRoute />);
+
+    expect(await screen.findByTestId(landingTestid.newsCount, undefined, SLOW)).toHaveTextContent("2");
+    fireEvent.click(screen.getByTestId(landingTestid.newsBookmark));
+    const [post, patch] = screen.getAllByTestId(newsTestid.entry);
+    const row = must(post, "the post");
+    expect(row).toHaveTextContent("Maintenance tonight");
+    expect(row).toHaveTextContent("The server restarts at midnight UTC.");
+    expect(row.querySelector(".entry-card__pill")).toBeNull();
+    expect(within(must(patch, "the patch")).getByRole("button", { name: "Claim 100 Jlore" })).toBeEnabled();
+    vi.mocked(announceWallet).mockClear();
+
+    fireEvent.click(within(row).getByRole("button", { name: "Mark read" }));
+    await waitFor(() => {
+      expect(screen.getByTestId(landingTestid.newsCount)).toHaveTextContent("1");
+    }, SLOW);
+    expect(server.to("POST", "/api/news/post-0a1b2c3d4e5f/claim")).toHaveLength(1);
+    const read = must(screen.getAllByTestId(newsTestid.entry)[0], "the post, read");
+    expect(within(read).getByTestId(newsTestid.claimed)).toHaveTextContent("Read");
+    // A post pays nothing, so nothing announces the wallet.
+    expect(announceWallet).not.toHaveBeenCalled();
+  });
+
+  it("R3074003 a post's text shows as text, never as markup", async () => {
+    signIn();
+    serve([{ ...POST, title: "<b>Bold</b>", summary: "<img src=x onerror=alert(1)>." }]);
+    render(<LandingRoute />);
+    fireEvent.click(await screen.findByTestId(landingTestid.newsBookmark, undefined, SLOW));
+    const row = must(screen.getAllByTestId(newsTestid.entry)[0], "the post");
+    expect(row).toHaveTextContent("<b>Bold</b>");
+    expect(row.querySelector("b")).toBeNull();
+    expect(row.querySelector("img")).toBeNull();
   });
 });
 

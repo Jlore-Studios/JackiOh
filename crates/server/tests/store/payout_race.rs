@@ -104,6 +104,7 @@ fn summary(profile_id: &str, match_id: &str, at: i64) -> GameSummary {
         at,
         bot: false,
         tally: GameTally::default(),
+        proficiency: Vec::new(),
     }
 }
 

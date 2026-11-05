@@ -24,9 +24,6 @@ function isDeck(value: unknown): value is PracticeDeckChoice {
       return typeof deck.id === "string";
     case "saved":
       return typeof deck.index === "number" && Array.isArray(deck.cards) && deck.cards.every((card) => typeof card === "string");
-    case "try":
-      // #921: the creator's "Try it", around one of the game's custom cards.
-      return typeof deck.card === "string";
     default:
       return false;
   }
@@ -42,18 +39,8 @@ function isConfig(value: unknown): value is PracticeStartConfig {
     isDeck(config.deck) &&
     (config.sandbox === undefined || config.sandbox === true) &&
     (config.earning === undefined || config.earning === true) &&
-    (config.customCards === undefined || isCustomCards(config.customCards)) &&
     (config.dailyDeal === undefined || typeof config.dailyDeal === "string") &&
     config.lesson === undefined
-  );
-}
-
-/** R915006: the game's custom cards, each with its id; the engine judges the rest when the game is folded. */
-function isCustomCards(value: unknown): boolean {
-  return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every((card) => typeof card === "object" && card !== null && typeof (card as { id?: unknown }).id === "string")
   );
 }
 
@@ -87,9 +74,8 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
     clearPracticeResume();
     return;
   }
-  const { seed, difficulty, humanSeat, deck, sandbox, customCards, earning, dailyDeal } = config;
-  // R923000: a sandbox game is picked up as a sandbox. R915006: a game with custom cards keeps them,
-  // so the page picks it up as what it is (no card statistics, R915009) and Play again deals them again.
+  const { seed, difficulty, humanSeat, deck, sandbox, earning, dailyDeal } = config;
+  // R923000: a sandbox game is picked up as a sandbox.
   // R1303001: a game on a server seed is picked up as one, so its end is still claimed.
   // R2882000: today's deal is picked up as one, so Play again deals it again.
   const setup = {
@@ -100,7 +86,6 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
     ...(sandbox === true ? { sandbox } : {}),
     ...(earning === true ? { earning } : {}),
     ...(dailyDeal === undefined ? {} : { dailyDeal }),
-    ...(customCards === undefined || customCards.length === 0 ? {} : { customCards }),
   };
   const kept = options.saved === true ? { ...setup, saved: true } : setup;
   // Blocked or full storage: a reload starts at the setup.

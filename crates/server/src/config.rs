@@ -229,7 +229,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-31/2026-11-01";
+pub const TERMS_VERSION: &str = "2026-11-05/2026-11-05";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -2762,6 +2762,12 @@ pub const SET_TRACK_LEVELS: u32 = 100;
 pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
 /// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
 pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
+/// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
+/// reach each of its proficiency levels, lowest first (#3013: the first comes in a game or two, the
+/// last after 200 plays, a season's commitment to one card). Level n unlocks stamp n (R3013001).
+pub const PROFICIENCY_LEVEL_PLAYS: [i64; 5] = [3, 15, 40, 100, 200];
+/// SPEC §14.14, R3013000: a card's proficiency levels, one stamp each (R3013001).
+pub const PROFICIENCY_LEVELS: usize = PROFICIENCY_LEVEL_PLAYS.len();
 /// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
 pub const JLORE_LADDER_WIN: i32 = 20;
 /// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves
@@ -2934,3 +2940,27 @@ pub const GLOBAL_PACK_NAME: &str = "global";
 /// ids (`env.rs` reads it at boot, `seed-catalog` for R1300001's exemption). A name, not a number,
 /// and never exported: the client learns only whether its own caller is one (`isDev`).
 pub const DEV_PROFILE_IDS: &str = "DEV_PROFILE_IDS";
+/// §14.10, R3074000: the environment variable that sets the dev dashboard's strict mode, `on` or
+/// `off`, unset meaning `on`. Strict, every `/api/admin/*` route needs the two-step code (`aal2`)
+/// and a hand-set rating is off the public ladder until it is reset (R3074001). Production leaves it
+/// unset; staging's `wrangler.jsonc` vars and end-to-end mode set `off`. A name, never exported.
+pub const DEV_STRICT: &str = "DEV_STRICT";
+/// §14.10, R3074000: the most Jlore one `POST /api/dev/jlore` gives. Exported to `serverConfig.ts`.
+pub const DEV_JLORE_PER_REQUEST_MAX: i64 = 1_000_000;
+/// §14.10, R3074000: the most XP one `POST /api/dev/xp` gives a track. Exported to
+/// `serverConfig.ts`.
+pub const DEV_XP_PER_REQUEST_MAX: i64 = 1_000_000;
+/// §14.10, R3074001: the lowest rating a dev account may hand-set itself on a ladder. Exported to
+/// `serverConfig.ts`.
+pub const DEV_RATING_MIN: f64 = 100.0;
+/// §14.10, R3074001: the highest rating a dev account may hand-set itself on a ladder, past every
+/// bot's (`SKILL_ELO_TABLE`). Exported to `serverConfig.ts`.
+pub const DEV_RATING_MAX: f64 = 3000.0;
+/// §14.10, R3074000: the newest audit rows `GET /api/admin/audit` answers.
+pub const ADMIN_AUDIT_PAGE: i64 = 200;
+/// §14.13, R3074003: the newest posts `GET /api/admin/news` answers, taken down or not.
+pub const NEWS_POSTS_PAGE: i64 = 100;
+/// §14.13, R3074003: the most characters a post's title holds. Exported to `serverConfig.ts`.
+pub const NEWS_POST_TITLE_MAX_CHARS: usize = 80;
+/// §14.13, R3074003: the most characters a post's summary holds. Exported to `serverConfig.ts`.
+pub const NEWS_POST_SUMMARY_MAX_CHARS: usize = 400;
