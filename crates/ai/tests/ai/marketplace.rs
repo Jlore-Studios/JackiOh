@@ -42,6 +42,8 @@ fn priced_board(seed: &str, theirs: &str, price: i32) -> GameState {
         bought: PerPlayer::new(0, 0),
         owner: Some(owner),
         fixed: None,
+        buffs: None,
+        nerfs: None,
     };
     state.marketplace = Some(Marketplace {
         offers: vec![offer(theirs, HUMAN), offer(VANILLA, AI)],

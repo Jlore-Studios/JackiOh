@@ -3,8 +3,8 @@ import type { PerPlayer } from "./PerPlayer";
 import type { PlayerId } from "./PlayerId";
 
 /**
- * R1853005, R2250002: one lot at the Marketplace: a card of `def_id`, at `price` Credits (`base` before
- * it moved), offered to `owner` alone, `stock` of it and the copies each player has bought.
+ * R1853005, R2250002, R3047002: one lot at the Marketplace: a card of `def_id`, at `price` Credits (`base`
+ * before it moved), offered to `owner` alone, `stock` of it and the copies each player has bought.
  */
 export type MarketOffer = { defId: string, 
 /**
@@ -21,4 +21,14 @@ owner?: PlayerId,
  * at its owner's turn start; absent on a rolled offer, which the owner's next turn start replaces.
  * Only ever `Some(true)`.
  */
-fixed?: true, };
+fixed?: true, 
+/**
+ * R3047002: the Buffs the lot was rolled with, each landed on the card bought (R3047003) and each
+ * raising `base`. Absent on a lot with none, a Nerfed or a fixed one among them (D14).
+ */
+buffs?: number, 
+/**
+ * R3047002: the Nerfs the lot was rolled with, each landed on the card bought (R3047003) and each
+ * lowering `base`. Absent on a lot with none, a Buffed or a fixed one among them (D14).
+ */
+nerfs?: number, };

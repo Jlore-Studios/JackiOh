@@ -69,8 +69,25 @@ fn may_preview(state: &GameState, card: &CardInstance, viewer: PlayerId, zone: C
     }
 }
 
+/// R3047004: the label of the Credits a Resource in hand sells for this turn, printed in braces.
+pub const SELL_QUOTE_LABEL: &str = "Credits";
+
+/// R3047004: a Resource in its owner's hand while the Marketplace is open sells for its quote this turn
+/// (`marketplace::sell_quote`, R1853002), the Credits it pays as it is played or discarded (R2250001):
+/// that number as an R280 preview. Nothing for a card that is no Resource, one outside a hand or a
+/// closed Marketplace, none of which has a quote.
+fn sell_quote_preview(state: &GameState, card: &CardInstance, zone: ConditionZone) -> Option<PreviewValue> {
+    if zone != ConditionZone::Hand || !crate::resources::is_resource_card(state, card) {
+        return None;
+    }
+    let quote = crate::marketplace::sell_quote(state, card)?;
+    Some(count_preview(SELL_QUOTE_LABEL, quote))
+}
+
 /// R280: the labeled numbers `viewer` sees on `card`, or `None` for none. Pure: it copies what the
 /// hook returns, so the view holds no reference into a script, and it calls the hook at most once.
+/// R3047004: a Resource in hand adds the Credits it sells for this turn, whether or not its script
+/// declares a `preview`.
 pub fn preview_of(
     state: &GameState,
     card: &CardInstance,
@@ -82,7 +99,10 @@ pub fn preview_of(
     }
     // B5 E14, R547: a copier (Classic #57 Echo) previews the formula of the text it has, on that face.
     let script = crate::subsystems::copied_text::running_script_of(state, card);
-    let hook = script.preview.as_ref()?;
+    let quote = sell_quote_preview(state, card, zone);
+    let Some(hook) = script.preview.as_ref() else {
+        return quote.map(|value| vec![value]);
+    };
     let face = crate::subsystems::copied_text::text_face_of(state, card);
     let values = hook(ConditionContext {
         state,
@@ -94,7 +114,7 @@ pub fn preview_of(
     });
     // R372: a value the text names by a word (#93's grade letter) carries it as `display`; a value that
     // counts a set of cards (Classic+ #44, #45's Radiant "highlight targets") carries their ids.
-    let copied: Vec<PreviewValue> = values
+    let mut copied: Vec<PreviewValue> = values
         .into_iter()
         .filter(|entry| !entry.label.is_empty())
         .map(|entry| PreviewValue {
@@ -104,6 +124,7 @@ pub fn preview_of(
             ids: entry.ids.map(|ids| readable_ids(state, ids, viewer)),
         })
         .collect();
+    copied.extend(quote);
     if copied.is_empty() { None } else { Some(copied) }
 }
 
