@@ -1,7 +1,8 @@
 //! R1846000: a card script's code lines, counted alike by `build.rs` (which `#[path]`-includes this
 //! file, so the BUSTED and complicated lists it compiles in come from here) and by the tools, which
-//! count a version's lists for `patches ship` and a change's for `classify` (R2173000). Pure string
-//! work, so the cards crate may hold it (CLAUDE.md rule 4).
+//! count a version's lists for `patches ship` and a change's for `classify` (R2173000). #3116: and
+//! whether a script owes an extra turn, which `build.rs` lists for the AI's hand prices (R846). Pure
+//! string work, so the cards crate may hold it (CLAUDE.md rule 4).
 
 /// R2173000: what a script's code spells when it reads the BUSTED or complicated lists: a catalog
 /// query's `busted` or `complicated` field (in JSON or as a Rust field) or the engine's readers.
@@ -19,6 +20,31 @@ const LIST_READS: [&str; 6] = [
 /// #111 Shockwave447 do.
 pub fn reads_card_lists(source: &str) -> bool {
     script_code(source).any(|code| LIST_READS.iter().any(|read| code.contains(read)))
+}
+
+/// #3116, R846: the engine's verb that owes a player an extra turn (`effects::take_extra_turn`), the
+/// only one that does.
+const EXTRA_TURN_VERB: &str = "take_extra_turn";
+
+/// #3116, R846: whether a card script owes an extra turn: its code, above its tests and without its
+/// comments, names `take_extra_turn` as a whole word (a call, or the `use` bringing it in), in any
+/// hook: a cry (M #19.1 Temporal Rift, S #4.3 Event Horizon) or a Trap's resumed reveal step (S #4.4
+/// Last Word). A turn owed through another file's helper or another card's cast is not seen.
+pub fn owes_extra_turn(source: &str) -> bool {
+    script_code(source).any(|code| names_word(&code, EXTRA_TURN_VERB))
+}
+
+/// Whether `code` holds `word` with no identifier character on either side.
+fn names_word(code: &str, word: &str) -> bool {
+    code.match_indices(word).any(|(at, _)| {
+        !code[..at].chars().next_back().is_some_and(is_ident_char)
+            && !code[at + word.len()..].chars().next().is_some_and(is_ident_char)
+    })
+}
+
+/// A character a Rust identifier may hold.
+fn is_ident_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
 }
 
 /// The lines of a script's code: above its `#[cfg(test)]` (its tests are not its code), without

@@ -50,7 +50,11 @@ fn sample(
         account_created_at,
         match_created_at,
         deck: ids(deck),
-        loadout: Loadout { seat, cards },
+        loadout: Loadout {
+            seat,
+            cards,
+            stamps: Vec::new(),
+        },
     }
 }
 

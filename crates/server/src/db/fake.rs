@@ -2839,6 +2839,10 @@ pub fn game_records_unfiled(
 
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
     call(f, "statsTotals.load")?;
+    if query.patch.is_none() {
+        // R3067000: every patch's totals, counted apart from one patch's load.
+        call(f, "statsTotals.loadAllPatches")?;
+    }
     Ok(f.tables().stats_totals.select(
         &sources_of(query.source),
         query.mode,

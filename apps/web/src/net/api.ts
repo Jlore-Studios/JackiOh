@@ -522,6 +522,26 @@ export function uploadCardPicks(token: string, cards: CardPicksEntry[]): Promise
   return apiRequest<CardPicksResponse>("/api/card-picks/upload", { method: "POST", token, body: { cards } });
 }
 
+// R3013000, R3013001: each card's proficiency on the account (§14.14), which the server alone counts, and the
+// stamp the card wears. `cards/proficiencySync.ts` is the only caller of these two.
+
+/** One card the account has played in a game that counts: its plays, the level they reached and its stamp, null for none. */
+export type ProficiencyEntry = { cardId: string; plays: number; level: number; stamp: number | null };
+
+export type ProficiencyResponse = { cards: ProficiencyEntry[] };
+
+/** One card's stamp pick: a stamp its level unlocked, or null for none. */
+export type ProficiencyStampPut = { cardId: string; stamp: number | null };
+
+export function getProficiency(token: string): Promise<ProficiencyResponse> {
+  return apiRequest<ProficiencyResponse>("/api/proficiency", { token });
+}
+
+/** `PUT /api/proficiency/stamp` (`active`): 400 for an unknown card, a token, or a stamp the card's level has not unlocked (R3013001). */
+export function putProficiencyStamp(token: string, change: ProficiencyStampPut): Promise<ProficiencyResponse> {
+  return apiRequest<ProficiencyResponse>("/api/proficiency/stamp", { method: "PUT", token, body: change });
+}
+
 /** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
 export type QuestView = {
   questId: string;

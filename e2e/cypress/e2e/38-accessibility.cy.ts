@@ -17,7 +17,6 @@ import {
   BOARD,
   CARD_POOL,
   COLLECTION_SCREEN,
-  CREATOR_SCREEN,
   GAME,
   PLAY_QUEUE,
   PRACTICE_HUD,
@@ -243,10 +242,6 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
 
         it("/leaderboard", () => {
           checkSignedIn(at("/leaderboard"), accounts.p1(), "/leaderboard", SCREEN.leaderboard);
-        });
-
-        it("/creator", () => {
-          checkSignedIn(at("/creator"), accounts.p1(), routes.creator(), CREATOR_SCREEN);
         });
 
         it("/replays", () => {

@@ -27,8 +27,6 @@ export const routes = {
   match: (matchId: string) => `${env("matchRoute", "/match")}/${matchId}`,
   /** R259: a Best-of-3 series. */
   series: (seriesId: string) => `${env("seriesRoute", "/series")}/${seriesId}`,
-  /** #920, SPEC §12.11. */
-  creator: () => env("creatorRoute", "/creator"),
   /** SPEC §9.9. */
   practice: () => env("practiceRoute", "/practice"),
   /** R768000. */

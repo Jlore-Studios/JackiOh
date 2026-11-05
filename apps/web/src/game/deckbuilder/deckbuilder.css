@@ -301,14 +301,6 @@
   background: color-mix(in srgb, var(--you) 45%, var(--bg-raised));
 }
 
-/* #920: the way to the card creator, after the set chips: a link dressed as a chip, dashed. */
-.deckbuilder.app-shell .db-chip--link {
-  display: inline-flex;
-  align-items: center;
-  border: 1px dashed var(--line-bright);
-  text-decoration: none;
-}
-
 /* Cost chips read as little mana crystals. */
 .deckbuilder.app-shell .db-chip--cost {
   min-width: 30px;
@@ -953,8 +945,8 @@
     0 0 6px var(--db-rarity, transparent);
 }
 
-/* A card the deck's verdict names (a token, a copy too many, one not owned, banned or gone, a
-   custom card): an amber edge, the verdict's hint color, and the flag below in the same tone. */
+/* A card the deck's verdict names (a token, a copy too many, one not owned, banned or gone): an
+   amber edge, the verdict's hint color, and the flag below in the same tone. */
 .deckbuilder.app-shell .db-tile[data-issue] {
   border-color: color-mix(in srgb, #e0a93b 75%, var(--line-bright));
   box-shadow:

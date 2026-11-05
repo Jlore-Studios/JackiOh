@@ -191,7 +191,7 @@ describe("R2117000 a move between two menu screens cross-fades in a view transit
   });
 
   it("R2117000 a move the leave guard holds starts no view transition until it is let go", async () => {
-    at(paths.creator);
+    at(paths.collection);
     render(<Screen />);
     const held = guard();
     let went: boolean | undefined;
@@ -200,7 +200,7 @@ describe("R2117000 a move between two menu screens cross-fades in a view transit
     });
     expect(went).toBe(false);
     expect(start).not.toHaveBeenCalled();
-    expect(window.location.pathname).toBe(paths.creator);
+    expect(window.location.pathname).toBe(paths.collection);
     act(() => {
       held[0]?.();
     });
@@ -209,12 +209,12 @@ describe("R2117000 a move between two menu screens cross-fades in a view transit
 
     for (const release of releases.splice(0)) release();
     act(() => {
-      navigate(paths.creator);
+      navigate(paths.collection);
     });
     const held2 = guard();
     await traverse(() => window.history.back());
     expect(start).toHaveBeenCalledTimes(2);
-    expect(window.location.pathname).toBe(paths.creator);
+    expect(window.location.pathname).toBe(paths.collection);
     await traverse(() => {
       held2[0]?.();
     });

@@ -1,7 +1,8 @@
 //! Every route that writes under an account's economy lock for a press takes the account's turn
 //! first (SPEC §14.11, R2378000, issue #2610): `PUT /api/card-picks`, `POST /api/card-picks/upload`,
 //! `POST /api/practice/seeds`, `DELETE /api/practice/seeds/:seed`,
-//! `POST /api/quests/:questId/replace` and `POST /api/news/:newsId/claim` (R2875000). The tests hold the turns with claims of their own, as
+//! `POST /api/quests/:questId/replace`, `POST /api/news/:newsId/claim` (R2875000) and
+//! `PUT /api/proficiency/stamp` (R3013001). The tests hold the turns with claims of their own, as
 //! `tests/api/tokens.rs` does. A fake transaction holds the fake store's mutex, so a free mutex while
 //! a request waits shows it holds no transaction.
 
@@ -54,7 +55,7 @@ async fn issue_seed(app: &Arc<App>) -> String {
     body["seed"].as_str().expect("a seed").to_string()
 }
 
-/// The six routes: method, path, body and the status each answers once it runs.
+/// The seven routes: method, path, body and the status each answers once it runs.
 fn routes(seed: &str) -> Vec<(&'static str, String, Value, u16)> {
     vec![
         (
@@ -80,6 +81,13 @@ fn routes(seed: &str) -> Vec<(&'static str, String, Value, u16)> {
         ),
         // Nor does any news entry, so the claim answers 404 (R2875000).
         ("POST", "/api/news/no-such-entry/claim".into(), Value::Null, 404),
+        // Clearing a stamp the card never wore writes nothing and answers 200 (R3013001).
+        (
+            "PUT",
+            "/api/proficiency/stamp".into(),
+            json!({ "cardId": "core-008", "stamp": null }),
+            200,
+        ),
     ]
 }
 
@@ -138,7 +146,7 @@ async fn r2378000_each_route_on_the_economy_lock_waits_its_turn_holding_no_trans
     let (app, p1) = setup().await;
     let seed = issue_seed(&app).await;
 
-    // One route at a time: all six at once would overfill `ECONOMY_SPENDS_WAITING_MAX`.
+    // One route at a time: all seven at once would overfill `ECONOMY_SPENDS_WAITING_MAX`.
     for (method, path, body, expected) in routes(&seed) {
         let release = hold_turns(&app, &p1, ECONOMY_SPENDS_RUNNING_MAX).await;
         let request = {

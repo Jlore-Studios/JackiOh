@@ -224,25 +224,29 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
                   }}
                   onRemove={() => {
                     const id = friend.profileId;
+                    // `hold` first, since it sends any Remove held before this one. R3059000: it refuses a double
+                    // click's second press, which lands on the friend that moved up, and nothing then changes.
+                    if (
+                      !hold({
+                        words: () => t("Friend removed"),
+                        send: (keepalive) => {
+                          void attempt(() => (keepalive ? removeFriend(id, { keepalive: true }) : removeFriend(id))).then(
+                            () => {
+                              reloadFriends();
+                            },
+                            (cause: unknown) => {
+                              showFriend(id);
+                              setError(messageOf(cause));
+                            },
+                          );
+                        },
+                        restore: () => {
+                          showFriend(id);
+                        },
+                      })
+                    )
+                      return;
                     setError(null);
-                    // `hold` first, since it sends any Remove held before this one.
-                    hold({
-                      words: () => t("Friend removed"),
-                      send: (keepalive) => {
-                        void attempt(() => (keepalive ? removeFriend(id, { keepalive: true }) : removeFriend(id))).then(
-                          () => {
-                            reloadFriends();
-                          },
-                          (cause: unknown) => {
-                            showFriend(id);
-                            setError(messageOf(cause));
-                          },
-                        );
-                      },
-                      restore: () => {
-                        showFriend(id);
-                      },
-                    });
                     hideFriend(id);
                   }}
                   onBlock={() => {
