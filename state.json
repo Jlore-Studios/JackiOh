@@ -15391,7 +15391,7 @@
         "tier": "medium",
         "why": "Rule 1: it changes how the engine's view and listing (`crates/engine/src/subsystems/activate.rs`) decide `usable` and `reason`, and adds a fuzz-monitor check; the issue itself asks for the hard label."
       },
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-11-04T23:13:14Z",
