@@ -376,35 +376,6 @@ async fn r2092000_a_stale_catalog_answers_update_required_and_makes_nothing() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn r2092000_a_custom_card_in_a_frozen_deck_is_refused_l7() {
-    let (app, a1, a2) = app_with_pair().await;
-    let finished_id = uuid(107);
-    let custom = "custom-0123456789abcdef0123456789abcdef";
-    let mut options = default_options(&app);
-    options["decks"]["a1"][0] = json!(custom);
-    finished_row(&app, &finished_id, &a1.id, &a2.id, json!({ "options": options })).await;
-
-    offer(&app, &a1.token, &finished_id, json!({})).await;
-    let (code, refused) = offer(&app, &a2.token, &finished_id, json!({})).await;
-    assert_eq!(code, 422, "{refused}");
-    assert_eq!(refused["error"]["code"], "loadout_invalid");
-    let details = refused["error"]["details"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
-    assert_eq!(details.len(), 1, "{refused}");
-    assert_eq!(details[0]["rule"], "L7");
-    assert_eq!(details[0]["cardId"], custom);
-    assert_eq!(refused["error"]["message"], details[0]["message"]);
-    assert!(live_duos(&app).await.is_empty());
-    // The claim was let go: the status shows no game made.
-    assert_eq!(
-        status(&app, &a1.token, &finished_id).await.1["matchId"],
-        Value::Null
-    );
-}
-
-#[tokio::test(start_paused = true)]
 async fn r2092000_a_seat_in_another_game_is_refused_with_no_details() {
     let (app, a1, a2) = app_with_pair().await;
     let finished_id = uuid(108);

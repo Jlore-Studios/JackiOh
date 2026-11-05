@@ -40,7 +40,6 @@ export const COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY = 12;
 export const COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK = 12;
 export const COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE = 6;
 export const COSMETIC_TOKEN_CYCLE = ["rare","epic","legendary","rare","epic","cosmeticPack"];
-export const CUSTOM_CARDS_PER_ACCOUNT = 50;
 export const DECK_AUTOSAVE_DEBOUNCE_MS = 800;
 export const DECK_AUTOSAVE_RETRY_SECONDS = 5;
 export const DECK_CODE_CORE_ONLY_VERSION = 1;

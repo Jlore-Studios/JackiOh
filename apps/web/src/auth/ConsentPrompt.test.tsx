@@ -310,3 +310,41 @@ describe("R757001 the terms at the gate", () => {
     expect(screen.queryByText("the gate opened")).toBeNull();
   });
 });
+
+describe("R3147002 the consent screen offers a new account's way back to an older one", () => {
+  function base64url(text: string): string {
+    return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  const ROBLOX = `${base64url(JSON.stringify({ alg: "none" }))}.${base64url(
+    JSON.stringify({ sub: "user-1", app_metadata: { provider: "custom:roblox" } }),
+  )}.sig`;
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("R3147002 before the age is asked, a pending Roblox sign-up may go back to the account it meant", async () => {
+    signIn(ROBLOX);
+    serveAs({ status: "pending", owed: BOTH, extra: { email: null, emailVerified: false } });
+    at("/invite");
+    render(<App />);
+    const prompt = await screen.findByTestId(consentTestid.prompt, undefined, SLOW);
+    expect(within(prompt).getByTestId("move-to-existing-open")).toHaveTextContent("Already have a JackiOh account?");
+  });
+
+  it("R3147002 an active account asked to agree to changed terms is not offered it", async () => {
+    signIn(ROBLOX);
+    serveAs({ status: "active", owed: TERMS_ONLY });
+    at("/decks");
+    render(<App />);
+    const prompt = await screen.findByTestId(consentTestid.prompt, undefined, SLOW);
+    expect(within(prompt).queryByTestId("move-to-existing")).toBeNull();
+  });
+});

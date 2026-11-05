@@ -4,6 +4,9 @@
 // Card definitions and the vocabulary every package shares (SPEC §5, §6.1, §10.6).
 // Script and Effect types live in engine/src/script.ts: they need GameState, which lives in the engine.
 
+import { SHIPPED_SETS } from "./engineConfig.ts";
+import type { SetName } from "./generated/SetName.ts";
+
 export type PlayerId = "p1" | "p2";
 
 export function opponentOf(player: PlayerId): PlayerId {
@@ -64,30 +67,14 @@ export type Rarity = "Common" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Toke
 export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
- * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15, issue
- * #1187, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and Training Grounds
- * (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are reserved.
+ * §5: the sets (the generated `SetName`, R3114000) and the sets that ship, in catalog order: a pool
+ * that names no set draws from all of them (R380), and a set the catalog holds that is not listed is
+ * in no pool, no deck and no list a player reads until it is (R1420). Both are read from the engine's
+ * set table (`crates/engine/src/wire/catalog_types.rs`), `SHIPPED_SETS` through `./engineConfig.ts`,
+ * so a new set or a set that ships changes nothing here.
  */
-export type SetName =
-  | "Core"
-  | "Classic"
-  | "Classic+"
-  | "Meditative"
-  | "Meditative+"
-  | "Stinkyscape"
-  | "Training Grounds"
-  | "Boss"
-  | "Boss-X"
-  | "Custom";
-
-/**
- * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
- * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
- * until it is (R1420). Meditative+ is listed from v0.3.15, the patch that ships it (R1178000), and
- * Stinkyscape from its release (issue #1884, R1857000), and Training Grounds from its (issue #2204,
- * R2194000).
- */
-export const SHIPPED_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] as const satisfies readonly SetName[];
+export type { SetName };
+export { SHIPPED_SETS };
 
 /** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
 export function setShips(set: SetName): boolean {

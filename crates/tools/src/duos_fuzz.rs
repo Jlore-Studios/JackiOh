@@ -33,7 +33,6 @@ use jackioh_engine::{
     DuosState, HUMAN_HANDICAP, PerTeam, Rng, TURN_CAP_PLAYER_TURNS, duos_ai_team, duos_begin, duos_create,
     duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
 };
-use rayon::prelude::*;
 
 use crate::agent::panic_message;
 use crate::fuzz::{
@@ -834,10 +833,17 @@ where
     }
 }
 
-/// Seeds `from..from + ran`, in parallel, read back in seed order.
+/// Seeds `from..from + ran`, in parallel, read back in seed order, watched for a stalled seed (#3158,
+/// `seed_watch.rs`).
 fn play_duos_wave(from: u32, ran: u32) -> Vec<DuosSeedOutcome> {
     register_all();
-    (from..from + ran).into_par_iter().map(fuzz_duos_seed).collect()
+    crate::seed_watch::watched(
+        "fuzz-duos",
+        from,
+        ran,
+        |seed| format!("cargo jackioh fuzz --duos --from {seed} --seeds 1"),
+        fuzz_duos_seed,
+    )
 }
 
 fn failure_lines(outcomes: &[DuosSeedOutcome]) -> Vec<String> {

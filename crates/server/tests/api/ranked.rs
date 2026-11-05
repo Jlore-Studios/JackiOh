@@ -17,8 +17,9 @@ use jackioh_server::config::{
     SEASON_RESET_STRENGTH,
 };
 use jackioh_server::db::store::{BotRating, MatchRow, SeriesRow, StoreError};
+use jackioh_server::ranked::board::{record_of, standings_of};
 use jackioh_server::ranked::glicko2::START_GLICKO;
-use jackioh_server::ranked::ladder::{Ladder, RankTier, SeasonRank, fresh_rank, tier_bottom};
+use jackioh_server::ranked::ladder::{Ladder, RankTier, SeasonRank, fresh_rank, jlorious_order, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
 
 use crate::support::deps::{add_user, call, test_app};
@@ -612,6 +613,76 @@ mod r608_jlorious_through_the_server {
             .collect();
         assert_eq!(golden, vec![json!("golden")]);
         assert_eq!(JLORIOUS_SIZE, 100);
+    }
+
+    /// #3105: the integer sort key on a rating record (`ranked::board`) orders the ladder as `GET
+    /// /api/leaderboard` lists it, so a store that sorts integers lists the same players in the same
+    /// order: Jlorious by rating, then each Grape tier from Mythic down by ladder position, a tie by
+    /// profile id. More Mythic Grape players than Jlorious holds, equal ratings and positions, and a
+    /// player still in their placements (counted, not listed).
+    #[tokio::test(start_paused = true)]
+    async fn r612_the_sort_key_orders_the_ladder_as_the_leaderboard_lists_it() {
+        let app = test_app().await;
+        let mythic = tier_bottom(4);
+        for index in 0..JLORIOUS_SIZE + 6 {
+            // Ratings repeat every 40 players and positions every 9: ties on both.
+            let rating = 1500.0 + (index % 40) as f64 * 5.0;
+            seed_placed(
+                &app,
+                &format!("m-{index:03}"),
+                rating,
+                mythic + (index % 9) as i32,
+                json!({}),
+            )
+            .await;
+        }
+        for (id, rating, ladder) in [
+            ("g-b", 2600.0, tier_bottom(3) + 8),
+            ("g-a", 1100.0, tier_bottom(3) + 8),
+            ("g-c", 1900.0, tier_bottom(3) + 2),
+            ("l-a", 1700.0, tier_bottom(2) + 4),
+            ("n-a", 1600.0, tier_bottom(1) + 4),
+            ("n-b", 1300.0, tier_bottom(1) + 4),
+            ("r-a", 900.0, 0),
+        ] {
+            seed_placed(&app, id, rating, ladder, json!({})).await;
+        }
+        seed_profile(&app, json!({ "id": "raisin", "username": "raisin" })).await;
+        put_rank(&app, json!(fresh_rank(&season(), "raisin", 0))).await;
+
+        let listed = board(&app, "m-000").await;
+        let mut on_the_board: Vec<String> = listed["jlorious"]
+            .as_array()
+            .expect("a list")
+            .iter()
+            .map(|row| row["profileId"].as_str().expect("an id").to_owned())
+            .collect();
+        assert_eq!(on_the_board.len(), JLORIOUS_SIZE);
+        for tier in listed["tiers"].as_array().expect("tiers") {
+            on_the_board.extend(
+                tier["players"]
+                    .as_array()
+                    .expect("players")
+                    .iter()
+                    .map(|row| row["profileId"].as_str().expect("an id").to_owned()),
+            );
+        }
+        assert_eq!(listed["raisins"], json!(1));
+
+        let standings = q!(app, ranked_standings(&season(), Ladder::Constructed));
+        let jlorious = jlorious_order(&standings_of(&standings, false));
+        let mut keyed: Vec<(i64, String)> = standings
+            .iter()
+            .map(|standing| {
+                let id = standing.rank.profile_id.clone();
+                (record_of(standing, jlorious.contains(&id), false).sort_key, id)
+            })
+            .filter(|(key, _)| *key > 0)
+            .collect();
+        keyed.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        let by_key: Vec<String> = keyed.into_iter().map(|(_, id)| id).collect();
+        assert_eq!(by_key, on_the_board);
+        assert_eq!(by_key.len(), JLORIOUS_SIZE + 6 + 7);
     }
 
     /// #2022: GET /api/ranked reads visible rows and Mythic Grape rather than whole season.

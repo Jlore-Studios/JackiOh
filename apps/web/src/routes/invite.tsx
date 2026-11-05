@@ -15,6 +15,7 @@ import {
 import { AccountError } from "../auth/AccountError.tsx";
 import Address from "../auth/Address.tsx";
 import CodeField from "../auth/CodeField.tsx";
+import MoveToExisting from "../auth/MoveToExisting.tsx";
 import { deadlineAfter, useAddressCooldown, useSecondsUntil } from "../auth/cooldown.ts";
 import { INVITE_CODE_FORMAT, attemptsText, waitInWords } from "../auth/codeInput.ts";
 import { inviteTestid } from "../auth/testids.ts";
@@ -34,6 +35,7 @@ import { loginPath, navigate, paths } from "../net/navigate.ts";
 import { pendingEmailEntry } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
@@ -489,12 +491,31 @@ function InviteScreen({ account }: { account: Account }) {
           ) : null}
 
           {unverified && !done ? (
-            <div className="notice invite-screen__unverified" data-testid={inviteTestid.unverified} role="status">
-              <p>
-                {confirmBefore}
-                <strong>{email === null ? t("your address") : <Address value={email} />}</strong>
-                {confirmAfter}
-              </p>
+            <div
+              className="notice invite-screen__unverified"
+              data-testid={inviteTestid.unverified}
+              role={email === null ? undefined : "status"}
+            >
+              {email === null ? (
+                // R3147001: a sign-up whose provider named no address (Roblox, R3147000) adds one here;
+                // §9.4 step 1 asks for it confirmed, and Check again reads the account once it is.
+                <div data-testid={inviteTestid.addEmail}>
+                  <p>
+                    {t(
+                      "This account has no email address yet. An invite code needs a confirmed one: add it here, open the link we email you, then check again.",
+                    )}
+                  </p>
+                  <ChangeEmail adding />
+                </div>
+              ) : (
+                <p>
+                  {confirmBefore}
+                  <strong>
+                    <Address value={email} />
+                  </strong>
+                  {confirmAfter}
+                </p>
+              )}
               <div className="invite-screen__actions">
                 <button
                   type="button"
@@ -505,19 +526,21 @@ function InviteScreen({ account }: { account: Account }) {
                 >
                   {emailCheck === "checking" ? t("Checking…") : t("Check again")}
                 </button>
-                <button
-                  type="button"
-                  className="link-button"
-                  data-testid={inviteTestid.resend}
-                  disabled={email === null || resendBusy || resendWait > 0}
-                  onClick={resend}
-                >
-                  {resendBusy
-                    ? t("Sending…")
-                    : resendWait > 0
-                      ? t("Send again in {seconds} s", { seconds: String(resendWait) })
-                      : t("Resend the confirmation email")}
-                </button>
+                {email === null ? null : (
+                  <button
+                    type="button"
+                    className="link-button"
+                    data-testid={inviteTestid.resend}
+                    disabled={resendBusy || resendWait > 0}
+                    onClick={resend}
+                  >
+                    {resendBusy
+                      ? t("Sending…")
+                      : resendWait > 0
+                        ? t("Send again in {seconds} s", { seconds: String(resendWait) })
+                        : t("Resend the confirmation email")}
+                  </button>
+                )}
               </div>
               {emailCheck === "unchanged" || emailCheck === "failed" ? (
                 <p data-testid={inviteTestid.checkResult} data-result={emailCheck} role="status">
@@ -529,6 +552,9 @@ function InviteScreen({ account }: { account: Account }) {
               {resendNotice === null ? null : <p data-testid={inviteTestid.resendNotice}>{t(resendNotice)}</p>}
             </div>
           ) : null}
+
+          {/* R3147002: a new account a provider made, for a player who meant the account they had. */}
+          {token !== null && me !== null && me.needsInviteCode && !done ? <MoveToExisting token={token} /> : null}
         </div>
 
         <div className="auth-board__body">

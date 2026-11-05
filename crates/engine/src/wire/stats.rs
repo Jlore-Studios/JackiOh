@@ -1616,14 +1616,6 @@ string_union! {
     }
 }
 
-/// R3022000: the card's balance tier (`CardTier`) against the field. `None` when it has no adjusted win
-/// rate; the page's sample floor is the server's (R654).
-pub fn card_tier(stats: &CardStats, field: &StatsField) -> Option<CardTier> {
-    let rate = adjusted_win_rate(stats, field)?;
-    let (low, high) = adjusted_interval(stats, field)?;
-    Some(tier_of(rate, low, high))
-}
-
 /// R3022000: the tier of an adjusted win rate and its 95% range.
 pub fn tier_of(rate: f64, low: f64, high: f64) -> CardTier {
     if rate > TIER_BAND_HIGH && low > ADJUSTED_WIN_RATE_CENTER {
@@ -2517,6 +2509,15 @@ mod tests {
 
     mod card_win_rates {
         use super::*;
+
+        /// R3022000: a card's balance tier (`CardTier`) against the field, `tier_of` its adjusted win
+        /// rate and range; `None` when it has no adjusted win rate. The server reads the two itself
+        /// (crates/server/src/api/stats.rs), so only these tests compose them.
+        fn card_tier(stats: &CardStats, field: &StatsField) -> Option<CardTier> {
+            let rate = adjusted_win_rate(stats, field)?;
+            let (low, high) = adjusted_interval(stats, field)?;
+            Some(tier_of(rate, low, high))
+        }
 
         #[test]
         fn r377_counts_every_breakdown_over_the_decks_that_held_the_card_a_mirror_once_per_deck() {

@@ -55,7 +55,7 @@ enum Command {
     TimingFit(Rest),
     /// Print what people wear by account age as the ladder bots' cosmetic fits to paste into config (R1834006).
     CosmeticsFit(Rest),
-    /// Play the ladder bots' strengths against each other and print their seed ratings to paste into config (R748000).
+    /// Play the ladder bots' strengths against each other and print their seed ratings (or rewrite them in config with `--write`) (R748000).
     BotCalibrate(Rest),
     /// The strongest ladder bot's rating from its rated games against people (R748000).
     BotCalibrateLive(Rest),

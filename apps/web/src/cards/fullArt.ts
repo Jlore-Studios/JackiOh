@@ -4,7 +4,7 @@
 // R2655000: three tiers (`FullArtTier`); R2655002: a token in `fullArtTokens.json` prints its parent's. CLAUDE.md rule 7.
 // R2723000: in the viewer's own hand it keeps only the cost gem and a Unit's attack and health (CardFace's `ownHand`).
 // R2715000: a fourth, the Animated art (`animated-<slug>`, tier "Animated"), prints the normal face with its art moving
-// (R2715001) and no full art (`printsFullArt`); a pick of `true` still names the still Epic.
+// (R2715001) and no full art; a pick of `true` still names the still Epic.
 // R2725000: a face wears a look (versions.ts, `useCardLook`): its version, the normal face or the Full art version (which
 // any card it is offered may wear, `wearsFullArt`), and the Animated and Signature augments layered on it. The 21 still
 // print full art by the setting alone; any other card wears a version only by its own pick. A retired full art's pick
@@ -53,11 +53,8 @@ export type FullArtTier = "Epic" | "Legendary" | "Mythic" | "Animated";
 /** R2655000, R2715000: the tiers, as the registry lists each card's full arts (the Animated art appended last). */
 export const FULL_ART_TIERS: readonly FullArtTier[] = ["Epic", "Legendary", "Mythic", "Animated"];
 
-/** R2655000: the tiers that print full art, the face's whole layout (`printsFullArt`). */
+/** R2655000: the tiers that print full art, the face's whole layout. */
 export const FULL_ART_LAYOUT_TIERS: readonly FullArtTier[] = ["Epic", "Legendary", "Mythic"];
-
-/** R2715000: the order the Collection's card view offers a card's tiers in, after "No full art". */
-export const FULL_ART_STRIP_TIERS: readonly FullArtTier[] = ["Animated", "Epic", "Legendary", "Mythic"];
 
 /**
  * R2655000, R2715000: the tier a registry entry is: "Animated" for an Epic `animated-` full art, its
@@ -67,11 +64,6 @@ export function fullArtTierOfEntry(cosmetic: Cosmetic): FullArtTier | null {
   if (cosmetic.kind !== "fullArt") return null;
   if (cosmetic.id.startsWith(ANIMATED_ART_ID_PREFIX)) return cosmetic.rarity === "Epic" ? "Animated" : null;
   return (FULL_ART_LAYOUT_TIERS as readonly string[]).includes(cosmetic.rarity) ? (cosmetic.rarity as FullArtTier) : null;
-}
-
-/** R2715000: whether a face at `tier` prints full art: every tier but the Animated art, whose face is the normal one. */
-export function printsFullArt(tier: FullArtTier | null): boolean {
-  return tier !== null && tier !== "Animated";
 }
 
 /** R2655000: each full-art card's full arts, by tier, from the registry's `fullArt` entries. */
@@ -149,14 +141,6 @@ export function fullArtIdOf(defId: string, pick: boolean | string | null | undef
   return [...tiers.values()].includes(pick) ? pick : null;
 }
 
-/** R2655000: the tier of the full art `pick` names on `defId` (`fullArtIdOf`), or null. */
-export function fullArtTierOf(defId: string, pick: boolean | string | null | undefined): FullArtTier | null {
-  const id = fullArtIdOf(defId, pick);
-  if (id === null) return null;
-  for (const [tier, tierId] of FULL_ARTS_OF_CARD.get(defId) ?? []) if (tierId === id) return tier;
-  return null;
-}
-
 /** R2655000: the pick that wears the full art `id` on `defId`: `true` for its Epic, as the store has always held it, and the id for a Legendary, a Mythic or (R2715000) an Animated art. */
 export function fullArtPickOf(defId: string, id: string): boolean | string {
   return FULL_ART_OF_CARD.get(defId) === id ? true : id;
@@ -223,16 +207,6 @@ export function OwnCopy({ own, children }: { own: boolean; children?: ReactNode 
 /** R1655000: whether the face drawn here is the viewer's own copy: what the inspect overlays and the detail view pass a `CardFace` as `worn`. */
 export function useOwnCopy(): boolean {
   return useContext(OwnCopyContext);
-}
-
-/**
- * R1313000: whether a copy of `defId` may print its full art of `tier` (R2655000): any copy where every
- * cosmetic is owned, else only an own copy whose full art of that tier is owned (R1655000).
- */
-export function ownsFullArt(owned: FullArtOwnership, defId: string, own: boolean, tier: FullArtTier = "Epic"): boolean {
-  if (owned === "every") return true;
-  const id = FULL_ARTS_OF_CARD.get(defId)?.get(tier);
-  return own && id !== undefined && ownsCosmetic(owned, defId, id);
 }
 
 /** R1834000: a full-art pick (R2725000: and augments) shown on a card's own copies below it in place of the store's. */
@@ -328,11 +302,6 @@ export function useCardLook(defId: string, worn: boolean = false): CardLook {
 export function tierOfLook(look: CardLook): FullArtTier | null {
   if (look.version === VERSION_FULL_ART_ID) return look.animated ? (look.signed ? "Mythic" : "Legendary") : "Epic";
   return look.version === null && look.animated ? "Animated" : null;
-}
-
-/** R2655000: the tier of full art a copy of `defId` prints, or null: its look's (`useCardLook`, `tierOfLook`). */
-export function useFullArtTier(defId: string, worn: boolean = false): FullArtTier | null {
-  return tierOfLook(useCardLook(defId, worn));
 }
 
 /**

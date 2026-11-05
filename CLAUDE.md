@@ -58,8 +58,8 @@ trap backrow. This file binds every agent, not only Claude.
    same through the card kit, `docs/custom-cards.md`, which `crates/luau` turns into the same effects.)
 6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its
    header comment and `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`)
-   covering base and Radiant behavior per its set's must-pass table in BUILD (M4-T4's for Core, M9's to
-   M12's for the later sets).
+   covering base and Radiant behavior per its spec §8 row (BUILD's must-pass tables stop at M13: a later
+   card has no row there).
 7. The client sends intent and renders `viewFor` (the engine's `view_for`); it never enforces rules and never
    sees hidden information.
 8. Before claiming a milestone is done, run the paste-in prompt at the end of REVIEW.md as a separate session
@@ -104,6 +104,7 @@ cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
+cargo jackioh names                # name comments beside each card's id, written from catalog.json (--check fails on a stale one)
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
 cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
@@ -133,6 +134,7 @@ cargo test -p jackioh-engine --features testkit --test 'rules*'     # the engine
 cargo test -p jackioh-cards c002_speciesist                         # one card's tests
 cargo test -p jackioh-engine --features testkit --test 'rules*' r58 # by ruling: every test whose name holds r58
 cargo test -p jackioh-server --test server actor::                  # one area of the server suite
+sh scripts/pool-probe.sh                                            # the cards', AI's, server's and tools' tests with every random pool rotated one place (#3117)
 pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web test file
 pnpm exec vitest run --project edge                                 # the Worker's tests (apps/edge)
 ```

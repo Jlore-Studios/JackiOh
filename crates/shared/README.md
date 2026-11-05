@@ -8,7 +8,10 @@ scripts and client supply only I/O (timers, RemoteEvents, DataStores) and layout
 comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
-from `crates/server` (#3098).
+from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
+and Duos actors and the later practice and ladder-bot hosts (#3099, #3103) run on; the third, the loadout visibility rule
+(SPEC §10.8, R1834003, #3102); the fourth is the ranked ladder (#3105): Glicko-2, the visible ladder, the
+seasons and one rated game decided as data.
 
 ## Host contract
 
@@ -16,8 +19,9 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first: a
-   binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first, `loadout`
+   the next: a binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its
+   `NORMAL_ONLY`). A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -49,9 +53,10 @@ Every Part B issue follows it, and review holds each one to it.
 No clock, no I/O, no environment, no threads, no OS randomness, no hash-ordered collection, no mutable
 static. Two things hold it, as in the other pure crates:
 
-- `Cargo.toml` takes `serde`, `indexmap` and the engine and, behind the off-by-default `ts` feature,
-  `ts-rs` (`serde_json` only as a dev-dependency). It may also take `serde_json`, the cards, the AI and
-  the run, never `jackioh-luau`, and none of them takes it.
+- `Cargo.toml` takes `serde`, `indexmap`, the engine and the AI (the host machine asks it who owes a
+  move) and, behind the off-by-default `ts` feature, `ts-rs` (`serde_json` and the cards only as
+  dev-dependencies: the machine's tests play on the real catalog). It may also take `serde_json`, the
+  cards and the run, never `jackioh-luau`, and none of them takes it.
 - `clippy.toml` is the other five pure crates' byte for byte (`crates/tools/tests/acceptance.rs` holds
   the six the same and runs clippy over a fixture that uses each entry once). CI's `cargo clippy
   --workspace --all-targets -- -D warnings` fails a use anywhere in the crate, tests included.
@@ -61,9 +66,18 @@ A transition never reads a clock: it takes `now`, and the host passes the time i
 ## `src/config.rs`
 
 `MS_PER_SECOND`, `SERIES_WINS_NEEDED` (R330), `SERIES_MAX_GAMES` (R334) and `SERIES_PICK_SECONDS`
-(R333). The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name
-them as before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
-(`crates/wasm/c`) both bind.
+(R333), and the match host's: `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS` (R79), `MULLIGAN_CLOCK_SECONDS`
+(R268), `DISCONNECT_GRACE_SECONDS`, `MATCH_CEILING_MINUTES`, `MATCH_SERVER_ACTION_RETRY_MS` (R776000),
+`BOT_WRITE_RETRY_MS` (R1452), `AIM_RELAY_INTERVAL_MS` (R738), `REMATCH_OFFER_TTL_MS` (R672, R2685000) and
+the rematch stakes `STAKE_NORMAL` and `STAKE_DOUBLE` (R672), and the ranked ladder's (#3105): the hidden
+rating's (`RATING_START`, `RATING_DEVIATION_START`, `RATING_VOLATILITY_START`, `GLICKO_TAU`, `GLICKO_SCALE`,
+`GLICKO_CONVERGENCE`, `GLICKO_MAX_ITERATIONS`; R603), the visible ladder's (`RANK_TIER_PERCENTS` and the
+`RANK_*` pips, divisions and placements, `JLORIOUS_SIZE`; R605 to R608), the seasons' (`SEASON_RESET_STRENGTH`,
+`SEASON_RESET_DEVIATION_BOOST`; R609), `BOT_PROMOTION_DEVIATION_BOOST` (R1560000) and the leaderboard key's
+(`SORT_KEY_GRAPE_BASE`, `SORT_KEY_JLORIOUS_BASE`, `SORT_KEY_RATING_BITS`). `RANK_STREAK_FLAME_LENGTH` is only the
+client's and stays in the server. The server re-exports them from its own
+`config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants`
+carries them, which the browser and the C module (`crates/wasm/c`) both bind.
 
 ## `src/series.rs`: the Conquest series
 
@@ -120,6 +134,224 @@ refused by the body as an error (thrown in the browser, status 1 in the C module
 is never one. `apply` is the one function behind it, and `tests/boundary.rs` holds it to the functions it
 names.
 
+## `src/host/`: the match host
+
+The decisions a match host makes, as one pure state machine (#3101). A host is whatever carries a match:
+the server's actor (`crates/server/src/actor/match_actor.rs`), a practice session, a Roblox server script.
+It owns sockets or RemoteEvents, timers, a store and the bots' moves; this module decides the rest.
+
+```
+step(host, event, now) -> (host, outputs)
+```
+
+`DuelHost` is the state: serializable JSON with the `GameState` inside it, so it is the checkpoint a host
+that restarts resumes from. `DuelEvent` is what the host feeds it, `DuelOutput` what it carries out, in
+order. Nothing in the machine reads a clock, draws from the OS or does I/O.
+
+| Event | What it is |
+| --- | --- |
+| `arm` | the host is up (new, or made from a checkpoint): clocks brought up to date, a game already over ended, the opening driven |
+| `connected`, `attached`, `hello` | a socket arrives (R744: the account has now been here); its greeting, the fresh full view (§9.5); a hello from a socket already attached |
+| `left`, `disconnected` | a socket is gone (its aim and hover end); the grace begins and the opponent is told (§9.5) |
+| `action`, `emote` | an action for a seat, by home seat or engine seat; an emote a card may hear (MD-D29, R1127) |
+| `logged` | the log took (or refused) the row `append` asked for |
+| `timerFired` | a timer the machine set came due, with its key and id |
+| `aim`, `hover` | the account's aim (R738) or choice hover (R2739001), or its end |
+| `decided` | a bot's move, as `decide` asked for it |
+| `resultRecorded`, `rematchOffered`, `rematchSent` | the result `record` asked for is written; a person offered a rematch (a bot may meet it); a bot's offer has been made |
+| `stop` | the host is going away |
+
+| Output | What the host does |
+| --- | --- |
+| `send` | a message for the account that began in `home`: a seat's `view` (only that seat's `view_for` with its clock, and its own legal actions, CLAUDE.md rule 7), `clock`, `promptForYou`, `promptForOpponent`, `aim`, `choiceHover` |
+| `timer` | `set` (key, id, at) or `cancel` a timer; a firing comes back as `timerFired` with the same key and id, and a stale one does nothing |
+| `persistClocks`, `append` | write the clocks (§9.5), or the row of an action (row before state, §9.3) and feed `logged` |
+| `answer` | what an action's sender is told (`ack`, `illegal`, `matchOver`, `panicked`, `notRecorded`) |
+| `decide` | decide a move for the AI or ladder bot at a seat: one separate, deadline-bounded step, answered by `decided` |
+| `record`, `voided`, `ceilingDraw` | the game's end with what the store must record (outcome, turns, which account each seat is credited to, the boards, the final hash); R679's void; R1253000's ceiling draw |
+| `offerRematch`, `letGo` | a bot makes a rematch offer (R639000); the host forgets the match (R776000) |
+| `greeting`, `applied`, `seatsSwapped`, `changed`, `pushed`, `refused`, `panicked`, `note` | markers the host may use: where its own frames go in a greeting, what telemetry reads, the abuse guard's refusal count, a panic to report, a log line |
+
+What the machine decides:
+
+- **The clocks** (`clock.rs`): the turn clock, a non-active holder's prompt clock, the mulligan clock both
+  seats share, the disconnect grace, the ceiling and a question sequence's clock (R79, R265, R268, R147,
+  R744, R1563006), and the retry of a clock whose action the log did not take (R776000). `expiry`: a
+  clock that runs out is a server action under a `srv-` nonce (R270), so `(seed, log)` still folds; a
+  mulligan expiry times out each seat still owing, in seat order.
+- **The flow of a change**: the order every view, prompt and clock goes out in, the `prompt` frames a
+  change in who owes an answer sends (§10.6, R266), a Glitch's swap and the grace that moves with it
+  (R677), the end of the game (R679, R1253000) and what a ranked game with a bot does after it (R639000).
+- **Who is here** (R744, R147, R1452): a bot's seat is never away; an account that has never attached is
+  away from the first attach; a stored grace is kept, never extended.
+- **The relays** (`relay.rs`): an aim reaches the opponent at most once per `AIM_RELAY_INTERVAL_MS`,
+  coalesced, and only when every end of it is something the receiver may see (R738, R97, R177); a choice
+  hover the same (R2739001).
+- **A seat the host plays** (`bot.rs`): when the AI or a bot owes a move, whether it lets its clock run out
+  (R639000), how long its aim shows, what falls back when its move is refused (R188, R1452).
+
+The rematch book (`rematch.rs`) is its own state, `RematchBook`, because an offer outlives the host that
+played the match: stakes are a rematch or a double-or-nothing, only a ranked match spawns the second, an
+offer counts only inside the finished match's window (R2685000), two equal offers make one game, and a
+failed create gives the claim back (R672). `next_seats` is the seats of the rematch (R1989000: they swap,
+with each profile's deck, portrait, slots and lean; an All Random one deals fresh). The server keeps one
+book per `App`; a host of one process may keep it beside its `DuelHost`.
+
+Notes for a host:
+
+- **One write at a time.** `append` is followed by `logged` before the next action; the machine answers
+  `notRecorded` to an action fed while a row is awaited.
+- **A host with a pinned catalog runs `step` inside it** (R388, R767000): the machine calls the engine as
+  the engine is called.
+- **Events that stand for one fact** (`connected`, `left`, `aim`, `hover`) may be fed the moment the host
+  learns it; the others are the host's turns, one at a time, in order. A host with a queue (the server's
+  actor) feeds the rest from it; one without sends `connected` and `attached` together.
+- **`applied.before`** is the state the action was made on, for a host in the same process (telemetry); it
+  is not serialized.
+
+### The boundary
+
+`jackioh-wasm-core`'s `host(call)` takes one `HostCall` as JSON and answers one `HostAnswer`:
+
+```json
+{ "call": "stepDuel", "host": { "...": "the DuelHost" }, "event": { "event": "timerFired", "key": { "kind": "turn" }, "id": 4 }, "now": 1700000000000 }
+{ "answer": "stepped", "host": { "...": "the next DuelHost" }, "outputs": [ { "output": "send", "home": "p1", "message": { "message": "clock", "now": 1700000000000, "clocks": { "...": "" } } } ] }
+```
+
+The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
+`checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
+holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+
+### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
+
+The co-op host (`crates/server/src/duos/actor.rs`, fullsend SPEC S4 to S6, B35 to B40) is the twin of the
+1v1 one under the same shapes: `step_duos(host, event, now) -> (host, outputs)` over a serializable
+`DuosHost` holding the `DuosState` of two duels and four seats (a1 and a2 are people, b1 and b2 the AI's).
+`DuosHostEvent` (`arm`, `connected` / `attached` / `hello` / `left` / `disconnected`, `action`, `logged`,
+`timerFired`, `decided`, `rowChecked`, `stop`) and `DuosHostOutput` (`send`, `timer`, `append`, `answer`,
+`greeting`, `refused`, `panicked`, `pushed`, `decide`, `record`, `ceilingDraw`, `checkRow`, `letGo`, `note`)
+read like the 1v1 machine's, and its timers are the `duos*` `TimerKey`s. What it decides:
+
+- **The clocks** (S6, B2, B38): the one mulligan clock over the four mulligans (§13.2, R268), the round
+  clock of a round with a person in it, a prompt clock for a prompt a person holds outside its own round,
+  each person's disconnect grace (R744) and the hard ceiling (R1047000) with its retry (R776000). An expiry
+  hands seats to the AI and logs nothing itself: a lapsed mulligan keeps the hand, a lapsed round answers
+  the prompts and ends the turn of each round seat, a lapsed prompt answers that prompt alone.
+- **Who plays a seat** (B36 to B38): b1 and b2 always; a person's seat past its grace (until the person is
+  back, no loss by disconnect) or in the mode an expiry forced. The pause before every AI action
+  (`DUOS_AI_STEP_DELAY_MS`), whether the move needs the AI's search at all (a mulligan kept whole or a
+  turn simply ended does not), the move it falls back on and R188's forbidden ones, a refused move
+  deciding again, an unwritten one retried after `BOT_WRITE_RETRY_MS` (or the match let go if its row is
+  gone: `checkRow`, `rowChecked`).
+- **The flow of a change** (B35, B40): the order of every view and clock, the result recorded once with every
+  clock gone, a server action's panic ending the match as a ceiling draw (R1253000).
+
+The host keeps its sockets, its store, its abuse guards, the pings (B39), its watchers (R2881000) and the
+search itself (`decide`, answered by `decided`: one separate, deadline-bounded step).
+
+`AgainBook` is the co-op Play again's rendezvous state (R2092000, R1398000): an offer counts only inside the
+finished match's window, the offer that completes the pair makes the game, one that lands mid-create waits
+on it (the claim is a number, and the host keeps the wake-up under it), and a failed create gives the claim
+back. The boundary's `HostCall` carries the Duos host (`newDuos`, `stepDuos`, `duosSeatView`) and the book
+(`againWindow`, `againClaim`, `againSeen`, `againRelease`, `againMade`).
+
+## `src/loadout.rs`: the loadout visibility rule
+
+What a seat's cosmetic loadout lets a receiver see of a player's deck, without a decklist leaking (SPEC §10.8;
+R1834003, R3013002). The server freezes a loadout when a match starts (`crates/server/src/loadout.rs`, which
+keeps the registry, the freezing and the store reads, R1834002) and decides with these functions which of a
+seat's cards' own picks and stamps a receiver is sent, and when.
+
+| Function | Answers | Rulings |
+| --- | --- | --- |
+| `dealt_cards(&state)` | every card the decks dealt, by instance id: its seat and the card it was dealt as; a card minted after the deal (R943) is left out | R1834003 |
+| `shown_defs(&view, &dealt)` | the `(seat, card)` pairs a view shows: each card in it dealt from that seat's deck and still shown as dealt, wherever it is now; a face-down card, the other hand, a library, the events and the prompts show none | R1834003 |
+| `cards_due(&shown, &loadouts, &mut sent)` | the `SeatCards` entries newly due a receiver (a card's picks, and its stamp), by seat, the pairs then marked in `sent`; a pair whose card wears nothing of its own is marked and sends nothing | R1834003, R3013002 |
+
+- **The types are what the store and the frames carry.** `Loadout`, `SeatLoadout`, `SeatCards`, `CardPicks`,
+  `FullArtPick` and `CardStamp` are what `matches.loadouts` stores and the `loadouts` and `cardLoadouts` frames send,
+  so changing a field, a rename or a `skip_serializing_if` is a store and wire change. `CardStamp.stamp` keeps the
+  `i64` of its stored shape (README's integers). What needs the cosmetics registry (`defaults_of`, a kind's slot) stays
+  in the server, as extension traits of these types.
+- **The caller owns the state.** The deal is read once when a match begins; a receiver's `sent` set lives with
+  the receiver, and `cards_due` marks it. Over the boundary it is an argument and part of the answer.
+- **Only the deal counts.** A card counts for the deck that dealt it, not for the seat that owns it now, and only
+  while it shows as what was dealt (R1834003's rejected alternative): `shown_defs` and `dealt_cards` are the two
+  halves of that, so a host calls both from here and restates neither.
+
+### The boundary
+
+`jackioh-wasm-core`'s `loadout(call)` takes one `LoadoutCall` as JSON and answers one `LoadoutAnswer`:
+
+```json
+{ "call": "dealtCards", "state": { "...": "the game's state at its start" } }
+{ "call": "shownDefs", "view": { "...": "a PlayerView" }, "dealt": { "<instance id>": ["p1", "core-001"] } }
+{ "call": "cardsDue", "shown": [["p1", "core-001"]], "loadouts": [{ "...": "p1's Loadout" }, { "...": "p2's" }], "sent": [] }
+{ "dealt": { "<instance id>": ["p1", "core-001"] } }
+{ "shown": [["p1", "core-001"]] }
+{ "due": { "cards": [{ "seat": "p1", "cards": [], "stamps": [] }], "sent": [["p1", "core-001"]] } }
+```
+
+`apply` is the one function behind it. A call that does not parse is refused by the body as an error, and a
+rules answer is never one. `tests/loadout.rs` holds the calls to the functions they name.
+
+## `src/ranked/`: the ranked ladder
+
+The ranked ladder's rules (SPEC §9.12, R603 to R612), from `crates/server/src/ranked/` and the deciding half of
+`crates/server/src/api/ranked.rs` (#3105). The server keeps the store, the leaderboards' queries and the timers; it
+reads the standings, calls these natively and writes what they return. A Roblox host keeps the same records in an
+OrderedDataStore and a MemoryStore and calls the same code through the `ranked` body.
+
+| Module | Holds | Rulings |
+| --- | --- | --- |
+| `glicko2` | the hidden rating: `glicko2_period`, `rate_game`, `rate_game_scored`, `widen_for_promotions`, Glickman's steps in his order | R603, R1843004, R1560000 |
+| `ladder` | the visible ladder: `place_of`, `percentile_of`, `target_ladder`, `pip_delta`, `apply_ranked_game`, `jlorious_order`, `visible_rank`, `peak_badge` and the shapes `SeasonRank`, `Standing`, `VisibleRank`, `PeakBadge`, `Ladder` | R605 to R608, R2778000 |
+| `season` | `season_id_of`, `plan_season` (which season a build plays in, from the seasons that exist and the time), `soft_reset` | R609 |
+| `game` | `decide(&RateGameInput) -> RatedDecision`: one rated game, as data | R603 to R611, R640000, R672, R1560000, R1843004, R3074001 |
+| `board` | `SeasonStanding`, `RatingRecord`, `sort_key`: the leaderboard's integer | R608, R612, R1436, R3074001 |
+
+- **`decide`** takes `ratings, result, season, now_ms` as one `RateGameInput`: the ladder's standings (every
+  season row with its rating), the two sides (their rating going in, a bot's last-rated AI generation), the winner and the
+  reason (R1843004), the stake (R672), the season, the ladder, `strict` (the server's `DEV_STRICT`, R3074001) and `now_ms`.
+  It returns a `RatedDecision`: each side's rating and visible rank before and after, the season rows to write, the
+  bystanders' Jlorious peaks, the people who may be owed the Jlorious card back, and the rating records. It reads no
+  store, clock or environment, and its floating point is the server's own to the bit (same functions, same order of
+  operations): ratings are stored.
+- **The season's dates come in.** `plan_season(seasons, patch_version, now_ms)` names the season and when it starts;
+  the first season of all resets nothing, every later one soft-resets each ladder's rated players (`soft_reset`) in
+  the transaction that creates it. Seasons are the only thing that ages a rating: there is no separate decay, only
+  the deviation widening R609 adds at a reset and R1560000 adds for an AI promotion.
+- **The sort key** (`board.rs`) is one integer on each rating record that a store sorts as it is. It is `0` for a
+  player not on the board (unplaced, or a hand-set rating on a strict server), `SORT_KEY_GRAPE_BASE` plus the ladder
+  position for a Grape player (it rises with the position, so across tiers), and `SORT_KEY_JLORIOUS_BASE` plus the
+  rating in fixed point (`SORT_KEY_RATING_BITS` fractional bits) for a Jlorious player: so descending order is the
+  public leaderboard's, Jlorious by rating and then Mythic Grape down to Rotten by position, equal keys by profile id
+  (R1436). It stays under `2^51`, so a Luau number holds it exactly. The two orders part only between two Jlorious
+  ratings closer than `2^-36` (about `1.5e-11` of a point), which the key ties and the board tells apart.
+  `tests/board.rs` holds the key's order to the leaderboard's on ladders of hundreds, and the server's
+  `tests/api/ranked.rs` holds it to its real `GET /api/leaderboard`. Whether a record is Jlorious depends on the others'
+  ratings, so a game that brings a player into Jlorious or pushes one out also returns that player's record, with the
+  key that moved: `RatedDecision::records` is what to write to the board, and any record it leaves out keeps its key.
+- **The server's types.** `Season`, `SeasonStanding`, `RatedReason`, `RankedSideInput`, `PeakWrite` and the ladder's
+  shapes are stored or sent (`seasons`, `season_ranks`, `rated_games`, the `/api/ranked` and `/api/leaderboard` bodies),
+  so changing a field, a rename or a `skip_serializing_if` is a store or wire change. `crates/server/src/lib.rs`
+  re-exports the module as `ranked`, so `crate::ranked::ladder::…` names these still.
+
+### The boundary
+
+`jackioh-wasm-core`'s `ranked(call)` takes one `RankedCall` as JSON and answers one `RankedAnswer`:
+
+```json
+{ "call": "rateGame", "game": { "standings": [], "sides": [ … ], "winnerSide": 0, "reason": "hero-death", "season": { … }, "ladder": "constructed", "nowMs": 1700000000000 } }
+{ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [ … ], "nowMs": 1700000000000 }
+{ "game": { "sides": [ … ], "ranks": [ … ], "peaks": [], "jlorious": [], "records": [ … ] } }
+{ "season": { "plan": "new", "season": { … }, "first": false } }
+```
+
+The calls are `rateGame`, `planSeason`, `softReset`, `visibleRank`, `peakBadge` and `jloriousOrder`; the answers are `game`,
+`season`, `reset`, `rank`, `badge` and `jlorious`. A call that does not parse is refused by the body as an error.
+`apply` is the one function behind it, and `tests/ranked_game.rs` holds it to the functions it names.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:
@@ -129,7 +361,13 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 ## Tests
 
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
-unchanged, and `tests/boundary.rs` the JSON boundary. The `ts` feature writes the types that cross to
+unchanged, and `tests/boundary.rs` the JSON boundary; `tests/loadout.rs` holds the loadout rule's, moved from
+`crates/server/src/loadout.rs`, its JSON calls among them, over a game dealt from the shipped cards (the
+`jackioh-cards` and `jackioh-ai` dev-dependencies). The host machine's: `tests/clock.rs` (the clock's
+tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
+the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
+book) and `tests/host_boundary.rs`. The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
+with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.
 
 ```

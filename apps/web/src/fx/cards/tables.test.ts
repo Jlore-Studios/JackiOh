@@ -69,7 +69,7 @@ describe("R2784000 the per-set effects tables", () => {
     for (const file of FX_CARD_FILES) {
       const lines = linesOf(file);
       expect(lines.map((line) => line.id), file.file).toEqual(expectedIds(file));
-      for (const line of lines) expect(line.name, `${file.file} ${line.id}`).toBe(nameOf(line.id));
+      for (const line of lines) expect(line.name, `${file.file} ${line.id}, run cargo jackioh names`).toBe(nameOf(line.id));
     }
   });
 

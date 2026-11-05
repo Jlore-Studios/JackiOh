@@ -1564,6 +1564,12 @@ pub const VERSIONS_SCHEME: u32 = 3;
 /// a roll that takes more than a few hundred tries is built directly instead of widening this bound.
 pub const SEED_SEARCH_BOUND: usize = 4000;
 
+/// Issue #3117: how many places the testkit's `pool-probe` feature rotates every random pool
+/// `catalog::query` returns, so each roll lands on its neighbour as it would after one more card joined
+/// the pool (R380). A test that leans on where a roll lands fails under it, and a test of a pool's content
+/// or order reads the pool under `with_pool_shift(0, …)`. The shift is 0 in every build without the feature.
+pub const POOL_PROBE_SHIFT: usize = 1;
+
 // ---------------------------------------------------------------------------------------------
 // ME-CRAFT (Meditative #17 True Craft a Card, docs/meditative-set.md M6 #17, R880–R883).
 // ---------------------------------------------------------------------------------------------

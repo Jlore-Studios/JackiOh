@@ -11,13 +11,17 @@ use jackioh_server::bots::calibrate::{
     performance_rating, play_game, promotion_shift, reference_observations, seed_ratings,
 };
 use jackioh_server::cli::bot_calibrate::{
-    CalibrateOptions, CalibrationReport, parse_calibrate_args, parse_live_args, promotions_of,
-    render_calibration,
+    CalibrateOptions, CalibrationReport, config_items, parse_calibrate_args, parse_live_args, promotions_of,
+    render_calibration, rewrite_config, write_config,
 };
 use jackioh_server::config::{
-    BOT_CALIBRATION_GAMES_PER_PAIR, BOT_SEED_RATINGS, BOT_STRENGTHS, BotStrength, GLICKO_SCALE,
+    BOT_CALIBRATION_GAMES_PER_PAIR, BOT_CALIBRATION_GENERATION, BOT_SEED_RATINGS, BOT_STRENGTHS, BotStrength,
+    GLICKO_SCALE, SKILL_ELO_TABLE,
 };
 use jackioh_server::db::store::{BotRow, RatedGameRow};
+
+/// The file `bot-calibrate --write` rewrites, as this build was compiled from it.
+const CONFIG: &str = include_str!("../../src/config.rs");
 
 fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_string()).collect()
@@ -278,6 +282,7 @@ fn r748000_bot_calibrate_parses_its_flags() {
             anchor: None,
             history: PathBuf::from("training/history"),
             threads: None,
+            write: false,
         }
     );
     assert_eq!(
@@ -287,6 +292,7 @@ fn r748000_bot_calibrate_parses_its_flags() {
             "--anchor=1234.5",
             "--history=some/dir",
             "--threads=3",
+            "--write",
         ]))
         .expect("every flag"),
         CalibrateOptions {
@@ -295,12 +301,17 @@ fn r748000_bot_calibrate_parses_its_flags() {
             anchor: Some(1234.5),
             history: PathBuf::from("some/dir"),
             threads: Some(3),
+            write: true,
         }
     );
     let few = parse_calibrate_args(&args(&["--games=29"])).expect_err("too few games");
     assert!(few.to_string().contains("30"), "{few}");
     assert!(parse_calibrate_args(&args(&["--anchor=abc"])).is_err());
     assert!(parse_calibrate_args(&args(&["--bogus=1"])).is_err());
+    assert!(
+        parse_calibrate_args(&args(&["--write=1"])).is_err(),
+        "--write takes no value"
+    );
 
     assert_eq!(parse_live_args(&[]).expect("the default"), 0);
     assert_eq!(parse_live_args(&args(&["--since=123"])).expect("a since"), 123);
@@ -309,6 +320,7 @@ fn r748000_bot_calibrate_parses_its_flags() {
 
 #[test]
 fn r748000_the_report_prints_the_rows_to_paste() {
+    let seeds = vec![787.0, 900.0, 1000.0, 1100.0, 1200.0];
     let report = CalibrationReport {
         generation: 9,
         seed_base: "bot-calibration:gen9".to_string(),
@@ -323,28 +335,146 @@ fn r748000_the_report_prints_the_rows_to_paste() {
             draws: 2,
             unfinished: 0,
         }],
-        offsets: vec![
-            StrengthOffset {
-                strength: 0,
-                offset: -412.6,
+        offsets: [-413.0, -300.0, -200.0, -100.0, 0.0]
+            .iter()
+            .enumerate()
+            .map(|(strength, &offset)| StrengthOffset {
+                strength,
+                offset,
                 error: 20.0,
-            },
-            StrengthOffset {
-                strength: 1,
-                offset: 0.0,
-                error: 0.0,
-            },
-        ],
-        seeds: vec![787.0, 1200.0],
+            })
+            .collect(),
+        seeds: seeds.clone(),
     };
     let text = render_calibration(&report);
+    for (name, item) in config_items(&seeds, 9) {
+        assert!(text.contains(&item), "{name}: {text}");
+    }
+    assert!(text.contains("    (0.0, 787.0),\n"), "{text}");
+    assert!(text.contains("    (1.0, SKILL_ELO_ANCHOR),\n"), "{text}");
     assert!(
-        text.contains("pub const BOT_SEED_RATINGS: [f64; 2] = [787.0, 1200.0];"),
-        "{text}"
-    );
-    assert!(
-        text.contains("pub const BOT_CALIBRATION_GENERATION: i64 = 9;"),
-        "{text}"
+        !text.contains("pub const BOT_SEED_RATINGS"),
+        "the seeds are read off the table, never pasted: {text}"
     );
     assert!(text.contains("| 0 v 1 | 5 | 2 | 33 | 0 |"), "{text}");
+}
+
+#[test]
+fn r748000_the_seed_ratings_are_read_off_the_skill_curve() {
+    assert_eq!(BOT_SEED_RATINGS.len(), SKILL_ELO_TABLE.len());
+    for (index, &(_, elo)) in SKILL_ELO_TABLE.iter().enumerate() {
+        assert_eq!(BOT_SEED_RATINGS[index], elo, "row {index}");
+    }
+}
+
+#[test]
+fn r748000_write_on_the_current_calibration_leaves_no_diff() {
+    let written = rewrite_config(CONFIG, &BOT_SEED_RATINGS, BOT_CALIBRATION_GENERATION)
+        .expect("the config holds every item the writer owns");
+    assert!(
+        written == CONFIG,
+        "--write on the current calibration changed config.rs"
+    );
+}
+
+#[test]
+fn r748000_write_rewrites_only_the_calibrations_rows() {
+    let seeds: Vec<f64> = (0..BOT_STRENGTHS.len())
+        .map(|i| 1001.0 + 111.0 * i as f64)
+        .collect();
+    let anchor = *seeds.last().expect("a strength");
+    let generation = BOT_CALIBRATION_GENERATION + 1;
+    let written = rewrite_config(CONFIG, &seeds, generation).expect("a calibration is written");
+
+    assert_eq!(written.lines().count(), CONFIG.lines().count());
+    let owned = [
+        "pub const BOT_CALIBRATION_GENERATION",
+        "pub const SKILL_ELO_ANCHOR",
+        "    (",
+    ];
+    let mut changed = 0;
+    for (before, after) in CONFIG.lines().zip(written.lines()) {
+        if before != after {
+            changed += 1;
+            assert!(
+                owned.iter().any(|start| before.starts_with(start)),
+                "a line outside the calibration's items changed: {before:?} became {after:?}"
+            );
+        }
+    }
+    assert!(changed > 0);
+    let lines: Vec<&str> = written.lines().collect();
+    for line in [
+        format!("pub const BOT_CALIBRATION_GENERATION: i64 = {generation};"),
+        format!("pub const SKILL_ELO_ANCHOR: f64 = {anchor:.1};"),
+        "    (0.0, 1001.0),".to_string(),
+        "    (1.0, SKILL_ELO_ANCHOR),".to_string(),
+        "pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[".to_string(),
+    ] {
+        assert!(lines.contains(&line.as_str()), "{line}");
+    }
+    assert!(
+        !written.contains("pub const BOT_SEED_RATINGS: [f64; 5] = ["),
+        "the seeds stay read off the table"
+    );
+    assert_eq!(
+        rewrite_config(&written, &seeds, generation).expect("written again"),
+        written,
+        "the same calibration written twice is written once"
+    );
+}
+
+#[test]
+fn r748000_write_refuses_what_the_curve_cannot_hold() {
+    let rising: Vec<f64> = (0..BOT_STRENGTHS.len())
+        .map(|i| 1000.0 + 100.0 * i as f64)
+        .collect();
+    rewrite_config(CONFIG, &rising, 1).expect("the control writes");
+
+    let mut descending = rising.clone();
+    descending.reverse();
+    assert!(
+        rewrite_config(CONFIG, &descending, 1).is_err(),
+        "descending seeds"
+    );
+    let mut tied = rising.clone();
+    tied[1] = tied[0];
+    assert!(rewrite_config(CONFIG, &tied, 1).is_err(), "tied seeds");
+    assert!(rewrite_config(CONFIG, &[1.0, 2.0], 1).is_err(), "the wrong count");
+    let mut not_a_number = rising.clone();
+    not_a_number[2] = f64::NAN;
+    assert!(rewrite_config(CONFIG, &not_a_number, 1).is_err(), "a NaN seed");
+
+    let error = rewrite_config("pub const BOT_CALIBRATION_GENERATION: i64 = 1;\n", &rising, 1)
+        .expect_err("a file without the anchor");
+    assert!(error.to_string().contains("SKILL_ELO_ANCHOR"), "{error}");
+    let twice = format!("{CONFIG}pub const SKILL_ELO_ANCHOR: f64 = 1.0;\n");
+    let error = rewrite_config(&twice, &rising, 1).expect_err("an item twice");
+    assert!(error.to_string().contains("SKILL_ELO_ANCHOR"), "{error}");
+}
+
+#[test]
+fn r748000_write_config_writes_the_file_only_when_it_changes() {
+    let dir = std::env::temp_dir().join(format!("jackioh-bot-calibrate-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&dir).expect("a scratch directory");
+    let path = dir.join("config.rs");
+    std::fs::write(&path, CONFIG).expect("a copy of the config");
+
+    assert!(
+        !write_config(&path, &BOT_SEED_RATINGS, BOT_CALIBRATION_GENERATION).expect("the current calibration"),
+        "the current calibration changes nothing"
+    );
+    assert!(std::fs::read_to_string(&path).expect("the file") == CONFIG);
+
+    let next = BOT_CALIBRATION_GENERATION + 1;
+    assert!(write_config(&path, &BOT_SEED_RATINGS, next).expect("a new generation"));
+    let text = std::fs::read_to_string(&path).expect("the file");
+    assert!(text.contains(&format!("= {next};")), "the generation is written");
+    assert!(
+        !write_config(&path, &BOT_SEED_RATINGS, next).expect("written again"),
+        "the same calibration twice changes nothing"
+    );
+
+    assert!(write_config(&dir.join("absent.rs"), &BOT_SEED_RATINGS, next).is_err());
+    std::fs::remove_dir_all(&dir).expect("the scratch directory is removed");
 }

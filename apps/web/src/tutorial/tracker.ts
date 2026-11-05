@@ -110,6 +110,7 @@ export function createCoachTracker(source: CoachSource, script: LessonScript, op
     ctx = {
       view: snapshot.view,
       legal: snapshot.legal,
+      ...(snapshot.forecast === undefined ? {} : { forecast: snapshot.forecast }),
       fresh: previous === null ? [] : newEventsSince(previous.events, snapshot.view.events),
       aiToAct: snapshot.aiToAct,
       // §5.1: the catalog is public and arrives with `started`.

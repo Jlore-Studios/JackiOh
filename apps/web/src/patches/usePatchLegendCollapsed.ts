@@ -1,32 +1,19 @@
 // R3012000: whether the Patch notes legend is on the phone layout, where it collapses into a drawer,
 // followed live. patches.css folds the same width (`PATCH_LEGEND_PHONE_QUERY`); the hook only says which
 // layout is showing and decides nothing (CLAUDE.md rule 7). A host without `matchMedia` reads false.
-// It caches no `MediaQueryList`: a test swaps `window.matchMedia` between renders (as game/phoneBar.ts does).
+// It caches no `MediaQueryList`: a test swaps `window.matchMedia` between renders (game/mediaQuery.ts).
 
 import { useSyncExternalStore } from "react";
 
+import { queryList, subscribeTo } from "../game/mediaQuery.ts";
 import { PATCH_LEGEND_PHONE_QUERY } from "./constants.ts";
 
-function queryList(): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
-  try {
-    return window.matchMedia(PATCH_LEGEND_PHONE_QUERY);
-  } catch {
-    return null;
-  }
-}
-
 function subscribe(onChange: () => void): () => void {
-  const query = queryList();
-  if (query === null || typeof query.addEventListener !== "function") return () => undefined;
-  query.addEventListener("change", onChange);
-  return () => {
-    query.removeEventListener("change", onChange);
-  };
+  return subscribeTo(PATCH_LEGEND_PHONE_QUERY, onChange);
 }
 
 function isCollapsed(): boolean {
-  return queryList()?.matches === true;
+  return queryList(PATCH_LEGEND_PHONE_QUERY)?.matches === true;
 }
 
 /** Whether the legend is collapsed into a drawer now, kept current by the media query's `change` event. */

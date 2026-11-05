@@ -20,7 +20,7 @@
 //! collection are `usize`; game and ladder quantities are `i32`; ratings and Glicko numbers are
 //! `f64`.
 
-use jackioh_engine::wire::{CodeFormat, EmoteId, PrintedRarity};
+use jackioh_engine::wire::{CATALOG_SETS, CodeFormat, EmoteId, PrintedRarity, SetName};
 use serde::{Deserialize, Serialize};
 
 use crate::cosmetics::CosmeticRarity;
@@ -43,21 +43,15 @@ pub const NANOS_PER_MS: i128 = 1_000_000;
 // paragraph; do not rename or re-derive these.
 // ---------------------------------------------------------------------------------------------
 
-/// R79: the turn clock belongs to the active player and ends a stalled turn.
-pub const TURN_CLOCK_SECONDS: i64 = 75;
-/// R79: a prompt held by the non-active player (e.g. a trap firing on the opponent's turn).
-pub const PROMPT_CLOCK_SECONDS: i64 = 30;
-/// SPEC §11 R268: the mulligan clock. Both seats' mulligans are open at once (R265), so one deadline
-/// runs for both, armed when the window opens and never re-armed when one seat answers; on expiry
-/// every seat still owing is timed out and keeps its whole hand. Longer than the prompt clock because
-/// a mulligan reads a whole opening hand, shorter than the turn clock because nothing is played.
-pub const MULLIGAN_CLOCK_SECONDS: i64 = 45;
-/// R79: grace window after a disconnect before `disconnectExpired` ends the match as a loss.
-pub const DISCONNECT_GRACE_SECONDS: i64 = 60;
-/// R79, R389: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`.
-/// Patch v0.2.0 doubled the turn cap to 60 player-turns (B4.3), which at a full turn clock is 75
-/// minutes, so the ceiling doubled with it and a slow game ends on the cap, not the clock.
-pub const MATCH_CEILING_MINUTES: i64 = 120;
+// The match host's numbers (the clocks, the aim relay's interval, the retry paces, the rematch window and
+// its stakes) are `jackioh_shared::config`'s since #3101: the pure machine decides with them, and the
+// server names them here as it always has.
+pub use jackioh_shared::config::{
+    AIM_RELAY_INTERVAL_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES,
+    MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, REMATCH_OFFER_TTL_MS,
+    TURN_CLOCK_SECONDS,
+};
+
 /// R79, §9.5: room codes are 6 characters from the invite-code alphabet.
 pub const ROOM_CODE_LENGTH: usize = 6;
 /// R79, §9.5: how long an unjoined room stays open, in seconds. Fifteen minutes. TS stated this as
@@ -446,82 +440,31 @@ pub fn rating_window(waited_seconds: f64) -> f64 {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The hidden rating: Glicko-2 (SPEC §9.12, R603). The maths is `src/ranked/glicko2.rs`.
+// The hidden rating: Glicko-2 (SPEC §9.12, R603). The maths is `jackioh-shared`'s `src/ranked/glicko2.rs`.
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R603: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
-/// depends only on rating differences, so the ratings Elo left carry over unchanged as Glicko-2
-/// ratings and only the deviation and volatility are new (migration 0022).
-pub const RATING_START: f64 = 1000.0;
-/// R603: a new profile's rating deviation: Glickman's starting value, the most uncertain rating.
-pub const RATING_DEVIATION_START: f64 = 350.0;
-/// R603: a new profile's rating volatility: Glickman's starting value.
-pub const RATING_VOLATILITY_START: f64 = 0.06;
-/// R603: Glicko-2's system constant τ, which bounds how fast volatility moves. Glickman's 0.3–1.2.
-pub const GLICKO_TAU: f64 = 0.5;
-/// R603: the factor between a displayed rating and Glicko-2's internal scale, 400 / ln 10. Glickman
-/// writes it 173.7178; this is the same number to double precision (TS `400 / Math.LN10`).
-pub const GLICKO_SCALE: f64 = 400.0 / std::f64::consts::LN_10;
-/// R603: the volatility iteration stops once its bracket is narrower than this (Glickman's ε).
-pub const GLICKO_CONVERGENCE: f64 = 0.000001;
-/// R603: the most volatility iterations one update runs. The Illinois iteration converges in a
-/// handful of steps on any real input; the cap only makes a non-finite input end rather than spin.
-pub const GLICKO_MAX_ITERATIONS: u32 = 100;
+/// The hidden rating's numbers are `jackioh-shared`'s (#3105), where its maths now is.
+pub use jackioh_shared::config::{
+    GLICKO_CONVERGENCE, GLICKO_MAX_ITERATIONS, GLICKO_SCALE, GLICKO_TAU, RATING_DEVIATION_START,
+    RATING_START, RATING_VOLATILITY_START,
+};
 
 // ---------------------------------------------------------------------------------------------
-// The visible ladder (SPEC §9.12, R605–R608). The rules are `src/ranked/ladder.rs`. PUBLIC: the
+// The visible ladder (SPEC §9.12, R605–R608). The rules are `jackioh-shared`'s `src/ranked/ladder.rs`. PUBLIC: the
 // client reads the shape (divisions, pips, placements) to draw a rank it is handed.
 // ---------------------------------------------------------------------------------------------
 
-/// The shape of `RANK_TIER_PERCENTS` (SURFACE §4.2: a constant object becomes a const of a struct
-/// named after it). Serializes as TS's object, keys in TS order.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RankTierPercents {
-    pub rotten: i32,
-    pub normal: i32,
-    pub large: i32,
-    pub golden: i32,
-    pub mythic: i32,
-}
-
-/// SPEC §11 R606: the share of active players each Grape tier is meant to hold, in whole percents,
-/// lowest first: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%. A player's hidden rating is
-/// placed at its percentile among the season's placed players and read off these shares, so retuning
-/// a boundary is a change here and nowhere else. Whole numbers, so a boundary is exact; they sum to 100.
-pub const RANK_TIER_PERCENTS: RankTierPercents = RankTierPercents {
-    rotten: 12,
-    normal: 60,
-    large: 20,
-    golden: 7,
-    mythic: 1,
+/// The visible ladder's numbers are `jackioh-shared`'s (#3105), where its rules now are.
+pub use jackioh_shared::config::{
+    JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_CONVERGENCE_PIPS, RANK_DIVISIONS_PER_TIER, RANK_LOSS_PIPS,
+    RANK_PIPS_PER_DIVISION, RANK_PLACEMENT_GAMES, RANK_STREAK_BONUS_PIPS, RANK_STREAK_LENGTH,
+    RANK_TIER_PERCENTS, RANK_WIN_PIPS, RankTierPercents,
 };
-/// R605: divisions per Grape tier, III up to I.
-pub const RANK_DIVISIONS_PER_TIER: i32 = 3;
-/// R605: pips per division. A division is climbed one pip at a time; a full division promotes.
-pub const RANK_PIPS_PER_DIVISION: i32 = 3;
-/// R605: rated games a season's placements take. Until they are played the player is a Raisin.
-pub const RANK_PLACEMENT_GAMES: i32 = 5;
-/// R606: pips a win gives before any bonus.
-pub const RANK_WIN_PIPS: i32 = 1;
-/// R606: pips a loss takes before any adjustment. A draw moves no pip.
-pub const RANK_LOSS_PIPS: i32 = 1;
-/// R606: the win that makes a streak this long, and every win after it, earns the streak bonus.
-pub const RANK_STREAK_LENGTH: i32 = 3;
-/// R606: the streak bonus, in pips, earned below Mythic Grape only.
-pub const RANK_STREAK_BONUS_PIPS: i32 = 1;
+
 /// R2101000: the ranked win streak (R606's `streak`) from which the profile and a ranked match's
 /// line show a flame with its count. Only the client reads it. Three, where R606's bonus starts,
 /// but apart from `RANK_STREAK_LENGTH` so each tunes alone.
 pub const RANK_STREAK_FLAME_LENGTH: i32 = 3;
-/// R606: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
-/// before a game's pips lean toward it. One division: inside it a game is a plain win or loss.
-pub const RANK_CONVERGENCE_GAP_PIPS: i32 = 3;
-/// R606: how many pips the lean adds — to a win when the rating is above the visible rank, to a loss
-/// when it is below. Gentle by design: never more than this, and a win never gives fewer pips than a
-/// plain win, nor a loss take fewer than a plain loss.
-pub const RANK_CONVERGENCE_PIPS: i32 = 1;
-/// R608: Jlorious is the top this-many Mythic Grape players by hidden rating.
-pub const JLORIOUS_SIZE: usize = 100;
 
 // ---------------------------------------------------------------------------------------------
 // Usernames (SPEC §9.4, R1432–R1435). The checks are `src/username/`.
@@ -558,16 +501,11 @@ pub const USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW: usize = 10;
 pub const USERNAME_SIGN_IN_WINDOW_SECONDS: i64 = 300;
 
 // ---------------------------------------------------------------------------------------------
-// Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.rs`.
+// Seasons (SPEC §9.12, R609). The reset is `jackioh-shared`'s `src/ranked/season.rs`.
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R609: how far a season's soft reset pulls each rating toward the players' mean: 0 keeps
-/// every rating, 1 puts everyone on the mean. Half way.
-pub const SEASON_RESET_STRENGTH: f64 = 0.5;
-/// R609: the deviation a season's reset adds, combined in quadrature as Glicko adds uncertainty for
-/// time away: `min(√(RD² + this²), RATING_DEVIATION_START)`. A settled 60 becomes about 160.
-pub const SEASON_RESET_DEVIATION_BOOST: f64 = 150.0;
-
+/// The season reset's numbers are `jackioh-shared`'s (#3105), where the reset now is.
+pub use jackioh_shared::config::{SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};
 // ---------------------------------------------------------------------------------------------
 // Action flooding (§9.8).
 // ---------------------------------------------------------------------------------------------
@@ -610,13 +548,6 @@ pub const KNOWN_PROFILES_MAX: usize = 10_000;
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.
 pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
-/// SPEC §11 R738: the least time between two `aim` frames the actor relays for one seat. Aims that
-/// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
-/// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
-/// Ten a second follows a hover from target to target and bounds what a scripted client can push.
-/// R2739001's `choiceHover` relays are coalesced per seat by the same interval, on a window of their
-/// own.
-pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
 /// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000
 /// holds a player's socket to the same interval, on `/ws/match` and `/ws/duos`: a later hello of one
@@ -674,10 +605,6 @@ pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
 /// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
 /// try after it (250 ms, then 500 ms).
 pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
-/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
-/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
-/// row lands, the match ends or the actor stops, never in a loop.
-pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 /// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
@@ -748,11 +675,10 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about fifty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
-/// still the error's message, so nothing a player could fix is hidden. A refused custom card's
-/// issues are capped the same way (R915008): a frame of junk keywords breaks §12.2 once per keyword.
+/// still the error's message, so nothing a player could fix is hidden.
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
-/// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
+/// writes each card's set with its number (`catalog_number_set_offset`); a code naming a version
 /// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused. A set that ships later takes an
 /// offset of its own and leaves the version alone (R1410), so every code minted before still reads.
 pub const DECK_CODE_VERSION: i32 = 2;
@@ -760,44 +686,27 @@ pub const DECK_CODE_VERSION: i32 = 2;
 /// is a version 1 code, and its numbers are Core's (the only set there was).
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
-/// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`, `"Stinkyscape"`,
-/// `"Training Grounds"`).
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CatalogNumberSetOffsets {
-    #[serde(rename = "Core")]
-    pub core: i32,
-    #[serde(rename = "Classic")]
-    pub classic: i32,
-    #[serde(rename = "Classic+")]
-    pub classic_plus: i32,
-    #[serde(rename = "Meditative")]
-    pub meditative: i32,
-    #[serde(rename = "Meditative+")]
-    pub meditative_plus: i32,
-    #[serde(rename = "Stinkyscape")]
-    pub stinkyscape: i32,
-    #[serde(rename = "Training Grounds")]
-    pub training_grounds: i32,
-}
-
 /// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
-/// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
-/// 3000 + n, Meditative+ 4000 + n, Stinkyscape 5000 + n, Training Grounds 6000 + n — still written
-/// as LEB128. No set holds 1000 cards, so a number names one set and one card. Meditative's offset
-/// is the next thousand in catalog order (R1420), and so is Meditative+'s after it (v0.3.15, issue
-/// #1187, R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
-/// Stinkyscape's (issue #2204); none moved another set's, so a code minted before a set shipped
-/// reads as it always did.
-pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
-    core: 0,
-    classic: 1000,
-    classic_plus: 2000,
-    meditative: 3000,
-    meditative_plus: 4000,
-    stinkyscape: 5000,
-    training_grounds: 6000,
-};
+/// its §5 index plus its set's offset, a stride for each place its set holds in the catalog order —
+/// Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative 3000 + n, Meditative+ 4000 + n,
+/// Stinkyscape 5000 + n, Training Grounds 6000 + n — still written as LEB128. No set holds 1000
+/// cards, so a number names one set and one card.
+pub const CATALOG_NUMBER_SET_STRIDE: i32 = 1000;
+
+/// SPEC §11 R255, R339, R1410, R3114000: a set's offset in a version 2 deck or trio code, its place in
+/// the catalog order (`CATALOG_SETS`, the set table's order) times `CATALOG_NUMBER_SET_STRIDE`, or
+/// `None` for a set the catalog does not order (Boss, Boss-X, Custom). Meditative's offset was the
+/// next thousand in catalog order (R1420), and so was Meditative+'s after it (v0.3.15, issue #1187,
+/// R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
+/// Stinkyscape's (issue #2204); a set's row is appended to the table and never moved, so none moves
+/// another set's, and a code minted before a set shipped reads as it always did. The client reads
+/// the shipped sets' offsets (`CATALOG_NUMBER_SET_OFFSETS` in `serverConfig.ts`).
+pub fn catalog_number_set_offset(set: SetName) -> Option<i32> {
+    let place = CATALOG_SETS.iter().position(|listed| *listed == set)?;
+    i32::try_from(place)
+        .ok()
+        .map(|place| place * CATALOG_NUMBER_SET_STRIDE)
+}
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a
 /// chat client wraps around a pasted code.
@@ -816,7 +725,7 @@ pub const DECK_VERSIONS_KEPT: usize = 20;
 /// replacing save moves on.
 pub const DECK_VERSION_DEBOUNCE_MS: i64 = 60_000;
 /// SPEC §11 R339: the trio-code format's version. Version 2 writes each deck as a version 2 deck code
-/// does (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version other than this one or
+/// does (`catalog_number_set_offset`); a code naming a version other than this one or
 /// `TRIO_CODE_CORE_ONLY_VERSION` is refused.
 pub const TRIO_CODE_VERSION: i32 = 2;
 /// SPEC §11 R339: the one older trio-code version still read, whose decks carry Core numbers.
@@ -826,18 +735,6 @@ pub const TRIO_CODE_CORE_ONLY_VERSION: i32 = 1;
 /// and under 1,100 at the very worst (four-byte characters filling every name to its limit), so this
 /// leaves room for whatever a chat client wraps around a pasted code.
 pub const TRIO_CODE_MAX_INPUT_LENGTH: usize = 2048;
-
-// ---------------------------------------------------------------------------------------------
-// Custom cards on the account (SPEC §12.9, R915008). PUBLIC: the card creator imports the cap.
-// A card's own limits (its frame's, `CUSTOM_SOURCE_MAX_BYTES` of source and
-// `CUSTOM_BUILDER_MAX_BYTES` of builder) are the engine's (`jackioh_engine::config`), which the
-// validator applies; the request that carries one is held to `API_MAX_BODY_BYTES` like every body,
-// since the router reads a body before it picks the handler. A card at every limit fits it as JSON
-// unless most of its source is characters JSON escapes (`tests/api/custom_cards.rs`).
-// ---------------------------------------------------------------------------------------------
-
-/// SPEC §12.9, R915008: how many custom cards an account keeps. Mirrored in `app.settings` (0037).
-pub const CUSTOM_CARDS_PER_ACCOUNT: usize = 50;
 
 // ---------------------------------------------------------------------------------------------
 // Queue modes and the Conquest series (SPEC §9.5, R257–R264, R330–R338).
@@ -868,10 +765,6 @@ pub const SERIES_POLL_SECONDS: i64 = 2;
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render
 /// (`main.tsx` keys the gate and the error boundary by path).
 pub const MATCH_FOUND_NAV_DELAY_MS: i64 = 1200;
-/// SPEC §11 R672: how long one seat's rematch offer stands after a non-series match ends. Ten
-/// minutes: long enough to read the result screen and press the button, short enough that a stale
-/// offer cannot summon a game long after both players moved on.
-pub const REMATCH_OFFER_TTL_MS: i64 = 600_000;
 
 // ---------------------------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320). The lessons themselves are the client's
@@ -1215,16 +1108,28 @@ pub struct BotStrength {
     pub seed_rating: f64,
 }
 
-/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the skill
-/// curve's readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them
-/// equal), the reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server
-/// bot-calibrate` measures the five strengths as built (their budget, temperature, missed-lethal
-/// chance and skill together, which the curve, measured at the arena's budget, does not) against each
-/// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
-/// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-/// The row is generation 13's calibration with the skill miss (R2214000), pasted over the curve's too
-/// (docs/bot-calibration.md, Results).
-pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, SKILL_ELO_ANCHOR];
+/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the Elo
+/// column of `SKILL_ELO_TABLE`, read off in `const`, so no number is stated twice: the curve's
+/// readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them equal), the
+/// reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server bot-calibrate` measures
+/// the five strengths as built (their budget, temperature, missed-lethal chance and skill together,
+/// which the curve, measured at the arena's budget, does not) against each other, and its `--write`
+/// rewrites the rows of `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot takes
+/// `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
+/// The rows are generation 13's calibration with the skill miss (R2214000) (docs/bot-calibration.md,
+/// Results).
+pub const BOT_SEED_RATINGS: [f64; SKILL_ELO_TABLE.len()] = seed_ratings_from_curve();
+
+/// R748000: `SKILL_ELO_TABLE`'s Elo column, which `BOT_SEED_RATINGS` is.
+const fn seed_ratings_from_curve() -> [f64; SKILL_ELO_TABLE.len()] {
+    let mut seeds = [0.0; SKILL_ELO_TABLE.len()];
+    let mut index = 0;
+    while index < seeds.len() {
+        seeds[index] = SKILL_ELO_TABLE[index].1;
+        index += 1;
+    }
+    seeds
+}
 
 /// R2575000: the search budget of `BOT_STRENGTHS[2]` and `[3]`: the practice AI's `AI_BUDGET` before
 /// issue #2575 doubled it, kept so that `BOT_SEED_RATINGS`, calibrated on it (R748000), still hold.
@@ -1333,17 +1238,15 @@ pub const BOT_CALIBRATION_MAX_ACTIONS: usize = 3000;
 /// "Activate N" with each use, so the AI went on using it. Of 100 games sampled, the longest turn took
 /// 20 actions.
 pub const BOT_CALIBRATION_MAX_TURN_ACTIONS: usize = 30;
-/// R1560000: the deviation each AI promotion adds to a ladder bot's rating before its next rated game,
-/// combined in quadrature as R609's `SEASON_RESET_DEVIATION_BOOST` is: `min(√(RD² + n × this²),
-/// RATING_DEVIATION_START)` for n promotions since it was last rated. About one promotion's measured
-/// gain over its parent (generations 10 to 13 gained 35 to 241 Elo), and the season reset's own.
-pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
+/// R1560000: the deviation each AI promotion adds to a ladder bot's rating (`jackioh-shared`'s, #3105).
+pub use jackioh_shared::config::BOT_PROMOTION_DEVIATION_BOOST;
 
 /// R747000, R748000: the Elo the reference, this build's AI at full skill, is held at in
 /// `SKILL_ELO_TABLE`, and the strongest bot's seed: 1200 from R1454 until generation 13's calibration
-/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results). Not a
-/// new player's `RATING_START`, because the pairing seats no bot for a player rated above every bot
-/// (R1453) and a player past the middle of the ladder would otherwise have none.
+/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results);
+/// `bot-calibrate --write` rewrites it with the rows. Not a new player's `RATING_START`, because the
+/// pairing seats no bot for a player rated above every bot (R1453) and a player past the middle of
+/// the ladder would otherwise have none.
 pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 
 /// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
@@ -1353,8 +1256,9 @@ pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 /// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
 /// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
 /// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
-/// rows since generation 13, and with the skill miss since R2214000 (docs/bot-calibration.md,
-/// Results); the live Glicko ratings (R603) are the ongoing calibration.
+/// rows since generation 13, and with the skill miss since R2214000: `bot-calibrate --write` rewrites
+/// them here (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the ongoing
+/// calibration.
 pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
     (0.0, 1517.0),
     (0.25, 1576.0),
@@ -1735,9 +1639,6 @@ pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
 pub const BOT_STALE_START_SECONDS: i64 = 60;
-/// R1452: how long a bot waits to decide again when its move could not be written to the log, so a
-/// store that keeps failing is retried at this pace, never in a loop.
-pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Ladder bots' cosmetics (SPEC §14.2, R1834005, R1834006; #1834). A bot wears a loadout drawn as a
@@ -2471,18 +2372,11 @@ pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // but `DUOS_AI_BUDGET` is exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board
 // renders the same clocks and the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
 
-/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
-/// not ended has its prompts answered by the AI and its turn ended (`duos::actor`).
-pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
-/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
-/// person ended): on expiry the AI answers that prompt for them.
-pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
-/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
-/// still owes.
-pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
-/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
-/// the AI team's turn.
-pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+// S6, B38, B2, B36: the co-op match's clocks and its AI's pace are the match host's (`jackioh_shared::host::duos`,
+// #3101): the pure machine decides with them, and the server names them here as it always has.
+pub use jackioh_shared::config::{
+    DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
+};
 /// R2575000: the search budget of each AI-played Duos seat (`duos::actor`, cut short at
 /// `BOT_DECISION_DEADLINE_MS`): the practice AI's before issue #2575 doubled it, so the server's work
 /// per AI step does not double. Raising it is a person's call. Only the server reads it.

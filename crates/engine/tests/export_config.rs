@@ -2,7 +2,8 @@
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and types that a file under
 //! `apps/web/src` imports from it (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, Duos co-op's six, #936 S1, R1563006's
-//! sequence clock, #1843's vote tally, R2652001's coin faces, and others), generated from
+//! sequence clock, #1843's vote tally, R2652001's coin faces, the sets that ship (`SHIPPED_SETS`, read
+//! from the set table, R3114000), and others), generated from
 //! `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md rule 9).
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
 //! this test and fails on a diff, as it does for the ts-rs types under `wire/generated/` (V20).
@@ -14,6 +15,7 @@
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"
 )]
 
+use jackioh_engine::SHIPPED_SETS;
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
     CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_RETIRED_VERBS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
@@ -179,6 +181,14 @@ fn engine_config_ts() -> String {
         constant("SANDBOX_DRAW_MAX", None, &SANDBOX_DRAW_MAX),
         constant("SANDBOX_HERO_HEALTH_MAX", None, &SANDBOX_HERO_HEALTH_MAX),
         constant("SANDBOX_MANA_MAX", None, &SANDBOX_MANA_MAX),
+        // R1420, R3114000: the sets that ship, in catalog order, which the client reads rather than
+        // restating the set table. Never empty (Core ships), and typed so, so `SHIPPED_SETS[0]` is a
+        // `SetName`, never `undefined`.
+        constant(
+            "SHIPPED_SETS",
+            Some("readonly [SetName, ...SetName[]]"),
+            &SHIPPED_SETS,
+        ),
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
         // R1705005: the human seat's handicap in a lesson.
@@ -213,7 +223,7 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    assert_eq!(text.matches("\nexport const ").count(), 66, "{text}");
+    assert_eq!(text.matches("\nexport const ").count(), 67, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

@@ -12,6 +12,7 @@ import { announceAccountChange, callWithRenewal } from "../net/gate.ts";
 import { loginPath, navigate } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
+import MoveToExisting from "./MoveToExisting.tsx";
 import { forgetSignUpConsent, heldSignUpConsent, refuseSignUpHere, signUpRefusedHere } from "./consent.ts";
 import {
   BirthMonthYear,
@@ -182,6 +183,9 @@ export default function ConsentPrompt({ token, me, onAnswered }: ConsentPromptPr
             </button>
           </form>
         )}
+        {/* R3147002: before the age and the terms are asked, a new account a provider made for a player
+            who meant the one they had can go. */}
+        {outcome !== "refused" && me.profile.status === "pending" ? <MoveToExisting token={token} /> : null}
         {signOutButton === null ? null : <div className="row">{signOutButton}</div>}
       </section>
     </div>

@@ -1016,6 +1016,8 @@ export async function removeFactor(session: Session, factorId: string): Promise<
 export const OAUTH_PROVIDER_LABELS = {
   apple: "Apple",
   azure: "Microsoft",
+  // R3147000: Roblox, a custom OIDC provider in each Supabase project, named as the dashboard names it.
+  "custom:roblox": "Roblox",
   discord: "Discord",
   facebook: "Facebook",
   github: "GitHub",
@@ -1028,6 +1030,11 @@ export type OAuthProvider = keyof typeof OAUTH_PROVIDER_LABELS;
 
 function isOAuthProvider(name: string): name is OAuthProvider {
   return Object.hasOwn(OAUTH_PROVIDER_LABELS, name);
+}
+
+/** A provider's label, or null for a name this client does not know (`email`, a provider it never offers). */
+export function oauthProviderLabel(name: string | null): string | null {
+  return name !== null && isOAuthProvider(name) ? OAUTH_PROVIDER_LABELS[name] : null;
 }
 
 /** R666: offer configured known providers only when auth itself is configured. */

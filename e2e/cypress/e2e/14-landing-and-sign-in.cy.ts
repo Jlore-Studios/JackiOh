@@ -56,6 +56,15 @@ const WINDOW_MS = CODE_ATTEMPT_WINDOW_SECONDS * 1000;
 /** Provider text that must never reach the page (R193). */
 const PROVIDER_TEXT = "PROVIDER-SAYS-7f3a Email link is invalid or has expired";
 
+/** The 404 play's testids, which live in notfound/NotFoundPlay.tsx, a component file this project does not type-check. */
+const NOT_FOUND = {
+  path: "not-found-path",
+  lost: "not-found-lost",
+  ways: "not-found-ways",
+  way: "not-found-way-",
+  wayKeys: ["play", "practice", "almanac"],
+} as const;
+
 /** Routes omitted from support/config.ts, copied from navigate.ts because e2e type-checks alone. */
 const LANDING = "/";
 const RESET_PASSWORD = "/reset-password";
@@ -815,14 +824,35 @@ describe("B40 the shell's exits", () => {
     });
   });
 
-  it("B40 the 404 panel says so in a player's words and offers a way home", () => {
-    stubApi();
-    cy.visit("/no-such-screen");
-
+  /**
+   * R3127000: the client's 404 at `path`, drawn over whatever the page held before the entry script started: the
+   * glitched real path, the lost card, three ways out, and none of the static fallback (`not-found-static`); its
+   * way home leads to the landing page.
+   */
+  function expectNotFoundPlay(path: string): void {
     cy.get(byTestid(shellTestid.notFound)).should("be.visible").and("contain.text", "That page doesn't exist.");
+    cy.get(byTestid(shellTestid.notFoundStatic)).should("not.exist");
+    cy.get(byTestid(NOT_FOUND.path)).should("have.text", path);
+    cy.get(byTestid(NOT_FOUND.lost)).should("exist");
+    cy.get(byTestid(NOT_FOUND.ways)).should("be.visible");
+    for (const way of NOT_FOUND.wayKeys) cy.get(byTestid(`${NOT_FOUND.way}${way}`)).should("exist");
     cy.get(byTestid(shellTestid.notFoundHome)).click();
 
     cy.location("pathname").should("eq", LANDING);
     cy.get(byTestid(landingTestid.root)).should("be.visible");
+  }
+
+  it("B40 the 404 panel says so in a player's words and offers a way home", () => {
+    stubApi();
+    cy.visit("/no-such-screen");
+
+    expectNotFoundPlay("/no-such-screen");
+  });
+
+  it("R3127000 the built 404.html starts the client, which draws its 404 with the real path", () => {
+    stubApi();
+    cy.visit("/404.html");
+
+    expectNotFoundPlay("/404.html");
   });
 });

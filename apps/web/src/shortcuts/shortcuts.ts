@@ -2,6 +2,7 @@
 // Hints only (CLAUDE.md rule 7): nothing here listens for a key, and no shortcut is added but
 // R2785000's Space, which skips a set piece (game/Game.tsx listens for it).
 import { INSPECT_KEY_SHORTCUT } from "../cards/inspect/keys.ts";
+import { queryList, subscribeTo } from "../game/mediaQuery.ts";
 
 /** Keys in order: `MOD` is Ctrl, or ⌘ on an Apple device; the rest are `KeyboardEvent.key` values. */
 export type Shortcut = readonly string[];
@@ -55,25 +56,11 @@ export function shortcutTitle(label: string, keys: Shortcut, hints: ShortcutHint
   return hints.shown ? `${label} (${shortcutText(keys, hints.apple)})` : label;
 }
 
-function touchQuery(): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
-  try {
-    return window.matchMedia(TOUCH_ONLY_QUERY);
-  } catch {
-    return null;
-  }
-}
-
 /** A host without `matchMedia` is not touch-only. */
 export function touchOnly(): boolean {
-  return touchQuery()?.matches === true;
+  return queryList(TOUCH_ONLY_QUERY)?.matches === true;
 }
 
 export function subscribeTouchOnly(onChange: () => void): () => void {
-  const query = touchQuery();
-  if (query === null || typeof query.addEventListener !== "function") return () => undefined;
-  query.addEventListener("change", onChange);
-  return () => {
-    query.removeEventListener("change", onChange);
-  };
+  return subscribeTo(TOUCH_ONLY_QUERY, onChange);
 }

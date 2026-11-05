@@ -464,16 +464,35 @@ fn b24_zolarketh_activates_each_university_with_a_use_left() {
     });
 }
 
+/// Whether a Buff in `events` gave a card another use of its Activate (`Activate +1`). Each Buff a University
+/// applies is a random one, so one that ran first may be given a use after it ran, and then lists its Activate
+/// again whatever ZolarKeth spent.
+fn gave_a_use(events: &[GameEvent]) -> bool {
+    events.iter().any(|event| {
+        matches!(event, GameEvent::Upgraded { change: TuningChange::X { key, .. }, .. } if key == "Activate")
+    })
+}
+
 #[test]
 fn b24_a_university_zolarketh_ran_has_spent_its_use_and_is_refused_its_own_activate() {
     under_v0_5_9f(|| {
+        // The seed is one where no Buff gave a University another use in either face's run, searched for at
+        // run time (#848): which Buffs a run draws moves with every card that joins a pool.
+        let seed = seed_where("b24-spent", |seed| {
+            [false, true].into_iter().all(|radiant| {
+                let Campus { mut s, zolars, .. } = campus(seed, &[radiant]);
+                let action = universities_action(&s, &zolars[0]);
+                s.act(action, P1, "ZolarKeth activates the Universities");
+                !gave_a_use(s.last_events())
+            })
+        });
         for radiant in [false, true] {
             let Campus {
                 mut s,
                 zolars,
                 first,
                 second,
-            } = campus("b24-spent", &[radiant]);
+            } = campus(&seed, &[radiant]);
             let action = universities_action(&s, &zolars[0]);
             s.act(action, P1, "ZolarKeth activates the Universities");
             for university in [&first, &second] {
