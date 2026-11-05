@@ -44,6 +44,7 @@ pub mod carried_damage;
 pub mod carried_reads;
 pub mod chinese_is_cn;
 pub mod cloaked;
+pub mod combat_forecast;
 pub mod combat_positions;
 pub mod combat_property;
 pub mod combat_resolution;

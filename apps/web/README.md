@@ -100,8 +100,15 @@ Glitch's glyphs (`cards/glitch.ts`), seeded by the path, settling one character 
 stays the path; `NotFoundPlay` draws the lost card `notfound/lost.ts` picks by a hash of the path, which says its
 voice line through the audio engine when tapped, beside three face-down `CardBack`s that turn over into
 `ChoiceCard`s for Play, Practice and the Almanac (a tap turns one over and the next follows it; a mouse over it or
-keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. `public/404.html`, which
-Cloudflare serves for a path nothing routes, fans three of the brand's card backs into 4, 0 and 4 in CSS alone.
+keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. The page Cloudflare serves
+for a path nothing routes, `404.html`, is the client itself (R3127000, #3127): `static-pages.ts` `notFoundHtml`
+writes it from the built `index.html` (entry script, `noindex`, the 404 title, no canonical link), so the client
+starts and draws that `NotFound` with the real path. Its body, which shows with no script and until the client
+replaces `#root`, is a fallback in the app's look (`shellTestid.notFoundStatic`: the tavern board, the stacked logo,
+the button home) whose hand is three placeholder `CardFace` Spells, Error 4, Not 0 and Found 4, that deal in, fan out,
+turn over from the brand's card back and float in CSS alone (`notfound/notfound.css` `.nf-hand`, still under Reduce
+motion). `handCardHtml` writes their markup from the art builders `CardArt` calls, and `static-pages.test.ts` holds it
+to `CardFace`'s own render. No `public/404.html` ships beside it.
 
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
@@ -761,6 +768,10 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
+- In a lesson the snapshot also adds `forecast`, the engine's `combatForecast(state, human)` (R3100000): what
+  each of the human's legal attacks would do, as the board shows it, and whether the attackers that reach the
+  enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
+  (`tutorial/advice.ts`), so the client does no combat maths.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
 - A free game in progress survives a reload (R668). After every answer the core writes its save
@@ -838,6 +849,8 @@ src/tutorial/
                             R2205000: moments, discoveries, escalating hints)
   discoveries.ts            the Field Guide's entries: each mechanic, its rule, and how the view shows it found
   steps.ts targets.ts       reads of the view and legal actions, step factories, anchors → board testids
+  advice.ts                 the coach's own line (the next play, trade, hit or End turn), picked among the
+                            engine's combat forecast of each legal attack (R3100000)
   tracker.ts                feeds every controller snapshot to the coach and holds the AI for `holdAi`
   Coach.tsx layout.ts       the ring round what it points at, and the bubble docked to a corner, never the middle of the
                             board (R2434003; a panel above the board on phones)
@@ -857,8 +870,9 @@ src/tutorial/
   config.ts testids.ts devHandle.ts   the numbers, the testids (mirrored in e2e), `window.__jackiohTutorial`
 ```
 
-- The coach reads the snapshot the page already holds (`view`, `legal`, `aiToAct`) and nothing
-  else, and never sends an action (rule 7). A step points at a board element by its testid and
+- The coach reads the snapshot the page already holds (`view`, `legal`, `aiToAct`, and a lesson's
+  engine `forecast` of its attacks, R3100000) and nothing else, and never sends an action (rule 7).
+  `advice.ts` names the coach's own line by that forecast and computes no damage, Armor or shield itself. A step points at a board element by its testid and
   completes when the view shows it done. There is no Skip step, and nothing needs one (R314): only
   a tip or an `info` step holds the AI, and each shows "Got it"; an action step never holds it; a
   step expires after `TUTORIAL_STEP_TURNS_MAX` of the player's own turns (the lesson's `final` step
