@@ -13,14 +13,16 @@
 //!  - [`pick`]: its sealed picks in a Conquest series (R641000).
 //!  - [`fallback`]: the empty-queue pairing of a ticket with a bot, [`pool`]: the pool's size, who grinds,
 //!    a new bot's identity, decks and trio (R1454), [`names`]: its username.
+//!  - [`cosmetics`]: the loadout it wears, drawn as a person's from a wardrobe it owns past the starters
+//!    (R1834005).
 //!
 //! What exists only so that a bot passes for a person (R1452's pace, aim, emotes, concessions and
 //! rematches; R1453's fallback time) is behind one setting, `BotSeat.hidden`, which the server turns on.
-//! A bot's cosmetics (`bots/cosmetics.rs` in the server) wait for the cosmetics registry's move
-//! (#3104). [`boundary`] is the JSON call the browser and Roblox make for the decisions around a bot.
+//! [`boundary`] is the JSON call the browser and Roblox make for the decisions around a bot.
 
 pub mod aim;
 pub mod boundary;
+pub mod cosmetics;
 pub mod decide;
 pub mod fallback;
 pub mod names;
