@@ -17126,6 +17126,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-05T04:37:30Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "41969000703",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
