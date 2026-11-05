@@ -16560,6 +16560,13 @@
     "3112": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41953864687",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-05T02:39:26Z",
+        "until": "2026-11-05T03:09:26Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
