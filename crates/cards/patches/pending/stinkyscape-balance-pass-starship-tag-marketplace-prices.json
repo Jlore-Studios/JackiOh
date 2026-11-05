@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape balance pass — Starship tag, Marketplace prices, Weapons and twenty cards",
   "sources": "#3000",
-  "notes": "The owner's balance pass #3000, built as a fullsend tree (#3038 to #3048) and reconciled by a Claude session: Starship becomes a tag with innate Flying and Ranged (R3038000), launches for (4), and the Drone Battleship's layers stop being Starships (R3038002); an awakened card is never Dormant again and a Flashback play keeps Flashback (R3039000, R3039001); every Weapon's Health halved and the Rush Token Launcher reaches a Locked zone (#3040); eight Stinkyscape cards (#3041), five more cards (#3042), True Craft a Card's points (#3043), Twinspell as an Activate (R3044000); a fused Miner or Weapon keeps its host's art and a Starship its name (R3045000), full art on the board (R3046000); the Marketplace's four offers, new prices, (0) buys and Buffed or Nerfed offers (R3047000 to R3047004); Echo's Coin fallback and Death by 1000 cuts' kept targets (R3048000 to R3048002). The AI scores a decision over a Starship by its hand evaluation (R3038003).",
+  "notes": " With it, the owner's Stinkyscape balance pass IV, #3128 (#3134 to #3142): part 3 (#3136) moves seventeen Core, Classic and Legacy cards' numbers and keywords.",
   "player": {
     "title": "Stinkyscape balance pass",
     "new": [],
@@ -19,7 +19,22 @@
       "Rod of Ages turns Radiant at 12 keywords, up from 10, and loses Quickdraw and Flying.",
       "True Craft a Card crafts with about a fifth fewer points.",
       "In Too Deep's quests each ask about a fifth more, and the last one before Indestructible asks clearly more.",
-      "Twinspell's Radiant face gives Echo +1, down from +2."
+      "Twinspell's Radiant face gives Echo +1, down from +2.",
+      "Shadowstep costs (1), down from (2).",
+      "King Wagtoggle is 7/7 (Radiant 14/14), up from 5/5 (10/10).",
+      "Pointmaster is 6/1 (Radiant 12/2), down from 7/1 (14/2), and gains Rush.",
+      "Carnivorous Cube costs (2), down from (3), and is 2/4 (Radiant 4/8), down from 4/6 (8/12).",
+      "Selective Breeding's chance is 50%, up from 30%.",
+      "Rapid Draw draws 5 (Radiant 6), up from 4 (5).",
+      "Silly Silas is 2/2 (Radiant 4/4), down from 4/4 (8/8), and gains Crater.",
+      "Jlockeed Shredder-10 is 6/8 (Radiant 12/16), down from 6/10 (12/20).",
+      "Legacy: Jlockeed Shredder-10 is 4/10 (Radiant 8/20), down from 6/10 (12/20).",
+      "Jlockeed's Weapons gives +2 Attack (Radiant +4), down from +3 (+6).",
+      "Legacy: Big Felinor is 1/10 (Radiant 2/20), down from 3/10 (6/20).",
+      "KY's Trial costs (2), up from (1).",
+      "Nurse Cleaver is 3/4 (Radiant 6/8), down from 3/6 (6/12).",
+      "Unlicensed Experimentation costs (3), up from (2).",
+      "Legacy: Corpse Eater is 5/5 with no keywords (Radiant 10/10 with Rush), from 2/2 with Rush (Radiant 4/4 with Rush and Divine Shield)."
     ],
     "changes": [
       "Starship is now a tag, and every Starship, Dormant or launched, has Flying and Ranged.",
@@ -39,15 +54,29 @@
       "Asphyxiants Cloud has Flashback and deals 1 damage to all enemies (Radiant 2), and your next Spell this turn has Poisonous. It no longer draws.",
       "Rush Token Launcher can summon its Rush Token into a Locked zone.",
       "A Unit with a Miner or a Weapon fused into it keeps its own picture, and a Starship keeps its name as cards fuse into it.",
-      "Full-art cards look full-art on the board too, with their name below the picture."
+      "Full-art cards look full-art on the board too, with their name below the picture.",
+      "Right-house defender has Can't Defend, and so do the ones House Party and The House summon."
     ],
     "text": [],
     "fixes": []
   },
   "cards": [
+    "core-003",
+    "core-013",
+    "core-014",
+    "core-020",
+    "core-022",
+    "core-042",
+    "core-052",
     "core-079",
+    "core-082",
+    "core-085",
+    "classic-014",
+    "classic-026",
     "classic-040",
     "classic-057",
+    "classic-073",
+    "classic-085",
     "classicplus-001",
     "classicplus-051",
     "meditative-005",
@@ -79,11 +108,16 @@
     "stinkyscape-t-shield-layer",
     "stinkyscape-t-propagation-layer",
     "stinkyscape-t-meltdown-layer",
-    "traininggrounds-015"
+    "traininggrounds-015",
+    "traininggrounds-048",
+    "traininggrounds-051",
+    "traininggrounds-056"
   ],
   "plays": [
     "classic-090",
-    "stinkyscape-115"
+    "stinkyscape-115",
+    "meditative-056",
+    "classicplus-007"
   ],
   "rule": true,
   "visual": true
