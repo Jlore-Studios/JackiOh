@@ -96,6 +96,11 @@ pub struct OwnedCosmetics {
 /// pick before #2655 named it) or a full art's registry id, which travels as the id's text. An id
 /// is kept as written and judged where it is worn, as a foil's is (`cosmetics::full_art_picked`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(untagged)]
 pub enum FullArtPick {
     On(bool),

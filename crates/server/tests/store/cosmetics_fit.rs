@@ -10,7 +10,7 @@ use jackioh_server::config::{
 use jackioh_server::cosmetics::registry;
 use jackioh_server::db::store::LoadoutSample;
 use jackioh_server::economy::store::{CardCosmetic, CardPicks, OwnedCosmetics};
-use jackioh_server::loadout::{Loadout, SeatLoadout};
+use jackioh_server::loadout::{Loadout, SeatLoadout, SeatLoadoutExt};
 
 /// Unit conversion, not configuration: a day in milliseconds.
 const DAY: i64 = 86_400_000;

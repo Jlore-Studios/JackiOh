@@ -154,39 +154,10 @@ pub struct QuestBook {
     pub next_due_at: Option<i64>,
 }
 
-/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
-/// wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may
-/// name a version, and the augments layered on it (migration 0079, R2725000). A kind
-/// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
-/// id is kept as written, an unknown one too, and judged only where it is worn (`loadout::freeze_loadout`,
-/// R1834002).
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct CardPicks {
-    pub card_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub foil: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub finish: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub border: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub full_art: Option<FullArtPick>,
-    /// R2725000: the augments the card layers on its version, by id, as written: none is no pick.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub augments: Vec<String>,
-}
-
-impl CardPicks {
-    /// Whether the card has no pick of its own at all, which the store keeps as no row.
-    pub fn is_empty(&self) -> bool {
-        self.foil.is_none()
-            && self.finish.is_none()
-            && self.border.is_none()
-            && self.full_art.is_none()
-            && self.augments.is_empty()
-    }
-}
+/// R1834000: a card's own picks, and what it wears of its own, which the loadout visibility rule reads:
+/// `jackioh-shared`'s (#3102), which the frozen loadouts of a match hold. Its `FullArtPick` is the
+/// cosmetics registry's, re-exported above.
+pub use jackioh_shared::loadout::CardPicks;
 
 /// R1834005: how many people own a cosmetic, on one card for a per-card one (`card_id`) or on the
 /// account (`None`), and when one was first granted it (epoch ms; `None` when no grant row shows
@@ -520,6 +491,23 @@ fn check_inventory(grant: &InventoryGrant) -> Result<(), StoreError> {
     check_inventory_key(grant.item, &grant.key)
 }
 
+/// R3191000: a batch of grants is a payout to one account: every grant adds, so no balance can
+/// fall short and none is refused partway, and all name the first one's account.
+fn check_payout<'g>(owners: impl IntoIterator<Item = (&'g str, i64)>) -> Result<(), StoreError> {
+    let mut first = None;
+    for (owner, delta) in owners {
+        if delta < 0 {
+            return Err(refused(format!(
+                "a batch grant only adds, not {delta}; a spend goes one grant at a time"
+            )));
+        }
+        if *first.get_or_insert(owner) != owner {
+            return Err(refused("a batch grant pays one account".to_string()));
+        }
+    }
+    Ok(())
+}
+
 fn check_counter(grant: &CounterGrant) -> Result<(), StoreError> {
     check_delta(grant.delta)?;
     check_dev(grant.reason == EconomyReason::Dev, grant.dev)?;
@@ -665,6 +653,24 @@ impl Tx<'_> {
         economy_dispatch!(self, jlore_grant(grant))
     }
 
+    /// R3191000: [`Tx::economy_jlore_grant`] for a payout of several grants to one account, every
+    /// delta above 0: the wallet moves by their sum and each grant writes its own ledger row, in
+    /// one statement. Nothing to grant writes nothing.
+    pub async fn economy_jlore_grant_all(&mut self, grants: &[JloreGrant]) -> StoreResult<()> {
+        for grant in grants {
+            check_jlore(grant)?;
+        }
+        check_payout(
+            grants
+                .iter()
+                .map(|grant| (grant.profile_id.as_str(), grant.delta)),
+        )?;
+        if grants.is_empty() {
+            return Ok(());
+        }
+        economy_dispatch!(self, jlore_grant_all(grants))
+    }
+
     /// R1483000: the Jlore the profile's `game` rows add up to with `at` in `[from, until)`
     /// (milliseconds), and the share of it written under `reference`. Read under the account's
     /// economy lock, so the sum is the one a payout adds to.
@@ -688,6 +694,23 @@ impl Tx<'_> {
     pub async fn economy_inventory_grant(&mut self, grant: &InventoryGrant) -> StoreResult<Option<i64>> {
         check_inventory(grant)?;
         economy_dispatch!(self, inventory_grant(grant))
+    }
+
+    /// R3191000: [`Tx::economy_jlore_grant_all`] over the inventory: each item and key moves by
+    /// the sum of its grants and each grant writes its own ledger row, in one statement.
+    pub async fn economy_inventory_grant_all(&mut self, grants: &[InventoryGrant]) -> StoreResult<()> {
+        for grant in grants {
+            check_inventory(grant)?;
+        }
+        check_payout(
+            grants
+                .iter()
+                .map(|grant| (grant.profile_id.as_str(), grant.delta)),
+        )?;
+        if grants.is_empty() {
+            return Ok(());
+        }
+        economy_dispatch!(self, inventory_grant_all(grants))
     }
 
     /// §14.4–§14.6: the account's counters, by counter and pack.
@@ -931,6 +954,29 @@ impl Tx<'_> {
         economy_dispatch!(self, news_claim(profile_id, news_id, at))
     }
 
+    /// R3191000: [`Tx::economy_news_claim`] of every id in `news_ids` at once, in one statement:
+    /// answers the ids it wrote, those the profile had not claimed, in the order given. An id that
+    /// is no slug, or one listed twice, is refused, writing nothing.
+    pub async fn economy_news_claim_all(
+        &mut self,
+        profile_id: &str,
+        news_ids: &[String],
+        at: i64,
+    ) -> StoreResult<Vec<String>> {
+        for (index, news_id) in news_ids.iter().enumerate() {
+            if !crate::cosmetics::is_slug(news_id) {
+                return Err(refused(format!("a news id is a slug, not {news_id:?}")));
+            }
+            if news_ids[..index].contains(news_id) {
+                return Err(refused(format!("{news_id:?} is listed twice")));
+            }
+        }
+        if news_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        economy_dispatch!(self, news_claim_all(profile_id, news_ids, at))
+    }
+
     /// R3013000: the account's card proficiency, by card (`collate "C"`), a stamp in each row that
     /// wears one.
     pub async fn economy_card_proficiency_get(
@@ -1098,6 +1144,47 @@ mod pg {
         Ok(Some(jlore))
     }
 
+    /// One statement for every grant (`unnest`): the wallet upserted by their sum, which is above 0
+    /// (`Tx::economy_jlore_grant_all` refuses a spend), so no row it proposes breaks `jlore >= 0`
+    /// and no balance needs reading first; then one ledger row per grant, in the order given.
+    pub async fn jlore_grant_all(t: &mut PgTx<'_>, grants: &[JloreGrant]) -> Result<(), StoreError> {
+        let Some(first) = grants.first() else {
+            return Ok(());
+        };
+        run_as(t, Some(first.profile_id.as_str())).await?;
+        let reasons = grants
+            .iter()
+            .map(|grant| literal(&grant.reason))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        sqlx::query(
+            "with g as (
+               select * from unnest($2::int8[], $3::text[], $4::text[], $5::boolean[], $6::int8[])
+                        with ordinality as g(delta, reason, ref, dev, at, n)
+             ), wallet as (
+               insert into public.wallets (profile_id, jlore)
+               select $1::uuid, sum(delta)::bigint from g
+               on conflict (profile_id) do update set jlore = public.wallets.jlore + excluded.jlore
+             )
+             insert into public.jlore_grants (profile_id, delta, reason, ref, dev, at)
+             select $1::uuid, delta, reason, ref, dev, to_timestamp(at::double precision / 1000.0)
+               from g order by n",
+        )
+        .bind(first.profile_id.as_str())
+        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
+        .bind(reasons)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.reference.clone())
+                .collect::<Vec<Option<String>>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
+        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
+        .execute(&mut **t)
+        .await?;
+        Ok(())
+    }
+
     /// One aggregate over the profile's rows (`jlore_grants_profile_idx` leads it).
     pub async fn game_jlore_totals(
         t: &mut PgTx<'_>,
@@ -1211,6 +1298,60 @@ mod pg {
         .execute(&mut **t)
         .await?;
         Ok(Some(count))
+    }
+
+    /// `jlore_grant_all`'s one statement, over `inventory`: one upsert per item and key, by the
+    /// sum of its grants (so no row is touched twice), then one ledger row per grant.
+    pub async fn inventory_grant_all(t: &mut PgTx<'_>, grants: &[InventoryGrant]) -> Result<(), StoreError> {
+        let Some(first) = grants.first() else {
+            return Ok(());
+        };
+        run_as(t, Some(first.profile_id.as_str())).await?;
+        let items = grants
+            .iter()
+            .map(|grant| literal(&grant.item))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        let reasons = grants
+            .iter()
+            .map(|grant| literal(&grant.reason))
+            .collect::<Result<Vec<String>, StoreError>>()?;
+        sqlx::query(
+            "with g as (
+               select * from unnest($2::text[], $3::text[], $4::int8[], $5::text[], $6::text[],
+                                    $7::boolean[], $8::int8[])
+                        with ordinality as g(item, key, delta, reason, ref, dev, at, n)
+             ), counts as (
+               insert into public.inventory (profile_id, item, key, count)
+               select $1::uuid, item, key, sum(delta)::bigint from g group by item, key
+               on conflict (profile_id, item, key)
+               do update set count = public.inventory.count + excluded.count
+             )
+             insert into public.inventory_grants (profile_id, item, key, delta, reason, ref, dev, at)
+             select $1::uuid, item, key, delta, reason, ref, dev,
+                    to_timestamp(at::double precision / 1000.0)
+               from g order by n",
+        )
+        .bind(first.profile_id.as_str())
+        .bind(items)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.key.clone())
+                .collect::<Vec<String>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
+        .bind(reasons)
+        .bind(
+            grants
+                .iter()
+                .map(|grant| grant.reference.clone())
+                .collect::<Vec<Option<String>>>(),
+        )
+        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
+        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
+        .execute(&mut **t)
+        .await?;
+        Ok(())
     }
 
     pub async fn counters_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<CounterEntry>, StoreError> {
@@ -2224,6 +2365,34 @@ mod pg {
         Ok(done.rows_affected() == 1)
     }
 
+    /// One statement for every id (`unnest`): each conflict writes nothing, and the ids written
+    /// come back, put in the order given.
+    pub async fn news_claim_all(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        news_ids: &[String],
+        at: i64,
+    ) -> Result<Vec<String>, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let written: Vec<String> = sqlx::query_scalar(
+            "insert into public.news_claims (profile_id, news_id, claimed_at)
+             select $1::uuid, news_id, to_timestamp($3::double precision / 1000.0)
+               from unnest($2::text[]) as n(news_id)
+             on conflict (profile_id, news_id) do nothing
+             returning news_id",
+        )
+        .bind(profile_id)
+        .bind(news_ids)
+        .bind(at)
+        .fetch_all(&mut **t)
+        .await?;
+        Ok(news_ids
+            .iter()
+            .filter(|news_id| written.contains(news_id))
+            .cloned()
+            .collect())
+    }
+
     /// Migration 0081.
     pub async fn card_proficiency_get(
         t: &mut PgTx<'_>,
@@ -2345,20 +2514,31 @@ mod fake {
     }
 
     pub fn jlore_grant(f: &mut FakeTx<'_>, grant: &JloreGrant) -> Result<Option<i64>, StoreError> {
-        let tables = call(f, "economy.wallets.grant")?;
+        Ok(add_jlore(call(f, "economy.wallets.grant")?, grant))
+    }
+
+    /// One call for the lot, as Postgres's one statement.
+    pub fn jlore_grant_all(f: &mut FakeTx<'_>, grants: &[JloreGrant]) -> Result<(), StoreError> {
+        let tables = call(f, "economy.wallets.grantAll")?;
+        for grant in grants {
+            add_jlore(tables, grant);
+        }
+        Ok(())
+    }
+
+    /// A grant's wallet move and ledger row, or `None` for a spend the wallet cannot cover.
+    fn add_jlore(tables: &mut EconomyTables, grant: &JloreGrant) -> Option<i64> {
         let held = tables
             .wallets
             .iter_mut()
             .find(|(owner, _)| *owner == grant.profile_id);
-        let Some(jlore) = count_after(held.as_ref().map(|(_, jlore)| *jlore), grant.delta) else {
-            return Ok(None);
-        };
+        let jlore = count_after(held.as_ref().map(|(_, jlore)| *jlore), grant.delta)?;
         match held {
             Some((_, held)) => *held = jlore,
             None => tables.wallets.push((grant.profile_id.clone(), jlore)),
         }
         tables.jlore_grants.push(grant.clone());
-        Ok(Some(jlore))
+        Some(jlore)
     }
 
     pub fn game_jlore_totals(
@@ -2398,13 +2578,24 @@ mod fake {
     }
 
     pub fn inventory_grant(f: &mut FakeTx<'_>, grant: &InventoryGrant) -> Result<Option<i64>, StoreError> {
-        let tables = call(f, "economy.inventory.grant")?;
+        Ok(add_item(call(f, "economy.inventory.grant")?, grant))
+    }
+
+    /// One call for the lot, as Postgres's one statement.
+    pub fn inventory_grant_all(f: &mut FakeTx<'_>, grants: &[InventoryGrant]) -> Result<(), StoreError> {
+        let tables = call(f, "economy.inventory.grantAll")?;
+        for grant in grants {
+            add_item(tables, grant);
+        }
+        Ok(())
+    }
+
+    /// A grant's count move and ledger row, or `None` when the account holds fewer than it spends.
+    fn add_item(tables: &mut EconomyTables, grant: &InventoryGrant) -> Option<i64> {
         let held = tables.inventory.iter_mut().find(|(owner, entry)| {
             *owner == grant.profile_id && entry.item == grant.item && entry.key == grant.key
         });
-        let Some(count) = count_after(held.as_ref().map(|(_, entry)| entry.count), grant.delta) else {
-            return Ok(None);
-        };
+        let count = count_after(held.as_ref().map(|(_, entry)| entry.count), grant.delta)?;
         match held {
             Some((_, entry)) => entry.count = count,
             None => tables.inventory.push((
@@ -2417,7 +2608,7 @@ mod fake {
             )),
         }
         tables.inventory_grants.push(grant.clone());
-        Ok(Some(count))
+        Some(count)
     }
 
     pub fn counters_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<CounterEntry>, StoreError> {
@@ -3013,6 +3204,33 @@ mod fake {
             claimed_at: at,
         });
         Ok(true)
+    }
+
+    /// One call for the lot; each id the profile holds already writes nothing.
+    pub fn news_claim_all(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        news_ids: &[String],
+        at: i64,
+    ) -> Result<Vec<String>, StoreError> {
+        let tables = call(f, "economy.newsClaims.putAll")?;
+        let mut written = Vec::new();
+        for news_id in news_ids {
+            if tables
+                .news_claims
+                .iter()
+                .any(|held| held.profile_id == profile_id && held.news_id == *news_id)
+            {
+                continue;
+            }
+            tables.news_claims.push(NewsClaim {
+                profile_id: profile_id.to_string(),
+                news_id: news_id.clone(),
+                claimed_at: at,
+            });
+            written.push(news_id.clone());
+        }
+        Ok(written)
     }
 
     pub fn card_proficiency_get(

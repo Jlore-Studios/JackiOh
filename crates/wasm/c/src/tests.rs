@@ -318,6 +318,62 @@ fn series_export_answers_what_the_core_body_answers() {
 }
 
 #[test]
+fn loadout_export_answers_what_the_core_body_answers() {
+    let game = game();
+    // The deal of the begun game, then what p1's view shows of it, then the picks due for those cards: each
+    // answer is the next call's argument, and the host keeps the `sent` set between calls.
+    let deal =
+        json!({ "call": "dealtCards", "state": serde_json::from_str::<Value>(&game.state).expect("JSON") })
+            .to_string();
+    let dealt = call!(loadout; deal;);
+    assert_eq!(dealt, expect(wasm_core::loadout(&deal)));
+    assert_eq!(dealt.status, STATUS_OK, "{}", dealt.text);
+    let dealt: Value = serde_json::from_str(&dealt.text).expect("JSON");
+    assert!(dealt["dealt"].as_object().is_some_and(|cards| !cards.is_empty()));
+
+    let view = ok(call!(view_for; game.state, "p1";));
+    let shown_call = json!({
+        "call": "shownDefs", "view": serde_json::from_str::<Value>(&view).expect("JSON"), "dealt": dealt["dealt"],
+    })
+    .to_string();
+    let shown = call!(loadout; shown_call;);
+    assert_eq!(shown, expect(wasm_core::loadout(&shown_call)));
+    assert_eq!(shown.status, STATUS_OK, "{}", shown.text);
+    let shown: Value = serde_json::from_str(&shown.text).expect("JSON");
+    let first = shown["shown"][0].clone();
+    assert!(first.is_array(), "p1's opening hand shows: {shown}");
+
+    let seat =
+        json!({ "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" });
+    let own = json!({ "seat": seat, "cards": [{ "cardId": first[1], "foil": "foil-cracked-ice" }] });
+    let theirs = json!({ "seat": seat });
+    let loadouts = if first[0] == "p1" {
+        json!([own, theirs])
+    } else {
+        json!([theirs, own])
+    };
+    let due_call = json!({ "call": "cardsDue", "shown": shown["shown"], "loadouts": loadouts }).to_string();
+    let due = call!(loadout; due_call;);
+    assert_eq!(due, expect(wasm_core::loadout(&due_call)));
+    assert_eq!(due.status, STATUS_OK, "{}", due.text);
+    let due: Value = serde_json::from_str(&due.text).expect("JSON");
+    assert_eq!(due["due"]["cards"][0]["cards"][0]["foil"], "foil-cracked-ice");
+    // Handed back, the same pairs are not due again.
+    let again =
+        json!({ "call": "cardsDue", "shown": shown["shown"], "loadouts": loadouts, "sent": due["due"]["sent"] })
+            .to_string();
+    let none = ok(call!(loadout; again;));
+    assert_eq!(
+        serde_json::from_str::<Value>(&none).expect("JSON")["due"]["cards"],
+        json!([])
+    );
+    // A call that does not parse is the one failure.
+    let broken = call!(loadout; "{}";);
+    assert_eq!(broken, expect(wasm_core::loadout("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
 fn host_export_answers_what_the_core_body_answers() {
     init();
     // The rematch window and the refusal before an offer are data in, data out (#3101).
@@ -342,6 +398,35 @@ fn host_export_answers_what_the_core_body_answers() {
     // A call that does not parse is the one failure.
     let broken = call!(host; "{}";);
     assert_eq!(broken, expect(wasm_core::host("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
+fn ranked_export_answers_what_the_core_body_answers() {
+    init();
+    let plan =
+        json!({ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [], "nowMs": 1700000000000_i64 })
+            .to_string();
+    let planned = call!(ranked; plan;);
+    assert_eq!(planned, expect(wasm_core::ranked(&plan)));
+    assert_eq!(planned.status, STATUS_OK, "{}", planned.text);
+    let planned: Value = serde_json::from_str(&planned.text).expect("JSON");
+    assert_eq!(planned["season"]["season"]["id"], "v0.3");
+    // The season it answered is the next call's argument, with the sides it rates.
+    let side = |id: &str| json!({ "side": { "kind": "player", "profileId": id }, "glicko": { "rating": 1000.0, "deviation": 350.0, "volatility": 0.06 } });
+    let game = json!({ "call": "rateGame", "game": {
+        "standings": [], "sides": [side("a"), side("b")], "winnerSide": 1, "reason": "hero-death",
+        "season": planned["season"]["season"], "ladder": "random", "nowMs": 1700000000000_i64 } })
+    .to_string();
+    let rated = call!(ranked; game;);
+    assert_eq!(rated, expect(wasm_core::ranked(&game)));
+    assert_eq!(rated.status, STATUS_OK, "{}", rated.text);
+    let rated: Value = serde_json::from_str(&rated.text).expect("JSON");
+    assert_eq!(rated["game"]["ranks"][1]["wins"], 1);
+    assert_eq!(rated["game"]["ranks"][0]["format"], "random");
+    // A call that does not parse is the one failure.
+    let broken = call!(ranked; "{}";);
+    assert_eq!(broken, expect(wasm_core::ranked("{}")));
     assert_eq!(broken.status, STATUS_FAILED);
 }
 
@@ -391,8 +476,8 @@ fn economy_export_answers_what_the_core_body_answers() {
 #[test]
 fn run_exports_answer_what_the_core_bodies_answer() {
     init();
-    let content = call!(run_content; "[]";);
-    assert_eq!(content, expect(wasm_core::run_content("[]")));
+    let content = call!(run_content;;);
+    assert_eq!(content, expect(wasm_core::run_content()));
     let content = ok(content);
     let numbers = call!(run_constants;;);
     assert_eq!(numbers, expect(wasm_core::run_constants()));

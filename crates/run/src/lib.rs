@@ -41,8 +41,7 @@ use crate::config::{
 
 // Content: data the caller passes in
 
-/// What a run deals from: the designer's lists, or `run_placeholder_content` until they land. A
-/// Sandbox run's caller adds the player's custom cards to `pool` (DR1).
+/// What a run deals from: the designer's lists, or `run_placeholder_content` until they land.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",
@@ -322,6 +321,12 @@ impl RunNodeKind {
                 | RunNodeKind::MiniBoss
                 | RunNodeKind::Boss
         )
+    }
+
+    /// A mini-boss or a boss: the fights `cargo jackioh run-sim` (#3165) tallies a run's health
+    /// against.
+    pub fn is_boss(self) -> bool {
+        matches!(self, RunNodeKind::MiniBoss | RunNodeKind::Boss)
     }
 }
 

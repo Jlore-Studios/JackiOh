@@ -12,6 +12,47 @@ export function isServerPath(pathname: string): boolean {
 }
 
 /**
+ * #3183: the engine's WebAssembly module, which the build ships brotli-compressed (scripts/build-wasm.sh)
+ * and Vite names `jackioh_wasm_bg.wasm-<hash>.br`. Cloudflare serves a stored file with the type of its
+ * extension and no `Content-Encoding`, and a `_headers` rule cannot add one (the asset Worker sets it on
+ * a response whose body the runtime would then compress again), so this Worker serves it.
+ */
+export const MODULE_ROUTES = ["/assets/*.wasm-*.br"] as const;
+
+/** Every path wrangler.jsonc's `assets.run_worker_first` sends here: the server's, and the module's. */
+export const WORKER_ROUTES = [...SERVER_ROUTES, ...MODULE_ROUTES] as const;
+
+/** `MODULE_ROUTES`' one glob, as Cloudflare's router reads a `run_worker_first` glob: `*` is any run of characters. */
+const MODULE_PATH = /^\/assets\/.*\.wasm-.*\.br$/u;
+
+export function isModulePath(pathname: string): boolean {
+  return MODULE_PATH.test(pathname);
+}
+
+/**
+ * How a browser may keep the module: a year, as `_headers`' rule for `/assets/*` says of every built file,
+ * whose name carries its content's hash (apps/web/public/_headers; config.test.ts holds the two alike).
+ */
+export const MODULE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
+/**
+ * #3183: the stored `.br` as the browser takes it: the same bytes, with `Content-Encoding: br` and the
+ * module's own type, so the browser decodes it as it arrives and `instantiateStreaming` compiles it.
+ * `encodeBody: "manual"` tells the runtime the body is encoded already; without it the runtime would
+ * compress it to match the header, and the page would get brotli inside brotli. The stored answer's
+ * other headers (its ETag, its year-long `Cache-Control`, given if it came without) are kept, and an answer with no file to send
+ * (a 304 for a copy the browser holds, a 404) is passed on as it is.
+ */
+export function precompressedModule(stored: Response): Response {
+  if (stored.status !== 200) return stored;
+  const headers = new Headers(stored.headers);
+  headers.set("Content-Type", "application/wasm");
+  headers.set("Content-Encoding", "br");
+  if (!headers.has("Cache-Control")) headers.set("Cache-Control", MODULE_CACHE_CONTROL);
+  return new Response(stored.body, { status: 200, headers, encodeBody: "manual" });
+}
+
+/**
  * The request as the server sees it. R190: the per-IP limits read the `X-Forwarded-For` entry
  * `TRUSTED_PROXY_HOPS` places from the right, so the Worker replaces whatever the caller wrote with
  * the one address Cloudflare saw (`CF-Connecting-IP`), and `TRUSTED_PROXY_HOPS` is 1.
