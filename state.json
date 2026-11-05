@@ -16150,7 +16150,16 @@
       "feedback_since": "2026-11-05T17:00:40Z",
       "issue": 3205,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
+        "rejections": [],
+        "reviews": [],
+        "sha": "94ff51e392403d3a1ee520c0e7f990e2d715b5e1",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
