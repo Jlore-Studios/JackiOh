@@ -15530,6 +15530,8 @@
       "taken_asks": []
     },
     "3193": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T14:43:34Z",
@@ -15543,8 +15545,11 @@
         "trail": " an account\\\\|Jlore is earned\\\\|\\\\\\\"Rarity\\\\\\\"\\\\|\\\\\\\"Card packs\\\\\\\"\\\\|\\\u2026\n- Bash: {\"command\": \"cd apps/web/src; for k in \\\"Every card pack counts\\\" \\\"{count} / {threshold} packs\\\" \\\"Pity guarantees an Epic\\\" \\\"Each slot\\\" \\\"Guaranteed slot\\\" \\\"A duplicate becomes a cosmetic\\\" \\\"Wh\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3188/apps/web/src/routes/purchases.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; grep -n \\\"packsInfo\\\" -A40 apps/web/src/packs/fixtures.ts | sed -n 1,80p; grep -n \\\"cosmeticPacksInfo\\\" -A25 apps/web/src/shop/fixtures.ts | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; grep -n \\\"interface PacksResponse\\\\|type PacksResponse\\\\|TierOdds\\\\|CosmeticPacksResponse\\\" -B1 -A22 apps/web/src/net/api.ts | sed -n 1,100p\", \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; grep -n \\\"export function t(\\\" -B3 -A12 apps/web/src/i18n/i18n.ts; grep -n \\\"server-config\\\" apps/web/src/duos/DuosRoute.tsx\", \"description\": \"\u2026\n- said: Now write `purchases.tsx`.\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np = \\\"apps/web/src/routes/purchases.tsx\\\"\\ns = open(p).read()\\n\\n# header comment\\ns = s.replace(\\\"\\\"\\\"// `/purchases`: the odds and the pity of every pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; python3 -I - <<'EOF'\\np = \\\"apps/web/src/routes/purchases.css\\\"\\ns = open(p).read()\\na = s.index(\\\".tavern.app-shell.purchases-screen .purchase\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; grep -rn \\\"tierPercents\\\\|purchases-pity-line\\\\|purchases-global-cosmetic\\\\|purchases-cosmetic-slot\\\\|pityList\\\\|purchases-pity__\\\" --include=*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; python3 -I - <<'EOF'\\np = \\\"spec/14-economy.md\\\"\\ns = open(p).read()\\nold = \\\"a duplicate's cosmetic, the global roll's line (its chance, then \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; python3 -I - <<'EOF'\\np = \\\"spec/rulings/R1665000.md\\\"\\ns = open(p).read()\\nold1 = \\\"\\\"\\\"- **The page.** `/purchases` is public, like `/terms`:\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; f=apps/web/src/i18n/zh-CN.json; for k in \\\"Each card\\\" \\\"Guaranteed card\\\" \\\"Duplicates\\\" \\\"A card you already own becomes a cosmetic.\\\" \\\"Cosm\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; python3 -I - <<'EOF'\\nimport json\\np = \\\"apps/web/src/i18n/zh-CN.json\\\"\\nlines = open(p, encoding=\\\"utf-8\\\").read().split(\\\"\\\\n\\\")\\ndead = [\\n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; python3 -I - <<'EOF'\\np = \\\"apps/web/src/routes/purchases.test.tsx\\\"\\ns = open(p).read()\\n\\ns = s.replace(\\\"\\\"\\\"// `/purchases` (#1665, part of\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; ls apps/web/src/wasm/pkg 2>&1 | head -3; (time pnpm exec vitest run --project web apps/web/src/routes/purchases.test.tsx apps/web/src/routes/sh\u2026\n- said: The WebAssembly module isn't built yet, so I'll build it first. That can take a while, so I'm running it in the background.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; cat >> .bot-notes.md <<'EOF'\\n\\n## State\\n\\nRun 2 (build, sonnet). Plan above is followed. DONE (all edited, untested until wasm builds): purch\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; (time pnpm exec eslint apps/web/src/routes apps/web/src/packs 2>&1 | tail -30)\", \"description\": \"Run eslint on touched web folders\", \"timeout\":\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; tail -5 /tmp/wasm-build.log; ls apps/web/src/wasm/pkg | head\", \"description\": \"Check wasm build result\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/wasm-build.log; do sleep 2; done; tail -4 /tmp/wasm-build.log\", \"description\": \"Wait for wasm build to finish\", \"timeout\": 1800000, \"run_in_background\": true}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; cargo fmt --check 2>&1 | tail -5; echo fmt=$?; git status --short\", \"description\": \"Run cargo fmt check and git status\"}\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/wasm-build.log; do sleep 3; done; tail -3 /tmp/wasm-build.log | cut -c1-200; ls /home/runner/work/_temp/work/item-3188/apps/web/src/wasm/pkg 2>&1 | head -3\", \"\u2026\n- said: The WebAssembly module built (exit 0). Now the tests.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; (time pnpm exec vitest run --project web apps/web/src/routes/purchases.test.tsx apps/web/src/routes/shop.test.tsx apps/web/src/packs/PackOpenin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; (pnpm --dir apps/web typecheck 2>&1 | tail -15; echo typecheck-exit=${PIPESTATUS[0]}); grep -rn \\\"never sold\\\\|seeded, logged\\\\|Pity guarantees\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; grep -n \\\"never sold\\\\|purchases-\\\" apps/web/src/routes/shop.tsx | head; (time cargo jackioh spec check 2>&1 | tail -15)\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; git status --short; (time pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; git rev-parse --verify origin/main >/dev/null 2>&1 && echo has-origin || echo no-origin; (cargo jackioh classify --base origin/main --claims 2>\u2026\n- said: Everything checks out. Updating the notes, then the report.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3188; python3 -I - <<'EOF'\\np = \\\".bot-notes.md\\\"\\ns = open(p).read()\\na = s.index(\\\"## State\\\")\\ns = s[:a] + \\\"\\\"\\\"## State\\n\\nRun 2 (build, sonnet)\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Purchases page shows every odds figure as a table and drops the long prose (#3188)\"} --> `/purchases` now shows every odds figure in a table, with the issue's copy, and the long prose is gone. The web tests, typecheck, eslint and `cargo jackioh spec che\u2026"
       },
       "issue": 3188,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T15:40:00Z",
         "from_run": "42047793003",
         "gates": [
           {
@@ -15636,7 +15641,11 @@
         "source": "build",
         "until": "2026-11-05T16:07:02Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-05T15:37:02Z",
+      "run_id": "pending:c1d926f8-1793893170",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15655,6 +15664,9 @@
         "provider": "claude-8",
         "run": "42047793003"
       },
+      "started_at": "2026-11-05T15:40:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15816,9 +15828,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T15:39:15Z",
+    "at": "2026-11-05T15:40:00Z",
     "url": "",
-    "what": "review #3194 on claude-6"
+    "what": "review #3193 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T15:25:44Z",
