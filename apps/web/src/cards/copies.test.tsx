@@ -160,7 +160,8 @@ describe("R399 R511 Echo through the real engine", () => {
     const hand = (): CardView[] => game.view("p1").you.hand as CardView[];
     const echoCard = must(hand().find((entry) => entry.defId === ECHO), "Echo in hand");
     const knowledge = must(hand().find((entry) => entry.defId === KNOWLEDGE), "Book of Knowledge in hand");
-    expect(echoCard.copies).toBeUndefined();
+    // R3048000: until a Spell is played, Echo has The Coin's text.
+    expect(echoCard.copies?.defId).toBe("core-t-coin");
 
     game.act("p1", must(playOf(game, "p1", knowledge.instanceId), "a legal play of Book of Knowledge"));
     const copied = must(hand().find((entry) => entry.instanceId === echoCard.instanceId), "Echo still in hand");
