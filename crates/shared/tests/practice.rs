@@ -8,7 +8,7 @@ use jackioh_ai::{AI_BUDGET, AiDeckOptions, build_ai_deck, random_action};
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_engine::{
     Action, ActionBody, DECK_SIZE, Difficulty, GameOverReason, GameState, LastBoardEntry, LeanPick,
-    PendingView, Rng, SandboxOp, SetName, TUTORIAL_HUMAN, Winner,
+    PendingView, Rng, SandboxOp, SetName, SpawnZone, TUTORIAL_HUMAN, Winner,
 };
 use jackioh_shared::config::{PRACTICE_AI_CLOCK_MS, PRACTICE_LETHAL_HINT_CLOCK_MS, PRACTICE_REPLAYS_KEPT};
 use jackioh_shared::host::practice::replays::{ReplayPageResult, ReplayVerdict, list_replays, page_replay};
@@ -16,6 +16,7 @@ use jackioh_shared::host::practice::{
     ClaimRefusal, KeptAs, LessonDeal, PracticeConfig, PracticeDeckChoice, PracticeEvent, PracticeHost,
     PracticeOutput, PracticeReplay, PracticeResult, PracticeSave, PracticeSnapshot, check_claim,
 };
+use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 
 const EPOCH: i64 = 1_700_000_000_000;
 const MOVE_CAP: usize = 4000;
@@ -61,6 +62,7 @@ struct Session {
     kept: Vec<PracticeReplay>,
     snapshots: Vec<PracticeSnapshot>,
     lethal_asks: Vec<(PlayerId, i64)>,
+    timers: Vec<TimerCommand>,
     decide_clocks: Vec<i64>,
     records: Vec<jackioh_shared::host::practice::PracticeRecord>,
     voids: usize,
@@ -84,6 +86,7 @@ impl Session {
             kept: Vec::new(),
             snapshots: Vec::new(),
             lethal_asks: Vec::new(),
+            timers: Vec::new(),
             decide_clocks: Vec::new(),
             records: Vec::new(),
             voids: 0,
@@ -108,6 +111,7 @@ impl Session {
                 PracticeOutput::Voided { .. } => self.voids += 1,
                 PracticeOutput::Snapshot { snapshot } => self.snapshots.push((**snapshot).clone()),
                 PracticeOutput::Lethal { ask } => self.lethal_asks.push((ask.seat, ask.clock_ms)),
+                PracticeOutput::Timer { command } => self.timers.push(*command),
                 PracticeOutput::Failed { message } => self.failed.push(message.clone()),
                 PracticeOutput::Decide { ask } => self.decide_clocks.push(ask.clock_ms),
                 _ => {}
@@ -1286,6 +1290,165 @@ fn r2575000_r2560000_every_decision_the_machine_asks_for_carries_the_practice_cl
         session.feed(PracticeEvent::AiTurn);
         assert_eq!(session.decide_clocks, vec![PRACTICE_AI_CLOCK_MS], "{earning:?}");
     }
+}
+
+// R1563006: Meditative+ #20 KY's Competition's question sequence has `KY_COMPETITION_SECONDS` from its first
+// question, kept by its host. The machine states the window as a timer, the way the 1v1 match clock does
+// (`host::clock`), and answers Stop for the human when it lapses.
+
+const COMPETITION: &str = "meditativeplus-020";
+
+/// A sandbox game with the human (p1) holding KY's Competition and the mana to cast it; the cast is the
+/// last action taken, so a sequence's first question is open for the human.
+fn sequence_opened(seed: &str) -> Session {
+    let mut asked = config(seed, P1);
+    asked.sandbox = Some(true);
+    let mut session = Session::start(&asked).expect("starts");
+    session.answer_mulligans();
+    let tools = [
+        SandboxOp::SetMana {
+            player: P1,
+            current: Some(10),
+            max: Some(10),
+        },
+        SandboxOp::Spawn {
+            player: P1,
+            def_id: COMPETITION.to_string(),
+            radiant: None,
+            to: SpawnZone::Hand,
+        },
+    ];
+    for op in tools {
+        assert!(session.act(ActionBody::Sandbox { op }).error.is_none());
+    }
+    let card = session
+        .state()
+        .players
+        .p1
+        .hand
+        .iter()
+        .find(|card| card.def_id == COMPETITION)
+        .map(|card| card.id.clone())
+        .expect("the spawned card is in hand");
+    let play = session
+        .snapshot()
+        .legal
+        .iter()
+        .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
+        .cloned()
+        .expect("the human can cast it");
+    session.timers.clear();
+    assert!(session.act(play).error.is_none());
+    session
+}
+
+fn sequence_windows(session: &Session) -> Vec<(u32, i64)> {
+    session
+        .timers
+        .iter()
+        .filter_map(|command| match command {
+            TimerCommand::Set {
+                key: TimerKey::Sequence,
+                id,
+                at,
+            } => Some((*id, *at)),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn r1563006_a_sequences_first_question_sets_one_window_a_later_question_keeps_it() {
+    let mut session = sequence_opened("practice-r1563006");
+    let window = i64::from(jackioh_engine::KY_COMPETITION_SECONDS) * 1000;
+    assert_eq!(sequence_windows(&session), vec![(1, EPOCH + window)]);
+    let question = session
+        .state()
+        .pending
+        .clone()
+        .expect("the first question is open");
+    assert_eq!(question.streak, Some(0));
+
+    // A right answer asks the next question: the window goes on, no second one is set.
+    let correct = jackioh_engine::answer_key_of(&question.resume.data).expect("the question's key");
+    let right = question
+        .options
+        .iter()
+        .find(|option| option.key == format!("mode:{correct}"))
+        .expect("the right option")
+        .selection
+        .clone();
+    session.now = EPOCH + window / 2;
+    session.act(ActionBody::Answer {
+        choice_id: question.id.clone(),
+        selection: vec![right],
+    });
+    assert_eq!(
+        session.state().pending.as_ref().and_then(|prompt| prompt.streak),
+        Some(1)
+    );
+    assert_eq!(
+        sequence_windows(&session).len(),
+        1,
+        "one window for the whole sequence"
+    );
+}
+
+#[test]
+fn r1563006_the_window_lapsing_answers_stop_for_the_human_as_its_own_action() {
+    let mut session = sequence_opened("practice-r1563006-lapse");
+    let (id, at) = sequence_windows(&session)[0];
+    let stop = jackioh_engine::prompts::stop_answer(session.state()).expect("a question to stop");
+    let logged = session.log().len();
+    session.now = at;
+    session.feed(PracticeEvent::TimerFired {
+        key: TimerKey::Sequence,
+        id,
+    });
+    let last = session.log().last().expect("the stop was logged");
+    assert_eq!(session.log().len(), logged + 1);
+    // The human's action under the nonce the claim's fold knows, answering the question Stop.
+    assert_eq!((last.player_id, last.nonce.starts_with('h')), (P1, true));
+    assert_eq!(last.body, stop);
+    assert!(session.state().pending.is_none(), "the sequence ended");
+    assert!(session.snapshot().error.is_none());
+    // The window was spent: a second firing of it does nothing.
+    session.feed(PracticeEvent::TimerFired {
+        key: TimerKey::Sequence,
+        id,
+    });
+    assert_eq!(session.log().len(), logged + 1);
+}
+
+#[test]
+fn r1563006_a_sequence_the_human_stops_itself_takes_its_window_back() {
+    let mut session = sequence_opened("practice-r1563006-stop");
+    let (id, _) = sequence_windows(&session)[0];
+    let stop = jackioh_engine::prompts::stop_answer(session.state()).expect("a question to stop");
+    session.timers.clear();
+    session.act(stop);
+    assert!(session.state().pending.is_none());
+    assert_eq!(
+        session.timers,
+        vec![TimerCommand::Cancel {
+            key: TimerKey::Sequence,
+            id
+        }]
+    );
+    // The window it took back, fired late by a host that could not cancel it, does nothing.
+    let logged = session.log().len();
+    session.feed(PracticeEvent::TimerFired {
+        key: TimerKey::Sequence,
+        id,
+    });
+    assert_eq!(session.log().len(), logged);
+}
+
+#[test]
+fn r1563006_a_game_with_no_sequence_sets_no_timer() {
+    let mut session = started("practice-r1563006-none", P2);
+    session.answer_mulligans();
+    assert!(session.timers.is_empty());
 }
 
 // The boundary

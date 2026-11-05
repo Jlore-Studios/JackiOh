@@ -789,6 +789,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
   (`tutorial/advice.ts`), so the client does no combat maths.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
+- A question sequence's 60 seconds (Meditative+ #20 KY's Competition, R1563006) are the machine's: an answer carries `timers`
+  (`PracticeTimer`, a delay in ms from the answer), the controller keeps each as a timeout and sends `timerFired` when it is
+  due, and the machine answers Stop for the human. The prompt's countdown (`game/sequenceClock.ts`) only shows the seconds left.
 - A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
 - A free game in progress survives a reload (R668). After every answer the machine's `save` output is written
   to the worker's store by the driver, which never crosses to the page (the log names the AI's hidden cards); the

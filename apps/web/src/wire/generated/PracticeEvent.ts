@@ -2,8 +2,9 @@
 import type { Action } from "./Action";
 import type { ActionBody } from "./ActionBody";
 import type { AiMove } from "./AiMove";
+import type { TimerKey } from "./TimerKey";
 
 /**
  * What the host feeds the machine.
  */
-export type PracticeEvent = { "event": "act", body: ActionBody, } | { "event": "aiTurn" } | { "event": "decided", moved: AiMove, } | { "event": "fold", action: Action, } | { "event": "replays" } | { "event": "claim" } | { "event": "runReport" } | { "event": "debug" };
+export type PracticeEvent = { "event": "act", body: ActionBody, } | { "event": "aiTurn" } | { "event": "decided", moved: AiMove, } | { "event": "fold", action: Action, } | { "event": "replays" } | { "event": "timerFired", key: TimerKey, id: number, } | { "event": "claim" } | { "event": "runReport" } | { "event": "debug" };

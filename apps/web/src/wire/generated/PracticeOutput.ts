@@ -9,8 +9,9 @@ import type { PracticeReplay } from "./PracticeReplay";
 import type { PracticeSave } from "./PracticeSave";
 import type { PracticeSnapshot } from "./PracticeSnapshot";
 import type { RunReport } from "./RunReport";
+import type { TimerCommand } from "./TimerCommand";
 
 /**
  * What the host carries out, in the order given.
  */
-export type PracticeOutput = { "output": "began", aiSeat: PlayerId, } | { "output": "save", save: PracticeSave | null, } | { "output": "keep", replay: PracticeReplay, keep: number, } | { "output": "finished", record: PracticeRecord, } | { "output": "voided", at: number, } | { "output": "snapshot", snapshot: PracticeSnapshot, } | { "output": "lethal", ask: LethalAsk, } | { "output": "decide", ask: AiAsk, } | { "output": "claim", claim: PracticeClaim, } | { "output": "runReport", report: RunReport, } | { "output": "debug", debug: PracticeDebug, } | { "output": "failed", message: string, };
+export type PracticeOutput = { "output": "began", aiSeat: PlayerId, } | { "output": "save", save: PracticeSave | null, } | { "output": "keep", replay: PracticeReplay, keep: number, } | { "output": "finished", record: PracticeRecord, } | { "output": "voided", at: number, } | { "output": "timer", command: TimerCommand, } | { "output": "snapshot", snapshot: PracticeSnapshot, } | { "output": "lethal", ask: LethalAsk, } | { "output": "decide", ask: AiAsk, } | { "output": "claim", claim: PracticeClaim, } | { "output": "runReport", report: RunReport, } | { "output": "debug", debug: PracticeDebug, } | { "output": "failed", message: string, };

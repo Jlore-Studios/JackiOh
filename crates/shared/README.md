@@ -298,6 +298,7 @@ step(host, event, now) -> (host, outputs)
 | `act` | the human's action, minted `h<n>` and sent from the seat the human plays now (R677) |
 | `aiTurn` | the host's pacing says the AI's turn: the machine answers `decide` if the AI owes a move, else just the snapshot |
 | `decided` | the AI's move as the host decided it, with the cursor of the AI's stream (`"{seed}:ai"`); a move R188 forbids, or the engine refuses, falls back on `endTurn` first |
+| `timerFired` | R1563006: a timer the machine set came due (its key and id); the human's question sequence ran out, so the question still open is answered Stop (R1184001) as the human's action, `h<n>`. A timer taken back or replaced does nothing |
 | `fold` | an action of a game already played, under its own nonce and seat: a save resumed (R668), a claim checked (R2560000) |
 | `replays`, `claim`, `runReport`, `debug` | kept games are listed and opened only once the game is over (R768); the finished game's claim (R1303000); a run fight's report (DR14); the raw game, dev builds only |
 
@@ -305,6 +306,7 @@ step(host, event, now) -> (host, outputs)
 | --- | --- |
 | `began` | the game is on: the seat the AI plays |
 | `snapshot` | what the page is told (CLAUDE.md rule 7): `view_for` and the legal actions of the human's seat, whether the AI owes a move, the engine's last refusal, the last board of a finished game (R508), the kept game's number (R768000), a lesson's combat forecast (R3100000) |
+| `timer` | R1563006: set or take back a timer, as the 1v1 machine's (`TimerCommand`); the one practice sets is the window of the human's question sequence (Meditative+ #20 KY's Competition), read from the match clock's own rule (`MatchClock::sync_sequence`): `KY_COMPETITION_SECONDS` from the sequence's first question, kept over the questions after it, cleared when none is open or the game ends. Practice keeps no turn clock |
 | `lethal` | R2102000: ask the lethal check for that seat under `PRACTICE_LETHAL_HINT_CLOCK_MS`; when it says yes, the snapshot says `lethal`. A host without the check leaves it out |
 | `decide` | the AI owes a move: search for it under `PRACTICE_AI_CLOCK_MS` (the node budget stays the real bound, R2560000) on `ai.seat`, from `rng_seed` at `rng_cursor`, and feed `decided`: one separate, deadline-bounded step |
 | `save` | R668: write the save of a free game in progress, or clear it (a lesson, a finished game); a run fight leaves it as it was |

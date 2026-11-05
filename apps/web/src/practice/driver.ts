@@ -50,6 +50,7 @@ import type {
   PracticeResponse,
   PracticeSnapshot,
   PracticeStartConfig,
+  PracticeTimer,
 } from "./protocol.ts";
 import { messageOf } from "../net/errors.ts";
 
@@ -80,6 +81,7 @@ type Carried = {
   claim?: PracticeClaim;
   debug?: PracticeDebug;
   report?: RunReport;
+  timers: PracticeTimer[];
 };
 
 /**
@@ -142,8 +144,8 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
   }
 
   /** Carries out what the machine asked, in order, and gathers what the answer to the page holds. */
-  function carryOut(outputs: readonly PracticeOutput[], game: GameState): Carried {
-    const carried: Carried = {};
+  function carryOut(outputs: readonly PracticeOutput[], game: GameState, now: number): Carried {
+    const carried: Carried = { timers: [] };
     for (const output of outputs) {
       switch (output.output) {
         case "began":
@@ -157,6 +159,14 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
           if (saves !== undefined) saves.writeReplays([...saves.readReplays(), output.replay].slice(-output.keep));
           break;
         }
+        case "timer":
+          // R1563006: relayed to the page, which keeps it as a timeout; the delay is from this answer's clock.
+          carried.timers.push(
+            output.command.command === "set"
+              ? { command: "set", key: output.command.key, timer: output.command.id, inMs: Math.max(0, output.command.at - now) }
+              : { command: "cancel", key: output.command.key, timer: output.command.id },
+          );
+          break;
         case "snapshot":
           carried.snapshot = output.snapshot;
           break;
@@ -191,18 +201,24 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
 
   /** One event to the machine, and what its outputs hold; the game it holds from then on. */
   function step(event: PracticeEvent): Carried {
-    const answer = practiceCall({ op: "step", host: current(), event, now: env.now() });
+    const now = env.now();
+    const answer = practiceCall({ op: "step", host: current(), event, now });
     if (answer.reply !== "stepped") throw new Error(`the practice engine answered "${answer.reply}" unexpectedly`);
     machine = answer.host;
-    return carryOut(answer.outputs, answer.host.game);
+    return carryOut(answer.outputs, answer.host.game, now);
   }
 
   /** A start or a resume: the machine's refusal is the failure, and no game exists. */
-  function begin(answer: ReturnType<typeof practiceCall>): Carried {
+  function begin(answer: ReturnType<typeof practiceCall>, now: number): Carried {
     if (answer.reply === "refused") throw new Error(answer.message);
     if (answer.reply !== "stepped") throw new Error(`the practice engine answered "${answer.reply}" unexpectedly`);
     machine = answer.host;
-    return carryOut(answer.outputs, answer.host.game);
+    return carryOut(answer.outputs, answer.host.game, now);
+  }
+
+  /** The timers an answer carries to the page, when it carries any. */
+  function timersOf(carried: Carried): { timers?: PracticeTimer[] } {
+    return carried.timers.length === 0 ? {} : { timers: carried.timers };
   }
 
   function snapshotOf(carried: Carried): PracticeSnapshot {
@@ -212,7 +228,18 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
 
   function started(id: number, carried: Carried): PracticeResponse {
     if (carried.aiSeat === undefined) throw new Error("the practice engine began no game");
-    return { id, type: "started", snapshot: snapshotOf(carried), defs: registeredCatalog(), aiSeat: carried.aiSeat };
+    return {
+      id,
+      type: "started",
+      snapshot: snapshotOf(carried),
+      defs: registeredCatalog(),
+      aiSeat: carried.aiSeat,
+      ...timersOf(carried),
+    };
+  }
+
+  function actAnswer(id: number, carried: Carried): PracticeResponse {
+    return { id, type: "snapshot", snapshot: snapshotOf(carried), ...timersOf(carried) };
   }
 
   /** One AI action, or nothing when the AI owes none. R188: a decision that gives nothing usable falls back, in the machine. */
@@ -235,7 +262,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
       }
       carried = step({ event: "decided", moved: { body, rngCursor: rng.cursor } });
     }
-    return { id, type: "snapshot", snapshot: snapshotOf(carried) };
+    return { id, type: "snapshot", snapshot: snapshotOf(carried), ...timersOf(carried) };
   }
 
   /** R768: a kept game opened once and held by its number; going back to it folds it no second time. */
@@ -285,14 +312,16 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
         // A start replaces whatever was running, even when it fails: no request may land on the
         // previous game after the page asked for a new one.
         machine = null;
+        const now = env.now();
         const carried = begin(
           practiceCall({
             op: "start",
             config: machineConfig(request.config),
             catalog: CATALOG_VERSION,
             ...(keptNumbers() === undefined ? {} : { kept: keptNumbers() }),
-            now: env.now(),
+            now,
           }),
+          now,
         );
         return started(request.id, carried);
       }
@@ -300,6 +329,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
         // Like a start, a resume replaces whatever was running, even when it fails.
         machine = null;
         const saved = env.saves?.read() ?? null;
+        const now = env.now();
         const carried = begin(
           practiceCall({
             op: "resume",
@@ -307,14 +337,19 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
             save: saved === null ? null : withCards(saved),
             catalog: CATALOG_VERSION,
             ...(keptNumbers() === undefined ? {} : { kept: keptNumbers() }),
-            now: env.now(),
+            now,
           }),
+          now,
         );
         return started(request.id, carried);
       }
       case "act":
         current();
-        return { id: request.id, type: "snapshot", snapshot: snapshotOf(step({ event: "act", body: request.action })) };
+        return actAnswer(request.id, step({ event: "act", body: request.action }));
+      case "timerFired":
+        // R1563006: a timer the machine set came due; the machine decides what it means.
+        current();
+        return actAnswer(request.id, step({ event: "timerFired", key: request.key, id: request.timer }));
       case "aiStep":
         current();
         return aiStep(request.id);

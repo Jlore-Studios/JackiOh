@@ -15,6 +15,7 @@ import type { RunAction, RunFightSetup } from "@jackioh/run";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { LastBoardEntry } from "../wire/generated/LastBoardEntry.ts";
+import type { TimerKey } from "../wire/generated/TimerKey.ts";
 import type { PracticeClaim } from "../wire/generated/PracticeClaim.ts";
 import type { PracticeDebug } from "../wire/generated/PracticeDebug.ts";
 import type { PracticeReplayListing } from "../wire/generated/PracticeReplayListing.ts";
@@ -89,6 +90,14 @@ export type { PracticeClaim, PracticeDebug, PracticeReplayListing, PracticeRepla
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
 export type LastBoardCard = LastBoardEntry;
 
+/**
+ * R1563006: a timer the machine set (`inMs` from when the answer was made) or took back, as the driver
+ * relays it with a response. The page keeps it as a timeout and fires it back as `timerFired`.
+ */
+export type PracticeTimer =
+  | { command: "set"; key: TimerKey; timer: number; inMs: number }
+  | { command: "cancel"; key: TimerKey; timer: number };
+
 export type PracticeRequest =
   | { id: number; type: "start"; config: PracticeStartConfig }
   /** R668: pick up the game saved on this device, named by the setup the page remembers (`resume.ts`). */
@@ -115,11 +124,13 @@ export type PracticeRequest =
    * game's setup and log, for the seat the human ended in (R677). Refused before the end and for a
    * game that is no fight. Only the run's action crosses, never the log (CLAUDE.md rule 7).
    */
-  | { id: number; type: "runReport" };
+  | { id: number; type: "runReport" }
+  /** R1563006: a timer the machine set came due (`timers` of an earlier answer); `timer` is its id. */
+  | { id: number; type: "timerFired"; key: TimerKey; timer: number };
 
 export type PracticeResponse =
-  | { id: number; type: "started"; snapshot: PracticeSnapshot; defs: CardDefs; aiSeat: PlayerId }
-  | { id: number; type: "snapshot"; snapshot: PracticeSnapshot }
+  | { id: number; type: "started"; snapshot: PracticeSnapshot; defs: CardDefs; aiSeat: PlayerId; timers?: PracticeTimer[] }
+  | { id: number; type: "snapshot"; snapshot: PracticeSnapshot; timers?: PracticeTimer[] }
   | { id: number; type: "catalog"; defs: CardDefs }
   | { id: number; type: "replays"; replays: PracticeReplayListing[] }
   | { id: number; type: "replay"; game: number; from: number; steps: ReplayStep[]; total: number }
