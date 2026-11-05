@@ -8,7 +8,6 @@ import type { Mock } from "vitest";
 
 import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
 import type { RunAction, RunContent, RunFightSetup, RunState } from "@jackioh/run";
-import type { CustomCard } from "@jackioh/shared";
 
 import { navigate, paths } from "../../net/navigate.ts";
 import { at } from "../../test/stubServer.ts";
@@ -139,11 +138,9 @@ function fightHost(reports: ("action" | "error")[] = [], aiToAct = false): Fight
 function fakeDungeon(
   act: Mock<(action: RunAction) => string | null>,
   startedAt: number | null = Date.now() - 65_000,
-  customCards: CustomCard[] = [],
 ): Dungeon {
   return {
     content: CONTENT,
-    customCards,
     progress: { unlocks: {}, embers: 0 },
     run: RUN,
     startedAt,
@@ -190,25 +187,8 @@ describe("B22 a fight node starts a practice game from runFightSetup", () => {
 
     expect(plan.asked[0]).toEqual({ state: RUN, content: CONTENT });
     expect(host.starts()).toEqual([expect.objectContaining({ seed: SETUP.seed, humanSeat: "p1", run: SETUP })]);
-    expect(host.starts()[0]).not.toHaveProperty("customCards");
     expect(screen.getByTestId(fightTestid.enemy)).toHaveTextContent("Cave Troll");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Fight against Cave Troll");
-  });
-
-  it("B21 a deck naming a custom card carries the run's kept copy of it, and no other", async () => {
-    const card = (id: string, name: string): CustomCard => ({
-      id,
-      version: 1,
-      frame: { name, type: "Unit", cost: 1, rarity: "Common", attack: 1, health: 2, text: "" },
-      source: "",
-    });
-    const kept = card("custom-ember-imp", "Ember Imp");
-    plan.setup = { ...SETUP, humanDeck: [...SETUP.humanDeck, kept.id] };
-    const host = fightHost();
-    renderFight(host, fakeDungeon(vi.fn(() => null), Date.now(), [kept, card("custom-frost-imp", "Frost Imp")]));
-    await screen.findByTestId(fightTestid.screen);
-
-    expect(host.starts()).toEqual([expect.objectContaining({ customCards: [kept] })]);
   });
 
   it("B22 a run on no fight it can set up starts no game and says so", async () => {

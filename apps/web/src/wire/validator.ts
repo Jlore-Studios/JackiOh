@@ -4,7 +4,7 @@
 
 import { catalogVersion, registeredCatalog, validator } from "../wasm/index.ts";
 
-import type { CardDef, CardDefs, CustomCard, CustomIssue } from "./index.ts";
+import type { CardDefs } from "./index.ts";
 
 /** §9.4: the decks per loadout, the engine's `config::LOADOUT_DECKS` (generated, `./engineConfig.ts`). */
 export { LOADOUT_DECKS } from "./engineConfig.ts";
@@ -122,8 +122,8 @@ const PRACTICE_DECK_RULES: readonly LoadoutRule[] = ["L2", "L3", "L6"];
 
 /**
  * §9.9: what would stop a practice game on `deck`: `validateDeck`'s L2, L3 and L6 against the catalog this
- * module carries, the one the worker's `createGame` judges by, with nothing banned. Ownership (L5) and
- * R915005's L7 (a custom card, which plays in practice) are never among them. Empty when it would start.
+ * module carries, the one the worker's `createGame` judges by, with nothing banned. Ownership (L5) is never
+ * among them. Empty when it would start.
  * Setup UX only (CLAUDE.md rule 7): the worker still judges every deck it is sent.
  */
 export function practiceDeckIssues(deck: LoadoutDeck): LoadoutError[] {
@@ -172,14 +172,4 @@ export function checkTrioDraft(input: TrioDraftInput): DraftIssue<TrioDraftRule>
 /** R340: whether an import fits under both caps, and the sentence when it does not. */
 export function checkImportRoom(input: ImportRoomInput): ImportRoom {
   return validator<ImportRoom>("checkImportRoom", input);
-}
-
-/** R915001: every way a custom card breaks §12.2's limits, each with its field; empty when valid. */
-export function validateCustomCard(card: CustomCard): CustomIssue[] {
-  return validator<CustomIssue[]>("validateCustomCard", card);
-}
-
-/** R915000: the definition a custom card's frame builds, which the deck builder and the creator draw. */
-export function customDef(card: CustomCard): CardDef {
-  return validator<CardDef>("customDef", card);
 }
