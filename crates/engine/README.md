@@ -25,6 +25,7 @@ What the other crates call:
 | `summarize_game` (`game_summary.rs`) | a finished game's record for the card statistics (R376), its dealt cards apart from its Created ones (R2089000); `SummaryReader` reads it a step at a time, as a test reads a `scenario()` |
 | `last_board_for`, `seat_played_by`, `seats_swapped`, `mulligan_owed` | the facts the server and practice read at the edges of a game (R417, R677, R265) |
 | `registered_catalog()` | the catalog `jackioh_cards::register_all()` installed |
+| `combat_forecast(&GameState, PlayerId) -> CombatForecast` (`query.rs`, R3100000) | what each attack that player may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether a shield breaks) and whether the attackers that reach the enemy hero finish it, projected from the board through the damage pipeline's own readers; the tutorial's coach names its attacks by it |
 | `validator::*` | deck and trio checks (§9.4: D1–D4, T1–T3, L1–L6, R250–R253, R340), shared by the server and, through WASM, the client |
 | `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`) | a Duos game (§13): two 1v1 games side by side, below |
 

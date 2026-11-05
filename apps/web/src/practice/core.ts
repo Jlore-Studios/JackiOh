@@ -35,6 +35,7 @@ import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import {
   beginGame,
   carriedVersions,
+  combatForecast,
   createGame,
   createRng,
   hashState,
@@ -365,6 +366,8 @@ function snapshotOf(game: PracticeGame, now: number): PracticeSnapshot {
     error: game.error,
     ...(keepsBoard ? { lastBoard: lastBoardFor(game.state, human) } : {}),
     ...(lethalFor(game, now) ? { lethal: true as const } : {}),
+    // R3100000: a lesson's coach names its attacks by the engine's forecast of them.
+    ...(game.config.lesson === undefined ? {} : { forecast: combatForecast(game.state, human) }),
     ...(game.keptAs === undefined ? {} : { replay: { ...game.keptAs } }),
   };
 }

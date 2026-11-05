@@ -18,6 +18,7 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `hash_state(state)`, `fold(args)` | the state hash, and a log folded (`{ state, errors }`) |
 | `replay_open(args, record)`, `replay_page(checkpoints, seat, from, count)` | R768's `ReplayOpen`, then `ReplayPage` |
 | `last_board_for`, `seat_played_by`, `find_instance` | as the engine's |
+| `combat_forecast(state, seat)` | R3100000: `{ attacks, lethal }`, what each attack `seat` may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives, whether the shield breaks) and whether the attackers that reach the enemy hero finish it, as the board shows it (`jackioh_engine::combat_forecast`); the practice worker asks it of a tutorial lesson's game, and the coach names its attacks by it. The normal and C modules bind it; the Luau module has no copy (a lesson holds no custom card) |
 | `deal_emote_hand(seed, seat)` | `EmoteId[]`: the seat's hand of eight emotes for that seed, as the server deals it (R1341), for hotseat and practice |
 | `ai_to_act(state, seat)`, `ai_decide(state, seat, options, deadline_ms)` | the AI; `options` is `{ rngSeed, rngCursor, budget? }`, the answer `{ decision, rngCursor }` |
 | `lethal_hint(state, seat, deadline_ms)` | R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`), for the practice AI's lethal hint; a search still running at `deadline_ms` (as `ai_decide`'s) answers no |

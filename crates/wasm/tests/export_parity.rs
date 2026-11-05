@@ -55,9 +55,12 @@ const SHARED: &[&str] = &[
 ];
 
 /// What only the normal module binds, and why: R1011000's fixture, which only the normal build is
-/// held to (`apps/web/src/wasm/learned.test.ts`), and #936's Duos bindings for `/dev/duos`, whose
-/// game holds no custom card (`apps/web/src/wasm/index.ts` calls them on `normal`).
+/// held to (`apps/web/src/wasm/learned.test.ts`), #936's Duos bindings for `/dev/duos`, whose
+/// game holds no custom card (`apps/web/src/wasm/index.ts` calls them on `normal`), and R3100000's
+/// combat forecast, which only a tutorial lesson asks for, a game with no custom card, so the Luau
+/// module (which leaves with part 5 of #2956) has no copy; the C module binds it.
 const NORMAL_ONLY: &[&str] = &[
+    "combat_forecast",
     "learned_parity",
     "duos_create",
     "duos_begin",
