@@ -13,15 +13,11 @@ use jackioh_engine::validator::{
     CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput, validate_deck, validate_trio,
 };
 use jackioh_engine::wire::{GameRecord, ListTotal, StatsTotals};
-use jackioh_server::actor::engine::{deal_random_deck, deal_random_deck_excluding};
+use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::bots::fallback::{bot_match_gap_passed, bot_matches, choose_bot_pair, on_schedule};
-use jackioh_server::bots::pool::{
-    PoolChange, bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
-    refresh_pool, release_stale_starts,
-};
+use jackioh_server::bots::pool::{bot_name_filter, refresh_pool, release_stale_starts};
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_GRIND_ACTIVE_HOURS, BOT_GRIND_GAP,
@@ -34,6 +30,38 @@ use jackioh_server::db::store::{BotDeck, BotRow, BotState, FrozenTrio, NewBot, R
 use jackioh_server::ranked::ladder::{Ladder, fresh_rank};
 use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::username::normalize_username;
+use jackioh_shared::bots::fallback::{bot_match_gap_passed, bot_matches, choose_bot_pair, on_schedule};
+use jackioh_shared::bots::pool::{PoolChange, bot_target_strength, deal_bot_deck, plan_pool, pool_target};
+
+/// The pool's deals read the registered catalog, which the server registers before it asks (R388).
+fn draw_decks(
+    seed: &str,
+    lists: &[ListTotal],
+    catalog: &jackioh_server::api::catalog::Catalog,
+    strength: f64,
+) -> Vec<BotDeck> {
+    jackioh_cards::register_all();
+    jackioh_shared::bots::pool::draw_decks(seed, lists, &catalog.snapshot(), strength)
+}
+
+fn draw_trio(
+    seed: &str,
+    own: &[BotDeck],
+    catalog: &jackioh_server::api::catalog::Catalog,
+    strength: f64,
+) -> Option<FrozenTrio> {
+    jackioh_cards::register_all();
+    jackioh_shared::bots::pool::draw_trio(seed, own, &catalog.snapshot(), strength)
+}
+
+/// A new bot, its name judged as the pool's refresh judges it (`bot_name_filter`).
+fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<String>) {
+    jackioh_shared::bots::pool::draw_new_bot(seed, profile_id, now, &mut |name| bot_name_filter(name))
+}
+
+fn plan_grind(bots: &[BotRow], people: &[f64], ladder: Ladder) -> Vec<String> {
+    jackioh_shared::bots::pool::plan_grind(bots, people, ladder.into())
+}
 
 use crate::support::deps::empty_test_app;
 use crate::support::engine::playable;
@@ -645,20 +673,20 @@ fn r641000_a_dealt_deck_leaves_out_the_cards_it_is_told_to() {
     let excluded: Vec<String> = pool[..pool.len() / 2].to_vec();
     for k in 0..20 {
         let seed = format!("excluding-{k}");
-        let dealt = deal_random_deck_excluding(&seed, &excluded);
+        let dealt = deal_bot_deck(&seed, Some(&excluded), 0.0);
         assert_eq!(dealt.len(), deck_size());
         assert!(
             dealt.iter().all(|card| !excluded.contains(card)),
             "seed {k} dealt an excluded card: {dealt:?}"
         );
         assert_eq!(
-            deal_random_deck_excluding(&seed, &excluded),
+            deal_bot_deck(&seed, Some(&excluded), 0.0),
             dealt,
             "the same seed, the same deck"
         );
         // Leaving nothing out is a player's All Random deal with no lean (R258).
         assert_eq!(
-            deal_random_deck_excluding(&seed, &[]),
+            deal_bot_deck(&seed, Some(&[]), 0.0),
             deal_random_deck(&seed, None)
         );
     }
@@ -1131,7 +1159,10 @@ fn r1555000_the_bot_pair_is_the_lowest_grinder_and_its_closest_ready_bot() {
     held[1].in_match_id = Some("with-a-person".to_string());
     held[2].in_match_id = Some("between-bots".to_string());
     let held: Vec<BotState> = held.iter().map(BotState::from).collect();
-    assert_eq!(bot_matches(&held), vec!["between-bots".to_string()]);
+    assert_eq!(
+        bot_matches(held.iter().map(|bot| bot.in_match_id.as_deref())),
+        vec!["between-bots".to_string()]
+    );
 
     // The gap runs from the last game between two bots; a game against a person does not count.
     let gap = BOT_VS_BOT_MIN_GAP_SECONDS * MS_PER_SECOND;

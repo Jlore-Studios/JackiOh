@@ -11,7 +11,8 @@ It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
 and Duos actors and the later practice and ladder-bot hosts (#3099, #3103) run on; the third, the loadout visibility rule
 (SPEC §10.8, R1834003, #3102); the fourth is the ranked ladder (#3105): Glicko-2, the visible ladder, the
-seasons and one rated game decided as data.
+seasons and one rated game decided as data; the fifth, the ladder bots (#3103): a bot is a seat kind of that
+machine, and the queue's and the pool's decisions around it are here too.
 
 ## Host contract
 
@@ -74,10 +75,15 @@ rating's (`RATING_START`, `RATING_DEVIATION_START`, `RATING_VOLATILITY_START`, `
 `GLICKO_CONVERGENCE`, `GLICKO_MAX_ITERATIONS`; R603), the visible ladder's (`RANK_TIER_PERCENTS` and the
 `RANK_*` pips, divisions and placements, `JLORIOUS_SIZE`; R605 to R608), the seasons' (`SEASON_RESET_STRENGTH`,
 `SEASON_RESET_DEVIATION_BOOST`; R609), `BOT_PROMOTION_DEVIATION_BOOST` (R1560000) and the leaderboard key's
-(`SORT_KEY_GRAPE_BASE`, `SORT_KEY_JLORIOUS_BASE`, `SORT_KEY_RATING_BITS`). `RANK_STREAK_FLAME_LENGTH` is only the
-client's and stays in the server. The server re-exports them from its own
-`config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants`
-carries them, which the browser and the C module (`crates/wasm/c`) both bind.
+(`SORT_KEY_GRAPE_BASE`, `SORT_KEY_JLORIOUS_BASE`, `SORT_KEY_RATING_BITS`; `RANK_STREAK_FLAME_LENGTH` is only the
+client's and stays in the server), and the ladder bots': their strengths and seed
+ratings (`BOT_STRENGTHS`, `SKILL_ELO_TABLE`, R747000, R748000), think times and habits (`THINK_TIME_FITS`,
+`BOT_CONCEDE_FIT`, `BOT_REMATCH_FIT` and the other fits of R639000, R1442), emote personas (`AI_PERSONAS`,
+`AI_EMOTE`, R645), pool, schedule and grind (`BOT_POOL_*`, `BOT_GRIND_*`, R1454, R1555000), fallback and
+pick numbers (`BOT_FALLBACK_*`, `BOT_PICK_*`, R1453, R641000) and username shapes (`BOT_NAME_*`, R1454).
+The server re-exports them from its own `config.rs` (so `serverConfig.ts` and its code name them as
+before), and `jackioh-wasm-core`'s `constants` carries them, which the browser and the C module
+(`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file.
 
 ## `src/series.rs`: the Conquest series
 
@@ -157,7 +163,8 @@ order. Nothing in the machine reads a clock, draws from the OS or does I/O.
 | `logged` | the log took (or refused) the row `append` asked for |
 | `timerFired` | a timer the machine set came due, with its key and id |
 | `aim`, `hover` | the account's aim (R738) or choice hover (R2739001), or its end |
-| `decided` | a bot's move, as `decide` asked for it |
+| `decided` | a bot's move (a `BotChoice`), as `decide` asked for it |
+| `emotesMuted` | the two accounts block each other: no persona answers a person's emote from now on (R1351000) |
 | `resultRecorded`, `rematchOffered`, `rematchSent` | the result `record` asked for is written; a person offered a rematch (a bot may meet it); a bot's offer has been made |
 | `stop` | the host is going away |
 
@@ -167,7 +174,8 @@ order. Nothing in the machine reads a clock, draws from the OS or does I/O.
 | `timer` | `set` (key, id, at) or `cancel` a timer; a firing comes back as `timerFired` with the same key and id, and a stale one does nothing |
 | `persistClocks`, `append` | write the clocks (§9.5), or the row of an action (row before state, §9.3) and feed `logged` |
 | `answer` | what an action's sender is told (`ack`, `illegal`, `matchOver`, `panicked`, `notRecorded`) |
-| `decide` | decide a move for the AI or ladder bot at a seat: one separate, deadline-bounded step, answered by `decided` |
+| `decide` | decide a move for the AI or ladder bot at a seat: one separate, deadline-bounded step (`DuelHost::job` makes what to run, `bots::decide` is what it runs), answered by `decided` |
+| `botEmote` | a bot's persona sends an emote: the host sends it as a person's (hand, rate gate, relay, telemetry) and feeds `emote` if it let it through (R645, R1127) |
 | `record`, `voided`, `ceilingDraw` | the game's end with what the store must record (outcome, turns, which account each seat is credited to, the boards, the final hash); R679's void; R1253000's ceiling draw |
 | `offerRematch`, `letGo` | a bot makes a rematch offer (R639000); the host forgets the match (R776000) |
 | `greeting`, `applied`, `seatsSwapped`, `changed`, `pushed`, `refused`, `panicked`, `note` | markers the host may use: where its own frames go in a greeting, what telemetry reads, the abuse guard's refusal count, a panic to report, a log line |
@@ -187,8 +195,16 @@ What the machine decides:
 - **The relays** (`relay.rs`): an aim reaches the opponent at most once per `AIM_RELAY_INTERVAL_MS`,
   coalesced, and only when every end of it is something the receiver may see (R738, R97, R177); a choice
   hover the same (R2739001).
-- **A seat the host plays** (`bot.rs`): when the AI or a bot owes a move, whether it lets its clock run out
-  (R639000), how long its aim shows, what falls back when its move is refused (R188, R1452).
+- **A ladder bot** (`bot.rs`, `crates/shared/src/bots/`, #3103): a `BotSeat` in the setup (its strength, speed,
+  persona and whether it is hidden). The machine asks the host for its move (`decide`), and the host answers
+  with the AI's find (`decided`); the machine does the rest as timers and actions: the think time (R1452,
+  R639000), the aim shown a beat before a targeted move and taken down after (R738), the persona's emotes
+  and its replies (R645), the concession, draw offer and draw answer (R639000, R2660000, R2660001), the
+  turn clock it lets run out now and then, what falls back when its move is refused (R188, R1452) and its
+  stay for a rematch (R639000). **Hidden** (`BotSeat.hidden`, R3103000) is the one switch for all that exists
+  only so that a bot passes for a person: the server turns it on; a host whose players see a bot labelled
+  (a Roblox server) leaves it off, and the bot then plays as the practice AI does, at once and
+  without chatter, concessions or rematches.
 
 The rematch book (`rematch.rs`) is its own state, `RematchBook`, because an offer outlives the host that
 played the match: stakes are a rematch or a double-or-nothing, only a ranked match spawns the second, an
@@ -221,6 +237,11 @@ Notes for a host:
 The calls are `newDuel`, `stepDuel`, `duelView`, `duelPresence`, `newDuos`, `stepDuos`, `duosSeatView`,
 `checkOffer`, `rematchWindow`, `offer`, `seen`, `release`, `sweep` and the `again*` ones; `boundary::apply` is the one function behind it, and `tests/boundary.rs`
 holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s `NORMAL_ONLY`).
+
+The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
+`DecideRequest` a `decide` output made) in, the `BotChoice` to feed back as `decided` out. A host with a clock
+(the browser) passes the `deadline_ms` the request's `deadlineMs` makes of its clock, and the search ends
+there with its best line; the C module has no clock, so the search ends at the strength's budget.
 
 ### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
 
@@ -352,6 +373,44 @@ The calls are `rateGame`, `planSeason`, `softReset`, `visibleRank`, `peakBadge` 
 `season`, `reset`, `rank`, `badge` and `jlorious`. A call that does not parse is refused by the body as an error.
 `apply` is the one function behind it, and `tests/ranked_game.rs` holds it to the functions it names.
 
+## `src/bots/`: the ladder bots
+
+What a ladder bot decides, over plain records the host read from its store (#3103). At its seat the bot is
+the machine's (above); these are the modules the machine and the queue are made of.
+
+| Module | Holds | Rulings |
+| --- | --- | --- |
+| `decide` | the move the AI finds at the bot's strength (`decide_styled` after a skill roll), the concession and draw habits of a hidden bot, the aim of a targeted move | R1452, R639000, R747000, R2214000, R2660000, R2660001, R738 |
+| `think` | the think time a person-paced bot waits (R1442's fits and hand-set priors), and the cap on a decision | R1452, R639000 |
+| `signals` | a bot's habits at the end of a game: concede, offer and answer draws, idle a turn, linger for a rematch | R639000, R2660000, R2660001 |
+| `persona` | its emotes: rolls, caps and the rate limit, as data the machine keeps (`EmotePersona` takes its draws as an argument) | R645, R1344 |
+| `aim` | the arrow a person's client would show | R738 |
+| `pick` | its sealed picks in a Conquest series | R641000 |
+| `fallback` | the empty-queue pairing: a ticket's fallback time, which bot it pairs with, two bots' kickoff | R1453, R641000, R1555000 |
+| `pool` | the pool's size, who retires, returns and grinds, a new bot, its decks and trio | R1454, R750000, R1555000 |
+| `names` | a new bot's username shapes and word lists; what a name may be is the host's (`draw_username`'s `accepts`) | R1454 |
+
+- **Records, not rows.** `BotRecord` (a bot), `TicketRecord` and `RatedGameRecord` are what the pairing and the pool
+  read; the server implements them for its store rows, and `BotFacts`, `TicketFacts` and `GameFacts` are
+  the same as plain JSON for a host with no row type of its own (a Roblox script, the boundary).
+- **Hidden is the one switch** (`BotSeat.hidden`). The fallback time (R1453: a ticket waits 15 to 40 s so that a
+  pairing does not come the moment it is queued) is part of it: `fallback_due_keyed(key, ticket, now, hidden)`
+  has every ticket due at once when the bots are not hidden. The key is the host's secret.
+- **Every draw is a stream of the match's or the pool's seed**, apart from the match rng, so none reaches
+  a state, the log or a replay hash; the think time, the idle roll and the rematch plan are drawn by the
+  machine from the seed it was made with.
+- **Cosmetics are still the server's** (`crates/server/src/bots/cosmetics.rs`, R1834005): they read the
+  cosmetics registry and the economy's ledger types, which move into this crate with the economy (#3104).
+
+### The boundary
+
+`jackioh-wasm-core`'s `bots(call)` takes one `BotCall` and answers one `BotAnswer`. The calls are `poolTarget`,
+`planPool`, `planGrind`, `newBot`, `botTargetStrength`, `drawDecks`, `drawTrio`, `fallbackSeconds`, `fallbackDue`,
+`hourOf`, `chooseBot`, `chooseBotPair`, `botMatches`, `botMatchGapPassed`, `pickDueAt`, `pickIsDue`, `pickSlot`
+and `botPick`; `bots::boundary::apply` is the one function behind it, and `tests/bots_boundary.rs` holds it to
+the functions it names. The deals read the catalog the module registered, and a new bot's username is the
+host's to give.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:
@@ -363,7 +422,9 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
 unchanged, and `tests/boundary.rs` the JSON boundary; `tests/loadout.rs` holds the loadout rule's, moved from
 `crates/server/src/loadout.rs`, its JSON calls among them, over a game dealt from the shipped cards (the
-`jackioh-cards` and `jackioh-ai` dev-dependencies). The host machine's: `tests/clock.rs` (the clock's
+`jackioh-cards` and `jackioh-ai` dev-dependencies). The ladder bots': `tests/bots_decide.rs` (the decision and
+the think time), `tests/bots_signals.rs`, `tests/bots_persona.rs`, `tests/bots_pick.rs` and
+`tests/bots_boundary.rs`, moved from the server's bot tests; the bot seat of the machine is in `tests/duel.rs`. The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/again.rs` (the co-op machine and its Play again
 book) and `tests/host_boundary.rs`. The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests

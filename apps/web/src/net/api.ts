@@ -395,6 +395,11 @@ export function devFill(token: string): Promise<{ cards: number; cosmetics: numb
   return apiRequest<{ cards: number; cosmetics: number }>("/api/dev/fill", { method: "POST", token, body: {} });
 }
 
+/** R3156001: every cosmetic the fill grants and nothing else, answering the ledger rows written. */
+export function devUnlockCosmetics(token: string): Promise<{ cosmetics: number }> {
+  return apiRequest<{ cosmetics: number }>("/api/dev/cosmetics", { method: "POST", token, body: {} });
+}
+
 export function devClear(token: string, part: DevClearPart): Promise<{ written: number }> {
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }

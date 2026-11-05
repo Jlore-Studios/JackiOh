@@ -100,6 +100,7 @@ describe("Holdings and Dev tools", () => {
   it("every other tool sends its own route", async () => {
     const tools: [string, string][] = [
       [testids.fill, "/api/dev/fill"],
+      [testids.unlockCosmetics, "/api/dev/cosmetics"],
       ...BARS.map((bar): [string, string] => [testids.bar(bar), `/api/dev/bar/${bar}`]),
       [testids.questGive, "/api/dev/quests"],
       ...CLEAR_PARTS.map((part): [string, string] => [testids.clear(part), `/api/dev/clear/${part}`]),

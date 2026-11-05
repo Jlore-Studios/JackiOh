@@ -8,7 +8,7 @@
 //! Reads every row of `public.action_timings` (DATABASE_URL, all of it in memory), leaves out the AI's
 //! moves and fits a log-normal (`mu` and `sigma` of `ln(think_ms)`) to each bucket (rank bucket, action
 //! kind, the turn's first move or not) of at least `TIMING_FIT_MIN_SAMPLES` moves. It prints one
-//! `ThinkTimeFit` per bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs` by
+//! `ThinkTimeFit` per bucket, to be pasted into `THINK_TIME_FITS` in `crates/shared/src/config.rs` by
 //! hand, as `cargo jackioh sweep` prints its rows (CLAUDE.md rule 9): no number reaches the ladder bots
 //! (#636) unread by a person.
 //!
@@ -23,7 +23,6 @@ use indexmap::IndexMap;
 use jackioh_engine::wire::GameOverReason;
 use jackioh_engine::{ActionType, PlayerId};
 
-use crate::bots::persona::reply_key_of;
 use crate::cli::card_stats::literal;
 use crate::cli::{connect_one, database_url};
 use crate::config::{
@@ -34,19 +33,20 @@ use crate::config::{
 use crate::db::store::{ActionTimingRow, Db, EmoteEventRow, Pilot, SignalOutcomeRow, StoreError};
 use crate::env::quoted;
 use crate::ranked::ladder::RankTier;
+use jackioh_shared::bots::persona::reply_key_of;
 
 const USAGE: &str = "Usage: jackioh-server timing-fit
 
   Prints log-normal fits of the human think times in action_timings (R1442), one ThinkTimeFit row
-  per bucket, to paste into THINK_TIME_FITS in crates/server/src/config.rs, then the ladder bots'
+  per bucket, to paste into THINK_TIME_FITS in crates/shared/src/config.rs, then the ladder bots'
   other rows fitted from people's play (R639000): the complexity slope and lethal shift, the
   concession, draw-answer, timeout and rematch rates, the emote delay windows and the persona
   weights, each to paste over the row of its name there. Takes no options; reads DATABASE_URL.";
 
-const HEADER: &str = "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/server/src/config.rs";
+const HEADER: &str = "// jackioh-server timing-fit: paste into THINK_TIME_FITS, crates/shared/src/config.rs";
 
 const SIGNALS_HEADER: &str =
-    "// jackioh-server timing-fit: paste each over the row of its name, crates/server/src/config.rs";
+    "// jackioh-server timing-fit: paste each over the row of its name, crates/shared/src/config.rs";
 
 /// One bucket's fit (`config::ThinkTimeFit`'s fields, as values).
 #[derive(Clone, Copy, Debug, PartialEq)]

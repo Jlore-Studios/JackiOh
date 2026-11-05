@@ -533,9 +533,10 @@ routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-read
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
                         read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
-                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds GET
-                        /api/packs and GET /api/cosmetic-packs state, the global roll's line (R1661001) and
-                        the account's pity counters, shown as the server answers them; a visitor sees the
+                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
+                        (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
+                        /api/packs and GET /api/cosmetic-packs state, and the pity table with the account's
+                        counters, shown as the server answers them (a zero rate as a dash); a visitor sees the
                         disclaimer and a link to sign in
 economy/                #1651: the economy's shared pieces: `wallet.ts`, the balance the Jlore pill shows
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
