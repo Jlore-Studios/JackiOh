@@ -26,7 +26,10 @@
 # `previewSets` (the engine's testkit), which the hotseat route's E2E injection uses to play a set
 # before it ships (#552); 0 builds it without, as apps/web's `prebuild` does for the production
 # bundle, so a module a player loads can preview nothing. Cargo keeps both builds, so switching costs
-# one compile each the first time only.
+# one compile each the first time only. 0 also has wasm-bindgen leave out the module's `name` section,
+# the function names only a debugger's stack trace reads: on 2026-11-05 they were 5.6 MiB of 26.2, and
+# put the player's module over Cloudflare Workers' 25 MiB cap on one asset, so every deploy of staging
+# failed at `wrangler deploy` ("Asset too large"). The dev, test and E2E modules (1) keep them.
 #
 # JACKIOH_WASM_DUOS: 0 (the default) builds stubs in place of crates/wasm's `duos` feature, #936's
 # Duos bindings; 1 builds them, as apps/web's `predev` does, since only `/dev/duos` calls them and
@@ -139,9 +142,10 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
   fi
 
   FEATURES=""
+  BINDGEN_FLAGS=""
   case "${JACKIOH_WASM_PREVIEW:-1}" in
     1) FEATURES="preview" ;;
-    0) ;;
+    0) BINDGEN_FLAGS="--remove-name-section" ;;
     *)
       echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
       exit 1
@@ -161,7 +165,8 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
     cargo build -p jackioh-wasm --release --target "$WASM_TARGET"
   fi
   mkdir -p "$OUT_DIR"
-  "$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
+  # shellcheck disable=SC2086 # BINDGEN_FLAGS is empty or one flag, split on purpose.
+  "$WASM_BINDGEN" --target web $BINDGEN_FLAGS --out-dir "$OUT_DIR" "$MODULE"
   echo "build-wasm: wrote $OUT_DIR"
 fi
 

@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::PlayerId;
+use jackioh_engine::wire::DuosSeat;
 
 /// Which timer. One of each is armed at most, so a host keeps them by key and replaces on `Set`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -41,6 +42,20 @@ pub enum TimerKey {
     BotReply { player: PlayerId },
     /// R1452: the wait before a bot whose move could not be written decides again.
     BotRetry,
+    /// Duos' (`host::duos`, S6): the one mulligan clock over the four open mulligans (B2, R268).
+    DuosMulligan,
+    /// Duos': the clock of the current round (B38).
+    DuosRound,
+    /// Duos': the clock of a prompt a person holds outside its round (S6).
+    DuosPrompt { seat: DuosSeat },
+    /// Duos': a person's disconnect grace, after which the AI plays the seat (B37).
+    DuosGrace { seat: DuosSeat },
+    /// Duos': the hard ceiling (R1047000), and its retry (R776000).
+    DuosCeiling,
+    /// Duos': the pause before an AI seat decides its next action (B36).
+    DuosAi { seat: DuosSeat },
+    /// Duos': the wait before an AI seat whose action could not be written decides again.
+    DuosAiRetry,
 }
 
 /// One instruction about a timer, in the order the machine gave it.
