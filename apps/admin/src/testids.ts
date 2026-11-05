@@ -51,6 +51,8 @@ export const testids = {
   jloreInput: "admin-jlore-input",
   jloreGive: "admin-jlore-give",
   fill: "admin-fill",
+  /** R3156001: every cosmetic, nothing else. */
+  unlockCosmetics: "admin-unlock-cosmetics",
   bar: (bar: Bar) => `admin-bar-${bar}`,
   questGive: "admin-quest-give",
   questSelect: "admin-quest-select",
