@@ -866,8 +866,8 @@ pub const PLAYER_SETTINGS_BYTES_MAX: usize = 4096;
 pub use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games". Its played delta needs this many on each side, played and
-/// drawn but not played, and displays "not enough data" until then.
+/// the row displays "not enough games" and has no tier (R3022000). `GET /api/stats/cards` sends no
+/// played or drawn delta, which waited for this many on each side (R3185000).
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`

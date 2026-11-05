@@ -1,9 +1,9 @@
-// Tests for CardStatsBlock (SPEC §9.11, R377, R654).
+// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { INSPECT_STATS } from "../cards/inspect/testids.ts";
+import { INSPECT_STATS, INSPECT_STATS_ADJUSTED, INSPECT_STATS_TIER } from "../cards/inspect/testids.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { CardStatsBlock } from "./CardStatsBlock.tsx";
 
@@ -46,142 +46,101 @@ const SPARK_PUP = {
   set: "core",
   games: 60,
   winRate: 0.6,
-  drawnGames: 40,
-  drawnWinRate: 0.65,
-  playedGames: 30,
-  playedWinRate: 0.7,
-  drawnNotPlayedGames: 10,
-  drawnNotPlayedWinRate: 0.5,
-  playedDelta: 0.2,
-  notDrawnGames: 20,
-  notDrawnWinRate: 0.5,
-  drawnDelta: 0.15,
+  adjustedWinRate: 0.5612,
+  adjustedLow: 0.51,
+  adjustedHigh: 0.61,
+  tier: "A",
   playRate: 0.5,
   hasEnoughGames: true,
 };
 
-describe("R377 CardStatsBlock", () => {
-  it("R2427000 renders Drawn vs not drawn with both sides' games above the sample floor", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify(mockStatsResponse(SPARK_PUP)),
-          { status: 200 },
-        ),
-      ),
-    );
+/** Serves `card` as the card statistics' only row. */
+function serve(card: Record<string, unknown>): void {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(mockStatsResponse(card)), { status: 200 })));
+}
 
+/** Each figure's label and what it reads, in the panel's order. */
+function figures(): [string, string][] {
+  return [...screen.getByTestId(INSPECT_STATS).querySelectorAll(".inspect-stats-metric")].map((metric) => [
+    metric.querySelector(".inspect-stats-metric-label")?.textContent ?? "",
+    metric.querySelector(".inspect-stats-metric-value")?.textContent ?? "",
+  ]);
+}
+
+describe("R3185000 CardStatsBlock", () => {
+  it("R3185000 shows Games, Tier, Adjusted win rate, Win rate and Play rate, and nothing else of the server's", async () => {
+    serve(SPARK_PUP);
     render(<CardStatsBlock cardId="core-001" />);
 
-    expect(await screen.findByText("Drawn vs not drawn", undefined, SLOW)).toBeInTheDocument();
-    expect(screen.getByText("+15%")).toBeInTheDocument();
-    expect(screen.getByText("(40 / 20)")).toBeInTheDocument();
-    expect(screen.queryByText("Played vs held")).not.toBeInTheDocument();
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()).toEqual([
+      ["Games", "60"],
+      ["Tier", "A"],
+      // To a tenth of a point, as /stats prints it (R2777000).
+      ["Adjusted win rate", "56.1%"],
+      ["Win rate", "60%"],
+      ["Play rate", "50%"],
+    ]);
+    // The tier is /stats' chip.
+    const chip = screen.getByTestId(INSPECT_STATS_TIER);
+    expect(chip).toHaveClass("stats-tier");
+    expect(chip).toHaveAttribute("data-tier", "A");
+    expect(screen.getByTestId(INSPECT_STATS_ADJUSTED)).toHaveTextContent("56.1%");
+    for (const gone of ["When drawn", "Drawn vs not drawn", "not enough data"]) {
+      expect(screen.queryByText(gone)).toBeNull();
+    }
   });
 
   it("#2115 a panel skeleton stands in for the figures while the read is pending", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify(mockStatsResponse(SPARK_PUP)),
-          { status: 200 },
-        ),
-      ),
-    );
-
+    serve(SPARK_PUP);
     render(<CardStatsBlock cardId="core-001" />);
 
     // Right after render the read has not answered: the block keeps its frame and its title.
     const block = screen.getByTestId(INSPECT_STATS);
     expectSkeleton(within(block).getByText("Loading stats…"), "panel");
 
-    expect(await screen.findByText("Drawn vs not drawn", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("Adjusted win rate", undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByText("Loading stats…")).toBeNull();
     expect(screen.queryByTestId("skeleton")).toBeNull();
   });
 
-  it("R654 renders not enough data for Drawn vs not drawn when below sample floor", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify(
-            mockStatsResponse({
-              id: "core-002",
-              name: "Lava Hound",
-              cost: 4,
-              rarity: "Rare",
-              set: "core",
-              games: 10,
-              winRate: 0.9,
-              drawnGames: 8,
-              drawnWinRate: 0.9,
-              playedGames: 5,
-              playedWinRate: 1.0,
-              drawnNotPlayedGames: 3,
-              drawnNotPlayedWinRate: 0.733,
-              playedDelta: 0.267,
-              notDrawnGames: 2,
-              notDrawnWinRate: 1.0,
-              drawnDelta: -0.1,
-              playRate: 0.1,
-              hasEnoughGames: false,
-            }),
-          ),
-          { status: 200 },
-        ),
-      ),
-    );
-
+  it("R3185000 R654 below the floor, Win rate reads not enough games and the tier and the adjusted rate read —", async () => {
+    serve({
+      id: "core-002",
+      name: "Lava Hound",
+      cost: 4,
+      rarity: "Rare",
+      set: "core",
+      games: 10,
+      winRate: 0.9,
+      adjustedWinRate: 0.497,
+      tier: "F",
+      playRate: 0.1,
+      hasEnoughGames: false,
+    });
     render(<CardStatsBlock cardId="core-002" />);
 
-    expect(await screen.findByText("Drawn vs not drawn", undefined, SLOW)).toBeInTheDocument();
-    // Delta should display "not enough data" and not any misleading percentage
-    expect(screen.getByText("not enough data")).toBeInTheDocument();
-    expect(screen.queryByText("-10%")).not.toBeInTheDocument();
-    expect(screen.queryByText("(8 / 2)")).not.toBeInTheDocument();
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(figures()).toEqual([
+      ["Games", "10"],
+      ["Tier", "—"],
+      ["Adjusted win rate", "—"],
+      ["Win rate", "not enough games (< 20)"],
+      ["Play rate", "10%"],
+    ]);
+    expect(screen.queryByText("90%")).toBeNull();
   });
 
-  it("R654 renders not enough data for Drawn vs not drawn when the server withholds the delta", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify(
-            mockStatsResponse({
-              id: "core-003",
-              name: "Aqua Warden",
-              cost: 2,
-              rarity: "Common",
-              set: "core",
-              games: 30,
-              winRate: 0.5,
-              drawnGames: 30,
-              drawnWinRate: 0.5,
-              playedGames: 0,
-              playedWinRate: null,
-              drawnNotPlayedGames: 30,
-              drawnNotPlayedWinRate: 0.5,
-              playedDelta: null,
-              notDrawnGames: 0,
-              notDrawnWinRate: null,
-              drawnDelta: null,
-              playRate: 0.3,
-              hasEnoughGames: true,
-            }),
-          ),
-          { status: 200 },
-        ),
-      ),
-    );
+  it("R3185000 a card with no tier or adjusted rate, as from an older server, reads — for both", async () => {
+    const { adjustedWinRate: _rate, adjustedLow: _low, adjustedHigh: _high, tier: _tier, ...older } = SPARK_PUP;
+    serve(older);
+    render(<CardStatsBlock cardId="core-001" />);
 
-    render(<CardStatsBlock cardId="core-003" />);
-
-    expect(await screen.findByText("Drawn vs not drawn", undefined, SLOW)).toBeInTheDocument();
-    expect(screen.getByText("not enough data")).toBeInTheDocument();
-    expect(screen.queryByText("%")).not.toBeInTheDocument();
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(screen.getByTestId(INSPECT_STATS_TIER)).toHaveTextContent("—");
+    expect(screen.getByTestId(INSPECT_STATS_TIER)).not.toHaveClass("stats-tier");
+    expect(screen.getByTestId(INSPECT_STATS_ADJUSTED)).toHaveTextContent("—");
+    expect(screen.getByText("60%")).toBeInTheDocument();
   });
 });
 
@@ -198,8 +157,8 @@ describe("CardStatsBlock after a load that failed", () => {
     await screen.findByText("Statistics unavailable", undefined, SLOW);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
-    await screen.findByText("Drawn vs not drawn", undefined, SLOW);
-    expect(screen.getByText("+15%")).toBeInTheDocument();
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(screen.getByText("56.1%")).toBeInTheDocument();
     expect(screen.queryByText("Statistics unavailable")).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });

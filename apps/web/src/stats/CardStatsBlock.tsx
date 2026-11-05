@@ -1,7 +1,9 @@
-// Compact card statistics block for CardDetail view (SPEC §9.11, R654). It names no data source (R661).
+// Compact card statistics block for CardDetail view (SPEC §9.11, R654). It names no data source (R661). It shows
+// the four figures that read a card, Tier, Adjusted win rate, Win rate and Play rate, with Games as their sample,
+// as /stats prints them, and nothing else of the server's (R3185000).
 
 import { useEffect, useState, type ReactElement } from "react";
-import { INSPECT_STATS } from "../cards/inspect/testids.ts";
+import { INSPECT_STATS, INSPECT_STATS_ADJUSTED, INSPECT_STATS_TIER } from "../cards/inspect/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
@@ -9,8 +11,9 @@ import { readSession } from "../net/session.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE } from "./config.ts";
-import { formatPlayedDelta, winPercent } from "./model.ts";
+import { winPercent } from "./model.ts";
 import { usePlayerStats } from "./store.ts";
+import { TierChip, adjustedText } from "./TierChip.tsx";
 
 export type CardStatsBlockProps = {
   cardId: string;
@@ -85,23 +88,6 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
       ? `${Math.round(stat.winRate * 100)}%`
       : t("not enough games");
 
-  const drawnWinRateDisplay =
-    stat.hasEnoughGames && stat.drawnWinRate !== null
-      ? `${Math.round(stat.drawnWinRate * 100)}%`
-      : "—";
-
-  const drawnDeltaDisplay =
-    stat.hasEnoughGames && typeof stat.drawnDelta === "number" ? (
-      <>
-        {formatPlayedDelta(stat.drawnDelta)}{" "}
-        <span className="inspect-stats-sample-hint">
-          ({stat.drawnGames} / {stat.notDrawnGames ?? 0})
-        </span>
-      </>
-    ) : (
-      t("not enough data")
-    );
-
   const playRateDisplay = `${Math.round(stat.playRate * 100)}%`;
 
   return (
@@ -115,6 +101,19 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           <span className="inspect-stats-metric-label">{t("Games")}</span>
           <span className="inspect-stats-metric-value">{stat.games}</span>
         </div>
+        {/* R3185000: below the floor, or from a server without them, the tier and the adjusted rate read "—", as on /stats */}
+        <div className="inspect-stats-metric">
+          <span className="inspect-stats-metric-label">{t("Tier")}</span>
+          <span className="inspect-stats-metric-value">
+            <TierChip tier={stat.hasEnoughGames ? stat.tier : null} testid={INSPECT_STATS_TIER} />
+          </span>
+        </div>
+        <div className="inspect-stats-metric">
+          <span className="inspect-stats-metric-label">{t("Adjusted win rate")}</span>
+          <span className="inspect-stats-metric-value" data-testid={INSPECT_STATS_ADJUSTED}>
+            {stat.hasEnoughGames ? adjustedText(stat.adjustedWinRate) : "—"}
+          </span>
+        </div>
         <div className="inspect-stats-metric">
           <span className="inspect-stats-metric-label">{t("Win rate")}</span>
           <span className="inspect-stats-metric-value">
@@ -125,16 +124,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           </span>
         </div>
         <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">{t("When drawn")}</span>
-          <span className="inspect-stats-metric-value">{drawnWinRateDisplay}</span>
-        </div>
-        <div className="inspect-stats-metric">
           <span className="inspect-stats-metric-label">{t("Play rate")}</span>
           <span className="inspect-stats-metric-value">{playRateDisplay}</span>
-        </div>
-        <div className="inspect-stats-metric">
-          <span className="inspect-stats-metric-label">{t("Drawn vs not drawn")}</span>
-          <span className="inspect-stats-metric-value">{drawnDeltaDisplay}</span>
         </div>
       </div>
 

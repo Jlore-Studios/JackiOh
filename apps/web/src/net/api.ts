@@ -1472,6 +1472,10 @@ export function forfeitSeries(token: string, seriesId: string): Promise<SeriesVi
 
 // Public card and player statistics (SPEC §9.11, R654)
 
+/**
+ * R3185000: the figures a card's row carries, the ones the client reads. The drawn, played, face and never-drawn
+ * breakdowns and the played and drawn deltas are no longer sent; the adjusted rate and the tier are read off them.
+ */
 export type PublicCardStat = {
   id: string;
   name: string;
@@ -1480,21 +1484,6 @@ export type PublicCardStat = {
   set: string;
   games: number;
   winRate: number | null;
-  drawnGames: number;
-  drawnWinRate: number | null;
-  playedGames: number;
-  playedWinRate: number | null;
-  playedRadiantGames?: number;
-  playedRadiantWinRate?: number | null;
-  playedNormalGames?: number;
-  playedNormalWinRate?: number | null;
-  drawnNotPlayedGames: number;
-  drawnNotPlayedWinRate: number | null;
-  playedDelta: number | null;
-  /** R2427000: the decks that held the card and never drew it, and the drawn delta; an older server omits them. */
-  notDrawnGames?: number;
-  notDrawnWinRate?: number | null;
-  drawnDelta?: number | null;
   /**
    * R2777000: the drawn delta kept as far as the card's games back it, read from an even game: the page's
    * headline rate. Null when it was never seen or never unseen; absent from a server deployed before it.
