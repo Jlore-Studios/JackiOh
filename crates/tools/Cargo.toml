@@ -17,6 +17,8 @@ jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 # `replay` folds a practice game with custom cards (R915006) through the card kit's host.
 jackioh-luau = { workspace = true }
+# run-sim plays dungeon runs' fights to the end (#3065).
+jackioh-run = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }

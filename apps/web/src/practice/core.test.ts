@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   AI_DIFFICULTY,
   DECK_SIZE,
+  combatForecast,
   createRng,
   fold,
   hashState,
@@ -949,6 +950,25 @@ describe("R508 a practice game's last board", () => {
     const over = snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
     expect(over.view.result).not.toBeNull();
     expect(over.lastBoard).toBeUndefined();
+  });
+});
+
+// R3100000: a lesson's snapshot carries the engine's forecast of the human's attacks, for its coach
+describe("R3100000 a lesson's snapshot adds the engine's combat forecast", () => {
+  it("R3100000 a lesson's every snapshot holds combatForecast(state, human), and a free game's none", () => {
+    const lesson = TUTORIAL_LESSONS[0];
+    if (lesson === undefined) throw new Error("the tutorial has no lesson");
+    const d = driver();
+    const human = lesson.humanSeat;
+    const started = d.send({ type: "start", config: lessonStartConfig(lesson) });
+    let last = snapshotOf(started);
+    for (let n = 0; n < 12 && last.view.result === null; n += 1) {
+      expect(last.forecast, `request ${String(n)}`).toEqual(combatForecast(stateOf(debugOf(d)), human));
+      expect(Object.keys(last.forecast ?? {}).sort()).toEqual(["attacks", "lethal"]);
+      last = snapshotOf(d.send(last.aiToAct ? { type: "aiStep" } : { type: "act", action: last.legal.find((each) => each.type === "endTurn") ?? last.legal[0] ?? { type: "concede" } }));
+    }
+    const free = driver();
+    expect(snapshotOf(free.send({ type: "start", config: config({ seed: "r3100000-free", humanSeat: "p1" }) })).forecast).toBeUndefined();
   });
 });
 

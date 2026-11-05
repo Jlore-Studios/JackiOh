@@ -11,7 +11,7 @@
 //!            The Activate (R384, once a turn, its controller's alone, no cost) is one `add_to_hand` of
 //!            Meditative #39.1 Auspicious Rock, Radiant on the Radiant face as every other Rock source has
 //!            it (M #39, #43, #44), and the Feng Shui stays. It declares no number.
-//!   Luck:    through v0.5.11p the card also read "You have Luck {luck}" (ME-LUCK, R987), the `luck` static
+//!   Luck:    through v0.5.11r the card also read "You have Luck {luck}" (ME-LUCK, R987), the `luck` static
 //!            flag and its tuned param; no card gives Luck now (R3140000), the engine keeping `luck_of`,
 //!            the flag and its fixture (`script_v0_5_11o`, R767000).
 
@@ -19,7 +19,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-040";
 
-/// R767000: the declared number `luck` the card read through v0.5.11p (R987): "Aura: You have Luck {luck}".
+/// R767000: the declared number `luck` the card read through v0.5.11r (R987): "Aura: You have Luck {luck}".
 const LUCK_V0_5_11O: i32 = 1;
 
 /// Meditative #39.1 Auspicious Rock (§7), the card its Activate adds.
@@ -92,7 +92,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the judge with the Luck it gave through v0.5.11p and no Activate, `luck` read through the
+/// R767000: the judge with the Luck it gave through v0.5.11r and no Activate, `luck` read through the
 /// declared number (R386); `KEPT_SCRIPTS` folds those replays under it.
 fn judge_v0_5_11o() -> Script {
     Script {
@@ -105,7 +105,7 @@ fn judge_v0_5_11o() -> Script {
     }
 }
 
-/// R767000: the scripts v0.5.11p and every version before it ran.
+/// R767000: the scripts v0.5.11r and every version before it ran.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: judge_v0_5_11o(),
@@ -361,7 +361,7 @@ mod tests {
         }
     }
 
-    /// The card as v0.5.11p and before printed it: (2), "You have Luck {luck}" on both faces.
+    /// The card as v0.5.11r and before printed it: (2), "You have Luck {luck}" on both faces.
     fn as_printed_through_v0_5_11o(def: &mut CardDef) {
         def.cost = CardCost::Fixed(2);
         def.params = Some(vec![json_as(json!({

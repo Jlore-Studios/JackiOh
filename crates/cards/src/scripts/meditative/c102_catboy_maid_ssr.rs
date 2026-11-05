@@ -188,7 +188,7 @@ mod tests {
         #[test]
         fn r1439_r987_a_given_lucky_2_beside_the_printed_one_reaches_both_rolls() {
             // Lucky 2 given beside the printed Lucky 1: each roll keeps the best of four draws, the best-of
-            // path Feng Shui's Luck 1 took through v0.5.11p (R3140000: no card gives Luck now).
+            // path Feng Shui's Luck 1 took through v0.5.11r (R3140000: no card gives Luck now).
             for n in 0..12 {
                 let seed = format!("catboy-maid-luck-{n}");
                 let mut s = holding(&seed, false);

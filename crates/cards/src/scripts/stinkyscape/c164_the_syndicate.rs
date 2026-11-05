@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn r1864003_r987_lucky_rolls_it_no_more_times() {
         // The roll is a pick from a table, not a best-of (R32): a Lucky X given to the Syndicate (R1438) adds
-        // no roll, as the Luck M #40 Feng Shui gave through v0.5.11p added none (R3140000).
+        // no roll, as the Luck M #40 Feng Shui gave through v0.5.11r added none (R3140000).
         let kept = seed_where("syndicate-luck", |seed| {
             let mut s = with(seed, ID, false, &[]);
             crate::give_lucky(&mut s, ID, 3);

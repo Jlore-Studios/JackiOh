@@ -689,9 +689,9 @@ pub const MELEE_MAX_ATTACKS: i32 = 20;
 /// R1848006 (Stinkyscape #153 Stimmycheck): the printed chance, in percent, that Inflation hits a card.
 pub const INFLATION_CHANCE: i32 = 15;
 /// R1848006, R3142000: how much a Stimmycheck's chance grows on the copy it makes ("Its Inflation chance
-/// goes up by 5%"; 10 through v0.5.11p, `INFLATION_CHANCE_STEP_V0_5_11O`).
+/// goes up by 5%"; 10 through v0.5.11r, `INFLATION_CHANCE_STEP_V0_5_11O`).
 pub const INFLATION_CHANCE_STEP: i32 = 5;
-/// R3142000, R767000: the step through v0.5.11p, which the Stimmycheck script kept for those replays reads.
+/// R3142000, R767000: the step through v0.5.11r, which the Stimmycheck script kept for those replays reads.
 pub const INFLATION_CHANCE_STEP_V0_5_11O: i32 = 10;
 /// R1848006: the sides of an Inflation roll: a chance is in percent, so a roll is one of 100.
 pub const INFLATION_ROLL_SIDES: i32 = 100;
@@ -1055,19 +1055,19 @@ pub const CHAOS_PLUS_UPGRADES: i32 = 2;
 pub const CHAOS_PLUS_DEGRADES: i32 = 3;
 
 // Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R423): its table's numbers.
-/// §8.8 row 95 entry 1: "add 1 copy of it to your hand" (R1242; 2 copies through v0.5.11p, #3135, R3135001).
+/// §8.8 row 95 entry 1: "add 1 copy of it to your hand" (R1242; 2 copies through v0.5.11r, #3135, R3135001).
 pub const CHAOS_MED_FUSE_COPIES: i32 = 1;
 /// §8.8 row 95 entry 2: "Add 2 random CN cards to your hand" (3 through patch v0.3.7b, #1149).
 pub const CHAOS_MED_CN_CARDS: i32 = 2;
 /// §8.8 row 95 entry 3: "Add 2 random Prime cards to your hand" (R1421).
 pub const CHAOS_MED_PRIME_CARDS: i32 = 2;
-/// §8.8 row 95 entry 4: "Your hero gains 5 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11p, #3135,
+/// §8.8 row 95 entry 4: "Your hero gains 5 Armor" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
 /// R3135001).
 pub const CHAOS_MED_HERO_ARMOR: i32 = 5;
-/// §8.8 row 95 entry 4: "and you heal it 5" (8 through patch v0.3.7b, #1149; 6 through v0.5.11p, #3135,
+/// §8.8 row 95 entry 4: "and you heal it 5" (8 through patch v0.3.7b, #1149; 6 through v0.5.11r, #3135,
 /// R3135001).
 pub const CHAOS_MED_HEAL: i32 = 5;
-/// §8.8 row 95 entry 6: "Summon 2 random Acclaimed cards" (R1243; 3 through v0.5.11p, #3135, R3135001).
+/// §8.8 row 95 entry 6: "Summon 2 random Acclaimed cards" (R1243; 3 through v0.5.11r, #3135, R3135001).
 pub const CHAOS_MED_ACCLAIMED: i32 = 2;
 /// §8.8 row 95 entry 7: "then Nerf each card bounced", once each (R1244).
 pub const CHAOS_MED_NERFS: i32 = 1;
@@ -1090,14 +1090,14 @@ pub const CHAOS_STINKY_DEATH_WATCH_CAP: i32 = 3;
 /// turn, its terminator (REVIEW A3.6): each cast is a chain with R28's cap of its own, and a cast that
 /// kills an Acclaimed Unit starts another, so an Acclaimed death past this many that turn casts nothing.
 pub const CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN: i32 = 5;
-/// §8.10 row 151 entry 2: "summon 2 Drone Corvettes" (3 through v0.5.11p, #3135, R3135001).
+/// §8.10 row 151 entry 2: "summon 2 Drone Corvettes" (3 through v0.5.11r, #3135, R3135001).
 pub const CHAOS_SCAPE_CORVETTES: i32 = 2;
 /// §8.10 row 151 entry 4: "cast 2 different cards of" the four Systems (R1882006).
 pub const CHAOS_SCAPE_SYSTEMS: i32 = 2;
-/// §8.10 row 151 entry 5: "add 3 random Starship Pieces to your hand" (4 through v0.5.11p, #3135, R3135001).
+/// §8.10 row 151 entry 5: "add 3 random Starship Pieces to your hand" (4 through v0.5.11r, #3135, R3135001).
 pub const CHAOS_SCAPE_HAND_PIECES: i32 = 3;
 /// §8.10 row 151 entry 7: "fuse 3 random Starship Pieces into your Dormant Starship" (R1882008; 4 through
-/// v0.5.11p, #3135, R3135001).
+/// v0.5.11r, #3135, R3135001).
 pub const CHAOS_SCAPE_FUSED_PIECES: i32 = 3;
 /// §8.10 row 151 entry 8: "add 2 random Radiant Weapons to your hand".
 pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
@@ -1106,33 +1106,33 @@ pub const CHAOS_SCAPE_WEAPONS: i32 = 2;
 pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
 
 // Training Grounds #39 Call to Chaos (Training-Grounds Edition) (SPEC §8.11 row 39, issue #2200, #3135): its
-// table's numbers, as printed. The through-v0.5.11p numbers are in each doc (R3135000).
+// table's numbers, as printed. The through-v0.5.11r numbers are in each doc (R3135000).
 /// §8.11 row 39 entry 1: "Summon 3 Rush Tokens", base faces.
 pub const CHAOS_TG_RUSH_TOKENS: i32 = 3;
-/// §8.11 row 39 entry 2: "refresh 3 mana" (§6.3 Refresh, R364; 4 through v0.5.11p).
+/// §8.11 row 39 entry 2: "refresh 3 mana" (§6.3 Refresh, R364; 4 through v0.5.11r).
 pub const CHAOS_TG_REFRESH: i32 = 3;
 /// §8.11 row 39 entry 3: "add 4 random Training Grounds cards to your hand" (R2200000).
 pub const CHAOS_TG_CARDS: i32 = 4;
-/// §8.11 row 39 entries 3 and 6: the added cards "cost (1)" (`costOverride`; (0) through v0.5.11p), apart from
+/// §8.11 row 39 entries 3 and 6: the added cards "cost (1)" (`costOverride`; (0) through v0.5.11r), apart from
 /// the price of any Call to Chaos entry 9 adds, which costs what it prints (R3135000).
 pub const CHAOS_TG_CARD_COST: i32 = 1;
 /// §8.11 row 39 entry 3: "and gain 2 mana", after the cards are added (R3135000).
 pub const CHAOS_TG_CARDS_MANA: i32 = 2;
-/// §8.11 row 39 entry 4: "gain 6 mana", which may pass max (§2.3; 8 through v0.5.11p).
+/// §8.11 row 39 entry 4: "gain 6 mana", which may pass max (§2.3; 8 through v0.5.11r).
 pub const CHAOS_TG_MANA: i32 = 6;
 /// §8.11 row 39 entry 4: "and draw 2 cards".
 pub const CHAOS_TG_DRAW: i32 = 2;
-/// §8.11 row 39 entry 5: "summon 5 random Training Grounds permanents" (R2200000; 6 through v0.5.11p).
+/// §8.11 row 39 entry 5: "summon 5 random Training Grounds permanents" (R2200000; 6 through v0.5.11r).
 pub const CHAOS_TG_PERMANENTS: i32 = 5;
 /// §8.11 row 39 entry 6: "add 2 random Radiant Training Grounds cards to your hand".
 pub const CHAOS_TG_RADIANT_CARDS: i32 = 2;
 /// §8.11 row 39 entry 6: "and gain 1 mana", after the cards are added (R3135000).
 pub const CHAOS_TG_RADIANT_MANA: i32 = 1;
-/// §8.11 row 39 entry 7: "summon 3 Rush Tokens", base faces (5 through v0.5.11p).
+/// §8.11 row 39 entry 7: "summon 3 Rush Tokens", base faces (5 through v0.5.11r).
 pub const CHAOS_TG_ARMY_TOKENS: i32 = 3;
 /// §8.11 row 39 entry 9, R2200002, R3135000: "at the start of every turn of yours": the entry adds on the
 /// caster's own turns whose count since the entry resolved is a multiple of this (every second turn, 2,
-/// through v0.5.11p).
+/// through v0.5.11r).
 pub const CHAOS_TG_EVERY: i32 = 1;
 /// §8.11 row 39 entry 9, R2200002: the most rest-of-game start-of-turn adds one player holds, its
 /// terminator (REVIEW A3.6), bounded as M #95's entry 9 is (`CALL_TO_CHAOS_ETERNAL_CAP`, R1241); a roll at
@@ -1592,6 +1592,12 @@ pub const VERSIONS_SCHEME: u32 = 3;
 /// searches for it, so a card or keyword joining the pool moves the position it finds and breaks nothing;
 /// a roll that takes more than a few hundred tries is built directly instead of widening this bound.
 pub const SEED_SEARCH_BOUND: usize = 4000;
+
+/// Issue #3117: how many places the testkit's `pool-probe` feature rotates every random pool
+/// `catalog::query` returns, so each roll lands on its neighbour as it would after one more card joined
+/// the pool (R380). A test that leans on where a roll lands fails under it, and a test of a pool's content
+/// or order reads the pool under `with_pool_shift(0, …)`. The shift is 0 in every build without the feature.
+pub const POOL_PROBE_SHIFT: usize = 1;
 
 // ---------------------------------------------------------------------------------------------
 // ME-CRAFT (Meditative #17 True Craft a Card, docs/meditative-set.md M6 #17, R880–R883).

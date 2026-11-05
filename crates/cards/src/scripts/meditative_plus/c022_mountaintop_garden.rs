@@ -63,7 +63,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11p the Garden had no Cry; `KEPT_SCRIPTS` folds those replays under it.
+/// R767000: through v0.5.11r the Garden had no Cry; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: garden(false, false),
@@ -480,7 +480,7 @@ mod tests {
             assert!(added(&s).is_empty());
         }
 
-        /// R767000: through v0.5.11p the Garden had no Cry, so playing it added nothing to the hand.
+        /// R767000: through v0.5.11r the Garden had no Cry, so playing it added nothing to the hand.
         #[test]
         fn r767000_a_game_on_v0_5_11o_adds_no_card_when_it_is_played() {
             for radiant in [false, true] {

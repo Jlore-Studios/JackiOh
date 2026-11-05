@@ -59,6 +59,13 @@ mod tests {
 
     use crate::scenario;
 
+    /// Whether a cast ended the game, which stops the rest of the chain and shows every hand to both seats.
+    /// A test of what a whole chain does reads the seeds where it ran on: which ones end the game moves
+    /// with every card that joins the pool (#848), and `a_game_that_ends_midway…` tests the ones that do.
+    fn game_over(s: &Scenario) -> bool {
+        s.state().result.is_some()
+    }
+
     fn view(s: &Scenario, seat: PlayerId) -> Value {
         js(&s.view(seat))
     }
@@ -278,7 +285,7 @@ mod tests {
             let mut checked = 0;
             for seed in seeds() {
                 let (s, prime) = play_prime(&seed, PrimeOptions::default());
-                if s.events().iter().any(|event| event.event_type() == GameEventType::TurnEnded) {
+                if game_over(&s) || s.events().iter().any(|event| event.event_type() == GameEventType::TurnEnded) {
                     continue;
                 }
                 let casts = casts_during(&s, &prime);
@@ -323,8 +330,12 @@ mod tests {
 
         #[test]
         fn r97_the_casts_are_public_a_card_a_cast_adds_to_your_hand_is_hidden_from_the_opponent() {
+            let mut checked = 0;
             for seed in seeds() {
                 let (s, prime) = play_prime(&seed, PrimeOptions::default());
+                if game_over(&s) {
+                    continue;
+                }
                 let theirs = view(&s, P2);
                 // A cast is public: its announce names it, unless the card now lies where p2 may not read it.
                 let hand: Vec<String> = s.hand(P1).into_iter().map(|card| card.id).collect();
@@ -347,7 +358,9 @@ mod tests {
                     }
                 }
                 assert!(!theirs["opponent"]["hand"].is_array());
+                checked += 1;
             }
+            assert!(checked > 0);
         }
 
         #[test]
@@ -362,8 +375,12 @@ mod tests {
 
         #[test]
         fn casts_5_radiant_spells() {
-            for seed in seeds().into_iter().take(6) {
+            let mut checked = 0;
+            for seed in seeds() {
                 let (s, prime) = play_prime(&seed, PrimeOptions { radiant: true, ..PrimeOptions::default() });
+                if game_over(&s) {
+                    continue;
+                }
                 let own: Vec<Cast> = casts_during(&s, &prime).into_iter().filter(|cast| cast.depth == 1).collect();
                 assert_eq!(own.len(), 5, "{seed}");
                 let events = events_json(&s);
@@ -374,7 +391,9 @@ mod tests {
                         .find(|e| e["type"] == "cardResolved" && e["instanceId"] == event["instanceId"]);
                     assert!(resolved.is_some_and(|e| e["radiant"] == true), "{seed} {}", text(event, "defId"));
                 }
+                checked += 1;
             }
+            assert!(checked > 0);
         }
 
         #[test]

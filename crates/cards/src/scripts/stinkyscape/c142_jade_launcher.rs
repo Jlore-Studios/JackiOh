@@ -149,7 +149,7 @@ mod tests {
         #[test]
         fn r987_a_lucky_1_given_to_it_rolls_the_reward_again_keeping_the_best() {
             // Lucky 1 given to the Launcher (R1438) gives its roll a second roll, keeping the better: the
-            // best-of path M #40 Feng Shui's Luck 1 took through v0.5.11p (R3140000: no card gives Luck now).
+            // best-of path M #40 Feng Shui's Luck 1 took through v0.5.11r (R3140000: no card gives Luck now).
             // Worst to best (R960): Dud < Jade < Red Jade.
             const RANKED: [&str; 3] = ["meditative-039-3", "meditative-039-2", "meditative-039-4"];
             const SEEDS: u32 = 30;

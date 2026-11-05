@@ -1,4 +1,4 @@
-//! M #47 饕餮 (SPEC §8.8 row 47): (4) Unit, CN, Legendary, 0/1 → 0/2 (2/2 → 4/4 through v0.5.11p).
+//! M #47 饕餮 (SPEC §8.8 row 47): (4) Unit, CN, Legendary, 0/1 → 0/2 (2/2 → 4/4 through v0.5.11r).
 //!
 //! Base:    "End of turn: Fuse a random enemy Unit into this."
 //! Radiant: "End of turn: Fuse a random enemy Unit and a random card from your opponent's deck into this."
@@ -6,7 +6,7 @@
 //! from the match rng (ME-FUSE-RANDOM, MD-C20): the enemy Units on the field (the top of each pile, both
 //! the unit row and a Flying Unit standing in the backrow, R1081000; never a Field Spell or a Trap, face-up
 //! or face-down, and never an Immutable one), then on the Radiant face the opponent's library. Through
-//! v0.5.11p the field ingredient was any enemy permanent, a Field Spell or a Trap too (`script_v0_5_11o`,
+//! v0.5.11r the field ingredient was any enemy permanent, a Field Spell or a Trap too (`script_v0_5_11o`,
 //! R767000). The fusion is R77 and R102's: this keeps its instance, zone, damage and Radiant flag; the
 //! eaten card ceases to exist with no Death. An Immutable 饕餮 eats nothing (R23). With no enemy Unit
 //! nothing is fused from the field.
@@ -21,7 +21,7 @@ fn enemy_unit() -> Value {
     json!({ "side": "enemy", "zones": ["field"], "rows": ["units"], "types": ["Unit"] })
 }
 
-/// R767000: through v0.5.11p, any enemy permanent: both rows.
+/// R767000: through v0.5.11r, any enemy permanent: both rows.
 fn enemy_permanent() -> Value {
     json!({ "side": "enemy", "zones": ["field"] })
 }
@@ -56,7 +56,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11p the field ingredient was any enemy permanent; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.11r the field ingredient was any enemy permanent; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -533,7 +533,7 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.11p and before, which ate any enemy permanent.
+        /// R767000: the script kept for the replays of v0.5.11r and before, which ate any enemy permanent.
         mod v0_5_11o {
             use super::*;
 

@@ -1,4 +1,4 @@
-//! M #81 Deadman's Hand (SPEC §8.8 row 81): (0) embiggen (1) Spell, Rare ((2) through v0.5.11p).
+//! M #81 Deadman's Hand (SPEC §8.8 row 81): (0) embiggen (1) Spell, Rare ((2) through v0.5.11r).
 //!
 //! Base:    "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw
 //!          {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
@@ -8,10 +8,10 @@
 //! - **The copies:** for each card in this player's hand, in hand order, then for this card on the
 //!   face it was played with, a library copy (`shuffle_into { copyOf }`, R57's riders) at a random
 //!   position (§6.3), R80's cap turning the rest away. A copy is not generation (R387).
-//! - **The roll** (R1144): played at (1), (2) through v0.5.11p (`ctx.embiggened`, §2.3), each copy whose card is not
+//! - **The roll** (R1144): played at (1), (2) through v0.5.11r (`ctx.embiggened`, §2.3), each copy whose card is not
 //!   already Radiant rolls `chance` on the match rng once, before it goes in, so it goes in on the
 //!   face it rolled (R311); at (0) none rolls, and a Radiant card's copy is Radiant without a roll (R129).
-//! - **The draw** (since #3140; through v0.5.11p the Radiant face alone drew, one card, `script_v0_5_11o`):
+//! - **The draw** (since #3140; through v0.5.11r the Radiant face alone drew, one card, `script_v0_5_11o`):
 //!   `draw` cards after the copies went in, on either face, read through `param` (R386): 1 on the base face,
 //!   3 on the Radiant one, both tuned.
 //! - **Hidden information** (R311): the owner's library list names the copies on the faces they went
@@ -66,7 +66,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11p only the Radiant face drew (one card); `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.5.11r only the Radiant face drew (one card); `KEPT_SCRIPTS` folds those replays
 /// under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -331,7 +331,7 @@ mod tests {
                 }
             }
 
-            /// R767000: Deadman's Hand through v0.5.11p: the Radiant face alone drew, one card, and its
+            /// R767000: Deadman's Hand through v0.5.11r: the Radiant face alone drew, one card, and its
             /// Embiggened version cost (2).
             #[test]
             fn r767000_a_game_on_v0_5_11o_draws_on_the_radiant_face_alone_and_one_card() {

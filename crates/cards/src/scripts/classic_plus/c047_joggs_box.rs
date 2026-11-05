@@ -12,7 +12,7 @@
 //! (R456): the casts and everything they set off resolve first, and the turn then ends as if its player
 //! had pressed End turn, every end-of-turn step running (R62); on the opponent's turn it does nothing.
 //! Base "Cast {casts} random Spells. End the turn." (10); Radiant the same, 20 (`casts` 10 → 20). The
-//! Radiant face had Echo 1 through v0.5.11p, a repeat that ran the Cry again with fresh picks, and the
+//! Radiant face had Echo 1 through v0.5.11r, a repeat that ran the Cry again with fresh picks, and the
 //! Box ended no turn (`script_v0_5_11o`, R767000).
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
@@ -42,7 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.11p the Box ended no turn, and its Radiant face had Echo 1 (20 casts as two runs of
+/// R767000: through v0.5.11r the Box ended no turn, and its Radiant face had Echo 1 (20 casts as two runs of
 /// 10); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
@@ -744,7 +744,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.11p and before: no End the turn, and Echo 1 on the
+    /// R767000: the script kept for the replays of v0.5.11r and before: no End the turn, and Echo 1 on the
     /// Radiant face, whose `casts` was 10.
     mod v0_5_11o {
         use super::*;

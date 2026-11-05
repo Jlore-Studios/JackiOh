@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn r987_a_lucky_x_given_to_the_rock_joins_the_roll() {
         // Lucky 1 given to the base Rock (R1438) gives its roll a second roll, keeping the better: the best-of
-        // path Feng Shui's Luck 1 took through v0.5.11p (R3140000: no card gives Luck now; the engine keeps
+        // path Feng Shui's Luck 1 took through v0.5.11r (R3140000: no card gives Luck now; the engine keeps
         // it, tested on its fixture).
         crate::register_all();
         let mut worse_never = true;

@@ -30,7 +30,7 @@ use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, full_art_picked, reg
 use crate::db::store::{Db, LoadoutSample, StoreError};
 use crate::economy::store::OwnedCosmetics;
 use crate::env::quoted;
-use crate::loadout::{CARD_SLOT_KINDS, DECK_SLOT_KINDS};
+use crate::loadout::{CARD_SLOT_KINDS, CardPicksExt, DECK_SLOT_KINDS, SeatLoadoutExt};
 
 const USAGE: &str = "Usage: jackioh-server cosmetics-fit
 

@@ -10,7 +10,7 @@
 //!            Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Through v0.5.11p it summoned 3 Corvettes, added 4 Pieces to the hand and fused 4 Pieces; those numbers are
+//! Through v0.5.11r it summoned 3 Corvettes, added 4 Pieces to the hand and fused 4 Pieces; those numbers are
 //! the engine's (`config.rs`) and the labels below are the only words of this file that moved, so it keeps no
 //! old script (R3135001, R767000).
 //!

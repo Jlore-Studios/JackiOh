@@ -11,7 +11,7 @@
 //!            a random Call to Chaos to your hand; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Through v0.5.11p the refresh was 4, the cards cost (0) with no mana, the mana 8, the permanents 6, the
+//! Through v0.5.11r the refresh was 4, the cards cost (0) with no mana, the mana 8, the permanents 6, the
 //! army 5 tokens, and entry 9 added a Call at (0) at once and at the start of every second turn; the
 //! numbers are the engine's (`config.rs`), so this file keeps no old script (R3135000, R767000).
 //!
@@ -619,10 +619,13 @@ mod tests {
         #[test]
         fn r2200004_once_its_set_ships_the_call_to_chaos_pool_holds_this_card() {
             crate::register_all();
-            let pool: Vec<String> = catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
-                .iter()
-                .map(|def| def.id.clone())
-                .collect();
+            // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+            let pool: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
+                catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
+            })
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
             assert_eq!(pool, SHIPPED_EDITIONS.map(String::from).to_vec());
         }
     }

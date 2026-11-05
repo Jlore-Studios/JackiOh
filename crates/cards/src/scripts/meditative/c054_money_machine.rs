@@ -61,7 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11p the Machine had no Cry; `KEPT_SCRIPTS` folds those replays under it.
+/// R767000: through v0.5.11r the Machine had no Cry; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: money_machine(false, false),
@@ -214,7 +214,7 @@ mod tests {
         assert!(crate::card_def(ID).params.is_none());
     }
 
-    /// R767000: through v0.5.11p the Machine had no Cry, so playing it added nothing to the hand.
+    /// R767000: through v0.5.11r the Machine had no Cry, so playing it added nothing to the hand.
     #[test]
     fn r767000_a_game_on_v0_5_11o_adds_no_coin_when_it_is_played() {
         for radiant in [false, true] {

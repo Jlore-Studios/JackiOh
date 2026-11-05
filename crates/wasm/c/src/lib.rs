@@ -521,6 +521,22 @@ pub extern "C" fn find_instance(
     })
 }
 
+/// R3100000: `CombatForecast`, `{ attacks: AttackForecast[], lethal }`: what each attack `seat` may declare
+/// would do, as the board shows it, for the tutorial's coach (`engine::combat_forecast`).
+#[unsafe(no_mangle)]
+pub extern "C" fn combat_forecast(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    seat_ptr: *const u8,
+    seat_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("combatForecast: the state", state_json_ptr, state_json_len)?;
+        let seat = arg("combatForecast: the seat", seat_ptr, seat_len)?;
+        wasm_core::combat_forecast(state, seat)
+    })
+}
+
 /// `EmoteId[]`: emote hand `seat` is dealt for `seed` (R1341), matching the match actor (R1342).
 #[unsafe(no_mangle)]
 pub extern "C" fn deal_emote_hand(
@@ -770,6 +786,16 @@ pub extern "C" fn validator(
 #[unsafe(no_mangle)]
 pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
+}
+
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`, the host contract). Only a call that does not parse is a failed status.
+#[unsafe(no_mangle)]
+pub extern "C" fn loadout(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::loadout(arg("loadout: the call", call_json_ptr, call_json_len)?))
 }
 
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)

@@ -8,7 +8,7 @@
 //!            cast a random Call to Chaos; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Through v0.5.11p the fuse added 2 copies (three cards at (0)), the hero gained 6 Armor and healed 6, and
+//! Through v0.5.11r the fuse added 2 copies (three cards at (0)), the hero gained 6 Armor and healed 6, and
 //! 3 Acclaimed cards were summoned; those numbers are the engine's (`config.rs`), so this file keeps no old
 //! script (R3135001, R767000).
 //!
@@ -513,11 +513,13 @@ mod tests {
             crate::register_all();
             // No preview: the Meditative set ships (R1420), so the pool that names no set holds
             // every edition, in catalog order.
-            let shipped: Vec<String> =
+            // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+            let shipped: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
                 jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
-                    .iter()
-                    .map(|def| def.id.clone())
-                    .collect();
+            })
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
             assert_eq!(shipped, EDITIONS.map(String::from).to_vec());
         }
     }

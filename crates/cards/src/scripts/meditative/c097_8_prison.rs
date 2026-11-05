@@ -433,7 +433,7 @@ mod tests {
     // rolls are the whole difference Prison makes to the cursor. No card gives Luck since #3140
     // (R3140000), so the Luck path is proved by a Lucky X given to Prison (R1438), the same best-of rolls,
     // and by the engine's own Luck test on its fixture; Feng Shui's Luck 1 stands only in the kept script
-    // of v0.5.11p and before.
+    // of v0.5.11r and before.
     mod luck {
         use super::*;
 

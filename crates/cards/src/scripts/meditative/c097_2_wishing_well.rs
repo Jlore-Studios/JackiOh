@@ -296,7 +296,7 @@ mod tests {
     // draws one `chance` per roll and nothing else. No card gives Luck since #3140 (R3140000), so the
     // Luck path is proved here by a Lucky X given to the Well (R1438), the same best-of rolls, and
     // by the engine's own Luck test on its fixture; Feng Shui's Luck 1 stands only in the kept script
-    // of v0.5.11p and before.
+    // of v0.5.11r and before.
     mod luck {
         use super::*;
 

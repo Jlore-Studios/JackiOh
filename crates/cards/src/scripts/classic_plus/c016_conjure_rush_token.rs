@@ -8,7 +8,7 @@
 //! Token with `keywords` different random keywords from R21's pool it lacks on heads and `tails` on
 //! tails; the coin is shown to both players before the summon it decided (R2652001). The Radiant face
 //! flips nothing: `tokens` Rush Tokens, each with `keywords`. A summon with no open zone rolls no
-//! keywords (R129), though the coin was flipped as the Spell resolved. Through v0.5.11p the base face
+//! keywords (R129), though the coin was flipped as the Spell resolved. Through v0.5.11r the base face
 //! gave 3 keywords with no coin and the Radiant face 3 (`script_v0_5_11o`, R767000).
 
 use jackioh_engine::effects::summon;
@@ -41,7 +41,7 @@ fn flip_then_summon() -> Hook {
     })
 }
 
-/// The Radiant face, and the base face through v0.5.11p: no coin.
+/// The Radiant face, and the base face through v0.5.11r: no coin.
 fn conjure() -> Hook {
     hook(|ctx| summons(param(&*ctx, "keywords"), ctx))
 }
@@ -59,7 +59,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11p both faces summoned with `keywords` and no coin; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.11r both faces summoned with `keywords` and no coin; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -340,7 +340,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.5.11p and before: no coin, 3 keywords on a base
+    /// R767000: the script kept for the replays of v0.5.11r and before: no coin, 3 keywords on a base
     /// token, 3 on each of the Radiant's.
     mod v0_5_11o {
         use super::*;

@@ -728,8 +728,8 @@ pub struct RankRecord {
 /// R1436: each listed profile's username as shown, read in the transaction that read the standings
 /// it labels, so a rename shows on every read at once and nothing but `profiles` holds a name. A
 /// seat a deleted account left empty names nobody and is not looked up; a profile with no row
-/// shows an empty name.
-async fn usernames_of<'a>(
+/// shows an empty name. The admin routes label their posts and audit rows with it too.
+pub(crate) async fn usernames_of<'a>(
     tx: &mut Tx<'_>,
     profile_ids: impl IntoIterator<Item = &'a str>,
 ) -> Result<IndexMap<String, String>, StoreError> {

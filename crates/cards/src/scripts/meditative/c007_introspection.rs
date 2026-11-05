@@ -9,7 +9,7 @@
 //! cheaper too, but the turn's draw, which follows, is not (R62). The discount is a
 //! `costMod` (R78: kept until a graveyard takes it off, R766), and it never reaches an X card (R65). One
 //! script serves both faces: every number is declared per face and read through `param` (R386). Through
-//! v0.5.11p it was an `end_of_turn` hook (`script_v0_5_11o`, R767000).
+//! v0.5.11r it was an `end_of_turn` hook (`script_v0_5_11o`, R767000).
 
 use jackioh_engine::effects::{
     ForEachCardArgs, damage_all, draw, for_each_card, heal, set_cost_mod,
@@ -73,7 +73,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.11p the hook ran at the end of its controller's turn; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.11r the hook ran at the end of its controller's turn; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let base = Script {
@@ -242,7 +242,7 @@ mod tests {
             s.expect_health(P2, HERO_HEALTH - 2);
         }
 
-        /// R767000: the script kept for the replays of v0.5.11p and before, which acted at the end of turn.
+        /// R767000: the script kept for the replays of v0.5.11r and before, which acted at the end of turn.
         #[test]
         fn r767000_a_game_on_v0_5_11o_acts_at_the_end_of_your_turn_and_not_the_start() {
             for radiant in [false, true] {

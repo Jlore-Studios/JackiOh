@@ -13,12 +13,20 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::combat::{AttackTarget, attack_target_of};
 use crate::config::{CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
 use crate::damage::DamageTarget;
-use crate::layers::{AuraTable, face_of, unit_has};
+use crate::duos_life::effective_life;
+use crate::layers::{AuraTable, face_of, unit_has, unit_view};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
-use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
-use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
+use crate::state::{
+    CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, can_lose, find_instance,
+};
+use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage};
+use crate::wire::{
+    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, has_keyword,
+    opponent_of,
+};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of};
 
 /// A hero's block as a card may see it (§10.1), copied so a script cannot write through it. Not the
@@ -680,4 +688,166 @@ pub fn beneficial_on_own_side(state: &GameState, event: &GameEvent) -> Option<St
     } else {
         None
     }
+}
+
+// The combat forecast: what each attack a seat may declare would do (SPEC §9.10, R3100000)
+
+/// What one attack a seat may declare would do, as the board shows it (R3100000). `dealt` is the damage
+/// the blow does to its target after Divine Shield, Armor and the other stops of §4.4; `taken` is what
+/// the target's strike back does to the attacker (§4.3); `kills` says the blow destroys its target (ends
+/// the game, for a hero); `survives` says the attacker outlasts the exchange; and `pops` says the blow
+/// breaks a Divine Shield. A unit's size is its Attack plus its Health, the measure the tutorial's coach
+/// ranks its picks by; a hero target's is 0.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct AttackForecast {
+    /// The `attack` action's own ids, so a caller finds the entry of an action it holds.
+    pub attacker_id: String,
+    pub target_id: String,
+    pub dealt: i32,
+    pub taken: i32,
+    pub kills: bool,
+    pub survives: bool,
+    pub pops: bool,
+    pub attacker_size: i32,
+    pub target_size: i32,
+}
+
+/// The forecast of one seat's whole turn so far: every attack it may declare, and whether the attackers
+/// that may hit the enemy hero finish it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CombatForecast {
+    /// One entry per `attack` in `legal_actions(state, seat)`, in its order.
+    pub attacks: Vec<AttackForecast>,
+    /// Whether the units that may attack the enemy hero, one blow each, deal it its whole life between
+    /// them. Traps and the hero's other answers are not counted: they show nothing on the board.
+    pub lethal: bool,
+}
+
+/// R3100000: the forecast of every attack `seat` may declare now. It reads only what the board shows
+/// (every unit's stats and keywords through the layers, each hero's Armor and life), never a hand, a
+/// library or a face-down card, and it changes nothing: each damage is the pipeline's own reading (§4.4
+/// steps 1 to 4, `projected_damage` on a hero), so no forecast can disagree with the hit.
+pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
+    let enemy = opponent_of(seat);
+    let mut attacks = Vec::new();
+    let mut hitters: IndexSet<String> = IndexSet::new();
+    let mut hero_damage = 0;
+    for action in crate::reduce::legal_actions(state, seat) {
+        let ActionBody::Attack {
+            attacker_id,
+            target_id,
+        } = action
+        else {
+            continue;
+        };
+        let (Some(attacker), Some(target)) = (
+            find_instance(state, &attacker_id),
+            attack_target_of(state, &target_id),
+        ) else {
+            continue;
+        };
+        let forecast = forecast_attack(state, attacker, &target);
+        let on_enemy_hero = matches!(target, DamageTarget::Hero { player } if player == enemy);
+        if on_enemy_hero && hitters.insert(attacker_id.clone()) {
+            hero_damage += forecast.dealt;
+        }
+        attacks.push(AttackForecast {
+            attacker_id,
+            target_id,
+            ..forecast
+        });
+    }
+    let lethal = !hitters.is_empty() && can_lose(state, enemy) && hero_damage >= effective_life(state, enemy);
+    CombatForecast { attacks, lethal }
+}
+
+/// One attack's forecast, its ids left empty for the caller.
+fn forecast_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> AttackForecast {
+    let mine = unit_view(state, attacker);
+    let attacker_size = mine.attack + mine.health;
+    let DamageTarget::Unit { instance: defender } = target else {
+        // A hero never strikes back: R44's projection of the blow is the whole of it.
+        return AttackForecast {
+            attacker_id: String::new(),
+            target_id: String::new(),
+            dealt: projected_damage(state, attacker, target),
+            taken: 0,
+            kills: is_lethal(state, attacker, target),
+            survives: true,
+            pops: false,
+            attacker_size,
+            target_size: 0,
+        };
+    };
+    let theirs = unit_view(state, defender);
+    let bonus = crate::combat::attack_mod_for(state, attacker, defender);
+    let hit = (mine.attack + bonus.attack) * crate::combat::lane_multiplier_for(state, attacker, defender);
+    let back = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
+    let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
+    // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land.
+    let falls = strikes_back && falls_to_first_strike(state, attacker, defender);
+    let mut dealt = if falls {
+        0
+    } else {
+        hit_on_unit(state, attacker, defender, hit)
+    };
+    // §4.4 step 5: a Trample hit deals no more than its target's health; the rest goes on to the hero.
+    if has_keyword(&mine.keywords, KeywordKind::Trample) {
+        dealt = dealt.min(theirs.health.max(0));
+    }
+    let poisons = bonus.poisonous || has_keyword(&mine.keywords, KeywordKind::Poisonous);
+    let kills = dealt > 0 && (poisons || dealt >= theirs.health);
+    // One First Strike attacker that destroys its target is not struck back (§4.3 step 1).
+    let strikes_first = has_keyword(&mine.keywords, KeywordKind::FirstStrike)
+        && !has_keyword(&theirs.keywords, KeywordKind::FirstStrike);
+    let taken = if !strikes_back || (strikes_first && kills) {
+        0
+    } else {
+        hit_on_unit(state, defender, attacker, back)
+    };
+    let survives =
+        taken <= 0 || (taken < mine.health && !has_keyword(&theirs.keywords, KeywordKind::Poisonous));
+    AttackForecast {
+        attacker_id: String::new(),
+        target_id: String::new(),
+        dealt,
+        taken,
+        kills,
+        survives,
+        pops: !falls && hit > 0 && is_shielded(state, defender),
+        attacker_size,
+        target_size: theirs.attack + theirs.health,
+    }
+}
+
+/// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
+fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
+    unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
+}
+
+/// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them: a Divine Shield negates the
+/// hit, Armor takes its part unless the source pierces (R346), the unit's own cap comes next (R2179005)
+/// and an Indestructible unit takes nothing.
+fn hit_on_unit(state: &GameState, source: &CardInstance, unit: &CardInstance, amount: i32) -> i32 {
+    if amount <= 0 || is_shielded(state, unit) || unit_has(state, unit, KeywordKind::Indestructible) {
+        return 0;
+    }
+    let after_armor = if crate::damage::pierces(state, Some(source), None) {
+        amount
+    } else {
+        (amount - unit_view(state, unit).armor).max(0)
+    };
+    crate::damage::unit_damage_cap(state, unit).map_or(after_armor, |cap| after_armor.min(cap))
 }

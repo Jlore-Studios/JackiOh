@@ -38,7 +38,7 @@ struct Face {
 
 const BASE: Face = Face { attack: (2, 2), books: (2, 2), percent: (6, 0), health: (2, 2), armor: (1, 0) };
 const RADIANT: Face = Face { attack: (4, 3), books: (4, 1), percent: (16, 0), health: (5, 1), armor: (2, 0) };
-/// R767000: the numbers through v0.5.11p, before #3135's nerf.
+/// R767000: the numbers through v0.5.11r, before #3135's nerf.
 const BASE_V0_5_11O: Face = Face { attack: (2, 1), books: (2, 1), percent: (7, 0), health: (2, 1), armor: (1, 0) };
 const RADIANT_V0_5_11O: Face = Face { attack: (4, 2), books: (4, 0), percent: (17, 0), health: (5, 0), armor: (2, 0) };
 /// R767000: the numbers through v0.4.0f, before #1704's nerf.
@@ -104,7 +104,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11p and the versions before it back to the one after v0.4.0f's ran, +(2X−1)
+/// R767000: the scripts v0.5.11r and the versions before it back to the one after v0.4.0f's ran, +(2X−1)
 /// Attack [+(4X−2)], 2X−1 Books [4X], 7X% [17X%] and +(2X−1) Health [+5X]; `KEPT_SCRIPTS` folds those
 /// versions' replays under it.
 pub fn script_v0_5_11o() -> CardScripts {

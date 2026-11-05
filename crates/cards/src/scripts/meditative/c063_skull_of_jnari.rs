@@ -4,7 +4,7 @@
 //! Radiant: "End of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
 //! Engine: `end_of_turn` returns `param("units")` copies of `summon_random_from_hand` (R1083),
 //! Radiant with `radiant: true`. It runs at its controller's end of turn alone (R62), in the order the
-//! turn's other end-of-turn hooks come; through v0.5.11p it was a `start_of_turn` hook (`script_v0_5_11o`,
+//! turn's other end-of-turn hooks come; through v0.5.11r it was a `start_of_turn` hook (`script_v0_5_11o`,
 //! R767000).
 //! Voice: the `trigger` hook in `card-audio.json5`, its lines in `card-text.yaml` ("This one will
 //! prove very useful! ...Probably.", "There IS a method to my madness!", "Good units are hard to
@@ -43,7 +43,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.11p the Skull summoned at the start of its controller's turn; `KEPT_SCRIPTS`
+/// R767000: through v0.5.11r the Skull summoned at the start of its controller's turn; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     let at_start = |radiant: bool| Script {
@@ -324,7 +324,7 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.11p and before, which summoned at the start.
+        /// R767000: the script kept for the replays of v0.5.11r and before, which summoned at the start.
         mod v0_5_11o {
             use super::*;
 

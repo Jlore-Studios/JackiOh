@@ -2,7 +2,7 @@
 //!
 //! Base:    "Get ready to learn Chinese! Transform every card in your hand into the same random CN
 //!           card. Summon {units} random CN Units." (the cards cost their printed prices since #3140;
-//!           (1) through v0.5.11p, kept as `script_v0_5_11o`, and (0) through v0.5.9f, kept as
+//!           (1) through v0.5.11r, kept as `script_v0_5_11o`, and (0) through v0.5.9f, kept as
 //!           `script_v0_5_9f`, R767000)
 //! Radiant: "… the same random Radiant CN card … Summon {units} random Radiant CN Units." Printed in
 //!           English since issue #2179 (in Chinese before, MD-B13).
@@ -28,7 +28,7 @@ pub const ID: &str = "meditative-032";
 /// The three effects, in the order the text prints them.
 const EFFECTS: i32 = 3;
 
-/// R767000: "which costs (1)": what the new hand cards cost from #2657 through v0.5.11p.
+/// R767000: "which costs (1)": what the new hand cards cost from #2657 through v0.5.11r.
 const CN_CARD_COST_V0_5_11O: i32 = 1;
 /// R767000: what they cost through v0.5.9f, (0).
 const CN_CARD_COST_V0_5_9E: i32 = 0;
@@ -100,7 +100,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.11p the new hand cards cost (1); `KEPT_SCRIPTS` folds those replays under it.
+/// R767000: through v0.5.11r the new hand cards cost (1); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         base: spiritually(false, Some(CN_CARD_COST_V0_5_11O)),
@@ -344,7 +344,7 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.11p and before, whose hand cards cost (1).
+        /// R767000: the script kept for the replays of v0.5.11r and before, whose hand cards cost (1).
         mod v0_5_11o {
             use super::*;
 

@@ -18,7 +18,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { RunAction, RunContent, RunFile, RunSetup, RunState, RunStats, RunUnlocks } from "@jackioh/run";
 
 import { t } from "../i18n/i18n.ts";
-import { localStorageOrNull } from "../net/storage.ts";
+import { messageOf } from "../net/errors.ts";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 import {
   runCheckSetup,
   runContent,
@@ -188,9 +189,10 @@ function parseHistory(raw: unknown): RunRecord[] {
 }
 
 function readJson(key: string): unknown {
+  const raw = getStored(key);
+  if (raw === null) return null;
   try {
-    const raw = localStorageOrNull()?.getItem(key) ?? null;
-    return raw === null ? null : (JSON.parse(raw) as unknown);
+    return JSON.parse(raw) as unknown;
   } catch {
     return null;
   }
@@ -198,17 +200,10 @@ function readJson(key: string): unknown {
 
 function writeJson(key: string, value: unknown): void {
   try {
-    localStorageOrNull()?.setItem(key, JSON.stringify(value));
+    setStored(key, JSON.stringify(value));
   } catch {
-    // Keeping the run is a convenience: a full or blocked storage must not stop the run being played.
-  }
-}
-
-function removeKey(key: string): void {
-  try {
-    localStorageOrNull()?.removeItem(key);
-  } catch {
-    // As above.
+    // Keeping the run is a convenience: a value that cannot be written as JSON must not stop the run being played
+    // (`setStored` already shrugs off a full or blocked storage).
   }
 }
 
@@ -241,7 +236,7 @@ function loadCore(): Core {
     const kept = parseKept(stored);
     live = kept === null ? null : foldKept(kept);
     // A run that cannot be read or folded is dropped alone: the progress and the history stay.
-    if (live === null) removeKey(DUNGEON_RUN_KEY);
+    if (live === null) removeStored(DUNGEON_RUN_KEY);
   }
   return { progress, daily, history, live };
 }
@@ -327,17 +322,13 @@ export function dailyRunNumber(date: string): number {
   return daily !== null && daily.date === date ? DUNGEON_FIRST_RUN + daily.started : DUNGEON_FIRST_RUN;
 }
 
-function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
 function union(held: readonly string[], more: readonly string[]): string[] {
   return [...new Set([...held, ...more])];
 }
 
-/** B20: the curses' points, summed from the content's own. */
-function cursePointsOf(run: RunState, content: RunContent): number {
-  return run.curses.reduce((sum, id) => sum + (content.curses.find((curse) => curse.id === id)?.points ?? 0), 0);
+/** B20: the curses' points, summed from the content's own: a finished run's record's and the start screen's. */
+export function cursePointsOf(curses: readonly string[], content: RunContent): number {
+  return curses.reduce((sum, id) => sum + (content.curses.find((curse) => curse.id === id)?.points ?? 0), 0);
 }
 
 /** B20: what a finished run adds: its record, its extractions and its Embers, once. */
@@ -350,7 +341,7 @@ function settle(from: Core, live: Live, now: number): Core {
     daily: live.daily,
     mode: "sandbox",
     curses: run.curses,
-    cursePoints: cursePointsOf(run, content),
+    cursePoints: cursePointsOf(run.curses, content),
     rowReached: run.row === null ? 0 : run.row + DUNGEON_ROW_OFFSET,
     won: run.phase.phase === "won",
     score,
@@ -432,7 +423,7 @@ function step(from: Core, live: Live, action: RunAction): Core | string {
     const settled = settle(from, next, Date.now());
     persistProgress(settled);
     persistHistory(settled);
-    removeKey(DUNGEON_RUN_KEY);
+    removeStored(DUNGEON_RUN_KEY);
     return settled;
   } catch (cause) {
     return messageOf(cause);

@@ -261,7 +261,7 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
 
 #[test]
 fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
-    // Introspection's start of turn deals 1 to each enemy (at the end of turn through v0.5.11p, #3140), with no
+    // Introspection's start of turn deals 1 to each enemy (at the end of turn through v0.5.11r, #3140), with no
     // Pierce of its own (The Power to Punish's has it, #2179).
     let introspection_at_armored = |pierce: bool| {
         let mut s = scenario(json!({

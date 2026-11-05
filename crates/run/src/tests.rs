@@ -97,7 +97,7 @@ fn the_map_holds_sixteen_fights_three_of_them_bosses_each_after_a_campfire() {
     let state = start(&content);
     assert_eq!(state.map.iter().filter(|row| row[0].kind.is_fight()).count(), 16);
     let bosses: Vec<usize> = (0..state.map.len())
-        .filter(|r| state.map[*r][0].kind.is_boss())
+        .filter(|r| matches!(state.map[*r][0].kind, RunNodeKind::MiniBoss | RunNodeKind::Boss))
         .collect();
     assert_eq!(bosses.len(), 3);
     assert_eq!(state.map[bosses[2]][0].kind, RunNodeKind::Boss);

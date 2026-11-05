@@ -768,6 +768,7 @@ keeps behind its opaque `EngineState` brand.
     // one flat object of every rules, AI and run number a client reads (#3093): AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK (practice, the tutorial harness, the lean toggle, R1370, and their tests),
     // RUN (run_constants's object) and each constant of engineConfig.ts (§5.1) under its own name (DECK_SIZE, …), so a host that is not the web restates none (CLAUDE.md rule 9)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
+#[wasm_bindgen] pub fn combat_forecast(state_json: &str, seat: &str) -> String;      // R3100000: CombatForecast { attacks: AttackForecast[], lethal } (query.rs's combat_forecast): what each attack `seat` may declare would do, as the board shows it, for the tutorial's coach; the normal and C modules bind it (the Luau module has no copy)
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
@@ -782,6 +783,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn host(call_json: &str) -> String;
     // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
     // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn loadout(call_json: &str) -> String;
+    // #3102: jackioh-shared's loadout visibility rule (SPEC §10.8, R1834003, R3013002). A LoadoutCall in ({ call: "dealtCards", state } | { call: "shownDefs", view, dealt }
+    // | { call: "cardsDue", shown, loadouts, sent? }), a LoadoutAnswer out ({ dealt } | { shown } | { due: { cards, sent } }); the host holds the deal and each receiver's sent set
 ```
 
 ### 10.2 Build
@@ -802,7 +806,7 @@ no CI job sets it yet.
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
-`dealEmoteHand`, …).
+`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
 `practice.worker.ts` awaits it before handling a message.
@@ -1024,7 +1028,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a
   Mythic's or an Animated art's id, R2655000, R2715000), goes after the first view to a socket that shows a card that seat's deck
-  dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
+  dealt, once per socket (`jackioh_shared::loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and

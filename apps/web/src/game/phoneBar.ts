@@ -14,24 +14,7 @@
 import { useSyncExternalStore } from "react";
 
 import { PHONE_BAR_QUERY, PHONE_PORTRAIT_QUERY } from "./config.ts";
-
-function queryList(text: string): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
-  try {
-    return window.matchMedia(text);
-  } catch {
-    return null;
-  }
-}
-
-function subscribeTo(text: string, onChange: () => void): () => void {
-  const query = queryList(text);
-  if (query === null || typeof query.addEventListener !== "function") return () => undefined;
-  query.addEventListener("change", onChange);
-  return () => {
-    query.removeEventListener("change", onChange);
-  };
-}
+import { queryList, subscribeTo } from "./mediaQuery.ts";
 
 function subscribe(onChange: () => void): () => void {
   return subscribeTo(PHONE_BAR_QUERY, onChange);
