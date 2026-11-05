@@ -16909,6 +16909,7 @@
       "run_id": "41956877554",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 70,
       "started_at": "2026-11-05T02:41:47Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -32486,9 +32487,33 @@
         "title": "Patch: the engine's C boundary builds as a plain wasm32-unknown-unknown crate, without emscripten",
         "tries": 3,
         "verdict": "failed"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "5f0046ca73281580d1a79847fee981247258a3c6",
+        "issue": 3061,
+        "merged_at": "2026-11-05T08:49:43Z",
+        "n": 70,
+        "pr": 3123,
+        "queued_at": "2026-11-05T08:49:43Z",
+        "sha": "2d7d2fffdeb59301398368256ac58a0ae8114ef1",
+        "status": "queued",
+        "title": "Patch: an Activate the game won't let you use says why, and the fuzz holds every ability to it",
+        "tries": 0
       }
     ],
-    "count": 69
+    "count": 70
   },
   "statistics": {
     "at": "2026-11-05T08:17:33Z"
