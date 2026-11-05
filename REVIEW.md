@@ -166,7 +166,7 @@ Every spec BUILD M8 lists exists under `e2e/cypress/e2e/` with the listed assert
 
 - `cargo jackioh fuzz` green: it reports 1,000 seeds, 0 panics, 0 replay mismatches, 0 invariant violations, 0 games over the action bound; `cargo jackioh fuzz --handicap` the same.
 - `cargo jackioh golden check` green: the hotseat fixture folds to `HOTSEAT_HASH` (the 240 TypeScript traces were retired in #2578).
-- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `972f5b85`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
+- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `512357ea`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
 
 ---
 
