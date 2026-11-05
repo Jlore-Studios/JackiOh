@@ -19,44 +19,52 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
-    c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime, c032_felinor_feelings, c035_prep,
-    c039_outbreak, c047_recurring_felinor, c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad,
-    c090_in_too_deep,
+    c004_palantir, c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep,
+    c020_the_power_to_punish, c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime,
+    c032_felinor_feelings, c035_prep, c037_last_hurrah, c039_outbreak, c047_recurring_felinor,
+    c052_final_gambit, c057_echo, c062_living_bomb, c064_malzahars_recycler, c070_book_of_plague,
+    c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
-    c007_the_house, c011_anime_armor, c019_1_top_loser, c023_dropshipping, c030_felinor_fuser,
-    c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c048_jlockeeds_lobbyist,
-    c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff,
-    c073_1_classic_golem, c078_claudes_datacenter,
+    c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c023_dropshipping,
+    c030_felinor_fuser, c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
+    c048_jlockeeds_lobbyist, c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya,
+    c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
-    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
-    c065_1_spikey_pillow, c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c080_zao_gao,
-    c081_radiant_saintess, c083_transmogulate, c084_going_long,
+    c043_big_felinor, c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook,
+    c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms,
+    c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell, c080_zao_gao, c081_radiant_saintess,
+    c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
-    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
-    c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer,
-    c045_knowledge_breaker, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
-    c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant, c080_aluneth, c085_playtester,
-    c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
-    c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
-    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c005_death_by_1000_cuts, c007_introspection, c009_joint_filing, c017_true_craft_a_card,
+    c018_expedition12, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
+    c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c045_knowledge_breaker,
+    c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend, c049_yilegpt_tamed,
+    c053_prestige, c054_money_machine, c063_skull_of_jnari, c074_montana_giant, c080_aluneth,
+    c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
+    c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
+    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
-    c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
+    c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
-    c026_zolarketh, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c050_beam_v3,
+    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c026_zolarketh, c033_drone_core_vii,
+    c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
     c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
     c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c116_megabase, c143_book_launcher, c149_wildar,
-    c163_swear_loyalities, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c086_prototype_x2, c094_tmack_trav, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod,
+    c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck, c163_swear_loyalities,
+    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
     c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
-use crate::scripts::training_grounds::c036_training_dummy;
+use crate::scripts::training_grounds::{
+    c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
+    c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
+};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -68,7 +76,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #1149 (R1149000, R1149001), #1194, #1279 (R1279000), #1563 (R844), #1704 (R831003, R406), #1748
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
-/// `never_defense_kept`, R2657001, R2657002, R2657004).
+/// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
+/// #3044, #3048) and #3128's (#3134, #3135, #3139, #3140, #3142).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -469,6 +478,170 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.9f",
         c036_training_dummy::script_v0_5_9f,
     ),
+    (c115_scornboi::ID, "v0.5.11r", c115_scornboi::script_v0_5_11o),
+    (
+        c140_rush_token_launcher::ID,
+        "v0.5.11r",
+        c140_rush_token_launcher::script_v0_5_11o,
+    ),
+    (
+        c013_asphyxiants_cloud::ID,
+        "v0.5.11r",
+        c013_asphyxiants_cloud::script_v0_5_11o,
+    ),
+    (
+        c016_rod_of_ages::ID,
+        "v0.5.11r",
+        c016_rod_of_ages::script_v0_5_11o,
+    ),
+    (c026_zolarketh::ID, "v0.5.11r", c026_zolarketh::script_v0_5_11o),
+    (
+        c129_jlockeeds_missile_pod::ID,
+        "v0.5.11r",
+        c129_jlockeeds_missile_pod::script_v0_5_11o,
+    ),
+    (
+        c168_drone_hanger::ID,
+        "v0.5.11r",
+        c168_drone_hanger::script_v0_5_11o,
+    ),
+    (
+        c090_in_too_deep::ID,
+        "v0.5.11r",
+        c090_in_too_deep::script_v0_5_11o,
+    ),
+    (c079_twinspell::ID, "v0.5.11r", c079_twinspell::script_v0_5_11o),
+    (c057_echo::ID, "v0.5.11r", c057_echo::script_v0_5_11o),
+    (
+        c005_death_by_1000_cuts::ID,
+        "v0.5.11r",
+        c005_death_by_1000_cuts::script_v0_5_11o,
+    ),
+    (
+        c045_drone_commander::ID,
+        "v0.5.11r",
+        c045_drone_commander::script_v0_5_11o,
+    ),
+    (
+        c033_drone_core_vii::ID,
+        "v0.5.11r",
+        c033_drone_core_vii::script_v0_5_11o,
+    ),
+    (c018_1_melchior::ID, "v0.5.11r", c018_1_melchior::script_v0_5_11o),
+    (c004_palantir::ID, "v0.5.11r", c004_palantir::script_v0_5_11o),
+    (
+        c062_living_bomb::ID,
+        "v0.5.11r",
+        c062_living_bomb::script_v0_5_11o,
+    ),
+    (
+        c070_book_of_plague::ID,
+        "v0.5.11r",
+        c070_book_of_plague::script_v0_5_11o,
+    ),
+    (
+        c043_big_felinor::ID,
+        "v0.5.11r",
+        c043_big_felinor::script_v0_5_11o,
+    ),
+    (
+        c049_snom_bunny_mind_control::ID,
+        "v0.5.11r",
+        c049_snom_bunny_mind_control::script_v0_5_11o,
+    ),
+    (
+        c059_unbiased_immigration::ID,
+        "v0.5.11r",
+        c059_unbiased_immigration::script_v0_5_11o,
+    ),
+    (
+        c065_masochism_mask::ID,
+        "v0.5.11r",
+        c065_masochism_mask::script_v0_5_11o,
+    ),
+    (
+        c089_corpse_eater::ID,
+        "v0.5.11r",
+        c089_corpse_eater::script_v0_5_11o,
+    ),
+    (
+        c038_tutorial_master::ID,
+        "v0.5.11r",
+        c038_tutorial_master::script_v0_5_11o,
+    ),
+    (
+        c045_jlockeeds_weapons::ID,
+        "v0.5.11r",
+        c045_jlockeeds_weapons::script_v0_5_11o,
+    ),
+    (
+        c153_stimmycheck::ID,
+        "v0.5.11r",
+        c153_stimmycheck::script_v0_5_11o,
+    ),
+    (
+        c052_legacy_snom_bunny_mind_control::ID,
+        "v0.5.11r",
+        c052_legacy_snom_bunny_mind_control::script_v0_5_11o,
+    ),
+    (
+        c037_last_hurrah::ID,
+        "v0.5.11r",
+        c037_last_hurrah::script_v0_5_11o,
+    ),
+    (
+        c009_joint_filing::ID,
+        "v0.5.11r",
+        c009_joint_filing::script_v0_5_11o,
+    ),
+    (
+        c098_heroic_power::ID,
+        "v0.5.11r",
+        c098_heroic_power::script_v0_5_11o,
+    ),
+    (
+        c040_appropriations::ID,
+        "v0.5.11r",
+        c040_appropriations::script_v0_5_11o,
+    ),
+    (c040_feng_shui::ID, "v0.5.11r", c040_feng_shui::script_v0_5_11o),
+    (
+        c063_skull_of_jnari::ID,
+        "v0.5.11r",
+        c063_skull_of_jnari::script_v0_5_11o,
+    ),
+    (
+        c054_money_machine::ID,
+        "v0.5.11r",
+        c054_money_machine::script_v0_5_11o,
+    ),
+    (
+        c022_mountaintop_garden::ID,
+        "v0.5.11r",
+        c022_mountaintop_garden::script_v0_5_11o,
+    ),
+    (
+        c081_deadmans_hand::ID,
+        "v0.5.11r",
+        c081_deadmans_hand::script_v0_5_11o,
+    ),
+    (
+        c007_introspection::ID,
+        "v0.5.11r",
+        c007_introspection::script_v0_5_11o,
+    ),
+    (c047_joggs_box::ID, "v0.5.11r", c047_joggs_box::script_v0_5_11o),
+    (
+        c032_spiritually_zhongguo::ID,
+        "v0.5.11r",
+        c032_spiritually_zhongguo::script_v0_5_11o,
+    ),
+    (
+        c016_conjure_rush_token::ID,
+        "v0.5.11r",
+        c016_conjure_rush_token::script_v0_5_11o,
+    ),
+    (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

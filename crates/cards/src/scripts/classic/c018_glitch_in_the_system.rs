@@ -132,7 +132,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit
     const STOCKPILE: &str = "core-005"; // (1) Spell
     const FELINORS: &str = "core-012"; // (2) Unit
-    const EXPERIMENT: &str = "core-085"; // (2) Trap
+    const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
     const TWINSPELL: &str = "core-079"; // (2) Field Spell
     const MENACE: &str = "core-019"; // (3) Unit
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
@@ -147,7 +147,7 @@ mod tests {
             "p1": {
                 "hand": [{ "def": GLITCH, "radiant": radiant_face }, FELINORS, VANILLA],
                 "field": [FELINORS, MENACE],
-                "backrow": [{ "def": EXPERIMENT, "faceUp": false }, MANA_WELL],
+                "backrow": [{ "def": TWO_TRAP, "faceUp": false }, MANA_WELL],
                 "library": [FELINORS, SEVEN],
                 "graveyard": [FELINORS],
                 "exile": [FELINORS],
@@ -279,7 +279,7 @@ mod tests {
             fn face_down_and_indestructible_cards_are_included() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [GLITCH, STOCKPILE], "field": [ROCK] },
-                    "p2": { "hand": [STOCKPILE], "field": [SEVEN], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
+                    "p2": { "hand": [STOCKPILE], "field": [SEVEN], "backrow": [{ "def": TWO_TRAP, "faceUp": false }] },
                 }));
                 let rock = s.card(ROCK).clone();
                 s.play(GLITCH, json!({ "modes": ["4"] }));
@@ -290,18 +290,18 @@ mod tests {
             #[test]
             fn r65_costs_at_resolution_a_set_card_at_its_own_cost_a_2_trap_under_toe_cracker_costs_2() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [GLITCH, STOCKPILE], "field": [TOE_CRACKER], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
+                    "p1": { "hand": [GLITCH, STOCKPILE], "field": [TOE_CRACKER], "backrow": [{ "def": TWO_TRAP, "faceUp": false }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                let trap = s.card(EXPERIMENT).clone();
+                let trap = s.card(TWO_TRAP).clone();
                 s.play(GLITCH, json!({ "modes": ["0"] }));
                 s.expect_in_zone(&trap, "field");
                 let mut two = scenario(json!({
-                    "p1": { "hand": [GLITCH, STOCKPILE], "field": [TOE_CRACKER], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
+                    "p1": { "hand": [GLITCH, STOCKPILE], "field": [TOE_CRACKER], "backrow": [{ "def": TWO_TRAP, "faceUp": false }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 two.play(GLITCH, json!({ "modes": ["2"] }));
-                two.expect_in_zone(EXPERIMENT, "exile");
+                two.expect_in_zone(TWO_TRAP, "exile");
             }
 
             #[test]
@@ -397,7 +397,7 @@ mod tests {
                 assert_eq!(felinors_in(&s, P2), Felinors { field: 0, hand: 0, library: 0, graveyard: 1, exile: 4 });
                 assert!(s.backrow(P2, 1).is_none());
                 assert_eq!(felinors_in(&s, P1), Felinors { field: 1, hand: 1, library: 1, graveyard: 1, exile: 1 });
-                assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(EXPERIMENT.to_string()));
+                assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(TWO_TRAP.to_string()));
             }
 
             #[test]
@@ -422,26 +422,26 @@ mod tests {
             fn r65_a_hand_card_at_its_hand_cost_a_2_trap_under_toe_cracker_costs_0() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GLITCH, "radiant": true }, STOCKPILE] },
-                    "p2": { "hand": [EXPERIMENT, STOCKPILE], "field": [TOE_CRACKER], "library": [REPLENISH] },
+                    "p2": { "hand": [TWO_TRAP, STOCKPILE], "field": [TOE_CRACKER], "library": [REPLENISH] },
                 }));
                 s.play(GLITCH, json!({ "modes": ["0"] }));
-                s.expect_in_zone(EXPERIMENT, "exile");
+                s.expect_in_zone(TWO_TRAP, "exile");
             }
 
             #[test]
             fn r65_a_deck_card_at_its_own_cost_a_2_trap_in_the_deck_costs_2() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GLITCH, "radiant": true }, STOCKPILE] },
-                    "p2": { "hand": [STOCKPILE], "field": [TOE_CRACKER], "library": [EXPERIMENT] },
+                    "p2": { "hand": [STOCKPILE], "field": [TOE_CRACKER], "library": [TWO_TRAP] },
                 }));
                 s.play(GLITCH, json!({ "modes": ["0"] }));
-                s.expect_in_zone(EXPERIMENT, "library");
+                s.expect_in_zone(TWO_TRAP, "library");
                 let mut two = scenario(json!({
                     "p1": { "hand": [{ "def": GLITCH, "radiant": true }, STOCKPILE] },
-                    "p2": { "hand": [STOCKPILE], "field": [TOE_CRACKER], "library": [EXPERIMENT] },
+                    "p2": { "hand": [STOCKPILE], "field": [TOE_CRACKER], "library": [TWO_TRAP] },
                 }));
                 two.play(GLITCH, json!({ "modes": ["2"] }));
-                two.expect_in_zone(EXPERIMENT, "exile");
+                two.expect_in_zone(TWO_TRAP, "exile");
             }
 
             #[test]

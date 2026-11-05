@@ -1,4 +1,4 @@
-//! Stinkyscape #60 Cannon v5 (SPEC §8.10 row 60). Unit 0/8 → 0/16, Weapon, cost 4, Legendary.
+//! Stinkyscape #60 Cannon v5 (SPEC §8.10 row 60). Unit 0/4 → 0/8, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy Unit." — damage 9
 //!   Radiant: the same text — damage 18
@@ -109,7 +109,7 @@ mod tests {
     /// The printed `damage`, and the Radiant face's, and its Radiant health.
     const DAMAGE: i32 = 9;
     const RADIANT_DAMAGE: i32 = 18;
-    const RADIANT_HEALTH: i32 = 16;
+    const RADIANT_HEALTH: i32 = 8;
     const ARMOR: i32 = 3;
 
     fn at(target: &str) -> Value {

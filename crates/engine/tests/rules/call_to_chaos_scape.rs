@@ -1,10 +1,12 @@
 //! Stinkyscape #151 Call to Chaos (Scape Edition)'s entry builders (`subsystems/call_to_chaos_scape.rs`;
 //! the table, its first entry laying an Anomaly board, is the cards crate's data): the entries that summon or
 //! add the set's cards, against `fixtures::call_to_chaos_stinkyscape`: the Corvettes, the Drone Battleship's
-//! pile (R1842000), the Interceptor in every zone (R1882007), the Starship Pieces (R1878000), the Weapons.
+//! pile (R1842000), the Interceptor in every zone (R1882007), the Starship Pieces (R1878000), the Weapons,
+//! and the three numbers issue #3135 tuned down (R3135001).
 
 use jackioh_engine::config::{
-    CHAOS_SCAPE_CORVETTES, CHAOS_SCAPE_HAND_PIECES, CHAOS_SCAPE_WEAPONS, CHAOS_STINKYSCAPE_COST, UNIT_ZONES,
+    CHAOS_SCAPE_CORVETTES, CHAOS_SCAPE_FUSED_PIECES, CHAOS_SCAPE_HAND_PIECES, CHAOS_SCAPE_LOT_PRICE,
+    CHAOS_SCAPE_SYSTEMS, CHAOS_SCAPE_WEAPONS, CHAOS_STINKYSCAPE_COST, UNIT_ZONES,
 };
 use jackioh_engine::subsystems::call_to_chaos_scape::{
     scape_battleship, scape_corvettes, scape_interceptors, scape_pieces, scape_weapons,
@@ -50,14 +52,27 @@ fn piles(state: &GameState) -> Vec<Vec<String>> {
 }
 
 #[test]
-fn the_corvettes_entry_summons_three_drone_corvettes() {
+fn r3135001_the_three_tuned_numbers_and_the_modes_left_alone() {
+    assert_eq!(
+        (
+            CHAOS_SCAPE_CORVETTES,
+            CHAOS_SCAPE_HAND_PIECES,
+            CHAOS_SCAPE_FUSED_PIECES
+        ),
+        (2, 3, 3)
+    );
+    assert_eq!(
+        (CHAOS_SCAPE_SYSTEMS, CHAOS_SCAPE_WEAPONS, CHAOS_SCAPE_LOT_PRICE),
+        (2, 2, 20)
+    );
+}
+
+#[test]
+fn r3135001_the_corvettes_entry_summons_two_drone_corvettes() {
     let mut state = game("scape-corvettes");
     run(&mut state, scape_corvettes());
     let corvettes = piles(&state).concat();
-    assert_eq!(
-        corvettes,
-        vec![CORVETTE.to_string(); CHAOS_SCAPE_CORVETTES as usize]
-    );
+    assert_eq!(corvettes, vec![CORVETTE.to_string(); 2]);
 }
 
 #[test]
@@ -97,11 +112,11 @@ fn r1882007_the_interceptors_entry_tops_every_unit_zone_a_unit_standing_in_one_i
 }
 
 #[test]
-fn r1878000_the_pieces_entry_adds_four_starship_pieces_at_zero() {
+fn r1878000_r3135001_the_pieces_entry_adds_three_starship_pieces_at_zero() {
     let mut state = game("scape-pieces");
     run(&mut state, scape_pieces());
     let hand = &state.players.p1.hand;
-    assert_eq!(hand.len(), CHAOS_SCAPE_HAND_PIECES as usize);
+    assert_eq!(hand.len(), 3);
     for card in hand {
         assert!(PIECES.contains(&card.def_id.as_str()), "{}", card.def_id);
         assert_eq!(card.cost_override, Some(CHAOS_STINKYSCAPE_COST));

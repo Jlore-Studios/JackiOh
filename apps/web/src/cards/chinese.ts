@@ -29,6 +29,7 @@ import {
 } from "@jackioh/shared";
 
 import { getLocale, isZhCn, type Locale } from "../i18n/i18n.ts";
+import { DORMANT_STARSHIP_ID, holdsDormantStarship } from "./fused.ts";
 import { isGlitch } from "./glitch.ts";
 import type { GlossaryTermId } from "./glossary.ts";
 
@@ -119,9 +120,18 @@ function ingredientEntries(def: CardDef): { entry: ChineseEntry; radiant: boolea
 }
 
 /**
+ * R3045000: the Dormant Starship's name in Chinese, for a fusion that holds its hull: a Starship keeps the hull's
+ * name whatever was fused into it, as the English face does (`faceModel`); undefined for any other definition.
+ */
+function hullNameOf(def: CardDef): string | undefined {
+  return holdsDormantStarship(def) ? entryOf(DORMANT_STARSHIP_ID)?.name : undefined;
+}
+
+/**
  * R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its ingredients'
  * joined as crates/engine/src/subsystems/fuse.rs joins the English (R469: one fused on its Radiant face puts
- * that face in the base text too). Any other with no entry, and Glitch (glitch.ts), comes back as given.
+ * that face in the base text too), but a fused Dormant Starship's name is the hull's (R3045000). Any other
+ * with no entry, and Glitch (glitch.ts), comes back as given.
  */
 export function chineseDef(def: CardDef): CardDef {
   if (isGlitch(def.id)) return def;
@@ -129,11 +139,12 @@ export function chineseDef(def: CardDef): CardDef {
   if (own !== undefined) {
     return { ...def, name: own.name, base: { ...def.base, text: own.base }, radiant: { ...def.radiant, text: own.radiant } };
   }
+  const hull = hullNameOf(def);
   const parts = ingredientEntries(def);
-  if (parts === null) return def;
+  if (parts === null) return hull === undefined ? def : { ...def, name: hull };
   return {
     ...def,
-    name: parts.map((part) => part.entry.name).join(FUSED_NAME),
+    name: hull ?? parts.map((part) => part.entry.name).join(FUSED_NAME),
     base: { ...def.base, text: parts.map((part) => (part.radiant ? part.entry.radiant : part.entry.base)).join(FUSED_LINE) },
     radiant: { ...def.radiant, text: parts.map((part) => part.entry.radiant).join(FUSED_LINE) },
   };
@@ -147,7 +158,7 @@ export function chineseName(defId: string, english: string, def?: CardDef): stri
   if (isGlitch(defId)) return english;
   const own = entryOf(defId);
   if (own !== undefined) return own.name;
-  if (def === undefined || ingredientEntries(def) === null) return english;
+  if (def === undefined || (ingredientEntries(def) === null && hullNameOf(def) === undefined)) return english;
   return chineseDef(def).name;
 }
 

@@ -89,7 +89,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const REPLENISH: &str = "core-010"; // (0) Spell, Combo 3.
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: your next Spell gains Echo +1.
+    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
     const BEAR: &str = "core-060"; // (1) Trap.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019";
@@ -209,6 +209,7 @@ mod tests {
         #[test]
         fn r448_a_countered_spell_makes_no_echo_repeats() {
             let mut s = setup(json!({}), json!({ "backrow": [{ "def": TWINSPELL, "faceUp": true }] }), false);
+            s.activate(TWINSPELL, json!({}));
 
             s.play(STOCKPILE, json!({}));
 

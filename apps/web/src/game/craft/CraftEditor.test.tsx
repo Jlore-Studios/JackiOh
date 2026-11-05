@@ -15,7 +15,7 @@ import { HAT_LABELS } from "./recipe.ts";
 
 afterEach(cleanup);
 
-/** A valid Unit preset at cost 2: 5+6−1 = 10 of 12 points, 3 of 24 lines. */
+/** A valid Unit preset at cost 2: 5+6−1 = 10 of Meditative #17's 10 points (R3043000), 3 of 24 lines. */
 function unitPreset(): CraftRecipe {
   return {
     cost: 2,
@@ -30,7 +30,7 @@ function unitPreset(): CraftRecipe {
   };
 }
 
-/** A valid Spell preset at cost 2: a When cast dealing 8, 8 of 12 points. */
+/** A valid Spell preset at cost 2: a When cast dealing 8, 8 of 10 points. */
 function spellPreset(): CraftRecipe {
   return {
     cost: 2,
@@ -90,7 +90,7 @@ describe("the block editor (R880)", () => {
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
     expect(screen.getByTestId("prompt-modal").getAttribute("data-prompt-kind")).toBe("craft");
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("10/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("10/10 pts");
     expect(screen.getByTestId("craft-loc")).toHaveTextContent("3/24 lines");
     expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("false");
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
@@ -102,7 +102,7 @@ describe("the block editor (R880)", () => {
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
     fireEvent.click(screen.getByTestId("craft-preset-1"));
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("8/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("8/10 pts");
 
     fireEvent.click(screen.getByTestId("prompt-submit"));
     expect(props.onAction).toHaveBeenCalledTimes(1);
@@ -131,7 +131,7 @@ describe("the block editor (R880)", () => {
 
     // The Spell preset's When cast holds one effect; snapping a second under it is valid.
     fireEvent.click(screen.getByRole("button", { name: /^Heal your hero ·/ }));
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("9/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("9/10 pts");
     expect(screen.getByLabelText("Heal your hero 1 under When cast")).toBeInTheDocument();
   });
 
@@ -142,9 +142,9 @@ describe("the block editor (R880)", () => {
     const block = screen.getByLabelText("Deal damage to the enemy hero 8 under When cast");
     block.focus();
     fireEvent.keyDown(block, { key: "+" });
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("9/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("9/10 pts");
     fireEvent.keyDown(block, { key: "-" });
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("8/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("8/10 pts");
     fireEvent.keyDown(block, { key: "Delete" });
     // No effects left: the Spell has no When cast effect, so it is refused.
     expect(screen.getByRole("status").textContent).toContain("no effect");
@@ -165,7 +165,7 @@ describe("the block editor (R880)", () => {
       restore();
     }
     expect(screen.getByLabelText("Heal your hero 1 under When cast")).toBeInTheDocument();
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("9/12 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("9/10 pts");
   });
 
   it("R880 a drag reorders the canvas", () => {
@@ -324,6 +324,33 @@ function modeProps(
 function typeCode(code: string): void {
   fireEvent.change(screen.getByTestId("craft-code"), { target: { value: code } });
 }
+
+// R3043000: the meter is the engine's budget for the prompt's mode, so the client restates none.
+describe("R3043000 the points meter", () => {
+  it("R3043000 shows Meditative #17's prompt 80% of the crafter's points and Scratch Pad's the whole", () => {
+    // 6 + 6 − 1 = 11 points at cost 2: one over Meditative #17's 10, within Scratch Pad's 12.
+    const eleven: CraftRecipe = { ...unitPreset(), attack: 6 };
+    const free = editorProps({ options: [presetOption(eleven, 0)] });
+    render(<CraftEditor pending={free.pending} onAction={free.onAction} />);
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("11/10 pts");
+    expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByRole("status").textContent).toContain("over the budget of 10");
+    cleanup();
+
+    const scratch = modeProps("scratch", [presetOption(eleven, 0)], 2);
+    render(<CraftEditor pending={scratch.pending} onAction={scratch.onAction} />);
+    typeCode('card Unit "Pure Closure" {\n  stats(6, 6)\n}\n');
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("11/12 pts");
+    expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("false");
+    cleanup();
+
+    // At cost 4: 18 of the crafter's 22.
+    const dearest = modeProps(undefined, [presetOption({ ...unitPreset(), cost: 4, attack: 9, health: 10 }, 0)], 4);
+    render(<CraftEditor pending={dearest.pending} onAction={dearest.onAction} />);
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("18/18 pts");
+    expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("false");
+  });
+});
 
 // Meditative+ #26 Scratch Pad (R1182002, R1563010): code typed as text.
 describe("R1182002 R1563010 the from-scratch code editor", () => {

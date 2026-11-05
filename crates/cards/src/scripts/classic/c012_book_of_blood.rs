@@ -53,8 +53,8 @@ mod tests {
     const SHIELDED: &str = "core-003"; // Right-house defender 1/1 Taunt, Divine Shield, Reborn.
     const POINTMASTER: &str = "core-020"; // (2) Unit 7/1 First Strike.
     const ROCK: &str = "core-066"; // The Rock 10/10 Indestructible.
-    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10 since patch
-    // v0.3.10): a big body no Immutable keeps a Spell off (R781001).
+    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue
+    // #3138, 10/10 from patch v0.3.10): a big body no Immutable keeps a Spell off (R781001).
     const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005";
 

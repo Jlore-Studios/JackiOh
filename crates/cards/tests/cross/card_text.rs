@@ -51,10 +51,12 @@ fn keyword_label(keyword: &Keyword) -> String {
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
 /// embiggen card's Embiggened version is labeled with its Embiggened cost, one label per cost a card
 /// prints (R1175000). The Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
-/// "Activate 3:" to "Activate 6:" (R1857003).
+/// "Activate 3:" to "Activate 6:" (R1857003). "Cry & Death:" (TG #38 Tutorial Master, issue #3139) labels
+/// the one line both hooks run: its "Death:" is the tail of it, not a second label mid-line.
 pub(super) const LABELS: &[&str] = &[
     "Cry:",
     "Death:",
+    "Cry & Death:",
     "Start of turn:",
     "End of turn:",
     "Aura:",
@@ -102,6 +104,17 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "traininggrounds-049 base",
     "traininggrounds-049 radiant",
 ];
+
+/// Whether `label`, found at `index` of `line`, is the tail of a longer label that opens the line ("Cry &
+/// Death:" holds "Death:" at 6), which is no second label.
+fn tails_the_lines_label(line: &str, index: usize, label: &str) -> bool {
+    LABELS.iter().any(|longer| {
+        *longer != label
+            && longer.ends_with(label)
+            && line.starts_with(longer)
+            && longer.len() == index + label.len()
+    })
+}
 
 fn is_word(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_'
@@ -478,10 +491,9 @@ fn failures(face: &Face) -> Vec<String> {
         }
         for label in LABELS {
             // R1445: a label that opens a double-quoted ability the card grants stays in its sentence.
-            if line
-                .match_indices(label)
-                .any(|(index, _)| index > 0 && !opens_a_quote(&line[..index]))
-            {
+            if line.match_indices(label).any(|(index, _)| {
+                index > 0 && !opens_a_quote(&line[..index]) && !tails_the_lines_label(line, index, label)
+            }) {
                 out.push(format!("does not start \"{label}\" on a line of its own"));
             }
         }

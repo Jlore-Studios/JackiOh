@@ -176,8 +176,8 @@ mod tests {
             #[test]
             fn r457_a_draw_the_draw_limit_stops_ends_the_chain_it_is_tried_once_and_not_again() {
                 let mut s = scenario(json!({
-                    // At (2), so Palantir (which steals a (1) Cost Spell) lets it resolve.
-                    "p1": { "hand": [{ "def": CHAIN, "costMod": 1 }, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },
+                    // At its printed (1), so Palantir (which steals a (2) Cost Spell) lets it resolve.
+                    "p1": { "hand": [CHAIN, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },
                     "p2": { "hand": [VANILLA], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [VANILLA] },
                 }));
                 s.play(CHAIN, json!({}));

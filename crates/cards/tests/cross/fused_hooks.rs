@@ -558,10 +558,13 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     }
 
     #[test]
-    fn r102_r77_r209_a_twinspell_fused_onto_a_twinspell_gives_the_next_spell_both_echo_1s_8_79() {
+    fn r102_r77_r3044000_a_twinspell_fused_onto_a_twinspell_has_two_activates_but_the_first_sends_it_to_the_graveyard_8_79()
+     {
         let library: Vec<&str> = vec![MR_VANILLA; 10];
         // p2 plays a Twinspell; p1's Unlicensed Experimentation fuses it onto p1's own Twinspell (R61,
-        // R77). The fused Field Spell prints "the next Spell you play gains Echo +1" twice.
+        // R77). The fused Field Spell prints "Activate: The next Spell you play this turn gains Echo +1.
+        // Then this goes to the graveyard." twice, two abilities (R102), and the first one used sends the
+        // card away before the second can be.
         let mut s = scenario(json!({
             "seed": "r7-card-twin-twin",
             "active": "p2",
@@ -576,6 +579,23 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
                 .is_some_and(|id| is_fused_id(id, "core-079+core-079"))
         );
         s.end_turn();
+        let twin = s.backrow(P1, 1).expect("the fused Twinspell");
+        let offered = |s: &Scenario| -> Vec<String> {
+            legal_actions(s.state(), P1)
+                .into_iter()
+                .filter_map(|action| match action {
+                    ActionBody::Activate {
+                        instance_id, ability, ..
+                    } if instance_id == twin.id => ability,
+                    _ => None,
+                })
+                .collect()
+        };
+        assert_eq!(offered(&s), vec!["echo".to_string(), "echo#2".to_string()]);
+
+        s.activate(&twin, json!({ "ability": "echo" }));
+        s.expect_in_zone(&twin, "graveyard");
+        assert!(offered(&s).is_empty());
 
         let from = s.events().len();
         s.play(STOCKPILE, json!({}));
@@ -583,7 +603,7 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
             .iter()
             .filter(|event| matches!(event, GameEvent::Drawn { .. }))
             .count();
-        assert_eq!(draws, 6);
+        assert_eq!(draws, 4);
     }
 }
 
@@ -603,8 +623,6 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
                 ],
             },
         }));
-        // The power the Heroic Power rolled in hand (R43): "deal 2 damage to each opposing hero", which
-        // asks nothing.
         let power = must(
             g.state()
                 .players
@@ -615,21 +633,29 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
                 .cloned(),
             "the live Heroic Power",
         );
-        g.card_mut(&power.id)
-            .memory
-            .insert(subsystems::POWER_KEY.to_string(), json!("burn"));
         let well = must(g.backrow(P2, 2), "p2's Mana Well");
 
-        // p1 plays it (which uses nothing, R752), and after it resolves p2's #85 fuses it onto the Mana Well
-        // (R61, R77): the Mana Well's instance is kept and now carries the Heroic Power's text.
+        // p1 plays it (which uses nothing but its Cry, R752, R3134002), which Discovers its power, and after
+        // it resolves p2's #85 fuses it onto the Mana Well (R61, R77): the Mana Well's instance is kept and
+        // now carries the Heroic Power's text.
         g.play(&power.id, json!({ "zone": 1 }));
+        let first_power = must(
+            g.state()
+                .pending
+                .as_ref()
+                .and_then(|pending| pending.options.first())
+                .cloned(),
+            "an offered power",
+        );
+        g.answer(json!(first_power.key));
         let fused: CardInstance = g.card(&well.id).clone();
         assert!(fused.def_id.starts_with("t-"));
         g.expect_in_zone(&power.id, "gone");
 
         // R43: each power is an Activate of the card's text (R752), and "one created later rolls when it
-        // is created"; R151 has a Heroic Power roll as it arrives anywhere a card can be looked at, so no
-        // copy of the text is left "carrying no power … for ever".
+        // is created"; R151 has a Heroic Power that reaches the field with no Cry roll as it arrives (a
+        // fusion onto a card on the field, R3134002), so no copy of the text is left "carrying no power …
+        // for ever".
         assert!(subsystems::power_of(&fused).is_some());
         g.end_turn();
         assert_eq!(g.state().active, P2);
@@ -752,6 +778,9 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
                     { "def": MASOCHISM_MASK, "lane": 1 },
                     { "def": WEAPONS, "lane": 2 },
                     { "def": EXPERIMENTATION, "lane": 3 },
+                    // A second Weapons: its +2 twice (issue #3136, +3 once before) keeps the sum above what the
+                    // base Pillow's own −2 takes off, so a second −2 from the fused aura would show.
+                    { "def": WEAPONS, "lane": 4 },
                 ],
                 "hand": [STOCKPILE],
                 "library": LAYER_LIBRARY,
@@ -772,7 +801,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         let pillow = g.unit_at(P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
 
-        g.expect_stats(&pillow.id, json!({ "attack": 1 }));
+        // 0 + 2 + 2 from the Weapons, −2 from the base Pillow's own aura; the fused Radiant aura spares it.
+        g.expect_stats(&pillow.id, json!({ "attack": 2 }));
     }
 }
 

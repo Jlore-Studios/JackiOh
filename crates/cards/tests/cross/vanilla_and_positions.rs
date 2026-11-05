@@ -260,7 +260,10 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 // A unit's keywords are a set (§6.1, §10.4, §10.8)
 
 const TIMMY: &str = "core-011"; // Unit, 1: Rush, First Strike
-const WEAPONS: &str = "core-014"; // Field Spell: your units have +4 attack, Rush, First Strike
+const WEAPONS: &str = "core-014"; // Field Spell: your units have +2 attack, Rush, First Strike
+// Unit, 3: printed Taunt, and no Can't Defend: Right-house defender has it since issue #3136 (R2657000),
+// so it cannot stand in Defense Position, which this set test needs.
+const MENACE: &str = "core-019";
 
 mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
     use super::*;
@@ -273,7 +276,7 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
                 "hand": [HINDER],
                 "field": [
                     { "def": TIMMY, "lane": 1 },
-                    { "def": RIGHT_HOUSE, "lane": 2, "position": "DEF" },
+                    { "def": MENACE, "lane": 2, "position": "DEF" },
                 ],
                 "backrow": [WEAPONS],
                 "library": LIBRARY,
@@ -297,9 +300,7 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
         assert_eq!(kinds_in(1), ["First Strike", "Rush"].map(str::to_string).to_vec());
         assert_eq!(
             kinds_in(2),
-            ["Divine Shield", "First Strike", "Reborn", "Rush", "Taunt"]
-                .map(str::to_string)
-                .to_vec()
+            ["First Strike", "Rush", "Taunt"].map(str::to_string).to_vec()
         );
     }
 }

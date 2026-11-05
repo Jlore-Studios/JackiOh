@@ -10,7 +10,7 @@ use jackioh_server::config::{
 use jackioh_server::cosmetics::registry;
 use jackioh_server::db::store::LoadoutSample;
 use jackioh_server::economy::store::{CardCosmetic, CardPicks, OwnedCosmetics};
-use jackioh_server::loadout::{Loadout, SeatLoadout, SeatLoadoutExt};
+use jackioh_server::loadout::{Loadout, SeatLoadout};
 
 /// Unit conversion, not configuration: a day in milliseconds.
 const DAY: i64 = 86_400_000;
@@ -287,7 +287,7 @@ fn r1834006_people_only_rows() {
     let printed = render_cosmetic_fits(&rows, 1);
     assert_eq!(
         printed,
-        "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs\n\
+        "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/shared/src/config.rs\n\
          \x20   CosmeticFit { max_age_days: Some(7), samples: 2, slots: &[(\"foil-none\", 0.5000), (\"foil-rainbow\", 0.5000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 0.5000), (\"table-felt\", 0.5000), (\"field-none\", 0.5000), (\"field-rain\", 0.5000), (\"card-back-standard\", 1.0000)], per_card_share: 1.0000, cards_per_deck_mean: 1.5000, card_picks: &[(\"foil-rainbow\", 0.5000), (\"border-wood\", 0.5000)], earned_wear: &[CosmeticWear { cosmetic: \"foil-glitter\", card: \"core-003\", share: 1.0000 }, CosmeticWear { cosmetic: \"foil-glitter\", card: \"core-005\", share: 0.0000 }], full_art_wear: &[(\"full-art-big-d-fender\", 0.5000)], ownership: &[CosmeticOwnership { cosmetic: \"foil-glitter\", card: Some(\"core-003\"), share: 1.0000 }, CosmeticOwnership { cosmetic: \"full-art-big-d-fender\", card: Some(\"core-001\"), share: 1.0000 }] },\n\
          \x20   CosmeticFit { max_age_days: Some(30), samples: 1, slots: &[(\"foil-none\", 1.0000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 1.0000), (\"field-none\", 1.0000), (\"card-back-standard\", 1.0000)], per_card_share: 0.0000, cards_per_deck_mean: 0.0000, card_picks: &[], earned_wear: &[], full_art_wear: &[(\"full-art-gary-the-gambler\", 0.0000)], ownership: &[CosmeticOwnership { cosmetic: \"foil-glitter\", card: Some(\"core-005\"), share: 1.0000 }, CosmeticOwnership { cosmetic: \"full-art-big-d-fender\", card: Some(\"core-001\"), share: 1.0000 }, CosmeticOwnership { cosmetic: \"full-art-gary-the-gambler\", card: Some(\"core-004\"), share: 1.0000 }] },\n\
          \x20   CosmeticFit { max_age_days: None, samples: 1, slots: &[(\"foil-none\", 1.0000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 1.0000), (\"field-none\", 1.0000), (\"card-back-standard\", 1.0000)], per_card_share: 0.0000, cards_per_deck_mean: 0.0000, card_picks: &[], earned_wear: &[], full_art_wear: &[], ownership: &[] },\n"
@@ -306,7 +306,7 @@ fn r1834006_people_only_rows() {
     assert!(fit_cosmetics(registry(), &[], &BTreeMap::new()).is_empty());
     assert_eq!(
         render_cosmetic_fits(&[], BOT_COSMETIC_FIT_MIN_SAMPLES),
-        "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs\n"
+        "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/shared/src/config.rs\n"
     );
 }
 

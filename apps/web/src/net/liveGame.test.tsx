@@ -21,7 +21,7 @@ import {
 } from "./liveGame.ts";
 import { navigate, paths } from "./navigate.ts";
 import { signIn } from "../test/stubServer.ts";
-import { setVisibility } from "../test/setup.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 
 vi.mock("./navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./navigate.ts")>();
@@ -71,6 +71,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetVisibility();
   vi.useRealTimers();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -199,6 +200,24 @@ describe("R765 the live game an account read names", () => {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
     }
+  });
+
+  it("R3205000 the live-game banner's read pauses in a hidden tab, reads once when it shows and goes on at its pace", async () => {
+    vi.useFakeTimers();
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
+    renderHook(() => useLiveGame(ready(me("m-1")), read));
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(1);
+
+    setVisibility("hidden");
+    await advance(3 * POLL_MS);
+    expect(read).toHaveBeenCalledTimes(1);
+
+    setVisibility("visible");
+    await flush();
+    expect(read).toHaveBeenCalledTimes(2);
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(3);
   });
 
   it("R765 an account with no live game is not polled", async () => {
@@ -373,6 +392,22 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
       if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
       else Object.defineProperty(document, "visibilityState", visibility);
     }
+  });
+
+  it("R3205000 the queue follow keeps reading in a hidden tab, for its reads keep the ticket alive (R897000)", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));
+    render(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(read).toHaveBeenCalledTimes(1);
+
+    setVisibility("hidden");
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(2);
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(3);
   });
 
   it("R765 a Conquest pairing goes to the series screen", async () => {

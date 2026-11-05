@@ -1,4 +1,4 @@
-//! Stinkyscape #53 Flak v3 (SPEC §8.10 row 53; R2521001). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
+//! Stinkyscape #53 Flak v3 (SPEC §8.10 row 53; R2521001). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal a random {least} to {most} damage to each enemy Unit." — 1 to 3
 //!   Radiant: "Starship Piece, Equip, Lucky 1
@@ -143,7 +143,7 @@ mod tests {
     const BASE_RANGE: (i32, i32) = (1, 3);
     const RADIANT_RANGE: (i32, i32) = (2, 4);
     const RADIANT_LUCKY: i32 = 1;
-    const RADIANT_HEALTH: i32 = 8;
+    const RADIANT_HEALTH: i32 = 4;
     const ROUNDS: i32 = 1;
     /// The printed odds as the test reads them, lowest first.
     const PRINTED: [i32; 3] = [60, 30, 10];
