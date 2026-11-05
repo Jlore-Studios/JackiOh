@@ -15602,11 +15602,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-05T00:08:40Z",
+        "at": "2026-11-05T01:39:29Z",
         "difficulty": "hard",
         "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 3 (design across crates) and the doubt clause: the change spans `crates/ai` (a new `MatchSetup` field passed through `play_match` and the fold), `crates/tools` (a new dependency on `jackioh-run`) and \u00a715, and the issue itself asks for hard. It touches no engine rule and no AI decision or search"
+        "tier": "strong",
+        "why": "rule 3: the AI crate's MatchSetup, the tools crate and the run crate's fight setup and report must agree on deck marks and the fight loop"
       },
       "failures": 0,
       "forced": false,
