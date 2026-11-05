@@ -16630,6 +16630,8 @@
       "stop_requested": false
     },
     "3120": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T00:50:37Z",
@@ -16643,8 +16645,11 @@
         "trail": "c\u2026\n- Bash: {\"command\": \"git diff crates/engine/src/testkit/invariants.rs\", \"description\": \"Show invariants.rs diff so far\"}\n- Bash: {\"command\": \"grep -n 'pub rng_cursor' crates/engine/src/state.rs; sed -n 2935,2965p crates/engine/src/testkit/invariants.rs\", \"description\": \"Check rng_cursor type and Duos hidden panic block\"}\n- Bash: {\"command\": \"cat > /tmp/inv_edit2.py <<'EOF'\\np = \\\"crates/engine/src/testkit/invariants.rs\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\ndef sub(old, new, count=1):\\n global s\\n assert s.count(old) == \u2026\n- Bash: {\"command\": \"git diff crates/engine/src/testkit/invariants.rs | sed -n 30,230p\", \"description\": \"Review invariants.rs diff\"}\n- Bash: {\"command\": \"cat > /tmp/fuzz_edit.py <<'EOF'\\np = \\\"crates/tools/src/fuzz.rs\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\ndef sub(old, new, count=1):\\n global s\\n assert s.count(old) == count, (old, s.\u2026\n- Bash: {\"command\": \"cat > /tmp/fuzz_edit2.py <<'EOF'\\np = \\\"crates/tools/src/fuzz.rs\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\nold = \\\"I8 every {} state(s), probes every {} state(s); {}s\\\\\\\\n\\\"\\nassert s.c\u2026\n- Bash: {\"command\": \"sed -n 17,25p crates/tools/src/fuzz.rs\", \"description\": \"View module doc invariants paragraph\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3062/crates/tools/src/fuzz.rs\", \"old_string\": \"//! by their strides; I13 reads I6's view and listing, so it rides I6's stride.\\n\u2026\n- Bash: {\"command\": \"cat > /tmp/fuzz_edit3.py <<'EOF'\\np = \\\"crates/tools/src/fuzz.rs\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\ndef sub(old, new, count=1):\\n global s\\n assert s.count(old) == count, (old, s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3062/crates/tools/src/fuzz.rs\", \"old_string\": \" for (seed, probe, name) in cases {\\n assert_caught(seed, probe, name);\\n }\\n }\\n\u2026\n- said: Now format and run the quick checks: cards tests first.\n- Bash: {\"command\": \"cargo fmt && git diff --stat && cat >> .bot-notes.md <<'EOF'\\nEOF\\npython3 -I - <<'EOF'\\np = \\\".bot-notes.md\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\ni = s.index(\\\"## Goal\\\")\\nhead = s\u2026\n- Bash: {\"command\": \"git diff crates/tools/src/fuzz.rs | grep '^[+-]' | cut -c1-160\", \"description\": \"Review the fuzz.rs diff after fmt\"}\n- Bash: {\"command\": \"( time cargo test -p jackioh-cards --test cards i14_ ) > /tmp/t-i14.log 2>&1; tail -25 /tmp/t-i14.log | cut -c1-250\", \"description\": \"Run the I14 cards tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-cards --test cards i6_ 2>&1 | tail -6 | cut -c1-200; sed -i 's/^- 00:5x baseline.*$/&\\\\n- cards `i14_` tests: 5 passed. Next: i6_ tests, release fuzz build + timed \u2026\n- said: Now build release and time the fuzz run (compile first, separately, so the timed run is clean).\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools 2>&1 | tail -3 | cut -c1-200; ( time cargo jackioh fuzz --seeds 200 > /tmp/after1.log 2>&1 ) 2>&1 | grep real; head -4 /tmp/after1.log | cut -c1-20\u2026\n- Bash: {\"command\": \"for i in 1 2; do ( time cargo jackioh fuzz --seeds 200 > /tmp/after-$i.log 2>&1 ) 2>&1 | grep real; done; grep -c passed /tmp/after-1.log\", \"description\": \"Repeat the timed run twice for\u2026\n- Bash: {\"command\": \"cargo jackioh fuzz --regress > /tmp/regress-after.log 2>&1; diff <(sed -E 's/[0-9.]+s//g' /tmp/regress-before.log) <(sed -E 's/[0-9.]+s//g' /tmp/regress-after.log) && echo \\\"regress iden\u2026\n- Bash: {\"command\": \"diff <(sed -E 's/I14 every [0-9]+ state\\\\(s\\\\), //; s/; [0-9]+s$//' /tmp/after-1.log | grep -v 'Finished\\\\|Running') <(sed -E 's/; [0-9]+s$//' /tmp/baseline2.log | grep -v 'Finished\\\\|Ru\u2026\n- tool error: Exit code 1 6c6 < checkpoints: 200 paused, 0 mid-game fallback; slowest 521ms of 5000ms --- > checkpoints: 200 paused, 0 mid-game fallback; slowest 516ms of 5000ms\n- Bash: {\"command\": \"sed -i 's/^- cards `i14_` tests: 5 passed.*$/- cards `i14_` (5) and `i6_` (19) tests pass. Release fuzz --seeds 200: 44.9, 44.1, 44.0 s after vs 39.0 s before; --handicap --seeds 200 gre\u2026\n- Bash: {\"command\": \"grep -E 'refuses_a_listed|breaks_a_probe|handicapped_probe_failure' /tmp/t-fuzz.log | cut -c1-200\", \"description\": \"Confirm the planted-reducer and seatless tests ran\"}\n- said: Now clippy, fmt check, spec check, and patches check.\n- Bash: {\"command\": \"cargo fmt --check && echo \\\"fmt ok\\\"; cargo clippy -p jackioh-engine -p jackioh-cards -p jackioh-tools --all-targets --features jackioh-engine/testkit -- -D warnings 2>&1 | tail -5 | cut\u2026\n- Bash: {\"command\": \"grep -rn 'I8 every\\\\|I6 every' --include=* -I . 2>/dev/null --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git | grep -v '^./crates/tools/src/fuzz.rs' | head; grep -rn 't\u2026\n- Bash: {\"command\": \"sed -i 's/39.0 s before I14, <after> s with/39.0 s before I14, 44.0 s with/' crates/engine/src/testkit/invariants.rs && grep -n '44.0 s with' crates/engine/src/testkit/invariants.rs && c\u2026\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools 2>&1 | tail -1 | cut -c1-150; for w in \\\"\\\" \\\"--handicap\\\"; do ( time cargo jackioh fuzz $w --seeds 200 > /tmp/exh$w.log 2>&1 ) 2>&1 | grep real; s\u2026\n- Bash: {\"command\": \"cp /tmp/invariants.final.rs crates/engine/src/testkit/invariants.rs && sed -i 's/I14 on every state with no cap, 154 s\\\\./I14 on every state with no cap, 152 s (and no listed action refu\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo check -p jackioh-engine --features testkit 2>&1 | tail -1 | cut -c1-120; git status --short\", \"description\": \"Final fmt, compile check and status\"\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np = \\\".bot-notes.md\\\"\\ns = open(p, encoding=\\\"utf-8\\\").read()\\ni = s.index(\\\"## Goal\\\")\\nhead = \\\"\\\"\\\"## State\\n\\nBuild run 1 (sonnet): DONE, nothing lef\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the fuzz monitor sends every action the legal list offers, and each one must be accepted\"} --> ## What changed The fuzz monitor has a new check, **I14**. On a copy of the state, it sends `reduce` the actions `legal_actions` lists for each seat. A refusa\u2026"
       },
       "issue": 3062,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T02:24:43Z",
         "from_run": "41944322301",
         "gates": [
           {
@@ -16736,7 +16741,11 @@
         "source": "build",
         "until": "2026-11-05T02:52:58Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-05T02:22:58Z",
+      "run_id": "pending:7490fe6c-1793845455",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16755,6 +16764,9 @@
         "provider": "claude-3",
         "run": "41944322301"
       },
+      "started_at": "2026-11-05T02:24:43Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16768,9 +16780,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T02:14:15Z",
+    "at": "2026-11-05T02:24:43Z",
     "url": "",
-    "what": "plan #3112 on claude-6"
+    "what": "review #3120 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T02:12:41Z",
