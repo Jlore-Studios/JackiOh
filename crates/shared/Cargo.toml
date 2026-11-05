@@ -10,6 +10,8 @@ publish.workspace = true
 # Pure (CLAUDE.md rule 4): serde, indexmap, the engine and, behind `ts`, ts-rs. It may also take serde_json,
 # the cards, the AI and the run, never jackioh-luau, and none of them takes it.
 jackioh-engine = { workspace = true }
+# The host machine asks the AI who owes a move (`ai_to_act`) and reads a panic's text (`panic_message`).
+jackioh-ai = { workspace = true }
 serde = { workspace = true }
 indexmap = { workspace = true }
 # Off by default, as the engine's and the run's `ts` are: the types that cross the boundary (README.md, the
@@ -22,7 +24,8 @@ ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
 [dev-dependencies]
 serde_json = { workspace = true }
-# The loadout tests deal a real game from the shipped cards (`tests/loadout.rs`); dev-dependencies are not
-# the crate's own, which stay the pure crates' (CLAUDE.md rule 4).
+# The loadout tests deal a real game from the shipped cards (`tests/loadout.rs`), and the host machine's tests
+# play whole games under the real catalog; dev-dependencies are not the crate's own, which stay the pure
+# crates' (CLAUDE.md rule 4).
 jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }

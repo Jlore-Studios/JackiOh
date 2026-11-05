@@ -4,12 +4,15 @@
 //!
 //! The first thing in is the Conquest series rules, from `crates/server` (#3098):
 //! [`series`] holds the rows and the transitions over them (SPEC §9.5, R330–R337), [`deck`] what a
-//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. Next is the loadout
+//! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. Next is the
+//! match host's decisions (#3101): [`host`] holds the clocks, the disconnect grace, the rematch offers and
+//! the relays as one state machine, `step(host, event, now) -> (host, outputs)`. Then the loadout
 //! visibility rule (SPEC §10.8, R1834003, #3102): [`loadout`] decides when a card's cosmetics may be shown
 //! without leaking a decklist.
 
 pub mod config;
 pub mod deck;
+pub mod host;
 pub mod loadout;
 pub mod series;
 

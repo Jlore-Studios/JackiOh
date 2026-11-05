@@ -43,21 +43,15 @@ pub const NANOS_PER_MS: i128 = 1_000_000;
 // paragraph; do not rename or re-derive these.
 // ---------------------------------------------------------------------------------------------
 
-/// R79: the turn clock belongs to the active player and ends a stalled turn.
-pub const TURN_CLOCK_SECONDS: i64 = 75;
-/// R79: a prompt held by the non-active player (e.g. a trap firing on the opponent's turn).
-pub const PROMPT_CLOCK_SECONDS: i64 = 30;
-/// SPEC §11 R268: the mulligan clock. Both seats' mulligans are open at once (R265), so one deadline
-/// runs for both, armed when the window opens and never re-armed when one seat answers; on expiry
-/// every seat still owing is timed out and keeps its whole hand. Longer than the prompt clock because
-/// a mulligan reads a whole opening hand, shorter than the turn clock because nothing is played.
-pub const MULLIGAN_CLOCK_SECONDS: i64 = 45;
-/// R79: grace window after a disconnect before `disconnectExpired` ends the match as a loss.
-pub const DISCONNECT_GRACE_SECONDS: i64 = 60;
-/// R79, R389: hard wall-clock ceiling; reaching it ends the match as a draw via `ceilingReached`.
-/// Patch v0.2.0 doubled the turn cap to 60 player-turns (B4.3), which at a full turn clock is 75
-/// minutes, so the ceiling doubled with it and a slow game ends on the cap, not the clock.
-pub const MATCH_CEILING_MINUTES: i64 = 120;
+// The match host's numbers (the clocks, the aim relay's interval, the retry paces, the rematch window and
+// its stakes) are `jackioh_shared::config`'s since #3101: the pure machine decides with them, and the
+// server names them here as it always has.
+pub use jackioh_shared::config::{
+    AIM_RELAY_INTERVAL_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES,
+    MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, REMATCH_OFFER_TTL_MS,
+    TURN_CLOCK_SECONDS,
+};
+
 /// R79, §9.5: room codes are 6 characters from the invite-code alphabet.
 pub const ROOM_CODE_LENGTH: usize = 6;
 /// R79, §9.5: how long an unjoined room stays open, in seconds. Fifteen minutes. TS stated this as
@@ -610,13 +604,6 @@ pub const KNOWN_PROFILES_MAX: usize = 10_000;
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.
 pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
-/// SPEC §11 R738: the least time between two `aim` frames the actor relays for one seat. Aims that
-/// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
-/// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
-/// Ten a second follows a hover from target to target and bounds what a scripted client can push.
-/// R2739001's `choiceHover` relays are coalesced per seat by the same interval, on a window of their
-/// own.
-pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
 /// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000
 /// holds a player's socket to the same interval, on `/ws/match` and `/ws/duos`: a later hello of one
@@ -674,10 +661,6 @@ pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
 /// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
 /// try after it (250 ms, then 500 ms).
 pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
-/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
-/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
-/// row lands, the match ends or the actor stops, never in a loop.
-pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 /// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
 /// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
 /// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
@@ -868,10 +851,6 @@ pub const SERIES_POLL_SECONDS: i64 = 2;
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render
 /// (`main.tsx` keys the gate and the error boundary by path).
 pub const MATCH_FOUND_NAV_DELAY_MS: i64 = 1200;
-/// SPEC §11 R672: how long one seat's rematch offer stands after a non-series match ends. Ten
-/// minutes: long enough to read the result screen and press the button, short enough that a stale
-/// offer cannot summon a game long after both players moved on.
-pub const REMATCH_OFFER_TTL_MS: i64 = 600_000;
 
 // ---------------------------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320). The lessons themselves are the client's
@@ -1215,16 +1194,28 @@ pub struct BotStrength {
     pub seed_rating: f64,
 }
 
-/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the skill
-/// curve's readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them
-/// equal), the reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server
-/// bot-calibrate` measures the five strengths as built (their budget, temperature, missed-lethal
-/// chance and skill together, which the curve, measured at the arena's budget, does not) against each
-/// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
-/// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-/// The row is generation 13's calibration with the skill miss (R2214000), pasted over the curve's too
-/// (docs/bot-calibration.md, Results).
-pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, SKILL_ELO_ANCHOR];
+/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the Elo
+/// column of `SKILL_ELO_TABLE`, read off in `const`, so no number is stated twice: the curve's
+/// readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them equal), the
+/// reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server bot-calibrate` measures
+/// the five strengths as built (their budget, temperature, missed-lethal chance and skill together,
+/// which the curve, measured at the arena's budget, does not) against each other, and its `--write`
+/// rewrites the rows of `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot takes
+/// `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
+/// The rows are generation 13's calibration with the skill miss (R2214000) (docs/bot-calibration.md,
+/// Results).
+pub const BOT_SEED_RATINGS: [f64; SKILL_ELO_TABLE.len()] = seed_ratings_from_curve();
+
+/// R748000: `SKILL_ELO_TABLE`'s Elo column, which `BOT_SEED_RATINGS` is.
+const fn seed_ratings_from_curve() -> [f64; SKILL_ELO_TABLE.len()] {
+    let mut seeds = [0.0; SKILL_ELO_TABLE.len()];
+    let mut index = 0;
+    while index < seeds.len() {
+        seeds[index] = SKILL_ELO_TABLE[index].1;
+        index += 1;
+    }
+    seeds
+}
 
 /// R2575000: the search budget of `BOT_STRENGTHS[2]` and `[3]`: the practice AI's `AI_BUDGET` before
 /// issue #2575 doubled it, kept so that `BOT_SEED_RATINGS`, calibrated on it (R748000), still hold.
@@ -1341,9 +1332,10 @@ pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
 
 /// R747000, R748000: the Elo the reference, this build's AI at full skill, is held at in
 /// `SKILL_ELO_TABLE`, and the strongest bot's seed: 1200 from R1454 until generation 13's calibration
-/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results). Not a
-/// new player's `RATING_START`, because the pairing seats no bot for a player rated above every bot
-/// (R1453) and a player past the middle of the ladder would otherwise have none.
+/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results);
+/// `bot-calibrate --write` rewrites it with the rows. Not a new player's `RATING_START`, because the
+/// pairing seats no bot for a player rated above every bot (R1453) and a player past the middle of
+/// the ladder would otherwise have none.
 pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 
 /// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
@@ -1353,8 +1345,9 @@ pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 /// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
 /// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
 /// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
-/// rows since generation 13, and with the skill miss since R2214000 (docs/bot-calibration.md,
-/// Results); the live Glicko ratings (R603) are the ongoing calibration.
+/// rows since generation 13, and with the skill miss since R2214000: `bot-calibrate --write` rewrites
+/// them here (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the ongoing
+/// calibration.
 pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
     (0.0, 1517.0),
     (0.25, 1576.0),
@@ -1735,9 +1728,6 @@ pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
 pub const BOT_STALE_START_SECONDS: i64 = 60;
-/// R1452: how long a bot waits to decide again when its move could not be written to the log, so a
-/// store that keeps failing is retried at this pace, never in a loop.
-pub const BOT_WRITE_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Ladder bots' cosmetics (SPEC §14.2, R1834005, R1834006; #1834). A bot wears a loadout drawn as a

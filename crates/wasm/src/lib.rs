@@ -412,6 +412,15 @@ pub fn loadout(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::loadout(call_json))
 }
 
+// The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
+
+/// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host
+/// holds the `DuelHost` and hands it back on every call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn host(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::host(call_json))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
