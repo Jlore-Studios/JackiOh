@@ -15101,8 +15101,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-7",
-      "owner_since": "2026-11-04T21:50:23Z",
-      "owner_why": "its final audit of `c452452eb226` asked for changes, and the auditor fixes its own findings",
+      "owner_since": "2026-11-05T08:34:36Z",
+      "owner_why": "its turn came (#3152, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-04T14:55:49Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -15709,14 +15709,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3049,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-11-04T23:44:45Z",
+      "queued_at": "2026-11-05T08:34:36Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
@@ -15740,10 +15740,17 @@
         "provider": "claude-7",
         "run": "41976722559"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-05T05:52:16Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-05T08:34:36Z",
+        "until": "2026-11-05T09:04:36Z",
+        "why": "#3152, which it waited behind, closed"
+      },
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
@@ -15764,17 +15771,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3152
-        ],
-        "ends": "2026-11-05T09:10:45Z",
-        "from_run": "41976722559",
-        "head": "f18b4f60027977f251a37cb9fb22884f1be52f10",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-05T07:10:45Z"
       }
     },
     "3078": {
