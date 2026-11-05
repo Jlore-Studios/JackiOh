@@ -91,11 +91,12 @@ mod r275_the_radiant_power_standard_spec_5_2 {
     }
 
     #[test]
-    fn r1149002_jlockeed_shredder_10_is_no_exception_since_issue_1219_its_radiant_12_20_doubles_its_6_10() {
+    fn r1149002_jlockeed_shredder_10_is_no_exception_since_issue_1219_its_radiant_12_16_doubles_its_6_8() {
         let card = CATALOG.get("core-013").expect("Jlockeed Shredder-10");
-        // Issue #1219 raised the Radiant Attack from 8 to 12, so both halves double again.
+        // Issue #1219 raised the Radiant Attack from 8 to 12, so both halves double again; issue #3136
+        // lowered the Health from 10 (Radiant 20) to 8 (Radiant 16), doubled still.
         assert_eq!((card.base.attack, card.radiant.attack), (Some(6), Some(12)));
-        assert_eq!((card.base.health, card.radiant.health), (Some(10), Some(20)));
+        assert_eq!((card.base.health, card.radiant.health), (Some(8), Some(16)));
         assert!(!is_exception(&card.id));
     }
 

@@ -254,13 +254,13 @@ mod tests {
             crate::register_all();
             let mut s = giga(6, true);
             let unit_id = s.unit(P1, 1).map(|card| card.id.clone()).unwrap_or_default();
-            s.expect_stats(&unit_id, json!({ "attack": 6, "maxHealth": 10, "health": 8 }));
+            s.expect_stats(&unit_id, json!({ "attack": 6, "maxHealth": 8, "health": 6 }));
 
             s.play("core-029", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/10 → 12/20; the 2 damage stays, and no Cry re-fires: setting
+            // #13 Jlockeed Shredder-10 is 6/8 → 12/16; the 2 damage stays, and no Cry re-fires: setting
             // a flag is not an entry to the field.
-            s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 20, "health": 18 }));
+            s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 16, "health": 14 }));
             assert_eq!(
                 s.last_events()
                     .iter()

@@ -45,7 +45,7 @@ mod tests {
 
     const DINO: &str = "traininggrounds-034";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +3 Attack.
+    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +2 Attack.
     const PARAGON: &str = "stinkyscape-074"; // Paragon-X 10/1, Immutable.
 
     fn board(radiant: bool, mine: Value, my_backrow: Value, theirs: Value) -> Scenario {
@@ -96,7 +96,7 @@ mod tests {
             s.card_mut(&unit).buffs = AttackHealth { attack: 2, health: 2 };
             s.play(DINO, on(&unit));
             assert_eq!(s.card(&unit).buffs, AttackHealth { attack: 0, health: 0 });
-            s.expect_stats(&unit, json!({ "attack": 13, "health": 10 }));
+            s.expect_stats(&unit, json!({ "attack": 12, "health": 10 }));
         }
 
         #[test]

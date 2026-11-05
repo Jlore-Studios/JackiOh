@@ -283,7 +283,7 @@ mod tests {
 
             g.expect_in_zone(&doomed, "graveyard");
             g.expect_in_zone(&mine, "field");
-            g.expect_stats(&mine, json!({ "attack": 7, "maxHealth": 1 }));
+            g.expect_stats(&mine, json!({ "attack": 6, "maxHealth": 1 }));
         }
 
         /// "both faces are a §10.4 layer-5 aura and ask for nothing at play time (R81, §10.6)"

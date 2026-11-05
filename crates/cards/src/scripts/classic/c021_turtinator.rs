@@ -70,10 +70,10 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell, a card to keep a hand from auto-ending (§2.5).
     const VANILLA: &str = "core-008"; // 4/4.
     const TIMMY: &str = "core-011"; // 3/3.
-    const POINTMASTER: &str = "core-020"; // 7/1.
+    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack Unit (Pointmaster is a 6/1 since issue #3136).
     const D_FENDER: &str = "core-001"; // 0/7.
     const SAINTESS: &str = "core-081"; // 2/2, "Death: Make your other Units Radiant."
-    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +3 Attack, Rush and First Strike."
+    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +2 Attack, Rush and First Strike."
     const SHEEP: &str = "core-t-sheep"; // 1/1, worth 2 Tributes.
     const ROCK: &str = "core-066"; // 10/10 Indestructible.
 
@@ -128,10 +128,10 @@ mod tests {
             #[test]
             fn r384_tributes_one_of_your_units_as_it_activates_then_deals_that_unit_s_attack_to_the_declared_target() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
-                let point = s.card(POINTMASTER).clone();
+                let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
+                let point = s.card(SEVEN_SEVEN).clone();
 
-                eat(&mut s, POINTMASTER, enemy_hero(), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, enemy_hero(), TURTLE);
 
                 s.expect_in_zone(&point, "graveyard");
                 s.expect_health(P2, 23);
@@ -141,10 +141,10 @@ mod tests {
             #[test]
             fn the_hit_s_source_is_turtinator() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
+                let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 let turtle = s.card(TURTLE).clone();
 
-                eat(&mut s, POINTMASTER, enemy_hero(), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, enemy_hero(), TURTLE);
 
                 let hit = s.last_events().iter().find(|event| event.event_type() == GameEventType::Damage).cloned();
                 match hit {
@@ -160,11 +160,11 @@ mod tests {
             fn r78_the_amount_is_the_tributed_unit_s_attack_as_it_stood_an_aura_s_bonus_included() {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY], "backrow": [WEAPONS] }), json!({}));
-                s.expect_stats(TIMMY, json!({ "attack": 6 }));
+                s.expect_stats(TIMMY, json!({ "attack": 5 }));
 
                 eat(&mut s, TIMMY, enemy_hero(), TURTLE);
 
-                s.expect_health(P2, 24);
+                s.expect_health(P2, 25);
             }
 
             #[test]
@@ -183,32 +183,32 @@ mod tests {
             #[test]
             fn r384_the_tribute_is_its_cost_an_activation_that_names_none_is_refused_and_changes_nothing() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
+                let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
 
                 s.expect_refused(|s| s.activate(TURTLE, json!({ "targets": enemy_hero(), "tributes": [] })));
 
-                s.expect_in_zone(POINTMASTER, "field");
+                s.expect_in_zone(SEVEN_SEVEN, "field");
                 s.expect_health(P2, 30);
             }
 
             #[test]
             fn r384_an_enemy_unit_is_no_tribute_for_it() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE] }), json!({ "field": [POINTMASTER] }));
+                let mut s = setup(json!({ "field": [TURTLE] }), json!({ "field": [SEVEN_SEVEN] }));
 
-                s.expect_refused(|s| eat(s, POINTMASTER, enemy_hero(), TURTLE));
+                s.expect_refused(|s| eat(s, SEVEN_SEVEN, enemy_hero(), TURTLE));
 
-                s.expect_in_zone(POINTMASTER, "field");
+                s.expect_in_zone(SEVEN_SEVEN, "field");
                 s.expect_health(P2, 30);
             }
 
             #[test]
             fn r384_one_unit_is_one_tribute_two_named_are_refused() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, TIMMY, POINTMASTER] }), json!({}));
+                let mut s = setup(json!({ "field": [TURTLE, TIMMY, SEVEN_SEVEN] }), json!({}));
 
                 s.expect_refused(|s| {
-                    s.activate(TURTLE, json!({ "tributes": [TIMMY, POINTMASTER], "targets": enemy_hero() }))
+                    s.activate(TURTLE, json!({ "tributes": [TIMMY, SEVEN_SEVEN], "targets": enemy_hero() }))
                 });
             }
 
@@ -239,7 +239,7 @@ mod tests {
             fn r13_a_unit_dormant_under_a_stack_pile_is_no_tribute_for_it() {
                 crate::register_all();
                 let mut s = setup(
-                    json!({ "field": [TURTLE, { "def": TIMMY, "lane": 2 }, { "def": POINTMASTER, "stack": true }] }),
+                    json!({ "field": [TURTLE, { "def": TIMMY, "lane": 2 }, { "def": SEVEN_SEVEN, "stack": true }] }),
                     json!({}),
                 );
                 let dormant = s.card(TIMMY).clone();
@@ -277,10 +277,10 @@ mod tests {
             #[test]
             fn targets_any_unit_either_side_or_a_hero() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, POINTMASTER, VANILLA] }), json!({ "field": ["core-019"] }));
+                let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN, VANILLA] }), json!({ "field": ["core-019"] }));
                 let menace = s.card("core-019").clone();
 
-                eat(&mut s, POINTMASTER, json!([{ "pick": "instance", "instanceId": menace.id }]), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, json!([{ "pick": "instance", "instanceId": menace.id }]), TURTLE);
                 s.expect_stats(&menace, json!({ "health": 2 }));
 
                 let mut s = setup(json!({ "field": [TURTLE, VANILLA] }), json!({}));
@@ -291,7 +291,7 @@ mod tests {
             #[test]
             fn r391_needs_no_zone_it_activates_with_its_controller_s_unit_row_full() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, TIMMY, VANILLA, POINTMASTER, D_FENDER] }), json!({}));
+                let mut s = setup(json!({ "field": [TURTLE, TIMMY, VANILLA, SEVEN_SEVEN, D_FENDER] }), json!({}));
 
                 eat(&mut s, TIMMY, enemy_hero(), TURTLE);
 
@@ -334,14 +334,14 @@ mod tests {
             #[test]
             fn r386_an_upgrade_of_its_multiplier_doubles_the_hit_a_degrade_never_takes_it_below_1() {
                 crate::register_all();
-                let mut up = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
+                let mut up = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 step_param(up.card_mut(TURTLE), "multiplier", 1);
-                eat(&mut up, POINTMASTER, enemy_hero(), TURTLE);
+                eat(&mut up, SEVEN_SEVEN, enemy_hero(), TURTLE);
                 up.expect_health(P2, 16);
 
-                let mut down = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
+                let mut down = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 step_param(down.card_mut(TURTLE), "multiplier", -1);
-                eat(&mut down, POINTMASTER, enemy_hero(), TURTLE);
+                eat(&mut down, SEVEN_SEVEN, enemy_hero(), TURTLE);
                 down.expect_health(P2, 23);
             }
         }
@@ -359,9 +359,9 @@ mod tests {
             #[test]
             fn deals_twice_the_tributed_unit_s_attack() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [{ "def": TURTLE, "radiant": true }, POINTMASTER] }), json!({}));
+                let mut s = setup(json!({ "field": [{ "def": TURTLE, "radiant": true }, SEVEN_SEVEN] }), json!({}));
 
-                eat(&mut s, POINTMASTER, enemy_hero(), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, enemy_hero(), TURTLE);
 
                 s.expect_health(P2, 16);
             }

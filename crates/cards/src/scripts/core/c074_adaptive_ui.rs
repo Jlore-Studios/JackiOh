@@ -152,7 +152,7 @@ mod tests {
 
             s.play("core-074", json!({ "x": 2, "targets": [{ "pick": "instance", "instanceId": shredder.id }] }));
 
-            s.expect_stats(&shredder, json!({ "health": 8, "maxHealth": 10 }))
+            s.expect_stats(&shredder, json!({ "health": 6, "maxHealth": 8 }))
                 .expect_health(P1, 22)
                 // "Heal your hero X" is never the chosen target's hero.
                 .expect_health(P2, 30);

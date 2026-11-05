@@ -1006,7 +1006,8 @@ mod tests {
 
     use super::*;
 
-    /// Classic #73 Nurse Cleaver, a 3/6 with Rush, Cleave and Lifesteal.
+    /// Classic #73 Nurse Cleaver, with Rush, Cleave and Lifesteal: a 3/4 since issue #3136, set back to the 3/6
+    /// these trades were worked out for (see `facing`).
     const CLEAVER: &str = "classic-073";
     /// #67 Zoomerbin Oomen, a 1/2.
     const OOMEN: &str = "core-067";
@@ -1017,7 +1018,7 @@ mod tests {
     fn facing(field: Value) -> Scenario {
         jackioh_cards::register_all();
         scenario(json!({
-            "p1": { "field": [CLEAVER] },
+            "p1": { "field": [{ "def": CLEAVER, "statsOverride": { "attack": 3, "health": 6 } }] },
             "p2": { "field": field },
         }))
     }

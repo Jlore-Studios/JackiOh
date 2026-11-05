@@ -541,13 +541,13 @@ mod tests {
         #[test]
         fn s10_7_a_charge_unit_s_swing_is_read_through_the_viewer_s_auras_both_ways_s10_4_layer_5() {
             crate::register_all();
-            // #45 Deft Duelist, a printed 4/3 with Charge, swings for 7 under p1's #14 Jlockeed's Weapons
+            // #45 Deft Duelist, a printed 4/3 with Charge, swings for 6 under p1's #14 Jlockeed's Weapons
             // and for 2 under p1's own #65.1 Spikey Pillow. The scorer reads the printed 4 both times, and
             // the Duelist has no text for the dry run to play.
             let under_weapons = scenario(json!({
                 "seed": "zephyrs-weapons",
                 "p1": { "hand": [ZEPHYRS, VANILLA], "backrow": ["core-014"], "library": LIBRARY },
-                "p2": { "hand": [VANILLA], "health": 7, "library": LIBRARY },
+                "p2": { "hand": [VANILLA], "health": 6, "library": LIBRARY },
             }));
             let under_pillow = scenario(json!({
                 "seed": "zephyrs-pillow",

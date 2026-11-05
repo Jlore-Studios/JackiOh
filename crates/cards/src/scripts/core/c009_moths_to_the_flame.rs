@@ -139,7 +139,7 @@ mod tests {
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Speciesist
-                // (a 4/1) is set to 8/1; the Shredder is a 6/10.
+                // (a 4/1) is set to 8/1; the Shredder is a 6/8.
                 "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 8, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();
@@ -155,9 +155,9 @@ mod tests {
             );
             s.expect_in_zone(&moths, "graveyard");
             // Each forced attack was its own combat with its own state check: the 8/1 died to the
-            // strike-back of the combat it started, before the 6/10 attacked.
+            // strike-back of the combat it started, before the 6/8 attacked.
             s.expect_in_zone(&speciesist, "graveyard");
-            s.expect_stats(&shredder, json!({ "health": 9, "maxHealth": 10 }));
+            s.expect_stats(&shredder, json!({ "health": 7, "maxHealth": 8 }));
             s.expect_in_zone(&scarab, "field");
             s.expect_stats(&scarab, json!({ "health": 1, "maxHealth": 1 }));
             assert_eq!(s.card(&scarab).exertion, Exertion::default());

@@ -411,11 +411,12 @@ mod tests {
             assert_eq!(gained(&s), vec![coin.clone(), coin.clone(), coin]);
         }
 
-        /// The 2-cost KY cards are Conjure KY, C+ #62, M+ #20 and Stinkyscape #25 (#1884): the seeds
-        /// show the whole pool rather than one pick.
+        /// The 2-cost KY cards are Conjure KY, Core #82 KY's Trial (since #3136), C+ #62, M+ #20 and
+        /// Stinkyscape #25 (#1884): the seeds show the whole pool rather than one pick.
         #[test]
         fn r420_easy_a_random_2_cost_ky_card_conjure_ky_among_them() {
-            const TWO_COST_KY: [&str; 4] = [CONJURE_KY, "classicplus-062", "meditativeplus-020", "stinkyscape-025"];
+            const TWO_COST_KY: [&str; 5] =
+                [CONJURE_KY, "core-082", "classicplus-062", "meditativeplus-020", "stinkyscape-025"];
             let mut seen: BTreeSet<String> = BTreeSet::new();
             for n in 0..16 {
                 let mut s = rolled("Easy", "ky", false, &[FILLER], &format!("two{n}-"));
