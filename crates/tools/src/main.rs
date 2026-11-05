@@ -8,6 +8,7 @@ mod arena;
 mod board;
 mod card_lists;
 mod catalog;
+mod changed;
 mod claims;
 mod classify;
 mod dealt_fit;
