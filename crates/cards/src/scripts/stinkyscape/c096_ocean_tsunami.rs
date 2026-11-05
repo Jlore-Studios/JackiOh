@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 96 Ocean Tsunami, a card of the Stinkyscape set.
-//!   Base:    "Cry: Discard your hand. Fill your hand with random Stinkyscape Resources." (6/6)
+//!   Base:    "Cry: Discard your hand. Fill your hand with random Stinkyscape Resources." (6/6, cost 4)
 //!   Radiant: "Cry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
 //!            (12/12)
 //!
@@ -53,6 +53,15 @@ mod tests {
             },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }))
+    }
+
+    /// #3142: it costs (4) on both faces, where it cost (3).
+    #[test]
+    fn it_costs_4_on_both_faces() {
+        for radiant in [false, true] {
+            let s = tsunami(radiant);
+            assert_eq!(effective_cost(s.state(), s.card(ID), Default::default()), 4, "radiant {radiant}");
+        }
     }
 
     #[test]

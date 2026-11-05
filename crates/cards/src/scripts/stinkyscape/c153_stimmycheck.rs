@@ -1,8 +1,8 @@
-//! S #153 Stimmycheck (SPEC §8.10 row S 153; §6.1, §6.3 Mana, R62, R78, R350, R440, R1440, R1848006):
-//! (0) Spell, Legendary.
+//! S #153 Stimmycheck (SPEC §8.10 row S 153; §6.1, §6.3 Mana, R62, R78, R350, R440, R1440, R1848006,
+//! R3142000): (0) Spell, Legendary.
 //!   Base:    "Gain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to
 //!            cost (1) more. / At the end of this turn, add a Stimmycheck to your hand. Its Inflation
-//!            chance goes up by 10%." — 1, 15.
+//!            chance goes up by 5%." — 1, 15.
 //!   Radiant: "Lucky 1" and the same text, the copy a Radiant Stimmycheck.
 //!
 //! Engine: `gain_mana` (this turn's mana, §6.3), then `inflate` (R1848006): one luck-based roll per
@@ -11,8 +11,9 @@
 //! its own chance (`INFLATION_CHANCE_KEY`) rolls at that instead of `chance`. "At the end of this
 //! turn" is a delayed add at the end of the turn it is cast on, whoever's (R350, ST-S14-11), not an
 //! End of turn trigger, the card being in the graveyard by then: `delay` re-enters this script's
-//! `resume` step (R62), whose data carries the copy's chance, 10 higher and never past 100
-//! (`next_inflation_chance`), written into the copy's memory as `add_to_hand` makes it.
+//! `resume` step (R62), whose data carries the copy's chance, 5 higher and never past 100
+//! (`next_inflation_chance`, `INFLATION_CHANCE_STEP`), written into the copy's memory as `add_to_hand`
+//! makes it. Through v0.5.11o the step was 10 (R3142000, `script_v0_5_11o`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -34,9 +35,10 @@ fn preview() -> PreviewHook {
     })
 }
 
-fn stimmycheck(radiant: bool) -> Script {
+/// One face, its copy's chance `step` higher than the card's own (R3142000).
+fn stimmycheck(radiant: bool, step: i32) -> Script {
     Script {
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let printed = param(&*ctx, "chance");
             let chance = inflation_chance_of(ctx.self_.as_ref(), printed);
             vec![
@@ -46,7 +48,7 @@ fn stimmycheck(radiant: bool) -> Script {
                     "at": { "phase": "end", "player": THIS_TURN },
                     "step": COPY_STEP,
                     "hook": RESUME_HOOK,
-                    "data": { INFLATION_CHANCE_KEY: next_inflation_chance(chance) },
+                    "data": { INFLATION_CHANCE_KEY: next_inflation_chance_by(chance, step) },
                 }))),
             ]
         })),
@@ -68,18 +70,28 @@ fn stimmycheck(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: stimmycheck(false),
-        radiant: stimmycheck(true),
+        base: stimmycheck(false, INFLATION_CHANCE_STEP),
+        radiant: stimmycheck(true, INFLATION_CHANCE_STEP),
     }
 }
 
-// S #153 Stimmycheck — SPEC §8.10 row S 153, BUILD M12 row S 153 (R1848006).
+/// R767000: through v0.5.11o the copy's chance went up by 10 (R3142000); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: stimmycheck(false, INFLATION_CHANCE_STEP_V0_5_11O),
+        radiant: stimmycheck(true, INFLATION_CHANCE_STEP_V0_5_11O),
+    }
+}
+
+// S #153 Stimmycheck — SPEC §8.10 row S 153, BUILD M12 row S 153 (R1848006, R3142000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::prelude::INFLATION_CHANCE_KEY;
     use jackioh_engine::testkit::*;
 
-    use crate::{degrade_number, filler, scenario, upgrade_number};
+    use super::script_v0_5_11o;
+    use crate::{degrade_number, filler, scenario, under_kept, upgrade_number};
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -129,7 +141,7 @@ mod tests {
     }
 
     /// R2476000: in hand, after "15% chance", the chance it rolls at: 15 printed, 25 once it carries 25,
-    /// and the copy its play adds carries 35.
+    /// and the copy its play adds carries 30 (R3142000: 5 higher).
     #[test]
     fn r2476000_in_hand_it_previews_the_inflation_chance_it_carries() {
         for radiant in [false, true] {
@@ -141,7 +153,7 @@ mod tests {
             assert!(crate::preview_seen(&s, PlayerId::P2, &stimmy).is_empty(), "radiant {radiant}");
             s.play(STIMMY, json!({}));
             s.end_turn();
-            assert_eq!(copy_chance(&s), Some(35), "radiant {radiant}");
+            assert_eq!(copy_chance(&s), Some(30), "radiant {radiant}");
         }
     }
 
@@ -195,21 +207,52 @@ mod tests {
             );
         }
 
+        /// R3142000: the step is 5 (it was 10): 15, then 20, then 25.
         #[test]
-        fn r1848006_the_copy_rolls_at_25_and_its_copy_at_35() {
+        fn r3142000_the_copy_rolls_at_20_and_its_copy_at_25() {
+            assert_eq!(INFLATION_CHANCE_STEP, 5, "the step is the engine's named constant");
             let mut s = stimmy_board("stimmy-copies", false);
             s.play(STIMMY, json!({}));
             assert_eq!(copy_chance(&s), None, "the copy waits for the turn's end");
 
             s.end_turn();
-            assert_eq!(copy_chance(&s), Some(25));
+            assert_eq!(copy_chance(&s), Some(20));
             s.end_turn();
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == STIMMY).unwrap();
             assert!(!copy.radiant);
             s.play(&copy, json!({}));
             s.end_turn();
 
-            assert_eq!(copy_chance(&s), Some(35));
+            assert_eq!(copy_chance(&s), Some(25));
+        }
+
+        /// R3142000, R767000: through v0.5.11o the step was 10: the copy rolled at 25 and its copy at 35.
+        #[test]
+        fn r3142000_the_kept_script_rolls_at_25_and_35() {
+            assert_eq!(INFLATION_CHANCE_STEP_V0_5_11O, 10);
+            under_kept(STIMMY, script_v0_5_11o(), || {
+                let mut s = stimmy_board("stimmy-copies", false);
+                s.play(STIMMY, json!({}));
+                s.end_turn();
+                assert_eq!(copy_chance(&s), Some(25));
+                s.end_turn();
+                let copy = s.hand(P1).into_iter().find(|card| card.def_id == STIMMY).unwrap();
+                s.play(&copy, json!({}));
+                s.end_turn();
+
+                assert_eq!(copy_chance(&s), Some(35));
+            });
+        }
+
+        /// R3142000: the step stops at a certain hit, 100.
+        #[test]
+        fn r3142000_the_chance_never_passes_100() {
+            let mut s = stimmy_board("stimmy-cap", false);
+            s.card_mut(STIMMY).memory.insert(INFLATION_CHANCE_KEY.to_string(), json!(98));
+            s.play(STIMMY, json!({}));
+            s.end_turn();
+
+            assert_eq!(copy_chance(&s), Some(100));
         }
 
         #[test]
@@ -223,7 +266,7 @@ mod tests {
             assert_eq!(s.state().players[P1].mana.current, before + 2);
             s.end_turn();
 
-            assert_eq!(copy_chance(&s), Some(29), "the chance it rolled at, 10 higher");
+            assert_eq!(copy_chance(&s), Some(24), "the chance it rolled at, 5 higher");
         }
     }
 
@@ -239,7 +282,7 @@ mod tests {
             s.end_turn();
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == STIMMY).unwrap();
             assert!(copy.radiant);
-            assert_eq!(copy_chance(&s), Some(25));
+            assert_eq!(copy_chance(&s), Some(20));
         }
     }
 }

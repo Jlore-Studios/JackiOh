@@ -1780,16 +1780,8 @@ mod stinkyscape {
         }));
         let vanilla = s.card(VANILLA).id.clone();
         activate_listed(&mut s, "stinkyscape-018-1", any);
-        if !radiant {
-            let options = s
-                .state()
-                .pending
-                .as_ref()
-                .map(|pending| pending.options.clone())
-                .unwrap_or_default();
-            assert_eq!(options.len(), 3);
-            s.answer(json!(options[0].key.clone()));
-        }
+        // R3142001: neither face asks anything; each Unit draws its own keywords.
+        assert!(s.state().pending.is_none(), "nothing is asked");
         assert!(
             !s.card(&vanilla).granted_keywords.is_empty(),
             "the Vanilla gained a keyword"

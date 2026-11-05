@@ -1,4 +1,4 @@
-//! S #159 Faction: ETHICS (SPEC §8.10 row S 159; §2.4, §5.2, §6.3): (2) Spell, Faction, Rare.
+//! S #159 Faction: ETHICS (SPEC §8.10 row S 159; §2.4, §5.2, §6.3): (1) Spell, Faction, Rare.
 //!   Base:    "Add an iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
 //!   Radiant: "Add a Radiant iKwzki, Shockwave447, xxFreshJack, Tnack Trav, Kwzka and Tylannt to your hand."
 //!
@@ -8,7 +8,7 @@
 //! Radiant: each `radiant: true` (§5.2, R1880000). The cards are named, so they reach the hand whether or
 //! not the set ships (R1420). Declares no numbers.
 //!
-//! #2521: renamed from ETHICS, tagged Faction and (2) where it was (3). It and the six cards it adds are the
+//! #2521: renamed from ETHICS, tagged Faction and (2) where it was (3); #3142 made it (1). It and the six cards it adds are the
 //! ETHICS faction that S #163 Swear Loyalities keeps or exiles (R2521004). Tylannt is Vanguard Coalition's
 //! too.
 
@@ -74,6 +74,15 @@ mod tests {
 
     fn added(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).collect()
+    }
+
+    /// #3142: it costs (1) on both faces, where it cost (2).
+    #[test]
+    fn it_costs_1_on_both_faces() {
+        for radiant in [false, true] {
+            let s = board(radiant, json!([]));
+            assert_eq!(effective_cost(s.state(), s.card(ETHICS), Default::default()), 1, "radiant {radiant}");
+        }
     }
 
     mod base {

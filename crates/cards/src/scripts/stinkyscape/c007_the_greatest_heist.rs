@@ -1,4 +1,4 @@
-//! Stinkyscape #7 The Greatest Heist (SPEC §8.10 row 7). (3) Field Spell, Quest, Legendary.
+//! Stinkyscape #7 The Greatest Heist (SPEC §8.10 row 7). (2) Field Spell, Quest, Legendary.
 //!   Base:    "Cry: Discover an Acclaimed Unit or a Jelly Bean.
 //!            Quest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random
 //!            Acclaimed Unit.
@@ -207,6 +207,15 @@ mod tests {
             s.state_mut().players[player].auto_end_turn = Some(false);
         }
         s
+    }
+
+    /// #3142: it costs (2) on both faces, where it cost (3).
+    #[test]
+    fn it_costs_2_on_both_faces() {
+        for radiant in [false, true] {
+            let s = holding(radiant, "heist-cost", &[]);
+            assert_eq!(effective_cost(s.state(), s.card(ID), Default::default()), 2, "radiant {radiant}");
+        }
     }
 
     fn offered(s: &Scenario) -> Vec<String> {

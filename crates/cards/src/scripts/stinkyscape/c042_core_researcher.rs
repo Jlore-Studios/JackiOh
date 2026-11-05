@@ -1,4 +1,4 @@
-//! S #42 Core Researcher (SPEC §8.10 row 42): (2) Unit, Human, Rare, 4/5 → 8/10, a card of the
+//! S #42 Core Researcher (SPEC §8.10 row 42): (2) Unit, Human, Rare, 3/3 → 6/6, a card of the
 //! Stinkyscape set.
 //!   Base:    "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your
 //!            hand." — cards 1
@@ -103,11 +103,19 @@ mod tests {
     }
 
     #[test]
-    fn radiant_8_10_adds_two_radiant_ones() {
+    fn base_3_3() {
+        let s = played(false);
+        let researcher = s.unit(P1, 1).expect("the Researcher");
+        let stats = s.stats(researcher.id.as_str());
+        assert_eq!((stats.attack, stats.health), (3, 3));
+    }
+
+    #[test]
+    fn radiant_6_6_adds_two_radiant_ones() {
         let s = played(true);
         let researcher = s.unit(P1, 1).expect("the Researcher");
         let stats = s.stats(researcher.id.as_str());
-        assert_eq!((stats.attack, stats.health), (8, 10));
+        assert_eq!((stats.attack, stats.health), (6, 6));
         let added = cores(&s);
         assert_eq!(added.len(), 2, "{added:?}");
         assert!(added.iter().all(|(_, radiant)| *radiant));

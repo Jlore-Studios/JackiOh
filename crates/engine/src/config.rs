@@ -688,8 +688,11 @@ pub const FROZEN_FOREVER: i32 = i32::MAX;
 pub const MELEE_MAX_ATTACKS: i32 = 20;
 /// R1848006 (Stinkyscape #153 Stimmycheck): the printed chance, in percent, that Inflation hits a card.
 pub const INFLATION_CHANCE: i32 = 15;
-/// R1848006: how much a Stimmycheck's chance grows on the copy it makes ("+10% chance at Inflation").
-pub const INFLATION_CHANCE_STEP: i32 = 10;
+/// R1848006, R3142000: how much a Stimmycheck's chance grows on the copy it makes ("Its Inflation chance
+/// goes up by 5%"; 10 through v0.5.11o, `INFLATION_CHANCE_STEP_V0_5_11O`).
+pub const INFLATION_CHANCE_STEP: i32 = 5;
+/// R3142000, R767000: the step through v0.5.11o, which the Stimmycheck script kept for those replays reads.
+pub const INFLATION_CHANCE_STEP_V0_5_11O: i32 = 10;
 /// R1848006: the sides of an Inflation roll: a chance is in percent, so a roll is one of 100.
 pub const INFLATION_ROLL_SIDES: i32 = 100;
 /// R1848006: what Inflation adds to a card's price when it hits ("cost (1) more").

@@ -18354,7 +18354,7 @@
     "rarity": "Legendary",
     "flavor": "Hustle",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "stinkyscape-t-anomaly-found"
     ],
@@ -18743,7 +18743,7 @@
     "rarity": "Epic",
     "flavor": "Dark",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "stinkyscape-012-1",
       "stinkyscape-012-2",
@@ -18843,7 +18843,7 @@
     "printedRarity": "Epic",
     "flavor": "Dark",
     "token": true,
-    "cost": 3,
+    "cost": 4,
     "params": [
       {
         "key": "surcharge",
@@ -19095,12 +19095,11 @@
     "params": [
       {
         "key": "keywords",
-        "base": 3,
+        "base": 1,
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 76,
@@ -19110,7 +19109,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of turn: Vote to remove you if your opponent has more Units than you.\nActivate: Discover a combat keyword. Give it to each of your Units."
+      "text": "Indestructible\nStart of turn: Vote to remove you if your opponent has more Units than you.\nActivate: Give each of your Units {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [
@@ -19703,7 +19702,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 4,
+    "cost": 5,
     "refs": [
       "stinkyscape-t-drone-interceptor",
       "stinkyscape-t-drone-corvette"
@@ -19721,11 +19720,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Summon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
+      "text": "Float reduces cost.\nSummon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}."
+      "text": "Float reduces cost.\nSummon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}."
     }
   },
   "stinkyscape-034": {
@@ -20051,14 +20050,14 @@
     ],
     "loc": 19,
     "base": {
-      "attack": 4,
-      "health": 5,
+      "attack": 3,
+      "health": 3,
       "keywords": [],
       "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     },
     "radiant": {
-      "attack": 8,
-      "health": 10,
+      "attack": 6,
+      "health": 6,
       "keywords": [],
       "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand."
     }
@@ -20145,38 +20144,18 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "cards",
-        "base": 6,
-        "radiant": 6,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "cry": true
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "cry": true
-      }
-    ],
     "loc": 20,
     "base": {
       "attack": 8,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Add {cards|random Drone Core card|random Drone Core cards} to your hand. Each costs ({discount}) less."
+      "text": "Cry: Fill your hand with random Drone Core cards."
     },
     "radiant": {
       "attack": 16,
       "health": 24,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Drone Core card|random Radiant Drone Core cards} to your hand. Each costs ({discount}) less."
+      "text": "Cry: Fill your hand with random Radiant Drone Core cards."
     }
   },
   "stinkyscape-046": {
@@ -20189,7 +20168,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ],
@@ -21654,8 +21633,8 @@
     },
     "loc": 28,
     "base": {
-      "attack": 8,
-      "health": 8,
+      "attack": 3,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21667,8 +21646,8 @@
       "text": "Starship Piece, Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (5): The Miners offered are Radiant."
     },
     "radiant": {
-      "attack": 16,
-      "health": 16,
+      "attack": 6,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21693,8 +21672,8 @@
     "cost": 4,
     "loc": 46,
     "base": {
-      "attack": 10,
-      "health": 10,
+      "attack": 5,
+      "health": 5,
       "keywords": [
         {
           "kind": "Flying"
@@ -21703,8 +21682,8 @@
       "text": "Tribute 2, Flying\nCry: Discover 2 Radiant Miners and Equip them into this."
     },
     "radiant": {
-      "attack": 20,
-      "health": 20,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Flying"
@@ -22218,8 +22197,8 @@
     "cost": 3,
     "loc": 23,
     "base": {
-      "attack": 9,
-      "health": 9,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Rush"
@@ -22228,8 +22207,8 @@
       "text": "Rush\nAfter this destroys a Unit, it may attack again."
     },
     "radiant": {
-      "attack": 18,
-      "health": 18,
+      "attack": 16,
+      "health": 16,
       "keywords": [
         {
           "kind": "Rush"
@@ -22284,7 +22263,7 @@
     "rarity": "Rare",
     "flavor": "Brute",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 18,
     "base": {
       "attack": 6,
@@ -23272,12 +23251,26 @@
     ],
     "loc": 30,
     "base": {
-      "keywords": [],
-      "text": "Add your choice of a Core System, a Secure System, an Unsecure System or a Wild System to your hand."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        },
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Tradable, Flashback\nAdd your choice of a Core System, a Secure System, an Unsecure System or a Wild System to your hand."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Add your choice of a Radiant Core System, Secure System, Unsecure System or Wild System to your hand."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        },
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Tradable, Flashback\nAdd your choice of a Radiant Core System, Secure System, Unsecure System or Wild System to your hand."
     }
   },
   "stinkyscape-122": {
@@ -23821,19 +23814,26 @@
     "base": {
       "attack": 0,
       "health": 4,
-      "keywords": [],
-      "text": "When this leaves the field, summon the Unit stuffed into it."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nWhen this leaves the field, summon the Unit stuffed into it."
     },
     "radiant": {
       "attack": 0,
       "health": 8,
       "keywords": [
         {
+          "kind": "Can't Defend"
+        },
+        {
           "kind": "Brittle",
           "n": 1
         }
       ],
-      "text": "Brittle 1\nWhen this leaves the field, summon the Unit stuffed into it."
+      "text": "Can't Defend, Brittle 1\nWhen this leaves the field, summon the Unit stuffed into it."
     }
   },
   "stinkyscape-136": {
@@ -24624,9 +24624,6 @@
       "health": 10,
       "keywords": [
         {
-          "kind": "Starship Piece"
-        },
-        {
           "kind": "Flying"
         },
         {
@@ -24636,16 +24633,13 @@
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Flying, Ranged, Rush"
+      "text": "Flying, Ranged, Rush"
     },
     "radiant": {
       "attack": 20,
       "health": 20,
       "keywords": [
         {
-          "kind": "Starship Piece"
-        },
-        {
           "kind": "Flying"
         },
         {
@@ -24655,7 +24649,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Flying, Ranged, Rush"
+      "text": "Flying, Ranged, Rush"
     }
   },
   "stinkyscape-151": {
@@ -24776,7 +24770,7 @@
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Gain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Stimmycheck to your hand. Its Inflation chance goes up by 10%."
+      "text": "Gain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Stimmycheck to your hand. Its Inflation chance goes up by 5%."
     },
     "radiant": {
       "keywords": [
@@ -24785,7 +24779,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nGain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Radiant Stimmycheck to your hand. Its Inflation chance goes up by 10%."
+      "text": "Lucky 1\nGain {mana} mana. Inflation: each card in your hand and deck has a {chance}% chance to cost (1) more.\nAt the end of this turn, add a Radiant Stimmycheck to your hand. Its Inflation chance goes up by 5%."
     }
   },
   "stinkyscape-154": {
@@ -24960,7 +24954,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "stinkyscape-006",
       "stinkyscape-020",
