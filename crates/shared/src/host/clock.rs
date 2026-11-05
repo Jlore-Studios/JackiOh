@@ -543,7 +543,14 @@ impl MatchClock {
             | TimerKey::Hover { .. }
             | TimerKey::BotOffer { .. }
             | TimerKey::BotReply { .. }
-            | TimerKey::BotRetry => return None,
+            | TimerKey::BotRetry
+            | TimerKey::DuosMulligan
+            | TimerKey::DuosRound
+            | TimerKey::DuosPrompt { .. }
+            | TimerKey::DuosGrace { .. }
+            | TimerKey::DuosCeiling
+            | TimerKey::DuosAi { .. }
+            | TimerKey::DuosAiRetry => return None,
         };
         (!self.stopped).then_some(expiry)
     }
