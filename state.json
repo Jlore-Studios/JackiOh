@@ -16320,6 +16320,13 @@
     "3098": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "41947139885",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-05T01:38:51Z",
+        "until": "2026-11-05T02:08:51Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
