@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{already_in_match, assert_no_custom_cards, lean_of};
+use crate::api::decks::{already_in_match, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -185,12 +185,6 @@ async fn create_rematch(
     match_id: &str,
 ) -> Result<(), ApiError> {
     let random = mode == QueueMode::Random;
-    // R915005: a deck with a custom card plays only in practice, so the frozen decks a Best-of-1
-    // rematch would replay are asked the validator's L7, as the queue asks it, before anything is
-    // claimed. All Random deals from the catalog, which holds no custom card.
-    if !random {
-        assert_no_custom_cards(&[&finished.decks.0, &finished.decks.1])?;
-    }
     let seed = new_seed();
     let portrait_of = |at: usize| -> Option<String> {
         finished

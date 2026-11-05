@@ -109,10 +109,10 @@ pub fn create_game_args(
         glitch_boards,
         // R923000: no match the server runs is a practice sandbox.
         sandbox: None,
-        // R915005: nor holds a custom card, which plays only in practice.
-        custom_cards: None,
         // R2702000: nor deck marks, which only the dungeon run deals.
         deck_marks: None,
+        // The rest of the setup is the engine's default, which holds no custom card.
+        ..CreateGameOptions::default()
     }
 }
 
@@ -134,11 +134,10 @@ pub fn fold_args(
         dealt,
         last_boards,
         glitch_boards,
-        // R923000, R915005, R2702000: as `create_game_args`, never a sandbox, no custom card and no
-        // deck mark.
+        // R923000, R2702000: as `create_game_args`, never a sandbox and no deck mark.
         sandbox: None,
-        custom_cards: None,
         deck_marks: None,
+        ..FoldArgs::default()
     }
 }
 

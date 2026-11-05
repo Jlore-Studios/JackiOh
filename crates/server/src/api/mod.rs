@@ -11,7 +11,6 @@ pub mod consent;
 pub mod cors;
 pub mod cosmetics;
 pub mod crypto;
-pub mod custom_cards;
 pub mod decks;
 pub mod dev;
 pub mod e2e;
