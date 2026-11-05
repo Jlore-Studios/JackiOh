@@ -146,6 +146,16 @@ export function Holdings({ api, revision, working, run }: SectionProps): ReactEl
         >
           Add all cosmetics and cards
         </button>
+        <button
+          type="button"
+          data-testid={testids.unlockCosmetics}
+          disabled={working}
+          onClick={() => {
+            run(async () => answered(await api.unlockCosmetics()));
+          }}
+        >
+          Unlock all cosmetics
+        </button>
         {BARS.map((bar) => (
           <button
             key={bar}

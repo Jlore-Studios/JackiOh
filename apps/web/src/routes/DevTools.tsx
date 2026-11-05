@@ -1,7 +1,9 @@
 // The Dev tools panel (SPEC §14.10, R1300000): a dev account moves its own economy by hand, to try
 // each part on staging and production. The quest tools (§14.9, #1304) give or complete a quest; the
 // bar tools (§14.5, R1310003) fill a token bar so it pays its token at once.
-// The server decides (CLAUDE.md rule 7): `/account` mounts this only when `/api/auth/me` says `isDev`;
+// R3156000: the front screen's Dev button (`DevButton.tsx`) opens it in a dialog, on a computer; and
+// R3156001's Unlock all cosmetics grants every cosmetic the fill does, and nothing else.
+// The server decides (CLAUDE.md rule 7): the button shows only when `/api/auth/me` says `isDev`;
 // every button sends its request as typed (an amount as `Number(text)`), each dev route checks
 // `DEV_PROFILE_IDS` itself, and the line under the buttons shows the server's answer word for word.
 
@@ -15,6 +17,7 @@ import {
   devCompleteQuest,
   devFill,
   devFillBar,
+  devUnlockCosmetics,
   devGiveJlore,
   devGiveQuest,
   devGiveXp,
@@ -33,6 +36,8 @@ export const devToolsTestid = {
   jlore: "dev-tools-jlore",
   giveJlore: "dev-tools-give-jlore",
   fill: "dev-tools-fill",
+  /** R3156001: every cosmetic, nothing else. */
+  unlockCosmetics: "dev-tools-unlock-cosmetics",
   fillCardBar: "dev-tools-fill-card-bar",
   fillCosmeticBar: "dev-tools-fill-cosmetic-bar",
   giveQuest: "dev-tools-give-quest",
@@ -205,6 +210,16 @@ export default function DevTools({ token }: { token: string }): ReactElement {
           }}
         >
           {t("Fill collection")}
+        </button>
+        <button
+          type="button"
+          data-testid={devToolsTestid.unlockCosmetics}
+          disabled={working}
+          onClick={() => {
+            run(() => devUnlockCosmetics(token));
+          }}
+        >
+          {t("Unlock all cosmetics")}
         </button>
       </div>
 

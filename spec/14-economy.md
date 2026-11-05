@@ -140,12 +140,13 @@ A quest is a goal read from a finished game's public events, such as winning gam
 
 ### 14.10 Dev accounts
 
-A dev account is one whose profile id the server's `DEV_PROFILE_IDS` environment variable lists, read at boot with the rest of the environment: a malformed id fails the boot, naming it, and none set means no dev accounts. The server decides: it tells the client whether the caller is a dev account, and every dev route checks the list itself and refuses anyone else as forbidden. The client only chooses whether to show the Dev tools panel. Any signed-in account can reveal its own profile id on the account page, hidden until asked for, so a new developer can be listed. In end-to-end mode the fixture account `e2e-econ` is a dev account too, for the test that walks the economy ([[R1310004]]).
+A dev account is one whose profile id the server's `DEV_PROFILE_IDS` environment variable lists, read at boot with the rest of the environment: a malformed id fails the boot, naming it, and none set means no dev accounts. The server decides: it tells the client whether the caller is a dev account, and every dev route checks the list itself and refuses anyone else as forbidden. The client only chooses whether to show the Dev tools: a Dev button in the front screen's top bar, on a computer alone (a wide window with a mouse or a trackpad), opens them in a dialog, and the account page has none ([[R3156000]]). Any signed-in account can reveal its own profile id on the account page, hidden until asked for, so a new developer can be listed. In end-to-end mode the fixture account `e2e-econ` is a dev account too, for the test that walks the economy ([[R1310004]]).
 
 A dev account can, for itself alone:
 
 - give XP to a set track it picks, through the level curve ([[§14.7]]), and give Jlore;
 - fill its collection with every card and every cosmetic but the Jlorious card back, which only reaching Jlorious grants ([[R2755000]]), and set every card's proficiency to its top level ([[R3013001]]);
+- unlock every cosmetic the fill grants, and nothing else: no card and no proficiency ([[R3156001]]);
 - clear its cards, its cosmetics, its Jlore, its bars and pity counters, or its track progress, each apart, or all of them;
 - be given a quest at once, or complete one ([[§14.9]]);
 - fill its card token bar or its cosmetic token bar, so it pays at once, the cosmetic token bar to its current step's size ([[§14.5]], [[R1310003]], [[R2728000]]).

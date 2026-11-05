@@ -22,6 +22,7 @@ const ALLOWED: [string, string][] = [
   ["POST", "/api/dev/xp"],
   ["POST", "/api/dev/jlore"],
   ["POST", "/api/dev/fill"],
+  ["POST", "/api/dev/cosmetics"],
   ["POST", "/api/dev/clear/everything"],
   ["POST", "/api/dev/bar/card"],
   ["POST", "/api/dev/quests"],

@@ -40,6 +40,7 @@ import {
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
+import { DevButton } from "./DevButton.tsx";
 import { LiveGameBanner } from "./GameBanner.tsx";
 import { NewsList, useNews } from "./NewsPanel.tsx";
 import { QuestsView, useQuests } from "./QuestsPanel.tsx";
@@ -636,6 +637,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
               volume and reduced motion are reachable from the first screen too. A signed-in
               account's Jlore pill leads the language button and the gear, as in every top bar. */}
           <div className="landing-corner">
+            {/* R3156000: a dev account's door to the Dev tools, on a computer alone. */}
+            <DevButton account={account} />
             <Corner account={account} />
             <JlorePill />
             <FriendsButton placement="nav" />

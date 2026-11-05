@@ -46,8 +46,8 @@ section again.
   on, and Sign out (which forgets the tab's session and revokes it, `scope=local`).
 - **Holdings and Dev tools** (`src/Holdings.tsx`): the account's Jlore (`GET /api/wallet`) and held
   quests (`GET /api/quests`), then the Dev tools with exactly `apps/web/src/net/api.ts`'s bodies: XP to a
-  shipped set's track, Jlore, Add all cosmetics and cards, each clear, both token bars, give a quest,
-  complete a held quest.
+  shipped set's track, Jlore, Add all cosmetics and cards, Unlock all cosmetics (R3156001), each clear,
+  both token bars, give a quest, complete a held quest.
 - **Rating** (`src/Rating.tsx`): both ladders' rating, deviation, volatility, the hand-set flag and the
   rating the games had earned; Set (`PUT /api/admin/rating`) and, when hand-set, Reset to earned
   (`POST /api/admin/rating/reset`). On a strict server a hand-set rating is off the public ladder until
@@ -161,7 +161,7 @@ Every control and read value has a `data-testid` from `src/testids.ts`'s `testid
 drives: `admin-sign-in-*` (`email`, `password`, `submit`, `method-password`, `method-code`, `send-code`,
 `code`, `verify-code`, `totp`, `totp-submit`, `cancel`, `notice`, `error`), `admin-forbidden`,
 `admin-sign-out`, `admin-status` (with `data-state`), and per section `admin-account-*`, `admin-xp-*`,
-`admin-jlore-*`, `admin-fill`, `admin-bar-<bar>`, `admin-clear-<part>`, `admin-quest-*`,
+`admin-jlore-*`, `admin-fill`, `admin-unlock-cosmetics`, `admin-bar-<bar>`, `admin-clear-<part>`, `admin-quest-*`,
 `admin-rating-{value,deviation,volatility,hand-set,earned,input,set,reset}-<ladder>`, `admin-ladder-<ladder>`,
 `admin-leaderboard-row` (with `data-profile-id`, `data-kind`, `data-hand-set`, `data-you`), `admin-news-*`
 (`admin-news-row` with `data-post-id`, `data-taken-down`) and `admin-audit-row` (with `data-action-id`).

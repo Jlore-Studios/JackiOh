@@ -11,6 +11,7 @@
 //! - `POST /api/dev/fill`: every collectable card to `MAX_COPIES` and every cosmetic but each kind's default,
 //!   which every account owns with no row (§14.2), a full art on its card (R1313000); and every collectable
 //!   card to its top proficiency level (§14.14, R3013001), progress with no ledger row.
+//! - `POST /api/dev/cosmetics` (R3156001): every cosmetic the fill grants, and nothing else.
 //! - `POST /api/dev/clear/:part`: cards, cosmetics, jlore, counters, tracks, or everything; packs,
 //!   tokens and quests are no part of any.
 //! - `POST /api/dev/bar/:bar` (R1310003): a token bar filled, paying as a pack's duplicates would (§14.5).
@@ -36,7 +37,7 @@ use crate::config::{
     CARD_TOKEN_BAR_SIZE, DEV_JLORE_PER_REQUEST_MAX, DEV_XP_PER_REQUEST_MAX, SET_TRACK_FIRST_LEVEL,
     SET_TRACK_LEVELS,
 };
-use crate::cosmetics::offered;
+use crate::cosmetics::{Cosmetic, offered};
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
 use crate::economy::math::level_for_xp;
 use crate::economy::packs::{bar_before, cycle_at, cycle_step, delta_of};
@@ -226,31 +227,7 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
         tx.collection_append_grants(&grants).await?;
     }
 
-    let mut cosmetics_written = 0;
-    // R2755000: the Jlorious card back too is left out, which only reaching Jlorious grants.
-    for cosmetic in cosmetics
-        .iter()
-        .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
-    {
-        // §14.2: a per-card cosmetic on every card it is offered (R2725001): a full art on the one card it names
-        // (R1313000), a version or an augment on each card its offer takes.
-        let targets: Vec<Option<&str>> = if cosmetic.kind.is_per_card() {
-            cards
-                .iter()
-                .copied()
-                .filter(|card| offered(cosmetic, Some(card)))
-                .map(Some)
-                .collect()
-        } else {
-            vec![None]
-        };
-        for card_id in targets {
-            let granted = tx
-                .economy_cosmetics_grant(&dev_cosmetic_grant(&profile.id, card_id, &cosmetic.id, 1, at))
-                .await?;
-            cosmetics_written += usize::from(granted);
-        }
-    }
+    let cosmetics_written = grant_every_cosmetic(&mut tx, &profile.id, &cards, &cosmetics, at).await?;
 
     // [[R3013001]]: every collectable card at its top proficiency level, so each stamp is unlocked.
     // Progress, no holding: no ledger row (§14.11), and a card already at the top is left as it is.
@@ -286,6 +263,70 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
         200,
         json!({ "cards": grants.len(), "cosmetics": cosmetics_written }),
     ))
+}
+
+/// `POST /api/dev/cosmetics` (R3156001): 200 `{ cosmetics }`, the rows written to the cosmetics'
+/// ledger: every cosmetic the fill grants and nothing else, no card and no proficiency. What is
+/// owned already is left as it is, so a second press writes nothing.
+pub async fn cosmetics(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = dev_caller(app, &req)?;
+    let cosmetics = crate::cosmetics::shipped().map_err(ApiError::internal)?;
+    let cards = collectable_cards(app);
+    let at = now_ms();
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // [[R1301003]]: the account's economy lock, as the fill and every pack opening take it.
+    tx.economy_lock_account(&profile.id).await?;
+    let written = grant_every_cosmetic(&mut tx, &profile.id, &cards, &cosmetics, at).await?;
+    audit(
+        &mut tx,
+        &profile.id,
+        "POST /api/dev/cosmetics".to_string(),
+        json!({}),
+        Value::Null,
+        json!({ "cosmetics": written }),
+        at,
+    )
+    .await?;
+    tx.commit().await?;
+    log_dev(&profile, "cosmetics", written);
+    Ok(json(200, json!({ "cosmetics": written })))
+}
+
+/// Every cosmetic of the registry but each kind's default, which every account owns with no row
+/// (§14.2), and the Jlorious card back, which only reaching Jlorious grants (R2755000): a per-card
+/// cosmetic on every card it is offered (R2725001), a full art on the one card it names (R1313000),
+/// a version or an augment on each card its offer takes, an account kind once. Answers the rows
+/// written; one owned already writes none.
+async fn grant_every_cosmetic(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    cards: &[&str],
+    cosmetics: &[Cosmetic],
+    at: i64,
+) -> Result<usize, ApiError> {
+    let mut written = 0;
+    for cosmetic in cosmetics
+        .iter()
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.jlorious)
+    {
+        let targets: Vec<Option<&str>> = if cosmetic.kind.is_per_card() {
+            cards
+                .iter()
+                .copied()
+                .filter(|card| offered(cosmetic, Some(card)))
+                .map(Some)
+                .collect()
+        } else {
+            vec![None]
+        };
+        for card_id in targets {
+            let granted = tx
+                .economy_cosmetics_grant(&dev_cosmetic_grant(profile_id, card_id, &cosmetic.id, 1, at))
+                .await?;
+            written += usize::from(granted);
+        }
+    }
+    Ok(written)
 }
 
 /// What a clear names (§14.10): each holding apart, or all of them.

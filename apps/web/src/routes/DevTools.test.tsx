@@ -178,6 +178,21 @@ describe("R1300000 the Dev tools panel", () => {
     );
   });
 
+  it("R3156001 Unlock all cosmetics asks the server for every cosmetic and nothing else", async () => {
+    const fetchMock = answer(200, { cosmetics: 120 });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<DevTools token={TOKEN} />);
+
+    await userEvent.click(screen.getByTestId(devToolsTestid.unlockCosmetics));
+    await waitFor(() => {
+      expect(screen.getByTestId(devToolsTestid.status)).toHaveTextContent("Done.");
+    });
+    expect(devCalls(fetchMock)).toHaveLength(1);
+    expect(sent(fetchMock, 0)).toEqual({ path: "/api/dev/cosmetics", method: "POST", body: {} });
+    const [, init] = devCalls(fetchMock)[0] ?? [];
+    expect((init?.headers as Record<string, string>).authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
   it("R1300000 holds every button while a request is out", async () => {
     let finish: (response: Response) => void = () => undefined;
     vi.stubGlobal(
@@ -197,6 +212,7 @@ describe("R1300000 the Dev tools panel", () => {
     expect(screen.getByTestId(devToolsTestid.giveJlore)).toBeDisabled();
     expect(screen.getByTestId("dev-tools-clear-cards")).toBeDisabled();
     expect(screen.getByTestId(devToolsTestid.giveQuest)).toBeDisabled();
+    expect(screen.getByTestId(devToolsTestid.unlockCosmetics)).toBeDisabled();
     finish(response(200, { cards: 0, cosmetics: 0 }));
     await waitFor(() => {
       expect(screen.getByTestId(devToolsTestid.status)).toHaveTextContent("Done.");

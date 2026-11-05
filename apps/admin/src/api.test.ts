@@ -87,6 +87,7 @@ describe("adminApi", () => {
     ["giveXp", (api) => api.giveXp("Classic", 250), "POST", "/api/dev/xp", { setId: "Classic", xp: 250 }],
     ["giveJlore", (api) => api.giveJlore(500), "POST", "/api/dev/jlore", { jlore: 500 }],
     ["fill", (api) => api.fill(), "POST", "/api/dev/fill", {}],
+    ["unlockCosmetics", (api) => api.unlockCosmetics(), "POST", "/api/dev/cosmetics", {}],
     ["clear", (api) => api.clear("counters"), "POST", "/api/dev/clear/counters", {}],
     ["fillBar", (api) => api.fillBar("cosmetic"), "POST", "/api/dev/bar/cosmetic", {}],
     ["giveQuest", (api) => api.giveQuest(), "POST", "/api/dev/quests", {}],

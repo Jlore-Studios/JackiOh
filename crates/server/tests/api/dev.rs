@@ -335,6 +335,7 @@ async fn r1300000_a_non_dev_gets_403_on_every_dev_route_and_nothing_is_written()
             ("POST", "/api/dev/xp".to_string()),
             ("POST", "/api/dev/jlore".to_string()),
             ("POST", "/api/dev/fill".to_string()),
+            ("POST", "/api/dev/cosmetics".to_string()),
             ("POST", "/api/dev/clear/everything".to_string()),
             ("POST", "/api/dev/bar/card".to_string()),
         ]
@@ -614,6 +615,67 @@ async fn r1300000_r2755000_fill_grants_every_card_and_every_cosmetic_but_the_jlo
 }
 
 #[tokio::test]
+async fn r3156001_unlocking_cosmetics_grants_what_the_fill_does_of_them_and_no_card_marked_dev() {
+    let (app, dev, _other) = dev_app().await;
+    let cards_before = holdings(&app, DEV).await.cards;
+    let before = ledger(&app, DEV).await;
+
+    let answer = ok(&app, "/api/dev/cosmetics", &dev, json!({})).await;
+    let written = answer["cosmetics"].as_u64().expect("a count of cosmetics");
+    assert!(written > 0, "{answer}");
+    assert_eq!(answer, json!({ "cosmetics": written }));
+
+    // Cosmetics alone: no card, no collection row, no proficiency.
+    let held = holdings(&app, DEV).await;
+    assert_eq!(held.cards, cards_before);
+    assert_eq!(card_grants(&app, DEV).await, Vec::<CollectionGrant>::new());
+    let mut tx = app.db.begin(Some(DEV)).await.expect("begin");
+    let proficiency = tx
+        .economy_card_proficiency_get(DEV)
+        .await
+        .expect("the proficiency");
+    tx.commit().await.expect("commit");
+    assert!(proficiency.is_empty(), "{proficiency:?}");
+    assert!(!held.cosmetics.account.iter().any(|id| id == JLORIOUS_CARD_BACK));
+    let after = ledger(&app, DEV).await;
+    let marks = new_marks(&before, &after);
+    assert_eq!(marks.len(), usize::try_from(written).expect("a count"));
+    assert!(
+        marks
+            .iter()
+            .all(|(table, dev_reason, dev)| *table == "cosmetics" && *dev_reason && *dev)
+    );
+
+    // A second press writes nothing.
+    assert_eq!(
+        ok(&app, "/api/dev/cosmetics", &dev, json!({})).await,
+        json!({ "cosmetics": 0 })
+    );
+    assert_eq!(ledger(&app, DEV).await, after);
+
+    // What the fill grants of cosmetics, exactly: the fill finds every one owned, and a fresh dev
+    // account's fill grants as many.
+    assert_eq!(
+        ok(&app, "/api/dev/fill", &dev, json!({})).await["cosmetics"],
+        json!(0)
+    );
+    let (fresh, fresh_dev, _) = dev_app().await;
+    assert_eq!(
+        ok(&fresh, "/api/dev/fill", &fresh_dev, json!({})).await["cosmetics"],
+        json!(written)
+    );
+}
+
+#[tokio::test]
+async fn r3156001_a_non_dev_unlocking_cosmetics_gets_403_and_nothing_is_written() {
+    let (app, _dev, other) = dev_app().await;
+    let (status, answer) = api(&app, "POST", "/api/dev/cosmetics", &other, json!({})).await;
+    assert_eq!(status, 403, "{answer}");
+    assert_eq!(answer["error"]["code"], json!("forbidden"), "{answer}");
+    assert_eq!(ledger(&app, OTHER).await, EconomyLedger::default());
+}
+
+#[tokio::test]
 async fn r2715000_fill_grants_each_full_art_card_its_animated_art() {
     let (app, dev, _other) = dev_app().await;
     let registry = shipped().expect("the registry parses");
@@ -809,6 +871,7 @@ async fn fill_and_every_clear_take_the_accounts_economy_lock_before_they_read() 
     let (app, dev, _other) = dev_app().await;
     for path in [
         "/api/dev/fill",
+        "/api/dev/cosmetics",
         "/api/dev/clear/cards",
         "/api/dev/clear/cosmetics",
         "/api/dev/clear/jlore",

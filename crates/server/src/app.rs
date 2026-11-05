@@ -751,6 +751,13 @@ pub static ROUTES: &[Route] = &[
         h!(api::dev::give_jlore),
     ),
     ("POST", "/api/dev/fill", AuthLevel::Active, h!(api::dev::fill)),
+    // R3156001: every cosmetic the fill grants, and nothing else.
+    (
+        "POST",
+        "/api/dev/cosmetics",
+        AuthLevel::Active,
+        h!(api::dev::cosmetics),
+    ),
     (
         "POST",
         "/api/dev/clear/:part",

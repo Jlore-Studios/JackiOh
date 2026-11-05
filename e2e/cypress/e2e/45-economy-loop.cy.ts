@@ -39,17 +39,18 @@ import {
   type E2EAccount,
 } from "../../support/config.ts";
 import {
-  ACCOUNT_DEV_TOGGLE,
   CARD_FACE,
   COLLECTION_JLORE,
   COLLECTION_LOCKED_CARDS,
   COLLECTION_PREVIEW,
   COLLECTION_SCREEN,
+  DEV_PANEL,
   DEV_TOOLS,
   DEV_TOOLS_FILL_CARD_BAR,
   DEV_TOOLS_FILL_COSMETIC_BAR,
   DEV_TOOLS_GIVE_QUEST,
   DEV_TOOLS_STATUS,
+  LANDING_DEV,
   PACK_CLOSE,
   PACK_SCENE,
   PACK_SKIP_ALL,
@@ -221,10 +222,14 @@ function gateFullArt(win: Cypress.AUTWindow): void {
   win.localStorage.setItem(FULL_ART_GATED_KEY, "1");
 }
 
-/** `/account` with its Dev tools open (R1300000: shown because `/api/auth/me` says `isDev`). */
+/**
+ * R3156000: the front screen's Dev button opens the Dev tools in a dialog, shown because
+ * `/api/auth/me` says `isDev` (R1300000) and the spec's window is a computer's.
+ */
 function openDevTools(): void {
-  cy.visitAs(econ(), routes.account());
-  cy.get(ts(ACCOUNT_DEV_TOGGLE), { timeout: timeouts.view }).click();
+  cy.visitAs(econ(), routes.landing());
+  cy.get(ts(LANDING_DEV), { timeout: timeouts.view }).click();
+  cy.get(ts(DEV_PANEL), { timeout: timeouts.view }).should("be.visible");
   cy.get(ts(DEV_TOOLS), { timeout: timeouts.view }).should("be.visible");
 }
 
@@ -623,7 +628,7 @@ function earnAFullArt(loop: Loop): void {
   });
 }
 
-describe("R1310000 R1310003 the economy loop", () => {
+describe("R1310000 R1310003 R3156000 the economy loop", () => {
   beforeEach(() => {
     expect(SEED, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
     // R144: every fixture as a boot leaves it, so e2e-econ is pending and the good code unspent.
