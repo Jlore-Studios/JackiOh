@@ -495,6 +495,10 @@ pub(crate) struct Checked {
     pub rule: bool,
     /// Whether the AI's self-play logs differ; `None` when the check did not run.
     pub ai: Option<bool>,
+    /// The scripts the check left once the tier was a patch, which count as without `--parent-bin`.
+    pub skipped: BTreeSet<String>,
+    /// Play code changed and the check stopped before it replayed the unforced games.
+    pub play_code_skipped: bool,
 }
 
 #[derive(Serialize, Debug, PartialEq)]
@@ -515,7 +519,7 @@ pub(crate) struct Classification {
     /// R2529000: the cards' look changed, a micro of no family at least.
     pub visual: bool,
     pub stage2: &'static str,
-    /// What stage 2 would have checked, when it did not run.
+    /// What stage 2 would have checked, when it did not run or stopped once the tier was a patch.
     pub unchecked: Vec<String>,
 }
 
@@ -527,6 +531,12 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         Some(checked) => {
             cards.extend(checked.scripts.iter().cloned());
             cards.extend(checked.touched.iter().cloned());
+            // A script the check stopped short of counts unconfirmed, as without `--parent-bin`.
+            cards.extend(checked.skipped.iter().map(|id| family(id)));
+            unchecked.extend(checked.skipped.iter().map(|id| format!("script:{id}")));
+            if checked.play_code_skipped {
+                unchecked.push("play-code".to_string());
+            }
         }
         None => {
             cards.extend(diff.scripts.iter().map(|id| family(id)));
@@ -938,11 +948,12 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
         diff.play.len() + checked.scripts.len() + checked.touched.len() >= PATCH_MIN_CARDS || checked.rule
     };
     for id in &diff.scripts {
-        if enough(&checked) {
-            break;
-        }
         let family = family(id);
         if diff.play.contains(&family) || checked.scripts.contains(&family) {
+            continue;
+        }
+        if enough(&checked) {
+            checked.skipped.insert(id.clone());
             continue;
         }
         let diverged = match forced_diverge(id, head, parent) {
@@ -957,6 +968,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
             checked.scripts.insert(family);
         }
     }
+    checked.play_code_skipped = diff.play_code && enough(&checked);
     if diff.play_code && !enough(&checked) {
         let traces = temp_traces();
         let seeds: Vec<u32> = (1..=UNFORCED_GAMES).collect();
@@ -1152,7 +1164,10 @@ fn print_classification(classification: &Classification) {
         ("cards that play differently", &classification.cards),
         ("of them reprinted", &classification.reprinted),
         ("wording only", &classification.wording),
-        ("not checked (no --parent-bin)", &classification.unchecked),
+        (
+            "not checked (no --parent-bin, or the tier was a patch first)",
+            &classification.unchecked,
+        ),
     ] {
         if !list.is_empty() {
             println!("  {label}: {}", list.join(", "));
@@ -1592,6 +1607,32 @@ mod tests {
             ..Checked::default()
         };
         assert_eq!(classify(&diff, Some(&rule)).tier, Some(Tier::Patch));
+    }
+
+    // R1365000: a check that stopped once the tier was a patch leaves what it skipped as stage 1 named
+    // it, a script claim unconfirmed and a change to play code unreplayed, never "plays as before".
+    #[test]
+    fn r1365000_what_the_check_stops_short_of_counts_unconfirmed() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let changed = SCRIPT.replace("CardScripts::default()", "CardScripts { ..Default::default() }");
+        let diff = read_diff(
+            &both,
+            &both,
+            &[file("crates/cards/src/scripts/core/c001.rs", SCRIPT, &changed)],
+        );
+        let stopped = Checked {
+            skipped: BTreeSet::from(["core-001".to_string()]),
+            play_code_skipped: true,
+            ..Checked::default()
+        };
+        let classified = classify(&diff, Some(&stopped));
+        assert_eq!(classified.cards, vec!["core-001".to_string()]);
+        assert_eq!(
+            classified.unchecked,
+            vec!["script:core-001".to_string(), "play-code".to_string()]
+        );
+        assert_eq!(classified.stage2, "ran");
+        assert!(classify(&diff, Some(&Checked::default())).unchecked.is_empty());
     }
 
     #[test]

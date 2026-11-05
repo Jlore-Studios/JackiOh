@@ -80,9 +80,12 @@ pub(crate) fn problems(
             .find(|named| named.name == name)
             .map(|named| &named.fragment)
     };
+    // R1365000: a check that stopped once the tier was a patch replayed no unforced games, so after a
+    // change to play code it shows no card playing as before and no rule missing.
+    let replayed = !classification.unchecked.iter().any(|item| item == "play-code");
     for NamedFragment { name, fragment } in head {
         let before = held(name);
-        if ran {
+        if ran && replayed {
             let old = before
                 .map(|fragment| families(&fragment.plays))
                 .unwrap_or_default();
@@ -101,7 +104,7 @@ pub(crate) fn problems(
             ));
         }
         let newly_rule = fragment.rule && !before.is_some_and(|fragment| fragment.rule);
-        if ran && newly_rule && !classification.rule {
+        if ran && replayed && newly_rule && !classification.rule {
             problems.push(format!(
                 "pending/{name} claims a rule every game meets, but too few games against the base build diverge without a card (R1370000, R2455000)"
             ));
@@ -158,6 +161,27 @@ mod tests {
                 ..PendingFragment::default()
             },
         }
+    }
+
+    // R1370000, R1365000: a check that stopped once the tier was a patch played no games for what it
+    // skipped: a skipped script counts as playing differently, and after a change to play code it
+    // never replayed, a `plays` claim of a card with no script change and a new rule claim both stand.
+    #[test]
+    fn r1370000_claims_the_check_stopped_short_of_stand() {
+        let mut stopped = classified(&["core-002"], false, "ran");
+        stopped.unchecked = vec!["script:core-002".to_string(), "play-code".to_string()];
+        let fragment = named("pass.json", &[], &["core-002", "core-007"], true);
+        assert_eq!(problems(&stopped, &[fragment.clone()], &[]), Vec::<String>::new());
+        stopped.unchecked.pop();
+        assert_eq!(
+            problems(&stopped, &[fragment], &[]),
+            vec![
+                "pending/pass.json claims \"core-007\" plays differently, but its games against the base build play as before (R1370000)"
+                    .to_string(),
+                "pending/pass.json claims a rule every game meets, but too few games against the base build diverge without a card (R1370000, R2455000)"
+                    .to_string(),
+            ]
+        );
     }
 
     #[test]
