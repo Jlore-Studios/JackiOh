@@ -16,6 +16,9 @@
 //! - `POST /api/dev/bar/:bar` (R1310003): a token bar filled, paying as a pack's duplicates would (§14.5).
 //!
 //! The quest tools (§14.9) are `api/quests.rs`'s, behind this same [`dev_caller`].
+//!
+//! R3074000: each tool writes its audit row (`api::admin::audit`) in its own transaction, and a grant
+//! of XP or Jlore is capped by `DEV_XP_PER_REQUEST_MAX` or `DEV_JLORE_PER_REQUEST_MAX`.
 
 use std::sync::Arc;
 
@@ -24,11 +27,15 @@ use serde_json::{Value, json};
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::{SetName, set_ships};
 
+use crate::api::admin::audit;
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::e2e::is_e2e_dev;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, str};
 use crate::app::{App, now_ms};
-use crate::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
+use crate::config::{
+    CARD_TOKEN_BAR_SIZE, DEV_JLORE_PER_REQUEST_MAX, DEV_XP_PER_REQUEST_MAX, SET_TRACK_FIRST_LEVEL,
+    SET_TRACK_LEVELS,
+};
 use crate::cosmetics::offered;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
 use crate::economy::math::level_for_xp;
@@ -66,11 +73,13 @@ pub(crate) fn dev_caller(app: &App, req: &Req) -> Result<Profile, ApiError> {
     Ok(profile)
 }
 
-/// `body[key]` as a whole number above 0.
-fn amount_of(body: &Value, key: &str) -> Result<i64, ApiError> {
+/// `body[key]` as a whole number from 1 to `max` (R3074000's cap of one request).
+fn amount_of(body: &Value, key: &str, max: i64) -> Result<i64, ApiError> {
     match body.get(key).and_then(Value::as_i64) {
-        Some(amount) if amount > 0 => Ok(amount),
-        _ => Err(bad_request(format!("\"{key}\" must be a positive whole number"))),
+        Some(amount) if (1..=max).contains(&amount) => Ok(amount),
+        _ => Err(bad_request(format!(
+            "\"{key}\" must be a positive whole number of at most {max}"
+        ))),
     }
 }
 
@@ -103,7 +112,7 @@ pub async fn give_xp(app: &Arc<App>, req: Req) -> ApiResult {
             crate::env::quoted(&set_id)
         )));
     }
-    let xp = amount_of(&req.body, "xp")?;
+    let xp = amount_of(&req.body, "xp", DEV_XP_PER_REQUEST_MAX)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     // [[R1301003]]: the account's economy lock, as every pack opening takes, so a dev grant never
     // reads a track a payout is moving.
@@ -130,10 +139,21 @@ pub async fn give_xp(app: &Arc<App>, req: Req) -> ApiResult {
         dev: true,
         at: now_ms(),
     };
+    let set_id = grant.set_id.clone();
     let track: SetTrack = tx
         .economy_tracks_grant(&grant)
         .await?
         .ok_or_else(|| bad_request(TOO_MUCH_MESSAGE))?;
+    audit(
+        &mut tx,
+        &profile.id,
+        "POST /api/dev/xp".to_string(),
+        json!({ "setId": set_id, "xp": xp }),
+        json!({ "xp": held_xp, "level": held_level }),
+        json!({ "track": track }),
+        grant.at,
+    )
+    .await?;
     tx.commit().await?;
     log_dev(&profile, "xp", 1);
     Ok(json(200, json!({ "track": track })))
@@ -142,7 +162,8 @@ pub async fn give_xp(app: &Arc<App>, req: Req) -> ApiResult {
 /// `POST /api/dev/jlore` with `{ jlore }`: 200 `{ jlore }`, the balance after the grant.
 pub async fn give_jlore(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = dev_caller(app, &req)?;
-    let delta = amount_of(&req.body, "jlore")?;
+    let delta = amount_of(&req.body, "jlore", DEV_JLORE_PER_REQUEST_MAX)?;
+    let at = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let balance = tx
         .economy_jlore_grant(&JloreGrant {
@@ -151,10 +172,22 @@ pub async fn give_jlore(app: &Arc<App>, req: Req) -> ApiResult {
             reason: JloreReason::Dev,
             reference: None,
             dev: true,
-            at: now_ms(),
+            at,
         })
         .await?
         .ok_or_else(|| bad_request(TOO_MUCH_MESSAGE))?;
+    audit(
+        &mut tx,
+        &profile.id,
+        "POST /api/dev/jlore".to_string(),
+        json!({ "jlore": delta }),
+        // The grant read the wallet under its own row lock: the balance before is the one after less
+        // the grant, whatever ran beside it.
+        json!({ "jlore": balance - delta }),
+        json!({ "jlore": balance }),
+        at,
+    )
+    .await?;
     tx.commit().await?;
     log_dev(&profile, "jlore", 1);
     Ok(json(200, json!({ "jlore": balance })))
@@ -236,6 +269,17 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
         })
         .collect();
     tx.economy_card_proficiency_put(&profile.id, &topped, at).await?;
+
+    audit(
+        &mut tx,
+        &profile.id,
+        "POST /api/dev/fill".to_string(),
+        json!({}),
+        Value::Null,
+        json!({ "cards": grants.len(), "cosmetics": cosmetics_written }),
+        at,
+    )
+    .await?;
     tx.commit().await?;
     log_dev(&profile, "fill", grants.len() + cosmetics_written);
     Ok(json(
@@ -301,6 +345,16 @@ pub async fn clear(app: &Arc<App>, req: Req) -> ApiResult {
             Holding::Tracks => clear_tracks(&mut tx, &profile.id, at).await?,
         };
     }
+    audit(
+        &mut tx,
+        &profile.id,
+        format!("POST /api/dev/clear/{part}"),
+        json!({ "part": part }),
+        Value::Null,
+        json!({ "written": written }),
+        at,
+    )
+    .await?;
     tx.commit().await?;
     log_dev(&profile, part, written);
     Ok(json(200, json!({ "written": written })))
@@ -368,6 +422,16 @@ pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
         grant_dev_counter(&mut tx, &profile.id, Counter::CosmeticTokenCycle, pays, at).await?;
         written += 1;
     }
+    audit(
+        &mut tx,
+        &profile.id,
+        format!("POST /api/dev/bar/{bar}"),
+        json!({ "bar": bar }),
+        json!({ "held": held }),
+        json!({ "held": remainder, "pays": pays, "written": written }),
+        at,
+    )
+    .await?;
     tx.commit().await?;
     log_dev(&profile, bar, written);
     Ok(json(200, json!({ "written": written })))

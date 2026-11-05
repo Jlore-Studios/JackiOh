@@ -1,5 +1,6 @@
 // Node-side tasks. Registered from cypress.config.ts's setupNodeEvents.
 
+import { awaitServer, type AwaitServerCommand } from "./awaitServer.ts";
 import { tutorialLessons } from "./lessons.ts";
 import { onlineReset } from "./onlineReset.ts";
 import { replayHash, type ReplayHashPayload } from "./replay.ts";
@@ -18,6 +19,10 @@ export function registerTasks(
     /** Specs 19 and 37: a seat enqueued over HTTP keeps polling like a queued client (R897000). */
     stayQueued(command: StayQueuedCommand) {
       return stayQueued(command);
+    },
+    /** Spec 49: the server's answer, once it says what the spec waits for (a match, a rated game). */
+    awaitServer(command: AwaitServerCommand) {
+      return awaitServer(command);
     },
     /** Spec 01: fold the recorded log through the engine and compare state hashes. */
     replayHash(payload: ReplayHashPayload) {

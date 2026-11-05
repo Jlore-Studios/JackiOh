@@ -27,9 +27,9 @@ locals {
 # first five characters of the password's SHA-1 hash leave Supabase (k-anonymity). The client says
 # why (`weakPasswordPwned` in apps/web/src/net/auth.ts). An existing password is never checked.
 #
-# `auth` names only these three keys, and the provider then reads and writes only them. An import
-# reads every setting into state, so the first apply narrows the state to these three and sends
-# Supabase the three values (README.md, The first import).
+# `auth` names only these four keys, and the provider then reads and writes only them. An import
+# reads every setting into state, so the first apply narrows the state to these four and sends
+# Supabase the four values (README.md, The first import).
 resource "supabase_settings" "production" {
   project_ref = local.supabase_production_ref
 
@@ -37,6 +37,8 @@ resource "supabase_settings" "production" {
     site_url              = "https://jackioh.com"
     uri_allow_list        = "https://jackioh.com/login"
     password_hibp_enabled = true
+    # R3025000: /account links and unlinks a provider for a signed-in player.
+    security_manual_linking_enabled = true
   })
 }
 
@@ -47,6 +49,8 @@ resource "supabase_settings" "staging" {
     site_url              = "https://staging.jackioh.com"
     uri_allow_list        = "https://staging.jackioh.com/login"
     password_hibp_enabled = true
+    # R3025000: /account links and unlinks a provider for a signed-in player.
+    security_manual_linking_enabled = true
   })
 }
 

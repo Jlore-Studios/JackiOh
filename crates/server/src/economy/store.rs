@@ -7,7 +7,7 @@
 //! `economy_practice_seed_settle`); migration 0077's news claims, one per account and entry
 //! (R2875000), no holding and no ledger: the reward a claim pays is written to the ledgers; and
 //! migration 0078's practice claim counts by UTC day and outcome (#2884, `economy_practice_claim_count`);
-//! and migration 0080's card proficiency, one row per account and card (R3013000, R3013001): plays, level
+//! and migration 0081's card proficiency, one row per account and card (R3013000, R3013001): plays, level
 //! and the stamp worn, current state and no ledger, a level and a stamp being progress and a pick.
 //!
 //! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching to
@@ -410,7 +410,7 @@ pub struct NewsClaim {
     pub claimed_at: i64,
 }
 
-/// R3013000: one row of `public.card_proficiency` (migration 0080): how often the account played
+/// R3013000: one row of `public.card_proficiency` (migration 0081): how often the account played
 /// the card from hand in games that pay rewards, the level those plays reached (§14.14), and the
 /// stamp the card wears, one its level unlocked (R3013001), `None` for none.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -559,7 +559,7 @@ pub struct EconomyTables {
     pub idempotency_keys: Vec<IdempotencyRow>,
     /// R2875000: migration 0077's news claims, one per profile and entry.
     pub news_claims: Vec<NewsClaim>,
-    /// R3013000: migration 0080's card proficiency, one per profile and card.
+    /// R3013000: migration 0081's card proficiency, one per profile and card.
     pub card_proficiency: Vec<(String, CardProficiency)>,
 }
 
@@ -711,7 +711,7 @@ fn is_stamp(stamp: i64) -> bool {
     usize::try_from(stamp).is_ok_and(|stamp| (1..=PROFICIENCY_LEVELS).contains(&stamp))
 }
 
-/// Migration 0080's checks of a row's card and counts, and the curve's top (R3013000): a slug of a
+/// Migration 0081's checks of a row's card and counts, and the curve's top (R3013000): a slug of a
 /// settings text's length, at least one play, and a level of the curve.
 fn check_proficiency(row: &CardProficiency) -> Result<(), StoreError> {
     if !crate::cosmetics::is_slug(&row.card_id) || row.card_id.len() > PLAYER_SETTINGS_TEXT_MAX_LENGTH {
@@ -1032,7 +1032,7 @@ impl Tx<'_> {
     }
 
     /// R3013000: writes each row's plays and level, inserting a card the account holds no row for
-    /// and never touching a stamp (a new row wears none). A row migration 0080's checks refuse is
+    /// and never touching a stamp (a new row wears none). A row migration 0081's checks refuse is
     /// refused here first, writing nothing; so is one whose level falls below the stamp it holds. A
     /// current-state table with no ledger: a level is progress, no holding (§14.11).
     pub async fn economy_card_proficiency_put(
@@ -1053,7 +1053,7 @@ impl Tx<'_> {
 
     /// R3013001: sets the stamp `card_id` wears, or clears it with `None`. False, writing nothing,
     /// when the account holds no row for the card or its level has not reached the stamp; a stamp
-    /// outside `1..=PROFICIENCY_LEVELS` is refused, as migration 0080's check refuses it.
+    /// outside `1..=PROFICIENCY_LEVELS` is refused, as migration 0081's check refuses it.
     pub async fn economy_card_proficiency_stamp(
         &mut self,
         profile_id: &str,
@@ -2315,7 +2315,7 @@ mod pg {
         Ok(done.rows_affected() == 1)
     }
 
-    /// Migration 0080.
+    /// Migration 0081.
     pub async fn card_proficiency_get(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -2342,7 +2342,7 @@ mod pg {
     }
 
     /// One statement for every row (`unnest`): a held row's plays and level are replaced, its stamp
-    /// kept; migration 0080's stamp check refuses a level below it, rolling back the statement.
+    /// kept; migration 0081's stamp check refuses a level below it, rolling back the statement.
     pub async fn card_proficiency_put(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -3127,7 +3127,7 @@ mod fake {
     }
 
     /// Every row or none, as Postgres's one statement: a level below a held stamp refuses the lot,
-    /// as migration 0080's stamp check does.
+    /// as migration 0081's stamp check does.
     pub fn card_proficiency_put(
         f: &mut FakeTx<'_>,
         profile_id: &str,

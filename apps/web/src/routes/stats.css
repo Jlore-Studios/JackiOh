@@ -438,6 +438,32 @@
   color: var(--text-dim, #9aa1b8);
 }
 
+/* R3022000: a card's balance tier; S (a nerf candidate) and F (a buff candidate) stand out, A to D stay quiet */
+.stats-tier {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+}
+
+.stats-tier[data-tier="S"] {
+  border-color: var(--tavern-danger);
+  color: var(--tavern-danger);
+}
+
+.stats-tier[data-tier="F"] {
+  border-color: var(--pal-sky-400);
+  color: var(--pal-sky-400);
+}
+
+.stats-tiers-note p {
+  margin: 4px 0;
+}
+
 /* R2895000: a figure's 95% range, on its own line under it (in the Win rate cell, under its text and bar) */
 .stats-range {
   display: block;

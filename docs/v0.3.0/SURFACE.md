@@ -1005,7 +1005,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   frame and a replay page's entry carry the stamps of the cards they send, `{ seat, cards, stamps? }`,
   `stamps` left out when none, by the same send rule; two more `Active` routes, `GET /api/proficiency`
   → `{ cards }` (`{ cardId, plays, level, stamp }`) and `PUT /api/proficiency/stamp` `{ cardId, stamp }`
-  (`api/proficiency.rs`, over `public.card_proficiency`, migration 0080; R3013000, R3013001). Three routes, all `Active`:
+  (`api/proficiency.rs`, over `public.card_proficiency`, migration 0081; R3013000, R3013001). Three routes, all `Active`:
   `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
   fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, `full-art-…` or `animated-…`, R2655000, R2715000) and `POST /api/card-picks/upload` `{ cards }`
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in

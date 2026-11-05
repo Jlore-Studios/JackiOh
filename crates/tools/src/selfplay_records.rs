@@ -189,11 +189,16 @@ mod tests {
         card_stats, forced_series, game_report,
     };
 
+    use crate::arena::TEST_BUDGET;
     use crate::stats::{ReportArgs, read_records, report};
 
-    /// The real exporter's lines for games `1..=games` of the base `records-test`, on commit `abc123`.
-    fn exported(games: i32) -> Vec<SelfplayGame> {
-        crate::selfplay::play("records-test", 1, games, "abc123").unwrap()
+    /// The real exporter's lines for games `1..=games` of the base `records-test`, on commit `abc123`,
+    /// both played once for the two tests (game n does not depend on how many follow it).
+    fn exported(games: usize) -> Vec<SelfplayGame> {
+        static EXPORT: std::sync::OnceLock<Vec<SelfplayGame>> = std::sync::OnceLock::new();
+        let all = EXPORT
+            .get_or_init(|| crate::selfplay::play_at("records-test", 1, 2, "abc123", TEST_BUDGET).unwrap());
+        all[..games].to_vec()
     }
 
     /// A scratch directory of its own holding `log.jsonl`, written with `text`.

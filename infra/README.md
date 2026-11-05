@@ -9,14 +9,19 @@ and the next `terraform plan` shows it. Terraform 1.6 or later; OpenTofu reads t
 
 | Host | Owned here | File | Left to |
 | --- | --- | --- | --- |
-| Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, and `www.jackioh.com` once it serves); the Access application and policies that keep staging to the team | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
+| Cloudflare | The jackioh.com zone's DNS records; the Workers' custom domains (`jackioh.com` for `jackioh`, `staging.jackioh.com` for `jackioh-staging`, the dev dashboard's `admin.jackioh.com` for `jackioh-admin` and `admin-staging.jackioh.com` for `jackioh-admin-staging`, and `www.jackioh.com` once it serves); the Access applications and policies that keep staging to the team and the dev dashboard to the devs (R3074000) | `cloudflare.tf` | `wrangler.jsonc` (both Workers, their assets, containers, settings and workers.dev routes) and `apps/admin/wrangler.jsonc` (the dashboard's two Workers), deployed by `promote-production.yml` and `deploy-staging.yml`; the server's secrets (`wrangler secret put`, `apps/edge/README.md`); the Access service token, whose secret would sit in the state |
 | Supabase (production's `fuzpvmjdejvbjcarypyi`, staging's `exmjdaswedxhnzmpzqrq`) | Each project's Authentication Site URL, Redirect URLs and leaked-password protection | `supabase.tf` | the migrations, which `jackioh-server release` applies; the keys, which are secrets |
 | GitHub (`Jlore-Studios/JackiOh`) | `main`'s branch protection with its five required checks, `main`'s merge queue (the `main-merge-queue` ruleset), and the `production` ruleset | `github.tf` | `bot/go/internal/config` `Labels` (the labels, which the sweep restores) |
 
 Not here at all: secret values (Actions secrets, the Workers' secrets, the Access service token),
 because the state would hold them. The server's `PUBLIC_ORIGINS` is in `wrangler.jsonc`'s `vars`.
-Nor the team's addresses for staging's Access policy: they are personal data in a public repository,
-so `var.staging_team_emails` is set in `infra/terraform.tfvars`, which git ignores (Running it).
+Nor the team's addresses for staging's Access policy, nor the devs' for the dev dashboard's: they are
+personal data in a public repository, so `var.staging_team_emails` and `var.admin_emails` are set in
+`infra/terraform.tfvars`, which git ignores (Running it).
+
+`email-templates/` holds the four mail templates both Supabase projects send (R3024000). Terraform
+does not apply them: `cutover.yml`'s `email-links` step writes a project's, and refuses while its site
+runs a commit without them.
 
 `docs/deploy-cloudflare.md` §4 Steps 2, 3, 4 and 6 point here for the settings above.
 
@@ -50,7 +55,8 @@ time.
 ## Running it
 
 From the repository root, with the variables above exported and `infra/terraform.tfvars` holding
-the team's addresses for staging (`staging_team_emails = ["you@example.com", ...]`; never commit it):
+the team's addresses for staging (`staging_team_emails = ["you@example.com", ...]`) and the dev accounts'
+addresses for the dev dashboard (`admin_emails = [...]`; never commit it):
 
 ```
 terraform -chdir=infra init       # the backend and the pinned providers
@@ -112,6 +118,17 @@ from.
    you would rather not publish (none of it is a secret) redacted.
 6. **The drift test.** Remove one Redirect URL in Supabase's dashboard (Authentication -> URL
    Configuration). `plan` shows `uri_allow_list` changing back, and `apply` puts it back.
+
+## The dev dashboard
+
+The dashboard's two Access applications, their one policy (`admin_emails`) and the two custom
+domains (R3074000, `apps/admin/README.md`) did not exist, so they have no `import` blocks: the first
+`apply` after they merged creates them (`Plan: 5 to add`). A custom domain names a Worker, which must
+exist first: `deploy-staging.yml` makes `jackioh-admin-staging` on the first deploy of `main` after
+the merge, and `promote-production.yml` makes `jackioh-admin` on the next promotion. Until both have
+run, apply staging's alone with `-target=cloudflare_workers_custom_domain.admin_staging_jackioh_com`
+(Terraform takes its Access application and policy with it). Each domain waits on its Access
+application (`depends_on`), so the hostname never serves a request Access has not seen.
 
 ## The merge queue
 

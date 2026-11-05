@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0080: Card proficiency, one row per account and card
+-- Migration 0081: Card proficiency, one row per account and card
 -- (SPEC §14.14; R3013000, R3013001; issue #3013)
 -- ============================================================================
 -- Serves R3013000. An account's proficiency of a card is how often it has
@@ -25,7 +25,7 @@
 -- src/economy/store.rs) is the only writer.
 --
 -- Apply order: ... -> 0045 (the economy) -> ... -> 0061 (card picks) -> ...
--- -> 0078 -> 0079 -> 0080 (this file). This file only ADDS objects. Safe to
+-- -> 0078 -> 0079 -> 0080 -> 0081 (this file). This file only ADDS objects. Safe to
 -- re-apply: create-if-not-exists, drop-policy-if-exists then create.
 -- ============================================================================
 

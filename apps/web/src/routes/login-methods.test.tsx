@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GIS_BUTTON, GIS_SCRIPT_URL, type GisButtonConfiguration, type GisIdConfiguration } from "../auth/googleIdentity.ts";
 import { challengeForRequest, storedVerifiers } from "../auth/pkce.ts";
-import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession } from "../auth/redirect.ts";
+import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession, takeLinkResult } from "../auth/redirect.ts";
 import { loginTestid } from "../auth/testids.ts";
 import { AUTH_MESSAGES, AUTH_NOTICES } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
@@ -458,6 +458,32 @@ describe("R666 OAuth providers, behind configuration", () => {
     expect(screen.getByTestId(loginTestid.oauthError).textContent).toBe(AUTH_MESSAGES.oauthFailed);
     expect(screen.queryByTestId(loginTestid.linkError)).toBeNull();
     expect(document.body.textContent).not.toContain("PROVIDER-TEXT");
+  });
+});
+
+describe("R3025000 linking a provider comes back through /login", () => {
+  it("R3025000 the link's code keeps the same account's session and goes back to /account, which says so", async () => {
+    await challengeForRequest("link");
+    serve({ "/auth/v1/token": tokens(AAL1) });
+    window.history.replaceState(null, "", `/login?code=${CODE}`);
+    render(<LoginRoute />);
+    await settle();
+    expect(readSession()?.accessToken).toBe(AAL1);
+    expect(window.location.pathname).toBe(paths.account);
+    expect(takeLinkResult()).toBe("linked");
+    expect(storedVerifiers().map((entry) => entry.flow)).not.toContain("link");
+  });
+
+  it("R3025000 a link that comes back with an error goes back to /account, which says it was not linked", async () => {
+    await challengeForRequest("link");
+    serve({});
+    window.history.replaceState(null, "", "/login?error=server_error&error_code=identity_already_exists");
+    render(<LoginRoute />);
+    await settle();
+    expect(window.location.pathname).toBe(paths.account);
+    expect(takeLinkResult()).toBe("failed");
+    expect(screen.queryByTestId(loginTestid.oauthError)).toBeNull();
+    expect(storedVerifiers().map((entry) => entry.flow)).not.toContain("link");
   });
 });
 

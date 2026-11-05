@@ -50,9 +50,11 @@ bring_up_postgres() {
   docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
   # The data directory in memory and fsync off: a throwaway database that no test restarts, whose
   # per-test `truncate` and commits were a large part of the suite's time on disk (116 s to 74 s).
+  # autovacuum=off: its worker commits in a database with no client connected (about 25 transactions
+  # on its first visit to a freshly migrated one), and migrate_on_a_wake counts a database's commits.
   docker run -d --name "$CONTAINER" -e POSTGRES_PASSWORD=postgres -p "$PORT":5432 \
     --tmpfs /var/lib/postgresql/data postgres:16 \
-    -c fsync=off -c synchronous_commit=off -c full_page_writes=off >/dev/null
+    -c fsync=off -c synchronous_commit=off -c full_page_writes=off -c autovacuum=off >/dev/null
 
   # Ready means the real server. The image's entrypoint first starts a temporary one for its own
   # setup, which answers on the socket but not on TCP and then shuts down, cutting off whatever is

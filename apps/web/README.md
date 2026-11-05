@@ -172,6 +172,14 @@ present for exactly that window.
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
+**One press is sent once** (R3060000). `Game.tsx`'s `dispatch` remembers the last `endTurn`, `answer` or
+`mulligan` it sent and the view it was sent against, and drops an equal body against the same view, so a
+double click on End turn, a double tap on a one-tap choice or a double press of the mulligan's Ready is one
+intent (after a card that gave an extra turn the second End turn was legal and ended the extra turn unseen).
+A new view or an `error` that gains text releases it; the error line clearing does not. Everything else, the
+board click and drag paths included, goes straight to `onAction`. Hotseat's views are new objects on every
+render, so it never blocks.
+
 **Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
@@ -574,6 +582,8 @@ motion). The request waits for the window to close and goes at once when a secon
 toast, when the page hides (as a `keepalive` request, `net/api.ts`'s `SendOptions`) or when the screen
 goes away; the workshop also sends it before a new deck or trio, a duplicate or an import, and the
 creator before a new card's first save, since the item counts against the server's caps until then.
+A deletion within `UNDO_REPEAT_MS` of the one taken is a double click's second press: `hold` refuses it
+(returns `false`) and every caller leaves the item in place and stays where it is (R3059000).
 Undo puts the item back and sends nothing. A refusal puts it back in the server's words; a deck or
 trio whose DELETE could not reach the server stays deleted and is retried (R256). While a deck's or
 trio's deletion is held, `sync.ts`'s `hide` keeps it out of every list, every trio slot and every save,

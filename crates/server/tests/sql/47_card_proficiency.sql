@@ -1,10 +1,10 @@
 -- Card proficiency, one row per account and card: its plays, its level and the stamp it wears
--- (migration 0080, SPEC §14.14, §9.1; R3013000, R3013001; issue #3013). Runs after
--- 45_card_versions.sql; profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated
+-- (migration 0081, SPEC §14.14, §9.1; R3013000, R3013001; issue #3013). Runs after
+-- 46_dev_dashboard.sql; profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated
 -- them).
 \set ON_ERROR_STOP on
 
--- Same rules as 01-45: every check raises on failure (`raise exception 'FAIL (…): …'`), every
+-- Same rules as 01-46: every check raises on failure (`raise exception 'FAIL (…): …'`), every
 -- expected refusal is matched on its sqlstate (and on the constraint, the table or the message that
 -- names it), each check that could pass vacuously carries a guard, and every block that writes runs
 -- inside a transaction that is rolled back. Nothing here selects into the log: the do blocks raise
@@ -418,7 +418,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R3013000: 0080 re-applies over rows of its own and changes none ###'
+\echo '### R3013000: 0081 re-applies over rows of its own and changes none ###'
 begin;
 insert into public.card_proficiency (profile_id, card_id, plays, level, stamp)
 values ('11111111-1111-1111-1111-111111111111', 'core-008', 15, 2, 2);
@@ -426,7 +426,7 @@ create temp table r3013000_rows (n bigint not null) on commit drop;
 insert into r3013000_rows select count(*) from public.card_proficiency;
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0080_card_proficiency.sql
+\i /tmp/0081_card_proficiency.sql
 set local client_min_messages = notice;
 do $$
 declare
@@ -437,18 +437,18 @@ begin
     raise exception 'FAIL (R3013000): % rows before the re-apply, expected the one written', before;
   end if;
   if (select count(*) from public.card_proficiency) <> before then
-    raise exception 'FAIL (R3013000): re-applying 0080 changed public.card_proficiency from % rows to %',
+    raise exception 'FAIL (R3013000): re-applying 0081 changed public.card_proficiency from % rows to %',
       before, (select count(*) from public.card_proficiency);
   end if;
   select format('%s %s %s', plays, level, stamp) into held
     from public.card_proficiency where card_id = 'core-008';
   if held is distinct from '15 2 2' then
-    raise exception 'FAIL (R3013000): re-applying 0080 left the row as [%]', coalesce(held, '(none)');
+    raise exception 'FAIL (R3013000): re-applying 0081 left the row as [%]', coalesce(held, '(none)');
   end if;
   if (select count(*) from pg_policies where schemaname = 'public' and tablename = 'card_proficiency') <> 1 then
-    raise exception 'FAIL (R3013000): re-applying 0080 left other than one policy on card_proficiency';
+    raise exception 'FAIL (R3013000): re-applying 0081 left other than one policy on card_proficiency';
   end if;
-  raise notice 'OK (R3013000): 0080 re-applies over its own rows and changes none';
+  raise notice 'OK (R3013000): 0081 re-applies over its own rows and changes none';
 end $$;
 rollback;
 

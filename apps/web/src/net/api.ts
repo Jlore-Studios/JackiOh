@@ -11,6 +11,7 @@ import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, Set
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
+import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { forgetRead, rememberRead, updateCachedRead } from "./readCache.ts";
 import { whileSpending } from "./spending.ts";
@@ -823,7 +824,11 @@ export type NewsReward =
   | { kind: "cosmeticToken"; amount: number; tier: CosmeticTokenTier }
   | { kind: "cosmeticPack"; amount: number };
 
-/** One live news entry (R2875001); `postedAt` is epoch ms, `version` a patch's, null for an alert. */
+/**
+ * One live news entry (R2875001); `postedAt` is epoch ms, `version` a patch's, null for an alert.
+ * R3074003: a dev's post from the dev dashboard is an alert whose `reward` is null: its claim marks
+ * it read and pays nothing.
+ */
 export type NewsEntry = {
   id: string;
   kind: "patch" | "alert";
@@ -831,7 +836,7 @@ export type NewsEntry = {
   title: string;
   summary: string;
   postedAt: number;
-  reward: NewsReward;
+  reward: NewsReward | null;
   claimed: boolean;
 };
 
@@ -857,7 +862,10 @@ const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>>
 export async function claimNews(token: string, id: string): Promise<NewsResponse> {
   const answer = await spendRequest<NewsResponse>(`/api/news/${encodeURIComponent(id)}/claim`, token, {});
   const reward = answer.news.find((entry) => entry.id === id)?.reward;
-  for (const path of reward === undefined ? [] : NEWS_REWARD_READS[reward.kind]) forgetRead(token, path);
+  // R3074003: a post pays nothing, so no kept read changes.
+  for (const path of reward === undefined || reward === null ? [] : NEWS_REWARD_READS[reward.kind]) {
+    forgetRead(token, path);
+  }
   return answer;
 }
 
@@ -1500,6 +1508,12 @@ export type PublicCardStat = {
   winRateHigh?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /**
+   * R3022000: the card's balance tier from its adjusted rate and range: S above the band and sure of it (a nerf
+   * candidate), F below it and sure of it (a buff candidate), A to D the band's quarters. Null below the sample
+   * floor; absent from a server deployed before it.
+   */
+  tier?: CardTier | null;
   playRate: number;
   hasEnoughGames: boolean;
   window?: PublicCardWindow;
@@ -1539,6 +1553,20 @@ export type PublicCreatedStat = {
   window: PublicCardWindow;
 };
 
+/** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
+export type PublicStatsTiers = {
+  /** The field's mean drawn delta, read as an even game. */
+  center: number;
+  /** The spread (one standard deviation) of real card lifts. */
+  spread: number;
+  /** The cards the field was read from; 0 when too few, and R2777000's prior is kept. */
+  cards: number;
+  /** R3070000: the average deck's win rate, which a card always in hand and the Dormant Starship are read against. */
+  baseline?: number;
+  bandLow: number;
+  bandHigh: number;
+};
+
 /** R654, R1367000: which records a window's figures count. */
 export type PublicStatsSource = "provisional" | "live" | "previous" | "dev";
 
@@ -1566,6 +1594,8 @@ export type PublicStatsCardsResponse = {
    * figures are asked for at the last). An older server omits it.
    */
   patches?: { versions: string[]; games: number; liveGames: number }[];
+  /** R3022000: the field and band the cards' tiers are read against; absent from a server deployed before it. */
+  tiers?: PublicStatsTiers;
   summary: {
     totalGames: number;
     liveGames: number;

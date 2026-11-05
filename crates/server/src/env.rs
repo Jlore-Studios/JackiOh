@@ -12,7 +12,7 @@
 use indexmap::IndexMap;
 
 use crate::config::{
-    BUG_REPORT_REPO_DEFAULT, DEFAULT_TRUSTED_PROXY_HOPS, DEV_PROFILE_IDS, MAX_TRUSTED_PROXY_HOPS,
+    BUG_REPORT_REPO_DEFAULT, DEFAULT_TRUSTED_PROXY_HOPS, DEV_PROFILE_IDS, DEV_STRICT, MAX_TRUSTED_PROXY_HOPS,
 };
 
 /// The deployment environment (TS `"development" | "test" | "production"`).
@@ -100,6 +100,10 @@ pub struct Env {
     /// R1300000: `DEV_PROFILE_IDS`, the profile ids of the dev accounts (SPEC §14.10), each a UUID
     /// in its canonical lower-case hyphenated form. Empty when unset: no dev accounts.
     pub dev_profile_ids: Vec<String>,
+    /// R3074000: `DEV_STRICT`, the dev dashboard's strict mode (SPEC §14.10), on unless it is set to
+    /// `off`: every `/api/admin/*` route then needs the two-step code (`aal2`), and a hand-set
+    /// rating is off the public ladder until it is reset (R3074001). Production leaves it unset.
+    pub dev_strict: bool,
 }
 
 impl std::fmt::Debug for Env {
@@ -130,6 +134,7 @@ impl std::fmt::Debug for Env {
             .field("github_issues_repo", &self.github_issues_repo)
             // A dev account's id is its account secret ID (R1300000): only how many are listed.
             .field("dev_profile_ids", &self.dev_profile_ids.len())
+            .field("dev_strict", &self.dev_strict)
             .finish()
     }
 }
@@ -197,6 +202,7 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "CREATE_ISSUES_TOKEN",
     "GITHUB_ISSUES_REPO",
     DEV_PROFILE_IDS,
+    DEV_STRICT,
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -350,6 +356,25 @@ fn parse_ladder_bots(value: Option<&str>, problems: &mut Vec<String>) -> bool {
                 quoted(raw)
             ));
             false
+        }
+    }
+}
+
+/// R3074000: `DEV_STRICT`, `on` or `off`; unset or blank is `on`, so a server nobody configured is
+/// as strict as production.
+fn parse_dev_strict(value: Option<&str>, problems: &mut Vec<String>) -> bool {
+    let Some(raw) = value.filter(|text| is_non_empty(Some(text))) else {
+        return true;
+    };
+    match js_trim(raw) {
+        "on" => true,
+        "off" => false,
+        _ => {
+            problems.push(format!(
+                "{DEV_STRICT}: whether the dev dashboard is strict (SPEC §14.10, R3074000): every /api/admin route then needs the two-step code, and a hand-set rating is off the public ladder. Must be 'on' or 'off' (got {}). Optional; defaults to 'on'. Staging sets 'off'.",
+                quoted(raw)
+            ));
+            true
         }
     }
 }
@@ -537,6 +562,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         problems.push(problem);
         Vec::new()
     });
+    let dev_strict = parse_dev_strict(read(DEV_STRICT), &mut problems);
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -578,6 +604,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         github_issues_token,
         github_issues_repo,
         dev_profile_ids,
+        dev_strict,
     })
 }
 
