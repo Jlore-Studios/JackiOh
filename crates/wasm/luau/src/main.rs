@@ -551,8 +551,10 @@ pub extern "C" fn choose_action(
     })
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
-/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
+/// Every number a client reads, one JSON object (#3093): the AI's (`AI_BUDGET`, `AI_GATE_BUDGET`,
+/// `SHADOW_BAN_IDS`, `FIXTURE_BANNED_IDS`, `AI_DECK`) for practice, the tutorial harness, the "More cards
+/// from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests; the dungeon run's (`RUN`);
+/// and the rules' by the names `apps/web/src/wire/engineConfig.ts` gives them (`DECK_SIZE`, …).
 /// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
 /// fixtures were dealt.
 #[unsafe(no_mangle)]

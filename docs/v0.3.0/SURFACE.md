@@ -762,7 +762,7 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;
     // call ∈ validateDeck | validateTrio | validateLoadout | checkDeckDraft | checkTrioDraft | checkImportRoom | trioConflicts | normalizeName;
     // the input and output are those TS functions' argument and result, as JSON
-#[wasm_bindgen] pub fn constants() -> String;                                      // { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK } for practice, the tutorial harness, the lean toggle (R1370) and their tests
+#[wasm_bindgen] pub fn constants() -> String;                                      // every number a client reads, one JSON object: { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK } for practice, the tutorial harness, the lean toggle (R1370) and their tests, RUN (run_constants()), and engineConfig.ts's 66 constants by name (DECK_SIZE, …) (#3093)
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
 #[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
@@ -825,6 +825,15 @@ sources from `packages/shared/src/` into `apps/web/src/wire/{catalog,codes,emote
 unchanged. The Rust server needs the same functions; part 5 ports them to `crates/engine/src/wire/`.
 Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-cases.json` (from
 `packages/shared/test/fixtures/code-input-cases.ts`, part 5), so they cannot drift.
+
+### 10.5 The C module (`crates/wasm/c`, #3093)
+
+`cargo build -p jackioh-wasm-c --release --target wasm32-unknown-unknown` builds the §10.1 bindings a
+second way: `extern "C"` functions over JSON, in a module with an empty import section, for a host that
+is not a browser (the Roblox port, #2898). Each text argument is a `(ptr, len)` pair of UTF-8 bytes, each
+binding answers an `i32` status, and the text it answers is read through `jackioh_result_ptr()` and
+`jackioh_result_len()`. `crates/wasm/c/README.md` is the contract; `crates/wasm/tests/export_parity.rs`
+holds its exports to §10.1's.
 
 ## 11. The server
 

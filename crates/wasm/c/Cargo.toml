@@ -1,0 +1,30 @@
+[package]
+name = "jackioh-wasm-c"
+description = "The engine's C boundary as a plain wasm32-unknown-unknown module (#3093): the browser module's bindings over JSON as extern \"C\" functions with a memory interface, importing nothing from the host (crates/wasm/c/README.md)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# A `cdylib` for `wasm32-unknown-unknown`: `rustc` links it with its own `rust-lld`, so no `emcc` and no
+# C++ toolchain is needed, and the module has an empty import section. It is a third wrapper over
+# `jackioh-wasm-core`'s bodies, beside `crates/wasm` (wasm-bindgen) and `crates/wasm/luau` (emscripten).
+# Nothing here may name a crate that imports from the host (`crates/wasm/tests/export_parity.rs`).
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = []
+# R1420's preview, as `crates/wasm`'s `preview`: a host that wants `preview_sets` builds with it.
+preview = ["jackioh-wasm-core/preview"]
+# #936's Duos bindings, as `crates/wasm`'s `duos`: without it each `duos_*` answers the reason.
+duos = ["jackioh-wasm-core/duos"]
+
+[dependencies]
+jackioh-engine = { workspace = true }
+jackioh-cards = { workspace = true }
+# By path, not through the workspace: the crate sits inside `crates/wasm`.
+jackioh-wasm-core = { path = "../core" }
+
+[dev-dependencies]
+serde_json = { workspace = true }

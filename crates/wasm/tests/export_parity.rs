@@ -1,7 +1,9 @@
-//! #1505: the two browser modules wrap one set of bodies, so a binding cannot be added to one
-//! side and forgotten in the other. This test compares each module's export list to a declared
-//! allow-list: a binding bound in only one module fails it, unless the allow-list says so with the
-//! reason. It uses `std` only and reads files at run time.
+//! #1505: the modules wrap one set of bodies, so a binding cannot be added to one side and forgotten
+//! in another. This test compares each module's export list to a declared allow-list: a binding bound
+//! in only one module fails it, unless the allow-list says so with the reason. The browser's two
+//! modules are held to each other (`parity_problems`), and the C module (`crates/wasm/c`, #3093, the
+//! module the Roblox port translates) to the browser's, so a binding added for the web reaches it by
+//! itself (`c_parity_problems`). It uses `std` only and reads files at run time.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -68,6 +70,41 @@ const NORMAL_ONLY: &[&str] = &[
 /// boundary's strings.
 const LUAU_ONLY: &[&str] = &["check_custom_card", "jackioh_free", "jackioh_last_error"];
 
+/// What only the C module exports, and why: its memory interface, which moves the JSON text across a
+/// boundary that has no strings (`crates/wasm/c/README.md`).
+const C_ONLY: &[(&str, &str)] = &[
+    (
+        "jackioh_alloc",
+        "the C module's memory interface (`crates/wasm/c/README.md`)",
+    ),
+    (
+        "jackioh_free",
+        "the C module's memory interface (`crates/wasm/c/README.md`)",
+    ),
+    (
+        "jackioh_result_ptr",
+        "the C module's memory interface (`crates/wasm/c/README.md`)",
+    ),
+    (
+        "jackioh_result_len",
+        "the C module's memory interface (`crates/wasm/c/README.md`)",
+    ),
+];
+
+/// What the Luau module binds and the C module does not, and why. Both go with the Luau module in part
+/// 5 of #2956 (#3097), and this list goes with them.
+const LUAU_NOT_IN_C: &[(&str, &str)] = &[
+    (
+        "check_custom_card",
+        "the creator's check needs the Luau VM, which the C module holds none of; leaves with part 5",
+    ),
+    (
+        "jackioh_last_error",
+        "the Luau module's NUL-terminated error channel; the C module answers a failure's message in its \
+         result buffer instead; leaves with part 5",
+    ),
+];
+
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
@@ -105,6 +142,10 @@ fn normal_exports() -> BTreeSet<String> {
 
 fn luau_exports() -> BTreeSet<String> {
     exported(&read("crates/wasm/luau/src/main.rs"), "#[unsafe(no_mangle)]")
+}
+
+fn c_exports() -> BTreeSet<String> {
+    exported(&read("crates/wasm/c/src/lib.rs"), "#[unsafe(no_mangle)]")
 }
 
 /// One message for every export the allow-list does not account for: a name a module binds that
@@ -153,6 +194,62 @@ fn parity_problems(normal: &BTreeSet<String>, luau: &BTreeSet<String>) -> Vec<St
         if !luau.contains(*name) {
             problems.push(format!(
                 "`{name}` is listed for the Luau module but crates/wasm/luau/src/main.rs does not bind it"
+            ));
+        }
+    }
+    problems
+}
+
+/// One message for every C export the allow-lists do not account for: a browser binding the C module
+/// lacks, a name only the C module has that is not its memory interface, a Luau binding it lacks
+/// without a reason, and a listed name that is not there.
+fn c_parity_problems(
+    normal: &BTreeSet<String>,
+    c: &BTreeSet<String>,
+    luau: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut problems = Vec::new();
+    for name in normal {
+        if !c.contains(name) {
+            problems.push(format!(
+                "`{name}` is bound in crates/wasm/src/lib.rs but not exported by crates/wasm/c/src/lib.rs: \
+                 export it there too (with its tests in crates/wasm/c/src/tests.rs and a row in \
+                 crates/wasm/c/README.md)"
+            ));
+        }
+    }
+    for name in c {
+        let browser = normal.contains(name);
+        let memory = C_ONLY.iter().any(|(listed, _)| listed == name);
+        if !browser && !memory {
+            problems.push(format!(
+                "`{name}` is exported by crates/wasm/c/src/lib.rs only: bind it in crates/wasm/src/lib.rs \
+                 too, or list it in C_ONLY with the reason"
+            ));
+        }
+    }
+    for (name, _) in C_ONLY {
+        if !c.contains(*name) {
+            problems.push(format!(
+                "`{name}` is listed for the C module but crates/wasm/c/src/lib.rs does not export it"
+            ));
+        }
+    }
+    for name in luau {
+        let carried = c.contains(name);
+        let listed = LUAU_NOT_IN_C.iter().any(|(listed, _)| listed == name);
+        if !carried && !listed {
+            problems.push(format!(
+                "`{name}` is bound in crates/wasm/luau/src/main.rs but not exported by \
+                 crates/wasm/c/src/lib.rs: export it there too, or list it in LUAU_NOT_IN_C with the reason"
+            ));
+        }
+    }
+    for (name, _) in LUAU_NOT_IN_C {
+        if !luau.contains(*name) {
+            problems.push(format!(
+                "`{name}` is listed in LUAU_NOT_IN_C but crates/wasm/luau/src/main.rs does not bind it: \
+                 drop it from the list"
             ));
         }
     }
@@ -215,4 +312,98 @@ fn a_binding_bound_in_one_module_only_fails_parity() {
         problems.iter().any(|problem| problem.contains("only_here")),
         "expected a parity problem for only_here, got: {problems:?}"
     );
+}
+
+#[test]
+fn the_c_module_exports_every_browser_binding_and_its_memory_interface_alone() {
+    let problems = c_parity_problems(&normal_exports(), &c_exports(), &luau_exports());
+    assert!(problems.is_empty(), "C export parity:\n{}", problems.join("\n"));
+}
+
+/// A binding added for the web and not for the C module fails: the way it reaches Roblox by itself.
+#[test]
+fn a_browser_binding_the_c_module_lacks_fails_c_parity() {
+    let text = read("crates/wasm/src/lib.rs") + "\n#[wasm_bindgen]\npub fn only_here() {}\n";
+    let normal = exported(&text, "#[wasm_bindgen]");
+    let problems = c_parity_problems(&normal, &c_exports(), &luau_exports());
+    assert!(
+        problems.iter().any(|problem| problem.contains("only_here")),
+        "expected a C parity problem for only_here, got: {problems:?}"
+    );
+}
+
+/// The reverse, and the Luau side: a C export that is neither the browser's nor its memory interface, and
+/// a Luau binding the C module lacks, each fail.
+#[test]
+fn a_c_export_with_no_browser_binding_and_a_luau_binding_it_lacks_fail_c_parity() {
+    let c = read("crates/wasm/c/src/lib.rs") + "\n#[unsafe(no_mangle)]\npub extern \"C\" fn only_here() {}\n";
+    let problems = c_parity_problems(
+        &normal_exports(),
+        &exported(&c, "#[unsafe(no_mangle)]"),
+        &luau_exports(),
+    );
+    assert!(
+        problems.iter().any(|problem| problem.contains("only_here")),
+        "expected a C parity problem for only_here, got: {problems:?}"
+    );
+    let mut luau = luau_exports();
+    luau.insert("only_there".to_owned());
+    let problems = c_parity_problems(&normal_exports(), &c_exports(), &luau);
+    assert!(
+        problems.iter().any(|problem| problem.contains("only_there")),
+        "expected a C parity problem for only_there, got: {problems:?}"
+    );
+}
+
+/// What makes the module's import section empty, as far as a test of the source can tell: no crate that
+/// brings glue or a system interface, no foreign function block, no clock. The build holds the rest
+/// (`scripts/build-wasm.sh`'s `JACKIOH_WASM_C=1` reads the built module's imports).
+#[test]
+fn the_c_module_imports_nothing_from_the_host() {
+    let manifest = read("crates/wasm/c/Cargo.toml");
+    let mut section = String::new();
+    for line in manifest
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.starts_with('#'))
+    {
+        if let Some(header) = line.strip_prefix('[') {
+            section = header.trim_end_matches(']').to_owned();
+        } else if section.contains("dependencies") {
+            let name = line.split(['=', ' ']).next().unwrap_or_default();
+            for banned in [
+                "wasm-bindgen",
+                "js-sys",
+                "console_error_panic_hook",
+                "wasi",
+                "wasip1",
+                "wasip2",
+            ] {
+                assert!(
+                    !name.contains(banned),
+                    "crates/wasm/c/Cargo.toml depends on `{name}`, which imports from the host"
+                );
+            }
+        }
+    }
+    let source = read("crates/wasm/c/src/lib.rs");
+    let code: String = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    for banned in [
+        "extern \"C\" {",
+        "unsafe extern \"C\" {",
+        "wasm_bindgen",
+        "js_sys",
+        "SystemTime",
+        "Instant::now",
+        "wasi",
+    ] {
+        assert!(
+            !code.contains(banned),
+            "crates/wasm/c/src/lib.rs names `{banned}`, which imports from the host"
+        );
+    }
 }

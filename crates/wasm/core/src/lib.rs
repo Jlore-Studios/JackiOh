@@ -1,7 +1,8 @@
-//! `jackioh-wasm-core`: the bodies both browser modules bind (#1505). JSON strings in and out, nothing
-//! else crosses: the state is the `GameState` JSON object, which the client keeps behind its opaque
+//! `jackioh-wasm-core`: the bodies every module binds (#1505). JSON strings in and out, nothing else
+//! crosses: the state is the `GameState` JSON object, which the client keeps behind its opaque
 //! `EngineState` brand (CLAUDE.md rule 7) and hands back on every call. `crates/wasm` wraps each body
-//! for wasm-bindgen, `crates/wasm/luau` for C; the exports stay identical.
+//! for wasm-bindgen, `crates/wasm/luau` for C over emscripten and `crates/wasm/c` for C over a plain
+//! `wasm32-unknown-unknown` module (#3093); the exports stay identical.
 //!
 //! The state cache: the client hands the same state over and over, so the bodies keep the few states
 //! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text. A text that differs by
@@ -9,7 +10,7 @@
 //!
 //! Errors are `String`s, each module's own failure. The clock is the caller's (`ai_decide` takes
 //! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3), and so is the setup check
-//! (`CheckSetup`): the normal module refuses a game with custom cards (R915009), the Luau module
+//! (`CheckSetup`): the normal and C modules refuse a game with custom cards (R915009), the Luau module
 //! judges them (R915005, R915006).
 
 use std::cell::RefCell;
@@ -26,6 +27,10 @@ use jackioh_run::{RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
+
+mod constants;
+
+pub use constants::constants;
 
 // JSON in, JSON out
 
@@ -146,8 +151,8 @@ fn reduce_result_json(result: ReduceResult) -> Result<String, String> {
 // The setup check each module runs before the engine sees a setup
 
 /// Each module's own setup check, which `create_game`, `fold` and `replay_open` run before the engine
-/// sees the setup: the normal module refuses a game with custom cards (R915009), the Luau module judges
-/// them (R915005, R915006) and hands their definitions to `check_decks`. The kind is `create_game`'s
+/// sees the setup: the normal and C modules refuse a game with custom cards (R915009), the Luau module
+/// judges them (R915005, R915006) and hands their definitions to `check_decks`. The kind is `create_game`'s
 /// `New` or a fold's `Recorded` (R1705003).
 pub type CheckSetup = fn(&CreateGameArgs, SetupKind) -> Result<(), String>;
 
@@ -541,20 +546,6 @@ pub fn choose_action(
     let mut rng = Rng::new(rng_seed, rng_cursor as u32);
     let action = jackioh_ai::random_action(&state, seat, &mut rng);
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
-}
-
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
-/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
-/// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
-/// fixtures were dealt.
-pub fn constants() -> Result<String, String> {
-    to_json(&json!({
-        "AI_BUDGET": jackioh_ai::AI_BUDGET,
-        "AI_GATE_BUDGET": jackioh_ai::AI_GATE_BUDGET,
-        "SHADOW_BAN_IDS": jackioh_ai::SHADOW_BAN_IDS,
-        "FIXTURE_BANNED_IDS": jackioh_ai::FIXTURE_BANNED_IDS,
-        "AI_DECK": jackioh_ai::AI_DECK,
-    }))
 }
 
 /// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`) as

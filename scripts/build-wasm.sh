@@ -46,6 +46,13 @@
 # side (ci.yml's `web (wasm module)` and `web (wasm luau module)`): one after the other they took
 # over seven minutes (#959). With JACKIOH_WASM_LUAU=0 it would build nothing, so that pair fails.
 #
+# JACKIOH_WASM_C: 0 (the default) skips the C module; 1 builds crates/wasm/c (#3093), the engine's C
+# boundary as a plain wasm32-unknown-unknown module with no emscripten and no wasm-bindgen, without its
+# `preview` or `duos` features, and fails if its import section is not empty (read with `node`, which
+# this check needs). Nothing the web loads, so it is off by default: it links the engine, the cards and
+# the AI once more. It leaves target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm, the module the
+# Roblox port translates (crates/wasm/c/README.md).
+#
 # CARGO_TARGET_DIR: where cargo builds, which is where the modules are read from; unset, target/
 # under the root. Cargo runs from the root, so a relative one is the root's. JACKIOH_CACHE_DIR: where
 # wasm-bindgen (bin/) and the emsdk (emsdk/) are kept; unset, .cache/ under the root. The night bot's
@@ -73,6 +80,7 @@ EMSDK_DIR="$TOOLS_DIR/emsdk"
 LUAU_OUT_DIR="$OUT_DIR/luau"
 LUAU_JS="$TARGET_DIR/$LUAU_TARGET/release/jackioh-wasm-luau.js"
 LUAU_WASM="$TARGET_DIR/$LUAU_TARGET/release/jackioh_wasm_luau.wasm"
+C_MODULE="$TARGET_DIR/$WASM_TARGET/release/jackioh_wasm_c.wasm"
 
 cd "$ROOT"
 
@@ -92,7 +100,7 @@ case "${JACKIOH_WASM_NORMAL:-1}" in
     exit 1
     ;;
 esac
-if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ]; then
+if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ] && [ "${JACKIOH_WASM_C:-0}" != 1 ]; then
   echo "build-wasm: JACKIOH_WASM_NORMAL=0 with JACKIOH_WASM_LUAU=0 builds nothing" >&2
   exit 1
 fi
@@ -164,6 +172,34 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
   "$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
   echo "build-wasm: wrote $OUT_DIR"
 fi
+
+# #3093: the C module, the engine's boundary as `extern "C"` functions over JSON with a memory interface
+# (crates/wasm/c/README.md). `rustc` links it for wasm32-unknown-unknown with its own linker, so none of
+# the toolchain below is needed, and it must import nothing: the built module's import section is read
+# with node, which fails the build on the first import (a host that is not the browser has nothing to
+# give it). The Luau module's block comes after, so JACKIOH_WASM_LUAU=0 ends the script here.
+case "${JACKIOH_WASM_C:-0}" in
+  0) ;;
+  1)
+    if command -v rustup >/dev/null 2>&1; then
+      if ! rustup target list --installed | grep -qx "$WASM_TARGET"; then
+        echo "build-wasm: adding the $WASM_TARGET target"
+        rustup target add "$WASM_TARGET"
+      fi
+    fi
+    cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+    if ! command -v node >/dev/null 2>&1; then
+      echo "build-wasm: node is needed to check that the C module imports nothing" >&2
+      exit 1
+    fi
+    node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
+    echo "build-wasm: built $C_MODULE, which imports nothing"
+    ;;
+  *)
+    echo "build-wasm: JACKIOH_WASM_C is 0 (the default) or 1, not \"$JACKIOH_WASM_C\"" >&2
+    exit 1
+    ;;
+esac
 
 # R915009, #919: the Luau module, the engine with the card kit, which the web loads only for a
 # practice game with a custom card and for the creator (apps/web/src/wasm/luau.ts). JACKIOH_WASM_LUAU

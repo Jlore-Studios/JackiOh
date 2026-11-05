@@ -11,7 +11,7 @@
 //! `console_error_panic_hook` prints it on the console before the trap.
 //!
 //! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505), which the Luau
-//! module wraps too; this module keeps the wasm-bindgen wrappers, the panic hook, the clock and the
+//! and C (#3093) modules wrap too; this module keeps the wasm-bindgen wrappers, the panic hook, the clock and the
 //! custom-card refusal (R915009). The pure crates never read a clock (CLAUDE.md rule 4, SURFACE §3):
 //! `ai_decide` hands the body `js_sys::Date::now` against the deadline the page computed.
 
@@ -346,8 +346,10 @@ pub fn choose_action(
     js(wasm_core::choose_action(state_json, seat, rng_seed, rng_cursor))
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
-/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
+/// Every number a client reads, one JSON object (#3093): the AI's (`AI_BUDGET`, `AI_GATE_BUDGET`,
+/// `SHADOW_BAN_IDS`, `FIXTURE_BANNED_IDS`, `AI_DECK`) for practice, the tutorial harness, the "More cards
+/// from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests; the dungeon run's (`RUN`);
+/// and the rules' by the names `apps/web/src/wire/engineConfig.ts` gives them (`DECK_SIZE`, …).
 /// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
 /// fixtures were dealt.
 #[wasm_bindgen]
