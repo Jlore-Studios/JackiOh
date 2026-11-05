@@ -15364,6 +15364,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-05T11:40:36Z",
@@ -15374,15 +15375,19 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3180,
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-11-05T11:37:39Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "strong",
       "run_id": "42023548181",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3165,
       "started_at": "2026-11-05T12:00:38Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3178": {
       "action": "build",
