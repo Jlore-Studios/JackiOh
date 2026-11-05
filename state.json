@@ -17024,15 +17024,8 @@
       }
     },
     "3127": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41990322219",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-05T08:24:25Z",
-        "until": "2026-11-05T08:54:25Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17044,10 +17037,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; git status --short; git log --oneline | head -3; ls -la .bot-plan.md 2>&1; ls apps/web/vitest.exp.config.ts apps/web/src/zz-exp.test.tsx 2>&1 |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; git show --stat --format='%h %s' f18823b01e | head; git diff f5624e3193 HEAD --stat | tail -3; sed -n 1,30p apps/web/src/palette.test.ts >/dev/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127/apps/web/src; grep -n \\\"gradient\\\" surfaces.test.ts | head -20; grep -n \\\"KEEP\\\" -A12 motion.test.ts | head -50; grep -n \\\"perspective\\\\|rotateY\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127/apps/web/src; grep -n \\\"BOARD_SHEETS =\\\" -B2 -A8 motion.test.ts; sed -n 195,225p surfaces.test.ts; grep -n \\\"OWN\\\\|EXEMPT\\\\|startsWith\\\\|filter(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; grep -rn \\\"Object\\\\.\\\\(values\\\\|keys\\\\|entries\\\\)(shellTestid\\\" apps e2e --include=*.ts --include=*.tsx | head; grep -n \\\"shell-panel\\\\|ShellPa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127/apps/web/src; grep -n '^import \\\".*css\\\"\\\\|ConsentPrompt' main.tsx | head; grep -rn \\\"fonts.css\\\" --include=*.tsx --include=*.ts --include=*.css\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127/apps/web/src; sed -n 85,99p main.tsx; grep -rn \\\"import.*fonts\\\" index.css main.tsx | head -3; grep -n \\\"@import\\\" index.css | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; grep -n \\\"WAYS_OUT\\\" -A12 apps/web/src/notfound/lost.ts | head -30; sed -n 330,352p e2e/cypress/e2e/47-tap-areas.cy.ts | head -5; grep -n \\\"bef\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3127/.bot-plan.md\", \"content\": \"## Goal\\n\\n`pnpm --dir apps/web build` writes `dist/404.html` from the built `index.html` (`static-pages.ts`): it load\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; wc -w .bot-plan.md; wc -c .bot-plan.md; git status --short\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; python3 -I - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:50]\\n s=s.replace(a,b)\\nrep(\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3127; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"- The \u2026\n- said: ## Goal `pnpm --dir apps/web build` writes `dist/404.html` from the built `index.html` (`static-pages.ts`). The page loads the client's entry script, has `noindex`, the title `Page not found \u00b7 JackiOh` and no canonical link. Its static body is a visible, script-free fallback in the app's own look: \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-05T06:55:28Z",
       "owner_why": "it plans it",
@@ -17060,9 +17052,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-05T03:45:22Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41990322219",
+      "run_id": "pending:b6d0160a-1793867112",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T07:52:43Z",
+      "started_at": "2026-11-05T08:25:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6652281241
@@ -17711,9 +17703,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T07:53:33Z",
+    "at": "2026-11-05T08:25:51Z",
     "url": "",
-    "what": "build #3065 on claude-3"
+    "what": "build #3127 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T08:09:36Z",
