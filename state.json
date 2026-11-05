@@ -15067,11 +15067,6 @@
       "owner_since": "2026-11-05T00:33:50Z",
       "owner_why": "handed off from `claude-1`: it could not take it",
       "part_of": 3000,
-      "paused": {
-        "at": "2026-11-05T00:31:08Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "provider": "claude-8",
       "round_tier": "",
