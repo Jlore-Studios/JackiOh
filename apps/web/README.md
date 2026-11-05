@@ -133,6 +133,19 @@ a duos room's, a watch's or a replay's reads and anything that is not a `GET` (`
 for the watch and the replay share). `/decks` opens the workshop on the kept decks and reopens it, under a new
 `key`, when the decks that land differ, since its store is made once.
 
+A kept answer carries the time its read finished (R3206000): one younger than `READ_CACHE_FRESH_MS`
+(`net/readCache.ts`, 45 s) is *fresh*, and `keptGet` returns it and sends no read behind it. The gate skips its
+`/api/auth/me` read the same way (`freshRead`, for an active account that owes nothing; the renewal timer and the
+401 path are as they were), and the wallet pill reads through `getWallet`, so a navigation inside the window sends
+nothing. An older answer is drawn and read again as above. A fold of a write's answer keeps the age it found,
+`expireRead` ends freshness and keeps the value (a quest falling due), and a gate or a poll that only finished a
+read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of one path and token while it is out
+(one fetch, on its own controller that the last caller to abort aborts); a write is never shared. `writeEpoch`
+counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
+`clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
+not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
+game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
+
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.

@@ -13,7 +13,8 @@ import { CATALOG } from "@jackioh/cards";
 import { resetCosmeticsForTests, type OwnedByCard } from "../cards/cosmetics.ts";
 import { ViewerAccountCosmetics, ViewerFullArt, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import type { CollectionResponse, TokenBarsResponse } from "../net/api.ts";
+import { keptPaths, type CollectionResponse, type TokenBarsResponse } from "../net/api.ts";
+import { expireRead } from "../net/readCache.ts";
 import { collectionOf, tokenBars } from "../shop/fixtures.ts";
 import { settle } from "../test/settle.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
@@ -533,8 +534,10 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
     expect(server.to("GET", "/api/tokens")).toHaveLength(1);
     closePreview();
 
-    // Spent elsewhere, the token is gone: the locked card's preview offers nothing.
+    // Spent elsewhere, the token is gone: the locked card's preview offers nothing. R3206000: the visit
+    // is after the window, so the bars it kept are drawn and read again.
     cardHeld = 0;
+    expireRead(TOKEN, keptPaths.tokens);
     cleanup();
     gridOf(["core-001", "core-002"]);
     await settle();
