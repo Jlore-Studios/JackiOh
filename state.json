@@ -15832,15 +15832,8 @@
       "stop_requested": false
     },
     "3208": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42068330045",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-05T17:16:01Z",
-        "until": "2026-11-05T17:46:01Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15852,10 +15845,9 @@
         "reason": "planned on opus",
         "trail": "n\\\" crates/server/README.md | head -20; sed -n 355,375p docs/deploy-cloudflare.md\", \"description\": \"Check server README for pool contra\u2026\n- Bash: {\"command\": \"sed -n 45,52p crates/server/README.md | cut -c1-900\", \"description\": \"Read the README transaction description\"}\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; grep -n \\\"pub(super) fn release\\\\|fn release\\\" -A20 sqlx-core-0.9.0/src/pool/inner.rs | head -30; grep -n \\\"pub fn into_idle\\\\|pub fn into_live\\\\|idle_since\\\" sqlx-core-\u2026\n- Bash: {\"command\": \"grep -rn \\\"create_postgres_store\\\\|PostgresStoreOptions\\\" crates/ --include=*.rs | grep -v \\\"^crates/server/src/db/pg.rs\\\" | head -20\", \"description\": \"Find create_postgres_store call si\u2026\n- Bash: {\"command\": \"sed -n 1,70p crates/server/tests/api/health.rs; grep -rn \\\"PgPool::connect\\\\|PgPoolOptions\\\" crates/server/src --include=*.rs | head\", \"description\": \"Read health test using create_postg\u2026\n- Bash: {\"command\": \"sed -n 70,110p crates/server/tests/api/health.rs\", \"description\": \"Read readyz unreachable store test\"}\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; grep -n \\\"pub fn get_host\\\\|pub fn get_port\\\\|pub fn ssl_mode\\\\|pub fn host\\\\|pub fn port\\\\|pub fn statement_cache_capacity\\\" sqlx-postgres-0.9.0/src/options/mod.rs; gre\u2026\n- Bash: {\"command\": \"sed -n 888,930p crates/server/src/api/http.rs\", \"description\": \"Read upgrade_profile\"}\n- Bash: {\"command\": \"grep -n \\\"AccountBanned\\\" crates/server/src/api/*.rs | head -5; grep -rn \\\"account_banned\\\" crates/server/tests | head -3; grep -n \\\"profiles_status_check\\\\|status in\\\\|'banned'\\\" crates\u2026\n- said: Let me write the draft now, then check the remaining details.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3208/.bot-plan.md\", \"content\": \"# Draft plan #3208 (planner notes)\\n\\n## Findings so far\\n- sqlx 0.9.0. `PgTx<'a> = Transaction<'a, Postgres>` (pg.rs:\u2026\n- Bash: {\"command\": \"grep -n \\\"db\\\" scripts/ci-scope.sh | head -30\", \"description\": \"Check what turns the db CI job on\"}\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; tar xzf ~/.cargo/registry/cache/*/sqlx-0.9.0.crate; grep -n \\\"AssertSqlSafe\\\\|SqlSafeStr\\\\|pub use sqlx_core::pool\\\\|PoolConnectionMetadata\\\" sqlx-0.9.0/src/lib.rs | hea\u2026\n- Bash: {\"command\": \"grep -rn \\\"AssertSqlSafe\\\" crates/ --include=*.rs | head -5; ls crates/server/clippy.toml 2>/dev/null && cat crates/server/clippy.toml; cat clippy.toml 2>/dev/null | head -20\", \"descript\u2026\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; sed -n 199,300p sqlx-postgres-0.9.0/src/connection/executor.rs | grep -n \\\"Sync\\\\|write_sync\\\\|wait_until_ready\\\\|Query(\\\\|prepare\\\\|pending_ready_for_query_count\\\\|pers\u2026\n- Bash: {\"command\": \"grep -rn \\\"loop.stopped\\\\|\\\\\\\"challenges.sweeper\\\\\\\"\\\\|spawn_loops\\\" crates/server/tests crates/server/src | grep -v \\\"^crates/server/src/app.rs:1[12]\\\" | head; grep -n \\\"pub async fn co\u2026\n- Bash: {\"command\": \"sed -n 860,920p crates/server/tests/actor/ws_server.rs\", \"description\": \"Read the loop.stopped test\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/server/Cargo.toml; grep -n \\\"^tokio\\\\|^futures\\\" Cargo.toml\", \"description\": \"Check server crate dependencies and tokio features\"}\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; sed -n 405,434p sqlx-core-0.9.0/src/pool/options.rs\", \"description\": \"Read sqlx before_acquire doc example\"}\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; grep -n \\\"async fn check_idle_conn\\\" -A40 sqlx-core-0.9.0/src/pool/inner.rs | head -50\", \"description\": \"Read sqlx idle connection check on acquire\"}\n- Bash: {\"command\": \"cd /tmp/sqlxsrc; sed -n 420,462p sqlx-core-0.9.0/src/pool/inner.rs; grep -n \\\"pub(super) async fn connect\\\" -A45 sqlx-core-0.9.0/src/pool/inner.rs | grep -n \\\"backoff\\\\|sleep\\\\|deadline\\\u2026\n- Bash: {\"command\": \"grep -n -i \\\"loops\\\\|heartbeat\\\\|warm\\\" crates/server/README.md | cut -c1-400 | head\", \"description\": \"Check README mentions of background loops\"}\n- Bash: {\"command\": \"sed -n 1176,1215p crates/server/README.md\", \"description\": \"Read README test layout rules\"}\n- Bash: {\"command\": \"grep -n \\\"SHARED_TEST_HELPERS\\\" -A25 crates/tools/tests/acceptance.rs | head -50\", \"description\": \"Read SHARED_TEST_HELPERS acceptance rule\"}\n- Bash: {\"command\": \"grep -n \\\"home: \\\\\\\"crates/server\\\" -A20 crates/tools/tests/acceptance.rs | grep -n \\\"home\\\\|dirs\\\\|names\\\" | head; grep -n \\\"crates/server/tests/store\\\" crates/tools/tests/acceptance.rs\u2026\n- Bash: {\"command\": \"grep -n \\\"SERVER_SUPPORT_READERS\\\" -A8 crates/tools/tests/acceptance.rs | head -12; sed -n 1420,1440p crates/tools/tests/acceptance.rs\", \"description\": \"Check which dirs the helper rule \u2026\n- Bash: {\"command\": \"grep -rn \\\"fn migrate_on_a_wake\\\\|xact_commit\\\" crates/server/tests | head -5\", \"description\": \"Find commit-counting test\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3208/crates/server/tests/store/postgres.rs\", \"offset\": 1415, \"limit\": 120}\n- Bash: {\"command\": \"grep -n \\\"fn caller_profile\\\" -A12 crates/server/src/api/settings.rs crates/server/src/api/*.rs | head -20; grep -n \\\"consent\\\\|owes\\\" crates/server/src/api/http.rs | head\", \"description\u2026\n- Bash: {\"command\": \"grep -n \\\"t\\\\.commit(\\\\|&mut \\\\*t\\\\b\\\\|\\\\*t\\\\.\\\\|Transaction\\\" crates/server/src/db/pg.rs crates/server/src/economy/store.rs crates/server/src/duos/store.rs crates/server/src/admin/store\u2026\n- Bash: {\"command\": \"grep -n -i \\\"fragment\\\\|^## \\\\|server-only\\\\|no card\\\\|Patch:\\\" docs/issues-and-patches.md | head -40\", \"description\": \"Check patch fragment rules for non-card changes\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3208/.bot-plan.md\", \"content\": \"## Goal\\n\\nAn authenticated request costs half the Postgres round trips it does today, measured by a counting proxy in\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the plan draft\"}\n- said: ## Goal An authenticated request costs half the Postgres round trips it does today, measured by a counting proxy in a Postgres test. Four changes do it. (1) A transaction remembers the subject it stamped, and `run_as` sends `set_config` only when a method's subject differs. (2) A connection is ping\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-05T16:48:56Z",
       "owner_why": "it plans it",
@@ -15868,9 +15860,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-05T16:42:22Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42068330045",
+      "run_id": "pending:1c39c5aa-1793899003",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T16:48:56Z",
+      "started_at": "2026-11-05T17:17:18Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15937,9 +15929,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T17:00:40Z",
+    "at": "2026-11-05T17:17:18Z",
     "url": "",
-    "what": "build #3205 on claude-4"
+    "what": "build #3208 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T16:57:58Z",
