@@ -369,12 +369,13 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
     #[test]
     fn r81_s10_6_a_target_prompt_s_options_have_distinct_keys_so_each_of_two_same_named_units_can_be_picked_10_8()
      {
-        // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the four
-        // permanents Classic #40 MC Tech's Radiant face picks from in a prompt its Cry opens (§10.6).
+        // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the five
+        // permanents (its threshold, R3042000) Classic #40 MC Tech's Radiant face picks from in a prompt
+        // its Cry opens (§10.6).
         let mut s = scenario(json!({
             "seed": "inv-r4-prompt-keys",
             "p1": { "hand": [{ "def": MC_TECH, "radiant": true }, RENO], "mana": 8 },
-            "p2": { "field": [FELINORS, FELINORS, MENACE], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
+            "p2": { "field": [FELINORS, FELINORS, MENACE, VANILLA], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
         }));
         s.play(MC_TECH, json!({ "zone": 1 }));
 

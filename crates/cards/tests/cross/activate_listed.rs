@@ -18,6 +18,7 @@ const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
 const HEROIC_POWER: &str = "core-098";
+const TWINSPELL: &str = "core-079";
 const INFINISCEPTER: &str = "classic-007";
 const NOSE_HUNTER: &str = "classic-015";
 const POWER_TO_PUNISH: &str = "classic-020";
@@ -52,6 +53,7 @@ const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
 const ACTIVATE_CARDS: [&str; 71] = [
     HEROIC_POWER,
+    TWINSPELL,
     INFINISCEPTER,
     NOSE_HUNTER,
     POWER_TO_PUNISH,
@@ -1860,6 +1862,32 @@ mod stinkyscape {
         // Stage 1: the resume, a card from the hand sent in (R1865000).
         activate_listed(&mut s, "stinkyscape-112", any);
         assert_eq!(s.hand(P1).len(), hand - 1, "the resume left the hand");
+    });
+
+    /// R3044000: Twinspell's Activate grants its controller's next Spell this turn Echo +1, a rider
+    /// with no source; the base face then goes to the graveyard and the Radiant one stays.
+    both_faces!(c079_twinspell, |radiant: bool| {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(TWINSPELL, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let twin = s.card(TWINSPELL).id.clone();
+        activate_listed(&mut s, TWINSPELL, any);
+        let riders = s
+            .state()
+            .players
+            .p1
+            .mods
+            .iter()
+            .map(js)
+            .filter(|m| m["kind"] == "echoNextSpell")
+            .count();
+        assert_eq!(riders, 1, "one Echo rider on its controller");
+        if radiant {
+            assert!(listed(&s, &twin).is_empty(), "once a turn");
+        } else {
+            s.expect_in_zone(&twin, "graveyard");
+        }
     });
 
     both_faces!(s_n168_drone_hanger, |radiant: bool| {
