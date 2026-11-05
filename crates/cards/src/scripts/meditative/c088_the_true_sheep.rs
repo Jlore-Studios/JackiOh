@@ -166,9 +166,12 @@ mod tests {
                 // lists them, M #25 and #91, S #74, #80, #85, #86, #113 and #115 (#1884), TG #25 and #54
                 // (Core #66's snapshot, #2204). Turtinator's Tribute is an Activate's cost, not a play
                 // cost, and M #97's Tribute buildings are tokens, so neither is one of them.
-                let pool: Vec<&str> = jackioh_engine::catalog::query(&CatalogQueryArgs {
-                    tribute: Some(true),
-                    ..CatalogQueryArgs::default()
+                // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+                let pool: Vec<&str> = jackioh_engine::testkit::with_pool_shift(0, || {
+                    jackioh_engine::catalog::query(&CatalogQueryArgs {
+                        tribute: Some(true),
+                        ..CatalogQueryArgs::default()
+                    })
                 })
                 .into_iter()
                 .map(|def| def.id.as_str())

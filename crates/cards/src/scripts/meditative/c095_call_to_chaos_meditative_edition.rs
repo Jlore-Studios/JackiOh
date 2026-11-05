@@ -482,11 +482,13 @@ mod tests {
             crate::register_all();
             // No preview: the Meditative set ships (R1420), so the pool that names no set holds
             // every edition, in catalog order.
-            let shipped: Vec<String> =
+            // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
+            let shipped: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
                 jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
-                    .iter()
-                    .map(|def| def.id.clone())
-                    .collect();
+            })
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
             assert_eq!(shipped, EDITIONS.map(String::from).to_vec());
         }
     }
