@@ -1673,6 +1673,9 @@ struct ChosenExertion {
     deft: bool,
 }
 
+/// A hero is a target `hero-<player>` (the combat's facts, `after_attack_of`).
+const HERO_TARGET_PREFIX: &str = "hero-";
+
 /// B5 E35, R1869002: the fresh exertion a kill gave its attacker in one stint on one turn: `at` is how
 /// many attacks it had declared there then (none once a settling took it back), `before` the credit it
 /// held there before it.
@@ -1685,13 +1688,15 @@ struct KillCredit {
 }
 
 /// R424: the latest attack, and whether its attacker destroyed its target (R42). A forced one (R53) readies
-/// no transform, but its kill may earn a kill credit (R1869002).
+/// no transform, but its kill may earn a kill credit (R1869002). `answered`: R3139004's credit for an
+/// attack on a Unit that killed nothing has been given.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ShadowAttack {
     attacker_id: String,
     target_id: String,
     killed: bool,
     forced: bool,
+    answered: bool,
 }
 
 /// Every card on the field, a card dormant under a Stack pile and the backrow included (§3.2).
@@ -2616,6 +2621,7 @@ impl InvariantMonitor {
                             target_id: target_id.clone(),
                             killed: false,
                             forced: true,
+                            answered: false,
                         });
                         continue;
                     }
@@ -2704,6 +2710,7 @@ impl InvariantMonitor {
                         target_id: target_id.clone(),
                         killed: false,
                         forced: false,
+                        answered: false,
                     });
                 }
                 _ => {}
@@ -2711,6 +2718,23 @@ impl InvariantMonitor {
         }
 
         self.note_windfury(state);
+        // R3139004: an attacker whose text answers an attack on a Unit, survivors only (Core #89 Corpse Eater:
+        // "After this attacks a Unit, it may attack again"), is readied by it kill or no kill, so it earns
+        // the credit a kill earns; `settle_kill_credits` takes it back if the attack stayed spent.
+        let unanswered = self.attack.as_mut().filter(|attack| {
+            !attack.killed && !attack.answered && !attack.target_id.starts_with(HERO_TARGET_PREFIX)
+        });
+        if let Some(attack) = unanswered {
+            attack.answered = true;
+            let attacker_id = attack.attacker_id.clone();
+            let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
+                attacker.zone.z() == ZoneName::Field
+                    && crate::scripts::script_of(state, attacker).after_attack.is_some()
+            });
+            if answers {
+                self.credit_kill(&attacker_id);
+            }
+        }
         self.settle_kill_credits(state);
 
         // I9: what the action announced is the state it left (§10.3); a Glitch's reset moves `resets` (R676).
