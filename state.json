@@ -16556,15 +16556,8 @@
       "taken_asks": []
     },
     "3111": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "41969074124",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-05T04:58:15Z",
-        "until": "2026-11-05T05:28:15Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16576,10 +16569,9 @@
         "reason": "planned on sonnet",
         "trail": "hon3 -c \\\"\\nimport json\\nc=json.load(open('catalog.json'))\\nprint(type(c), list(c.keys())[:10] if isinstance(c,dict) else len(c))\\n\\\" ; head -c 1500 catalog.json\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 915,925p docs/radiant-audit.md | cut -c1-400; echo; grep -n 'must-pass\\\\|Must-pass\\\\|Must pass' BUILD.md | head -50\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 394,400p BUILD.md | cut -c1-500; sed -n 1427,1435p BUILD.md | cut -c1-500; grep -rn 'BUILD.md' --include=*.rs --include=*.ts --include=*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -rn 'BUILD\\\\.md\\\\|BUILD_MD\\\\|\\\"BUILD' crates/tools crates/cards/tests crates/cards/src/lib.rs crates/cards/build.rs apps/web/src apps/web/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -n 'BUILD\\\\|radiant-audit' crates/tools/tests/acceptance.rs scripts/ci-scope.sh crates/cards/README.md | head -30; grep -n 'radiant-audit\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; head -40 apps/web/src/audio/card-audio.json5; echo ------; head -50 crates/cards/card-text.yaml; echo -----; head -40 apps/web/src/fx/cards/cor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; cat crates/tools/tests/export_card_text.rs | head -400\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -n 'comment\\\\|name' apps/web/src/audio/voice-lines.test.ts | head -40; grep -n 'comment\\\\|name' apps/web/src/fx/cards/tables.test.ts | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 55,75p apps/web/src/audio/voice-lines.test.ts; sed -n 160,200p apps/web/src/audio/voice-lines.test.ts; sed -n 25,100p apps/web/src/fx/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 40,70p apps/web/src/audio/card-audio.json5 | cut -c1-200; grep -n 'cards: {\\\\|^ cards\\\\|^ emotes' apps/web/src/audio/card-audio.json5 | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; ls crates/tools crates/tools/src crates/tools/tests; wc -l crates/tools/src/main.rs; grep -n '\\\"catalog\\\"\\\\|\\\"spec\\\"\\\\|\\\"golden\\\"\\\\|\\\"patches\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; cat crates/tools/src/main.rs; grep -n 'fn \\\\|Subcommand\\\\|enum ' crates/tools/src/catalog.rs | head -60\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; python3 - <<'EOF'\\nimport re,collections\\nrows=[l for l in open('docs/radiant-audit.md') if l.startswith('| ') and not l.startswith('| #') and \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -rIn 'ADDING_CARDS' --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git . 2>/dev/null | grep -v '^./docs/ADDING_CARDS.md' |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -rIn -i 'must-pass' --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git --exclude=BUILD.md . 2>/dev/null | grep -v 'crates/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -n 'fn repo_root\\\\|CARGO_MANIFEST_DIR\\\\|fn root' crates/tools/src/*.rs | head -20; sed -n 1740,1790p crates/tools/src/catalog.rs; grep -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; python3 - <<'EOF'\\nimport json,re,collections\\nc=json.load(open('crates/cards/catalog.json'))\\nodd=[(k,v['name']) for k,v in c.items() if v['na\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; python3 - <<'EOF'\\nimport json,re\\nc=json.load(open('crates/cards/catalog.json')); print(len(c))\\ny=[l for l in open('crates/cards/card-text.ya\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 40,110p scripts/ci-scope.sh; sed -n 255,300p scripts/ci-scope.sh; grep -n 'card-audio\\\\|card-text\\\\|fx/cards\\\\|crates/tools' scripts/ci-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -n 'subcommand\\\\|README\\\\|SURFACE' crates/tools/tests/acceptance.rs | head -30; grep -n 'fused-pairs\\\\|fused_pairs' crates/tools/README.md\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 1,12p crates/tools/README.md | cut -c1-400; sed -n 28,70p crates/tools/README.md | cut -c1-260; sed -n 1595,1625p crates/tools/tests/acc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; cat spec/rulings/R0275.md | cut -c1-900; grep -n 'radiant-audit' spec/08-catalog.md spec/05-card-types.md spec/11-rulings.md | cut -c1-300\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; for f in classic classicplus meditative meditativeplus stinkyscape-1 traininggrounds; do echo == $f; head -3 apps/web/src/fx/cards/$f.json5 | c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; c=$(git log -1 --format=%h --grep='rename six cards'); git show --stat --format=%s $c | cut -c1-140 | head -50\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; grep -n 'CATALOG' crates/tools/src/*.rs | head -8; grep -n 'pub static CATALOG\\\\|pub fn catalog\\\\|pub use.*CATALOG' crates/cards/src/*.rs | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 186,193p crates/cards/README.md | cut -c1-300; sed -n 385,393p BUILD.md | cut -c1-300; grep -n 'radiant-audit\\\\|name in a comment\\\\|name\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 372,390p crates/cards/README.md | cut -c1-400; sed -n 389p BUILD.md | cut -c1-120\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3111; sed -n 446,470p apps/web/src/audio/voice-lines.test.ts\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3111/.bot-plan.md\", \"content\": \"# Draft plan #3111 (planner notes; final message holds the full plan)\\n\\nRead: docs/ADDING_CARDS.md, radiant_standard.\u2026\n- said: ## Goal A new card needs no hand-written BUILD row, and its name comments are written by one command. The Radiant audit row shrinks to the judgment alone. - **Name comments.** Add `cargo jackioh names [--check]`. It writes the card's name beside its id in `card-audio.json5`, `card-text.yaml` and `f\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-05T04:38:33Z",
       "owner_why": "it plans it",
@@ -16592,9 +16584,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-05T01:43:52Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41969074124",
+      "run_id": "pending:7148b5b6-1793854738",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T04:38:33Z",
+      "started_at": "2026-11-05T04:59:30Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17204,9 +17196,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T04:48:42Z",
+    "at": "2026-11-05T04:59:30Z",
     "url": "",
-    "what": "spot-check #3126 on claude-8"
+    "what": "build #3111 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-05T04:46:06Z",
