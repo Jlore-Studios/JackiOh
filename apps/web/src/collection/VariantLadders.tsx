@@ -4,7 +4,8 @@
 // it needs. Hovering or focusing a rung shows it on the card, choosing an owned one wears it on this card alone (the
 // view's `equip`, `writeCardLevel`), and choosing a locked one, or holding any (R2730000), opens its fullscreen
 // preview, where only the next one is offered a held token. It decides nothing (CLAUDE.md rule 7): ownership is the
-// server's (`useCanEquip`), and the server refuses any level past the next (R3015004).
+// server's (`useCanEquip`), and the server refuses any level past the next (R3015004). R3016001: a rung's `hover`, where
+// given, opens that level's hover preview as well (LookHover.tsx): the card, in hand and on the board.
 
 import type { ReactElement } from "react";
 
@@ -18,6 +19,7 @@ import { t } from "../i18n/i18n.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import { NO_FULL_ART_ID, collectionTestid as T, type Ladder, type Rung } from "./collection.ts";
 import { usePreviewHold } from "./ItemPreview.tsx";
+import type { LookHoverTrigger } from "./LookHover.tsx";
 
 /**
  * R3015002: one rung's small picture: its variant's picture across the whole face (every level of a variant draws its
@@ -58,6 +60,7 @@ function RungButton({
   hide,
   equip,
   onPreview,
+  hover,
 }: {
   def: CardDef;
   face: FaceModel;
@@ -67,7 +70,11 @@ function RungButton({
   hide: (rung: Rung) => void;
   equip: (rung: Rung) => void;
   onPreview: (rung: Rung) => void;
+  hover?: LookHoverTrigger | undefined;
 }): ReactElement {
+  const hold = usePreviewHold(`rung-${rung.id}`, () => {
+    onPreview(rung);
+  });
   return (
     <button
       type="button"
@@ -80,9 +87,11 @@ function RungButton({
       data-rarity={rung.rarity}
       aria-pressed={equipped}
       aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
-      {...usePreviewHold(`rung-${rung.id}`, () => {
-        onPreview(rung);
-      })}
+      {...hold}
+      onPointerDown={(event) => {
+        hover?.onPointerDown();
+        hold.onPointerDown(event);
+      }}
       onClick={() => {
         if (rung.owned) equip(rung);
         else onPreview(rung);
@@ -93,17 +102,21 @@ function RungButton({
       onMouseLeave={() => {
         hide(rung);
       }}
-      onPointerEnter={() => {
+      onPointerEnter={(event) => {
         show(rung);
+        hover?.onPointerEnter(event);
       }}
       onPointerLeave={() => {
         hide(rung);
+        hover?.onPointerLeave();
       }}
-      onFocus={() => {
+      onFocus={(event) => {
         show(rung);
+        hover?.onFocus(event);
       }}
-      onBlur={() => {
+      onBlur={(event) => {
         hide(rung);
+        hover?.onBlur(event);
       }}
     >
       <RungPicture def={def} face={face} rung={rung} />
@@ -125,6 +138,7 @@ export default function VariantLadders({
   hide,
   equip,
   onPreview,
+  hover,
 }: {
   def: CardDef;
   face: FaceModel;
@@ -135,6 +149,8 @@ export default function VariantLadders({
   equip: (rung: Rung) => void;
   /** R2730000: what a held, inspected or locked rung opens: its fullscreen preview. */
   onPreview: (rung: Rung) => void;
+  /** R3016001: a rung's hover preview handlers (LookHover.tsx `useLookHover`); none opens none. */
+  hover?: ((rung: Rung) => LookHoverTrigger) | undefined;
 }): ReactElement {
   return (
     <>
@@ -161,6 +177,7 @@ export default function VariantLadders({
                   hide={hide}
                   equip={equip}
                   onPreview={onPreview}
+                  hover={hover?.(rung)}
                 />
               </li>
             ))}

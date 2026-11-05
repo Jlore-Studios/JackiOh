@@ -4228,5 +4228,18 @@
   "The percentage under a tier is how much of the card's Adjusted range lies inside that tier.": "梯队下方的百分比是这张牌的校正胜率区间落在该梯队内的比例。",
   "The card": "卡牌本身",
   "In your hand": "在你的手牌中",
-  "On the board": "在棋盘上"
+  "On the board": "在棋盘上",
+  "Equip or buy": "装备或购买",
+  "Looks for {name}": "{name}的外观",
+  "Pay with": "支付方式",
+  "1 Rare token ({count} held)": "1 个稀有代币（持有 {count} 个）",
+  "1 Epic token ({count} held)": "1 个史诗代币（持有 {count} 个）",
+  "1 Legendary token ({count} held)": "1 个传说代币（持有 {count} 个）",
+  "Your full Chase Shard bar": "整个已满的追猎碎片进度条",
+  "Buy {name}? This spends 1 Rare token.": "购买{name}？这将花费 1 个稀有代币。",
+  "Buy {name}? This spends 1 Epic token.": "购买{name}？这将花费 1 个史诗代币。",
+  "Buy {name}? This spends 1 Legendary token.": "购买{name}？这将花费 1 个传说代币。",
+  "Collect {count} copies of this card to buy its looks": "集齐 {count} 张这张卡，才能购买它的外观",
+  "No token you hold covers it": "你持有的代币都不够买它",
+  "No token you hold covers it, and the Chase Shard bar isn't full": "你持有的代币都不够买它，追猎碎片进度条也还没满"
 }

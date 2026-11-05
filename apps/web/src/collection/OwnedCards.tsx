@@ -5,7 +5,8 @@
 // or the inspect key opens: a card token on an unowned card of the grid, a cosmetic token in the
 // card's view. R1956000: an owned tile wears the viewer's picks. R3016000: a mouse resting on a card, or the
 // keyboard's focus, opens its hover preview (LookHover.tsx), its look as the card, in hand and on the board
-// with a Radiant toggle; the fullscreen preview shows the same views.
+// with a Radiant toggle; the fullscreen preview shows the same views. R3016001: "Equip or buy" on either opens the
+// card's equip and buy screen (LooksScreen.tsx), over the fullscreen preview where it opened from there.
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -21,7 +22,8 @@ import CardCosmeticsView from "./CardCosmeticsView.tsx";
 import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.ts";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import { LookHoverPanel, useLookHover, type LookHoverTrigger } from "./LookHover.tsx";
-import LookViews, { RadiantToggle } from "./LookViews.tsx";
+import LookViews, { LooksButton, RadiantToggle } from "./LookViews.tsx";
+import LooksScreen from "./LooksScreen.tsx";
 import TokenOffer, { useHeldTokens, type HeldTokens } from "./TokenOffer.tsx";
 
 type Inspected = { def: CardDef; owned: boolean };
@@ -89,6 +91,8 @@ export default function OwnedCards({
   const [previewing, setPreviewing] = useState<string | null>(null);
   // R3016000: the fullscreen preview's Radiant toggle, base whenever a preview opens.
   const [previewRadiant, setPreviewRadiant] = useState(false);
+  // R3016001: the card whose equip and buy screen is open.
+  const [looking, setLooking] = useState<string | null>(null);
   const hover = useLookHover();
   // R2730000: a redeemed card token re-reads the collection here, so the grid moves with the preview.
   const [reread, setReread] = useState<{ from: CollectionResponse; value: CollectionResponse } | null>(null);
@@ -101,6 +105,7 @@ export default function OwnedCards({
   const previewed = shownCards.find((card) => card.def.id === previewing) ?? null;
   const hoveredId = hover.hovered?.id;
   const hovered = shownCards.find((card) => card.def.id === hoveredId) ?? null;
+  const looked = shownCards.find((card) => card.def.id === looking) ?? null;
 
   const redeemed = (answer: HeldTokens): void => {
     setTokens(answer);
@@ -162,8 +167,18 @@ export default function OwnedCards({
           </div>
         );
       })}
-      {hovered === null || hover.hovered === null || inspected !== null || previewed !== null ? null : (
-        <LookHoverPanel key={hovered.def.id} def={hovered.def} owned={hovered.owned} anchor={hover.hovered.anchor} hover={hover} />
+      {hovered === null || hover.hovered === null || inspected !== null || previewed !== null || looked !== null ? null : (
+        <LookHoverPanel
+          key={hovered.def.id}
+          def={hovered.def}
+          owned={hovered.owned}
+          anchor={hover.hovered.anchor}
+          hover={hover}
+          onLooks={() => {
+            hover.close();
+            setLooking(hovered.def.id);
+          }}
+        />
       )}
       {inspected === null ? null : (
         <CardCosmeticsView
@@ -185,12 +200,19 @@ export default function OwnedCards({
           owned={previewed.owned}
           picture={<LookViews def={previewed.def} radiant={previewRadiant} worn={previewed.owned} />}
           controls={
-            <RadiantToggle
-              radiant={previewRadiant}
-              onToggle={() => {
-                setPreviewRadiant((shown) => !shown);
-              }}
-            />
+            <div className="collection-look__actions">
+              <RadiantToggle
+                radiant={previewRadiant}
+                onToggle={() => {
+                  setPreviewRadiant((shown) => !shown);
+                }}
+              />
+              <LooksButton
+                onLooks={() => {
+                  setLooking(previewed.def.id);
+                }}
+              />
+            </div>
           }
           offer={
             previewed.owned || token === null || tokens === null || tokens.card < 1 ? null : (
@@ -206,6 +228,20 @@ export default function OwnedCards({
           }
           onClose={() => {
             setPreviewing(null);
+          }}
+        />
+      )}
+      {looked === null ? null : (
+        <LooksScreen
+          key={looked.def.id}
+          def={looked.def}
+          copies={quantitiesOf(shown).get(looked.def.id) ?? 0}
+          token={token}
+          onClose={() => {
+            setLooking(null);
+          }}
+          restoreFocus={() => {
+            document.querySelector<HTMLElement>(`[data-testid="${collectionTestid.card(looked.def.id)}"]`)?.focus();
           }}
         />
       )}

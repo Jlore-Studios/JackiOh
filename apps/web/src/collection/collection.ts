@@ -8,8 +8,8 @@ import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
-import { DEFAULT_VARIANT, FIRST_RANK, isNextLevel, ladderOf, levelOf, levelsBelow, levelsOn, variantsOn } from "../cards/versions.ts";
+import { CARD_SLOT_KINDS, cosmeticsOf, type CardPicks, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
+import { DEFAULT_VARIANT, FIRST_RANK, isNextLevel, ladderOf, levelOf, levelOfPick, levelsBelow, levelsOn, variantsOn, wornLevel } from "../cards/versions.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
@@ -82,6 +82,20 @@ export const collectionTestid = {
   lookView: (view: string) => `collection-look-${view}`,
   lookRadiant: "collection-look-radiant",
   lookHover: "collection-look-hover",
+  // R3016001: the equip and buy screen (LooksScreen), its opener, its rungs' actions and its payment question.
+  looksOpen: "collection-looks-open",
+  looks: "collection-looks",
+  looksClose: "collection-looks-close",
+  looksRung: (id: string) => `collection-looks-rung-${id}`,
+  looksEquip: (id: string) => `collection-looks-equip-${id}`,
+  looksBuy: (id: string) => `collection-looks-buy-${id}`,
+  looksMissing: (id: string) => `collection-looks-missing-${id}`,
+  looksNeeds: (id: string) => `collection-looks-needs-${id}`,
+  looksError: (id: string) => `collection-looks-error-${id}`,
+  looksDialog: (id: string) => `collection-looks-dialog-${id}`,
+  looksPay: (id: string, way: string) => `collection-looks-pay-${id}-${way}`,
+  looksConfirm: (id: string) => `collection-looks-confirm-${id}`,
+  looksCancel: (id: string) => `collection-looks-cancel-${id}`,
   // R3013001: a card's proficiency in its card view (ProficiencyPanel), its level, its plays and its stamps.
   proficiency: "collection-proficiency",
   proficiencyLevel: "collection-proficiency-level",
@@ -253,6 +267,16 @@ export function cardLadders(defId: string, canEquip: (defId: string, cosmeticId:
     const normal: Rung = { id: NO_FULL_ART_ID, rank: FIRST_RANK, name: t("Normal"), rarity: "Common", owned: true, next: false, needs: null };
     return { variant, name: t("Default"), rungs: [normal, ...rungs] };
   });
+}
+
+/**
+ * R3015005, R3015007: the rung a card's pick wears: the level it names (an older shape mapped as the server maps it),
+ * else the highest one below it that `owns` takes; the normal face where that is none, and none with no pick at all
+ * (the Full-art cards setting decides). R3016001: the equip and buy screen marks the same one.
+ */
+export function equippedRung(defId: string, picks: CardPicks, owns: (defId: string, id: string) => boolean): string | null {
+  if (picks.fullArt === undefined && picks.augments === undefined) return null;
+  return wornLevel(levelOfPick(defId, picks.fullArt, picks.augments), (id) => owns(defId, id)) ?? NO_FULL_ART_ID;
 }
 
 export type AccountTile = { cosmetic: Cosmetic; owned: boolean };
