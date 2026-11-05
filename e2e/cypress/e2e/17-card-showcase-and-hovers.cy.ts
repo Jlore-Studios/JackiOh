@@ -10,7 +10,6 @@ import {
   END_TURN,
   INSPECT_CLOSE,
   INSPECT_HOVER,
-  INSPECT_PRINTED,
   INSPECT_LIST_BACK,
   INSPECT_LIST_CARD,
   INSPECT_LIST_COUNT,
@@ -504,21 +503,20 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
 describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
   const inHand = (defId: string): string => `[data-testid^="hand-card-"][data-def-id="${defId}"]`;
 
-  it("R247 R831004 Heroic Power prints its rolled power, Call to Chaos reads ???, and KY's Trial Discovers a set, then three numbers", () => {
+  it("R247 R831004 Heroic Power prints its Cry until it holds a power, Call to Chaos reads ???, and KY's Trial Discovers a set, then three numbers", () => {
     cy.seedGame({ seed: LIVE_SEED, a: LIVE_DECK_A, b: LIVE_DECK_B });
     cy.jackioh().then((handle) => {
       if (handle.seat !== "p1") cy.handOver();
     });
 
-    // R752: show the rolled power, not all thirteen.
+    // R3134002: in the hand it holds no power yet (its Cry Discovers one when it is played), so it prints
+    // as it is printed, the Cry first; R752: once it holds one, the card shows that power, not all thirteen.
     cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", "0");
-    cy.get(`${inHand("core-098")} .card-text`)
-      .should("contain.text", "Activate: Spend (")
-      .and("not.contain.text", "13 random powers");
+    cy.get(`${inHand("core-098")} .card-text`).should("contain.text", "Cry: Discover one of 13 powers");
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
-    cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_PRINTED)}`, { timeout: timeouts.view })
+    cy.get(ts(INSPECT_HOVER), { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "Gain one of 13 random powers");
+      .and("contain.text", "Discover one of 13 powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 

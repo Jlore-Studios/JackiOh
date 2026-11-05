@@ -1630,7 +1630,15 @@ mod r384_activate_over_the_socket {
         send(&h, &h.p1, "play-power", play).await;
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
 
-        // The power it rolled costs (1) to (3): p1's turns pass until the mana pays it.
+        // R3134002: its Cry Discovers the power, a Choose one of three whose answer is the card's power.
+        let pick = legal_of(&h.p1)
+            .into_iter()
+            .find(|action| action["type"] == "answer")
+            .expect("the Cry's prompt is answerable");
+        send(&h, &h.p1, "pick-power", pick).await;
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+
+        // The power it picked costs (1) to (3): p1's turns pass until the mana pays it.
         let mut activation = listed_activation(&h.p1, &power);
         for round in 0..TURNS_TO_AFFORD_ANY_POWER {
             if activation.is_some() {
@@ -1652,7 +1660,7 @@ mod r384_activate_over_the_socket {
             .await;
             activation = listed_activation(&h.p1, &power);
         }
-        let activation = activation.expect("the rolled power is listed as an `activate` once p1 can pay it");
+        let activation = activation.expect("the picked power is listed as an `activate` once p1 can pay it");
 
         send(&h, &h.p1, "activate-power", activation.clone()).await;
         assert_eq!(errors(&h.p1), Vec::<Value>::new(), "the activation was refused");

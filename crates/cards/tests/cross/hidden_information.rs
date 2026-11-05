@@ -1095,6 +1095,25 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
                 play.unwrap_or(ActionBody::EndTurn),
             );
         }
+        // R3134002: the Cry of the Heroic Power just played Discovers its power, and p1's view of the hero
+        // panel names it once it holds one.
+        if let Some(pending) = state.pending.clone() {
+            let selection = pending
+                .options
+                .iter()
+                .take(1)
+                .map(|option| option.selection.clone())
+                .collect();
+            act(
+                &mut state,
+                &mut nonce,
+                pending.player_id,
+                ActionBody::Answer {
+                    choice_id: pending.id.clone(),
+                    selection,
+                },
+            );
+        }
         state
     }
 
@@ -2017,15 +2036,24 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
             "p1": { "hand": ["core-021"], "library": [HEROIC_POWER, MR_VANILLA, MR_VANILLA] },
             "p2": { "hand": ["core-021"], "library": [MR_VANILLA] },
         }));
-        // The turn's draw puts the Heroic Power in hand, and R151 rolls its power as it arrives.
+        // The turn's draw puts the Heroic Power in hand. Through v0.5.11o R151 rolled its power as it
+        // arrived; since issue #3134 it holds none until its Cry Discovers one (R3134002), so its view
+        // names none, and one it does hold (an old game's, or a power given) is named.
         g.start_turn();
         let power = must(
             g.hand("p1").into_iter().find(|card| card.def_id == HEROIC_POWER),
             "the drawn Heroic Power",
         );
-        let rolled = must(power_of(&power), "a rolled power on the drawn Heroic Power");
+        assert!(power_of(&power).is_none());
+        assert!(hand_entry(&g.view("p1"), &power.id).get("power").is_none());
+        g.card_mut(&power.id).memory.insert(
+            jackioh_engine::subsystems::hero_power::POWER_KEY.to_string(),
+            json!("burn"),
+        );
+        let power = g.card(&power.id).clone();
+        let rolled = must(power_of(&power), "a power on the Heroic Power");
         let entry = hand_entry(&g.view("p1"), &power.id);
-        // The card costs (0) whatever it rolled (R752), so the cost in the view does not say which it is.
+        // The card costs (0) whatever power it holds (R752), so the cost in the view does not say which it is.
         assert_eq!(entry["cost"], json!(0));
         assert_eq!(
             entry["power"],

@@ -289,6 +289,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             def_id,
                             former_id,
                             on_draw,
+                            from,
                             ..
                         } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
@@ -300,7 +301,11 @@ mod summarize_game_over_real_cards_s9_11 {
                             // (summary-cards-28, #2280). R831001: nor is a card a Counter sent to a hand in
                             // this step, its countering player's cast, even when a second Counter sends it
                             // back to the hand it was played from (summary-cards-87, #2657).
+                            // A play from the graveyard is no cast from the hand the card stood in as the step
+                            // began: a (0) Spell played again from there, step after step of one action, is the
+                            // graveyard's (R454; summary-cards-55 plays one 13 times).
                             } else if *on_draw != Some(true)
+                                && from.is_none()
                                 && !stolen_here.contains(&instance_id.as_str())
                                 && let Some(card) = state.players[*caster]
                                     .hand

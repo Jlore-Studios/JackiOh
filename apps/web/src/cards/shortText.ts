@@ -38,6 +38,8 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "classicplus-034": { base: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
+  // R3134001: its Radiant Cry and Aura run to seven lines.
+  "meditative-009": { radiant: "clamp" },
   "meditative-022": { base: 1, radiant: 1 },
   "meditative-022-1": { base: 3, radiant: 2 },
   "meditative-039-5": { base: 3, radiant: 3 },

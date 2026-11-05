@@ -18,7 +18,6 @@ export type TriggerTermId =
   | "Death"
   | "Start of turn"
   | "End of turn"
-  | "Start of game"
   | "Once per turn"
   | "Aura"
   | "Combo"
@@ -242,7 +241,6 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "End of turn": trigger("End of turn", "Controller's turn end, before cleanup", {
     aliases: ["end of turn"],
   }),
-  "Start of game": trigger("Start of game", "After mulligan, before turn 1", { row: "Start of Game" }),
   "Once per turn": trigger("Once per turn", "Activated ability limit", { row: "Once per Turn" }),
   Aura: trigger("Aura", "Effect while in play"),
   Combo: trigger("Combo", "Extra effect if X or more cards were played earlier this turn", { row: "Combo X" }),

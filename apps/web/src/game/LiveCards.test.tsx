@@ -260,7 +260,7 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
     );
     const root = screen.getByTestId(testid.handCard("h1"));
     expect(text(root, ".card-text")).toBe("Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.");
-    expect(text(root, ".card-text")).not.toContain("13 random powers");
+    expect(text(root, ".card-text")).not.toContain("one of 13 powers");
     expect(text(root, ".cost-gem")).toBe("0");
   });
 
@@ -278,13 +278,13 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
     );
     const preview = hover(screen.getByTestId(testid.card("b1")));
     expect(text(preview, ".card-text")).toBe("Indestructible\nPing\nActivate: Spend (1): Pierce. Deal 1 damage.");
-    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Gain one of 13 random powers");
+    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Discover one of 13 powers");
   });
 
   it("in the collection: the whole list of thirteen, base and radiant", () => {
     render(<CardDetail def={def("core-098")} onClose={() => {}} />);
     // R1017000: each face prints its header and "…", and the detail's rules print the whole list.
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Gain one of 13 random powers");
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Discover one of 13 powers");
     expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("…");
     const rules = screen.getByTestId(INSPECT_DETAIL).querySelector(".inspect-rules");
     expect(rules?.textContent).toContain("Recruit a permanent. Make it Radiant.");
