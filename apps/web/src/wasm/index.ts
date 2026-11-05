@@ -20,6 +20,7 @@ import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
+import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
   RunAction,
   RunConstants,
@@ -241,6 +242,16 @@ export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
 
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
   return call("findInstance", () => parsed<CardInstance | null>(normal.find_instance(stateJson(state), instanceId)) ?? undefined);
+}
+
+/**
+ * R3100000: what each attack `seat` may declare would do, as the board shows it, and whether the attackers
+ * that may reach the enemy hero finish it (`engine::combat_forecast`). The tutorial's coach names its
+ * attacks by it. It is the normal module's own, as the Duos bindings are: a lesson holds no custom card
+ * (R915009), so the Luau module has no copy.
+ */
+export function combatForecast(state: GameState, seat: PlayerId): CombatForecast {
+  return call("combatForecast", () => parsed<CombatForecast>(normal.combat_forecast(stateJson(state), seat)));
 }
 
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */

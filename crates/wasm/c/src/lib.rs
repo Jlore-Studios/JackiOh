@@ -515,6 +515,22 @@ pub extern "C" fn find_instance(
     })
 }
 
+/// R3100000: `CombatForecast`, `{ attacks: AttackForecast[], lethal }`: what each attack `seat` may declare
+/// would do, as the board shows it, for the tutorial's coach (`engine::combat_forecast`).
+#[unsafe(no_mangle)]
+pub extern "C" fn combat_forecast(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    seat_ptr: *const u8,
+    seat_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("combatForecast: the state", state_json_ptr, state_json_len)?;
+        let seat = arg("combatForecast: the seat", seat_ptr, seat_len)?;
+        wasm_core::combat_forecast(state, seat)
+    })
+}
+
 /// `EmoteId[]`: emote hand `seat` is dealt for `seed` (R1341), matching the match actor (R1342).
 #[unsafe(no_mangle)]
 pub extern "C" fn deal_emote_hand(

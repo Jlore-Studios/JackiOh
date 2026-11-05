@@ -3,6 +3,10 @@
 // Reuse `net/head.ts`, `almanacShelf` (R674, R1420; no unshipped cards), `fillParams`, and `patches.json`.
 // This Vite entry uses relative imports because Vitest and Cypress do not resolve `@jackioh/*` here.
 // `<style>` hides static content until startup; `<noscript>` restores it without script.
+// #3127, R3127000: the build also writes `404.html` from the same template, the page Cloudflare serves with a 404
+// status for a path nothing routes. It loads the client, which draws its own `NotFound`; its body is a script-free
+// fallback in the app's look (the tavern board, the stacked logo, three placeholder card faces), visible from the
+// first byte (no `.static-body`) and replaced when the client starts.
 // Every address names the build's own host (`StaticPagesInput.origin`, #696), and so does the CSP the
 // build writes into `_headers` (`connectSources`).
 
@@ -11,6 +15,10 @@ import { dirname, join, resolve } from "node:path";
 
 import type { Plugin } from "vite";
 
+import { shellTestid } from "./src/auth/testids.ts";
+import { motifFor } from "./src/cards/art/motifs.ts";
+import { proceduralArtUri } from "./src/cards/art/svg.ts";
+import { compositionFor, themeFor } from "./src/cards/art/themes.ts";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
@@ -328,6 +336,108 @@ function swap(html: string, pattern: RegExp, value: string): string {
   return html.replace(pattern, (_whole, lead: string) => lead + value);
 }
 
+/** `html` without what `pattern` matches; like `swap`, a template that lacks it is an error. */
+function strip(html: string, pattern: RegExp): string {
+  if (!pattern.test(html)) throw new Error(`static-pages.ts: index.html has no match for ${String(pattern)}`);
+  return html.replace(pattern, "");
+}
+
+/** The page Cloudflare serves, with a 404 status, for a path no rule routes (`wrangler.jsonc` `not_found_handling`). */
+export const NOT_FOUND_FILE = "404.html";
+
+/**
+ * #3127, R3127000: the fallback's hand, left to right. The gems read 4, 0, 4. The ids are in no catalog: these are
+ * placeholder Spells with no set, rarity, attack, health or rules text, nothing a player could take for a real card.
+ */
+export const NOT_FOUND_HAND = [
+  { id: "not-found-error", name: "Error", cost: 4 },
+  { id: "not-found-not", name: "Not", cost: 0 },
+  { id: "not-found-found", name: "Found", cost: 4 },
+] as const;
+
+export type HandCard = (typeof NOT_FOUND_HAND)[number];
+
+/**
+ * One hand card as `cards/CardFace.tsx` draws a Spell that has no card behind it (`faceModel({ defId, name, type:
+ * "Spell", radiant: false, liveCost })`, layout "full"): its frame, cost gem, art window, name banner and type line,
+ * and an empty rules box. The Vite config loader cannot import CardFace (its `.css` imports, its hooks), so the markup
+ * is written here from the same pure art builders `CardArt` calls, and static-pages.test.ts holds it to CardFace's own
+ * render, element by element: a changed CardFace fails that test.
+ */
+export function handCardHtml({ id, name, cost }: HandCard): string {
+  const theme = themeFor([], "Spell");
+  const motif = motifFor(name, theme);
+  const motifAttr = motif === null ? "" : ` data-art-motif="${motif}"`;
+  const uri = proceduralArtUri(id, theme, compositionFor("Spell"), false, motif);
+  return (
+    '<span class="cf cf--full" data-layout="full" data-card-type="Spell" data-name-tier="s" data-text-tier="s" ' +
+    'data-foil="none" style="--cf-name-scale:1;--cf-text-scale:1"><span class="cf-scale">' +
+    `<span class="cost-gem" data-cost="${String(cost)}" data-tone="base">${String(cost)}</span>` +
+    '<span class="cf-art-frame">' +
+    `<span class="cf-art cf-art--window" data-art="procedural" data-art-theme="${theme}" data-art-variant="base"${motifAttr} ` +
+    `aria-hidden="true" style="background-image:url(&quot;${escapeHtml(uri)}&quot;);background-size:cover"></span></span>` +
+    `<span class="card-name">${escapeHtml(name)}</span><span class="card-type">Spell</span>` +
+    '<span class="card-text"><span class="cf-text-base"></span></span></span></span>'
+  );
+}
+
+/** The fallback's two sentences, as the client's 404 panel says them (main.tsx `NotFound`). */
+const NOT_FOUND_NOTICE = "That page doesn't exist.";
+const NOT_FOUND_HINT = "The link may be wrong or out of date.";
+
+/** The stacked logo and its size, as main.tsx's `SHELL_LOGO` has them (static-pages.test.ts holds the two equal). */
+const STATIC_LOGO = { src: "/brand/jackioh-logo-stacked.svg", width: 1536, height: 1306 } as const;
+
+/**
+ * #3127, R3127000: what shows with no script, and while the entry script has not started: the shell's tavern board
+ * (main.tsx `ShellPanel`, auth/tavern.css) around the 404 panel's words, the hand of three card faces turning over
+ * from the brand's card back (notfound.css `.nf-hand`), and the app's own button home. Its styles are the entry
+ * stylesheet's, which the template links. It carries no `static-body` and no `<noscript>`: nothing hides it.
+ */
+function notFoundBody(): string {
+  const slots = NOT_FOUND_HAND.map(
+    (card) =>
+      '<div class="nf-hand__slot"><div class="nf-hand__card"><div class="nf-hand__side nf-hand__side--back"></div>' +
+      `<div class="nf-hand__side nf-hand__side--face">${handCardHtml(card)}</div></div></div>`,
+  ).join("");
+  return (
+    `<div class="app-shell tavern shell-panel" data-testid="${shellTestid.notFoundStatic}" data-shown="true">` +
+    `<h1 class="shell-panel__brand"><img class="shell-panel__logo" src="${STATIC_LOGO.src}" width="${String(STATIC_LOGO.width)}" ` +
+    `height="${String(STATIC_LOGO.height)}" alt="${SITE_NAME}" /></h1>` +
+    '<section class="panel panel--auth">' +
+    `<p class="notice">${NOT_FOUND_NOTICE}</p>` +
+    `<p class="auth-hint">${NOT_FOUND_HINT}</p>` +
+    `<div class="nf-hand" aria-hidden="true">${slots}</div>` +
+    '<div class="row"><a class="button-secondary" href="/">Back to the start</a></div>' +
+    "</section></div>"
+  );
+}
+
+const NOT_FOUND_DESCRIPTION = `${NOT_FOUND_NOTICE} ${NOT_FOUND_HINT}`;
+
+/**
+ * #3127, R3127000: `404.html`, from the built `index.html`. The client starts from it and, at the path it was
+ * served for, draws its own 404 (`NotFound`); Cloudflare still answers with a 404 status. Its head names the 404 as
+ * the client does (`documentTitleFor`), asks not to be indexed and names no address of its own: no canonical link,
+ * no `og:url`, no structured data (they name the landing page).
+ */
+export function notFoundHtml(template: string, origin: string): string {
+  const title = escapeHtml(documentTitleFor(`/${NOT_FOUND_FILE}`));
+  const description = escapeHtml(NOT_FOUND_DESCRIPTION);
+  let html = swap(template.replaceAll(SITE_ORIGIN, origin), /(<title>)[^<]*/u, title);
+  html = swap(html, /(<meta name="description" content=")[^"]*/u, description);
+  html = swap(html, /(<meta property="og:title" content=")[^"]*/u, title);
+  html = swap(html, /(<meta property="og:description" content=")[^"]*/u, description);
+  html = strip(html, /<meta property="og:url"[^>]*>\s*/u);
+  html = strip(html, /<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/u);
+  html = swap(html, /()<\/head>/u, '<meta name="robots" content="noindex" /></head>');
+
+  const open = html.indexOf(ROOT_OPEN) + ROOT_OPEN.length;
+  const close = html.lastIndexOf("</div>");
+  if (open < ROOT_OPEN.length || close < open) throw new Error("static-pages.ts: index.html has no #root");
+  return html.slice(0, open) + notFoundBody() + html.slice(close);
+}
+
 /** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (4)" for an embiggen card (R1175000). */
 const costText = (cost: CardCost): string =>
   typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})` : `(${String(cost)}) Cost`;
@@ -465,6 +575,7 @@ export function writeStaticPages({
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, pageHtml(template, page, pages, extra, origin));
   }
+  writeFileSync(join(outDir, NOT_FOUND_FILE), notFoundHtml(template, origin));
   writeFileSync(join(outDir, "sitemap.xml"), sitemapXml(pages, origin));
   if (snapshot !== undefined) {
     mkdirSync(join(outDir, RELEASE_ART_FOLDER), { recursive: true });

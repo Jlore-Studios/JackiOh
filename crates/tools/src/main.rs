@@ -23,6 +23,7 @@ mod positions;
 mod promote;
 mod replay;
 mod retcon;
+mod run_sim;
 mod sample_size;
 mod selfplay;
 mod selfplay_records;
@@ -51,6 +52,8 @@ enum Command {
     Fuzz(fuzz::Args),
     /// Each triggered card's text fused onto each fusable Unit and played until the board settles; a daily sample, or one pair (#2381).
     FusedPairs(fused_pairs::Args),
+    /// Whole dungeon runs with the AI in the player's seat, and how each kind of fight goes (#3065).
+    RunSim(run_sim::Args),
     /// What each card's plays and hooks do on the board, from seeded games, with a suggested motif (#2788).
     Fx(fx_census::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
@@ -98,6 +101,7 @@ fn main() -> ExitCode {
     let result = match parsed.command {
         Command::Fuzz(args) => fuzz::run(args),
         Command::FusedPairs(args) => fused_pairs::run(args),
+        Command::RunSim(args) => run_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
         Command::Trace(args) => trace::run(args),

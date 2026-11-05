@@ -2416,13 +2416,7 @@ mod fake {
     /// The unit fake's two seams (`db::fake`'s `call`): its fault-injection hook, then its race hook,
     /// each told the method's name.
     fn call<'t>(f: &'t mut FakeTx<'_>, method: &str) -> Result<&'t mut EconomyTables, StoreError> {
-        let data = f.data();
-        if let Some(hook) = data.on_call.clone() {
-            hook(method)?;
-        }
-        if let Some(hook) = data.before_call.clone() {
-            hook(method, &mut data.tables);
-        }
+        crate::db::fake::call(f, method)?;
         Ok(&mut f.tables().economy)
     }
 

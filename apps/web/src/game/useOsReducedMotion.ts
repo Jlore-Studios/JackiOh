@@ -8,23 +8,10 @@
 import { useSyncExternalStore } from "react";
 
 import { REDUCED_MOTION_QUERY, prefersReducedMotion } from "./animations.ts";
-
-function queryList(): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
-  try {
-    return window.matchMedia(REDUCED_MOTION_QUERY);
-  } catch {
-    return null;
-  }
-}
+import { subscribeTo } from "./mediaQuery.ts";
 
 export function subscribeOsReducedMotion(onChange: () => void): () => void {
-  const query = queryList();
-  if (query === null || typeof query.addEventListener !== "function") return () => undefined;
-  query.addEventListener("change", onChange);
-  return () => {
-    query.removeEventListener("change", onChange);
-  };
+  return subscribeTo(REDUCED_MOTION_QUERY, onChange);
 }
 
 /** Whether the OS asks for reduced motion now, kept current by the media query's `change` event. */

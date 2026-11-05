@@ -1,0 +1,17 @@
+{
+  "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-05",
+  "sources": "#3121",
+  "notes": "The code audit of 2026-11-05: dead code goes and duplicated helpers keep one copy. Under apps/web/src/cards/ only unused full-art and look helpers went (R2529000 counts any code change there): no card looks or plays differently.",
+  "player": {
+    "title": "Behind-the-scenes tidying",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "The code behind the card faces was tidied; nothing looks or plays differently."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}

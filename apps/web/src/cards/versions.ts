@@ -183,11 +183,6 @@ export function augmentsOf(look: CardLook): string[] {
   return [look.animated && AUGMENT_ANIMATED_ID, look.signed && AUGMENT_SIGNATURE_ID].filter((id): id is string => typeof id === "string");
 }
 
-/** Whether two looks wear the same version and augments. */
-export function sameLook(a: CardLook, b: CardLook): boolean {
-  return a.version === b.version && a.animated === b.animated && a.signed === b.signed;
-}
-
 /**
  * R2725000: the `fullArt` a write keeps when it rewrites only a card's augments: null (no pick, the setting's) where
  * the card has none, `true` and `false` as they are, a retired full art's id as the version its look wears (its

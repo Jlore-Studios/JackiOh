@@ -461,11 +461,6 @@ impl<'a> FakeTx<'a> {
         FakeTx { guard, snapshot }
     }
 
-    /// The whole store, for a test helper that runs inside a transaction.
-    pub fn data(&mut self) -> &mut FakeData {
-        &mut self.guard
-    }
-
     pub fn tables(&mut self) -> &mut FakeTables {
         &mut self.guard.tables
     }
@@ -497,8 +492,9 @@ pub fn commit(mut f: FakeTx<'_>) {
     f.snapshot = None;
 }
 
-/// Charges `method` to the fault-injection hook, then runs the race hook, if either is set.
-fn call(f: &mut FakeTx<'_>, method: &str) -> Result<(), StoreError> {
+/// Charges `method` to the fault-injection hook, then runs the race hook, if either is set. The admin,
+/// duos and economy fakes' `call`s charge theirs here too.
+pub(crate) fn call(f: &mut FakeTx<'_>, method: &str) -> Result<(), StoreError> {
     call_cas(f, method).map(|_| ())
 }
 
