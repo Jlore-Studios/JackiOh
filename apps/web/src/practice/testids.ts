@@ -17,18 +17,10 @@ export const practiceTestid = {
   /** In the preview: one bar per cost, `data-cost` and `data-count`. */
   deckCurve: "practice-deck-curve",
   deckCard: (defId: string): string => `practice-deck-card-${defId}`,
-  /** R915005: under the preview, why a saved deck that names custom cards cannot start; Start is off while it shows. role="status". */
-  customBlocked: "practice-custom-blocked",
-  /** #1691: beside `customBlocked`, after the custom cards could not be read. */
-  customRetry: "practice-custom-retry",
   /** #1691: beside the deck hint, after the saved decks could not be read. */
   savedRetry: "practice-saved-retry",
   /** #1691: in the preview, after the card list could not be loaded. */
   defsRetry: "practice-defs-retry",
-  /** #921: `?try=<custom id>` while the account's custom cards are read, before the game starts. */
-  tryLoading: "practice-try-loading",
-  /** #921: on the setup, after `?try=` named no custom card of the account's; role="status". */
-  tryMissing: "practice-try-missing",
   start: "practice-start",
   /** R2882000: on the setup, beside Start: Play today's deal, the UTC day's random deal. */
   dailyDeal: "practice-daily-deal",

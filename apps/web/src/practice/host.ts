@@ -2,7 +2,7 @@
 // Type-only imports keep the core out of the page bundle. The engine and AI are WebAssembly
 // (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request.
 
-import { loadWasm, useLuauModule } from "../wasm/index.ts";
+import { loadWasm } from "../wasm/index.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
@@ -16,8 +16,6 @@ export type PracticeHost = {
 type PracticeHostOptions = {
   forceInThread?: boolean;
   env?: Partial<PracticeCoreEnv>;
-  /** R915009: the Luau module's bytes for the in-thread host (jsdom has no fetch of a file URL). */
-  luauBytes?: BufferSource;
 };
 
 const CLOSED_MESSAGE = "the practice game was closed";
@@ -32,7 +30,7 @@ function withId(body: PracticeRequestBody, id: number): PracticeRequest {
 
 export function createPracticeHost(options: PracticeHostOptions = {}): PracticeHost {
   if (typeof Worker === "function" && options.forceInThread !== true) return createWorkerHost();
-  return createInThreadHost(options.env ?? {}, options.luauBytes);
+  return createInThreadHost(options.env ?? {});
 }
 
 // The worker host
@@ -108,7 +106,7 @@ function macrotask(): Promise<void> {
   });
 }
 
-function createInThreadHost(env: Partial<PracticeCoreEnv>, luauBytes?: BufferSource): PracticeHost {
+function createInThreadHost(env: Partial<PracticeCoreEnv>): PracticeHost {
   let nextId = 1;
   let disposed = false;
   let core: Promise<PracticeCore> | null = null;
@@ -140,9 +138,6 @@ function createInThreadHost(env: Partial<PracticeCoreEnv>, luauBytes?: BufferSou
     try {
       const loaded = await load();
       if (disposed) return failed(request.id, CLOSED_MESSAGE);
-      // R915009: as the worker does, the module this request runs on first.
-      const luau = loaded.needsLuau(request);
-      if (luau !== null) await useLuauModule(luau, luauBytes);
       return loaded.handle(request);
     } catch (cause) {
       return failed(request.id, `the practice engine could not be loaded: ${messageOf(cause)}`);

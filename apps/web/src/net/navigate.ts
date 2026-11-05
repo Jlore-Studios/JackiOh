@@ -254,8 +254,6 @@ export const paths = {
   stats: "/stats",
   /** R654: the statistics page's Cards tab with one card's drill-down open, as the card detail's View full stats links it. */
   statsCard: (cardId: string): string => `/stats?tab=cards&card=${encodeURIComponent(cardId)}`,
-  /** #920: the card creator, the account's custom cards (SPEC §12.9). */
-  creator: "/creator",
   /** R768000: the recent games and their replays. */
   replays: "/replays",
   /** #936 S8: Play together. */
@@ -332,11 +330,6 @@ export function loginPath(options: { reason?: LoginReason; mode?: LoginEntryMode
   if (options.mode === "forgot") query.set("mode", "forgot");
   const search = query.toString();
   return search.length === 0 ? paths.login : `${paths.login}?${search}`;
-}
-
-/** #921: the creator's "Try it": `/practice?try=<id>` deals a random deck around that custom card (R915005). */
-export function tryPath(customId: string): string {
-  return `${paths.practice}?try=${encodeURIComponent(customId)}`;
 }
 
 /**

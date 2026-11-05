@@ -22,7 +22,7 @@ export type CollectionPart = "cards" | "wallet" | "tracks";
 /** R1579000: the hub's sections that open in place, by `?section=`. */
 export const COLLECTION_SECTIONS = ["cards", "cosmetics"] as const;
 export type CollectionSection = (typeof COLLECTION_SECTIONS)[number];
-export type CollectionDoor = "decks" | "cards" | "cosmetics" | "builder";
+export type CollectionDoor = "decks" | "cards" | "cosmetics";
 
 /** The section `?section=` names, or null for the hub: an unknown name opens the hub. */
 export function collectionSectionOf(search: string): CollectionSection | null {

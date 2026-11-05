@@ -374,10 +374,10 @@ describe("the legal pages", () => {
     expect(chat).toHaveTextContent(/abuse in chat can get an account suspended or banned/);
   });
 
-  it("#970 the copyright page names a custom card's name and text as something a notice can be about", () => {
+  it("#970 the copyright page names a username as something a notice can be about", () => {
     render(<CopyrightRoute />);
     expect(screen.getByRole("region", { name: /reporting content that infringes your copyright/i })).toHaveTextContent(
-      /such as a username or a custom card.s name or text/,
+      /such as a username,/,
     );
   });
 

@@ -345,7 +345,7 @@ describe("where the pill sits", () => {
     expect(server.to("GET", "/api/wallet")).toHaveLength(0);
   });
 
-  it("R1651000 BackLink with onPress, a screen that guards its way out (the card creator's), has no pill to leave by", async () => {
+  it("R1651000 BackLink with onPress, a screen that guards its way out, has no pill to leave by", async () => {
     signIn(TOKEN);
     const server = serve();
     const onPress = vi.fn<() => void>();

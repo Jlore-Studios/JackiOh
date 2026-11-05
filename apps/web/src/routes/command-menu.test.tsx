@@ -144,7 +144,6 @@ describe("R2118000 the command menu", () => {
         "page-home",
         "page-decks",
         "page-collection",
-        "page-creator",
         "page-shop",
         "page-purchases",
         "page-almanac",
@@ -202,7 +201,7 @@ describe("R2118000 the command menu", () => {
   });
 
   it("R2118000 the leave guard still holds a move it makes", () => {
-    at("/creator");
+    at("/collection");
     render(<App />);
     const held: (() => void)[] = [];
     const release = guardLeaving((leave) => {
@@ -212,7 +211,7 @@ describe("R2118000 the command menu", () => {
       const input = openMenu();
       typeQuery(input, "Decks");
       fireEvent.keyDown(input, { key: "Enter" });
-      expect(window.location.pathname).toBe("/creator");
+      expect(window.location.pathname).toBe("/collection");
       expect(held).toHaveLength(1);
       act(() => {
         held[0]?.();

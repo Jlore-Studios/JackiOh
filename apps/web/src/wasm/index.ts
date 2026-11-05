@@ -14,14 +14,10 @@
 import initWasm, { initSync } from "./pkg/jackioh_wasm.js";
 import * as normal from "./pkg/jackioh_wasm.js";
 
-import type { LuauBindings } from "./luau.ts";
-
-import type { Action, ActionBody, CardDef, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
-import type { CustomCard } from "../wire/generated/CustomCard.ts";
-import type { CustomIssue } from "../wire/generated/CustomIssue.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type {
@@ -48,54 +44,6 @@ import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 
-// the module in use (R915009)
-
-/** The bindings every call below goes through: the normal module's exports, or the Luau module's. */
-type Bindings = Omit<LuauBindings, "check_custom_card">;
-
-const NORMAL: Bindings = normal;
-
-let engine: Bindings = NORMAL;
-let luau: Promise<LuauBindings> | null = null;
-
-/** The Luau module, imported and instantiated the first time anything asks (`luau.ts`). */
-function luauBindings(bytes?: BufferSource): Promise<LuauBindings> {
-  luau ??= import("./luau.ts")
-    .then(({ loadLuauBindings }) => loadLuauBindings(bytes))
-    .catch((cause: unknown) => {
-      luau = null;
-      throw cause;
-    });
-  return luau;
-}
-
-/**
- * R915009: from now on run every engine, AI and validator call through the Luau module (`true`), which
- * runs custom cards' scripts, or the normal one (`false`, the default). The practice worker turns it on
- * only for a game with a custom card. `bytes`: the Luau module's, in jsdom tests.
- */
-export async function useLuauModule(on: boolean, bytes?: BufferSource): Promise<void> {
-  engine = on ? await luauBindings(bytes) : NORMAL;
-}
-
-export function luauModuleInUse(): boolean {
-  return engine !== NORMAL;
-}
-
-/** The creator's check of one custom card (#913, #919); `def`, the frame's definition, is what the preview draws. */
-export type CustomCardCheck = { frame: CustomIssue[]; script: ScriptProblem[]; def: CardDef };
-
-export type ScriptProblem = { line?: number; message: string };
-
-/**
- * #919: check a custom card's frame (the engine's validator) and its script (the lint, Luau's
- * compiler and the kit's own checks) in the Luau module, loading it if no one has. Starts no game.
- */
-export async function checkCustomCard(card: CustomCard, bytes?: BufferSource): Promise<CustomCardCheck> {
-  const bindings = await luauBindings(bytes);
-  return parsed<CustomCardCheck>(bindings.check_custom_card(json(card)));
-}
-
 // loading
 
 let loaded = false;
@@ -104,7 +52,7 @@ const onLoad: (() => void)[] = [];
 
 function ready(): void {
   if (loaded) return;
-  engine.init();
+  normal.init();
   loaded = true;
   for (const run of onLoad.splice(0)) run();
 }
@@ -208,8 +156,6 @@ export type CreateGameArgs = {
   glitchBoards?: readonly [readonly LastBoardCard[], readonly LastBoardCard[]];
   /** R923000: a practice sandbox, whose dev tools (`sandbox` actions) only it accepts. */
   sandbox?: boolean;
-  /** R915006: the game's custom cards, which only the Luau module runs (R915009); this one refuses them. */
-  customCards?: readonly CustomCard[];
   /** R2702000: each seat's deck marks, cards of its list dealt Radiant or Buffed at setup. Omitted, nothing is marked or stored. */
   deckMarks?: Partial<Record<PlayerId, readonly DeckMark[]>>;
 };
@@ -234,72 +180,72 @@ function reduceResult(text: string, input: GameState): ReduceResult {
 }
 
 export function createGame(args: CreateGameArgs): GameState {
-  return call("createGame", () => parsed<GameState>(engine.create_game(json(args))));
+  return call("createGame", () => parsed<GameState>(normal.create_game(json(args))));
 }
 
 export function beginGame(state: GameState): ReduceResult {
-  return call("beginGame", () => reduceResult(engine.begin_game(stateJson(state)), state));
+  return call("beginGame", () => reduceResult(normal.begin_game(stateJson(state)), state));
 }
 
 export function reduce(state: GameState, action: Action): ReduceResult {
-  return call("reduce", () => reduceResult(engine.reduce(stateJson(state), json(action)), state));
+  return call("reduce", () => reduceResult(normal.reduce(stateJson(state), json(action)), state));
 }
 
 /** Everything `player` may legally do now. The client greys out the rest (BUILD M5-T2). */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
-  return call("legalActions", () => parsed<ActionBody[]>(engine.legal_actions(stateJson(state), player)));
+  return call("legalActions", () => parsed<ActionBody[]>(normal.legal_actions(stateJson(state), player)));
 }
 
 /** The only window the client has onto the game (SPEC §10.8). */
 export function viewFor(state: GameState, player: PlayerId): PlayerView {
-  return call("viewFor", () => parsed<PlayerView>(engine.view_for(stateJson(state), player)));
+  return call("viewFor", () => parsed<PlayerView>(normal.view_for(stateJson(state), player)));
 }
 
 /** The seat that owes the next action, or null when none does. */
 export function seatToAct(state: GameState): PlayerId | null {
   return call("seatToAct", () => {
-    const seat = engine.seat_to_act(stateJson(state));
+    const seat = normal.seat_to_act(stateJson(state));
     return seat === "" ? null : (seat as PlayerId);
   });
 }
 
 /** SURFACE §5.2's hash: eight hex digits. */
 export function hashState(state: GameState): string {
-  return call("hashState", () => engine.hash_state(stateJson(state)));
+  return call("hashState", () => normal.hash_state(stateJson(state)));
 }
 
 /** Fold a recorded log from scratch (SPEC §9.2, §9.3). Throws on a setup `createGame` refuses. */
 export function fold(input: FoldInput): FoldResult {
-  return call("fold", () => parsed<FoldResult>(engine.fold(json(input))));
+  return call("fold", () => parsed<FoldResult>(normal.fold(json(input))));
 }
 
 /** R768: a finished game's replay, its log checked against its catalog version and final hash. */
 export function replayOpen(input: FoldInput, record: ReplayRecord): ReplayOpen {
-  return call("replayOpen", () => parsed<ReplayOpen>(engine.replay_open(json(input), json(record))));
+  return call("replayOpen", () => parsed<ReplayOpen>(normal.replay_open(json(input), json(record))));
 }
 
 /** R768: steps [from, from + count) as `seat` saw them; continue at `from + steps.length`. */
 export function replayPage(checkpoints: ReplayCheckpoints, seat: PlayerId, from: number, count: number): ReplayPage {
-  return call("replayPage", () => parsed<ReplayPage>(engine.replay_page(json(checkpoints), seat, from, count)));
+  return call("replayPage", () => parsed<ReplayPage>(normal.replay_page(json(checkpoints), seat, from, count)));
 }
 
 /** R417, R508: the board `seat` takes away. */
 export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] {
-  return call("lastBoardFor", () => parsed<LastBoardCard[]>(engine.last_board_for(stateJson(state), seat)));
+  return call("lastBoardFor", () => parsed<LastBoardCard[]>(normal.last_board_for(stateJson(state), seat)));
 }
 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
-  return call("seatPlayedBy", () => engine.seat_played_by(stateJson(state), home) as PlayerId);
+  return call("seatPlayedBy", () => normal.seat_played_by(stateJson(state), home) as PlayerId);
 }
 
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return call("findInstance", () => parsed<CardInstance | null>(engine.find_instance(stateJson(state), instanceId)) ?? undefined);
+  return call("findInstance", () => parsed<CardInstance | null>(normal.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
 export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
-  return call("dealEmoteHand", () => parsed<EmoteId[]>(engine.deal_emote_hand(seed, seat)));
+  return call("dealEmoteHand", () => parsed<EmoteId[]>(normal.deal_emote_hand(seed, seat)));
 }
 
 /**
@@ -309,7 +255,7 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
  */
 export function previewSets(sets: readonly SetName[]): void {
   call("previewSets", () => {
-    engine.preview_sets(json(sets));
+    normal.preview_sets(json(sets));
   });
 }
 
@@ -318,14 +264,14 @@ let catalogCache: CardDefs | null = null;
 /** The registered catalog: the same object on every call. */
 export function registeredCatalog(): CardDefs {
   return call("registeredCatalog", () => {
-    catalogCache ??= parsed<CardDefs>(engine.catalog());
+    catalogCache ??= parsed<CardDefs>(normal.catalog());
     return catalogCache;
   });
 }
 
 /**
  * R1011000: the learned evaluation's parity fixture, its integer network's correction for each case.
- * Only the tests call it, so it is the normal module's own and the Luau module (R915009) has no copy.
+ * Only the tests call it.
  */
 export function learnedParity(fixtureJson: string): number[] {
   return call("learnedParity", () => parsed<number[]>(normal.learned_parity(fixtureJson)));
@@ -333,7 +279,7 @@ export function learnedParity(fixtureJson: string): number[] {
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
 export function catalogVersion(): string {
-  return call("catalogVersion", () => engine.catalog_version());
+  return call("catalogVersion", () => normal.catalog_version());
 }
 
 let carriedCache: readonly string[] | null = null;
@@ -345,7 +291,7 @@ let carriedCache: readonly string[] | null = null;
  */
 export function carriedVersions(): readonly string[] {
   return call("carriedVersions", () => {
-    carriedCache ??= parsed<string[]>(engine.carried_versions());
+    carriedCache ??= parsed<string[]>(normal.carried_versions());
     return carriedCache;
   });
 }
@@ -358,84 +304,84 @@ export function carriedVersions(): readonly string[] {
  */
 export type RunResult = { state: RunState } | { error: string };
 
-/** `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards. */
-export function runContent(customCards: CustomCard[]): RunContent {
-  return call("runContent", () => parsed<RunContent>(engine.run_content(json(customCards))));
+/** `RunContent`: `run_catalog_content` over the compiled-in catalog. */
+export function runContent(): RunContent {
+  return call("runContent", () => parsed<RunContent>(normal.run_content("[]")));
 }
 
 /** Whether the setup may start a run: null, or the reason. */
 export function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null {
   return call("runCheckSetup", () =>
-    parsed<string | null>(engine.run_check_setup(json(setup), json(unlocks), json(content))),
+    parsed<string | null>(normal.run_check_setup(json(setup), json(unlocks), json(content))),
   );
 }
 
 /** Start a run: its state, or the setup's refusal. */
 export function runCreate(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): RunResult {
   return call("runCreate", () =>
-    parsed<RunResult>(engine.run_create(json(setup), json(unlocks), json(content))),
+    parsed<RunResult>(normal.run_create(json(setup), json(unlocks), json(content))),
   );
 }
 
 /** The run after one action, or the action's refusal. */
 export function runReduce(state: RunState, content: RunContent, action: RunAction): RunResult {
   return call("runReduce", () =>
-    parsed<RunResult>(engine.run_reduce(json(state), json(content), json(action))),
+    parsed<RunResult>(normal.run_reduce(json(state), json(content), json(action))),
   );
 }
 
 /** A run file folded from its start, or the first refused step. */
 export function runFold(file: RunFile, content: RunContent): RunResult {
-  return call("runFold", () => parsed<RunResult>(engine.run_fold(json(file), json(content))));
+  return call("runFold", () => parsed<RunResult>(normal.run_fold(json(file), json(content))));
 }
 
 /** The fight being played, or null outside one. */
 export function runFightSetup(state: RunState, content: RunContent): RunFightSetup | null {
   return call("runFightSetup", () =>
-    parsed<RunFightSetup | null>(engine.run_fight_setup(json(state), json(content))),
+    parsed<RunFightSetup | null>(normal.run_fight_setup(json(state), json(content))),
   );
 }
 
 /** The `FightOver` a finished fight sends, or why the game reports none. */
 export function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string } {
   return call("runFightReport", () =>
-    parsed<{ action: RunAction } | { error: string }>(engine.run_fight_report(json(game), json(human))),
+    parsed<{ action: RunAction } | { error: string }>(normal.run_fight_report(json(game), json(human))),
   );
 }
 
 /** The run's score so far. */
 export function runScore(state: RunState, content: RunContent): number {
-  return call("runScore", () => parsed<number>(engine.run_score(json(state), json(content))));
+  return call("runScore", () => parsed<number>(normal.run_score(json(state), json(content))));
 }
 
 /** The Embers a score pays. */
 export function runEmbers(score: number): number {
-  return call("runEmbers", () => parsed<number>(engine.run_embers(json(score))));
+  return call("runEmbers", () => parsed<number>(normal.run_embers(json(score))));
 }
 
 /** The run's max HP, before no fight and after every artifact and blessing. */
 export function runMaxHp(state: RunState, content: RunContent): number {
-  return call("runMaxHp", () => parsed<number>(engine.run_max_hp(json(state), json(content))));
+  return call("runMaxHp", () => parsed<number>(normal.run_max_hp(json(state), json(content))));
 }
 
 /** The Embers that raise the starting deck from `level` to the next, or null at the ladder's top. */
 export function runLevelCost(level: number): number | null {
-  return call("runLevelCost", () => parsed<number | null>(engine.run_level_cost(json(level))));
+  return call("runLevelCost", () => parsed<number | null>(normal.run_level_cost(json(level))));
 }
 
 /** The run's numbers the screens show, so the client states none (CLAUDE.md rule 9). */
 export function runConstants(): RunConstants {
-  return call("runConstants", () => parsed<RunConstants>(engine.run_constants()));
+  return call("runConstants", () => parsed<RunConstants>(normal.run_constants()));
 }
 
 /** A seed of capital letters drawn from any text. */
 export function runSeed(source: string): string {
-  return call("runSeed", () => parsed<string>(engine.run_seed(json(source))));
+  return call("runSeed", () => parsed<string>(normal.run_seed(json(source))));
 }
 
 /** The daily run's seed: the date's and the day's run number. */
 export function runDailySeed(date: string, n: number): string {
-  return call("runDailySeed", () => parsed<string>(engine.run_daily_seed(json(date), json(n))));
+  return call("runDailySeed", () => parsed<string>(normal.run_daily_seed(json(date), json(n))));
 }
 
 // Duos co-op (#936 S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat
@@ -473,8 +419,8 @@ function duosReduceResult(text: string, input: DuosState): DuosReduceResult {
   return { state: input, events: [], error: result.error };
 }
 
-// The Duos bindings live in the normal module alone (`crates/wasm`'s `duos` feature, which only the
-// dev server's build turns on): a Duos game holds no custom card, so it never runs on the Luau module.
+// The Duos bindings are in the module only when `crates/wasm`'s `duos` feature is on, which only the
+// dev server's build turns on.
 
 /** A begun-able Duos game: two duels, seeded `<seed>:duel0` and `<seed>:duel1`. Throws on a deck it refuses. */
 export function duosCreate(args: DuosCreateArgs): DuosState {
@@ -504,7 +450,7 @@ export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
 // the AI (SURFACE §9)
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
-  return call("aiToAct", () => engine.ai_to_act(stateJson(state), seat));
+  return call("aiToAct", () => normal.ai_to_act(stateJson(state), seat));
 }
 
 export type StreamAt = { rngSeed: string; rngCursor: number };
@@ -518,7 +464,7 @@ export type DecideResult = { decision: Decision | null; rngCursor: number };
  * so far; 0 or less is no clock, so the decision depends only on the state, the stream and the budget.
  */
 export function decide(state: GameState, seat: PlayerId, request: DecideRequest, deadlineMs: number): DecideResult {
-  return call("decide", () => parsed<DecideResult>(engine.ai_decide(stateJson(state), seat, json(request), deadlineMs)));
+  return call("decide", () => parsed<DecideResult>(normal.ai_decide(stateJson(state), seat, json(request), deadlineMs)));
 }
 
 /**
@@ -526,7 +472,7 @@ export function decide(state: GameState, seat: PlayerId, request: DecideRequest,
  * `deadlineMs` is a `Date.now()` time, as `decide`'s is: a check still running past it says no; 0, no clock.
  */
 export function lethalHint(state: GameState, seat: PlayerId, deadlineMs: number): boolean {
-  return call("lethalHint", () => engine.lethal_hint(stateJson(state), seat, deadlineMs));
+  return call("lethalHint", () => normal.lethal_hint(stateJson(state), seat, deadlineMs));
 }
 
 /** `buildAiDeck`'s options as they cross (`AiDeckOptions` plus the stream and the size). */
@@ -549,13 +495,13 @@ export type AiDeckRequest = StreamAt & {
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
-  return call("buildAiDeck", () => parsed<{ deck: string[]; rngCursor: number }>(engine.build_ai_deck(json(request))));
+  return call("buildAiDeck", () => parsed<{ deck: string[]; rngCursor: number }>(normal.build_ai_deck(json(request))));
 }
 
 /** §10.7's random policy (`subsystems.chooseAction`), drawing from `(rngSeed, rngCursor)`. */
 export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt): { action: ActionBody | null; rngCursor: number } {
   return call("chooseAction", () =>
-    parsed<{ action: ActionBody | null; rngCursor: number }>(engine.choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
+    parsed<{ action: ActionBody | null; rngCursor: number }>(normal.choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
   );
 }
 
@@ -570,7 +516,7 @@ export function craftPreview(
 ): CraftPreview {
   // R1563007: the open prompt's mode and offer, so the verdict is the one its answer gets.
   const slice = { craftMode: prompt.craftMode, craftOffer: prompt.craftOffer };
-  return call("craftPreview", () => parsed<CraftPreview>(engine.craft_preview(json(recipe), cost, json(slice))));
+  return call("craftPreview", () => parsed<CraftPreview>(normal.craft_preview(json(recipe), cost, json(slice))));
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
@@ -611,7 +557,7 @@ let constantsCache: AiConstants | null = null;
 /** The AI's budgets, its shadow-ban ids and its deck builder's numbers, as the Rust AI states them. */
 export function aiConstants(): AiConstants {
   return call("constants", () => {
-    constantsCache ??= parsed<AiConstants>(engine.constants());
+    constantsCache ??= parsed<AiConstants>(normal.constants());
     return constantsCache;
   });
 }
@@ -636,7 +582,7 @@ let tablesCache: EngineTables | null = null;
 
 export function engineTables(): EngineTables {
   return call("engineTables", () => {
-    tablesCache ??= parsed<EngineTables>(engine.engine_tables());
+    tablesCache ??= parsed<EngineTables>(normal.engine_tables());
     return tablesCache;
   });
 }
@@ -652,11 +598,9 @@ export type ValidatorCall =
   | "checkTrioDraft"
   | "checkImportRoom"
   | "trioConflicts"
-  | "normalizeName"
-  | "validateCustomCard"
-  | "customDef";
+  | "normalizeName";
 
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
-  return call(name, () => parsed<T>(engine.validator(name, json(input))));
+  return call(name, () => parsed<T>(normal.validator(name, json(input))));
 }
