@@ -841,6 +841,34 @@ mod tests {
     }
 
     #[test]
+    fn the_tally_puts_each_mini_boss_and_the_final_boss_in_act_order() {
+        let content = content();
+        let (setup, unlocks) = run_setup(0);
+        let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
+        let outcomes = [RunOutcome {
+            file: RunFile {
+                setup,
+                unlocks,
+                log: Vec::new(),
+            },
+            end: RunState {
+                phase: RunPhase::Won,
+                ..start
+            },
+            fights: vec![
+                row(RunNodeKind::Fight, 30, 28, true, 8),
+                row(RunNodeKind::MiniBoss, 28, 20, true, 18),
+                row(RunNodeKind::Elite, 20, 16, true, 12),
+                row(RunNodeKind::MiniBoss, 16, 12, true, 16),
+                row(RunNodeKind::Boss, 12, 5, true, 22),
+            ],
+            faults: Vec::new(),
+        }];
+        let sums = tally(&outcomes, &content);
+        assert_eq!(sums.boss_hp, [(28, 1), (16, 1), (12, 1)]);
+    }
+
+    #[test]
     #[ignore = "daily: DAILY_SEEDS whole runs per skill at full budget; the two run-fight tests above play at the tiny budget per pull request"]
     fn the_daily_sweep_plays_whole_runs_at_full_budget_and_prints_the_report() {
         let content = content();

@@ -82,6 +82,8 @@ pub fn constants() -> Result<String, String> {
         RANK_STREAK_BONUS_PIPS, RANK_CONVERGENCE_GAP_PIPS, RANK_CONVERGENCE_PIPS, JLORIOUS_SIZE,
         SEASON_RESET_STRENGTH, SEASON_RESET_DEVIATION_BOOST, BOT_PROMOTION_DEVIATION_BOOST, SORT_KEY_GRAPE_BASE,
         SORT_KEY_JLORIOUS_BASE, SORT_KEY_RATING_BITS,
+        DUOS_ROUND_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_MULLIGAN_CLOCK_MS,
+        DUOS_AI_STEP_DELAY_MS,
     );
     to_json(&Value::Object(all))
 }
@@ -227,6 +229,10 @@ mod tests {
             SORT_KEY_GRAPE_BASE,
             SORT_KEY_JLORIOUS_BASE,
             SORT_KEY_RATING_BITS,
+            DUOS_ROUND_CLOCK_MS,
+            DUOS_PROMPT_CLOCK_MS,
+            DUOS_MULLIGAN_CLOCK_MS,
+            DUOS_AI_STEP_DELAY_MS,
         );
         assert_eq!(
             names, expected,

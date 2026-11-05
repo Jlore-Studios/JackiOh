@@ -195,3 +195,89 @@ fn a_call_that_does_not_parse_is_no_call() {
         assert!(serde_json::from_value::<HostCall>(broken).is_err());
     }
 }
+
+#[test]
+fn a_duos_host_is_made_stepped_and_handed_back_as_json() {
+    jackioh_cards::register_all();
+    let deck = |salt: &str| {
+        build_ai_deck(
+            &mut Rng::new(&format!("duos-boundary:{salt}"), 0),
+            DECK_SIZE,
+            &AiDeckOptions {
+                banned: Some(vec![]),
+                gated_sets: Some(vec![]),
+                ..AiDeckOptions::default()
+            },
+        )
+    };
+    let options = serde_json::from_value(json!({
+        "seed": "duos-boundary",
+        "decks": { "a1": deck("a1"), "a2": deck("a2"), "b1": deck("b1"), "b2": deck("b2") },
+    }))
+    .expect("create options");
+    let begun = jackioh_engine::duos::duos_begin(&jackioh_engine::duos::duos_create(&options));
+    let setup = jackioh_shared::host::DuosSetup {
+        match_id: "duos-1".to_string(),
+        created_at: NOW,
+        game: begun.state,
+        finished: false,
+        next_seq: 1,
+        acked: Vec::new(),
+    };
+    let made = call(json!({ "call": "newDuos", "setup": setup, "now": NOW }));
+    assert_eq!(made["answer"], "steppedDuos");
+    let armed = call(json!({
+        "call": "stepDuos", "host": made["host"], "event": { "event": "arm" }, "now": NOW,
+    }));
+    let timers: Vec<&Value> = armed["outputs"]
+        .as_array()
+        .expect("outputs")
+        .iter()
+        .filter(|output| output["output"] == "timer")
+        .collect();
+    for kind in ["duosMulligan", "duosCeiling"] {
+        assert!(
+            timers
+                .iter()
+                .any(|output| output["command"]["key"]["kind"] == kind),
+            "{kind}: {timers:?}"
+        );
+    }
+    // The mulligan clock runs out: the people's hands are kept, by the AI, after its pause.
+    let viewed =
+        call(json!({ "call": "duosSeatView", "host": armed["host"], "seat": "a1", "now": NOW + 1000 }));
+    assert_eq!(viewed["answer"], "duosView");
+    assert_eq!(viewed["view"]["seat"], "a1");
+    assert_eq!(viewed["view"]["own"]["clockMs"], 44_000);
+}
+
+#[test]
+fn the_again_calls_are_the_books_functions() {
+    let window = call(json!({ "call": "againWindow", "endedAt": NOW, "now": NOW + 600_000 }));
+    assert_eq!(window["open"], true);
+    let closed = call(json!({ "call": "againWindow", "endedAt": NOW, "now": NOW + 600_001 }));
+    assert_eq!(closed["open"], false);
+    let book = serde_json::to_value(jackioh_shared::host::again::AgainBook::default()).expect("book");
+    let first = call(json!({
+        "call": "againClaim", "book": book, "matchId": "m1", "seat": "a1", "lean": Value::Null, "now": NOW,
+    }));
+    assert_eq!(first["claim"], json!({ "claim": "done", "answered": null }));
+    let second = call(json!({
+        "call": "againClaim", "book": first["book"], "matchId": "m1", "seat": "a2", "lean": "newest", "now": NOW + 1,
+    }));
+    assert_eq!(second["claim"]["claim"], "make");
+    let creating = second["claim"]["creating"].clone();
+    let made = call(json!({
+        "call": "againMade", "book": second["book"], "matchId": "m1", "creating": creating, "id": "g1", "now": NOW + 2,
+    }));
+    let seen = call(
+        json!({ "call": "againSeen", "book": made["book"], "matchId": "m1", "seat": "a1", "now": NOW + 3 }),
+    );
+    assert_eq!(
+        seen["seen"],
+        json!({ "youOffered": true, "teammateOffered": true, "matchId": "g1" })
+    );
+    let released =
+        call(json!({ "call": "againRelease", "book": seen["book"], "matchId": "m1", "creating": creating }));
+    assert_eq!(released["answer"], "againBook");
+}
