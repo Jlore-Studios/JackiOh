@@ -1,5 +1,5 @@
 //! C #14 Shadowstep (SPEC §8.6 row 14, §4.5, §6.2 Replacement, §6.3 Flicker; R4, R11, R12, R33, R57,
-//! R61, R64, R69, R78, R97, R99, R317). Trap, cost 2, Common.
+//! R61, R64, R69, R78, R97, R99, R317). Trap, cost 1 (2 until issue #3136), Common.
 //!   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
 //!   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
 //!            copy of each to your hand. The copies cost ({setCost})."
@@ -213,13 +213,25 @@ mod tests {
         assert_eq!(moments, vec![ReplacementMoment::WouldDie]);
     }
 
+    /// Issue #3136: it costs (1), from (2), on both faces.
+    #[test]
+    fn issue_3136_costs_1_refused_with_0_mana_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": SHADOWSTEP, "radiant": radiant }, STOCKPILE] },
+                "p2": { "hand": [STOCKPILE] },
+            }));
+            crate::expect_costs(&mut s, SHADOWSTEP, 1, json!({}));
+        }
+    }
+
     mod base {
         use super::*;
 
         #[test]
         fn r33_it_sits_face_down() {
             let s = wipe(false, json!([VANILLA]), json!({}));
-            assert_eq!(js(&s.view(P2))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 2 }));
+            assert_eq!(js(&s.view(P2))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 1 }));
         }
 
         #[test]

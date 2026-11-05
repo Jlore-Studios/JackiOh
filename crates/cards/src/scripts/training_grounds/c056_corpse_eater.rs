@@ -4,7 +4,9 @@
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
 //! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
-//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). Since issue #3136
+//! its data differs from the Core card's: 5/5 with no keyword, Radiant 10/10 with Rush (it was 2/2 with
+//! Rush and 4/4 with Rush and Divine Shield); the hand-growth script is unchanged. The Core
 //! file's notes, as they stood:
 //!
 //! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
@@ -84,7 +86,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const EATER: &str = "traininggrounds-056"; // 2/2 → 4/4 (6/6 before patch v0.3.10), cost 4
+    const EATER: &str = "traininggrounds-056"; // 5/5 → 10/10, cost 4 (2/2 → 4/4 until issue #3136)
 
     // Inert fixtures: every unit below has a Cry and nothing else, and the harness's `field` setup
     // never fires a Cry.
@@ -124,10 +126,10 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": FELINORS, "lane": 1 }] },
             }));
 
-            s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
+            s.expect_stats(EATER, json!({ "attack": 5, "maxHealth": 5 }));
             s.attack(FELINORS, GARY);
 
-            s.expect_stats(EATER, json!({ "attack": 3, "maxHealth": 3 }));
+            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
             assert_eq!(s.card(EATER).zone.z(), ZoneName::Hand);
             s.expect_events(json!(["destroyed", "buffed"]));
         }
@@ -142,7 +144,7 @@ mod tests {
 
             s.attack(FELINORS, GARY);
 
-            s.expect_stats(EATER, json!({ "attack": 3, "maxHealth": 3 }));
+            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
         }
 
         #[test]
@@ -158,8 +160,8 @@ mod tests {
 
             s.attack(STRAAZA, RENO);
 
-            // 2/2 + 4/6. Reading current health instead would have made it 6/3.
-            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 8 }));
+            // 5/5 + 4/6. Reading current health instead would have made it 9/6.
+            s.expect_stats(EATER, json!({ "attack": 9, "maxHealth": 11 }));
         }
 
         #[test]
@@ -175,8 +177,8 @@ mod tests {
             let defender = s.unit(P1, 1).expect("p1's Gary");
             s.attack(&attacker, &defender);
 
-            // Both 1/1s die in the same check, so the Eater eats twice: 2/2 + 1/1 + 1/1.
-            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
+            // Both 1/1s die in the same check, so the Eater eats twice: 5/5 + 1/1 + 1/1.
+            s.expect_stats(EATER, json!({ "attack": 7, "maxHealth": 7 }));
         }
 
         #[test]
@@ -192,7 +194,7 @@ mod tests {
             s.attack(FELINORS, &token);
 
             s.expect_in_zone(&token, "gone");
-            s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
+            s.expect_stats(EATER, json!({ "attack": 5, "maxHealth": 5 }));
             assert_eq!(count_of(&s, GameEventType::Buffed), 0);
         }
 
@@ -212,7 +214,7 @@ mod tests {
 
             s.expect_events(json!(["drawn", "burned"]));
             assert_eq!(count_of(&s, GameEventType::Destroyed), 0);
-            s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
+            s.expect_stats(EATER, json!({ "attack": 5, "maxHealth": 5 }));
         }
 
         #[test]
@@ -229,7 +231,7 @@ mod tests {
             s.attack(STRAAZA, GARY);
 
             // §10.3: a card on the field registers `triggers`, and this card declares none.
-            s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
+            s.expect_stats(EATER, json!({ "attack": 5, "maxHealth": 5 }));
         }
 
         #[test]
@@ -242,7 +244,7 @@ mod tests {
             }));
 
             s.attack(FELINORS, GARY);
-            s.expect_stats(EATER, json!({ "attack": 3, "maxHealth": 3 }));
+            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
 
             // Back to p1's turn, then play the fattened Eater: entering the field resets nothing (R78
             // resets a card LEAVING the field), so it arrives at the stats it ate its way to.
@@ -250,7 +252,24 @@ mod tests {
             s.play(EATER, json!({}));
 
             s.expect_in_zone(EATER, "field");
-            s.expect_stats(EATER, json!({ "attack": 3, "maxHealth": 3 }));
+            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
+        }
+
+        #[test]
+        fn issue_3136_it_is_a_5_5_with_no_keyword_so_it_cannot_attack_the_turn_it_enters() {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "p1": { "hand": [EATER, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] },
+            }));
+
+            s.play(EATER, json!({}));
+
+            s.expect_stats(EATER, json!({ "attack": 5, "health": 5, "maxHealth": 5 }));
+            assert!(kinds(&s.stats(EATER).keywords).is_empty());
+            // No Rush any more: summoning sick against a Unit as against the hero.
+            s.expect_refused(|s| s.attack(EATER, GARY));
+            s.expect_refused(|s| s.attack(EATER, "hero"));
         }
     }
 
@@ -258,7 +277,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn gains_double_the_radiant_4_4_takes_twice_the_dying_unit_s_attack_and_max_health() {
+        fn gains_double_the_radiant_10_10_takes_twice_the_dying_unit_s_attack_and_max_health() {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
@@ -266,11 +285,11 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": FELINORS, "lane": 1 }] },
             }));
 
-            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
+            s.expect_stats(EATER, json!({ "attack": 10, "maxHealth": 10 }));
             s.attack(FELINORS, GARY);
 
-            // 4/4 + 2 × 1/1.
-            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
+            // 10/10 + 2 × 1/1.
+            s.expect_stats(EATER, json!({ "attack": 12, "maxHealth": 12 }));
         }
 
         #[test]
@@ -287,8 +306,8 @@ mod tests {
 
             s.attack(STRAAZA, RENO);
 
-            // 4/4 + 2 × 4/6.
-            s.expect_stats(EATER, json!({ "attack": 12, "maxHealth": 16 }));
+            // 10/10 + 2 × 4/6.
+            s.expect_stats(EATER, json!({ "attack": 18, "maxHealth": 22 }));
         }
 
         #[test]
@@ -307,11 +326,28 @@ mod tests {
             s.attack(FELINORS, &token);
 
             s.expect_in_zone(&token, "gone");
-            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
+            s.expect_stats(EATER, json!({ "attack": 10, "maxHealth": 10 }));
         }
 
         #[test]
-        fn stops_once_on_the_field_and_its_printed_divine_shield_is_the_catalog_s_not_a_grant() {
+        fn issue_3136_it_is_a_10_10_with_rush_so_it_attacks_a_unit_the_turn_it_enters_never_the_hero() {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "p1": { "hand": [{ "def": EATER, "radiant": true }, FILLER] },
+                "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] },
+            }));
+
+            s.play(EATER, json!({}));
+
+            s.expect_stats(EATER, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
+            assert_eq!(kinds(&s.stats(EATER).keywords), vec![KeywordKind::Rush]);
+            s.expect_refused(|s| s.attack(EATER, "hero"));
+            s.attack(EATER, GARY);
+            s.expect_in_zone(GARY, "graveyard");
+        }
+
+        #[test]
+        fn stops_once_on_the_field_and_its_printed_rush_is_the_catalog_s_not_a_grant() {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": { "hand": [{ "def": EATER, "radiant": true }, FILLER], "field": [{ "def": STRAAZA, "lane": 2 }] },
@@ -319,15 +355,12 @@ mod tests {
             }));
 
             s.play(EATER, json!({}));
-            assert_eq!(
-                kinds(&s.stats(EATER).keywords),
-                vec![KeywordKind::Rush, KeywordKind::DivineShield]
-            );
+            assert_eq!(kinds(&s.stats(EATER).keywords), vec![KeywordKind::Rush]);
             assert!(s.card(EATER).granted_keywords.is_empty());
 
             s.attack(STRAAZA, GARY);
 
-            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
+            s.expect_stats(EATER, json!({ "attack": 10, "maxHealth": 10 }));
         }
     }
 

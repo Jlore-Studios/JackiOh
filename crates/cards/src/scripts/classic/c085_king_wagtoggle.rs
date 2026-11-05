@@ -1,4 +1,4 @@
-//! C #85 King Wagtoggle (SPEC §8.6 row 85). (4) Unit, Legendary, 5/5 → 10/10.
+//! C #85 King Wagtoggle (SPEC §8.6 row 85). (4) Unit, Legendary, 7/7 → 14/14 (5/5 → 10/10 until issue #3136).
 //!   Base:    "Cry: Swap decks with your opponent."
 //!   Radiant: "Cry: Swap decks with your opponent. Then Recruit {recruits|card|cards}." — recruits 1
 //!
@@ -33,7 +33,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #85 King Wagtoggle (SPEC §8.6 row 85; BUILD M9 row C 85). (4) Unit, Legendary, 5/5 → 10/10: Cry:
+// C #85 King Wagtoggle (SPEC §8.6 row 85; BUILD M9 row C 85). (4) Unit, Legendary, 7/7 → 14/14: Cry:
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -133,12 +133,12 @@ mod tests {
             }
         }
 
-        /// §8.6 a 5/5
+        /// §8.6 a 7/7
         #[test]
-        fn s8_6_a_5_5() {
+        fn issue_3136_s8_6_a_7_7() {
             let mut s = scenario(json!({ "p1": { "hand": [KING, STOCKPILE], "library": [VANILLA] }, "p2": p2_hand() }));
             s.play(KING, json!({}));
-            s.expect_stats(KING, json!({ "attack": 5, "health": 5 }));
+            s.expect_stats(KING, json!({ "attack": 7, "health": 7 }));
             assert!(s.unit(P1, 2).is_none());
         }
     }
@@ -154,7 +154,7 @@ mod tests {
                 "p2": p2_with(json!([STOCKPILE, MENACE, VANILLA]))
             }));
             s.play(KING, json!({}));
-            s.expect_stats(KING, json!({ "attack": 10, "health": 10 }));
+            s.expect_stats(KING, json!({ "attack": 14, "health": 14 }));
             let recruit = must(s.unit(P1, 2), "the recruit");
             assert_eq!(recruit.def_id, MENACE);
             assert_eq!(recruit.owner, P1);

@@ -84,6 +84,27 @@ mod tests {
         assert!(!defender.radiant);
     }
 
+    /// Issue #3136: Right-house defender gains Can't Defend on both faces (R2657000), so the board this
+    /// fills is a board that never enters Defense Position; the card itself is not edited.
+    #[test]
+    fn r2657000_the_defenders_it_fills_the_board_with_have_can_t_defend_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                // One mana over the Party's 4 keeps FILLER playable, so the turn is still p1's after it.
+                "p1": { "hand": [{ "def": PARTY, "radiant": radiant }, FILLER], "mana": 5 },
+                "p2": { "hand": [FILLER] },
+            }));
+            s.play(PARTY, json!({}));
+            for lane in 1..=5 {
+                let defender = s.unit(PlayerId::P1, lane).expect("a defender");
+                assert_eq!(defender.def_id, DEFENDER);
+                assert!(keywords_of(s.state(), &defender).contains(&Keyword::CantDefend));
+                s.expect_refused_with(|s| s.switch_position(&defender), "Defense Position");
+                assert_ne!(s.card(&defender).position, Some(Position::Def));
+            }
+        }
+    }
+
     #[test]
     fn r64_a_full_board_takes_none() {
         crate::register_all();

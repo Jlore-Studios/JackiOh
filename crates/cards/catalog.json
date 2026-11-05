@@ -92,9 +92,12 @@
         },
         {
           "kind": "Reborn"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn"
+      "text": "Taunt, Divine Shield, Reborn, Can't Defend"
     },
     "radiant": {
       "attack": 2,
@@ -108,9 +111,12 @@
         },
         {
           "kind": "Reborn"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Taunt, Divine Shield, Reborn\nDeath: Summon a base Right-house defender."
+      "text": "Taunt, Divine Shield, Reborn, Can't Defend\nDeath: Summon a base Right-house defender."
     }
   },
   "core-004": {
@@ -473,13 +479,13 @@
     "loc": 10,
     "base": {
       "attack": 6,
-      "health": 10,
+      "health": 8,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
       "attack": 12,
-      "health": 20,
+      "health": 16,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     }
@@ -500,8 +506,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -698,19 +704,25 @@
     "cost": 2,
     "loc": 3,
     "base": {
-      "attack": 7,
+      "attack": 6,
       "health": 1,
       "keywords": [
+        {
+          "kind": "Rush"
+        },
         {
           "kind": "First Strike"
         }
       ],
-      "text": "First Strike"
+      "text": "Rush, First Strike"
     },
     "radiant": {
-      "attack": 14,
+      "attack": 12,
       "health": 2,
       "keywords": [
+        {
+          "kind": "Rush"
+        },
         {
           "kind": "First Strike"
         },
@@ -718,7 +730,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "First Strike, Divine Shield"
+      "text": "Rush, First Strike, Divine Shield"
     }
   },
   "core-021": {
@@ -771,7 +783,7 @@
     "rarity": "Epic",
     "flavor": "Toxic",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "copies",
@@ -785,14 +797,14 @@
     ],
     "loc": 85,
     "base": {
-      "attack": 4,
-      "health": 6,
+      "attack": 2,
+      "health": 4,
       "keywords": [],
       "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon {copies|copy|copies} of it."
     },
     "radiant": {
-      "attack": 8,
-      "health": 12,
+      "attack": 4,
+      "health": 8,
       "keywords": [],
       "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Fill your board with copies of it."
     }
@@ -1405,7 +1417,7 @@
     "params": [
       {
         "key": "chance",
-        "base": 30,
+        "base": 50,
         "radiant": 100,
         "better": "up",
         "step": 10,
@@ -1766,16 +1778,24 @@
     "cost": 4,
     "loc": 14,
     "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Crater"
+        }
+      ],
+      "text": "Crater\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Crater"
+        }
+      ],
+      "text": "Crater\nCry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
     }
   },
   "core-053": {
@@ -2983,7 +3003,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "params": [
       {
         "key": "setCost",
@@ -3081,7 +3101,7 @@
     "rarity": "Legendary",
     "flavor": "Dark",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 58,
     "base": {
       "keywords": [],
@@ -4538,7 +4558,7 @@
     "rarity": "Common",
     "flavor": "Holy",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "setCost",
@@ -5006,8 +5026,8 @@
     "params": [
       {
         "key": "draw",
-        "base": 4,
-        "radiant": 5,
+        "base": 5,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -6655,7 +6675,7 @@
     "loc": 3,
     "base": {
       "attack": 3,
-      "health": 6,
+      "health": 4,
       "keywords": [
         {
           "kind": "Rush"
@@ -6671,7 +6691,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 12,
+      "health": 8,
       "keywords": [
         {
           "kind": "Charge"
@@ -7175,14 +7195,14 @@
     ],
     "loc": 7,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 7,
+      "health": 7,
       "keywords": [],
       "text": "Cry: Swap decks with your opponent."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 14,
+      "health": 14,
       "keywords": [],
       "text": "Cry: Swap decks with your opponent. Then Recruit {recruits|card|cards}."
     }
@@ -28378,13 +28398,13 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 6,
+      "attack": 4,
       "health": 10,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 12,
+      "attack": 8,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
@@ -28469,13 +28489,13 @@
     "cost": 4,
     "loc": 15,
     "base": {
-      "attack": 3,
+      "attack": 1,
       "health": 10,
       "keywords": [],
       "text": "Cry: Destroy all non-Felinor Units."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 2,
       "health": 20,
       "keywords": [],
       "text": "Cry: Destroy all enemy non-Felinor Units."
@@ -28629,27 +28649,20 @@
     "cost": 4,
     "loc": 39,
     "base": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies."
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "While this is in your hand, it gains the attack and health of each Unit that dies."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Rush"
-        },
-        {
-          "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Divine Shield\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
     }
   },
   "traininggrounds-057": {
