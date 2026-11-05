@@ -283,7 +283,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
         outcome: t(PREDICTED_WORDS[event.outcome]),
       });
     case "scriptFailed":
-      // R915004: a custom card's hook did nothing; the engine's words say why.
+      // A hook that failed and did nothing; the engine's words say why.
       return t("{card}'s script failed: {message}", {
         card: event.instanceId === null ? named(event.defId) : namedCard(event.instanceId, event.defId),
         message: event.message,

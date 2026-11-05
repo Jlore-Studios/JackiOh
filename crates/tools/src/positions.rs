@@ -10,7 +10,9 @@
 //! `--every turn` (the default) writes the seat's first main-phase decision of its turn, `decision`
 //! every main-phase decision, `reply` the position after the opponent's reply as the search simulates
 //! it (R1006006). A header line (`PositionsHeader`) names the features. `--policy` (#1171) adds each
-//! decision's policy label, read from `redact` alone (R1171000).
+//! decision's policy label, read from `redact` alone (R1171000). The counts it prints end with the
+//! copies of cards its rows name and how many name an id this build's network has no row for, and their
+//! share, `unknownShare`, which says when the network wants a refit (R3112002).
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -18,8 +20,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use jackioh_ai::{
-    AI_EVAL, FEATURES_VERSION, NextSwing, POLICY_KEYS_VERSION, PolicyLabel, Prices, create_node_counter,
-    dense_names, evaluate, features_of, hidden_card_ids, policy_label, simulate_reply,
+    AI_EVAL, FEATURES_VERSION, LEARNED, NextSwing, POLICY_KEYS_VERSION, PolicyLabel, Prices,
+    create_node_counter, dense_names, evaluate, features_of, hidden_card_ids, policy_label, simulate_reply,
+    unknown_cards,
 };
 use jackioh_engine::{
     ActionBody, CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for,
@@ -120,21 +123,39 @@ pub(crate) struct Counts {
     pub unclean: usize,
     pub unreadable: usize,
     pub positions: usize,
+    /// R3112002: the copies of cards the rows name by id, each copy of each row once.
+    pub cards: usize,
+    /// R3112002: of `cards`, the copies whose id the network has no row for.
+    pub unknown_cards: usize,
 }
 
 impl Counts {
-    fn add(&mut self, folded: &Result<Vec<PositionRow>, Dropped>) {
+    /// `folded`'s game counted, its rows' cards against `known`, the ids the network knows (sorted).
+    fn add(&mut self, folded: &Result<Vec<PositionRow>, Dropped>, known: &[&str]) {
         self.games += 1;
         match folded {
             Ok(rows) => {
                 self.replayed += 1;
                 self.positions += rows.len();
+                for row in rows {
+                    let found = unknown_cards(&row.sparse, known);
+                    self.cards += found.named;
+                    self.unknown_cards += found.unknown;
+                }
             }
             Err(Dropped::NoResult) => self.no_result += 1,
             Err(Dropped::NotReplayed) => self.not_replayed += 1,
             Err(Dropped::EarlierPatch) => self.earlier_patch += 1,
             Err(Dropped::Unclean) => self.unclean += 1,
         }
+    }
+
+    /// R3112002: the share of the rows' cards whose id the network has no row for, 0 with none.
+    pub(crate) fn unknown_share(&self) -> f64 {
+        if self.cards == 0 {
+            return 0.0;
+        }
+        self.unknown_cards as f64 / self.cards as f64
     }
 }
 
@@ -317,6 +338,7 @@ pub(crate) fn write_positions(
     serde_json::to_writer(&mut writer, &header(every, build_catalog, policy))?;
     writer.write_all(b"\n")?;
 
+    let known = LEARNED.known_card_ids();
     let mut counts = Counts::default();
     for path in logs {
         let file = std::fs::File::open(path)
@@ -345,7 +367,7 @@ pub(crate) fn write_positions(
                 .map(|game| fold_game(game, every, build_catalog, policy))
                 .collect();
             for result in &folded {
-                counts.add(result);
+                counts.add(result, &known);
                 if let Ok(rows) = result {
                     for row in rows {
                         serde_json::to_writer(&mut writer, row)?;
@@ -369,7 +391,12 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let counts = write_positions(&args.logs, &args.out, args.every, args.policy)?;
     println!(
         "{}",
-        serde_json::json!({ "out": args.out.display().to_string(), "every": args.every, "counts": counts })
+        serde_json::json!({
+            "out": args.out.display().to_string(),
+            "every": args.every,
+            "counts": counts,
+            "unknownShare": counts.unknown_share(),
+        })
     );
     Ok(())
 }
@@ -377,7 +404,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_ai::{AI_GATE_BUDGET, MatchHooks, dev_game_config, play_match};
+    use jackioh_ai::{AI_GATE_BUDGET, MatchHooks, card_id_of_key, dev_game_config, play_match};
     use jackioh_engine::find_instance;
 
     fn played(n: i32) -> (SelfplayGame, Vec<(GameState, usize)>) {
@@ -548,6 +575,38 @@ mod tests {
         assert_eq!(labeled["policyKeysVersion"], POLICY_KEYS_VERSION);
         let unlabeled = serde_json::to_value(header(Every::Decision, build, false)).unwrap();
         assert!(unlabeled.get("policyKeysVersion").is_none(), "{unlabeled}");
+    }
+
+    /// R3112002: the counts name every copy of a card the rows name by id, and of them the ones whose
+    /// id the network has no row for: all of them against a network that knows no card, none against
+    /// one that knows every card the rows name.
+    #[test]
+    fn r3112002_positions_count_the_cards_the_network_has_no_row_for() {
+        let (game, _) = played(1);
+        let folded = fold_game(&game, Every::Turn, jackioh_cards::catalog_version(), false);
+        let mut ids: Vec<&str> = folded
+            .as_ref()
+            .expect("it replays")
+            .iter()
+            .flat_map(|row| row.sparse.iter())
+            .filter_map(|(key, _)| card_id_of_key(key).map(|(_, id)| id))
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+
+        let mut none_known = Counts::default();
+        none_known.add(&folded, &[]);
+        assert!(none_known.cards > 0, "{none_known:?}");
+        assert_eq!(none_known.unknown_cards, none_known.cards);
+        assert_eq!(none_known.unknown_share(), 1.0);
+
+        let mut all_known = Counts::default();
+        all_known.add(&folded, &ids);
+        assert_eq!(all_known.cards, none_known.cards);
+        assert_eq!(all_known.unknown_cards, 0);
+        assert_eq!(all_known.unknown_share(), 0.0);
+
+        assert_eq!(Counts::default().unknown_share(), 0.0);
     }
 
     #[test]

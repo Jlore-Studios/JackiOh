@@ -269,7 +269,7 @@ describe("B37 the corner slot", () => {
   it("R1577000 the removed entries have no call to action on the landing", () => {
     render(<LandingRoute />);
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
-    for (const path of [paths.together, paths.decks, paths.creator]) {
+    for (const path of [paths.together, paths.decks]) {
       expect(ctas.querySelector(`a[href="${path}"]`), `${path} has no door`).toBeNull();
     }
     // The invite-only sentence lives on `/invite` and `/play`, not beside the doors.

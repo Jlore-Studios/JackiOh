@@ -100,6 +100,7 @@ export const RELEASES: readonly Release[] = [
       "Every Stinkyscape card wears the set's mark, a ringed green planet, and every Legendary and Mythic of the set opens its play with a few bars of its own.",
       "A deck holds a Core card or its Training Grounds copy, never both, and the deck builder says which one it holds.",
       "Every Training Grounds card wears the set's mark, a straw archery target over crossed practice swords, and its Legendaries and its Mythic open their play with a few bars of their own.",
+      "Custom cards and the card creator are gone, and the cards you made are deleted.",
     ],
   },
 ];

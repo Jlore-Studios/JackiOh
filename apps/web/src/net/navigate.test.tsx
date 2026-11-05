@@ -73,14 +73,14 @@ afterEach(() => {
 
 describe("R1754000 a page that holds work a move would lose is asked before it is left", () => {
   it("R1754000 a guard holds every navigate off its page and hands over the move; a forced move and a released guard go at once", () => {
-    at(paths.creator);
+    at(paths.collection);
     const held = guard();
 
     expect(navigate("/decks")).toBe(false);
-    expect(window.location.pathname).toBe(paths.creator);
+    expect(window.location.pathname).toBe(paths.collection);
     expect(held).toHaveLength(1);
 
-    expect(navigate(paths.creator)).toBe(true);
+    expect(navigate(paths.collection)).toBe(true);
     expect(held).toHaveLength(1);
 
     held[0]?.();
@@ -96,7 +96,7 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
   });
 
   it("R1754000 leaveFirst runs at once unguarded, else through the hold", () => {
-    at(paths.creator);
+    at(paths.collection);
     const ran = vi.fn();
 
     expect(leaveFirst(ran)).toBe(true);
@@ -117,15 +117,15 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
 
   it("R1754000 the browser's Back off a guarded page puts its address back, and the held move goes back unheld", async () => {
     at("/decks");
-    window.history.pushState(null, "", paths.creator);
+    window.history.pushState(null, "", paths.collection);
     const { result } = renderHook(() => usePathname());
     const held = guard();
 
     await traverse(() => {
       window.history.back();
     });
-    expect(window.location.pathname).toBe(paths.creator);
-    expect(result.current).toBe(paths.creator);
+    expect(window.location.pathname).toBe(paths.collection);
+    expect(result.current).toBe(paths.collection);
     expect(held).toHaveLength(1);
 
     await traverse(() => {
@@ -137,20 +137,20 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
   });
 
   it("R1754000 the browser's Forward off a guarded page is held too, and the held move goes forward", async () => {
-    at(paths.creator);
+    at(paths.collection);
     window.history.pushState(null, "", "/decks");
     await traverse(() => {
       window.history.back();
     });
     const { result } = renderHook(() => usePathname());
     const held = guard();
-    expect(result.current).toBe(paths.creator);
+    expect(result.current).toBe(paths.collection);
 
     await traverse(() => {
       window.history.forward();
     });
-    expect(window.location.pathname).toBe(paths.creator);
-    expect(result.current).toBe(paths.creator);
+    expect(window.location.pathname).toBe(paths.collection);
+    expect(result.current).toBe(paths.collection);
     expect(held).toHaveLength(1);
 
     await traverse(() => {
@@ -166,7 +166,7 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
 
   it("R1754000 a held browser move made once goes once", async () => {
     at("/decks");
-    window.history.pushState(null, "", paths.creator);
+    window.history.pushState(null, "", paths.collection);
     renderHook(() => usePathname());
     const held = guard();
     await traverse(() => {
@@ -188,18 +188,18 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
     vi.useFakeTimers();
     signIn();
     rememberQueued("bo1");
-    at(paths.creator);
+    at(paths.collection);
     const held = guard();
     const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-9"));
 
-    render(<Follower path={paths.creator} read={read} />);
+    render(<Follower path={paths.collection} read={read} />);
     await advance(0);
     expect(screen.getByTestId("found")).toHaveTextContent(MATCH_FOUND_STATUS);
     expect(readQueued()).toBeNull();
 
     await advance(MATCH_FOUND_NAV_DELAY_MS);
     expect(held).toHaveLength(1);
-    expect(window.location.pathname).toBe(paths.creator);
+    expect(window.location.pathname).toBe(paths.collection);
     expect(screen.queryByTestId("found")).toBeNull();
 
     const reads = read.mock.calls.length;

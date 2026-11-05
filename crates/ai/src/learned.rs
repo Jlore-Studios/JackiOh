@@ -9,13 +9,15 @@
 //! and so does the tutorial's opponent (R1012003), whose lessons are scripts written for it. The float
 //! network is `f64`, every loop in one fixed order, ReLU written as comparisons and no libm function:
 //! the determinism the hand eval's own `f64` rests on (D7). A feature key the weights' table lacks is
-//! no input, so a new or custom card (#915) is valued by its dense stats alone (D5).
+//! no input, so a new or custom card's (#915) id key is none (D5), but the keys of what it is are
+//! (R3112000): its type, cost, tags, keywords, printed stats and Radiant face share what was learned of
+//! cards like it.
 
 use jackioh_engine::{AI_TUTORIAL, GameState, Handicap, PlayerId};
 
 use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
-use crate::features::{Features, features_of};
+use crate::features::{Features, card_id_of_key, features_of};
 
 /// One dense layer of the head: `out = clip(w · input + b)`, `w` row-major `outputs × inputs`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -64,7 +66,7 @@ pub enum Learned<'a> {
     Int(IntNetwork<'a>),
 }
 
-impl Learned<'_> {
+impl<'a> Learned<'a> {
     pub fn features_version(&self) -> u32 {
         match self {
             Learned::Float(net) => net.features_version,
@@ -88,6 +90,22 @@ impl Learned<'_> {
         }
     }
 
+    /// R3112002: the card ids it knows, sorted, each once: a card is known when any key of any zone and
+    /// side names it (`card_id_of_key`).
+    pub fn known_card_ids(&self) -> Vec<&'a str> {
+        let keys: &'a [&'a str] = match self {
+            Learned::Float(net) => net.keys,
+            Learned::Int(net) => net.keys,
+        };
+        let mut ids: Vec<&'a str> = keys
+            .iter()
+            .filter_map(|key| card_id_of_key(key).map(|(_, id)| id))
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        ids
+    }
+
     pub fn correction(&self, features: &Features) -> f64 {
         match self {
             Learned::Float(net) => net.correction(features),
@@ -104,6 +122,34 @@ impl Learned<'_> {
 }
 
 include!(concat!(env!("OUT_DIR"), "/learned_weights.rs"));
+
+/// R3112002: of the copies of cards a position names, how many name an id a network has no row for.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct UnknownCards {
+    pub named: usize,
+    pub unknown: usize,
+}
+
+/// R3112002: the copies of cards `sparse` names by id, and how many of them `known` (sorted, as
+/// `Learned::known_card_ids` gives it) lacks. Each copy counts once, whatever else it is.
+pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards {
+    let mut cards = UnknownCards::default();
+    for (key, count) in sparse {
+        let Some((zone, id)) = card_id_of_key(key) else {
+            continue;
+        };
+        // R1012004: a Radiant card in hand also has its `hand` key, which counted the copy already.
+        if zone == "hand_radiant" {
+            continue;
+        }
+        let copies = usize::try_from(*count).unwrap_or(0);
+        cards.named += copies;
+        if known.binary_search(&id).is_err() {
+            cards.unknown += copies;
+        }
+    }
+    cards
+}
 
 /// The ReLU clipped at one, as comparisons: below zero is zero, above one is one, NaN stays NaN.
 /// Written out rather than `f64::clamp` so the comparisons R1010001 names are the code itself.
@@ -276,12 +322,17 @@ pub fn finalist_score_with(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::features::{FEATURES_VERSION, dense_len};
+    use crate::features::{FEATURES_READ_SINCE, FEATURES_VERSION, dense_len};
 
-    /// R1010000: the network compiled in was fitted on this build's feature layout.
+    /// R1010000, R3112001: the network compiled in was fitted on a feature layout this build reads as it
+    /// was fitted: its own, or one from `FEATURES_READ_SINCE` on, to which it only added sparse keys.
     #[test]
-    fn r1010000_the_compiled_network_was_fitted_on_this_feature_version_and_layout() {
-        assert_eq!(LEARNED.features_version(), FEATURES_VERSION);
+    fn r1010000_r3112001_the_compiled_network_was_fitted_on_a_feature_layout_this_build_reads() {
+        assert!(
+            (FEATURES_READ_SINCE..=FEATURES_VERSION).contains(&LEARNED.features_version()),
+            "the network's FEATURES_VERSION {} is outside {FEATURES_READ_SINCE}..={FEATURES_VERSION}",
+            LEARNED.features_version()
+        );
         assert_eq!(LEARNED.dense_len(), dense_len());
         match LEARNED {
             Learned::Float(net) => {

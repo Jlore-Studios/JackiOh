@@ -5,7 +5,6 @@
 
 import { vi } from "vitest";
 
-import type { CustomCard } from "@jackioh/shared";
 import type {
   RunAction,
   RunConstants,
@@ -158,14 +157,6 @@ export function setupOf(over: Partial<RunSetup> = {}): RunSetup {
   return { seed: "ABCDEF", starter: STARTERS, artifacts: [], curses: [], ...over };
 }
 
-/** A card as the account keeps it. */
-export const IMP: CustomCard = {
-  id: "custom-ember-imp",
-  version: 2,
-  frame: { name: "Ember Imp", type: "Unit", cost: 1, rarity: "Common", attack: 1, health: 2, text: "" },
-  source: "",
-};
-
 /** Six capital letters from any text: a deterministic stand-in for `runSeed`, which the Rust draws from. */
 export function seedFrom(text: string): string {
   let state = 7;
@@ -218,7 +209,7 @@ function foldStandIn(file: RunFile): { state: RunState } | { error: string } {
  * default back.
  */
 export const wasmBindings = {
-  runContent: vi.fn((_customCards: CustomCard[]): RunContent => CONTENT),
+  runContent: vi.fn((): RunContent => CONTENT),
   runCheckSetup: vi.fn((_setup: RunSetup, _unlocks: RunUnlocks, _content: RunContent): string | null => null),
   runCreate: vi.fn((setup: RunSetup, _unlocks: RunUnlocks, _content: RunContent): { state: RunState } | { error: string } =>
     createStandIn(setup),
