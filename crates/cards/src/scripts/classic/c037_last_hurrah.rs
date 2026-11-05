@@ -1,7 +1,7 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
 //!   Base:    "Draw your deck. At the end of this turn, discard {discard|card|cards}." (discard 6)
 //!   Radiant: "Draw your deck. At the end of your next turn, discard {discard|card|cards}." (discard 6)
-//!   Through v0.5.11o: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
+//!   Through v0.5.11p: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
 //!
 //! "Draw your deck" is R58's "draw your whole library": as many draws as the library holds when the
 //! effect starts, each an ordinary §2.4 draw — a cast-on-draw card is cast (R58), a card past the hand
@@ -23,7 +23,7 @@ pub const ID: &str = "classic-037";
 const DISCARD: &str = "discard";
 
 /// One face: draw the deck, then the delayed discard at `turn`'s end (R458); `counted` is whether it
-/// takes `discard` cards (R3134000) rather than the whole hand, as v0.5.11o's did.
+/// takes `discard` cards (R3134000) rather than the whole hand, as v0.5.11p's did.
 fn last_hurrah(turn: &'static str, counted: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -49,7 +49,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: the delayed
+/// R767000: the scripts v0.5.11p and the versions before it ran, kept for their replays: the delayed
 /// discard took the whole hand, both faces.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts { base: last_hurrah("this", false), radiant: last_hurrah("next", false) }

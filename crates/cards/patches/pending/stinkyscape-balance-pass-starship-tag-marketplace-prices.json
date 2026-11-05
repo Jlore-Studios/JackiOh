@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape balance pass — Starship tag, Marketplace prices, Weapons and twenty cards",
   "sources": "#3000",
-  "notes": " Part 5 (#3139) rewrites eleven Core, Classic and Training Grounds scripts (R3139000 to R3139004); xxFreshJack and Shockwave447 (stinkyscape-109, -111) play differently as the BUSTED and complicated lists they draw from moved.",
+  "notes": " Part 1 (#3134): Last Hurrah's counted discard (R3134000), Joint Filing's turn-hook pools (R3134001) and Heroic Power's Cry Discover of 3 of its 13 powers (R3134002).",
   "player": {
     "title": "Stinkyscape balance pass",
     "new": [],
@@ -84,7 +84,10 @@
       "Masochism Mask makes your hand Radiant once you have taken 6 of its downsides, and again every 6.",
       "Corpse Eater has Brittle 1 (Radiant Brittle 3), and after it attacks a Unit it may attack again.",
       "Tutorial Master's Cry and Death add Training Grounds cards that no longer cost less.",
-      "Legacy: Snom Bunny Mind Control sets the stolen Unit's stats to 4/4, and its Radiant face steals any enemy card."
+      "Legacy: Snom Bunny Mind Control sets the stolen Unit's stats to 4/4, and its Radiant face steals any enemy card.",
+      "Last Hurrah discards 6 cards at the end of the turn instead of your whole hand.",
+      "Joint Filing gains a Cry: add a random card with a Start of turn or End of turn effect to your hand (Radiant: one of each).",
+      "Heroic Power lets you Discover one of 3 of its powers when you play it, instead of starting the game with a random one."
     ],
     "text": [],
     "fixes": []
@@ -105,9 +108,11 @@
     "core-082",
     "core-085",
     "core-089",
+    "core-098",
     "classic-004",
     "classic-014",
     "classic-026",
+    "classic-037",
     "classic-040",
     "classic-057",
     "classic-062",
@@ -117,6 +122,7 @@
     "classicplus-001",
     "classicplus-051",
     "meditative-005",
+    "meditative-009",
     "stinkyscape-007",
     "stinkyscape-012",
     "stinkyscape-012-3",

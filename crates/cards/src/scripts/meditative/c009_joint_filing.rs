@@ -5,7 +5,7 @@
 //!            (extra 1)
 //!   Radiant: "Cry: Add a random card with a Start of turn effect and a random card with an End of turn
 //!            effect to your hand." and the same Aura, extra 2.
-//!   Through v0.5.11o: the Aura alone (`script_v0_5_11o`, kept, R767000).
+//!   Through v0.5.11p: the Aura alone (`script_v0_5_11o`, kept, R767000).
 //!
 //! The Cry draws from the catalog pool the `turnHook` filter names (R3134001): the non-token cards of every
 //! set that ships (R380, R1420) whose base-face script sets `start_of_turn`, `end_of_turn` or either, never
@@ -49,7 +49,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: the Aura alone, no Cry.
+/// R767000: the scripts v0.5.11p and the versions before it ran, kept for their replays: the Aura alone, no Cry.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
         radiant: aura(),

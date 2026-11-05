@@ -2036,7 +2036,7 @@ mod r243_what_the_view_carries_of_a_card_beyond_its_printed_face {
             "p1": { "hand": ["core-021"], "library": [HEROIC_POWER, MR_VANILLA, MR_VANILLA] },
             "p2": { "hand": ["core-021"], "library": [MR_VANILLA] },
         }));
-        // The turn's draw puts the Heroic Power in hand. Through v0.5.11o R151 rolled its power as it
+        // The turn's draw puts the Heroic Power in hand. Through v0.5.11p R151 rolled its power as it
         // arrived; since issue #3134 it holds none until its Cry Discovers one (R3134002), so its view
         // names none, and one it does hold (an old game's, or a power given) is named.
         g.start_turn();

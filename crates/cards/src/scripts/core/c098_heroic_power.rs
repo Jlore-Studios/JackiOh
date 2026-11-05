@@ -2,7 +2,7 @@
 //! R3134002). Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Cry: Discover one of
 //! 13 powers, each 'Activate: Spend (X)'" (each power's words are its catalog line). Radiant: every
 //! power's Radiant words, Armor Up named Tank Up (R757).
-//! Through v0.5.11o: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
+//! Through v0.5.11p: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
 //! The thirteen powers live in `subsystems/hero_power.rs` (R43); `power_abilities` declares each as an
 //! Activate ability (R384, R752) present only while the card has that power, its X the mana price. State is
 //! on the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
@@ -20,7 +20,7 @@ pub const ID: &str = "core-098";
 
 /// Both faces are the same wiring: `power_abilities(radiant)` builds each power on the face that is
 /// running (§5.2), and `has` keeps only the one the instance has. `discovers` is whether the Cry asks
-/// (R3134002), where v0.5.11o's rolled at the start of the game in every zone (R43).
+/// (R3134002), where v0.5.11p's rolled at the start of the game in every zone (R43).
 fn heroic_power(radiant: bool, discovers: bool) -> Script {
     Script {
         // §6.2: starts in the opening hand instead of a draw (setup step 2).
@@ -31,7 +31,7 @@ fn heroic_power(radiant: bool, discovers: bool) -> Script {
         // R3134002: "Cry: Discover one of 13 powers."
         cry: discovers.then(|| hook(|_ctx| vec![subsystems::discover_power()])),
         // R151, R3134002: the roll of a copy that reaches the field with no Cry to choose; R43, through
-        // v0.5.11o: every copy in either hand or library rolls its power after the mulligan (§6.2).
+        // v0.5.11p: every copy in either hand or library rolls its power after the mulligan (§6.2).
         start_of_game: Some(hook(move |_ctx| {
             vec![if discovers { subsystems::roll_power_on_field() } else { subsystems::roll_power() }]
         })),
@@ -48,7 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: no Cry, and every
+/// R767000: the scripts v0.5.11p and the versions before it ran, kept for their replays: no Cry, and every
 /// copy in either hand or library rolled its power at the start of the game (R43).
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
@@ -527,7 +527,7 @@ mod tests {
 
         #[test]
         fn r3134002_a_heroic_power_in_the_hand_has_no_power_to_show_until_it_is_played() {
-            // Through v0.5.11o a copy rolled in the hand as it arrived (R151); now playing it asks.
+            // Through v0.5.11p a copy rolled in the hand as it arrived (R151); now playing it asks.
             let mut s = scenario(json!({
                 "seed": "hp-hand",
                 "p1": { "hand": [FILLER_DRAW], "library": [HEROIC, SPARE], "mana": 8 },

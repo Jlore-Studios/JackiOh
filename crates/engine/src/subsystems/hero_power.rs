@@ -8,7 +8,7 @@
 //! R3134002: since issue #3134 the card's Cry Discovers its power (`discover_power`): a Choose one of
 //! `DISCOVER_OPTIONS` different powers, whose answer is the power (`POWER_PICK`). A copy that reaches
 //! the field with no Cry to choose keeps R151's arrival roll (`roll_power_on_field`); one in a hand or
-//! a library rolls nothing, as playing it asks. Through v0.5.11o every copy rolled in every zone
+//! a library rolls nothing, as playing it asks. Through v0.5.11p every copy rolled in every zone
 //! (`roll_power`, the kept script's).
 //!
 //! R752: the card costs (0); each power is a once-per-turn "Activate: Spend (X): …" ability (R384,

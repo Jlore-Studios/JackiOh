@@ -425,7 +425,7 @@ mod pass_links {
     }
 
     /// What a card is travels with it: KY's Math Equation's climbing price stays a price, and Heroic
-    /// Power keeps the power it holds (R43; through v0.5.11o it rolled one in the hand, R3134002).
+    /// Power keeps the power it holds (R43; through v0.5.11p it rolled one in the hand, R3134002).
     #[test]
     fn r1168000_a_passed_card_keeps_its_return_price_and_its_rolled_power() {
         jackioh_cards::register_all();
@@ -440,7 +440,7 @@ mod pass_links {
         let mut state = duos_scenario("cross-duos-power", decks, free_passes());
         let power = held(&state, A1, HEROIC_POWER).expect("Quickdraw deals Heroic Power");
         // R3134002: a copy in a hand holds no power until its Cry Discovers one, so this one is given one,
-        // as the kept script's roll gave it through v0.5.11o.
+        // as the kept script's roll gave it through v0.5.11p.
         side_mut(&mut state, A1)
             .hand
             .iter_mut()
