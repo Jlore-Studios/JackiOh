@@ -3,11 +3,14 @@
 //! account's starting rewards run only while `App::economy_live` is on (`ECONOMY_LIVE`, §14.12;
 //! #1310, R1310000). The dev tools (`api/dev.rs`, §14.10) write a dev account's own, live or not.
 //!
-//! Its modules: `math`, the set-track level curve (§14.7) and pity (§14.4) (#1298, #1339); `tiers`, the
-//! tiered roll every drop goes through (§14.3, §14.6, #1339); `quests`, the daily quests (§14.9, #1304);
-//! `store`, migration 0045's holdings and ledgers (§14.11) and 0047's practice seeds (§14.8); `rewards`, the
-//! one reward hook (§14.8, #1302); `practice`, a practice claim's check (§14.8, #1303); `track_rewards`, a
-//! set track's reward table (§14.7, #1302); `roll`, the card pack roll (§14.3, #1301); `packs`, buying and
+//! The rolls, pity, the token bars, the set-track curve and its reward table, and the cosmetics registry are
+//! decided in `jackioh_shared` (`economy`, `cosmetics`; #3104): each is `decide(records, inputs, seed, now_ms)
+//! -> outcome` over plain records, and this module reads the records from the store and writes the outcome.
+//!
+//! Its modules: `quests`, the daily quests (§14.9, #1304);
+//! `store`, migration 0045's holdings and ledgers (§14.11) and 0047's practice seeds (§14.8); `grants`, an
+//! outcome's grants written to them (#3104); `rewards`, the
+//! one reward hook (§14.8, #1302); `practice`, a practice claim's check (§14.8, #1303); `packs`, buying and
 //! opening card packs (#1301); `tokens`, the token bars and their tokens (§14.5, #1305); `cosmetic_packs`,
 //! cosmetic packs and the Chase Shard bar (§14.6, #1306); `idempotency`, a spend's `Idempotency-Key`
 //! (§14.11, #2124, R2124000); `spend_slots`, one spend at a time per account (§14.11, #2378, R2378000);
@@ -15,19 +18,14 @@
 //! each card's plays and level, counted with a game's pay (§14.14, #3013, R3013000).
 
 pub mod cosmetic_packs;
+pub mod grants;
 pub mod idempotency;
-pub mod math;
 pub mod news;
 pub mod packs;
 pub mod practice;
 pub mod proficiency;
 pub mod quests;
 pub mod rewards;
-pub mod roll;
 pub mod spend_slots;
 pub mod store;
-#[cfg(test)]
-mod test_support;
-pub mod tiers;
 pub mod tokens;
-pub mod track_rewards;
