@@ -124,7 +124,13 @@ if (a === "run" && b === "list" && f("--workflow") === "super.yml" && f("--commi
   p.state = "closed";
   if (f("--comment") !== undefined) p.comments.push(f("--comment"));
 } else if (a === "pr" && b === "comment") {
-  st.prs.find((x) => x.number === Number(pos[2])).comments.push(f("--body"));
+  const p = st.prs.find((x) => x.number === Number(pos[2]));
+  // lock-conversations.yml locks a thread the bot opened; the Actions token cannot comment on it, the bot can.
+  if (p.locked && process.env.GH_TOKEN !== process.env.PROMOTE_TOKEN) {
+    process.stderr.write("GraphQL: Unable to create comment because issue is locked (addComment)\n");
+    process.exit(1);
+  }
+  p.comments.push(f("--body"));
 } else if (a === "pr" && b === "merge") {
   const p = st.prs.find((x) => x.number === Number(pos[2]));
   if (st.failMerges > 0) { st.failMerges--; fs.writeFileSync(file, JSON.stringify(st)); process.stderr.write("Pull request is not mergeable\n"); process.exit(1); }
@@ -152,7 +158,7 @@ process.stdout.write(printed);
 
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
 interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[]; createdAt?: string }
-interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean; comments: string[] }
+interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean; comments: string[]; locked?: boolean }
 interface SuperRun { databaseId: number; attempt: number; status: string; conclusion: string | null; url: string }
 interface MainSuperRun { databaseId: number; headSha: string; conclusion: string; url: string }
 interface Gh {
@@ -754,6 +760,25 @@ describe("/skip-super", () => {
     );
     expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
     expect(issue(w, 1).title).toBe("Production: everything on main is live");
+  });
+
+  it("posts its note as the bot, so the pull request lock-conversations.yml locked still merges", () => {
+    // The real run of 2026-11-05 21:01 on #3240 died at `gh pr comment`: the bot opened the pull
+    // request for `/promote`, lock-conversations.yml locked it, and the Actions token cannot comment there.
+    const w = promoted();
+    edit(w, (s) => {
+      const p = s.prs.find((x) => x.number === 2);
+      if (p !== undefined) p.locked = true;
+      s.tokens = [];
+    });
+    comment(w, "/skip-super notebooks is red on a change this does not touch");
+    const r = ok(run(w, "issue_comment", { GH_TOKEN: "actions", PROMOTE_TOKEN: "bot" }));
+    expect(r.output).toContain("promoted=true");
+    expect(pr(w, 2)).toMatchObject({ state: "closed", merged: true });
+    expect(pr(w, 2).comments).toEqual(["@maintainer merges this without the super run, the emergency way (`/skip-super`): notebooks is red on a change this does not touch"]);
+    const calls = (token: string): string[] =>
+      gh(w).tokens.filter((c) => c.startsWith(`${token} `)).map((c) => c.slice(token.length + 1));
+    expect(calls("bot")).toEqual(["pr comment", "pr merge", "api DELETE"]);
   });
 
   it("with no pull request open, merges main's newest green commit through one", () => {
