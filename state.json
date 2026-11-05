@@ -15329,11 +15329,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-05T11:37:39Z",
+        "at": "2026-11-05T11:58:46Z",
         "difficulty": "hard",
-        "provider": "claude-4",
+        "provider": "claude-1",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3165, a hard change"
+        "why": "No line of the rule holds (one file in crates/tools, no engine, AI, cross-crate design or migration), so it would be medium, but the bot already rated it hard and a plan may not rate lower"
       },
       "failures": 0,
       "forced": false,
