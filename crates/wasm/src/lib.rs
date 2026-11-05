@@ -238,6 +238,13 @@ pub fn find_instance(state_json: &str, instance_id: &str) -> Result<String, JsEr
     js(wasm_core::find_instance(state_json, instance_id))
 }
 
+/// R3100000: `CombatForecast`, `{ attacks: AttackForecast[], lethal }`: what each attack `seat` may declare
+/// would do, as the board shows it, for the tutorial's coach (`engine::combat_forecast`).
+#[wasm_bindgen]
+pub fn combat_forecast(state_json: &str, seat: &str) -> Result<String, JsError> {
+    js(wasm_core::combat_forecast(state_json, seat))
+}
+
 /// `EmoteId[]`: emote hand `seat` is dealt for `seed` (R1341), matching the match actor (R1342).
 #[wasm_bindgen]
 pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, JsError> {

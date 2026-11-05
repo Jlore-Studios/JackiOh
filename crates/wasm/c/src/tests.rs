@@ -150,6 +150,14 @@ fn engine_exports_answer_what_the_core_bodies_answer() {
         call!(find_instance; state, "no-such-card";),
         expect(wasm_core::find_instance(state, "no-such-card"))
     );
+    // R3100000: a begun game has no unit to attack with, so the forecast is empty and not lethal; a seat
+    // that is neither p1 nor p2 is refused by the body, as the status here.
+    let forecast = call!(combat_forecast; state, seat;);
+    assert_eq!(forecast, expect(wasm_core::combat_forecast(state, seat)));
+    assert_eq!(forecast.text, r#"{"attacks":[],"lethal":false}"#);
+    let refused = call!(combat_forecast; state, "p3";);
+    assert_eq!(refused, expect(wasm_core::combat_forecast(state, "p3")));
+    assert_eq!(refused.status, STATUS_FAILED);
     assert_eq!(
         call!(deal_emote_hand; "c-seed", "p2";),
         expect(wasm_core::deal_emote_hand("c-seed", "p2"))

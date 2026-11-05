@@ -56,14 +56,16 @@ const SHARED: &[&str] = &[
 
 /// What only the normal module binds, and why: R1011000's fixture, which only the normal build is
 /// held to (`apps/web/src/wasm/learned.test.ts`), #936's Duos bindings for `/dev/duos`, whose
-/// game holds no custom card (`apps/web/src/wasm/index.ts` calls them on `normal`), and #3098's
+/// game holds no custom card (`apps/web/src/wasm/index.ts` calls them on `normal`), #3098's
 /// `series`, the Conquest series rules of `jackioh-shared`, which no custom-card practice game or card
-/// creator plays, so the Luau module that leaves with #3097 never binds it, and #3101's `host`, the
-/// match host's machine, which no custom-card practice game plays on (practice runs on it after the Luau
-/// module is gone, #3099), and #3103's `bots` and `bot_decide`, the ladder bots' decisions and the move a
-/// bot owes, which are the machine's and the queue's. Their other wrapper is the C module's (#3093), as the host contract of
+/// creator plays, #3101's `host`, the match host's machine, which no custom-card practice game plays on
+/// (practice runs on it after the Luau module is gone, #3099), and R3100000's combat forecast, which only
+/// a tutorial lesson asks for and a lesson holds no custom card: so the Luau module that leaves with #3097
+/// never binds them, nor #3103's `bots` and `bot_decide`, the ladder bots' decisions and the move a bot
+/// owes, which are the machine's and the queue's. Their other wrapper is the C module's (#3093), as the host contract of
 /// `crates/shared/README.md` says.
 const NORMAL_ONLY: &[&str] = &[
+    "combat_forecast",
     "learned_parity",
     "duos_create",
     "duos_begin",

@@ -20,6 +20,7 @@ import {
   motifRing,
   motifShake,
   motifShot,
+  otherSide,
   placeOf,
   readEvents,
   sourceOf,
@@ -107,10 +108,6 @@ export const barrage: MotifPlanner = {
     return cues;
   },
 };
-
-function otherSide(side: Side): Side {
-  return side === "you" ? "opponent" : "you";
-}
 
 /**
  * lance: JackiOh's lane. A beam runs down the first target's whole lane, from the far side's backrow
