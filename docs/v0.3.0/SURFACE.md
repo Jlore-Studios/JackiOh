@@ -786,6 +786,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn loadout(call_json: &str) -> String;
     // #3102: jackioh-shared's loadout visibility rule (SPEC §10.8, R1834003, R3013002). A LoadoutCall in ({ call: "dealtCards", state } | { call: "shownDefs", view, dealt }
     // | { call: "cardsDue", shown, loadouts, sent? }), a LoadoutAnswer out ({ dealt } | { shown } | { due: { cards, sent } }); the host holds the deal and each receiver's sent set
+#[wasm_bindgen] pub fn ranked(call_json: &str) -> String;
+    // #3105: jackioh-shared's ranked ladder (SPEC §9.12, R603–R612). A RankedCall in ({ call: "rateGame", game: { standings, sides, winnerSide?, reason, stake?, season, ladder, strict?, nowMs } } | planSeason | softReset | visibleRank | peakBadge | jloriousOrder),
+    // a RankedAnswer out ({ game: { sides, ranks, peaks, jlorious, records } } | { season } | { reset } | { rank } | { badge } | { jlorious }); each record carries sortKey, the integer a leaderboard sorts by
 #[wasm_bindgen] pub fn bots(call_json: &str) -> String;
     // #3103: jackioh-shared's ladder bots (SPEC §9.12, R1453, R1454, R641000, R1555000). A BotCall in ({ call: "chooseBot", ticket, bots, recent, busy, hour, catalogVersion } | { call: "planPool" | "planGrind" | "newBot" | "drawDecks" | "drawTrio" | "fallbackDue" | "pickIsDue" | "botPick" | … }),
     // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | …); the host reads its store into plain records and writes what comes out
@@ -881,7 +884,7 @@ app.rs         ← src/index.ts (part 18): App, the route table, boot, backgroun
 auth.rs        (part 18) the Auth enum (from src/api/auth.ts's provider half and src/api/e2e.ts's fixture auth)
 api/<x>.rs     ← src/api/<x>.ts (parts 18 and 19, by PORT-MAP)
 actor/<x>.rs   ← src/match/<x>.ts (part 19); actor.ts → match_actor.rs (clippy's module_inception)
-ranked/<x>.rs  ← src/ranked/<x>.ts (part 18), pure
+ranked/<x>.rs  ← src/ranked/<x>.ts (part 18), pure; since #3105 `jackioh-shared`'s (crates/shared/src/ranked/), which the server re-exports as `ranked`
 db/store.rs    (part 20) the Db and Tx enums and every store method (← src/api/ports.ts's Store half)
 db/pg.rs       (part 20) ← src/db/store.ts: one free async fn per store method over sqlx
 db/fake.rs     (part 20) ← src/api/memory-stores.ts + e2e-store.ts: one free fn per store method over FakeData

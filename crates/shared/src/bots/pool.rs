@@ -48,6 +48,17 @@ pub enum BotLadder {
     Random,
 }
 
+/// R2778000: a bot's two ladders are the ranked ladder's (`ranked::ladder::Ladder`), which the server's store
+/// rows and rated games name, under the names the pool reads; the server converts with `into()`.
+impl From<crate::ranked::ladder::Ladder> for BotLadder {
+    fn from(ladder: crate::ranked::ladder::Ladder) -> Self {
+        match ladder {
+            crate::ranked::ladder::Ladder::Constructed => BotLadder::Constructed,
+            crate::ranked::ladder::Ladder::Random => BotLadder::Random,
+        }
+    }
+}
+
 /// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
 /// R1834005: and the slots it wears it with, drawn as a person's deck's (`bots::cosmetics`); absent
 /// on a deck dealt since the bot last drew its loadout, which the pool's next refresh draws.

@@ -38,15 +38,6 @@ use crate::username::{matches_lists, normalize_username, username_key};
 // The store's rows as the pure decisions read them (`jackioh_shared::bots`): a Roblox DataStore script
 // would implement the same traits, or hand over `BotFacts`.
 
-impl From<Ladder> for BotLadder {
-    fn from(ladder: Ladder) -> Self {
-        match ladder {
-            Ladder::Constructed => BotLadder::Constructed,
-            Ladder::Random => BotLadder::Random,
-        }
-    }
-}
-
 impl From<QueueMode> for BotMode {
     fn from(mode: QueueMode) -> Self {
         match mode {

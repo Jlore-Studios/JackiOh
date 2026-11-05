@@ -428,6 +428,15 @@ pub fn host(call_json: &str) -> Result<String, JsError> {
     js(wasm_core::host(call_json))
 }
 
+// The ranked ladder (SPEC §9.12, #3105: `jackioh-shared`, which the server calls natively)
+
+/// One call of the ranked ladder's rules: a `RankedCall` as JSON in, a `RankedAnswer` as JSON out. The host
+/// holds the ladder's records and passes the time in (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn ranked(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::ranked(call_json))
+}
+
 // The ladder bots (SPEC §9.12, #3103: `jackioh-shared`, which the server calls natively)
 
 /// One call of the decisions around a ladder bot: a `BotCall` as JSON in, a `BotAnswer` as JSON out. The
