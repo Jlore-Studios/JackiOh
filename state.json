@@ -12703,9 +12703,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-04T19:41:54Z",
-      "owner_why": "its approval shipped `fe33db6202f0`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-1",
+      "owner_since": "2026-11-05T02:04:38Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-04T12:35:28Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -15146,9 +15146,7 @@
     },
     "3050": {
       "action": "revise",
-      "asks": [
-        "c:6647234166"
-      ],
+      "asks": [],
       "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "d8d0a1fe81f048e022cdd11bc44bc8f479380634",
@@ -15188,15 +15186,15 @@
       "issue": 2944,
       "kind": "revise",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "revising",
       "merge_owner": "claude-4",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-05T01:39:16Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "41903260232",
+      "run_id": "pending:aed5b7ae-1793844242",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15217,9 +15215,11 @@
         "run": "41903260232"
       },
       "source": "request",
-      "started_at": "2026-11-04T20:05:34Z",
+      "started_at": "2026-11-05T02:04:38Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6647234166"
+      ],
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -16621,9 +16621,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T01:50:44Z",
+    "at": "2026-11-05T02:04:38Z",
     "url": "",
-    "what": "spot-check #3109 on claude-1"
+    "what": "revise #3050 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-05T01:48:37Z",
