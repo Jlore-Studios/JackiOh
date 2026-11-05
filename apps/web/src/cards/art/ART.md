@@ -57,6 +57,14 @@ Felinors, runes, posters and Golem each what the card is (R2202000). Its Legacy 
 (`SNAPSHOT_ART`) draw their Core card's subject in the yard, each with a touch of its own
 (`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id.
 
+## A fused card's art (R3045000)
+
+A fusion joins its ingredients' names and unions their tags, which this art reads. So `<CardArt>` first resolves the card
+whose art it draws (`fusedArt.ts`): a fused definition holding a Miner (Stinkyscape #62 to #66) or a Weapon-tagged card
+draws the last ingredient that is neither, the host an Equip was fused onto, by that card's id, name and tags, so its
+delivered file, family, seed and theme are the host's. Any other card, and a fusion whose ingredients a digest id hides,
+draws as it is handed; a Starship in play draws its own (R2249000).
+
 ## The full-art cards' moving art
 
 A full-art card's procedural picture also has a moving version (R2715001, `motion.ts`): given the
