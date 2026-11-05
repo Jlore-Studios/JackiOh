@@ -17690,6 +17690,17 @@
         "tiers": {
           "claude": "medium"
         }
+      },
+      "waiting_turn": {
+        "behind": [
+          3123
+        ],
+        "ends": "2026-11-05T09:49:37Z",
+        "from_run": "41987120001",
+        "head": "049569a7f9c040f5cff38a7be99c8a1399a36c44",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-05T07:49:37Z"
       }
     },
     "3158": {
