@@ -15,7 +15,7 @@ describe("R1437000 which flavor a definition draws", () => {
     expect(FLAVOR_FALLBACK).toBe("Physical");
     expect(flavorOf(undefined)).toBe("Physical");
     expect(flavorOf({})).toBe("Physical");
-    // A hidden card, and an id no catalog has (a crafted or custom card the view brought no definition for).
+    // A hidden card, and an id no catalog has (a crafted card the view brought no definition for).
     expect(flavorOfId("hidden")).toBe("Physical");
     expect(flavorOfId("t-404")).toBe("Physical");
   });

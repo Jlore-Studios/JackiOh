@@ -120,7 +120,6 @@ const LeaderboardRoute = routeChunks.leaderboard.Screen;
 const CollectionRoute = routeChunks.collection.Screen;
 const ShopRoute = routeChunks.shop.Screen;
 const StatsRoute = routeChunks.stats.Screen;
-const CreatorRoute = routeChunks.creator.Screen;
 const TogetherRoute = routeChunks.together.Screen;
 const WatchRoute = routeChunks.watch.Screen;
 
@@ -686,18 +685,6 @@ export function App(): ReactElement {
         <EngineGate>
           <DungeonStatsRoute />
         </EngineGate>
-      );
-    }
-    // #920: the card creator keeps its cards on the account, so it is behind the gate like the decks.
-    if (path === paths.creator) {
-      return (
-        <Gated key={path} engine>
-          {(account) => (
-            <EngineGate>
-              <CreatorRoute token={account.token} />
-            </EngineGate>
-          )}
-        </Gated>
       );
     }
     if (path === paths.leaderboard) {

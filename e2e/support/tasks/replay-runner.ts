@@ -14,8 +14,6 @@ type Payload = {
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
   /** R433: dealt seats, likewise. */
   dealt?: ("p1" | "p2")[];
-  /** R915006: a practice game's custom cards, which the CLI folds through the card kit. */
-  customCards?: unknown[];
 };
 
 type CliAnswer = { hash: string; errors: unknown[] };
@@ -58,7 +56,6 @@ function fold(payload: Payload): CliAnswer {
     log: payload.log,
     ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
     ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
-    ...(payload.customCards === undefined ? {} : { customCards: payload.customCards }),
   };
   const run = spawnSync(CLI, ["replay"], {
     input: JSON.stringify(input),

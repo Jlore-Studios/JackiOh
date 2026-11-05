@@ -3,15 +3,12 @@
 // the lobby's own (`PLAY_CHOICE_KEY`), kept beside the settings and not in them, which sync to the
 // account (R634). CLAUDE.md rule 7: whether a deck may be played is the server's, at the room.
 //
-// R915005: a deck naming a custom card, or a trio holding one, plays only in practice, so no pick here
-// is one. R2031000: All Random's "More cards from" pick is kept in the device's online pick
+// R2031000: All Random's "More cards from" pick is kept in the device's online pick
 // (`readPlayLean`, `game/LeanNewest.tsx`), not here.
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 import type { LeanPick } from "@jackioh/shared";
 
-import { namesCustomCard } from "../creator/useCustomCards.ts";
-import { t } from "../i18n/i18n.ts";
 import { isQueueMode, type ModeChoice, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
 import { getStored, setStored } from "../net/storage.ts";
 
@@ -19,48 +16,24 @@ export const CHALLENGE_CHOICE_KEY = "jackioh.challenge.choice";
 
 export type StoredChallengeChoice = { mode: QueueMode; deckId: string | null; trioId: string | null };
 
-/** R915005: a deck that names a custom card plays only in practice, never online. */
-export function deckPracticeOnly(deck: SavedDeck): boolean {
-  return namesCustomCard(deck.cards);
-}
-
-/** R915005: a trio holding such a deck is no online trio either. */
-export function trioPracticeOnly(trio: SavedTrio, decks: readonly SavedDeck[]): boolean {
-  return trio.deckIds.some((id) => {
-    const deck = id === null ? undefined : decks.find((saved) => saved.id === id);
-    return deck !== undefined && deckPracticeOnly(deck);
-  });
-}
-
-/** "Name (practice only)": a deck or trio the picker shows but does not offer (R915005). */
-export function practiceOnlyLabel(name: string): string {
-  return t("{name} (practice only)", { name });
-}
-
-/** The first complete deck, else the first, as the lobby picks one with nothing remembered; never one that plays only in practice (R915005). */
+/** The first complete deck, else the first, as the lobby picks one with nothing remembered. */
 export function firstDeck(decks: readonly SavedDeck[]): SavedDeck | null {
-  const online = decks.filter((deck) => !deckPracticeOnly(deck));
-  return online.find((deck) => deck.cards.length === DECK_SIZE) ?? online[0] ?? null;
+  return decks.find((deck) => deck.cards.length === DECK_SIZE) ?? decks[0] ?? null;
 }
 
-/** The first trio with three decks, else the first; never one holding a deck that plays only in practice (R915005). */
-export function firstTrio(trios: readonly SavedTrio[], decks: readonly SavedDeck[]): SavedTrio | null {
-  const online = trios.filter((trio) => !trioPracticeOnly(trio, decks));
-  return online.find((trio) => trio.deckIds.every((id) => id !== null)) ?? online[0] ?? null;
+/** The first trio with three decks, else the first. */
+export function firstTrio(trios: readonly SavedTrio[]): SavedTrio | null {
+  return trios.find((trio) => trio.deckIds.every((id) => id !== null)) ?? trios[0] ?? null;
 }
 
-/** The deck with `id` while it is still saved and plays online, else the first (`firstDeck`). */
+/** The deck with `id` while it is still saved, else the first (`firstDeck`). */
 export function pickDeck(decks: readonly SavedDeck[], id: string | null): SavedDeck | null {
-  return decks.find((deck) => deck.id === id && !deckPracticeOnly(deck)) ?? firstDeck(decks);
+  return decks.find((deck) => deck.id === id) ?? firstDeck(decks);
 }
 
-/** The trio with `id` while it is still saved and plays online, else the first (`firstTrio`). */
-export function pickTrio(
-  trios: readonly SavedTrio[],
-  id: string | null,
-  decks: readonly SavedDeck[],
-): SavedTrio | null {
-  return trios.find((trio) => trio.id === id && !trioPracticeOnly(trio, decks)) ?? firstTrio(trios, decks);
+/** The trio with `id` while it is still saved, else the first (`firstTrio`). */
+export function pickTrio(trios: readonly SavedTrio[], id: string | null): SavedTrio | null {
+  return trios.find((trio) => trio.id === id) ?? firstTrio(trios);
 }
 
 /** What a room is made with, or null while its pick is missing (`choiceFor` in `routes/play.tsx`; R924000). */
