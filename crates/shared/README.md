@@ -9,7 +9,8 @@ comes from this crate through that module.
 
 It is pure (CLAUDE.md rule 4). The first thing in is the Conquest series rules (SPEC §9.5, R330 to R337),
 from `crates/server` (#3098); the second is the match host's decisions (#3101), which the server's 1v1
-actor and the later practice and ladder-bot hosts (#3099, #3103) run on.
+actor and the later practice and ladder-bot hosts (#3099, #3103) run on; the third, the loadout visibility rule
+(SPEC §10.8, R1834003, #3102).
 
 ## Host contract
 
@@ -17,8 +18,9 @@ Every Part B issue follows it, and review holds each one to it.
 
 1. **One copy, three callers.** The server calls the crate natively. The browser and Roblox call it
    through a body in `jackioh-wasm-core`, bound by both `crates/wasm` and `crates/wasm/c`.
-   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first: a
-   binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its `NORMAL_ONLY`). A body is a JSON adapter
+   `crates/wasm/tests/export_parity.rs` fails a body bound in only one of them (`series` is the first, `loadout`
+   the next: a binding the Luau module, which leaves with #2956 part 5, does not bind is listed in its
+   `NORMAL_ONLY`). A body is a JSON adapter
    and nothing more: it parses its argument into this crate's types, calls this crate and writes the
    answer as JSON, so no decision is made, or restated, there.
 2. **JSON at the boundary.** Every type that crosses it derives serde and, behind the `ts` feature,
@@ -216,6 +218,46 @@ holds it to the functions it names. Not in the Luau module (`export_parity.rs`'s
 Duos co-op (`crates/server/src/duos/actor.rs`) runs on the same event and output shapes in a second
 part of #3101; until then its clocks and grace are the server's.
 
+## `src/loadout.rs`: the loadout visibility rule
+
+What a seat's cosmetic loadout lets a receiver see of a player's deck, without a decklist leaking (SPEC §10.8;
+R1834003, R3013002). The server freezes a loadout when a match starts (`crates/server/src/loadout.rs`, which
+keeps the registry, the freezing and the store reads, R1834002) and decides with these functions which of a
+seat's cards' own picks and stamps a receiver is sent, and when.
+
+| Function | Answers | Rulings |
+| --- | --- | --- |
+| `dealt_cards(&state)` | every card the decks dealt, by instance id: its seat and the card it was dealt as; a card minted after the deal (R943) is left out | R1834003 |
+| `shown_defs(&view, &dealt)` | the `(seat, card)` pairs a view shows: each card in it dealt from that seat's deck and still shown as dealt, wherever it is now; a face-down card, the other hand, a library, the events and the prompts show none | R1834003 |
+| `cards_due(&shown, &loadouts, &mut sent)` | the `SeatCards` entries newly due a receiver (a card's picks, and its stamp), by seat, the pairs then marked in `sent`; a pair whose card wears nothing of its own is marked and sends nothing | R1834003, R3013002 |
+
+- **The types are what the store and the frames carry.** `Loadout`, `SeatLoadout`, `SeatCards`, `CardPicks`,
+  `FullArtPick` and `CardStamp` are what `matches.loadouts` stores and the `loadouts` and `cardLoadouts` frames send,
+  so changing a field, a rename or a `skip_serializing_if` is a store and wire change. `CardStamp.stamp` keeps the
+  `i64` of its stored shape (README's integers). What needs the cosmetics registry (`defaults_of`, a kind's slot) stays
+  in the server, as extension traits of these types.
+- **The caller owns the state.** The deal is read once when a match begins; a receiver's `sent` set lives with
+  the receiver, and `cards_due` marks it. Over the boundary it is an argument and part of the answer.
+- **Only the deal counts.** A card counts for the deck that dealt it, not for the seat that owns it now, and only
+  while it shows as what was dealt (R1834003's rejected alternative): `shown_defs` and `dealt_cards` are the two
+  halves of that, so a host calls both from here and restates neither.
+
+### The boundary
+
+`jackioh-wasm-core`'s `loadout(call)` takes one `LoadoutCall` as JSON and answers one `LoadoutAnswer`:
+
+```json
+{ "call": "dealtCards", "state": { "...": "the game's state at its start" } }
+{ "call": "shownDefs", "view": { "...": "a PlayerView" }, "dealt": { "<instance id>": ["p1", "core-001"] } }
+{ "call": "cardsDue", "shown": [["p1", "core-001"]], "loadouts": [{ "...": "p1's Loadout" }, { "...": "p2's" }], "sent": [] }
+{ "dealt": { "<instance id>": ["p1", "core-001"] } }
+{ "shown": [["p1", "core-001"]] }
+{ "due": { "cards": [{ "seat": "p1", "cards": [], "stamps": [] }], "sent": [["p1", "core-001"]] } }
+```
+
+`apply` is the one function behind it. A call that does not parse is refused by the body as an error, and a
+rules answer is never one. `tests/loadout.rs` holds the calls to the functions they name.
+
 ## `src/deck.rs`
 
 What a ticket, a room or a series freezes of a player's decks, and the seat a match starts from:
@@ -225,7 +267,9 @@ What a ticket, a room or a series freezes of a player's decks, and the seat a ma
 ## Tests
 
 `tests/series.rs` holds the series rules' tests, moved from `crates/server`'s API tests
-unchanged, and `tests/boundary.rs` the JSON boundary. The host machine's: `tests/clock.rs` (the clock's
+unchanged, and `tests/boundary.rs` the JSON boundary; `tests/loadout.rs` holds the loadout rule's, moved from
+`crates/server/src/loadout.rs`, its JSON calls among them, over a game dealt from the shipped cards (the
+`jackioh-cards` and `jackioh-ai` dev-dependencies). The host machine's: `tests/clock.rs` (the clock's
 tests, moved from the server's actor tests on a simulated host), `tests/duel.rs` (the machine played on
 the real catalog), `tests/rematch.rs` (the book) and `tests/host_boundary.rs`. The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff.

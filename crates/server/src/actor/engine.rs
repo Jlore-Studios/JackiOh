@@ -9,7 +9,6 @@
 //! All Random decks (R258, R1372) and practice AI decks (#1303) are dealt here via `jackioh_ai`.
 //! Every catalog-reading function runs under the match's `Pinned` catalog (R388, R767000).
 
-use std::collections::BTreeMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
@@ -306,34 +305,9 @@ pub fn lean_of(lean: Option<LeanPick>) -> Option<SetName> {
     lean.map(LeanPick::resolve)
 }
 
-/// R1834003: every card dealt from a deck in a pristine game, by instance id, seat and dealt card id.
-/// Minted cards (R943 Created tokens/copies) are excluded. Owner can change later (R12);
-/// cosmetics are only sent for cards still showing what was dealt.
-pub fn dealt_cards(state: &EngineState) -> BTreeMap<String, (PlayerId, String)> {
-    let mut dealt = BTreeMap::new();
-    for seat in [PlayerId::P1, PlayerId::P2] {
-        let side = &state.players[seat];
-        let field = side
-            .units
-            .iter()
-            .flatten()
-            .flatten()
-            .chain(side.backrow.iter().flatten())
-            .chain(side.carried.iter().flatten().flatten());
-        let cards = side
-            .library
-            .iter()
-            .chain(&side.hand)
-            .chain(&side.graveyard)
-            .chain(&side.exile)
-            .chain(&side.resolving)
-            .chain(field);
-        for card in cards.filter(|card| card.created.is_none()) {
-            dealt.insert(card.id.clone(), (card.owner, card.def_id.clone()));
-        }
-    }
-    dealt
-}
+/// R1834003: every card dealt from a deck in a pristine game, by instance id, seat and dealt card id:
+/// `jackioh-shared`'s (#3102), which the loadout visibility rule reads.
+pub use jackioh_shared::loadout::dealt_cards;
 
 /// R417, R565: each seat's last board from a finished game, seat order — every card on the field,
 /// both sides, minus what that seat could not read (the other side's face-down cards, R33).
