@@ -9,9 +9,12 @@
 //! the relays as one state machine, `step(host, event, now) -> (host, outputs)`. Then the loadout
 //! visibility rule (SPEC §10.8, R1834003, #3102): [`loadout`] decides when a card's cosmetics may be shown
 //! without leaking a decklist. Then the ranked ladder (#3105): [`ranked`] holds the Glicko-2 ratings, the
-//! visible ladder, the seasons, one rated game decided as data and the leaderboard's sort key. Last,
-//! [`face`] is what a card face prints, worked out from the catalog and a view in the reader's words (#3106).
+//! visible ladder, the seasons, one rated game decided as data and the leaderboard's sort key. Then the
+//! ladder bots (#3103): a bot is a seat of that machine, and [`bots`] holds what its moves, pace, aim, emotes
+//! and habits are made of and the queue's and the pool's decisions around it. Last, [`face`] is what a card
+//! face prints, worked out from the catalog and a view in the reader's words (#3106).
 
+pub mod bots;
 pub mod config;
 pub mod deck;
 pub mod face;

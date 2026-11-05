@@ -42,6 +42,14 @@ pub enum TimerKey {
     BotReply { player: PlayerId },
     /// R1452: the wait before a bot whose move could not be written decides again.
     BotRetry,
+    /// R1452, R639000: the end of the think time of the bot at this home seat: its move is played.
+    BotMove { player: PlayerId },
+    /// R738, R639000: the moment the bot at this home seat starts to show its aim.
+    BotAim { player: PlayerId },
+    /// R645: the moment the next emote of the bot at this home seat is due.
+    BotEmote { player: PlayerId },
+    /// R645: the wait that makes a person's turn long to the bot at this home seat.
+    BotLongTurn { player: PlayerId },
     /// Duos' (`host::duos`, S6): the one mulligan clock over the four open mulligans (B2, R268).
     DuosMulligan,
     /// Duos': the clock of the current round (B38).

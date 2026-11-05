@@ -2,10 +2,10 @@
 //! R2660000: a concession needs the caller's proof of an unstoppable lethal; R2660001: a draw offer.
 
 use jackioh_engine::PlayerId;
-use jackioh_server::bots::signals::{
+use jackioh_shared::bots::signals::{
     Standing, accepts_draw, aim_lead_ms, concedes, idles_turn, offers_draw, rematch_plan,
 };
-use jackioh_server::config::{
+use jackioh_shared::config::{
     AIM_RELAY_INTERVAL_MS, BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS, BOT_REMATCH_DELAY_MAX_MS,
     BOT_REMATCH_DELAY_MIN_MS, BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_REMATCH_LINGER_MIN_MS,
     ConcedeFit, DrawAnswerFit, DrawOfferRule, REMATCH_OFFER_TTL_MS, RematchFit, TimeoutFit,
