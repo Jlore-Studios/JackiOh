@@ -696,5 +696,19 @@
     "blob": "e91d5b7f7148e66432e5efc7e42269306afa22b5",
     "winRatesBlob": "1a846c979a3146e2d83bdfc978640c3615e1084e",
     "cardMetricsBlob": "78effd3ccecb494b9b5b1bd12f15213f48488de6"
+  },
+  {
+    "version": "v0.5.11q",
+    "commit": "2d7d2fffdeb59301398368256ac58a0ae8114ef1",
+    "blob": "e91d5b7f7148e66432e5efc7e42269306afa22b5",
+    "winRatesBlob": "1a846c979a3146e2d83bdfc978640c3615e1084e",
+    "cardMetricsBlob": "78effd3ccecb494b9b5b1bd12f15213f48488de6"
+  },
+  {
+    "version": "v0.5.11r",
+    "commit": "fb42f52ced78b1c3b464ba8cdbdf24b57c13e149",
+    "blob": "e91d5b7f7148e66432e5efc7e42269306afa22b5",
+    "winRatesBlob": "1a846c979a3146e2d83bdfc978640c3615e1084e",
+    "cardMetricsBlob": "78effd3ccecb494b9b5b1bd12f15213f48488de6"
   }
 ]

@@ -31,7 +31,7 @@ use crate::cosmetics::{
     FULL_ART_ID_PREFIX, PickRefusal, VERSION_ID_PREFIX, full_art_of, is_slug, owns,
 };
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
-use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
+use crate::loadout::{AUGMENTS_KEY, CARD_SLOT_KINDS, CardPicksExt, FULL_ART_SETTING, setting_key};
 
 /// A card a deck may hold: in the catalog, and no token.
 pub(crate) fn is_playable(app: &App, card_id: &str) -> bool {

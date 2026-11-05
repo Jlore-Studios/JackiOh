@@ -788,6 +788,16 @@ pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 
     boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
 }
 
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`, the host contract). Only a call that does not parse is a failed status.
+#[unsafe(no_mangle)]
+pub extern "C" fn loadout(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::loadout(arg("loadout: the call", call_json_ptr, call_json_len)?))
+}
+
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
 
 /// One call of the match host's machine: a `HostCall` as JSON in, a `HostAnswer` as JSON out. The host

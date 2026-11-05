@@ -1,5 +1,5 @@
 -- Play together's social tables (migration 0038, SPEC S7, B43-B53; issue #936), and 0073's drop of
--- 0038's watching setting (R2615000; issue #2620). Runs after 21_custom_cards.sql; profiles 1 and 2 are
+-- 0038's watching setting (R2615000; issue #2620). Runs after 20_lean_set.sql; profiles 1 and 2 are
 -- active by then (03 activated them).
 \set ON_ERROR_STOP on
 

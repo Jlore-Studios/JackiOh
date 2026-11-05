@@ -17,8 +17,8 @@ use jackioh_server::config::{
 use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
     VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID,
-    VERSION_FULL_ART_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_SET_SHOWCASE_ID,
-    VERSION_SKETCH_ID,
+    VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID,
+    VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -1523,4 +1523,49 @@ async fn r2943000_a_legendary_token_refuses_a_version_not_offered() {
             .iter()
             .any(|row| row.card_id.as_deref() == Some(bare.as_str()))
     );
+}
+
+#[tokio::test]
+async fn r2944000_no_token_buys_a_mythic_version_and_none_where_not_offered() {
+    let (app, token) = setup().await;
+    // Ceaseless Void, a Mythic Unit, is offered both of #2944's versions; Speciesist, a Common Unit, neither.
+    let card = "core-100".to_string();
+    let bare = "core-002".to_string();
+    own(&app, &[card.clone(), bare.clone()]).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 2).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let part_five = [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID];
+    let before = everything(&app).await;
+    for cosmetic in part_five {
+        // On the card it is not offered, with the highest token: a 400.
+        let (status, answer) =
+            redeem(json!({ "token": "Legendary", "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+        // On the card it is offered, a Mythic chase, which no token buys: a 409 (R2728000).
+        let (status, answer) =
+            redeem(json!({ "token": "Legendary", "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (409, json!("that cosmetic sits above the token's tier")),
+            "{cosmetic}: {answer}"
+        );
+        // A Mythic token is no token: a 400.
+        let (status, answer) =
+            redeem(json!({ "token": "Mythic", "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 400, "{cosmetic}: {answer}");
+    }
+    // Nothing written or spent: both Legendary tokens are still held.
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 2);
 }

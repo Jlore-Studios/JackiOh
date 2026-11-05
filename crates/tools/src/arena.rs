@@ -338,8 +338,8 @@ pub(crate) struct ArenaGame {
 /// The budget a test decides at when it plays whole games to prove how a game is dealt, seated,
 /// replayed or filed, not how well it is played: `AI_GATE_BUDGET`'s search at about a quarter of its
 /// nodes and one determinization. At 60 nodes a seat falls back on two dozen decisions of a game,
-/// which R1489000 faults; 80 was the least that filed clean, and 150 leaves room.
-#[cfg(test)]
+/// which R1489000 faults; 80 was the least that filed clean, and 150 leaves room. It is also
+/// `run-sim --budget tiny`'s (#3065).
 pub(crate) const TEST_BUDGET: SearchBudget = SearchBudget {
     nodes: 150,
     lethal_nodes: 40,
