@@ -17721,18 +17721,8 @@
     "what": "build #3065 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-05T07:47:57Z",
-    "notes": [
-      "#3127 is held for `claude-3` until 01:50 (it refused a call)",
-      "#3065 is held for `claude-3` until 01:50 (it refused a call)",
-      "delivered review #3157 on claude-8 (run 41987120001): approved",
-      "delivered plan #3117 on claude-1 (run 41983579747): planned",
-      "started build #3117 on claude-1 (run 41990224666)",
-      "started plan #3127 on claude-3 (run 41990322219)",
-      "started build #3065 on claude-3 (run 41990422680)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-05T08:01:19Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18437,7 +18427,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-05T07:47:57Z",
+  "loop_tick": "2026-11-05T08:01:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
