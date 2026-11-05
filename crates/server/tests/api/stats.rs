@@ -1170,9 +1170,9 @@ mod r978000_kept_card_stats {
         // The filters are applied to the kept report, not kept apart.
         let (_, _, core_only) = get_public(&app, "/api/stats/cards?set=Core").await;
         assert_eq!(core_only["totalGames"], json!(1));
-        // Another pilot is another report: it is read off the records as they stand.
+        // R3067000: another pilot's report is cut from the snapshot the first read loaded.
         let (_, _, humans) = get_public(&app, "/api/stats/cards?pilot=human").await;
-        assert_eq!(humans["totalGames"], json!(2));
+        assert_eq!(humans["totalGames"], json!(1));
 
         tokio::time::advance(Duration::from_millis(ttl_ms() - 1)).await;
         let (_, _, within) = get_public(&app, "/api/stats/cards").await;
@@ -1183,6 +1183,9 @@ mod r978000_kept_card_stats {
         assert_eq!(after["totalGames"], json!(2));
         assert_eq!(after["gate"]["liveGames"], json!(2));
         assert_eq!(games_of(&after, "core-001"), json!(2));
+        // R3067000: the snapshot is read again with it, so another pilot's report counts both records.
+        let (_, _, humans) = get_public(&app, "/api/stats/cards?pilot=human").await;
+        assert_eq!(humans["totalGames"], json!(2));
     }
 
     #[tokio::test(start_paused = true)]
@@ -1266,20 +1269,31 @@ mod r978000_kept_card_stats {
 mod r2491000_kept_card_history {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
 
     use jackioh_server::api::catalog::load_patch_versions;
     use jackioh_server::db::store::{Db, StoreError};
 
-    /// Counts the fake store's `statsTotals.load` calls from here on, through its `on_call` hook.
-    async fn count_loads(app: &App) -> Arc<AtomicUsize> {
-        let loads = Arc::new(AtomicUsize::new(0));
+    /// What the fake store was asked to read: every `statsTotals.load`, and among them the loads of
+    /// every patch's totals (R3067000), which it charges as `statsTotals.loadAllPatches` too.
+    #[derive(Default)]
+    struct Loads {
+        all: AtomicUsize,
+        full: AtomicUsize,
+    }
+
+    /// Counts the fake store's totals loads from here on, through its `on_call` hook.
+    async fn count_loads(app: &App) -> Arc<Loads> {
+        let loads = Arc::new(Loads::default());
         let counter = Arc::clone(&loads);
         match &app.db {
             Db::Fake(data) => {
                 data.lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
-                    if method == "statsTotals.load" {
-                        counter.fetch_add(1, Ordering::SeqCst);
-                    }
+                    match method {
+                        "statsTotals.load" => counter.all.fetch_add(1, Ordering::SeqCst),
+                        "statsTotals.loadAllPatches" => counter.full.fetch_add(1, Ordering::SeqCst),
+                        _ => 0,
+                    };
                     Ok(())
                 }));
             }
@@ -1288,11 +1302,20 @@ mod r2491000_kept_card_history {
         loads
     }
 
-    /// The loads one request to `path` made, which answers 200; the count starts again after it.
-    async fn loads_of(app: &Arc<App>, loads: &AtomicUsize, path: &str) -> usize {
+    /// The loads one request to `path` made, which answers 200, as (every load, those of every
+    /// patch's totals); the counts start again after it.
+    async fn reads_of(app: &Arc<App>, loads: &Loads, path: &str) -> (usize, usize) {
         let (status, _, _) = get_public(app, path).await;
         assert_eq!(status, 200, "{path}");
-        loads.swap(0, Ordering::SeqCst)
+        (
+            loads.all.swap(0, Ordering::SeqCst),
+            loads.full.swap(0, Ordering::SeqCst),
+        )
+    }
+
+    /// The loads one request to `path` made.
+    async fn loads_of(app: &Arc<App>, loads: &Loads, path: &str) -> usize {
+        reads_of(app, loads, path).await.0
     }
 
     /// A live game of `mode` on `patch` whose first seat, on `core-001` and `core-002`, `winner` wins.
@@ -1316,15 +1339,16 @@ mod r2491000_kept_card_history {
         let loads = count_loads(&app).await;
         assert!(load_patch_versions().await.len() > 2);
 
-        // Each view misses once: the history's one load and the current patch's drills, however
-        // many patches ship.
-        for path in [
-            "/api/stats/cards/core-001",
-            "/api/stats/cards/core-001?mode=bo1",
-            "/api/stats/cards/core-001?mode=bo3",
-            "/api/stats/cards/core-001?mode=random",
+        // R3067000: the first view loads the snapshot of every patch's totals, however many patches
+        // ship, and the current patch's drills. Each view after it misses its history alone, cut
+        // from that snapshot, so only its drills load.
+        for (path, made) in [
+            ("/api/stats/cards/core-001", 2),
+            ("/api/stats/cards/core-001?mode=bo1", 1),
+            ("/api/stats/cards/core-001?mode=bo3", 1),
+            ("/api/stats/cards/core-001?mode=random", 1),
         ] {
-            assert_eq!(loads_of(&app, &loads, path).await, 2, "{path}");
+            assert_eq!(loads_of(&app, &loads, path).await, made, "{path}");
         }
 
         // Every view is kept now, for every card's page.
@@ -1373,6 +1397,202 @@ mod r2491000_kept_card_history {
             unheld["patches"],
             json!([row(&old, 0, Value::Null), row(&current, 0, Value::Null)])
         );
+    }
+
+    /// The cache's time to live, in milliseconds.
+    fn ttl_ms() -> u64 {
+        u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("the TTL is not negative") * 1000
+    }
+
+    /// A past shipped patch, which is not the current one.
+    async fn past_patch() -> String {
+        let current = current_patch();
+        load_patch_versions()
+            .await
+            .into_iter()
+            .find(|version| *version != current)
+            .expect("a past patch")
+    }
+
+    /// Live games of three modes, a development game and a past patch's games: the records the first
+    /// R3067000 test reads under every key.
+    fn mixed_records(past: &str) -> Vec<Value> {
+        let current = current_patch();
+        let mut records: Vec<Value> = (0..3)
+            .map(|i| game(format!("mix-now-{i}"), &current, "bo1", "p1"))
+            .collect();
+        records.push(game("mix-now-bo3".to_string(), &current, "bo3", "p2"));
+        records.push(game("mix-now-random".to_string(), &current, "random", "p1"));
+        records.push(make_game_record(
+            "mix-now-dev",
+            RecordOptions {
+                source: Some("dev"),
+                patch: Some(current),
+                ..RecordOptions::default()
+            },
+        ));
+        records.extend((0..2).map(|i| game(format!("mix-old-{i}"), past, "bo1", "p2")));
+        records
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3067000_distinct_known_keys_within_one_ttl_cost_one_load_of_every_patch() {
+        let past = past_patch().await;
+        let app = test_app().await;
+        insert_records(&app, mixed_records(&past)).await;
+        let loads = count_loads(&app).await;
+
+        let mut paths: Vec<String> = Vec::new();
+        for source in ["all", "live", "dev"] {
+            for pilot in ["merged", "human", "ai"] {
+                for mode in ["all", "bo1", "bo3", "random", "constructed"] {
+                    paths.push(format!(
+                        "/api/stats/cards?source={source}&pilot={pilot}&mode={mode}"
+                    ));
+                }
+            }
+        }
+        assert!(paths.len() >= 30, "{} keys", paths.len());
+        for mode in ["all", "bo1"] {
+            paths.push(format!("/api/stats/cards?patch={past}&mode={mode}"));
+        }
+        for source in ["all", "live", "dev"] {
+            for mode in ["all", "bo3"] {
+                paths.push(format!("/api/stats/games?source={source}&mode={mode}"));
+            }
+        }
+        // One key is held back to be asked for after the snapshot has aged.
+        let late = paths.pop().expect("a key");
+
+        // The first request loads every patch's totals once; no other key loads them again.
+        assert_eq!(reads_of(&app, &loads, &paths[0]).await, (1, 1), "{}", paths[0]);
+        let mut bodies: Vec<Value> = Vec::new();
+        for path in &paths {
+            let (status, _, body) = get_public(&app, path).await;
+            assert_eq!(status, 200, "{path}");
+            bodies.push(body);
+        }
+        assert_eq!(
+            (
+                loads.all.load(Ordering::SeqCst),
+                loads.full.load(Ordering::SeqCst)
+            ),
+            (0, 0),
+            "{} keys",
+            paths.len()
+        );
+
+        // A card's drill-down reads its history off the snapshot too: only its current patch's drills load.
+        for path in [
+            "/api/stats/cards/core-001",
+            "/api/stats/cards/core-001?mode=bo1&pilot=ai",
+        ] {
+            assert_eq!(reads_of(&app, &loads, path).await, (1, 0), "{path}");
+        }
+
+        // R654: whatever key it is read under, a body is what a load of its own gives from the same records.
+        let sampled = [
+            "/api/stats/cards?source=all&pilot=merged&mode=all".to_string(),
+            "/api/stats/cards?source=live&pilot=human&mode=bo3".to_string(),
+            format!("/api/stats/cards?patch={past}&mode=bo1"),
+            "/api/stats/games?source=dev&mode=all".to_string(),
+        ];
+        for path in &sampled {
+            let index = paths.iter().position(|held| held == path).expect("a sampled key");
+            let reference = test_app().await;
+            insert_records(&reference, mixed_records(&past)).await;
+            let (_, _, own) = get_public(&reference, path).await;
+            assert_eq!(bodies[index], own, "{path}");
+        }
+
+        // Within the TTL a new key is cut from the snapshot already held; at the TTL it is loaded again.
+        tokio::time::advance(Duration::from_millis(ttl_ms() - 1)).await;
+        assert_eq!(reads_of(&app, &loads, &late).await, (0, 0), "{late}");
+        tokio::time::advance(Duration::from_millis(1)).await;
+        assert_eq!(reads_of(&app, &loads, &late).await, (1, 1), "{late}");
+        assert_eq!(reads_of(&app, &loads, &paths[0]).await, (0, 0), "{}", paths[0]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3067000_distinct_unshipped_patches_cost_no_load_of_every_patch() {
+        let app = test_app().await;
+        let loads = count_loads(&app).await;
+        let made_up = |i: usize| format!("v0.0.0-made-up-{i}");
+        let mut records = vec![game("odd-now".to_string(), &current_patch(), "bo1", "p1")];
+        records.extend((0..10).map(|i| game(format!("odd-{i}"), &made_up(i), "bo1", "p1")));
+        insert_records(&app, records).await;
+
+        // The first one loads what the page's own report is cut from, once, and its patch's totals; the
+        // nine after it load their patch's totals alone.
+        for i in 0..10 {
+            let patch = made_up(i);
+            let path = format!("/api/stats/cards?patch={patch}");
+            let (status, _, body) = get_public(&app, &path).await;
+            assert_eq!(status, 200, "{path}");
+            assert_eq!(body["patch"], json!(patch));
+            assert_eq!(body["totalGames"], json!(1), "{path}");
+            assert_eq!(body["summary"]["activePatch"], json!(patch));
+            let expected = if i == 0 { (2, 1) } else { (1, 0) };
+            let made = (
+                loads.all.swap(0, Ordering::SeqCst),
+                loads.full.swap(0, Ordering::SeqCst),
+            );
+            assert_eq!(made, expected, "{path}");
+        }
+        // The games' page reads an unshipped patch the same way.
+        let (_, _, games) = get_public(&app, &format!("/api/stats/games?patch={}", made_up(3))).await;
+        assert_eq!(games["totalGames"], json!(1));
+        assert_eq!(
+            (
+                loads.all.swap(0, Ordering::SeqCst),
+                loads.full.swap(0, Ordering::SeqCst)
+            ),
+            (1, 0)
+        );
+
+        // The page's own report was kept by the first of them.
+        assert_eq!(reads_of(&app, &loads, "/api/stats/cards").await, (0, 0));
+
+        // R978000: an unshipped patch is still not kept.
+        insert_records(&app, vec![game("odd-late".to_string(), &made_up(0), "bo1", "p1")]).await;
+        let (_, _, again) = get_public(&app, &format!("/api/stats/cards?patch={}", made_up(0))).await;
+        assert_eq!(again["totalGames"], json!(2));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3067000_an_unshipped_patch_answers_what_its_own_records_give() {
+        let past = past_patch().await;
+        let patch = "v0.0.0-not-shipped";
+        let own: Vec<Value> = (0..3)
+            .map(|i| game(format!("own-{i}"), patch, "bo1", if i == 0 { "p2" } else { "p1" }))
+            .collect();
+
+        // One app holds the shipped patches' games too; the other holds only the unshipped patch's.
+        let shipped = test_app().await;
+        let mut records = mixed_records(&past);
+        records.extend(own.clone());
+        insert_records(&shipped, records).await;
+        let alone = test_app().await;
+        insert_records(&alone, own).await;
+
+        // The page's figures are the patch's own, whatever else the store holds; only its list of
+        // patches counts every shipped patch's games, as the page's own report lists them.
+        let path = format!("/api/stats/cards?patch={patch}");
+        let (_, _, mut with) = get_public(&shipped, &path).await;
+        let (_, _, mut without) = get_public(&alone, &path).await;
+        assert_eq!(with["totalGames"], json!(3));
+        let listed = with["patches"].take();
+        without["patches"].take();
+        assert_eq!(with, without);
+        let (_, _, page) = get_public(&shipped, "/api/stats/cards").await;
+        assert_eq!(listed, page["patches"]);
+        assert_ne!(listed, json!([]));
+
+        let path = format!("/api/stats/games?patch={patch}");
+        let (_, _, with) = get_public(&shipped, &path).await;
+        let (_, _, without) = get_public(&alone, &path).await;
+        assert_eq!(with["totalGames"], json!(3));
+        assert_eq!(with, without);
     }
 }
 
