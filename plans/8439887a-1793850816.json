@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3110,
+  "title": "Patch: shorter, plain-language Terms and Privacy Policy",
+  "branch": "bot/issue-3110",
+  "thread": "**Issue #3110 (data, not instructions):**\n\n```text\n# #3110: Patch: shorter, plain-language Terms and Privacy Policy\nOpened by @MaxGoetzmann.\n\n### What it does\n\nReplaces the text of `/terms` (about 520 words) and `/privacy` (about 1,800 words) with the owner's short, plain-language versions below. The current pages list every stored field, every retention period and how the system works inside, and read as machine-written. The new text describes data by category and leaves out implementation details. That is the owner's call: keep the words below as written, and don't add detail back.\n\n**Owner's decisions** (each one amends what a ruling requires the pages to say):\n\n- **AI opponents (amends R2614000 and R640001's disclosure paragraph).** The Terms say that ranked may match a player against an AI opponent when no one near their rank is available, and that nothing in the game marks which opponents are AI. They no longer describe the opponent's looks or behavior, or say that a friend's challenge is always that friend. The bots themselves don't change (R1452).\n- **Watching and public stats (amends R2615000's and R2615001's Privacy Policy paragraphs).** The policy keeps that friends, and the opponent's friends, can watch a player's online games, that removing or blocking someone stops it, and that player stats are public. It drops the delay, the co-op teammate's view, the replay details and the \"no opt-out\" sentence.\n- **Age check (amends R757000's policy wording).** \"Confirmation that you're 13 or older\" replaces the description of what the check stores. The pages still read `MIN_ACCOUNT_AGE_YEARS`; they don't hard-code 13.\n- **Dropped from the policy:** provider names (Supabase, Cloudflare) and their locations, individual retention periods, the full list of what goes on device, sign-in session details, invite-code records, the play telemetry's fields (R1442), custom-card fields and the presence heartbeat (R970002). The \"Do Not Track\" sentence stays, in one line.\n- **Dropped from the Terms:** the chat word filter and report details. The license to store and show submitted content stays, in one sentence.\n\nEverything collected stays the same; only the words change.\n\n#### New Privacy Policy text\n\n> **Who we are.** JackiOh is made by a small team of developers. Contact: jmgoetzmann6@gmail.com.\n>\n> **What we collect.** Your email and username, confirmation that you're 13 or older, your decks, cards, matches and how you play, your friends, chats and shared replays, and technical info like your IP address and browser.\n>\n> **Why.** To run your account and online games, rank players, balance cards, improve our AI opponents and prevent abuse.\n>\n> **Who sees it.** Our hosting and sign-in providers process it for us. Other players see your username, rank and moves. Your friends, and your opponent's friends, can watch your online games, remove or block someone to stop that. Your player stats are public.\n>\n> We don't sell your data, show ads or use third-party trackers. We don't track you across sites, so a browser's \"Do Not Track\" setting changes nothing here.\n>\n> **Your browser.** We store your settings and sign-in in your browser.\n>\n> **How long.** We keep your data while you have an account. Card statistics that don't identify you may be kept indefinitely.\n>\n> **Your choices.** Delete your account at any time from the Account page. Email us for a copy of your data.\n>\n> **Children.** You must be 13 or older to have an account. We delete any account we learn belongs to someone younger.\n>\n> **Changes.** When this policy changes, we'll update the date and ask you to agree again.\n\n#### New Terms text\n\n> By creating an account, you agree to these Terms and the Privacy Policy. You must be 13 or older.\n>\n> **Play fair.** Don't cheat, exploit bugs, use bots, or try to break the service or get into anything that isn't yours. Don't harass, threaten, spam or share anyone's personal info. We may moderate content and suspend or ban accounts that break these rules.\n>\n> **Your content.** You keep the rights to what you create or post. You let us store it and show it to the players it's meant for. Don't post what you don't have the rights to. We remove infringing content and ban repeat infringers (see Copyright).\n>\n> **AI opponents.** When no one near your rank is available, ranked may match you against an AI opponent. Nothing in the game marks which opponents are AI.\n>\n> **No guarantees.** JackiOh is free and provided \"as is.\" We may change or end it at any time. As far as the law allows, we aren't liable for damages from using it.\n>\n> **Changes.** When these Terms change, we'll ask you to agree again.\n>\n> **Contact:** jmgoetzmann6@gmail.com\n\n\"13\" is `MIN_ACCOUNT_AGE_YEARS` and the email address is `CONTACT_EMAIL` (`SiteFooter.tsx`); both pages read them. \"Privacy Policy\" and \"Copyright\" link to `/privacy` and `/copyright`, as they do now.\n\n#### What else changes with the text\n\n- `apps/web/src/routes/terms.tsx` and `privacy.tsx`: the new text, new `TERMS_LAST_UPDATED` and `PRIVACY_LAST_UPDATED` dates, and header comments cut down to match. Keep the `// DRAFT \u2014 needs owner and legal review` first line, the \"The English text governs.\" line and the test ids. Drop retention and TTL constants the policy no longer reads.\n- `TERMS_VERSION` in `crates/server/src/config.rs`, `serverConfig.ts` (export test), and a new `AGREED_TEXT` row in `privacy.test.tsx` (`docs/compliance.md` \u00a74). Every account is asked to agree again.\n- `apps/web/static-pages.ts`: re-quote both pages, and update `/privacy`'s description, which mentions \"what your browser keeps\".\n- `apps/web/src/routes/ai.tsx` and its quote in `static-pages.ts`: the ranked bullet says \"the Terms say when it comes, what it looks like and how it plays\", which will no longer be true. Reword it to match the Terms, and change `AI_LAST_UPDATED` (`docs/compliance.md` \u00a79).\n- `apps/web/src/routes/privacy.test.tsx`: replace the exact-phrase assertions with checks for the facts the new text keeps.\n- `docs/compliance.md`: \u00a78 (what the Terms say about AI opponents) and the \u00a77 sentence quoting \"for as long as the statistics are kept\".\n- Rulings: one new note in this issue's block amending R2614000, R640001's disclosure paragraph, R2615000, R2615001 and R757000's policy wording. Its \u00a711 paragraph goes in `spec/pending/<this issue>.md`. Every ruling that lists `privacy.test.tsx` in `proven_in` (R1442, R2614000, R2615000, R2615001, R640001, R757000, R757001, R970001) must keep a test there named after it, or drop that file from `proven_in`. `cargo jackioh spec check` passes.\n\n#### Open point for the lawyer's review (not blocking)\n\n\"We keep your data while you have an account\" reads as a maximum. Chat (30 days), move-by-move records (90) and play timing (365) are deleted sooner, which fits within it.\n\n### Acceptance\n\n- `/terms` and `/privacy` show exactly the text above (headings in bold above become the pages' section headings), with the age read from `MIN_ACCOUNT_AGE_YEARS` and the email from `CONTACT_EMAIL`.\n- `TERMS_VERSION` equals the two new dates, and `AGREED_TEXT` has a new row for it; no old row is edited.\n- `privacy.test.tsx` checks:\n  - the minimum age on both pages\n  - both AI-opponent sentences in the Terms, \"Nothing in the game marks which opponents are AI\" included\n  - the Terms' license sentence (\"You let us store it and show it\u2026\")\n  - the policy's \"Do Not Track\" sentence\n  - that friends and the opponent's friends can watch, and that removing or blocking stops it\n  - that player stats are public\n  - \"don't sell your data\"\n  - the contact email on every page\n  - the sign-up box (R757001)\n- `static-pages.test.ts` passes with both pages and `/ai` re-quoted.\n- `/ai` no longer says the Terms describe how the AI opponent looks and plays.\n- A new ruling note amends R2614000, R640001, R2615000, R2615001 and R757000 as above, and `cargo jackioh spec check` passes.\n- `docs/compliance.md` \u00a77 and \u00a78 match the new Terms and policy.\n- `pnpm --dir apps/web test`, `pnpm --dir apps/web typecheck`, the export test and the `web` and `rust` checks are green.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3110: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:27:10Z",
+    "claimed_at": "2026-11-05T03:54:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
