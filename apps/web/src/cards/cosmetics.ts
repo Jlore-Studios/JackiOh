@@ -688,8 +688,8 @@ function useFoilSlot(wanted: boolean): boolean {
 /**
  * R2715001: whether a face's moving art may move now: it wants to (CardFace: an Animated, Legendary or
  * Mythic face, full layout, Animated foil on, not a lazy grid face), neither the Reduce motion setting
- * nor the system asks for reduced motion, and it holds one of the foil's slots. Its hooks run on every
- * face.
+ * nor the system asks for reduced motion, and it holds one of the foil's slots. R2944002: or an Immersive
+ * face's depth, in the same slot, one per face whether it is Animated or not. Its hooks run on every face.
  */
 export function useArtMotion(wanted: boolean): boolean {
   const panel = useSetting("reduceMotion");

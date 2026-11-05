@@ -138,3 +138,20 @@ apart (`|backdrop`, `|subject`). A delivered file has no parts, so a window draw
 the painter, and a Starship in play and a Legacy card, whose painters draw one picture
 (`hasArtParts`), are never offered Out of frame. The constants were set by eye on the component
 spec's screenshot (`card-versions-part-4`).
+
+## Part 5's pictures (R2944001)
+
+Immersive (`"depth"`) and Prismatic (`"prismatic"`) draw no picture of their own either: each lays the
+normal picture under one SVG filter. Immersive's window draws the picture's `"backdrop"` as far off
+(`depthSvg`, `dp-haze`): softened by `DEPTH_BLUR`, its colour dulled to `DEPTH_SATURATE` and seen
+through sky-blue air at `DEPTH_HAZE_MIX`; over it a near layer (CardFace's `.cf-immersive`, the
+window's own box and shape) draws the `"subject"` as it is, unfiltered, so the two line up as Out of
+frame's do and the subject stands out of the haze. A Starship in play and a Legacy card, whose
+painters draw one picture (`hasArtParts`), draw it whole and hazed with no near layer; the Collection's
+tile shows the whole picture hazed. Prismatic (`prismaticSvg`, `pr-chrome`) greys the picture, bands
+its grey through `PRISMATIC_CHROME_TABLE`, light and dark in turn as polished metal catches its
+surroundings, maps it from slate to near-white chrome and lays an iridescent sheen over it, corner to
+corner, `PRISMATIC_SHEEN`: its no-gold spectrum there and back, so no two neighbours mix to gold. A
+Radiant face washes its painted picture back over both (`dp-wash`, `pr-wash`). The cache keys each
+apart (`|depth`, `|prismatic`). The constants were set by eye on the component spec's screenshot
+(`card-versions-part-5`).

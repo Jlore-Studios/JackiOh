@@ -1,14 +1,14 @@
 -- ============================================================================
--- Migration 0037: Custom cards on the account (SPEC §12.9, R915008; issue #918)
+-- Migration 0037: Custom cards on the account (SPEC §12.9; issue #918)
 -- ============================================================================
--- Serves SPEC.md §12.9 and SPEC §11 R915008, quoted:
+-- Serves SPEC.md §12.9, quoted:
 --   "An active account's custom cards are stored by the server in a table only
 --   their owner can read or write: at most `CUSTOM_CARDS_PER_ACCOUNT` (50), each
 --   saved whole by the routes under `/api/custom-cards` (list, get, create,
 --   update, delete). The server checks the frame with the engine's validator
 --   and the source's size, and never compiles or runs a script."
 --
--- One row per custom card (§12.1, R915000): the id the server minted at the
+-- One row per custom card (§12.1): the id the server minted at the
 -- first save (`custom-` and 32 lowercase hex digits), its owner, its version
 -- (the count of its saves, from 1), its frame, its card-kit source and the
 -- builder's model of it -- the engine's `CustomCard`
@@ -17,7 +17,7 @@
 -- TRUST BOUNDARY, exactly as saved decks (0007) and settings (0018): a profile
 -- reads its own rows through the Data API and writes none. SPEC §9.1's
 -- "Propose": the browser proposes a card to the server API, which checks it
--- with the engine's validator (R915001) and writes it as service_role through
+-- with the engine's validator (§12.2) and writes it as service_role through
 -- the two functions below. A client write path would skip that check, so there
 -- is none: RLS default deny is the enforcement, and no client role holds an
 -- insert, update or delete grant or policy. Nothing here reads a script: the
@@ -72,22 +72,22 @@ alter table public.custom_cards
   check (builder is null or octet_length(builder::text) <= 2 * 16384);
 
 comment on table public.custom_cards is
-  $$SPEC §12.9 / R915008: an active account's custom cards, private to it.
+  $$SPEC §12.9: an active account's custom cards, private to it.
   Written only by app.create_custom_card and app.update_custom_card (SECURITY
-  DEFINER, service_role only) after the server's validator (R915001), and
+  DEFINER, service_role only) after the server's validator (§12.2), and
   deleted only by the server; a client reads its own rows and writes none
   (SPEC §9.1: "Propose"). No role runs a source stored here.$$;
 
 comment on column public.custom_cards.id is
-  $$R915000: minted by the server at the first save: `custom-` and 32 lowercase
+  $$§12.1: minted by the server at the first save: `custom-` and 32 lowercase
   hex digits. No catalog id begins with `custom-`.$$;
 
 comment on column public.custom_cards.version is
   $$§12.1: the count of the card's saves, from 1. An update names the version
-  it replaces and is refused when another save came first (R915008).$$;
+  it replaces and is refused when another save came first (§12.9).$$;
 
 comment on column public.custom_cards.frame is
-  $$R915001: the engine's CustomFrame (name, type, cost, rarity, stats,
+  $$§12.2: the engine's CustomFrame (name, type, cost, rarity, stats,
   keywords, text, numbers), within §12.2's limits.$$;
 
 comment on column public.custom_cards.source is
@@ -118,7 +118,7 @@ create policy custom_cards_select_own
 -- ============================================================================
 -- Server config the create reads.
 -- ============================================================================
--- MIRRORS crates/server/src/config.rs CUSTOM_CARDS_PER_ACCOUNT (50, R915008),
+-- MIRRORS crates/server/src/config.rs CUSTOM_CARDS_PER_ACCOUNT (50),
 -- as 0007 mirrors the deck caps: the server passes its own cap to each create
 -- and the function applies the smaller of the two, so the database refuses an
 -- overfull account even from a caller that skipped the server. Changing the
@@ -127,7 +127,7 @@ insert into app.settings (key, value) values ('max_custom_cards', to_jsonb(50))
 on conflict (key) do nothing;
 
 -- ----------------------------------------------------------------------------
--- app.create_custom_card -- the one write path for a new card (R915008).
+-- app.create_custom_card -- the one write path for a new card (§12.9).
 -- ----------------------------------------------------------------------------
 -- Returns 'created' (written at version 1) or 'limit' (the profile already
 -- holds least(p_max_cards, max_custom_cards) cards; nothing written). An id
@@ -178,15 +178,15 @@ end;
 $$;
 
 comment on function app.create_custom_card(uuid, text, jsonb, text, jsonb, timestamptz, int) is
-  $$R915008: the one write path for a new custom card. Writes it at version 1
+  $$§12.9: the one write path for a new custom card. Writes it at version 1
   and returns 'created', or returns 'limit' (past least(p_max_cards,
   app.settings max_custom_cards); nothing written). The cap is counted under the
   profile row lock. An inactive or missing profile raises with a "custom card:"
   prefix, an id already held raises custom_cards_pkey; the engine's validator
-  (R915001) is the authority and runs first. service_role only.$$;
+  (§12.2) is the authority and runs first. service_role only.$$;
 
 -- ----------------------------------------------------------------------------
--- app.update_custom_card -- the one write path for a save of a card (R915008).
+-- app.update_custom_card -- the one write path for a save of a card (§12.9).
 -- ----------------------------------------------------------------------------
 -- p_version is the version the save replaces. Returns:
 --   'updated' -- the frame, source and builder replaced whole, the version
@@ -246,7 +246,7 @@ end;
 $$;
 
 comment on function app.update_custom_card(uuid, text, int, jsonb, text, jsonb, timestamptz) is
-  $$R915008: the one write path for a save of an existing custom card. Replaces
+  $$§12.9: the one write path for a save of an existing custom card. Replaces
   the profile's own card whole when its version is still p_version, counting
   the save, and returns 'updated'; 'stale' when another save came first,
   'missing' when the profile has no card with this id (nothing written for

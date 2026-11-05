@@ -1403,6 +1403,12 @@ mod m_n75_ever_growing_tree {
         s.last_events().to_vec()
     }
 
+    /// The abilities the card lists. The fused card may list its pick's own Activate (Classic #74's
+    /// `plant`), a different ability from the Tree's, so "once a turn" is read on the Tree's own.
+    fn abilities(s: &Scenario, id: &str) -> Vec<String> {
+        listed(s, id).iter().filter_map(ability_of).collect()
+    }
+
     fn grown(s: &Scenario, id: &str) -> String {
         find_instance(s.state(), id)
             .expect("the Tree is still on the field")
@@ -1413,6 +1419,8 @@ mod m_n75_ever_growing_tree {
     #[test]
     fn r384_base_activate_fuses_a_field_spell_it_offers_into_it_once_a_turn() {
         let (mut s, id) = planted(false);
+        let own = abilities(&s, &id);
+        assert!(!own.is_empty(), "the Tree lists its Activate");
         let events = grow(&mut s);
         assert!(
             events
@@ -1421,12 +1429,17 @@ mod m_n75_ever_growing_tree {
         );
         assert_ne!(grown(&s, &id), EVER_GROWING_TREE);
         assert!(!grown(&s, &id).contains('*'), "the base face fuses a base pick");
-        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        assert!(
+            abilities(&s, &id).iter().all(|ability| !own.contains(ability)),
+            "Activate is once per turn"
+        );
     }
 
     #[test]
     fn r384_radiant_activate_fuses_a_radiant_field_spell_it_offers_into_it_once_a_turn() {
         let (mut s, id) = planted(true);
+        let own = abilities(&s, &id);
+        assert!(!own.is_empty(), "the Tree lists its Activate");
         let events = grow(&mut s);
         assert!(
             events
@@ -1438,7 +1451,10 @@ mod m_n75_ever_growing_tree {
             grown(&s, &id).contains('*'),
             "the fused id names a Radiant ingredient"
         );
-        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        assert!(
+            abilities(&s, &id).iter().all(|ability| !own.contains(ability)),
+            "Activate is once per turn"
+        );
     }
 }
 
