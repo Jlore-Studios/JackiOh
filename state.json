@@ -17675,6 +17675,8 @@
       }
     },
     "3157": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-05T06:03:49Z",
@@ -17688,8 +17690,11 @@
         "trail": "\"description\": \"View changed_pairs tests\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/fused_pairs.rs'\\ns=open(p).read()\\na=s.index(\\\" #[test]\\\\n fn the_changed_pairs_hold_every_pair\\\")\\nb=s.index(\\\" #[test]\\\\n fn the_daily_sample_is_\u2026\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools 2>&1 | tail -3 && cd /home/runner/work/_temp/work/item-3113 && (time target/release/jackioh fuzz --seeds 20) > /tmp/smoke.out 2>&1; echo exit=$?; l\u2026\n- Bash: {\"command\": \"echo $CARGO_TARGET_DIR; BIN=$(cargo metadata --format-version 1 --no-deps 2>/dev/null | python3 -c \\\"import sys,json;print(json.load(sys.stdin)['target_directory'])\\\")/release/jackioh; e\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nd=c['core-090']\\nprint({k:d[k] for k in ('name','type','set') if k in d}, d.get('base',{}).get('text'))\\nE\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/fused_pairs.rs'\\ns=open(p).read()\\nold=''' if sample.is_empty() {\\n return Ok(());\\n }\\n let (failures, actions) = play_pairs(&sample);\\n println!(\u2026\n- Bash: {\"command\": \"BIN=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; (time $BIN fuzz --seeds 20) > /tmp/smoke.out 2>&1; echo exit=$?; grep -n \\\"changed\\\\|seeds 1\\\\.\\\\.\\\\|deals per\\\\|forced\\\\|re\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/changed.rs'\\ns=open(p).read()\\nold=''' #[test]\\n fn a_changed_script_or_catalog_entry_names_its_card'''\\nnew=''' #[test]\\n fn a_merge_commit_names_\u2026\n- Bash: {\"command\": \"set -e; D=$(mktemp -d); cd $D; git init -q -b main src; cd src; git config user.name t; git config user.email t@t; mkdir -p crates/cards/src/scripts/core; printf 'pub const ID: &str = \\\"\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -30\", \"description\": \"fmt and clippy\", \"timeout\": 900000}\n- said: Clippy is clean. Now the broader checks in the background: the tools binary tests, acceptance, and the CLI checks.\n- Bash: {\"command\": \"B=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $B catalog check 2>&1 | tail -3; $B patches check 2>&1 | tail -3; $B spec check 2>&1 | tail -5; git status --short\", \"descript\u2026\n- Bash: {\"command\": \"(cargo test -p jackioh-tools --bin jackioh -- fuzz:: positions:: --skip duos_fuzz:: > /tmp/tools-fuzz.log 2>&1; echo FINISHED >> /tmp/tools-fuzz.log) & \\necho started\", \"description\": \"R\u2026\n- Bash: {\"command\": \"git diff crates/tools/src/fuzz.rs | sed -n 1,260p\", \"description\": \"Review fuzz.rs diff\"}\n- Bash: {\"command\": \"tail -8 /tmp/tools-fuzz.log; grep -c \\\"^test .* ok\\\" /tmp/tools-fuzz.log; grep \\\"FAILED\\\\|failed\\\" /tmp/tools-fuzz.log | head\", \"description\": \"Check fuzz test group result\"}\n- Bash: {\"command\": \"grep -n \\\"test result\\\\|FINISHED\\\\|running\\\\|panicked\\\" /tmp/tools-fuzz.log | head; wc -l /tmp/tools-fuzz.log\", \"description\": \"Check whether fuzz test log completed\"}\n- Bash: {\"command\": \"until grep -q FINISHED /tmp/tools-fuzz.log; do sleep 10; done; grep -n \\\"test result\\\\|panicked\\\\|FAILED\\\" /tmp/tools-fuzz.log | head\", \"description\": \"Wait for the fuzz group to finish\"\u2026\n- said: Fuzz group passes (73 passed, 1 ignored). Now the rest of the tools tests and acceptance.\n- Bash: {\"command\": \"(cargo test -p jackioh-tools --bin jackioh -- --skip fuzz:: --skip selfplay:: --skip positions:: > /tmp/tools-rest.log 2>&1; echo FINISHED >> /tmp/tools-rest.log) > /dev/null 2>&1 &\\n(ca\u2026\n- Bash: {\"command\": \"grep -rn \\\"patches ship\\\" .github/workflows/*.yml | head -5\", \"description\": \"When does patches ship run\"}\n- Bash: {\"command\": \"sed -n 38,100p crates/tools/src/changed.rs\", \"description\": \"View changed_cards for restructure\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/changed.rs'\\ns=open(p).read()\\na=s.index(\\\"/// The cards the change at `root`'s `HEAD` touches\\\")\\nb=s.index(\\\"/// The base of a pull request's mer\u2026\n- Bash: {\"command\": \"grep -n \\\"the_pending_patches_claims_join\\\" -A28 crates/tools/src/changed.rs\", \"description\": \"View claims test\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/changed.rs'\\ns=open(p).read()\\na=s.index(\\\"/// The cards the change at `root`'s `HEAD` touches\\\")\\nb=s.index(\\\"/// The base of a pull request's mer\u2026\n- tool error: Exit code 1 tail: option used in invalid context -- 3\n- Bash: {\"command\": \"for f in /tmp/tools-rest.log /tmp/accept.log; do echo == $f; tail -n 4 $f; done; git status --short | head\", \"description\": \"Check background test results\"}\n- Bash: {\"command\": \"until grep -q FINISHED /tmp/tools-rest.log; do sleep 10; done; grep -n \\\"test result\\\\|FAILED\\\\|panicked\\\" /tmp/tools-rest.log | head\", \"description\": \"Wait for the rest of tools tests\",\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --bin jackioh changed:: 2>&1 | tail -12; cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -5; cargo fmt --check && echo fmt-ok\", \"descri\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/changed.rs'\\ns=open(p).read()\\nold='''//! 2. The pending fragments' claims, `cards` and `plays` (R1366000): `classify --claims` (R1370000)\\n//! hol\u2026\n- Bash: {\"command\": \"B=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $B spec check 2>&1 | tail -n 3; $B patches check 2>&1 | tail -n 2; ls crates/cards/patches/pending 2>&1 | head -2; git status \u2026\n- Bash: {\"command\": \"grep -n \\\"super\\\\|workflows\\\" scripts/ci-scope.sh | head -20\", \"description\": \"Check whether super.yml is on the CI skip list\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('## State')\\nb=s.index('## Goal')\\nstate='''## State\\n\\nRun 2 (sonnet): DONE. Everything built, tested and documented; o\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every pull request fuzzes the cards it changes, and the fuzz samples grow with the catalog\"} --> ## What changed The pull request's fuzz gate (`ci.yml`'s `target/release/jackioh fuzz --seeds 200`) now plays the plain wave as before. When the change touc\u2026"
       },
       "issue": 3113,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-05T07:25:15Z",
         "from_run": "41977925969",
         "gates": [
           {
@@ -17781,7 +17786,11 @@
         "source": "build",
         "until": "2026-11-05T07:53:53Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-05T07:23:53Z",
+      "run_id": "pending:7a6543b1-1793863475",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17800,6 +17809,9 @@
         "provider": "claude-8",
         "run": "41977925969"
       },
+      "started_at": "2026-11-05T07:25:15Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17813,9 +17825,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T07:13:49Z",
+    "at": "2026-11-05T07:25:15Z",
     "url": "",
-    "what": "build #3065 on claude-3"
+    "what": "review #3157 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-05T07:07:19Z",
