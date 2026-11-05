@@ -15202,21 +15202,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/i18n/zh-CN.json"
+            "spec/rulings/R2725004.md"
           ],
-          "from": "b9e8e577fa39476d9056bcf7ce430f3b47846832",
-          "main": "61c9bb9ed47554671ddadd5e8d2e931b5a63823e"
+          "from": "aebf679a741eed100d6f554b2d1c04087314e098",
+          "main": "b60666c6b030d31157d55d04993657c2b5b38622"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "41963100677",
+            "run": "41967483919",
             "tier": "strong"
           }
         ],
-        "sha": "aebf679a741eed100d6f554b2d1c04087314e098",
+        "sha": "7a2e22ac73d20d6c4417fc96ab8cfa07b046c410",
         "tiers": {
           "claude": "strong"
         }
