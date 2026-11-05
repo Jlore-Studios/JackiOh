@@ -33,8 +33,8 @@ use crate::scripts::classic_plus::{
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
     c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
-    c065_1_spikey_pillow, c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c080_zao_gao,
-    c081_radiant_saintess, c083_transmogulate, c084_going_long,
+    c065_1_spikey_pillow, c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell,
+    c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
@@ -49,12 +49,13 @@ use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
 };
 use crate::scripts::stinkyscape::{
-    c026_zolarketh, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c050_beam_v3,
-    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
-    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c116_megabase, c143_book_launcher, c149_wildar,
-    c163_swear_loyalities, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_narcor, t_red_narcor,
+    c013_asphyxiants_cloud, c016_rod_of_ages, c026_zolarketh, c034_drone_core_viii, c035_drone_core_ix,
+    c036_drone_core_x, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
+    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
+    c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c115_scornboi, c116_megabase,
+    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar,
+    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
 use crate::scripts::training_grounds::c036_training_dummy;
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -68,7 +69,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #1149 (R1149000, R1149001), #1194, #1279 (R1279000), #1563 (R844), #1704 (R831003, R406), #1748
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
-/// `never_defense_kept`, R2657001, R2657002, R2657004).
+/// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
+/// #3044).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -469,6 +471,39 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.9f",
         c036_training_dummy::script_v0_5_9f,
     ),
+    (c115_scornboi::ID, "v0.5.11o", c115_scornboi::script_v0_5_11o),
+    (
+        c140_rush_token_launcher::ID,
+        "v0.5.11o",
+        c140_rush_token_launcher::script_v0_5_11o,
+    ),
+    (
+        c013_asphyxiants_cloud::ID,
+        "v0.5.11o",
+        c013_asphyxiants_cloud::script_v0_5_11o,
+    ),
+    (
+        c016_rod_of_ages::ID,
+        "v0.5.11o",
+        c016_rod_of_ages::script_v0_5_11o,
+    ),
+    (c026_zolarketh::ID, "v0.5.11o", c026_zolarketh::script_v0_5_11o),
+    (
+        c129_jlockeeds_missile_pod::ID,
+        "v0.5.11o",
+        c129_jlockeeds_missile_pod::script_v0_5_11o,
+    ),
+    (
+        c168_drone_hanger::ID,
+        "v0.5.11o",
+        c168_drone_hanger::script_v0_5_11o,
+    ),
+    (
+        c090_in_too_deep::ID,
+        "v0.5.11o",
+        c090_in_too_deep::script_v0_5_11o,
+    ),
+    (c079_twinspell::ID, "v0.5.11o", c079_twinspell::script_v0_5_11o),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
