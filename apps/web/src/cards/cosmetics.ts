@@ -2,7 +2,7 @@
 // border round the frame. R1953001: nothing sets the account-wide picks of those three
 // (`COSMETICS_SETTINGS_KEY`, the account's `cosmetics` group, R633) and no face wears them; the group keeps
 // its shape (R1655000). R1297000: the same store holds the deck slots, the playmat (`table`), the backdrop
-// (`field`) and the card back (`cardBack`). Ids are the registry's (`crates/server/cosmetics.json`, generated
+// (`field`) and the card back (`cardBack`). Ids are the registry's (`crates/shared/cosmetics.json`, generated
 // into `wire/generated/cosmetics.ts`); an unknown id (a newer client's) is kept, never overwritten, and drawn
 // as its kind's default. The picks never reach the engine, an action, `PlayerView` or the log; a face wears
 // them only where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). An opponent's
@@ -66,7 +66,7 @@ export function cosmeticsOf(kind: CosmeticKind): readonly Cosmetic[] {
 
 function defaultOf(kind: CosmeticKind): CosmeticId {
   const found = COSMETICS.find((cosmetic) => cosmetic.kind === kind && cosmetic.default);
-  // The registry's check holds one default per kind (crates/server/src/cosmetics.rs).
+  // The registry's check holds one default per kind (crates/shared/src/cosmetics.rs).
   if (found === undefined) throw new Error(`the cosmetics registry has no default ${kind}`);
   return found.id;
 }

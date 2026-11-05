@@ -23,14 +23,14 @@ use jackioh_server::config::{
 use jackioh_server::db::store::{MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch};
 use jackioh_server::duos::{ceiling_draw, finish_match};
-use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::quests::{QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{self, GameEconomy, GameMode, track_level};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreGrant, JloreReason, QuestChange,
     QuestGrant, SetTrack, TrackGrant,
 };
-use jackioh_server::economy::track_rewards::reward_for_level;
+use jackioh_shared::economy::math::total_xp_for_level;
+use jackioh_shared::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{add_user, call, test_app as built_app};
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -1129,7 +1129,7 @@ mod joint_commit {
 
 mod reads {
     use super::*;
-    use jackioh_server::economy::math::{level_span_xp, xp_to_next_level};
+    use jackioh_shared::economy::math::{level_span_xp, xp_to_next_level};
 
     /// The scenario's profiles as signed-in accounts, with their tokens.
     async fn authed() -> (Arc<App>, String) {

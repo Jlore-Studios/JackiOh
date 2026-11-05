@@ -13,7 +13,7 @@ use crate::api::http::{ApiResult, Req, json};
 use crate::app::App;
 use crate::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use crate::economy::rewards::TrackPoint;
-use crate::economy::track_rewards::reward_for_level;
+use jackioh_shared::economy::track_rewards::reward_for_level;
 
 /// `GET /api/wallet` (`AuthLevel::Active`): the caller's Jlore balance.
 pub async fn get_wallet(app: &Arc<App>, req: Req) -> ApiResult {
