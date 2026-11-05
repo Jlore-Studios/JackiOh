@@ -74,6 +74,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
 
+The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
+Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
+worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
+a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
+in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
+the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
+`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
+draws its own buttons.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
@@ -495,20 +504,26 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         defaults of every card, so a card with no pick
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
-                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
-                        as live previews (a full-art card's strip offers no full art, its Animated art
-                        (its normal face, its art moving, R2715000), its Epic, its animated Legendary and
-                        its signed Mythic, R2655000), which equip on that card
-                        alone, kept on the device
+                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of the foils, finishes
+                        and borders it may wear drawn as live previews and, R3015007, its variants as ladders
+                        of their levels (collection/VariantLadders.tsx, `cardLadders`: the Default first,
+                        each rung owned, next or locked and naming what it needs; a full-art card's retired
+                        tiers are listed nowhere, the levels they map to standing for them), which equip on
+                        that card alone, one level a card (`writeCardLevel`), kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
-                        stored pick draws as the default (R1833000); holding a tile, a strip item or a
+                        stored pick draws as the default (R1833000); holding a tile, a strip item, a rung or a
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
                         R2730000), a grid card as the card, in hand and on the board with a Radiant
                         toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
-                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
-                        Only there does a locked item a held token covers offer the token
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx);
+                        Equip or buy on either opens the card's equip and buy screen
+                        (collection/LooksScreen.tsx, R3016001): its ladders, Equip on an owned level, Buy on
+                        the next with a held token or the full Chase Shard bar after a question, and what a
+                        later level needs; a rung hovered there or in the card view shows that level.
+                        Only there does a locked item a held token covers offer the token (of a
+                        ladder, its next rung alone, R3015004)
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or

@@ -487,7 +487,8 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
 /**
  * One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt`
  * may be false, true (the Epic) or a full art's id (R2655000) or a version's (R2725000), `augments` the
- * augment ids layered on it.
+ * augment ids layered on it. R3015005: a pick written since #3015 is one level's id and no augments; an older
+ * one is read by versions.ts's `levelOfPick`.
  */
 export type CardPicksEntry = {
   cardId: string;
@@ -590,7 +591,7 @@ export async function replaceQuest(token: string, questId: string): Promise<Ques
 
 export type PackCounters = { epic: number; legendary: number; mythic: number };
 
-/** One tiered roll's chance of each tier, fallback included (`TierOdds`, `crates/server/src/economy/tiers.rs`, R1339000). */
+/** One tiered roll's chance of each tier, fallback included (`TierOdds`, `crates/shared/src/economy/tiers.rs`, R1339000). */
 export type TierOdds = Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
 
 export type PacksResponse = {
@@ -604,6 +605,8 @@ export type PacksResponse = {
     flooredSlot: TierOdds;
     duplicateCosmetic: TierOdds;
     globalCosmetic: { chance: number; tiers: TierOdds };
+    /** R3015003: the chance, where a higher level of a variant is left, that a pull drops it and every level below it instead of the next. */
+    levelSkip: number;
   };
   /** One entry per kind of pack held (a shipped set's name, or `global`), the global pack first. */
   unopened: { pack: string; count: number }[];
@@ -612,7 +615,13 @@ export type PacksResponse = {
 /** What a slot became (R1301002). A cosmetic's rarity is its own scale, never the slot's card's (R1333000). */
 export type PackSlotGrant =
   | { kind: "card" }
-  | { kind: "cosmetic"; cosmeticId: string; cosmeticRarity: CosmeticRarity }
+  | {
+      kind: "cosmetic";
+      cosmeticId: string;
+      cosmeticRarity: CosmeticRarity;
+      /** R3015003: the levels granted with it, lowest first, by an out-of-order pull; absent when none. */
+      below?: string[];
+    }
   | { kind: "bars"; cosmeticRarity: CosmeticRarity };
 
 export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotGrant };
@@ -683,7 +692,7 @@ export function getWallet(token: string): Promise<WalletResponse> {
   return keptGet<WalletResponse>(keptPaths.wallet, token);
 }
 
-/** What reaching a set-track level pays (`LevelReward`, `crates/server/src/economy/track_rewards.rs`). */
+/** What reaching a set-track level pays (`LevelReward`, `crates/shared/src/economy/track_rewards.rs`). */
 export type TrackRewards = { jlore: number; setPacks: number; cardTokens: number };
 
 /** One shipped set's track (§14.7): `xp` is its total; `levelXp`, `xpToNext` and `nextRewards` are null on the last level (R1302005). */
@@ -765,7 +774,8 @@ export async function redeemCosmeticToken(
 export type CosmeticPacksResponse = {
   shardBar: TokenBarState;
   unopened: number;
-  odds: { slot: TierOdds; flooredSlot: TierOdds };
+  /** R3015003 `levelSkip`: as `PacksResponse`'s. */
+  odds: { slot: TierOdds; flooredSlot: TierOdds; levelSkip: number };
 };
 
 export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
@@ -782,6 +792,8 @@ export type CosmeticSlotGrant =
       cardId: string | null;
       /** Whether the account lacked that card, so the slot grants it too. */
       cardGranted: boolean;
+      /** R3015003: the levels granted with it, lowest first, by an out-of-order pull; absent when none. */
+      below?: string[];
     }
   | { kind: "bars" };
 

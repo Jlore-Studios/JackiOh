@@ -37,31 +37,31 @@
 // motion, with Animated foil off and on a lazy face.
 //
 // R2725000: the face wears its look (fullArt.ts `useCardLook`): its version (`data-version`; the Full art version prints
-// the full-art layout) and the augments layered on it (`data-augments`), its `data-full-art-tier` the tier the look
-// printed as before #2725 (`tierOfLook`). R2725003: Animated moves the art on either face. R2949000: Signature is worn
-// only beside Full art and Animated (versions.ts `signatureFits`), never on the normal face, and shows the Signature
-// look: a picture of its own (CardArt's `picture`, `data-art-picture="signature"`), a motion of its own
-// (`SIGNATURE_MOTION`) and the signed name. R2725004: a Radiant face keeps every Radiant mark under every look.
+// the full-art layout), its `data-full-art-tier` the tier the look printed as before #2725 (`tierOfLook`). R2725003:
+// Animated moves the art on either face. R2725004: a Radiant face keeps every Radiant mark under every look.
+// R3015002: the look is one level (`data-level`): every level of a variant draws its first level's picture
+// (`artPictureOf`), a level adding only the full-art frame, its picture's own motion (`artMotionOf`) and a signature;
+// a signed level is its variant's full art, moving, with the signed name (FullArtSignature.tsx), and no picture or
+// motion of its own (R2949000's Signature look is Full art's signed level, R3015005).
 // R2940001: Alt full art prints the full-art layout as Full art does (versions.ts `isFullBleed`); Alt art and Alt full
 // art draw Alt art's picture and the Sketch the normal one in pencil (`artPictureOf`, CardArt's `picture`), and the
-// Sketch's base frame is a pencilled outline (cosmetics.css). R2940002: Animated, a foil, a finish and a border layer
-// on each, and Signature on none.
+// Sketch's base frame is a pencilled outline (cosmetics.css), its full art's too (R3015002). R2940002: Animated, a
+// foil, a finish and a border layer on each.
 // R2942001: Extended art lays the card's own picture across the whole face (CardArt's `shape` "full") and keeps every
 // part of the normal face over it, its frame and rules box translucent (cards.css); Pixel and Comic restyle the normal
 // picture (`artPictureOf`), Pixel setting the name in its pixel face (pixelName.ts, `data-pixel-name`, the words
-// kept unseen) and Comic in a burst (cards.css). R2942002: Animated, a foil, a finish and a border layer on each, and
-// Signature on none.
+// kept unseen) and Comic in a burst (cards.css). R2942002: Animated, a foil, a finish and a border layer on each.
 // R2943001: Set showcase draws the card in its set's own look (`data-showcase`, pictures.ts `showcaseFamilyOf`): the
 // picture in its set's treatment (`artPictureOf` by the face's set), and on a base face the set's edge, bezel and name
 // banner (cards.css). Out of frame draws the picture's backdrop in a smaller window and its subject cut out over the
 // frame (`.cf-art--cutout`, CardArt's `part`), inside the art frame, so under the cost gem, crest, name, stats and rules
 // box and inside the card's rim; a Starship in play and a Legacy card, whose pictures have no parts, keep the normal
-// window (CardArt `hasArtParts`). R2943002: Animated, a foil, a finish and a border layer on each, and Signature on none.
+// window (CardArt `hasArtParts`). R2943002: Animated, a foil, a finish and a border layer on each.
 // R2944001: Immersive draws its window's backdrop hazed as far off (`artPictureOf`'s "depth") and its subject on a near
 // layer over it (`.cf-immersive`, the window's shape, CardArt's `part`), inside the window; a Starship in play and a
 // Legacy card draw their one picture hazed. Prismatic draws its picture in chrome under a sheen, and on a base face a
 // rainbow edge, a chrome bezel and a chrome banner (cards.css). R2944002: Animated, a foil, a finish and a border layer
-// on each, and Signature on none. Immersive's near layer follows the pointer and the device's tilt and breathes
+// on each. Immersive's near layer follows the pointer and the device's tilt and breathes
 // (`data-immersive-motion`, immersive.ts `useImmersiveShift`) while it holds a motion slot, the one Animated's motion
 // shares on that face (`useArtMotion`), and holds still under reduced motion, with Animated foil off and on a lazy face.
 //
@@ -90,7 +90,6 @@ import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity,
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { hasArtParts } from "./art/CardArt.tsx";
 import { showcaseFamilyOf } from "./art/pictures.ts";
-import { SIGNATURE_MOTION } from "./art/motion.ts";
 import { CardStates } from "./CardStates.tsx";
 import { useImmersiveShift } from "./immersive.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -120,7 +119,6 @@ import {
   VERSION_PIXEL_ID,
   VERSION_SET_SHOWCASE_ID,
   artPictureOf,
-  augmentsOf,
   isFullBleed,
 } from "./versions.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
@@ -331,7 +329,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
-  // R2725000: the look its pick names, its version and augments (R2655000's tiers among them).
+  // R2725000, R3015005: the look its pick names, one level (R2655000's tiers among them).
   const cardLook = useCardLook(face.defId, worn);
   // R2715000: the Animated art prints the normal face; R2725000: only the Full art version prints full art, and
   // R2940001 Alt full art.
@@ -373,15 +371,13 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const glitch = isGlitch(face.defId);
   // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
   const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
-  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none.
+  // R2715000, R2725000: any full layout keeps its look, the Default's animated level too; a compact face wears none.
   const look = full ? cardLook : NORMAL_LOOK;
   const tier = tierOfLook(look);
-  const augments = augmentsOf(look);
-  // R2725003: Animated on full art lays the band over it and drifts it. R2949000: Signature shows the Signature look,
-  // its own picture and motion, on Full art alone, and signs the name there but in the viewer's own hand.
+  // R2725003: an animated full art lays the band over it and drifts it. R3015002: a signed level signs the name
+  // across its full art, but in the viewer's own hand.
   const moving = fullArt && look.animated;
-  const signatureLook = fullArt && look.signed;
-  const signed = signatureLook && !bare;
+  const signed = fullArt && look.signed && !bare;
   // R2943001: a Starship in play's and a Legacy card's pictures have no parts.
   const starship = face.inPlay ? face.starship : null;
   // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
@@ -400,8 +396,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // parts (a Starship in play's and a Legacy card's have none).
   const showcase = look.version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(face.set) : null;
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
-  const picture = signatureLook ? "signature" : artPictureOf(look.version, face.set);
-  const motion = artMotion && artMoves ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null;
+  // R3015002: one picture per variant at every level, and its own motion at every animated one.
+  const picture = artPictureOf(look.version, face.set);
+  const motion = artMotion && artMoves ? artMotionOf(face.defId) : null;
 
   return (
     <span
@@ -423,8 +420,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-version={look.version ?? undefined}
+      data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
-      data-augments={augments.length > 0 ? augments.join(" ") : undefined}
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
       data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}

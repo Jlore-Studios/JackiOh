@@ -406,6 +406,55 @@
   color: var(--tavern-text-dim);
 }
 
+/* R3015007: a variant's ladder (VariantLadders.tsx), its levels lowest first, each rung joined to the one below it
+   by a short rule across the gap. An owned rung reads as any owned item; the next one, every level below it owned,
+   is ringed in a dashed teal with its picture half lit; a locked one past it stays dimmed and names what it needs.
+   No gold marks a level (R2725004): the teal is the tavern's, and the equipped ring is the strip's own. A locked
+   rung still opens its preview on a click, so it keeps the pointer. */
+.tavern.app-shell .collection-ladder__rungs > li {
+  position: relative;
+  display: flex;
+}
+
+.tavern.app-shell .collection-ladder__rungs > li + li::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: 8px;
+  height: 2px;
+  background: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .collection-ladder__rungs > li:has(> [data-owned="true"]) + li:has(> [data-owned="true"])::before {
+  background: var(--tavern-parchment);
+}
+
+.tavern.app-shell .collection-ladder__rungs > li:has(> [data-owned="true"]) + li:has(> [data-next="true"])::before {
+  background: var(--tavern-teal);
+}
+
+.tavern.app-shell button.collection-strip__item.collection-rung:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-owned="false"] {
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.tavern.app-shell button.collection-strip__item.collection-rung:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-next="true"] {
+  border-style: dashed;
+  border-color: var(--tavern-teal);
+}
+
+.tavern.app-shell .collection-rung[data-next="true"] .collection-strip__picture {
+  filter: grayscale(0.5) brightness(0.75);
+}
+
+.tavern.app-shell .collection-rung[data-next="true"] .collection-strip__name {
+  opacity: 0.85;
+}
+
+.tavern.app-shell .collection-strip__lock.collection-rung__next {
+  color: var(--tavern-teal);
+}
+
 /* The item shown on the large card fades in over the card's own face. */
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .tavern.app-shell .collection-cardview__preview {
@@ -925,4 +974,142 @@
   text-align: center;
   line-height: 1.15;
   color: var(--tavern-text-dim);
+}
+
+/* ---- R3016001: a card's equip and buy screen (LooksScreen), over the fullscreen preview it may open from. Each
+   variant a ladder of rows, a level a row: its picture, its name and rarity, and Equip, Buy or what it needs. The
+   rows wrap, so nothing scrolls sideways at phone width; the panel scrolls down. */
+
+.tavern.app-shell .collection-look__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tavern.app-shell .collection-looks {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-inspect-modal, 70) + 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.tavern.app-shell .collection-looks__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-black) 72%, transparent);
+}
+
+.tavern.app-shell .collection-looks__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(720px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
+}
+
+.tavern.app-shell .collection-looks__title,
+.tavern.app-shell .collection-looks__variant {
+  margin: 0;
+  font-family: var(--font-display);
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .collection-looks__ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tavern.app-shell .collection-looks__rungs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .collection-looks__rung {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 40%, transparent);
+  border-radius: 10px;
+}
+
+.tavern.app-shell .collection-looks__rung[data-equipped="true"] {
+  border-color: var(--tavern-gold);
+}
+
+.tavern.app-shell .collection-looks__picture .collection-strip__picture {
+  height: 56px;
+}
+
+.tavern.app-shell .collection-looks__words {
+  display: flex;
+  flex: 1 1 140px;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tavern.app-shell .collection-looks__rarity,
+.tavern.app-shell .collection-looks__missing,
+.tavern.app-shell .collection-looks__needs {
+  font-size: var(--type-sm);
+  color: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .collection-looks__buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tavern.app-shell .collection-looks__question {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 8px;
+}
+
+.tavern.app-shell .collection-looks__question > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tavern.app-shell :is(.collection-looks__ways, .collection-looks__answers) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tavern.app-shell .collection-looks__error {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--tavern-danger-text);
+}
+
+.tavern.app-shell .collection-looks__close {
+  align-self: center;
+}
+
+.tavern.app-shell .collection-looks__ways > button[aria-pressed="true"] {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 1px;
 }
