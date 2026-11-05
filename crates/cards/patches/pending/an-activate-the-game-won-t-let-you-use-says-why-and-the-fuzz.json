@@ -1,7 +1,7 @@
 {
   "title": "Patch: an Activate the game won't let you use says why, and the fuzz holds every ability to it",
   "sources": "#3061",
-  "notes": "View only: an Activate ability legalActions does not list now shows usable false and a reason in viewFor (R3061000), and the fuzz monitor's I14 holds every shown ability to the listing. No state, event, replay, listing or AI decision changes. The classifier's forced games read the changed view as a different play for these cards: classicplus-019, stinkyscape-039, stinkyscape-141 and stinkyscape-t-dormant-starship, the cards acting at each game's first diverging step on golden seeds that reach S #112 Job Application's Upload Resume with an empty hand.",
+  "notes": "View only: an Activate ability legalActions does not list now shows usable false and a reason in viewFor (R3061000), and the fuzz monitor's I15 holds every shown ability to the listing. No state, event, replay, listing or AI decision changes. The classifier's forced games read the changed view as a different play for these cards: classicplus-019, stinkyscape-039, stinkyscape-141 and stinkyscape-t-dormant-starship, the cards acting at each game's first diverging step on golden seeds that reach S #112 Job Application's Upload Resume with an empty hand.",
   "player": {
     "title": "A greyed-out Activate button says why",
     "new": [],
