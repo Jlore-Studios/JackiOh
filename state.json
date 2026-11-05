@@ -14815,7 +14815,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-04T17:56:49Z",
+      "feedback_since": "2026-11-05T01:40:44Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-04T20:56:16Z",
@@ -14858,7 +14858,7 @@
         "provider": "claude-8",
         "run": "41903161687"
       },
-      "source": "request",
+      "source": "",
       "started_at": "2026-11-05T01:40:44Z",
       "stop_requested": false,
       "taken_asks": [
