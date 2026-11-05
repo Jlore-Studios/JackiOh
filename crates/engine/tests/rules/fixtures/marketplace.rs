@@ -1,7 +1,9 @@
 //! Test-only cards and a table for Stinkyscape's Marketplace (#1853, R1853000–R1853005; #2250,
-//! R2250002), all of the Boss-X set so a set lot draws among them, and `MARKET_TABLE` in the shape of
-//! the set's (S21); the Resources are `fixtures/resources.rs`'. Ids `fx-mkt-…` from 18530 (the
-//! hand-sale card 18610) collide with no other fixture file's.
+//! R2250002; #3047, R3047000–R3047004), the four of the Boss-X set so a set lot draws among them (the four
+//! offers of a roll, R3047000, draw each of them), `MARKET_TABLE` in the shape of the set's (S21), and a
+//! card of each cost from (0) to (8) for the price curve; the Resources are `fixtures/resources.rs`'. Ids
+//! `fx-mkt-…` from 18530 (the hand-sale card 18610, the cost cards 18540) collide with no other fixture
+//! file's.
 
 use std::sync::LazyLock;
 
@@ -43,16 +45,57 @@ pub static MARKET_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     ]
 });
 
+/// R3047000: a card of each printed cost from (0) to (8), `fx-mkt-cost-0` to `fx-mkt-cost-8`, in no
+/// set a lot draws by, so they join no roll of `MARKET_TABLE`.
+pub const COST_CARDS: [&str; 9] = [
+    "fx-mkt-cost-0",
+    "fx-mkt-cost-1",
+    "fx-mkt-cost-2",
+    "fx-mkt-cost-3",
+    "fx-mkt-cost-4",
+    "fx-mkt-cost-5",
+    "fx-mkt-cost-6",
+    "fx-mkt-cost-7",
+    "fx-mkt-cost-8",
+];
+
+/// R3047000: a table whose one lot is the nine cost cards, for the price at each cost.
+pub static COST_TABLE: &[MarketLot] = &[MarketLot {
+    pool: MarketPool::Ids(&COST_CARDS),
+    count: 1,
+}];
+
+/// R3047002: a table of the (4) Unit alone, so a roll is one offer whose draws can be told one by one:
+/// the lot, the card, whether it is Radiant, the Buffs or Nerfs and the spread.
+pub static ONE_CARD_TABLE: &[MarketLot] = &[MarketLot {
+    pool: MarketPool::Ids(&[FOUR]),
+    count: 1,
+}];
+
+pub static COST_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    COST_CARDS
+        .iter()
+        .zip(18540..)
+        .zip(0..)
+        .map(|((id, index), cost)| {
+            spell_def(
+                index,
+                json!({ "id": id, "name": format!("Fixture Cost {cost}"), "set": "Core", "cost": cost }),
+            )
+        })
+        .collect()
+});
+
 pub fn marketplace_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
-    for def in MARKET_DEFS.iter() {
+    for def in MARKET_DEFS.iter().chain(COST_DEFS.iter()) {
         defs.insert(def.id.clone(), def.clone());
     }
     defs
 }
 
 /// The fixture table: the named three weighted 2, the (4) Unit alone 1, and the Boss-X set 1, so a
-/// roll of three offers draws its lots by 2 : 1 : 1 (R2250002).
+/// roll of offers draws its lots by 2 : 1 : 1 (R2250002).
 pub static MARKET_TABLE: &[MarketLot] = &[
     MarketLot {
         pool: MarketPool::Ids(&[FREE, FOUR, FIVE]),

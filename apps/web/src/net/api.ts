@@ -395,6 +395,11 @@ export function devFill(token: string): Promise<{ cards: number; cosmetics: numb
   return apiRequest<{ cards: number; cosmetics: number }>("/api/dev/fill", { method: "POST", token, body: {} });
 }
 
+/** R3156001: every cosmetic the fill grants and nothing else, answering the ledger rows written. */
+export function devUnlockCosmetics(token: string): Promise<{ cosmetics: number }> {
+  return apiRequest<{ cosmetics: number }>("/api/dev/cosmetics", { method: "POST", token, body: {} });
+}
+
 export function devClear(token: string, part: DevClearPart): Promise<{ written: number }> {
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
@@ -585,7 +590,7 @@ export async function replaceQuest(token: string, questId: string): Promise<Ques
 
 export type PackCounters = { epic: number; legendary: number; mythic: number };
 
-/** One tiered roll's chance of each tier, fallback included (`TierOdds`, `crates/server/src/economy/tiers.rs`, R1339000). */
+/** One tiered roll's chance of each tier, fallback included (`TierOdds`, `crates/shared/src/economy/tiers.rs`, R1339000). */
 export type TierOdds = Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
 
 export type PacksResponse = {
@@ -678,7 +683,7 @@ export function getWallet(token: string): Promise<WalletResponse> {
   return keptGet<WalletResponse>(keptPaths.wallet, token);
 }
 
-/** What reaching a set-track level pays (`LevelReward`, `crates/server/src/economy/track_rewards.rs`). */
+/** What reaching a set-track level pays (`LevelReward`, `crates/shared/src/economy/track_rewards.rs`). */
 export type TrackRewards = { jlore: number; setPacks: number; cardTokens: number };
 
 /** One shipped set's track (§14.7): `xp` is its total; `levelXp`, `xpToNext` and `nextRewards` are null on the last level (R1302005). */
@@ -866,6 +871,18 @@ export async function claimNews(token: string, id: string): Promise<NewsResponse
   for (const path of reward === undefined || reward === null ? [] : NEWS_REWARD_READS[reward.kind]) {
     forgetRead(token, path);
   }
+  return answer;
+}
+
+/**
+ * `POST /api/news/claim-all` (R3191000): Claim all, one spend for every entry the server finds unclaimed,
+ * so it sends an `Idempotency-Key` (R2124000); answers as `getNews`. The kept reads of every reward kind
+ * the answer shows claimed are dropped, as one claim drops its own.
+ */
+export async function claimAllNews(token: string): Promise<NewsResponse> {
+  const answer = await spendRequest<NewsResponse>("/api/news/claim-all", token, {});
+  const kinds = new Set(answer.news.flatMap((entry) => (entry.claimed && entry.reward !== null ? [entry.reward.kind] : [])));
+  for (const path of new Set([...kinds].flatMap((kind) => NEWS_REWARD_READS[kind]))) forgetRead(token, path);
   return answer;
 }
 

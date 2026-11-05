@@ -74,6 +74,15 @@ switch draws none, and a browsable pile's band is its `::after`. An input or a s
 radio is tapped through its labels. Neighbours nearer than that split the gap. e2e spec `47`
 measures the board and every menu of `46` at 390x844.
 
+The top bar is one skin (#3189). BackLink's `.screen-nav` and the landing's `.landing-corner` draw their
+Back or Account link, Friends, language button and settings gear with one rule, `routes/top-bar.css`,
+worn by the class `top-bar-button` (`--round` for the icon buttons, a 44 px circle; `--text` for a word in
+a pill). A new top-bar control adds that class and never a copy of the skin; the Jlore pill is drawn alike
+in `economy/jlore-pill.css`. The nav carries the three brass colors itself (`auth/tavern.css`), since
+the replays and the deck screens are not `.tavern`, and the tavern's wood-button and text-link rules skip
+`top-bar-button` through a `:where(:not())` that adds no weight. The board's control bar (`placement="game"`)
+draws its own buttons.
+
 A menu panel waiting on a read draws a skeleton, `skeleton/Skeleton.tsx` (R2115000), in one of four
 shapes: a card `grid`, list `rows`, `table` rows or a generic `panel`, each a fixed number of blocks
 and never a count from the read. The sentence it printed stays as a visually hidden `role="status"`
@@ -100,8 +109,15 @@ Glitch's glyphs (`cards/glitch.ts`), seeded by the path, settling one character 
 stays the path; `NotFoundPlay` draws the lost card `notfound/lost.ts` picks by a hash of the path, which says its
 voice line through the audio engine when tapped, beside three face-down `CardBack`s that turn over into
 `ChoiceCard`s for Play, Practice and the Almanac (a tap turns one over and the next follows it; a mouse over it or
-keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. `public/404.html`, which
-Cloudflare serves for a path nothing routes, fans three of the brand's card backs into 4, 0 and 4 in CSS alone.
+keyboard focus turns it first). Under Reduce motion all lie dealt, face up and settled. The page Cloudflare serves
+for a path nothing routes, `404.html`, is the client itself (R3127000, #3127): `static-pages.ts` `notFoundHtml`
+writes it from the built `index.html` (entry script, `noindex`, the 404 title, no canonical link), so the client
+starts and draws that `NotFound` with the real path. Its body, which shows with no script and until the client
+replaces `#root`, is a fallback in the app's look (`shellTestid.notFoundStatic`: the tavern board, the stacked logo,
+the button home) whose hand is three placeholder `CardFace` Spells, Error 4, Not 0 and Found 4, that deal in, fan out,
+turn over from the brand's card back and float in CSS alone (`notfound/notfound.css` `.nf-hand`, still under Reduce
+motion). `handCardHtml` writes their markup from the art builders `CardArt` calls, and `static-pages.test.ts` holds it
+to `CardFace`'s own render. No `public/404.html` ships beside it.
 
 A menu opens on its last answer (R2125000): `net/readCache.ts` keeps, in tab memory only, the last answer of each
 menu `GET`, keyed by path (query included) and account (the token's `sub`, so a renewal keeps it). The kept
@@ -498,7 +514,10 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         and the deck builder's slot picker offer what the account owns, and an unowned
                         stored pick draws as the default (R1833000); holding a tile, a strip item or a
                         card, or its inspect key, opens it full screen (collection/ItemPreview.tsx,
-                        R2730000). Only there does a locked item a held token covers offer the token
+                        R2730000), a grid card as the card, in hand and on the board with a Radiant
+                        toggle (collection/LookViews.tsx, R3016000), and a mouse resting on a grid card,
+                        or the keyboard's focus, opens the same views beside it (collection/LookHover.tsx).
+                        Only there does a locked item a held token covers offer the token
                         (collection/TokenOffer.tsx): a Rare, Epic or Legendary cosmetic token through
                         POST /api/tokens/redeem-cosmetic (R1953001, R2728000), or a card token through
                         POST /api/tokens/redeem-card. The offer asks first (R2480000), and ownership or
@@ -523,9 +542,10 @@ routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-read
                         one "Odds & pity" link to /purchases (R1665000); a change in a panel has the open screen and the next
                         read the owned cosmetics again; the page never scrolls, its body does
 routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
-                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds GET
-                        /api/packs and GET /api/cosmetic-packs state, the global roll's line (R1661001) and
-                        the account's pity counters, shown as the server answers them; a visitor sees the
+                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds tables
+                        (card packs, duplicates with the global roll's column (R1661001), cosmetic packs) GET
+                        /api/packs and GET /api/cosmetic-packs state, and the pity table with the account's
+                        counters, shown as the server answers them (a zero rate as a dash); a visitor sees the
                         disclaimer and a link to sign in
 economy/                #1651: the economy's shared pieces: `wallet.ts`, the balance the Jlore pill shows
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
@@ -799,8 +819,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
   whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
   its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
-  and leaves no last board, and resumes only as a sandbox. A sandbox game whose deck names custom
-  cards carries them, and its panel offers them first (R962000).
+  and leaves no last board, and resumes only as a sandbox.
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
@@ -983,7 +1002,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - `src/wasm/index.ts` is the module's only caller. `main.tsx` starts `loadWasm()` at boot, and its
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
-  `test/setup.ts` loads it synchronously for jsdom.
+  `test/setup.ts` loads it synchronously for jsdom. A card's face is worked out by the module (#3106),
+  so a screen that does not wait for it (the landing, the shop, `/replays`) draws a face only through
+  `useEngineReady` or `WhenEngineReady` (`src/wasm/`), the way the landing's fan, "Your table" showcase and
+  the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match

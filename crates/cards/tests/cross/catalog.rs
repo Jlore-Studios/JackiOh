@@ -13,6 +13,7 @@
 //!                   C+ #64, M #19.1), #1151 (#57, #82, #83, #85), #2280 (C+ #74, S #16; R2280000).
 //!   issue #2521   — §8's rows: Core #84, M #80, C+ #34, S #11, #39, #68, #95, #137, #159 to #162, #163,
 //!                   #164, #176, #177 and M+ #1.5 (§8.9, §8.10, §7).
+//!   issue #3139   — Core #49 Snom Bunny Mind Control's cost (5) and Classic #62 Living Bomb's cost (2).
 //!   others        — radiant faces (§5.2, R276, R349), the census (#2581), tags (§5, §6, M4-T1, R278, B2.4).
 //!
 //! Not asserted: `keywords`, `text`, `params`, `refs` and `loc` (per-card tests and references.rs prove the
@@ -215,8 +216,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Common,
-        st(6, 10),
-        st(12, 20),
+        st(6, 8),
+        st(12, 16),
     ),
     row(
         "14",
@@ -276,19 +277,19 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(7, 1),
-        st(14, 2),
+        st(6, 1),
+        st(12, 2),
     ),
     row("21", "Hinder", c(0), T::Spell, &[], R::Common, NO_STATS, NO_STATS),
     row(
         "22",
         "Carnivorous Cube",
-        c(3),
+        c(2),
         T::Unit,
         &[],
         R::Epic,
-        st(4, 6),
-        st(8, 12),
+        st(2, 4),
+        st(4, 8),
     ),
     row(
         "23",
@@ -544,7 +545,7 @@ const CORE: &[SpecRow] = &[
     row(
         "49",
         "Snom Bunny Mind Control",
-        c(4),
+        c(5),
         T::Spell,
         &[],
         R::Rare,
@@ -588,8 +589,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Legendary,
+        st(2, 2),
         st(4, 4),
-        st(8, 8),
     ),
     row(
         "53",
@@ -885,7 +886,7 @@ const CORE: &[SpecRow] = &[
     row(
         "82",
         "KY's Trial",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Ky],
         R::Rare,
@@ -915,7 +916,7 @@ const CORE: &[SpecRow] = &[
     row(
         "85",
         "Unlicensed Experimentation",
-        c(2),
+        c(3),
         T::Trap,
         &[],
         R::Legendary,
@@ -1262,7 +1263,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "14",
         "Shadowstep",
-        c(2),
+        c(1),
         T::Trap,
         &[],
         R::Common,
@@ -1688,7 +1689,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "62",
         "Living Bomb",
-        c(1),
+        c(2),
         T::FieldSpell,
         &[G::Plague],
         R::Rare,
@@ -1802,8 +1803,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(3, 6),
-        st(6, 12),
+        st(3, 4),
+        st(6, 8),
     ),
     row(
         "74",
@@ -1922,8 +1923,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Legendary,
-        st(5, 5),
-        st(10, 10),
+        st(7, 7),
+        st(14, 14),
     ),
     row(
         "86",
@@ -1992,7 +1993,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "1",
         "Doom Shroom",
-        c(3),
+        c(4),
         T::Trap,
         &[],
         R::Epic,
@@ -2062,7 +2063,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "8",
         "Withering Storm",
-        c(2),
+        c(1),
         T::Spell,
         &[],
         R::Rare,
@@ -2097,8 +2098,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Pancake],
         R::Legendary,
-        st(8, 8),
-        st(16, 16),
+        st(5, 5),
+        st(10, 10),
     ),
     row(
         "12.1",
@@ -2358,8 +2359,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(5, 5),
-        st(10, 10),
+        st(4, 4),
+        st(8, 8),
     ),
     row(
         "27",
@@ -2504,7 +2505,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "37",
         "Wardrum",
-        c(5),
+        c(4),
         T::Unit,
         &[G::Quickdraw, G::Acclaimed],
         R::Legendary,
@@ -3450,7 +3451,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "29",
         "Forbiddenous Factory",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Plague],
         R::Rare,
@@ -3464,8 +3465,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Felinor],
         R::Epic,
-        st(3, 4),
-        st(6, 8),
+        st(5, 5),
+        st(10, 10),
     ),
     row(
         "30.1",
@@ -3620,7 +3621,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "40",
         "Feng Shui",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Cn],
         R::Legendary,
@@ -3704,8 +3705,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn],
         R::Legendary,
-        st(2, 2),
-        st(4, 4),
+        st(0, 1),
+        st(0, 2),
     ),
     row(
         "48",
@@ -4090,7 +4091,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "81",
         "Deadman's Hand",
-        emb(0, 2),
+        emb(0, 1),
         T::Spell,
         &[],
         R::Rare,
@@ -4150,7 +4151,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "87",
         "Tatches the Totem",
-        c(1),
+        c(0),
         T::Unit,
         &[G::Human, G::Felinor, G::Ky, G::Cn, G::Jlockeed],
         R::Legendary,
@@ -4505,7 +4506,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("2", "NA Tech", c(1), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
+    row("2", "NA Tech", c(0), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
     row(
         "3",
         "Wondrous Wand",
@@ -4740,7 +4741,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "25",
         "KY's Intuition",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Ky],
         R::Rare,
@@ -4878,7 +4879,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "7",
         "The Greatest Heist",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Quest],
         R::Legendary,
@@ -4998,7 +4999,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12",
         "Otherworldly Nightmare",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5028,7 +5029,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12.3",
         "Psychic Scream",
-        c(3),
+        c(4),
         T::Spell,
         &[G::OtherOrigins, G::Token],
         R::Token,
@@ -5070,7 +5071,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Rod of Ages",
         c(1),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[],
         R::Mythic,
         NO_STATS,
         NO_STATS,
@@ -5193,8 +5194,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Legendary,
-        st(2, 9),
-        st(4, 18),
+        st(2, 7),
+        st(4, 14),
     ),
     row(
         "27",
@@ -5259,7 +5260,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "33",
         "Drone Core VII",
-        c(4),
+        c(5),
         T::Spell,
         &[G::DroneCore],
         R::Epic,
@@ -5353,8 +5354,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Rare,
-        st(4, 5),
-        st(8, 10),
+        st(3, 3),
+        st(6, 6),
     ),
     row(
         "43",
@@ -5389,7 +5390,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "46",
         "Circadian Halfcycler",
-        c(2),
+        c(1),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5399,7 +5400,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "47",
         "Circadian Fullcycler",
-        c(3),
+        c(4),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5433,8 +5434,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "51",
@@ -5443,8 +5444,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "52",
@@ -5453,8 +5454,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "53",
@@ -5463,8 +5464,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "54",
@@ -5473,8 +5474,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "55",
@@ -5483,8 +5484,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "56",
@@ -5493,8 +5494,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "57",
@@ -5503,8 +5504,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "58",
@@ -5513,8 +5514,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "59",
@@ -5523,8 +5524,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "60",
@@ -5533,8 +5534,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "61",
@@ -5543,8 +5544,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Legendary,
+        st(0, 4),
         st(0, 8),
-        st(0, 16),
     ),
     row(
         "62",
@@ -5653,16 +5654,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
     row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
-    row(
-        "79",
-        "Orca",
-        emb(4, 5),
-        T::Unit,
-        &[],
-        R::Epic,
-        st(8, 8),
-        st(16, 16),
-    ),
+    row("79", "Orca", emb(4, 5), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
     row(
         "80",
         "Galaxy",
@@ -5670,8 +5662,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Legendary,
+        st(5, 5),
         st(10, 10),
-        st(20, 20),
     ),
     row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
     row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
@@ -5764,8 +5756,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Rare,
-        st(3, 4),
-        st(6, 8),
+        st(3, 3),
+        st(6, 6),
     ),
     row(
         "93",
@@ -5784,8 +5776,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Epic,
-        st(9, 9),
-        st(18, 18),
+        st(8, 8),
+        st(16, 16),
     ),
     row(
         "95",
@@ -5800,7 +5792,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "96",
         "Ocean Tsunami",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Rare,
@@ -6171,7 +6163,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "133",
         "Ultra Capacitor",
-        c(2),
+        c(1),
         T::Unit,
         &[],
         R::Common,
@@ -6277,8 +6269,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "141",
@@ -6287,8 +6279,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Rare,
+        st(0, 2),
         st(0, 4),
-        st(0, 8),
     ),
     row(
         "142",
@@ -6297,8 +6289,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn, G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "143",
@@ -6307,8 +6299,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Weapon],
         R::Epic,
+        st(0, 3),
         st(0, 6),
-        st(0, 12),
     ),
     row(
         "144",
@@ -6503,7 +6495,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "159",
         "Faction: ETHICS",
-        c(2),
+        c(1),
         T::Spell,
         &[G::Faction],
         R::Rare,
@@ -6593,7 +6585,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "168",
         "Drone Hanger",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -6686,7 +6678,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Dormant Starship",
         c(3),
         T::Unit,
-        &[],
+        &[G::Starship],
         R::Legendary,
         st(0, 0),
         st(0, 0),
@@ -7052,7 +7044,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "15",
         "In a hurry",
-        c(2),
+        c(3),
         T::Spell,
         &[],
         R::Common,
@@ -7396,8 +7388,8 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed, G::Legacy],
         R::Common,
-        st(6, 10),
-        st(12, 20),
+        st(4, 10),
+        st(8, 20),
     ),
     row(
         "49",
@@ -7426,8 +7418,8 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
         T::Unit,
         &[G::Felinor, G::Legacy],
         R::Rare,
-        st(3, 10),
-        st(6, 20),
+        st(1, 10),
+        st(2, 20),
     ),
     row(
         "52",
@@ -7476,8 +7468,8 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
         T::Unit,
         &[G::Legacy],
         R::Epic,
-        st(2, 2),
-        st(4, 4),
+        st(5, 5),
+        st(10, 10),
     ),
     row(
         "57",
@@ -7564,6 +7556,7 @@ const ALLOWED_TAGS: &[&str] = &[
     "Legacy",
     "Resource",
     "Faction",
+    "Starship",
     "Token",
 ];
 
@@ -7842,6 +7835,33 @@ mod catalog_membership_build_m4_t1_b2_1 {
                 );
             }
         }
+    }
+
+    // R3114000: the census names each set the catalog orders once, by its name, and writes its id
+    // segment as the set's row of the set table does: a new set is its row and its census entry.
+    #[test]
+    fn r3114000_every_census_set_has_a_table_row_with_its_segment() {
+        use jackioh_engine::{CATALOG_SETS, SetStage, set_row};
+        for census in CENSUS {
+            let set: SetName = census
+                .set
+                .parse()
+                .unwrap_or_else(|error| panic!("{}: {error}", census.set));
+            let row = set_row(set);
+            assert!(
+                matches!(row.stage, SetStage::Shipped | SetStage::Held),
+                "{}: the census holds a set the catalog orders, not a {:?} one",
+                census.set,
+                row.stage
+            );
+            assert_eq!(census.segment, row.segment, "{}'s segment", census.set);
+        }
+        let named: Vec<&str> = CENSUS.iter().map(|census| census.set).collect();
+        let ordered: Vec<&str> = CATALOG_SETS.iter().map(|set| set.as_str()).collect();
+        assert_eq!(
+            named, ordered,
+            "one census entry per set the catalog orders, in its order"
+        );
     }
 
     #[test]
@@ -8225,6 +8245,8 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         for index in carrying(Tag::Faction) {
             assert!(row_at(index).name.starts_with("Faction: "), "{index}");
         }
+        // And #3038's Starship (R3038000): the Dormant Starship alone, never a Drone Battleship.
+        assert_eq!(carrying(Tag::Starship), ["T-dormant-starship"]);
     }
 
     #[test]
@@ -8803,7 +8825,7 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_3x_3x_and_6x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
+    fn prints_buff_billy_s_2x_3x_and_4x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
      {
         // Buff Billy's X is the one it is played for; Meditative+ #20.1 Lil' Kenny's the one M+ #20
         // summons it with (R1184003).
@@ -8817,11 +8839,11 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         assert_eq!(billy.map(|entry| entry.cost), Some(CardCost::X));
         assert_eq!(
             billy.and_then(|entry| entry.base.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 3, "health": 3 }))
+            Some(serde_json::json!({ "attack": 2, "health": 3 }))
         );
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 6, "health": 6 }))
+            Some(serde_json::json!({ "attack": 4, "health": 6 }))
         );
         let kenny = CATALOG.get("meditativeplus-020-1");
         assert_eq!(

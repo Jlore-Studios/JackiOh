@@ -195,13 +195,9 @@ pub fn carried_versions() -> Result<String, String> {
 // refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never a
 // module error: only JSON that does not parse is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
-pub fn run_content(custom_cards_json: &str) -> Result<String, String> {
-    let custom: Vec<engine::CustomCard> = parse("runContent: the custom cards", custom_cards_json)?;
-    to_json(&jackioh_run::run_catalog_content(
-        engine::registered_catalog(),
-        &custom,
-    ))
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
+pub fn run_content() -> Result<String, String> {
+    to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -570,7 +566,7 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
 /// block editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
 /// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (either absent), so the verdict is the
-/// one its answer gets: the mode's frame and the offer's blocks (R1563007).
+/// one its answer gets: the mode's frame and points (R3043000) and the offer's blocks (R1563007).
 pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, String> {
     let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
     if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
@@ -739,16 +735,6 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
             let raw: String = parse(call, input_json)?;
             to_json(&validator::normalize_name(&raw))
         }
-        // R915001, R915000: a custom card's frame judged, and the definition it builds, with no Luau:
-        // the script is the Luau module's to check.
-        "validateCustomCard" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::validate_custom_card(&card))
-        }
-        "customDef" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::custom_def(&card))
-        }
         other => Err(format!("validator: no such call {other:?}")),
     }
 }
@@ -764,6 +750,19 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
 pub fn series(call_json: &str) -> Result<String, String> {
     let call: jackioh_shared::series::SeriesCall = parse("series: the call", call_json)?;
     to_json(&jackioh_shared::series::apply(&call))
+}
+
+// The loadout visibility rule (SPEC §10.8, R1834003, R3013002; #3102)
+
+/// One call of `jackioh_shared::loadout`, the rule that keeps a decklist from leaking through a seat's
+/// cosmetics, which the server calls natively: the input is a `LoadoutCall`
+/// (`{ "call": "cardsDue", "shown": …, "loadouts": …, "sent": … }`), the output a `LoadoutAnswer`
+/// (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`). The host holds the deal
+/// of a match and each receiver's `sent` set and hands them back on every call (`crates/shared/README.md`,
+/// the host contract). No decision is made here.
+pub fn loadout(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::loadout::LoadoutCall = parse("loadout: the call", call_json)?;
+    to_json(&jackioh_shared::loadout::apply(&call))
 }
 
 // What a card face prints (#3106; `jackioh_shared::face`)
@@ -803,6 +802,67 @@ pub fn host(call_json: &str) -> Result<String, String> {
     let call: jackioh_shared::host::boundary::HostCall = parse("host: the call", call_json)?;
     jackioh_cards::register_all();
     to_json(&jackioh_shared::host::boundary::apply(call))
+}
+
+// The ranked ladder (SPEC §9.12, R603–R612; #3105)
+
+/// One call of `jackioh_shared::ranked`, the ranked ladder's rules the server calls natively: the input is a
+/// `RankedCall` (`{ "call": "rateGame", "game": { "standings": …, "sides": …, … } }`, `planSeason`, `softReset`,
+/// `visibleRank`, `peakBadge` or `jloriousOrder`), the output a `RankedAnswer` (`{ "game": … }`, `{ "season":
+/// … }`, …). The host holds the ladder's records, passes the time and the season's dates in, and writes what
+/// the answer says (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn ranked(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::ranked::RankedCall = parse("ranked: the call", call_json)?;
+    to_json(&jackioh_shared::ranked::apply(&call))
+}
+
+// The ladder bots (SPEC §9.12, R1452; #3103)
+
+/// One call of `jackioh_shared::bots`, the decisions around a ladder bot the server calls natively: the
+/// pool's size, who grinds, a new bot, its decks and trio, the empty-queue pairing and a series pick. The
+/// input is a `BotCall` (`{ "call": "chooseBot", "ticket": …, "bots": …, … }`), the output a `BotAnswer`.
+/// The host reads its store into plain records and writes what comes out (`crates/shared/README.md`, the
+/// host contract). The deals read the catalog this module registered. No decision is made here.
+pub fn bots(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::bots::boundary::BotCall = parse("bots: the call", call_json)?;
+    jackioh_cards::register_all();
+    to_json(&jackioh_shared::bots::boundary::apply(call))
+}
+
+/// The move a ladder bot owes: the input is a `DecideCall` (`{ "host": <the DuelHost>, "request": <the
+/// DecideRequest the machine made> }`), the output the `BotChoice` to feed the machine back as
+/// `{ "event": "decided", … }`. Once `now_ms()` passes `deadline_ms` the search answers with its best so far;
+/// `deadline_ms <= 0` means no clock, so the decision depends only on its inputs and the strength's budget.
+pub fn bot_decide(call_json: &str, deadline_ms: f64, now_ms: fn() -> f64) -> Result<String, String> {
+    let call: jackioh_shared::host::boundary::DecideCall = parse("botDecide: the call", call_json)?;
+    jackioh_cards::register_all();
+    let clock = move || now_ms() >= deadline_ms;
+    let should_stop = if deadline_ms > 0.0 {
+        Some(&clock as &dyn Fn() -> bool)
+    } else {
+        None
+    };
+    match jackioh_shared::host::boundary::decide(&call, should_stop) {
+        Some(choice) => to_json(&choice),
+        None => Err(format!(
+            "botDecide: no bot plays at {} in this host",
+            call.request.home
+        )),
+    }
+}
+
+// The collection economy's decisions (SPEC §14.3 to §14.7; #3104)
+
+/// One call of `jackioh_shared::economy`, the economy's decisions the server calls natively: the input is an
+/// `EconomyCall` (`{ "call": "openCardPack", "records": …, "pack": "global", "seed": "…", "now": … }`), the
+/// output an `EconomyAnswer` (`{ "opened": … }`, `{ "cosmeticOpened": … }`, `{ "filled": … }`,
+/// `{ "reward": … }` or `{ "refused": … }`). The host reads the records from its store, passes the seed and
+/// the time in, and writes the answer's grants back (`crates/shared/README.md`, the host contract). A pool,
+/// a registry or a catalog version a call leaves out is the one compiled in. A rules refusal is the returned
+/// `refused`, never an error: only a call that does not parse is one. No decision is made here.
+pub fn economy(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::economy::boundary::EconomyCall = parse("economy: the call", call_json)?;
+    to_json(&jackioh_shared::economy::boundary::apply(&call))
 }
 
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
@@ -957,10 +1017,10 @@ pub use duos_bodies::{duos_begin, duos_create, duos_legal_actions, duos_reduce, 
 mod run_body_tests {
     use super::*;
 
-    /// The content Part B's tests deal from: the catalog's, no custom card.
+    /// The content Part B's tests deal from: the catalog's.
     fn content() -> RunContent {
         jackioh_cards::register_all();
-        jackioh_run::run_catalog_content(engine::registered_catalog(), &[])
+        jackioh_run::run_catalog_content(engine::registered_catalog())
     }
 
     /// Unlocks at the ladder's top, so any Common/Rare ordering of the starter is valid.
@@ -1008,7 +1068,7 @@ mod run_body_tests {
     #[test]
     fn run_content_body_serializes_content() {
         let content = content();
-        let text = run_content("[]").unwrap();
+        let text = run_content().unwrap();
         assert_eq!(serde_json::from_str::<RunContent>(&text).unwrap(), content);
     }
 
@@ -1245,7 +1305,7 @@ mod face_body_tests {
         let english = ask("en");
         assert_eq!(english["answer"], "face");
         assert_eq!(english["face"]["name"], "Pointmaster");
-        assert_eq!(english["face"]["text"]["full"], "First Strike");
+        assert_eq!(english["face"]["text"]["full"], "Rush, First Strike");
         assert_ne!(ask("zh-CN")["face"]["name"], "Pointmaster");
     }
 
@@ -1379,6 +1439,140 @@ mod series_body_tests {
         for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
             let error = series(call).unwrap_err();
             assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod loadout_body_tests {
+    use super::*;
+
+    /// The body is `jackioh_shared::loadout::apply` over JSON: the `sent` set it answers is the next call's input.
+    #[test]
+    fn loadout_body_answers_the_due_cards_and_the_set_to_keep() {
+        let loadouts = json!([
+            { "seat": { "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" },
+              "cards": [{ "cardId": "core-001", "foil": "foil-cracked-ice" }] },
+            { "seat": { "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" } },
+        ]);
+        let call = json!({
+            "call": "cardsDue", "shown": [["p1", "core-001"], ["p2", "core-002"]], "loadouts": loadouts,
+        });
+        let due: Value = serde_json::from_str(&loadout(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(
+            due["due"]["cards"],
+            json!([{ "seat": "p1", "cards": [{ "cardId": "core-001", "foil": "foil-cracked-ice" }] }])
+        );
+        assert_eq!(
+            due["due"]["sent"],
+            json!([["p1", "core-001"], ["p2", "core-002"]])
+        );
+
+        // Handed back, nothing is sent twice.
+        let again = json!({
+            "call": "cardsDue", "shown": [["p1", "core-001"]], "loadouts": loadouts, "sent": due["due"]["sent"],
+        });
+        let again: Value = serde_json::from_str(&loadout(&again.to_string()).unwrap()).unwrap();
+        assert_eq!(again["due"]["cards"], json!([]));
+    }
+
+    #[test]
+    fn loadout_body_refuses_a_call_that_does_not_parse() {
+        for call in [
+            "",
+            "{}",
+            r#"{"call":"nope"}"#,
+            r#"{"call":"shownDefs","dealt":{}}"#,
+        ] {
+            let error = loadout(call).unwrap_err();
+            assert!(error.starts_with("loadout: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod ranked_body_tests {
+    use super::*;
+
+    /// The body is `jackioh_shared::ranked::apply` over JSON.
+    #[test]
+    fn ranked_body_plans_a_season_and_rates_a_game() {
+        let plan = json!({ "call": "planSeason", "patchVersion": "v0.3.1", "seasons": [], "nowMs": 1_700_000_000_000_i64 });
+        let planned: Value = serde_json::from_str(&ranked(&plan.to_string()).unwrap()).unwrap();
+        assert_eq!(planned["season"]["plan"], "new");
+        assert_eq!(planned["season"]["first"], true);
+        assert_eq!(planned["season"]["season"]["id"], "v0.3");
+
+        let side = |id: &str| {
+            json!({
+                "side": { "kind": "player", "profileId": id },
+                "glicko": { "rating": 1000.0, "deviation": 350.0, "volatility": 0.06 },
+            })
+        };
+        let game = json!({
+            "call": "rateGame",
+            "game": {
+                "standings": [], "sides": [side("a"), side("b")], "winnerSide": 0, "reason": "hero-death",
+                "season": planned["season"]["season"], "ladder": "constructed", "nowMs": 1_700_000_000_000_i64,
+            },
+        });
+        let rated: Value = serde_json::from_str(&ranked(&game.to_string()).unwrap()).unwrap();
+        let after = &rated["game"]["sides"];
+        assert!(after[0]["after"]["rating"].as_f64().unwrap() > 1000.0);
+        assert!(after[1]["after"]["rating"].as_f64().unwrap() < 1000.0);
+        // Both season rows were made from nothing, a game each.
+        assert_eq!(rated["game"]["ranks"][0]["games"], 1);
+        assert_eq!(rated["game"]["ranks"][1]["losses"], 1);
+    }
+
+    #[test]
+    fn ranked_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"rateGame"}"#] {
+            let error = ranked(call).unwrap_err();
+            assert!(error.starts_with("ranked: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod economy_body_tests {
+    use super::*;
+
+    fn records(held: i64) -> Value {
+        json!({
+            "held": held, "owned": {}, "cosmetics": { "cards": [], "account": [] },
+            "counters": {
+                "pity": { "epic": 0, "legendary": 0, "mythic": 0 },
+                "cardBar": 0, "cosmeticBar": 0, "cosmeticCycle": 0, "chaseShard": 0,
+            },
+        })
+    }
+
+    /// The body is `jackioh_shared::economy::boundary::apply` over JSON: the opening it answers holds the
+    /// grants a store writes, and a pack not held is a refusal the host reads, not an error.
+    #[test]
+    fn economy_body_answers_an_opening_and_a_refusal() {
+        let call =
+            json!({ "call": "openCardPack", "records": records(1), "pack": "global", "seed": "s", "now": 1 });
+        let opened: Value = serde_json::from_str(&economy(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(opened["opened"]["slots"].as_array().map(Vec::len), Some(5));
+        assert_eq!(opened["opened"]["grants"][0]["kind"], "inventory");
+        assert_eq!(opened["opened"]["grants"][0]["delta"], -1);
+        // The same call, the same opening.
+        assert_eq!(
+            economy(&call.to_string()).unwrap(),
+            economy(&call.to_string()).unwrap()
+        );
+        let call = json!({ "call": "openCosmeticPack", "records": records(0), "seed": "s", "now": 1 });
+        let refused: Value = serde_json::from_str(&economy(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(refused["refused"]["reason"], "no_pack_held");
+    }
+
+    #[test]
+    fn economy_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"fillBar"}"#] {
+            let error = economy(call).unwrap_err();
+            assert!(error.starts_with("economy: the call"), "{call:?}: {error}");
         }
     }
 }

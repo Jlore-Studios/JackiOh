@@ -57,10 +57,21 @@
 // frame (`.cf-art--cutout`, CardArt's `part`), inside the art frame, so under the cost gem, crest, name, stats and rules
 // box and inside the card's rim; a Starship in play and a Legacy card, whose pictures have no parts, keep the normal
 // window (CardArt `hasArtParts`). R2943002: Animated, a foil, a finish and a border layer on each, and Signature on none.
+// R2944001: Immersive draws its window's backdrop hazed as far off (`artPictureOf`'s "depth") and its subject on a near
+// layer over it (`.cf-immersive`, the window's shape, CardArt's `part`), inside the window; a Starship in play and a
+// Legacy card draw their one picture hazed. Prismatic draws its picture in chrome under a sheen, and on a base face a
+// rainbow edge, a chrome bezel and a chrome banner (cards.css). R2944002: Animated, a foil, a finish and a border layer
+// on each, and Signature on none. Immersive's near layer follows the pointer and the device's tilt and breathes
+// (`data-immersive-motion`, immersive.ts `useImmersiveShift`) while it holds a motion slot, the one Animated's motion
+// shares on that face (`useArtMotion`), and holds still under reduced motion, with Animated foil off and on a lazy face.
 //
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
 // apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
 // 2–5") under its text.
+//
+// R3046000: a compact face (a face-up backrow card) prints full art too: the art across the face, still, and its name in
+// a band below the art, with the cost gem, the rarity gem and set mark, the crest and the states over it and no type line
+// (`data-full-art` on a compact face, cards.css; fullArt.ts `boardLookOf`). A compact face that is not full art keeps its window.
 //
 // R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
 // (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
@@ -85,6 +96,7 @@ import { hasArtParts } from "./art/CardArt.tsx";
 import { showcaseFamilyOf } from "./art/pictures.ts";
 import { SIGNATURE_MOTION } from "./art/motion.ts";
 import { CardStates } from "./CardStates.tsx";
+import { useImmersiveShift } from "./immersive.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
 import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
@@ -92,7 +104,7 @@ import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
@@ -104,6 +116,7 @@ import { pixelNameUri } from "./pixelName.ts";
 import {
   NORMAL_LOOK,
   VERSION_EXTENDED_ART_ID,
+  VERSION_IMMERSIVE_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
   VERSION_SET_SHOWCASE_ID,
@@ -275,10 +288,12 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const fullArtOn = isFullBleed(cardLook.version);
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
+  const faceRef = useRef<HTMLSpanElement>(null);
 
   const full = layout === "full";
-  // R1017001: a full-art card fills its full face with its art, and prints no words.
-  const fullArt = full && showsFullArt(face, fullArtOn);
+  // R1017001: a full-art card fills its full face with its art, and prints no words. R3046000: a compact face (a face-up
+  // backrow card) fills itself with its art too, still, and prints its name in a band below the art.
+  const fullArt = showsFullArt(face, fullArtOn);
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
@@ -307,18 +322,25 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const glitch = isGlitch(face.defId);
   // R2718000: the set's watermark behind the rules text, unless Glitch's blank, or the setting is off.
   const watermark = settings.setWatermarks && !glitch ? watermarkOf(face.set) : null;
-  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none.
-  const look = full ? cardLook : NORMAL_LOOK;
-  const tier = tierOfLook(look);
+  // R2715000, R2725000: any full layout keeps its look, the normal face's augments too; a compact face wears none but
+  // (R3046000) the version a full-art one prints, still, and no tier.
+  const look = full ? cardLook : (boardLookOf(face, cardLook) ?? NORMAL_LOOK);
+  const tier = full ? tierOfLook(look) : null;
   const augments = augmentsOf(look);
   // R2725003: Animated on full art lays the band over it and drifts it. R2949000: Signature shows the Signature look,
   // its own picture and motion, on Full art alone, and signs the name there but in the viewer's own hand.
   const moving = fullArt && look.animated;
   const signatureLook = fullArt && look.signed;
   const signed = signatureLook && !bare;
-  // R2715001: an Animated look moves its art's own layers while a slot is theirs.
+  // R2943001: a Starship in play's and a Legacy card's pictures have no parts.
+  const starship = face.inPlay ? face.starship : null;
+  // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
+  const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
+  // R2715001: an Animated look moves its art's own layers while a slot is theirs. R2944002: Immersive's depth moves in
+  // the same slot, one per face, Animated or not.
   const artMoves = look.animated;
-  const artMotion = useArtMotion(artMoves && settings.animatedFoil && !lazyArt);
+  const artMotion = useArtMotion((artMoves || immersive) && settings.animatedFoil && !lazyArt);
+  useImmersiveShift(faceRef, immersive && artMotion);
   // R2942001: Extended art's picture runs past its window across the face; Pixel sets the name in its pixel face, when
   // the face has every character of it and it is short enough to read (`PIXEL_NAME_MAX_GLYPHS`; a small face prints
   // it in the normal face, cards.css).
@@ -327,13 +349,13 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R2943001: Set showcase wears its set's look; Out of frame cuts its subject out over the frame where the picture has
   // parts (a Starship in play's and a Legacy card's have none).
   const showcase = look.version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(face.set) : null;
-  const starship = face.inPlay ? face.starship : null;
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
   const picture = signatureLook ? "signature" : artPictureOf(look.version, face.set);
-  const motion = artMotion ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null;
+  const motion = artMotion && artMoves ? (signatureLook ? SIGNATURE_MOTION : artMotionOf(face.defId)) : null;
 
   return (
     <span
+      ref={faceRef}
       className={cx("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", signed && "cf-full-art--signed")}
       data-layout={layout}
       data-card-type={face.type}
@@ -355,6 +377,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-augments={augments.length > 0 ? augments.join(" ") : undefined}
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
       data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
+      data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
       {...cosmetics}
       style={scales}
     >
@@ -391,7 +414,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               starship={starship}
               picture={picture}
               motion={motion}
-              part={outOfFrame ? "backdrop" : "whole"}
+              part={outOfFrame || immersive ? "backdrop" : "whole"}
             />
           )}
           {outOfFrame && (
@@ -409,6 +432,24 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               motion={motion}
               part="subject"
             />
+          )}
+          {immersive && (
+            <span className={`cf-immersive cf-art--${ART_SHAPE[face.type]}`} aria-hidden="true">
+              <CardArt
+                defId={face.defId}
+                radiant={face.radiant}
+                tags={face.tags}
+                type={face.type}
+                name={face.englishName ?? face.name}
+                shape="full"
+                className="cf-art--near"
+                lazy={lazyArt}
+                starship={starship}
+                picture="normal"
+                motion={motion}
+                part="subject"
+              />
+            </span>
           )}
           {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
         </span>

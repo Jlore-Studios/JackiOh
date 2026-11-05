@@ -433,6 +433,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::news::post_claim_news),
     ),
+    // R3191000: Claim all, one spend for every unclaimed entry.
+    (
+        "POST",
+        "/api/news/claim-all",
+        AuthLevel::Active,
+        h!(api::news::post_claim_all_news),
+    ),
     // api/practice.rs (#1303)
     (
         "POST",
@@ -535,37 +542,6 @@ pub static ROUTES: &[Route] = &[
         "/api/trios/:id",
         AuthLevel::Active,
         h!(api::decks::delete_trio),
-    ),
-    // api/custom_cards.rs (SPEC §12.9, R915008)
-    (
-        "GET",
-        "/api/custom-cards",
-        AuthLevel::Active,
-        h!(api::custom_cards::list_custom_cards),
-    ),
-    (
-        "POST",
-        "/api/custom-cards",
-        AuthLevel::Active,
-        h!(api::custom_cards::create_custom_card),
-    ),
-    (
-        "GET",
-        "/api/custom-cards/:id",
-        AuthLevel::Active,
-        h!(api::custom_cards::get_custom_card),
-    ),
-    (
-        "PUT",
-        "/api/custom-cards/:id",
-        AuthLevel::Active,
-        h!(api::custom_cards::update_custom_card),
-    ),
-    (
-        "DELETE",
-        "/api/custom-cards/:id",
-        AuthLevel::Active,
-        h!(api::custom_cards::delete_custom_card),
     ),
     // api/queue.rs
     ("POST", "/api/queue", AuthLevel::Active, h!(api::queue::enqueue)),
@@ -751,6 +727,13 @@ pub static ROUTES: &[Route] = &[
         h!(api::dev::give_jlore),
     ),
     ("POST", "/api/dev/fill", AuthLevel::Active, h!(api::dev::fill)),
+    // R3156001: every cosmetic the fill grants, and nothing else.
+    (
+        "POST",
+        "/api/dev/cosmetics",
+        AuthLevel::Active,
+        h!(api::dev::cosmetics),
+    ),
     (
         "POST",
         "/api/dev/clear/:part",

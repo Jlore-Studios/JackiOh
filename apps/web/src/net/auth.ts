@@ -962,20 +962,31 @@ export type TotpEnrolment = { factorId: string; qrCode: string | null; secret: s
 
 const TOTP_ISSUER = "JackiOh";
 
-/** Re-encode only SVG data URIs; a raw `#` would terminate one. */
+/** What may come before an SVG's root: an XML declaration, comments and a doctype. */
+const SVG_PROLOG = /^\s*(?:<\?xml[^?]*\?>\s*)?(?:(?:<!--[\s\S]*?-->|<!DOCTYPE[^>]*>)\s*)*/iu;
+
+/**
+ * R665: the provider's QR code as an image the page may draw, or `null` (the key alone is shown).
+ * The auth server's REST answer is the SVG's own text, starting `<?xml version="1.0"?>` and a
+ * comment (supabase/auth's mfa.go draws it with svgo); supabase-js wraps the same text in a
+ * `data:image/svg+xml;utf-8,` URI. Either is taken, its prolog dropped, and it must then be an
+ * `<svg>`. It is drawn only as an `<img>`, where an SVG runs no script, and re-encoded, since a raw
+ * `#` would end the data URI.
+ */
 function qrImage(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const match = /^data:image\/svg\+xml(?:;[a-z0-9=-]+)*,(.*)$/isu.exec(raw);
-  const svg = match?.[1];
-  if (svg === undefined || svg.length === 0) return null;
-  let decoded = svg;
-  try {
-    decoded = decodeURIComponent(svg);
-  } catch {
-    // Raw SVG needs no decoding.
+  let text = match === null ? raw : (match[1] ?? "");
+  if (match !== null) {
+    try {
+      text = decodeURIComponent(text);
+    } catch {
+      // A data URI may carry the SVG unencoded.
+    }
   }
-  if (!decoded.trimStart().startsWith("<svg")) return null;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(decoded)}`;
+  const svg = text.replace(SVG_PROLOG, "");
+  if (!svg.startsWith("<svg")) return null;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 /** R665: remove unfinished factors before enrolment; they count only after verification. */

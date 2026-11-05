@@ -1773,6 +1773,39 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
+    fn r209_a_lasting_echo_grant_ends_when_its_permanent_leaves_the_field_so_the_next_spell_resolves_once() {
+        let mut state = playing("r209");
+        let source = put(&mut state, TWINSPELL, slot(P1, BACKROW, 1), json!({}));
+        {
+            let mut sink = sink_for(&mut state);
+            add_modifier(
+                &mut sink,
+                P1,
+                ModifierExpiry::Used,
+                ModifierKind::EchoNextSpell {
+                    amount: 1,
+                    source_id: Some(source.id.clone()),
+                },
+            );
+        }
+
+        // The permanent leaves the field, bounced to its controller's hand: its grant goes with it.
+        run(
+            &mut state,
+            effects::bounce(json_as(json!({ "target": { "of": "chosen" } }))),
+            targeting(P1, pick(&source)),
+        );
+        assert!(state.players.p1.hand.iter().any(|card| card.id == source.id));
+
+        // The next Spell resolves once, and nothing of the grant is left behind.
+        let spell = at(&in_hand(&mut state, BOLT, P1, 1), 0);
+        let after_spell = play(&state, &spell.id, "r209-spell");
+        assert_eq!(after_spell.error, None);
+        assert!(after_spell.state.players.p1.mods.is_empty());
+        assert_eq!(after_spell.state.players.p2.hero.health, HERO_HEALTH - 2);
+    }
+
+    #[test]
     fn r31_sends_a_replaced_hand_to_the_graveyard_where_reminisce_can_still_find_it() {
         let mut state = game("r31");
         let hand = in_hand(&mut state, BODY, P1, 3);

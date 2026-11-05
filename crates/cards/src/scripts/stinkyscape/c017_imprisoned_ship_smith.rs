@@ -227,6 +227,62 @@ mod tests {
             s.expect_stats(VANILLA, json!({ "health": 1 }));
         }
 
+        /// R3039000: awake, then destroyed by p2's Hit Job, Reborn given it first if `reborn`.
+        fn killed_after_its_awakening(reborn: bool) -> (Scenario, String) {
+            let mut s = played(false, json!([]));
+            let smith = s.card(ID).id.clone();
+            to_its_awakening(&mut s);
+            assert_eq!(s.card(&smith).awakened, Some(true), "awakened for good");
+            if reborn {
+                s.card_mut(&smith).granted_keywords.push(Keyword::Reborn);
+            }
+            s.end_turn();
+            s.state_mut().players[P2].mana.current = 10;
+            s.play(HIT_JOB, json!({ "targets": pick::id(&smith) }));
+            (s, smith)
+        }
+
+        fn awake_on_the_field(s: &Scenario, smith: &str) {
+            assert!(matches!(s.card(smith).zone, Zone::Field { player: P1, row: Row::Units, .. }));
+            assert_eq!(s.card(smith).slumber, None, "not Dormant");
+            assert_eq!(summoned_waraxes(s).len(), 1, "it awakens no more, so no second Waraxe");
+        }
+
+        #[test]
+        fn r3039000_awakened_killed_and_reborn_it_comes_back_awake() {
+            let (s, smith) = killed_after_its_awakening(true);
+            assert_eq!(s.card(&smith).reborn_spent, Some(true), "back by its Reborn");
+            awake_on_the_field(&s, &smith);
+        }
+
+        #[test]
+        fn r3039000_awakened_killed_and_played_again_from_the_graveyard_it_enters_awake() {
+            let (mut s, smith) = killed_after_its_awakening(false);
+            s.expect_in_zone(&smith, "graveyard");
+            // A Flashback given it lets it be played from there (R783012).
+            s.card_mut(&smith).granted_keywords.push(Keyword::Flashback);
+            s.end_turn();
+            s.act(
+                ActionBody::Play {
+                    instance_id: smith.clone(),
+                    zone: Some(ZoneChoice { row: Row::Units, lane: 3 }),
+                    x: None,
+                    embiggen: None,
+                    equip: None,
+                    tributes: None,
+                    targets: None,
+                    modes: None,
+                    plague: None,
+                    face_down: None,
+                },
+                P1,
+                "play the Ship Smith from the graveyard",
+            );
+            awake_on_the_field(&s, &smith);
+            s.end_turn().end_turn().end_turn().end_turn();
+            awake_on_the_field(&s, &smith);
+        }
+
         #[test]
         fn a_full_backrow_summons_no_waraxe() {
             let reserves: Vec<Value> = (1..=5).map(|lane| json!({ "def": RESERVES, "lane": lane })).collect();

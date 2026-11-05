@@ -1,5 +1,5 @@
 //! C #14 Shadowstep (SPEC §8.6 row 14, §4.5, §6.2 Replacement, §6.3 Flicker; R4, R11, R12, R33, R57,
-//! R61, R64, R69, R78, R97, R99, R317). Trap, cost 2, Common.
+//! R61, R64, R69, R78, R97, R99, R317). Trap, cost 1 (2 until issue #3136), Common.
 //!   Base:    "Activates when any of your Units die: Return them to your hand. They cost ({setCost})."
 //!   Radiant: "Activates when any of your Units would die: Flicker them instead, so they survive. Add a
 //!            copy of each to your hand. The copies cost ({setCost})."
@@ -146,7 +146,7 @@ mod tests {
 
     const SHADOWSTEP: &str = "classic-014";
     const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10: "Cry: Destroy all non-Felinor Units."
-    const MIND_CONTROL: &str = "core-049"; // (4) Spell: "Steal target enemy permanent."
+    const MIND_CONTROL: &str = "core-049"; // (5) Spell: "Float reduces cost. Steal an enemy card."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const TIMMY: &str = "core-011"; // (1) Unit 3/3
@@ -213,13 +213,25 @@ mod tests {
         assert_eq!(moments, vec![ReplacementMoment::WouldDie]);
     }
 
+    /// Issue #3136: it costs (1), from (2), on both faces.
+    #[test]
+    fn issue_3136_costs_1_refused_with_0_mana_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": SHADOWSTEP, "radiant": radiant }, STOCKPILE] },
+                "p2": { "hand": [STOCKPILE] },
+            }));
+            crate::expect_costs(&mut s, SHADOWSTEP, 1, json!({}));
+        }
+    }
+
     mod base {
         use super::*;
 
         #[test]
         fn r33_it_sits_face_down() {
             let s = wipe(false, json!([VANILLA]), json!({}));
-            assert_eq!(js(&s.view(P2))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 2 }));
+            assert_eq!(js(&s.view(P2))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 1 }));
         }
 
         #[test]
@@ -319,7 +331,7 @@ mod tests {
                     "backrow": [{ "def": SHADOWSTEP, "faceUp": false }],
                     "library": [STOCKPILE],
                 },
-                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "library": [STOCKPILE, STOCKPILE] },
+                "p2": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();
             s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
@@ -366,7 +378,7 @@ mod tests {
         #[test]
         fn r2618000_a_stolen_unit_of_theirs_you_control_that_dies_returns_to_your_hand() {
             let mut s = scenario(json!({
-                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
+                "p1": { "hand": [MIND_CONTROL, STOCKPILE], "mana": 5, "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
                 "p2": { "hand": [BIG_FELINOR, STOCKPILE], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] },
             }));
             let menace = s.card(MENACE).clone();

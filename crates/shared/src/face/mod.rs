@@ -15,6 +15,7 @@
 pub mod chinese;
 pub mod data;
 pub mod diff;
+pub mod fused;
 pub mod glitch;
 pub mod glossary;
 pub mod live;

@@ -191,6 +191,8 @@ export const shellTestid = {
   signOut: "gate-sign-out",
   notFound: "not-found",
   notFoundHome: "not-found-home",
+  /** #3127, R3127000: the script-free fallback's root in the built 404.html; never `notFound`, which only the client draws. */
+  notFoundStatic: "not-found-static",
   slow: "gate-slow",
   loadFailed: "load-failed",
   reload: "load-failed-reload",

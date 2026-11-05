@@ -18,6 +18,9 @@ const NAMES_A_HELD_CARD: &[&str] = &[
     "stinkyscape-159", // ETHICS: "Add an iKwzki, Shockwave447, xxFreshJack, … Tylannt to your hand."
     "stinkyscape-160", // Golden Accord: "Add a Paragon Mk1, Paragon Mk2, Paragon-X and Falcon …"
     "stinkyscape-162", // Star-jumper Core: "Add a Badger, Honey Badger, Ozark, Orca and Galaxy …"
+    // YileGPT Prime, a token: "Cry: … summon Claude's Datacenters". A random game reaches it as a
+    // Marketplace buy at (0) since #3047 (R3047001).
+    "meditative-049-1",
 ];
 const MAX_ACTIONS: usize = 3000;
 

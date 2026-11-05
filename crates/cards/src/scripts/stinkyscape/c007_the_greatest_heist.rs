@@ -1,4 +1,4 @@
-//! Stinkyscape #7 The Greatest Heist (SPEC §8.10 row 7). (3) Field Spell, Quest, Legendary.
+//! Stinkyscape #7 The Greatest Heist (SPEC §8.10 row 7). (2) Field Spell, Quest, Legendary.
 //!   Base:    "Cry: Discover an Acclaimed Unit or a Jelly Bean.
 //!            Quest: Stage 1, Initiation. Make an Acclaimed Unit Radiant. Reward: Summon a random
 //!            Acclaimed Unit.
@@ -209,6 +209,15 @@ mod tests {
         s
     }
 
+    /// #3142: it costs (2) on both faces, where it cost (3).
+    #[test]
+    fn it_costs_2_on_both_faces() {
+        for radiant in [false, true] {
+            let s = holding(radiant, "heist-cost", &[]);
+            assert_eq!(effective_cost(s.state(), s.card(ID), Default::default()), 2, "radiant {radiant}");
+        }
+    }
+
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.clone().expect("the Heist's Discover");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
@@ -407,27 +416,39 @@ mod tests {
         );
     }
 
-    #[test]
-    fn radiant_the_options_stage_1s_unit_and_stage_2s_finds_are_radiant() {
-        let mut s = holding(true, "heist-radiant", &[TYLANNT, TYLANNT]);
+    /// The Radiant Heist on `seed`, its Discover answered with the first option, then a Tylannt played
+    /// into lane 1: the scenario and whether the picked card was Radiant when it joined the hand. The pick
+    /// may be a card the hand already holds (a Tylannt), so it is the one added last.
+    fn radiant_to_stage_1(seed: &str) -> (Scenario, bool) {
+        let mut s = holding(true, seed, &[TYLANNT, TYLANNT]);
         s.play(ID, json!({ "zone": 1 }));
         let pick = offered(&s)[0].clone();
         s.answer(json!(pick));
-        // Re-pinned for the Training Grounds release (#2204): the seed's first option is now S #6
-        // Tylannt, which the hand already holds two of, so the pick is the one added last.
         let card = s.hand(P1).into_iter().rev().find(|card| card.def_id == pick).expect("the pick");
-        assert!(card.radiant);
+        let radiant = card.radiant;
         tylannt(&mut s, 1);
-        let summoned = s
-            .last_events()
-            .iter()
-            .find_map(|event| match event {
-                GameEvent::Summoned { player: P1, instance_id, .. } if s.card(instance_id).def_id != TYLANNT => {
-                    Some(s.card(instance_id).clone())
-                }
-                _ => None,
-            })
-            .expect("Stage 1's Unit");
+        (s, radiant)
+    }
+
+    /// The Unit Stage 1's reward summoned: the first Unit summoned that is not a Tylannt, since the one the
+    /// test plays is told apart by its def alone.
+    fn stage_1s_unit(s: &Scenario) -> Option<CardInstance> {
+        s.last_events().iter().find_map(|event| match event {
+            GameEvent::Summoned { player: P1, instance_id, .. } if s.card(instance_id).def_id != TYLANNT => {
+                Some(s.card(instance_id).clone())
+            }
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn radiant_the_options_stage_1s_unit_and_stage_2s_finds_are_radiant() {
+        // Stage 1's random Unit may be a Tylannt itself, which `stage_1s_unit` cannot tell from the one
+        // played: the seed is one where it is not (#848).
+        let seed = seed_where("heist-radiant", |seed| stage_1s_unit(&radiant_to_stage_1(seed).0).is_some());
+        let (mut s, pick_is_radiant) = radiant_to_stage_1(&seed);
+        assert!(pick_is_radiant);
+        let summoned = stage_1s_unit(&s).expect("Stage 1's Unit");
         assert!(summoned.radiant);
         tylannt(&mut s, 3);
         let (anomalies, resources) = found(&s);

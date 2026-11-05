@@ -179,9 +179,9 @@ R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`T
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
 `trade::trades_per_turn_of`), the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
 R1840000–R1840002, `resources.rs`), the Marketplace's (`MARKETPLACE_TABLE`, the set's own, S21's, R1881006,
-its cycle, its price rule, its spread and its Radiant chance and premium, R1853001–R1853005,
-`marketplace.rs`; a test registers a fixture table with `testkit::register_marketplace_table`) and
-#1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
+its offers a turn, its price rule, its spread, its Radiant chance and premium and its Buff and Nerf
+chances, steps and bound, R1853001–R1853005, R3047000–R3047002, `marketplace.rs`; a test registers a
+fixture table with `testkit::register_marketplace_table`) and #1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
 that remove a player (R1843000), and `LOSER_DRAWS_REASONS`, the endings that leave the winner's
 opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004),
 and the Anomalies' (`ANOMALY_*`: a scan's chances, their steps per miss and its roll, R1855003).
@@ -202,7 +202,8 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at`, the one-instance pick builders (`pick`, #1826) and `must` (an `Option`'s value, or a panic naming what was expected, #2023). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848), the pool shift (`with_pool_shift(0, …)`, `hold_pool_shift`: a test of a pool's content or order reads it as it is under `pool-probe`, #3117) the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at`, the one-instance pick builders (`pick`, #1826) and `must` (an `Option`'s value, or a panic naming what was expected, #2023). Every test crate enables it as a dev-dependency |
+| `pool-probe` | off | implies `testkit`: every random pool `catalog::query` returns comes back rotated `POOL_PROBE_SHIFT` (1) place, so each draw lands where one more card in the pool would put it (R380) and a test that pins a roll fails; `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests under it (#3117, `testkit/pool_probe.rs`) |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests
@@ -212,7 +213,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 | `rules` | `tests/rules.rs`, `tests/rules/<x>.rs` from `a` to `o` (`rules/mod.rs`) | one module per rule area; needs `--features testkit` |
 | `rules_2` | `tests/rules_2.rs`, `tests/rules/<x>.rs` from `p` through `r` (`rules/mod_2.rs`) | the same, apart so CI compiles the three side by side (#2090, #2957); all three take `rules/fixtures/` |
 | `rules_3` | `tests/rules_3.rs`, `tests/rules/<x>.rs` from `s` on (`rules/mod_3.rs`) | the same, apart so CI compiles the three side by side (#2957); all three take `rules/fixtures/` |
-| `golden` | `tests/golden.rs`, `tests/golden/` | the hotseat fixture's fold to `972f5b85` (as `cargo jackioh golden check` folds it), the pre-Equip log (R781000), and both logs folded alike with every card or none in the card metrics' lists (R1846003); the 240 traces recorded from the TypeScript engine were retired in #2578; needs `--features testkit` |
+| `golden` | `tests/golden.rs`, `tests/golden/` | the hotseat fixture's fold to `512357ea` (as `cargo jackioh golden check` folds it), the pre-Equip log (R781000), and both logs folded alike with every card or none in the card metrics' lists (R1846003); the 240 traces recorded from the TypeScript engine were retired in #2578; needs `--features testkit` |
 | `export_config` | `tests/export_config.rs` | writes `engineConfig.ts` |
 
 A test that proves a ruling is named after it: `fn r58_…` (CLAUDE.md rule 3).

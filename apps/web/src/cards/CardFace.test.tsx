@@ -257,9 +257,9 @@ describe("B12: the full face's DOM", () => {
     const cf = catalogFace("core-020");
     const atk = one(cf, ".cf-stats .cf-atk");
     const hp = one(cf, ".cf-stats .cf-hp");
-    expect(atk.getAttribute("data-face-attack")).toBe("7");
+    expect(atk.getAttribute("data-face-attack")).toBe("6");
     expect(atk.getAttribute("data-tone")).toBe("base");
-    expect(atk.textContent?.trim()).toBe("7");
+    expect(atk.textContent?.trim()).toBe("6");
     expect(hp.getAttribute("data-face-health")).toBe("1");
     expect(hp.getAttribute("data-tone")).toBe("base");
     expect(hp.textContent?.trim()).toBe("1");
@@ -353,7 +353,7 @@ describe("B8: the cost gem renders the model's cost", () => {
   });
 
   it("B8 R1175000 the second cost badge is named for the Embiggened version, for a screen reader and on hover", () => {
-    for (const [id, cost] of [["core-046", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "2"]] as const) {
+    for (const [id, cost] of [["core-046", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
       const alt = one(one(catalogFace(id), ".cost-gem"), ".cf-cost-alt");
       expect(alt.textContent, id).toBe(cost);
       expect(alt.getAttribute("role"), id).toBe("img");
@@ -1238,12 +1238,13 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     flushFits();
     const heroic = one(container, ".card-text");
     expect(heroic.getAttribute("data-short")).toBe("true");
-    expect(heroic.textContent).toContain("Gain one of 13 random powers");
+    expect(heroic.textContent).toContain("Discover one of 13 powers");
     expect(heroic.textContent).not.toContain("Expedition Map");
   });
 
   it("#1017: a face that fits prints its whole text, and a clamp prints its whole text as printing less", () => {
-    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: true })} />);
+    // Silly Silas's base face: its Radiant face has been a clamp since Crater joined it (issue #3136).
+    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: false })} />);
     flushFits();
     const fits = one(container, ".card-text");
     expect(fits.hasAttribute("data-short")).toBe(false);

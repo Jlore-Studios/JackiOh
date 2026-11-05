@@ -132,14 +132,19 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `choose_action(state, seat, rng_seed, rng_cursor)` | strings, then `rng_cursor: f64` | `{ action, rngCursor }` |
 | `validator(call, input)` | strings | one validator function's result |
 | `series(call)` | string | #3098: one call of `jackioh-shared`'s Conquest series rules, a `SeriesCall` in and a `SeriesAnswer` out (`{ "row": … }` to write back, `{ "refused": … }`, or a read); the host holds the row and passes the time in (`crates/shared/README.md`, the host contract) |
+| `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; `stepDuos` the co-op host's twin; the rematch and Play again books' calls answer their next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
+| `loadout(call)` | string | #3102: one call of `jackioh-shared`'s loadout visibility rule, a `LoadoutCall` in and a `LoadoutAnswer` out (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`); the host holds the match's deal and each receiver's `sent` set and hands them back (`crates/shared/README.md`, the host contract) |
+| `ranked(call)` | string | #3105: one call of `jackioh-shared`'s ranked ladder, a `RankedCall` in and a `RankedAnswer` out (`{ "game": … }`, `{ "season": … }`, `{ "reset": … }`, `{ "rank": … }`, `{ "badge": … }` or `{ "jlorious": … }`); the host holds the ladder's records and passes the time and the season's dates in (`crates/shared/README.md`, the host contract) |
+| `bots(call)` | string | #3103: one call of `jackioh-shared`'s decisions around a ladder bot, a `BotCall` in and a `BotAnswer` out (the pool's size and who grinds, a new bot, its decks and trio, the empty-queue pairing, a Conquest series pick), over plain records the host read from its store (`crates/shared/README.md`, the host contract) |
+| `bot_decide(call, deadline_ms)` | string, then `deadline_ms: f64` | #3103: the move a ladder bot owes, a `DecideCall` (the `DuelHost` and the `DecideRequest` a `decide` output made) in and the `BotChoice` to feed the machine back as `decided` out. As `ai_decide`'s, `deadline_ms` is accepted and has no effect (the module has no clock): the search ends at the strength's budget |
 | `face(call)` | string | #3106: one call of `jackioh-shared`'s card face model, a `FaceCall` in and a `FaceAnswer` out (a face, every face of a view, a text as spans, a word diff); the catalog is the one `init` registered and the locale an argument, so the answer is final text as spans in the reader's words and the host lays it out (`crates/shared/README.md`) |
 | `log(call)` | string | #3108: one call of `jackioh-shared`'s game log, a `LogCall` in and a `LogAnswer` out (a line, or `null`, for each event of a view's window; the line that says events may be missing); the catalog is the one `init` registered and the locale an argument, so each line is final text as spans in the reader's words, and a line about a hidden card never names it (`crates/shared/README.md`) |
-| `host(call)` | string | #3101: one call of `jackioh-shared`'s match host machine, a `HostCall` in and a `HostAnswer` out (`stepDuel` takes the `DuelHost`, a `DuelEvent` and the time, and answers the next `DuelHost` and its `DuelOutput`s, which the host carries out in order; the rematch book's calls answer its next state); the host holds the state and passes the time in (`crates/shared/README.md`, the host contract) |
+| `economy(call)` | string | #3104: one call of `jackioh-shared`'s collection economy, an `EconomyCall` in and an `EconomyAnswer` out (`openCardPack` and `openCosmeticPack` take the records the store read, the seed and the time, and answer the slots, the `grants` to write in order and the `log` every row's `ref` carries; `fillBar` and `levelReward` are reads); the host reads the records from its store and writes the grants back (`crates/shared/README.md`, the host contract) |
 | `craft_preview(recipe, cost, prompt)` | `recipe`, then `cost: f64`, then `prompt` | the engine's verdict on a recipe |
 | `engine_tables()` | | the Call to Chaos and Heroic Power tables |
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
 | `preview_sets(sets)` | string | nothing (an empty result); a module built with `preview` previews the sets |
-| `run_content(custom_cards)`, `run_constants()` | | the dungeon run's content and numbers |
+| `run_content()`, `run_constants()` | | the dungeon run's content and numbers |
 | `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | strings | whether the setup may start a run, a run started |
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | strings | a run after one action, a run file folded |
 | `run_fight_setup(state, content)`, `run_fight_report(game, human)` | strings | the fight being played, the `FightOver` it sends |
@@ -162,7 +167,8 @@ that differs by one byte is parsed again, so an answer never depends on the cach
 `FIXTURE_BANNED_IDS` and `AI_DECK`; `RUN`, the dungeon run's numbers; and each constant of
 `apps/web/src/wire/engineConfig.ts` under its own name (`DECK_SIZE`, `MAX_COPIES`, `DIFFICULTIES`, …),
 so a host reads `constants.DECK_SIZE` as the web does; and each constant of `jackioh-shared`'s `config.rs`
-(`SERIES_WINS_NEEDED`, `SERIES_MAX_GAMES`, `SERIES_PICK_SECONDS`, `MS_PER_SECOND`, #3098). A host restates
+(`SERIES_WINS_NEEDED`, `SERIES_MAX_GAMES`, `SERIES_PICK_SECONDS`, `MS_PER_SECOND`, #3098, and the economy's
+`PACK_SLOTS`, `CARD_TIER_WEIGHTS`, `PITY_EPIC_PACKS`, `COSMETIC_TOKEN_CYCLE` and the rest of its tables, #3104). A host restates
 none of them. Later shared modules add theirs here.
 
 ## Determinism, the clock and threading

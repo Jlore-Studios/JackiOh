@@ -3,7 +3,9 @@ import type { PlayerId } from "./PlayerId";
 
 /**
  * The host must decide a move for the AI or ladder bot at `home`, and answer with
- * [`DuelEvent::Decided`]: one deadline-bounded step, apart from every other.
+ * [`DuelEvent::Decided`]: one deadline-bounded step, apart from every other (`DuelHost::job` makes the
+ * job to run, `bots::decide` is what it runs). The machine paces the move it is told: its think time,
+ * its aim, the moment it is played.
  */
 export type DecideRequest = { 
 /**
@@ -27,14 +29,16 @@ firstInTurn: boolean,
  */
 ownTurnStart: boolean, 
 /**
- * R639000: how long an aim shows before the move.
- */
-aimLeadMs: number, 
-/**
  * The acting clock the bot has left (R79), or none when none runs for it.
  */
 clockLeftMs: number | null, 
 /**
- * Where the bot's two random streams stand: the search's and the think time's.
+ * R1452: the most wall-clock time the decision may take (`BOT_DECISION_DEADLINE_MS`, and never so
+ * long that less than `BOT_CLOCK_MARGIN_MS` is left on the clock), past which it plays the best line
+ * found so far. A host with no clock may ignore it: the search ends at the strength's budget.
  */
-aiCursor: number, timingCursor: number, };
+deadlineMs: number, 
+/**
+ * Where the bot's search stream stands.
+ */
+aiCursor: number, };

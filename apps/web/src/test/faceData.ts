@@ -58,7 +58,6 @@ export type GlossaryTermId =
   | "Death"
   | "Start of turn"
   | "End of turn"
-  | "Start of game"
   | "Once per turn"
   | "Aura"
   | "Combo"

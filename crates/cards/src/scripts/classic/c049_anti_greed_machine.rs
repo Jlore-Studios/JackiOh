@@ -247,7 +247,8 @@ mod tests {
             #[test]
             fn b5_e3_with_c_4_palantirs_limit_the_lowest_holds_whichever_card_sets_it() {
                 crate::register_all();
-                let dear = json!({ "def": STOCKPILE, "costMod": 1 });
+                // Plain (1) Cost Stockpiles: Palantir answers the (2) Cost Spells (R3139000), so these resolve for p2.
+                let dear = json!(STOCKPILE);
                 let mut palantir_lower = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }], "backrow": [PALANTIR] },
                     "p2": { "hand": [dear, FILLER], "library": [VANILLA, VANILLA, VANILLA] },

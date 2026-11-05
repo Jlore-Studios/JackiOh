@@ -4,6 +4,9 @@
 // Card definitions and the vocabulary every package shares (SPEC §5, §6.1, §10.6).
 // Script and Effect types live in engine/src/script.ts: they need GameState, which lives in the engine.
 
+import { SHIPPED_SETS } from "./engineConfig.ts";
+import type { SetName } from "./generated/SetName.ts";
+
 export type PlayerId = "p1" | "p2";
 
 export function opponentOf(player: PlayerId): PlayerId {
@@ -24,6 +27,8 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * (R1857000). Legacy marks Training Grounds #41 to #60, the frozen copies of Core cards, a family tag
  * no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources, Reknite to Red
  * Narcor, every one a token) and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162).
+ * Issue #3038 adds Starship (the Dormant Starship, on both faces, so every Starship, Dormant or
+ * launched): a card holding it has Flying and Ranged through the engine's layers (R3038000).
  */
 export type Tag =
   | "Human"
@@ -55,6 +60,7 @@ export type Tag =
   | "Legacy"
   | "Resource"
   | "Faction"
+  | "Starship"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
@@ -64,30 +70,14 @@ export type Rarity = "Common" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Toke
 export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
- * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15, issue
- * #1187, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and Training Grounds
- * (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are reserved.
+ * §5: the sets (the generated `SetName`, R3114000) and the sets that ship, in catalog order: a pool
+ * that names no set draws from all of them (R380), and a set the catalog holds that is not listed is
+ * in no pool, no deck and no list a player reads until it is (R1420). Both are read from the engine's
+ * set table (`crates/engine/src/wire/catalog_types.rs`), `SHIPPED_SETS` through `./engineConfig.ts`,
+ * so a new set or a set that ships changes nothing here.
  */
-export type SetName =
-  | "Core"
-  | "Classic"
-  | "Classic+"
-  | "Meditative"
-  | "Meditative+"
-  | "Stinkyscape"
-  | "Training Grounds"
-  | "Boss"
-  | "Boss-X"
-  | "Custom";
-
-/**
- * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
- * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
- * until it is (R1420). Meditative+ is listed from v0.3.15, the patch that ships it (R1178000), and
- * Stinkyscape from its release (issue #1884, R1857000), and Training Grounds from its (issue #2204,
- * R2194000).
- */
-export const SHIPPED_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] as const satisfies readonly SetName[];
+export type { SetName };
+export { SHIPPED_SETS };
 
 /** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
 export function setShips(set: SetName): boolean {
@@ -192,7 +182,9 @@ export type Keyword =
   | { kind: "Tradable" }
   /** #1852, R1852000: when it dies, a copy of it fuses into its owner's Dormant Starship. */
   | { kind: "Starship Piece" }
-  /** #1852, R1852003: a launched Starship. */
+  /** R3038001: kept for the shipped catalog snapshots, which print it on the Drone Battleships, and the
+   * replays that fold under them (R767000). No current card prints or gains it: a Starship carries the
+   * Starship tag (R3038000) instead. */
   | { kind: "Starship" }
   /** #2657, R2657000: never in Defense Position; the successor to the status "Cannot be in Defense Position". */
   | { kind: "Can't Defend" };

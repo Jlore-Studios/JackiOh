@@ -176,9 +176,10 @@ mod tests {
             }
 
             #[test]
-            fn r831001_palantir_s_base_face_steals_the_book_with_no_prompt_and_its_3_draws_are_the_opponent_s() {
+            fn r831001_r3139000_palantir_s_base_face_steals_the_2_cost_book_with_no_prompt_and_its_3_draws_are_the_opponent_s() {
+                // A `costMod` of 1 makes the (1) Cost Book the (2) Cost Spell Palantir answers.
                 let mut s = scenario(json!({
-                    "p1": { "hand": [BOOK], "library": [A, B, C] },
+                    "p1": { "hand": [{ "def": BOOK, "costMod": 1 }], "library": [A, B, C] },
                     "p2": { "hand": [FILLER], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [D, E, F] },
                 }));
                 fixed(&mut s, 3);

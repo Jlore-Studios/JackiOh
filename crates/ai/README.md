@@ -16,7 +16,8 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them; a call outside a decision passes `Prices::NONE` (plain
+through the search to the scorers that read them, with the one fact about the root they ride with, whether it
+holds a Starship (`starship_root`, R3038003); a call outside a decision passes `Prices::NONE` (plain
 `evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -279,9 +280,10 @@ less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but 
 The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
-set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most
-`STINKYSCAPE_BAN_CEILING` (35) of them (R1885000), and since #2203 Training Grounds cards, at most half
-of them (R2203000): no sweep, lane or person adds a card of an
+set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most a fifth of them
+(R1885000), and since #2203 Training Grounds cards, at most half of them (R2203000), each set's share
+written in its row of the set table and its ceiling that share of its non-token cards (R3114001): no
+sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
@@ -339,11 +341,12 @@ knows nothing of cards or sets: it keeps meaning the same when the AI improves o
 arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
 the same way, and the skill-to-Elo curve is measured with the arena.
 
-`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, written beside the config's
-other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps (R433, R417,
-R564, R678), and `MatchConfig::fold_args` folds a record with all of them (#1697). Unset, a game is
-created, played and folded exactly as before. No gate sets it; `SweepOptions.setup` opts a sweep in,
-the same inputs in seat order in every game.
+`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, written beside
+the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
+(R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
+(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
+`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `cargo jackioh
+run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
 
@@ -419,7 +422,11 @@ pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards; 
   reply with the network's logit mapped back onto the hand eval's points, `points = hand + (b +
   net(x))·U/a` (R1010000, R1010001), taken at `LEARNED_CORRECTION_SHARE`: `hand + share·(points −
   hand)` (R1012001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
-  eval (R1010002).
+  eval (R1010002). So does a decision whose root holds a Starship (`holds_starship`, R3038003: a Dormant
+  or launched Starship on either side, or a Starship Piece on either field or in the seat's own hand, read
+  off the redacted view once and carried in `Prices.starship_root`), every line of it alike: the network
+  was fitted before the set, and the hand eval holds what a Starship leaves behind (R2566000, R2380000,
+  R3064000).
 - `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
   version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`

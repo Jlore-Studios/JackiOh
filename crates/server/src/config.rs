@@ -20,10 +20,7 @@
 //! collection are `usize`; game and ladder quantities are `i32`; ratings and Glicko numbers are
 //! `f64`.
 
-use jackioh_engine::wire::{CodeFormat, EmoteId, PrintedRarity};
-use serde::{Deserialize, Serialize};
-
-use crate::cosmetics::CosmeticRarity;
+use jackioh_engine::wire::{CATALOG_SETS, CodeFormat, SetName};
 
 // ---------------------------------------------------------------------------------------------
 // Time units: conversions, not configuration. Rows and clocks are stamped in epoch milliseconds
@@ -33,8 +30,6 @@ use crate::cosmetics::CosmeticRarity;
 
 /// Milliseconds in a second: `jackioh-shared`'s (#3098), where the series' pick clock converts.
 pub use jackioh_shared::config::MS_PER_SECOND;
-/// Milliseconds in a day, a UTC day included (an epoch-ms timestamp has no leap seconds).
-pub const MS_PER_DAY: i64 = 86_400_000;
 /// Nanoseconds in a millisecond: `time::OffsetDateTime` counts the one, the port the other.
 pub const NANOS_PER_MS: i128 = 1_000_000;
 
@@ -50,6 +45,40 @@ pub use jackioh_shared::config::{
     AIM_RELAY_INTERVAL_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES,
     MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, REMATCH_OFFER_TTL_MS,
     TURN_CLOCK_SECONDS,
+};
+
+// The ladder bots' numbers (#3103) are `jackioh_shared::config`'s since the bots became a seat of the
+// match host's machine (`crates/shared/src/bots/`, `host/bot.rs`): the machine decides with them, and the
+// server names them here as it always has, so `serverConfig.ts` and the server's code read them unchanged.
+pub use jackioh_shared::config::{
+    AI_EMOTE, AI_PERSONAS, AiEmoteConfig, BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS,
+    BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN, BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS,
+    BOT_CALIBRATION_GENERATION, BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS,
+    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_DRAW_ANSWER_FIT,
+    BOT_DRAW_OFFER, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_FALLBACK_MAX_SECONDS,
+    BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_ACTIVE_HOURS, BOT_GRIND_GAP, BOT_GRIND_HYSTERESIS,
+    BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY, BOT_MID_STRENGTH_BUDGET,
+    BOT_NAME_BIRTH_YEAR_MAX, BOT_NAME_BIRTH_YEAR_MIN, BOT_NAME_CHINESE_NUMBERS, BOT_NAME_CHINESE_YEAR_SHARE,
+    BOT_NAME_COMPOUND_LETTERS, BOT_NAME_DRAW_ATTEMPTS, BOT_NAME_FILLER_NUMBER_SHARE, BOT_NAME_FILLER_NUMBERS,
+    BOT_NAME_LUIS_SHARE, BOT_NAME_SHAPES_CHINESE_HAN, BOT_NAME_SHAPES_CHINESE_PINYIN, BOT_NAME_SHAPES_CRUDE,
+    BOT_NAME_SHAPES_EDGY, BOT_NAME_SHAPES_GAMER, BOT_NAME_SHAPES_GIVEN, BOT_NAME_SHAPES_NONSENSE,
+    BOT_NAME_SHAPES_PLAIN, BOT_NAME_SHAPES_POLITICS, BOT_NAME_SHAPES_REFERENCE, BOT_NAME_SHARE_ANIME,
+    BOT_NAME_SHARE_CHINESE_HAN, BOT_NAME_SHARE_CHINESE_PINYIN, BOT_NAME_SHARE_CRUDE, BOT_NAME_SHARE_EDGY,
+    BOT_NAME_SHARE_GAMER, BOT_NAME_SHARE_GIVEN, BOT_NAME_SHARE_NONSENSE, BOT_NAME_SHARE_OTHER_REFS,
+    BOT_NAME_SHARE_PLAIN, BOT_NAME_SHARE_POLITICS, BOT_NAME_STRETCH_MAX, BOT_NAME_STRETCH_MIN,
+    BOT_NAME_SYLLABLES_MAX, BOT_NAME_SYLLABLES_MIN, BOT_NAME_TWO_DIGIT_MAX, BOT_NAME_TWO_DIGIT_MIN,
+    BOT_NAME_YEAR_SHARE, BOT_PERSONA_WEIGHTS, BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS,
+    BOT_PICK_RULE_SHARE, BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
+    BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS, BOT_REMATCH_DELAY_MIN_MS, BOT_REMATCH_FIT,
+    BOT_REMATCH_LINGER_MAX_MS, BOT_REMATCH_LINGER_MIN_MS, BOT_SEED_RATINGS, BOT_SPEED_MAX, BOT_SPEED_MIN,
+    BOT_STRENGTHS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_FIRST_MU, BOT_THINK_PRIOR_FIRST_SIGMA,
+    BOT_THINK_PRIOR_LATER_MU, BOT_THINK_PRIOR_LATER_SIGMA, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS,
+    BOT_TIMEOUT_FIT, BOT_VS_BOT_MIN_GAP_SECONDS, BotNameShape, BotStrength, CARD_STATS_MIN_SAMPLE,
+    ConcedeFit, DrawAnswerFit, DrawOfferRule, EMOTE_REPLY_KEYS, EMOTE_TRIGGERS, EmoteDelayFit, EmoteReplyKey,
+    EmoteTrigger, MAX_FAIR_GAP, MS_PER_DAY, PERSONA_DEAL_STEPS, PERSONA_NAMES, PersonaCaps, PersonaName,
+    PersonaRow, PersonaSpec, PersonaWeights, RematchFit, SKILL_ELO_ANCHOR, SKILL_ELO_TABLE, ScalarFit,
+    THINK_COMPLEXITY_SLOPE, THINK_LETHAL_SHIFT, THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior, TimeoutFit,
+    expected_elo_for_skill, persona_spec,
 };
 
 /// R79, §9.5: room codes are 6 characters from the invite-code alphabet.
@@ -385,10 +414,6 @@ pub const RATING_WINDOW_START: i64 = 100;
 pub const RATING_WINDOW_WIDEN_BY: i64 = 50;
 /// §9.5: the cadence, in seconds, at which the rating window widens.
 pub const RATING_WINDOW_WIDEN_EVERY_SECONDS: i64 = 10;
-/// SPEC §11 R640001: the widest the rating window gets, in rating points: its width at the 60 s mark
-/// where it used to go uncapped. Two people further apart than this never pair, however long they
-/// wait; past it the empty-queue fallback (R1453) seats a bot instead.
-pub const MAX_FAIR_GAP: i64 = 400;
 /// R640001: the seconds a ticket waits before its window reaches `MAX_FAIR_GAP`. The gap is a whole
 /// number of widenings past `RATING_WINDOW_START`, so the window reaches it exactly at a widening.
 /// PUBLIC: e2e spec 19 reads it.
@@ -440,82 +465,31 @@ pub fn rating_window(waited_seconds: f64) -> f64 {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The hidden rating: Glicko-2 (SPEC §9.12, R603). The maths is `src/ranked/glicko2.rs`.
+// The hidden rating: Glicko-2 (SPEC §9.12, R603). The maths is `jackioh-shared`'s `src/ranked/glicko2.rs`.
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R603: the rating a new profile starts at. R79's Elo started at 1000, and Glicko-2's update
-/// depends only on rating differences, so the ratings Elo left carry over unchanged as Glicko-2
-/// ratings and only the deviation and volatility are new (migration 0022).
-pub const RATING_START: f64 = 1000.0;
-/// R603: a new profile's rating deviation: Glickman's starting value, the most uncertain rating.
-pub const RATING_DEVIATION_START: f64 = 350.0;
-/// R603: a new profile's rating volatility: Glickman's starting value.
-pub const RATING_VOLATILITY_START: f64 = 0.06;
-/// R603: Glicko-2's system constant τ, which bounds how fast volatility moves. Glickman's 0.3–1.2.
-pub const GLICKO_TAU: f64 = 0.5;
-/// R603: the factor between a displayed rating and Glicko-2's internal scale, 400 / ln 10. Glickman
-/// writes it 173.7178; this is the same number to double precision (TS `400 / Math.LN10`).
-pub const GLICKO_SCALE: f64 = 400.0 / std::f64::consts::LN_10;
-/// R603: the volatility iteration stops once its bracket is narrower than this (Glickman's ε).
-pub const GLICKO_CONVERGENCE: f64 = 0.000001;
-/// R603: the most volatility iterations one update runs. The Illinois iteration converges in a
-/// handful of steps on any real input; the cap only makes a non-finite input end rather than spin.
-pub const GLICKO_MAX_ITERATIONS: u32 = 100;
+/// The hidden rating's numbers are `jackioh-shared`'s (#3105), where its maths now is.
+pub use jackioh_shared::config::{
+    GLICKO_CONVERGENCE, GLICKO_MAX_ITERATIONS, GLICKO_SCALE, GLICKO_TAU, RATING_DEVIATION_START,
+    RATING_START, RATING_VOLATILITY_START,
+};
 
 // ---------------------------------------------------------------------------------------------
-// The visible ladder (SPEC §9.12, R605–R608). The rules are `src/ranked/ladder.rs`. PUBLIC: the
+// The visible ladder (SPEC §9.12, R605–R608). The rules are `jackioh-shared`'s `src/ranked/ladder.rs`. PUBLIC: the
 // client reads the shape (divisions, pips, placements) to draw a rank it is handed.
 // ---------------------------------------------------------------------------------------------
 
-/// The shape of `RANK_TIER_PERCENTS` (SURFACE §4.2: a constant object becomes a const of a struct
-/// named after it). Serializes as TS's object, keys in TS order.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RankTierPercents {
-    pub rotten: i32,
-    pub normal: i32,
-    pub large: i32,
-    pub golden: i32,
-    pub mythic: i32,
-}
-
-/// SPEC §11 R606: the share of active players each Grape tier is meant to hold, in whole percents,
-/// lowest first: Rotten 12%, Normal 60%, Large 20%, Golden 7%, Mythic 1%. A player's hidden rating is
-/// placed at its percentile among the season's placed players and read off these shares, so retuning
-/// a boundary is a change here and nowhere else. Whole numbers, so a boundary is exact; they sum to 100.
-pub const RANK_TIER_PERCENTS: RankTierPercents = RankTierPercents {
-    rotten: 12,
-    normal: 60,
-    large: 20,
-    golden: 7,
-    mythic: 1,
+/// The visible ladder's numbers are `jackioh-shared`'s (#3105), where its rules now are.
+pub use jackioh_shared::config::{
+    JLORIOUS_SIZE, RANK_CONVERGENCE_GAP_PIPS, RANK_CONVERGENCE_PIPS, RANK_DIVISIONS_PER_TIER, RANK_LOSS_PIPS,
+    RANK_PIPS_PER_DIVISION, RANK_PLACEMENT_GAMES, RANK_STREAK_BONUS_PIPS, RANK_STREAK_LENGTH,
+    RANK_TIER_PERCENTS, RANK_WIN_PIPS, RankTierPercents,
 };
-/// R605: divisions per Grape tier, III up to I.
-pub const RANK_DIVISIONS_PER_TIER: i32 = 3;
-/// R605: pips per division. A division is climbed one pip at a time; a full division promotes.
-pub const RANK_PIPS_PER_DIVISION: i32 = 3;
-/// R605: rated games a season's placements take. Until they are played the player is a Raisin.
-pub const RANK_PLACEMENT_GAMES: i32 = 5;
-/// R606: pips a win gives before any bonus.
-pub const RANK_WIN_PIPS: i32 = 1;
-/// R606: pips a loss takes before any adjustment. A draw moves no pip.
-pub const RANK_LOSS_PIPS: i32 = 1;
-/// R606: the win that makes a streak this long, and every win after it, earns the streak bonus.
-pub const RANK_STREAK_LENGTH: i32 = 3;
-/// R606: the streak bonus, in pips, earned below Mythic Grape only.
-pub const RANK_STREAK_BONUS_PIPS: i32 = 1;
+
 /// R2101000: the ranked win streak (R606's `streak`) from which the profile and a ranked match's
 /// line show a flame with its count. Only the client reads it. Three, where R606's bonus starts,
 /// but apart from `RANK_STREAK_LENGTH` so each tunes alone.
 pub const RANK_STREAK_FLAME_LENGTH: i32 = 3;
-/// R606: how far, in pips, the rank the hidden rating calls for must sit from the visible rank
-/// before a game's pips lean toward it. One division: inside it a game is a plain win or loss.
-pub const RANK_CONVERGENCE_GAP_PIPS: i32 = 3;
-/// R606: how many pips the lean adds — to a win when the rating is above the visible rank, to a loss
-/// when it is below. Gentle by design: never more than this, and a win never gives fewer pips than a
-/// plain win, nor a loss take fewer than a plain loss.
-pub const RANK_CONVERGENCE_PIPS: i32 = 1;
-/// R608: Jlorious is the top this-many Mythic Grape players by hidden rating.
-pub const JLORIOUS_SIZE: usize = 100;
 
 // ---------------------------------------------------------------------------------------------
 // Usernames (SPEC §9.4, R1432–R1435). The checks are `src/username/`.
@@ -552,16 +526,11 @@ pub const USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW: usize = 10;
 pub const USERNAME_SIGN_IN_WINDOW_SECONDS: i64 = 300;
 
 // ---------------------------------------------------------------------------------------------
-// Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.rs`.
+// Seasons (SPEC §9.12, R609). The reset is `jackioh-shared`'s `src/ranked/season.rs`.
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R609: how far a season's soft reset pulls each rating toward the players' mean: 0 keeps
-/// every rating, 1 puts everyone on the mean. Half way.
-pub const SEASON_RESET_STRENGTH: f64 = 0.5;
-/// R609: the deviation a season's reset adds, combined in quadrature as Glicko adds uncertainty for
-/// time away: `min(√(RD² + this²), RATING_DEVIATION_START)`. A settled 60 becomes about 160.
-pub const SEASON_RESET_DEVIATION_BOOST: f64 = 150.0;
-
+/// The season reset's numbers are `jackioh-shared`'s (#3105), where the reset now is.
+pub use jackioh_shared::config::{SEASON_RESET_DEVIATION_BOOST, SEASON_RESET_STRENGTH};
 // ---------------------------------------------------------------------------------------------
 // Action flooding (§9.8).
 // ---------------------------------------------------------------------------------------------
@@ -731,11 +700,10 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about fifty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
-/// still the error's message, so nothing a player could fix is hidden. A refused custom card's
-/// issues are capped the same way (R915008): a frame of junk keywords breaks §12.2 once per keyword.
+/// still the error's message, so nothing a player could fix is hidden.
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
-/// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
+/// writes each card's set with its number (`catalog_number_set_offset`); a code naming a version
 /// other than this one or `DECK_CODE_CORE_ONLY_VERSION` is refused. A set that ships later takes an
 /// offset of its own and leaves the version alone (R1410), so every code minted before still reads.
 pub const DECK_CODE_VERSION: i32 = 2;
@@ -743,44 +711,27 @@ pub const DECK_CODE_VERSION: i32 = 2;
 /// is a version 1 code, and its numbers are Core's (the only set there was).
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
-/// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`, `"Stinkyscape"`,
-/// `"Training Grounds"`).
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CatalogNumberSetOffsets {
-    #[serde(rename = "Core")]
-    pub core: i32,
-    #[serde(rename = "Classic")]
-    pub classic: i32,
-    #[serde(rename = "Classic+")]
-    pub classic_plus: i32,
-    #[serde(rename = "Meditative")]
-    pub meditative: i32,
-    #[serde(rename = "Meditative+")]
-    pub meditative_plus: i32,
-    #[serde(rename = "Stinkyscape")]
-    pub stinkyscape: i32,
-    #[serde(rename = "Training Grounds")]
-    pub training_grounds: i32,
-}
-
 /// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
-/// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
-/// 3000 + n, Meditative+ 4000 + n, Stinkyscape 5000 + n, Training Grounds 6000 + n — still written
-/// as LEB128. No set holds 1000 cards, so a number names one set and one card. Meditative's offset
-/// is the next thousand in catalog order (R1420), and so is Meditative+'s after it (v0.3.15, issue
-/// #1187, R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
-/// Stinkyscape's (issue #2204); none moved another set's, so a code minted before a set shipped
-/// reads as it always did.
-pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
-    core: 0,
-    classic: 1000,
-    classic_plus: 2000,
-    meditative: 3000,
-    meditative_plus: 4000,
-    stinkyscape: 5000,
-    training_grounds: 6000,
-};
+/// its §5 index plus its set's offset, a stride for each place its set holds in the catalog order —
+/// Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative 3000 + n, Meditative+ 4000 + n,
+/// Stinkyscape 5000 + n, Training Grounds 6000 + n — still written as LEB128. No set holds 1000
+/// cards, so a number names one set and one card.
+pub const CATALOG_NUMBER_SET_STRIDE: i32 = 1000;
+
+/// SPEC §11 R255, R339, R1410, R3114000: a set's offset in a version 2 deck or trio code, its place in
+/// the catalog order (`CATALOG_SETS`, the set table's order) times `CATALOG_NUMBER_SET_STRIDE`, or
+/// `None` for a set the catalog does not order (Boss, Boss-X, Custom). Meditative's offset was the
+/// next thousand in catalog order (R1420), and so was Meditative+'s after it (v0.3.15, issue #1187,
+/// R1178000), Stinkyscape's after that (issue #1884, R1857000) and Training Grounds' after
+/// Stinkyscape's (issue #2204); a set's row is appended to the table and never moved, so none moves
+/// another set's, and a code minted before a set shipped reads as it always did. The client reads
+/// the shipped sets' offsets (`CATALOG_NUMBER_SET_OFFSETS` in `serverConfig.ts`).
+pub fn catalog_number_set_offset(set: SetName) -> Option<i32> {
+    let place = CATALOG_SETS.iter().position(|listed| *listed == set)?;
+    i32::try_from(place)
+        .ok()
+        .map(|place| place * CATALOG_NUMBER_SET_STRIDE)
+}
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a
 /// chat client wraps around a pasted code.
@@ -799,7 +750,7 @@ pub const DECK_VERSIONS_KEPT: usize = 20;
 /// replacing save moves on.
 pub const DECK_VERSION_DEBOUNCE_MS: i64 = 60_000;
 /// SPEC §11 R339: the trio-code format's version. Version 2 writes each deck as a version 2 deck code
-/// does (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version other than this one or
+/// does (`catalog_number_set_offset`); a code naming a version other than this one or
 /// `TRIO_CODE_CORE_ONLY_VERSION` is refused.
 pub const TRIO_CODE_VERSION: i32 = 2;
 /// SPEC §11 R339: the one older trio-code version still read, whose decks carry Core numbers.
@@ -809,18 +760,6 @@ pub const TRIO_CODE_CORE_ONLY_VERSION: i32 = 1;
 /// and under 1,100 at the very worst (four-byte characters filling every name to its limit), so this
 /// leaves room for whatever a chat client wraps around a pasted code.
 pub const TRIO_CODE_MAX_INPUT_LENGTH: usize = 2048;
-
-// ---------------------------------------------------------------------------------------------
-// Custom cards on the account (SPEC §12.9, R915008). PUBLIC: the card creator imports the cap.
-// A card's own limits (its frame's, `CUSTOM_SOURCE_MAX_BYTES` of source and
-// `CUSTOM_BUILDER_MAX_BYTES` of builder) are the engine's (`jackioh_engine::config`), which the
-// validator applies; the request that carries one is held to `API_MAX_BODY_BYTES` like every body,
-// since the router reads a body before it picks the handler. A card at every limit fits it as JSON
-// unless most of its source is characters JSON escapes (`tests/api/custom_cards.rs`).
-// ---------------------------------------------------------------------------------------------
-
-/// SPEC §12.9, R915008: how many custom cards an account keeps. Mirrored in `app.settings` (0037).
-pub const CUSTOM_CARDS_PER_ACCOUNT: usize = 50;
 
 // ---------------------------------------------------------------------------------------------
 // Queue modes and the Conquest series (SPEC §9.5, R257–R264, R330–R338).
@@ -879,8 +818,6 @@ pub const PLAYER_SETTINGS_GROUPS_MAX: usize = 8;
 pub const PLAYER_SETTINGS_KEYS_MAX: usize = 32;
 /// SPEC §11 R633: the longest group id or setting name, in characters. Both are camelCase or kebab-case words.
 pub const PLAYER_SETTINGS_NAME_MAX_LENGTH: usize = 40;
-/// SPEC §11 R633: the longest text value, in characters (a station or an intensity name).
-pub const PLAYER_SETTINGS_TEXT_MAX_LENGTH: usize = 40;
 /// SPEC §11 R633: the most text the stored groups of one account may come to, in bytes. Four
 /// groups of a dozen settings are well under a kilobyte; this bounds a body of junk. Mirrored in
 /// `app.settings` (0018).
@@ -894,11 +831,6 @@ pub const PLAYER_SETTINGS_BYTES_MAX: usize = 4096;
 /// figures are live-only. The engine holds it, since the window function that applies it is the
 /// engine's (`jackioh_engine::wire::stats::window`), shared with `cargo jackioh stats` and `winrates`.
 pub use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
-
-/// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games". Its played delta needs this many on each side, played and
-/// drawn but not played, and displays "not enough data" until then.
-pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`
 /// may flag it. Sits above `CARD_STATS_MIN_SAMPLE` (20): a card under 20 games counts toward the
@@ -993,175 +925,10 @@ pub const PLAYER_STATS_BYTES_MAX: usize = 131_072;
 /// R1442: the fewest human think times a bucket needs before `jackioh-server timing-fit` fits it.
 pub const TIMING_FIT_MIN_SAMPLES: usize = 30;
 
-/// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
-/// standard deviation `sigma` over `samples` moves of `action_kind` (an `ActionType` literal), made
-/// first or later in the turn, by players in `rank_bucket` (a `RankTier` literal; `None` for the
-/// moves no tier was read for). R639000: `ln_legal_mean` is the mean of `ln(legal_count)` over the
-/// same moves, the complexity `THINK_COMPLEXITY_SLOPE` is measured from.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ThinkTimeFit {
-    pub rank_bucket: Option<&'static str>,
-    pub action_kind: &'static str,
-    pub first_in_turn: bool,
-    pub samples: usize,
-    pub mu: f64,
-    pub sigma: f64,
-    pub ln_legal_mean: f64,
-}
-
-/// R1442: the think-time fits, pasted by hand from `jackioh-server timing-fit` (CLAUDE.md rule 9);
-/// the ladder bots (#636) read it. Empty until enough human games are recorded.
-pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
-
 // R639000: the rest of a person's habits a ladder bot copies, each one row that
 // `jackioh-server timing-fit` prints from the telemetry and a person pastes over the row here by
 // hand. A row with `samples: 0` is a hand-set prior, kept until a fit with
 // `TIMING_FIT_MIN_SAMPLES` behind it replaces it.
-
-/// R639000: one fitted number: `value`, over `samples` observations.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ScalarFit {
-    pub samples: usize,
-    pub value: f64,
-}
-
-/// R639000: how people concede. `share` of the players who lose concede at all; those who do never
-/// concede before turn `min_turn`, and concede once they stand `deficit` behind (the AI's evaluation
-/// from their side, negated, R1442), a threshold distributed normally with mean `deficit_mu` and
-/// standard deviation `deficit_sigma`, and only while they trail their opponent (`Standing.behind`).
-/// That deficit is not centered on an even board: it counts the enemy hero's health against the seat,
-/// so an even opening reads about 30 behind. `samples` is the concessions it was fitted on.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ConcedeFit {
-    pub samples: usize,
-    pub share: f64,
-    pub min_turn: i32,
-    pub deficit_mu: f64,
-    pub deficit_sigma: f64,
-}
-
-/// R639000: how people answer a draw offer: `accept_share` of `samples` seats offered one accepted.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct DrawAnswerFit {
-    pub samples: usize,
-    pub accept_share: f64,
-}
-
-/// R639000: how often a person's clock runs out: `chance_per_turn` of `samples` own turns.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct TimeoutFit {
-    pub samples: usize,
-    pub chance_per_turn: f64,
-}
-
-/// R639000: how people answer the end of a game that may be rematched (R672), over `samples` seats:
-/// `offer_share` offer a rematch the opponent never meets, and `accept_share` of the seats whose
-/// opponent offered first meet it.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct RematchFit {
-    pub samples: usize,
-    pub offer_share: f64,
-    pub accept_share: f64,
-}
-
-/// R639000, R645: the window an emote's delay is drawn from, uniformly, in ms, fitted over
-/// `samples` emotes.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct EmoteDelayFit {
-    pub samples: usize,
-    pub min_ms: f64,
-    pub max_ms: f64,
-}
-
-/// R639000, R645: the share of bots dealt each persona, in `PERSONA_NAMES` order, fitted over
-/// `samples` people's seats.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PersonaWeights {
-    pub samples: usize,
-    pub weights: [f64; 4],
-}
-
-/// R639000: how much longer a think time grows per unit of `ln(legal_count)` above its fit's
-/// `ln_legal_mean`, in `ln(think_ms)`: a board with more to do takes longer.
-pub const THINK_COMPLEXITY_SLOPE: ScalarFit = ScalarFit {
-    samples: 0,
-    value: 0.2,
-};
-
-/// R639000: how much longer the moves of a turn that wins take, in `ln(think_ms)`: a person counts
-/// the damage before they swing.
-pub const THINK_LETHAL_SHIFT: ScalarFit = ScalarFit {
-    samples: 0,
-    value: 0.4,
-};
-
-/// R639000: the concession model a ladder bot draws its temper from. The prior's threshold sits about
-/// 40 past an even opening's deficit, a game clearly lost. R2660000: a bot reads only `share`, whether
-/// it is one who concedes at all, and concedes only facing a lethal it cannot stop
-/// (`jackioh_ai::unstoppable_lethal`); `min_turn` and the deficit stay fitted, unread.
-pub const BOT_CONCEDE_FIT: ConcedeFit = ConcedeFit {
-    samples: 0,
-    share: 0.4,
-    min_turn: 6,
-    deficit_mu: 70.0,
-    deficit_sigma: 20.0,
-};
-
-/// R639000: how often a ladder bot that stands behind accepts a draw offer.
-pub const BOT_DRAW_ANSWER_FIT: DrawAnswerFit = DrawAnswerFit {
-    samples: 0,
-    accept_share: 0.25,
-};
-
-/// R2660001: when a ladder bot offers a draw: at the start of its own turn, while it trails its
-/// opponent by at least `min_behind`, on the scale of `Standing.behind` (about one point per point of
-/// hero health or of a unit's stats), with the chance `chance_per_turn`. Hand-set: `timing-fit` fits
-/// no offer rate.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct DrawOfferRule {
-    pub chance_per_turn: f64,
-    pub min_behind: f64,
-}
-
-/// R2660001: a ladder bot offers a draw on one turn start in twenty while it trails by ten points or
-/// more, a 4/4's worth and more.
-pub const BOT_DRAW_OFFER: DrawOfferRule = DrawOfferRule {
-    chance_per_turn: 0.05,
-    min_behind: 10.0,
-};
-
-/// R639000: how often a ladder bot lets its turn clock run out.
-pub const BOT_TIMEOUT_FIT: TimeoutFit = TimeoutFit {
-    samples: 0,
-    chance_per_turn: 0.01,
-};
-
-/// R639000: how often a ladder bot offers a rematch, and meets one.
-pub const BOT_REMATCH_FIT: RematchFit = RematchFit {
-    samples: 0,
-    offer_share: 0.15,
-    accept_share: 0.35,
-};
-
-/// R639000, R645: the window a ladder bot's triggered emote waits inside, after its trigger.
-pub const BOT_EMOTE_DELAY_FIT: EmoteDelayFit = EmoteDelayFit {
-    samples: 0,
-    min_ms: 800.0,
-    max_ms: 2500.0,
-};
-
-/// R639000, R645: the window a ladder bot's reply to a person's emote waits inside.
-pub const BOT_EMOTE_REPLY_DELAY_FIT: EmoteDelayFit = EmoteDelayFit {
-    samples: 0,
-    min_ms: 800.0,
-    max_ms: 2500.0,
-};
-
-/// R639000, R645: the weights a new ladder bot's persona is dealt by.
-pub const BOT_PERSONA_WEIGHTS: PersonaWeights = PersonaWeights {
-    samples: 0,
-    weights: [0.4, 0.25, 0.2, 0.15],
-};
 
 /// R639000: the quantiles of the observed delays an emote delay window runs between.
 pub const TIMING_FIT_DELAY_QUANTILES: (f64, f64) = (0.1, 0.9);
@@ -1170,137 +937,12 @@ pub const TIMING_FIT_DELAY_QUANTILES: (f64, f64) = (0.1, 0.9);
 pub const TIMING_FIT_CONCEDE_TURN_QUANTILE: f64 = 0.1;
 
 // ---------------------------------------------------------------------------------------------
-// Ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1451, R1452; #638). The strengths' seed ratings come from
-// R748000's offline calibration (docs/bot-calibration.md); every other value is hand-set until the
-// think-time fit (R1442's `THINK_TIME_FITS`) replaces it.
+// Ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1451, R1452; #638). What a bot decides, and so its numbers
+// (the strengths and their seed ratings, the think times and habits, the personas, the pool, the
+// fallback and the picks), is `crates/shared/src/config.rs`'s since #3103, re-exported at the top of this
+// file; what is left here is the server's own: the calibration's, the pool's refresh and the stale start.
 // ---------------------------------------------------------------------------------------------
 
-/// R1452, R747000: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`:
-/// the softmax temperature over the finalists, in evaluation points, and the chance it passes over a
-/// lethal it found), its skill (the chance each decision follows that AI, the rest the skill miss,
-/// R2214000) and the rating its `bot_ratings` row is seeded with (R610), which is what
-/// `expected_elo_for_skill` measured for that skill (`BOT_SEED_RATINGS`, R748000). Always on the
-/// spec's resources: a strength is never a practice handicap (R180). The chance is rolled at each
-/// decision that finds a lethal, and the bot decides again after every move, so a bot that passed
-/// over one often finds it again before the turn ends: it misses a lethal for the whole turn less
-/// often than the chance says, which calibration (R610's ratings) takes in as it takes in everything
-/// else.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BotStrength {
-    pub budget: jackioh_ai::SearchBudget,
-    pub temperature: f64,
-    pub missed_lethal_chance: f64,
-    pub skill: f64,
-    pub seed_rating: f64,
-}
-
-/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the Elo
-/// column of `SKILL_ELO_TABLE`, read off in `const`, so no number is stated twice: the curve's
-/// readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them equal), the
-/// reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server bot-calibrate` measures
-/// the five strengths as built (their budget, temperature, missed-lethal chance and skill together,
-/// which the curve, measured at the arena's budget, does not) against each other, and its `--write`
-/// rewrites the rows of `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot takes
-/// `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-/// The rows are generation 13's calibration with the skill miss (R2214000) (docs/bot-calibration.md,
-/// Results).
-pub const BOT_SEED_RATINGS: [f64; SKILL_ELO_TABLE.len()] = seed_ratings_from_curve();
-
-/// R748000: `SKILL_ELO_TABLE`'s Elo column, which `BOT_SEED_RATINGS` is.
-const fn seed_ratings_from_curve() -> [f64; SKILL_ELO_TABLE.len()] {
-    let mut seeds = [0.0; SKILL_ELO_TABLE.len()];
-    let mut index = 0;
-    while index < seeds.len() {
-        seeds[index] = SKILL_ELO_TABLE[index].1;
-        index += 1;
-    }
-    seeds
-}
-
-/// R2575000: the search budget of `BOT_STRENGTHS[2]` and `[3]`: the practice AI's `AI_BUDGET` before
-/// issue #2575 doubled it, kept so that `BOT_SEED_RATINGS`, calibrated on it (R748000), still hold.
-/// Raising it is a person's call, with a calibration after it.
-pub const BOT_MID_STRENGTH_BUDGET: jackioh_ai::SearchBudget = jackioh_ai::SearchBudget {
-    nodes: 600,
-    lethal_nodes: 150,
-    determinizations: 3,
-    beam_width: 4,
-    root_branching: 20,
-    branching: 6,
-    max_depth: 8,
-    finalists: 3,
-};
-
-/// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
-/// (`bots.strength`), so a change here changes every bot of that index.
-pub const BOT_STRENGTHS: &[BotStrength] = &[
-    BotStrength {
-        budget: jackioh_ai::SearchBudget {
-            nodes: 150,
-            lethal_nodes: 40,
-            determinizations: 1,
-            beam_width: 2,
-            root_branching: 10,
-            branching: 4,
-            max_depth: 6,
-            finalists: 3,
-        },
-        temperature: 3.0,
-        missed_lethal_chance: 0.4,
-        skill: 0.0,
-        seed_rating: BOT_SEED_RATINGS[0],
-    },
-    BotStrength {
-        budget: jackioh_ai::SearchBudget {
-            nodes: 300,
-            lethal_nodes: 80,
-            determinizations: 2,
-            beam_width: 3,
-            root_branching: 14,
-            branching: 5,
-            max_depth: 7,
-            finalists: 3,
-        },
-        temperature: 2.0,
-        missed_lethal_chance: 0.25,
-        skill: 0.25,
-        seed_rating: BOT_SEED_RATINGS[1],
-    },
-    BotStrength {
-        budget: BOT_MID_STRENGTH_BUDGET,
-        temperature: 1.0,
-        missed_lethal_chance: 0.12,
-        skill: 0.5,
-        seed_rating: BOT_SEED_RATINGS[2],
-    },
-    BotStrength {
-        budget: BOT_MID_STRENGTH_BUDGET,
-        temperature: 0.4,
-        missed_lethal_chance: 0.05,
-        skill: 0.75,
-        seed_rating: BOT_SEED_RATINGS[3],
-    },
-    BotStrength {
-        budget: jackioh_ai::SearchBudget {
-            nodes: 1200,
-            lethal_nodes: 300,
-            determinizations: 4,
-            beam_width: 5,
-            root_branching: 24,
-            branching: 7,
-            max_depth: 9,
-            finalists: 4,
-        },
-        temperature: 0.0,
-        missed_lethal_chance: 0.0,
-        skill: 1.0,
-        seed_rating: BOT_SEED_RATINGS[4],
-    },
-];
-
-/// R748000: the AI generation (`crates/ai/generation.json`) `BOT_SEED_RATINGS` were measured on.
-/// `bot-calibrate` shifts its anchor by the promotions after it.
-pub const BOT_CALIBRATION_GENERATION: i64 = 13;
 /// R748000: games each pair of strengths plays in a calibration. At 40 the five strengths' offsets
 /// carried errors of about 28 Elo, wider than the gaps between three of them.
 pub const BOT_CALIBRATION_GAMES_PER_PAIR: usize = 100;
@@ -1324,406 +966,20 @@ pub const BOT_CALIBRATION_MAX_ACTIONS: usize = 3000;
 /// "Activate N" with each use, so the AI went on using it. Of 100 games sampled, the longest turn took
 /// 20 actions.
 pub const BOT_CALIBRATION_MAX_TURN_ACTIONS: usize = 30;
-/// R1560000: the deviation each AI promotion adds to a ladder bot's rating before its next rated game,
-/// combined in quadrature as R609's `SEASON_RESET_DEVIATION_BOOST` is: `min(√(RD² + n × this²),
-/// RATING_DEVIATION_START)` for n promotions since it was last rated. About one promotion's measured
-/// gain over its parent (generations 10 to 13 gained 35 to 241 Elo), and the season reset's own.
-pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
+/// R1560000: the deviation each AI promotion adds to a ladder bot's rating (`jackioh-shared`'s, #3105).
+pub use jackioh_shared::config::BOT_PROMOTION_DEVIATION_BOOST;
 
-/// R747000, R748000: the Elo the reference, this build's AI at full skill, is held at in
-/// `SKILL_ELO_TABLE`, and the strongest bot's seed: 1200 from R1454 until generation 13's calibration
-/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results);
-/// `bot-calibrate --write` rewrites it with the rows. Not a new player's `RATING_START`, because the
-/// pairing seats no bot for a player rated above every bot (R1453) and a player past the middle of
-/// the ladder would otherwise have none.
-pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
-
-/// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
-/// skill from `AI_SKILL_MIN` to `AI_SKILL_MAX`: the Elo a seat at that skill is expected to hold, the
-/// reference (full skill) at `SKILL_ELO_ANCHOR`. The rows are measured, not set: `cargo jackioh arena`
-/// games of each skill against the reference and against the random policy, scored as Elo gaps and
-/// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
-/// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
-/// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
-/// rows since generation 13, and with the skill miss since R2214000: `bot-calibrate --write` rewrites
-/// them here (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the ongoing
-/// calibration.
-pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
-    (0.0, 1517.0),
-    (0.25, 1576.0),
-    (0.5, 1666.0),
-    (0.75, 1716.0),
-    (1.0, SKILL_ELO_ANCHOR),
-];
-
-/// R747000: the Elo a seat at `skill` is expected to hold, read off `SKILL_ELO_TABLE` by straight
-/// lines between its rows; a skill outside the range reads as the end it is past (`clamp_skill`).
-pub fn expected_elo_for_skill(skill: f64) -> f64 {
-    let skill = jackioh_ai::clamp_skill(skill);
-    for pair in SKILL_ELO_TABLE.windows(2) {
-        let ((low_skill, low_elo), (high_skill, high_elo)) = (pair[0], pair[1]);
-        if skill <= high_skill {
-            return low_elo + (high_elo - low_elo) * (skill - low_skill) / (high_skill - low_skill);
-        }
-    }
-    SKILL_ELO_TABLE.last().map_or(RATING_START, |&(_, elo)| elo)
-}
-
-/// R1454: the pool never holds fewer active bots than this, however few people play. R2778001: 40
-/// (8 before), so a player grinding the ladder never runs out of bots on, free and not among their
-/// last `BOT_RECENT_OPPONENTS`.
-pub const BOT_POOL_MIN: usize = 40;
-/// R1454: nor more than this, however many do (R2778001: 400, 200 before).
-pub const BOT_POOL_MAX: usize = 400;
-/// R1454: active bots per person who finished a live game in the last
-/// `BOT_POOL_ACTIVE_WINDOW_DAYS`, before the clamp (R2778001: one each, a quarter before).
-pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 1.0;
-/// R1454: the window "weekly active" counts people over.
-pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
 /// R1454: how often the server sizes the pool again (and once as it boots).
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
-/// R1555000: the place among the season's placed people (highest rating first) whose rating starts
-/// the top bots' grind, so one person far ahead does not.
-pub const BOT_GRIND_REFERENCE_RANK: usize = 3;
-/// R1555000: the grind starts at a refresh when that person is more than this above every active bot.
-pub const BOT_GRIND_GAP: f64 = 200.0;
-/// R1555000: and stops only once a bot is within `BOT_GRIND_GAP` less this of them, so it does not
-/// flap.
-pub const BOT_GRIND_HYSTERESIS: f64 = 100.0;
-/// R1555000: how many of the highest-rated active bots grind.
-pub const BOT_GRINDERS: usize = 3;
-/// R1555000: the hours a day a grinder is on, in place of its own schedule's when that is fewer.
-pub const BOT_GRIND_ACTIVE_HOURS: i32 = 20;
 /// R1555000: the rated wins a grinder needs while grinding to step up one strength.
 pub const BOT_GRIND_STEP_GAMES: i32 = 10;
 /// R1555000: the most matches between two bots that are live at once.
 pub const BOT_VS_BOT_MAX_LIVE: usize = 1;
-/// R1555000: the least time between a match between two bots ending and the next one's kickoff.
-pub const BOT_VS_BOT_MIN_GAP_SECONDS: i64 = 300;
-/// R1453, R641000: the shortest a ticket of any mode waits before it may pair with a bot.
-pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
-/// R1453: the longest; each ticket's wait is drawn from its id and the server's key between the
-/// two, inclusive.
-pub const BOT_FALLBACK_MAX_SECONDS: i64 = 40;
-/// R1453: a player is not paired with a bot they faced in this many of their last games.
-pub const BOT_RECENT_OPPONENTS: usize = 5;
 /// SPEC §11 R1989000: the stream label the seat coin is drawn on. Every 1v1 door seats its two
 /// profiles by one draw of the match or series seed on `{seed}:seats` at cursor 0, beside the
 /// dealt-deck streams (`{seed}:p1-deck`, R258) and the emote stream (`{seed}:emotes:{seat}`,
 /// R1341), so a fixed seed always seats the same way and a replay folds unchanged.
 pub const SEAT_COIN_LABEL: &str = "seats";
-/// R1454: the fewest hours a day a bot is on (its schedule, `bots.active_hours`; R2778001: 12, 8
-/// before). A bot drawn before keeps its schedule.
-pub const BOT_ACTIVE_HOURS_MIN: i32 = 12;
-/// R1454: the most hours a day a bot is on (R2778001: 18, 16 before), still under a grinder's
-/// `BOT_GRIND_ACTIVE_HOURS`.
-pub const BOT_ACTIVE_HOURS_MAX: i32 = 18;
-/// R1454: hours in the day a bot's schedule wraps around (UTC).
-pub const BOT_HOURS_PER_DAY: i32 = 24;
-/// R1452: the fastest a bot thinks, as a multiple of the think time it draws (its `bots.speed`).
-pub const BOT_SPEED_MIN: f64 = 0.75;
-/// R1452: the slowest.
-pub const BOT_SPEED_MAX: f64 = 1.35;
-/// R1454: the fewest Best-of-1 decks a bot carries.
-pub const BOT_DECKS_MIN: usize = 2;
-/// R1454: the most.
-pub const BOT_DECKS_MAX: usize = 3;
-/// R1454: how many decks the pool tries in all to find a bot's legal ones.
-pub const BOT_DECK_DRAW_ATTEMPTS: usize = 20;
-/// R1454: the youngest a bot's account reads (its profile's `created_at`), in days.
-pub const BOT_ACCOUNT_AGE_MIN_DAYS: i64 = 1;
-/// R1454: the oldest.
-pub const BOT_ACCOUNT_AGE_MAX_DAYS: i64 = 180;
-/// R1454: the share of bots that keep the `Player#n` name a new account is given, as people do
-/// who skip the username prompt (R1435).
-pub const BOT_DEFAULT_USERNAME_SHARE: f64 = 0.3;
-/// R1454: one shape a bot's username may take, filled from the word lists beside the pool
-/// (`crates/server/src/bots/names/`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BotNameShape {
-    /// R1454: the word as the list spells it.
-    Bare,
-    /// R1454: the word lowercased.
-    Lower,
-    /// R1454: both words capitalised and run together.
-    Camel,
-    /// R1454: both words lowercased and run together.
-    LowerPair,
-    /// R1454: both words lowercased with `_` between them.
-    SnakePair,
-    /// R1454: both words lowercased and run together, then a number.
-    LowerPairDigits,
-    /// R1454: the word, then a number.
-    Digits,
-    /// R1454: the word lowercased, then a number.
-    LowerDigits,
-    /// R1454: the word, then `_`, then a number.
-    SnakeDigits,
-    /// R1454: the word inside `xX…Xx` (or `xX_…_Xx`).
-    Xx,
-    /// R1454: an affix from `PREFIXES` capitalised with the word.
-    Prefix,
-    /// R1454: the word with an affix from `SUFFIXES`.
-    Suffix,
-    /// R1454: the word with a fan affix from `FAN_SUFFIXES`.
-    FanSuffix,
-    /// R1454: a fan affix from `FAN_PREFIXES` capitalised with the word.
-    FanPrefix,
-    /// R1454: the word in leetspeak (`a→4`, `e→3`, `o→0`, `i→1`).
-    Leet,
-    /// R1454: the word lowercased with one vowel stretched.
-    Stretch,
-    /// R1454: the word with its last letter doubled or an `ii`/`zz`/`_` ending.
-    Doubled,
-    /// R1454: nonsense syllables strung from the consonant-vowel table.
-    Syllables,
-    /// R1454: the given name with an initial (`LuisM`, `Luis_M`).
-    Initial,
-    /// R1454: the given name's diminutive (`Luisito`, `Lucita`).
-    Diminutive,
-    /// R1454: the given name (or its diminutive) with `Gamer` and maybe a year.
-    Gamer,
-    /// R1454: the word with the first `BOT_NAME_COMPOUND_LETTERS` letters of the lead word.
-    Compound,
-}
-
-/// R1454: the share of named bots whose username is drawn from plain words.
-pub const BOT_NAME_SHARE_PLAIN: f64 = 0.22;
-/// R1454: the share of named bots whose username is drawn from nonsense words.
-pub const BOT_NAME_SHARE_NONSENSE: f64 = 0.08;
-/// R1454: the share of named bots whose username is drawn from gamer filler.
-pub const BOT_NAME_SHARE_GAMER: f64 = 0.05;
-/// R1454: the share of named bots whose username is drawn from edgy words.
-pub const BOT_NAME_SHARE_EDGY: f64 = 0.12;
-/// R1454: the share of named bots whose username is drawn from anime references.
-pub const BOT_NAME_SHARE_ANIME: f64 = 0.13;
-/// R1454: the share of named bots whose username is drawn from Han characters.
-pub const BOT_NAME_SHARE_CHINESE_HAN: f64 = 0.05;
-/// R1454: the share of named bots whose username is drawn from pinyin.
-pub const BOT_NAME_SHARE_CHINESE_PINYIN: f64 = 0.05;
-/// R1454: the share of named bots whose username is drawn from given names other than Luis.
-pub const BOT_NAME_SHARE_GIVEN: f64 = 0.06;
-/// R1454: the share of named bots whose username is drawn from crude and meme bait.
-pub const BOT_NAME_SHARE_CRUDE: f64 = 0.09;
-/// R1454: the share of named bots whose username is drawn from other references.
-pub const BOT_NAME_SHARE_OTHER_REFS: f64 = 0.06;
-/// R1454: the share of named bots whose username is drawn from politics and public life.
-pub const BOT_NAME_SHARE_POLITICS: f64 = 0.06;
-/// R1454: the share of all bots named Luis, the most common given name on the ladder: about four
-/// in a full pool of 200, the later ones tagged `Luis#1`, `Luis#2`, …
-pub const BOT_NAME_LUIS_SHARE: f64 = 0.02;
-/// R1454: how many names the bot's register draws before it keeps its `Player#n`.
-pub const BOT_NAME_DRAW_ATTEMPTS: usize = 10;
-/// R1454: the smallest two-digit number a `{word}{digits}` shape draws.
-pub const BOT_NAME_TWO_DIGIT_MIN: i64 = 10;
-/// R1454: the largest two-digit number a `{word}{digits}` shape draws.
-pub const BOT_NAME_TWO_DIGIT_MAX: i64 = 99;
-/// R1454: the earliest birth year a `{word}{digits}` shape draws.
-pub const BOT_NAME_BIRTH_YEAR_MIN: i64 = 1985;
-/// R1454: the latest birth year a `{word}{digits}` shape draws.
-pub const BOT_NAME_BIRTH_YEAR_MAX: i64 = 2012;
-/// R1454: the fewest extra repeats a stretched letter draws.
-pub const BOT_NAME_STRETCH_MIN: i64 = 2;
-/// R1454: the most extra repeats a stretched letter draws.
-pub const BOT_NAME_STRETCH_MAX: i64 = 5;
-/// R1454: the fewest syllables a nonsense shape draws.
-pub const BOT_NAME_SYLLABLES_MIN: i64 = 1;
-/// R1454: the most syllables a nonsense shape draws.
-pub const BOT_NAME_SYLLABLES_MAX: i64 = 3;
-/// R1454: the share of drawn numbers that are a birth year.
-pub const BOT_NAME_YEAR_SHARE: f64 = 0.35;
-/// R1454: the share of drawn numbers that are a filler number (`69`, `420`, …).
-pub const BOT_NAME_FILLER_NUMBER_SHARE: f64 = 0.2;
-/// R1454: the share of drawn Chinese numbers that are a birth year.
-pub const BOT_NAME_CHINESE_YEAR_SHARE: f64 = 0.3;
-/// R1454: how many letters of the lead word a `Compound` shape keeps.
-pub const BOT_NAME_COMPOUND_LETTERS: usize = 3;
-/// R1454: the filler numbers a `{word}{digits}` shape draws from.
-pub const BOT_NAME_FILLER_NUMBERS: &[i64] = &[69, 420, 1337, 666, 777, 999, 123, 360, 101];
-/// R1454: the numbers a Chinese shape draws from (the Chinese-internet set).
-pub const BOT_NAME_CHINESE_NUMBERS: &[i64] = &[520, 1314, 666, 999, 8, 233, 2333, 521];
-/// R1454: the shapes a plain register draws, each with its weight.
-pub const BOT_NAME_SHAPES_PLAIN: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Camel, 0.28),
-    (BotNameShape::LowerPair, 0.10),
-    (BotNameShape::SnakePair, 0.08),
-    (BotNameShape::LowerPairDigits, 0.06),
-    (BotNameShape::Digits, 0.14),
-    (BotNameShape::LowerDigits, 0.09),
-    (BotNameShape::Prefix, 0.07),
-    (BotNameShape::Suffix, 0.06),
-    (BotNameShape::Leet, 0.05),
-    (BotNameShape::Stretch, 0.04),
-    (BotNameShape::Doubled, 0.03),
-];
-/// R1454: the shapes a nonsense register draws, each with its weight.
-pub const BOT_NAME_SHAPES_NONSENSE: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Bare, 0.25),
-    (BotNameShape::Syllables, 0.30),
-    (BotNameShape::Digits, 0.12),
-    (BotNameShape::Camel, 0.08),
-    (BotNameShape::Stretch, 0.08),
-    (BotNameShape::Doubled, 0.06),
-    (BotNameShape::Xx, 0.06),
-    (BotNameShape::LowerDigits, 0.05),
-];
-/// R1454: the shapes a gamer register draws, each with its weight.
-pub const BOT_NAME_SHAPES_GAMER: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Camel, 0.30),
-    (BotNameShape::LowerPair, 0.10),
-    (BotNameShape::Bare, 0.10),
-    (BotNameShape::Digits, 0.15),
-    (BotNameShape::Prefix, 0.10),
-    (BotNameShape::Xx, 0.10),
-    (BotNameShape::Stretch, 0.10),
-    (BotNameShape::Doubled, 0.05),
-];
-/// R1454: the shapes an edgy register draws, each with its weight.
-pub const BOT_NAME_SHAPES_EDGY: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Camel, 0.25),
-    (BotNameShape::LowerPair, 0.08),
-    (BotNameShape::SnakePair, 0.05),
-    (BotNameShape::Bare, 0.07),
-    (BotNameShape::Digits, 0.12),
-    (BotNameShape::Xx, 0.12),
-    (BotNameShape::Prefix, 0.08),
-    (BotNameShape::Leet, 0.10),
-    (BotNameShape::Stretch, 0.03),
-    (BotNameShape::Doubled, 0.05),
-    (BotNameShape::Suffix, 0.05),
-];
-/// R1454: the shapes an anime or other-reference register draws, each with its weight.
-pub const BOT_NAME_SHAPES_REFERENCE: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Bare, 0.25),
-    (BotNameShape::Lower, 0.08),
-    (BotNameShape::FanSuffix, 0.20),
-    (BotNameShape::FanPrefix, 0.06),
-    (BotNameShape::SnakeDigits, 0.10),
-    (BotNameShape::Digits, 0.10),
-    (BotNameShape::Xx, 0.08),
-    (BotNameShape::Leet, 0.05),
-    (BotNameShape::Camel, 0.04),
-    (BotNameShape::Doubled, 0.04),
-];
-/// R1454: the shapes a crude register draws, each with its weight.
-pub const BOT_NAME_SHAPES_CRUDE: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Bare, 0.35),
-    (BotNameShape::Lower, 0.10),
-    (BotNameShape::Digits, 0.15),
-    (BotNameShape::SnakeDigits, 0.05),
-    (BotNameShape::Xx, 0.10),
-    (BotNameShape::Suffix, 0.08),
-    (BotNameShape::Prefix, 0.05),
-    (BotNameShape::Leet, 0.07),
-    (BotNameShape::Doubled, 0.05),
-];
-/// R1454: the shapes a politics register draws, each with its weight.
-pub const BOT_NAME_SHAPES_POLITICS: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Bare, 0.55),
-    (BotNameShape::Lower, 0.10),
-    (BotNameShape::Digits, 0.15),
-    (BotNameShape::FanSuffix, 0.12),
-    (BotNameShape::FanPrefix, 0.08),
-];
-/// R1454: the shapes a given-name register draws, each with its weight.
-pub const BOT_NAME_SHAPES_GIVEN: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Bare, 0.22),
-    (BotNameShape::LowerDigits, 0.18),
-    (BotNameShape::Digits, 0.08),
-    (BotNameShape::Initial, 0.12),
-    (BotNameShape::Diminutive, 0.10),
-    (BotNameShape::Gamer, 0.06),
-    (BotNameShape::Prefix, 0.08),
-    (BotNameShape::Compound, 0.06),
-    (BotNameShape::Xx, 0.06),
-    (BotNameShape::Lower, 0.04),
-];
-/// R1454: the shapes a Han register draws, each with its weight.
-pub const BOT_NAME_SHAPES_CHINESE_HAN: &[(BotNameShape, f64)] =
-    &[(BotNameShape::Bare, 0.55), (BotNameShape::Digits, 0.45)];
-/// R1454: the shapes a pinyin register draws, each with its weight.
-pub const BOT_NAME_SHAPES_CHINESE_PINYIN: &[(BotNameShape, f64)] = &[
-    (BotNameShape::Camel, 0.25),
-    (BotNameShape::LowerPair, 0.15),
-    (BotNameShape::SnakePair, 0.12),
-    (BotNameShape::LowerPairDigits, 0.18),
-    (BotNameShape::LowerDigits, 0.20),
-    (BotNameShape::Lower, 0.10),
-];
-/// R1452: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
-/// the mean of `ln(think_ms)`.
-pub const BOT_THINK_PRIOR_FIRST_MU: f64 = 8.7;
-/// R1452: the first move's prior, the standard deviation of `ln(think_ms)`.
-pub const BOT_THINK_PRIOR_FIRST_SIGMA: f64 = 0.6;
-/// R1452: the prior for a bot's later moves of a turn: the mean of `ln(think_ms)`.
-pub const BOT_THINK_PRIOR_LATER_MU: f64 = 7.8;
-/// R1452: the later moves' prior, the standard deviation of `ln(think_ms)`.
-pub const BOT_THINK_PRIOR_LATER_SIGMA: f64 = 0.7;
-
-/// R639000: a hand-set prior for one action kind (an `ActionType` literal) whatever its place in the
-/// turn, ahead of the first and later moves' priors, until `THINK_TIME_FITS` holds a fit for it: the
-/// mean and standard deviation of `ln(think_ms)`.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ThinkTimePrior {
-    pub action_kind: &'static str,
-    pub mu: f64,
-    pub sigma: f64,
-}
-
-/// R639000: the kinds a person takes longer or shorter over than a play: a mulligan (about 9 s,
-/// R266), a draw offer's answer and a concession.
-pub const BOT_THINK_PRIORS: &[ThinkTimePrior] = &[
-    ThinkTimePrior {
-        action_kind: "mulligan",
-        mu: 9.1,
-        sigma: 0.5,
-    },
-    ThinkTimePrior {
-        action_kind: "answerDraw",
-        mu: 8.0,
-        sigma: 0.6,
-    },
-    ThinkTimePrior {
-        action_kind: "concede",
-        mu: 8.3,
-        sigma: 0.6,
-    },
-];
-
-/// R639000: the `ln(legal_count)` the priors are centered on, as a fit's `ln_legal_mean` is.
-pub const BOT_THINK_PRIOR_LN_LEGAL_MEAN: f64 = 2.0;
-/// R639000: the shortest a bot's aim arrow shows before its targeted play or attack goes. Never
-/// under `AIM_RELAY_INTERVAL_MS`, so the relay sends the aim before the move.
-pub const BOT_AIM_LEAD_MIN_MS: i64 = 250;
-/// R639000: the longest.
-pub const BOT_AIM_LEAD_MAX_MS: i64 = 600;
-/// R639000: the shortest a bot stays on a finished ranked match (R672), present for a rematch.
-pub const BOT_REMATCH_LINGER_MIN_MS: i64 = 4_000;
-/// R639000: the longest; always well inside `REMATCH_OFFER_TTL_MS`.
-pub const BOT_REMATCH_LINGER_MAX_MS: i64 = 15_000;
-/// R639000: the shortest a bot waits before it offers a rematch, or meets a person's offer.
-pub const BOT_REMATCH_DELAY_MIN_MS: i64 = 1_500;
-/// R639000: the longest; always under `BOT_REMATCH_LINGER_MIN_MS`, so an offer goes inside the linger.
-pub const BOT_REMATCH_DELAY_MAX_MS: i64 = 3_500;
-/// R641000: the soonest a bot seated in a Conquest series makes its sealed pick after the pick
-/// phase opens, as a person reads the matchup first.
-pub const BOT_PICK_DELAY_MIN_MS: i64 = 4_000;
-/// R641000: the latest; with one more series sweep (`SERIES_SWEEP_INTERVAL_SECONDS`) still well
-/// inside `SERIES_PICK_SECONDS`, so a bot never lets the pick clock run out.
-pub const BOT_PICK_DELAY_MAX_MS: i64 = 20_000;
-/// R641000: the share of a bot's picks that follow its rule (the fastest deck on the play, the
-/// slowest on the draw); the rest are uniform over the decks that have not won.
-pub const BOT_PICK_RULE_SHARE: f64 = 0.75;
-/// R1452: the quickest a bot moves, decision included.
-pub const BOT_THINK_MIN_MS: i64 = 600;
-/// R1452: the longest it waits before a move.
-pub const BOT_THINK_MAX_MS: i64 = 30_000;
-/// R1452: what a bot leaves on its acting clock (R79) when it decides or waits, so it never times
-/// out.
-pub const BOT_CLOCK_MARGIN_MS: i64 = 5_000;
-/// R1452: the wall-clock cap on a bot's decision (`should_stop`), past which it plays the best line
-/// found so far; shorter when less than this is left on its clock past `BOT_CLOCK_MARGIN_MS`.
-pub const BOT_DECISION_DEADLINE_MS: i64 = 4_000;
 /// R1454: how old a match a bot was claimed for may be and still be `open` (claimed, never
 /// started) before the queue's sweeper lets the bot and its player go and discards the match: a
 /// start that a crash or a restart cut off. A start that goes on takes milliseconds.
@@ -1851,552 +1107,6 @@ pub const USERNAME_SIGN_IN_WINDOW_MS: i64 = USERNAME_SIGN_IN_WINDOW_SECONDS * 10
 /// R1450: `OPEN_MATCH_REAP_GRACE_SECONDS` in milliseconds.
 pub const OPEN_MATCH_REAP_GRACE_MS: i64 = OPEN_MATCH_REAP_GRACE_SECONDS * 1000;
 
-// ---------------------------------------------------------------------------------------------
-// Ladder bots' emote personas (SPEC §9.9, R645, R1344; #638). The rolls are `src/bots/persona.rs`,
-// the server's port of `apps/web/src/practice/personas.ts`; these tables copy that file's value for
-// value, row for row, so a ladder bot emotes as the practice AI does. Cosmetic only: none of it
-// reaches the engine, the action log, a game record or the move search.
-// ---------------------------------------------------------------------------------------------
-
-/// R645: the four personas a bot may be dealt (TS `PersonaName`). Never shown to the player.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum PersonaName {
-    Balanced,
-    Polite,
-    Bm,
-    Silent,
-}
-
-impl PersonaName {
-    /// R645: the name as TS spells it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            PersonaName::Balanced => "balanced",
-            PersonaName::Polite => "polite",
-            PersonaName::Bm => "bm",
-            PersonaName::Silent => "silent",
-        }
-    }
-}
-
-/// R645: the personas in deal order (TS `PERSONA_ORDER`): the weighted pick walks them in this order.
-pub const PERSONA_NAMES: [PersonaName; 4] = [
-    PersonaName::Balanced,
-    PersonaName::Polite,
-    PersonaName::Bm,
-    PersonaName::Silent,
-];
-
-/// R645: the situations a persona may answer (TS `EmoteTrigger`), in the trigger table's order, which
-/// is the order one view step detects them in.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum EmoteTrigger {
-    /// The mulligan phase just ended.
-    MulliganEnd,
-    /// The bot's turn started while it is ahead (its health − the player's ≥ `lead_health`, or
-    /// `lead_units`+ more units).
-    TurnStartAhead,
-    /// The bot dealt `big_hit`+ damage to the player's hero in one hit.
-    DealtBigHit,
-    /// The bot killed the player's highest-attack unit.
-    KilledTopUnit,
-    /// The bot took `big_hit`+ damage to its hero in one hit.
-    TookBigHit,
-    /// The bot lost its highest-attack unit.
-    LostTopUnit,
-    /// The player's turn ran past `long_turn_ms` (once per turn).
-    PlayerTurnLong,
-    /// The player made a big play: `big_hit`+ damage to the bot's hero, or `kills_for_big_play`+ of
-    /// its units in one turn.
-    PlayerBigPlay,
-    /// The player conceded, or the bot dealt lethal.
-    MatchWon,
-    /// The bot is about to lose.
-    MatchLost,
-}
-
-/// R645: every trigger, in the table's order (TS `EMOTE_TRIGGERS`).
-pub const EMOTE_TRIGGERS: [EmoteTrigger; 10] = [
-    EmoteTrigger::MulliganEnd,
-    EmoteTrigger::TurnStartAhead,
-    EmoteTrigger::DealtBigHit,
-    EmoteTrigger::KilledTopUnit,
-    EmoteTrigger::TookBigHit,
-    EmoteTrigger::LostTopUnit,
-    EmoteTrigger::PlayerTurnLong,
-    EmoteTrigger::PlayerBigPlay,
-    EmoteTrigger::MatchWon,
-    EmoteTrigger::MatchLost,
-];
-
-/// R645, R1344: the reply table's rows (TS `EmoteReplyKey`): what a player's emote is answered as,
-/// when it has a row at all.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum EmoteReplyKey {
-    Greetings,
-    Compliment,
-    Taunt,
-    Apology,
-}
-
-/// R645: every reply row, in the table's order (TS `EMOTE_REPLY_KEYS`).
-pub const EMOTE_REPLY_KEYS: [EmoteReplyKey; 4] = [
-    EmoteReplyKey::Greetings,
-    EmoteReplyKey::Compliment,
-    EmoteReplyKey::Taunt,
-    EmoteReplyKey::Apology,
-];
-
-/// R645, R1344: one row of a persona's trigger or reply table: the chance a roll hits, and the pool
-/// a hit picks from, §6's own emotes first and verbatim, then the MN03 emoji of the same sense
-/// (R1344). A roll picks only from the part of the pool the bot's dealt hand holds.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PersonaRow {
-    pub chance: f64,
-    pub pool: &'static [EmoteId],
-}
-
-/// R645: a persona's caps: the most emotes within one of the bot's own turns (`own_turn`) or one of
-/// the player's (`other_turn`), and per match (`per_match`, TS `match`), the mulligan greeting and
-/// the end-of-match emotes exempted from the last.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PersonaCaps {
-    pub own_turn: usize,
-    pub other_turn: usize,
-    pub per_match: usize,
-}
-
-/// R645: one persona's whole config (TS `PersonaSpec`). `triggers` and `replies` hold only the rows
-/// the table gives it: an absent row (a dash in the table) sends nothing and draws nothing.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PersonaSpec {
-    /// The share of bots dealt this persona; the four weights sum to 1.
-    pub weight: f64,
-    pub caps: PersonaCaps,
-    pub triggers: &'static [(EmoteTrigger, PersonaRow)],
-    pub replies: &'static [(EmoteReplyKey, PersonaRow)],
-}
-
-impl PersonaSpec {
-    /// R645: the persona's row for `trigger`, or `None` for a dash.
-    pub fn trigger(&self, trigger: EmoteTrigger) -> Option<&PersonaRow> {
-        self.triggers
-            .iter()
-            .find(|(key, _)| *key == trigger)
-            .map(|(_, row)| row)
-    }
-
-    /// R645: the persona's reply row for `key`, or `None` when it has none.
-    pub fn reply(&self, key: EmoteReplyKey) -> Option<&PersonaRow> {
-        self.replies
-            .iter()
-            .find(|(row_key, _)| *row_key == key)
-            .map(|(_, row)| row)
-    }
-}
-
-/// R645, R1344: the persona tables (TS `AI_PERSONAS`), in deal order. Absent rows send nothing;
-/// R1344 adds the MN03 emoji after §6's emotes, and Polite never taunts.
-pub const AI_PERSONAS: [(PersonaName, PersonaSpec); 4] = [
-    (
-        PersonaName::Balanced,
-        PersonaSpec {
-            weight: 0.4,
-            caps: PersonaCaps {
-                own_turn: 1,
-                other_turn: 1,
-                per_match: 8,
-            },
-            triggers: &[
-                (
-                    EmoteTrigger::MulliganEnd,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::Greetings, EmoteId::Wave, EmoteId::Salute],
-                    },
-                ),
-                (
-                    EmoteTrigger::TurnStartAhead,
-                    PersonaRow {
-                        chance: 0.1,
-                        pool: &[EmoteId::Threaten, EmoteId::Laugh, EmoteId::Yawn, EmoteId::Cool],
-                    },
-                ),
-                (
-                    EmoteTrigger::DealtBigHit,
-                    PersonaRow {
-                        chance: 0.35,
-                        pool: &[EmoteId::Laugh, EmoteId::Threaten, EmoteId::WahWah, EmoteId::Fire],
-                    },
-                ),
-                (
-                    EmoteTrigger::KilledTopUnit,
-                    PersonaRow {
-                        chance: 0.2,
-                        pool: &[EmoteId::Laugh, EmoteId::WahWah, EmoteId::Skull],
-                    },
-                ),
-                (
-                    EmoteTrigger::TookBigHit,
-                    PersonaRow {
-                        chance: 0.25,
-                        pool: &[
-                            EmoteId::Oops,
-                            EmoteId::Sob,
-                            EmoteId::Angry,
-                            EmoteId::Sweat,
-                            EmoteId::Gasp,
-                        ],
-                    },
-                ),
-                (
-                    EmoteTrigger::LostTopUnit,
-                    PersonaRow {
-                        chance: 0.15,
-                        pool: &[
-                            EmoteId::Sob,
-                            EmoteId::Angry,
-                            EmoteId::Oops,
-                            EmoteId::Facepalm,
-                            EmoteId::Shrug,
-                        ],
-                    },
-                ),
-                (
-                    EmoteTrigger::PlayerTurnLong,
-                    PersonaRow {
-                        chance: 0.2,
-                        pool: &[EmoteId::Yawn, EmoteId::Thinking],
-                    },
-                ),
-                (
-                    EmoteTrigger::MatchWon,
-                    PersonaRow {
-                        chance: 0.4,
-                        pool: &[
-                            EmoteId::WahWah,
-                            EmoteId::Laugh,
-                            EmoteId::WellPlayed,
-                            EmoteId::Party,
-                            EmoteId::Salute,
-                        ],
-                    },
-                ),
-                (
-                    EmoteTrigger::MatchLost,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::WellPlayed, EmoteId::Salute, EmoteId::Clap],
-                    },
-                ),
-            ],
-            replies: &[
-                (
-                    EmoteReplyKey::Greetings,
-                    PersonaRow {
-                        chance: 0.7,
-                        pool: &[EmoteId::Greetings, EmoteId::Wave],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Compliment,
-                    PersonaRow {
-                        chance: 0.3,
-                        pool: &[EmoteId::Thanks, EmoteId::ThumbsUp],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Taunt,
-                    PersonaRow {
-                        chance: 0.25,
-                        pool: &[
-                            EmoteId::Laugh,
-                            EmoteId::WahWah,
-                            EmoteId::Yawn,
-                            EmoteId::Threaten,
-                            EmoteId::Cool,
-                        ],
-                    },
-                ),
-            ],
-        },
-    ),
-    (
-        PersonaName::Polite,
-        PersonaSpec {
-            weight: 0.25,
-            caps: PersonaCaps {
-                own_turn: 1,
-                other_turn: 1,
-                per_match: 6,
-            },
-            triggers: &[
-                (
-                    EmoteTrigger::MulliganEnd,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::Greetings, EmoteId::Wave, EmoteId::Salute],
-                    },
-                ),
-                (
-                    EmoteTrigger::DealtBigHit,
-                    PersonaRow {
-                        chance: 0.15,
-                        pool: &[EmoteId::Oops, EmoteId::Sweat],
-                    },
-                ),
-                (
-                    EmoteTrigger::TookBigHit,
-                    PersonaRow {
-                        chance: 0.3,
-                        pool: &[EmoteId::WellPlayed, EmoteId::Oops, EmoteId::Clap, EmoteId::Gasp],
-                    },
-                ),
-                (
-                    EmoteTrigger::LostTopUnit,
-                    PersonaRow {
-                        chance: 0.2,
-                        pool: &[EmoteId::WellPlayed, EmoteId::Clap],
-                    },
-                ),
-                (
-                    EmoteTrigger::PlayerBigPlay,
-                    PersonaRow {
-                        chance: 0.4,
-                        pool: &[EmoteId::WellPlayed, EmoteId::Clap, EmoteId::ThumbsUp],
-                    },
-                ),
-                (
-                    EmoteTrigger::MatchWon,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::WellPlayed, EmoteId::Salute, EmoteId::Heart],
-                    },
-                ),
-                (
-                    EmoteTrigger::MatchLost,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::WellPlayed, EmoteId::Clap, EmoteId::Salute],
-                    },
-                ),
-            ],
-            replies: &[
-                (
-                    EmoteReplyKey::Greetings,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::Greetings, EmoteId::Wave],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Compliment,
-                    PersonaRow {
-                        chance: 0.8,
-                        pool: &[EmoteId::Thanks, EmoteId::Heart, EmoteId::ThumbsUp],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Taunt,
-                    PersonaRow {
-                        chance: 0.3,
-                        pool: &[EmoteId::Oops, EmoteId::Greetings, EmoteId::Shrug],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Apology,
-                    PersonaRow {
-                        chance: 0.5,
-                        pool: &[EmoteId::Thanks, EmoteId::ThumbsUp],
-                    },
-                ),
-            ],
-        },
-    ),
-    (
-        PersonaName::Bm,
-        PersonaSpec {
-            weight: 0.2,
-            caps: PersonaCaps {
-                own_turn: 2,
-                other_turn: 2,
-                per_match: 20,
-            },
-            triggers: &[
-                (
-                    EmoteTrigger::MulliganEnd,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::Threaten, EmoteId::Laugh, EmoteId::Cool, EmoteId::Skull],
-                    },
-                ),
-                (
-                    EmoteTrigger::TurnStartAhead,
-                    PersonaRow {
-                        chance: 0.5,
-                        pool: &[
-                            EmoteId::Threaten,
-                            EmoteId::Laugh,
-                            EmoteId::Yawn,
-                            EmoteId::WahWah,
-                            EmoteId::Cool,
-                        ],
-                    },
-                ),
-                (
-                    EmoteTrigger::DealtBigHit,
-                    PersonaRow {
-                        chance: 0.8,
-                        pool: &[
-                            EmoteId::Laugh,
-                            EmoteId::WahWah,
-                            EmoteId::Threaten,
-                            EmoteId::Fire,
-                            EmoteId::Skull,
-                        ],
-                    },
-                ),
-                (
-                    EmoteTrigger::KilledTopUnit,
-                    PersonaRow {
-                        chance: 0.6,
-                        pool: &[EmoteId::Laugh, EmoteId::WahWah, EmoteId::Yawn, EmoteId::Skull],
-                    },
-                ),
-                (
-                    EmoteTrigger::TookBigHit,
-                    PersonaRow {
-                        chance: 0.4,
-                        pool: &[EmoteId::Angry, EmoteId::Threaten],
-                    },
-                ),
-                (
-                    EmoteTrigger::LostTopUnit,
-                    PersonaRow {
-                        chance: 0.3,
-                        pool: &[EmoteId::Angry],
-                    },
-                ),
-                (
-                    EmoteTrigger::PlayerTurnLong,
-                    PersonaRow {
-                        chance: 0.7,
-                        pool: &[EmoteId::Yawn],
-                    },
-                ),
-                (
-                    EmoteTrigger::MatchWon,
-                    PersonaRow {
-                        chance: 1.0,
-                        pool: &[EmoteId::WahWah, EmoteId::Laugh, EmoteId::Party, EmoteId::Cool],
-                    },
-                ),
-                (
-                    EmoteTrigger::MatchLost,
-                    PersonaRow {
-                        chance: 0.5,
-                        pool: &[EmoteId::Sob, EmoteId::Angry],
-                    },
-                ),
-            ],
-            replies: &[
-                (
-                    EmoteReplyKey::Greetings,
-                    PersonaRow {
-                        chance: 0.6,
-                        pool: &[EmoteId::Threaten, EmoteId::Laugh, EmoteId::Cool],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Compliment,
-                    PersonaRow {
-                        chance: 0.4,
-                        pool: &[EmoteId::Yawn, EmoteId::Cool],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Taunt,
-                    PersonaRow {
-                        chance: 0.9,
-                        pool: &[
-                            EmoteId::Laugh,
-                            EmoteId::WahWah,
-                            EmoteId::Yawn,
-                            EmoteId::Threaten,
-                            EmoteId::Skull,
-                            EmoteId::Fire,
-                        ],
-                    },
-                ),
-                (
-                    EmoteReplyKey::Apology,
-                    PersonaRow {
-                        chance: 0.7,
-                        pool: &[EmoteId::Laugh, EmoteId::WahWah],
-                    },
-                ),
-            ],
-        },
-    ),
-    (
-        PersonaName::Silent,
-        PersonaSpec {
-            weight: 0.15,
-            caps: PersonaCaps {
-                own_turn: 0,
-                other_turn: 0,
-                per_match: 0,
-            },
-            triggers: &[],
-            replies: &[],
-        },
-    ),
-];
-
-/// R645: `name`'s row of `AI_PERSONAS` (every persona has one).
-pub fn persona_spec(name: PersonaName) -> &'static PersonaSpec {
-    let table: &'static [(PersonaName, PersonaSpec); 4] = &AI_PERSONAS;
-    match table.iter().find(|(key, _)| *key == name) {
-        Some((_, spec)) => spec,
-        None => panic!("persona {} has no table", name.as_str()),
-    }
-}
-
-/// R645: the deal reads each weight in thousandths (TS `pickPersona`'s 1000), whole-number
-/// thresholds that keep a draw of 0.85 in Silent despite floating-point summation.
-pub const PERSONA_DEAL_STEPS: f64 = 1000.0;
-
-/// The shape of `AI_EMOTE` (SURFACE §4.2: a constant object becomes a const of a struct named after
-/// it). The integer types are the view's and the events' (`HeroView.health`, `GameEvent::Damage`'s
-/// `amount`: `i32`; unit counts: `usize`), so the checks compare without casts.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct AiEmoteConfig {
-    pub lead_health: i32,
-    pub lead_units: usize,
-    pub big_hit: i32,
-    pub kills_for_big_play: usize,
-    pub long_turn_ms: i64,
-    pub delay_min_ms: f64,
-    pub delay_max_ms: f64,
-}
-
-/// R645: the trigger table's thresholds and timings (TS `AI_EMOTE`): "its health − yours ≥ 10, or 3+
-/// more units", "10+ damage to a hero in one hit", "you kill 2+ of its units in one turn", "your turn
-/// runs past 45 s (once per turn)", and "a random 0.8–2.5 s delay" every rolled emote waits inside.
-pub const AI_EMOTE: AiEmoteConfig = AiEmoteConfig {
-    lead_health: 10,
-    lead_units: 3,
-    big_hit: 10,
-    kills_for_big_play: 2,
-    long_turn_ms: 45_000,
-    delay_min_ms: 800.0,
-    delay_max_ms: 2500.0,
-};
-
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
 // SPEC S7 (#936, Play together): friends, blocks, presence, challenges, watching and chat. PUBLIC:
 // the client reads the heartbeat, the poll, the chat's caps and a challenge's life.
@@ -2461,18 +1171,11 @@ pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // but `DUOS_AI_BUDGET` is exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board
 // renders the same clocks and the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
 
-/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
-/// not ended has its prompts answered by the AI and its turn ended (`duos::actor`).
-pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
-/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
-/// person ended): on expiry the AI answers that prompt for them.
-pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
-/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
-/// still owes.
-pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
-/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
-/// the AI team's turn.
-pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+// S6, B38, B2, B36: the co-op match's clocks and its AI's pace are the match host's (`jackioh_shared::host::duos`,
+// #3101): the pure machine decides with them, and the server names them here as it always has.
+pub use jackioh_shared::config::{
+    DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
+};
 /// R2575000: the search budget of each AI-played Duos seat (`duos::actor`, cut short at
 /// `BOT_DECISION_DEADLINE_MS`): the practice AI's before issue #2575 doubled it, so the server's work
 /// per AI step does not double. Raising it is a person's call. Only the server reads it.
@@ -2503,244 +1206,31 @@ pub const PING_SHOW_MS: i64 = 2_500;
 // The table in SPEC §14 lists every constant; the values are #1333's table, the owner's numbers
 // brought in at the end of #1294, and #1339's drop tables, and where they leave a value to be
 // derived the note below says how. No drop rate is tuned: every drop is a tiered roll on one of the
-// weight tables below (R1339000), and the seeded simulation in `economy/math.rs` only reports what
+// weight tables below (R1339000), and the seeded simulation in `crates/shared/src/economy/math.rs` only reports what
 // pity adds on top (R1339001) and derives both bars' points-per-duplicate from their target packs.
 // ---------------------------------------------------------------------------------------------
 
-/// The shape of `CARD_TIER_WEIGHTS` and `COSMETIC_TIER_WEIGHTS` (SPEC §14.3, R1339000): the integer
-/// weight out of `TIER_WEIGHT_TOTAL` of each tier above the lowest, so a tier's chance in one roll
-/// is its weight over the total. The lowest tier, Common, is the fallback: it takes whatever weight
-/// is left, computed and never stored, so raising one tier takes from it alone.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct TierWeights {
-    pub rare: u32,
-    pub epic: u32,
-    pub legendary: u32,
-    pub mythic: u32,
-}
-
-impl TierWeights {
-    /// The set tiers' weights summed: what the fallback's weight is `TIER_WEIGHT_TOTAL` less.
-    pub const fn set_total(&self) -> u32 {
-        self.rare + self.epic + self.legendary + self.mythic
-    }
-}
-
-/// The shape of `TOKEN_BAR_POINTS_BY_CARD_RARITY` and `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY` (SPEC
-/// §14.5, R1953000, R1999000): the token bar points each opened slot adds for each rarity it can
-/// roll.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct RarityPoints {
-    pub common: i64,
-    pub rare: i64,
-    pub epic: i64,
-    pub legendary: i64,
-    pub mythic: i64,
-}
-
-/// The shape of `PACK_UNOWNED_WEIGHTS` and `COSMETIC_PACK_CARD_WEIGHTS`: how a draw weighs the
-/// cards the account owns against the ones it does not (SPEC §14.3, §14.6). A card's weight is
-/// its side's number, so an unowned card is drawn `unowned / owned` times as often as an owned
-/// one of the same rarity in a card pack, and an owned one `owned / unowned` times as often as an
-/// unowned one in a cosmetic pack.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct PackUnownedWeights {
-    pub owned: f64,
-    pub unowned: f64,
-}
-
-/// One step of `COSMETIC_TOKEN_CYCLE` (SPEC §14.5): a cosmetic token of that rarity, or a
-/// cosmetic pack. Serialized lower-camel for the client (`cosmeticPack`).
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum CosmeticTokenStep {
-    Rare,
-    Epic,
-    Legendary,
-    CosmeticPack,
-}
-
-impl CosmeticTokenStep {
-    /// SPEC §14.5, R2728000: the cosmetic token bar's points this step takes to pay.
-    pub const fn bar_size(self) -> i64 {
-        match self {
-            Self::Rare => COSMETIC_TOKEN_BAR_SIZE_RARE,
-            Self::Epic => COSMETIC_TOKEN_BAR_SIZE_EPIC,
-            Self::Legendary => COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
-            Self::CosmeticPack => COSMETIC_TOKEN_BAR_SIZE_PACK,
-        }
-    }
-}
-
+// The rolls' numbers (the drop tables, pity, the token bars, the cosmetic packs and the track curve) are
+// `jackioh_shared::config`'s since #3104: the pure economy decides with them, and the server names them
+// here as it always has, so `serverConfig.ts` is unchanged.
+pub use jackioh_shared::config::{
+    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, CHASE_SHARD_PACKS,
+    COSMETIC_PACK_CARD_WEIGHTS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS, COSMETIC_TIER_WEIGHTS,
+    COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK,
+    COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC,
+    COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY, COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK,
+    COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
+    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, OFFER_SAMPLE_PERCENT_SCALE,
+    PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS, PITY_EPIC_PACKS,
+    PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, PLAYER_SETTINGS_TEXT_MAX_LENGTH, PackUnownedWeights,
+    RarityPoints, SET_TRACK_XP_PER_LEVEL, TIER_WEIGHT_TOTAL, TOKEN_BAR_POINTS_BY_CARD_RARITY,
+    TOKEN_BAR_POINTS_BY_COSMETIC_RARITY, TierWeights, VERSION_OFFER_MIN_CARDS, VERSION_OFFER_MIN_PER_SET,
+};
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
 pub const PACK_PRICE_JLORE: i32 = 100;
-/// SPEC §14.3: the slots of a card pack (#1333's table: 5), the Rare-or-better slot one of them.
-pub const PACK_SLOTS: usize = 5;
-/// SPEC §14.3: how a slot's card draw leans toward the cards the account does not own. #1294's
-/// table gives no value; an unowned card weighs four times an owned one of the same rarity, so
-/// early packs complete a collection and late packs feed the token bars.
-pub const PACK_UNOWNED_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
-    owned: 1.0,
-    unowned: 4.0,
-};
-/// SPEC §14.3, R1339000: the fixed total every tier weight table is out of, so a tier's chance in
-/// one roll is its weight over this, and one roll is one integer draw below it.
-pub const TIER_WEIGHT_TOTAL: u32 = 1000;
-/// SPEC §14.3, R1339000: a card pack slot's card rarity (#1339's table): Rare 300, Epic 70,
-/// Legendary 20 and Mythic 10, so the fallback, Common, is 600. Per pack before pity, five slots
-/// hold an Epic in 1 − (1 − 70/1000)^5 = 30.4% of packs, a Legendary in 9.6% and a Mythic in 4.9%.
-pub const CARD_TIER_WEIGHTS: TierWeights = TierWeights {
-    rare: 300,
-    epic: 70,
-    legendary: 20,
-    mythic: 10,
-};
-/// SPEC §14.3, §14.6, R1339000: the cosmetic rarity of a duplicate's cosmetic and of a cosmetic
-/// pack slot (#1339's table): Rare 250, Epic 150, Legendary 45 and Mythic 5, so the fallback,
-/// Common, is 550.
-pub const COSMETIC_TIER_WEIGHTS: TierWeights = TierWeights {
-    rare: 250,
-    epic: 150,
-    legendary: 45,
-    mythic: 5,
-};
-// SPEC §14.3, R1339000: set weights past the total leave the fallback nothing to take.
-const _: () = assert!(CARD_TIER_WEIGHTS.set_total() <= TIER_WEIGHT_TOTAL);
-const _: () = assert!(COSMETIC_TIER_WEIGHTS.set_total() <= TIER_WEIGHT_TOTAL);
-/// SPEC §14.3, R1339000: the card pack slot and the cosmetic pack slot floored at a tier, the
-/// first. #1339 says one slot; the first is this issue's pick.
-pub const PACK_FLOORED_SLOT: usize = 0;
-/// SPEC §14.3, R1339000: the floor of a card pack's floored slot: it rolls `CARD_TIER_WEIGHTS`, and
-/// a Common becomes Rare (Rare 900, Epic 70, Legendary 20, Mythic 10).
-pub const PACK_FLOOR_RARITY: PrintedRarity = PrintedRarity::Rare;
-/// SPEC §14.6, R1339000: the floor of a cosmetic pack's floored slot: it rolls
-/// `COSMETIC_TIER_WEIGHTS`, and a Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
-pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
-/// SPEC §14.3, R1661001, R1953000: a duplicate's global cosmetic roll (#1953: 2%, was #1661's 10%):
-/// with an account cosmetic left unowned, one draw below `TIER_WEIGHT_TOTAL`, and a draw below this
-/// drops an account cosmetic in place of the duplicate's per-card one.
-pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 20;
-// SPEC §14.3, R1661001: the hit is a share of the same total, so it cannot pass it.
-const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
-/// SPEC §14.2, §14.3, R1661000, R1661001: the rarity every account cosmetic but its kind's default
-/// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
-/// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
-pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
-/// SPEC §14.2, R2725001: the fewest cards each version and each augment is offered on, across the shipped
-/// sets (the registry's check holds every one to it).
-pub const VERSION_OFFER_MIN_CARDS: usize = 20;
-/// SPEC §14.2, R2725001: the fewest cards of each shipped set each version and each augment is offered on, so
-/// every set has some.
-pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
-/// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
-/// seeded hash, modulo this, falls below the percent.
-pub const OFFER_SAMPLE_PERCENT_SCALE: u32 = 100;
-/// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
-/// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
-/// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter
-/// would reach its threshold in (R1339001).
-pub const PITY_EPIC_PACKS: usize = 10;
-/// SPEC §14.4: the longest an account waits for a Legendary: of any 20 card packs in a row, at
-/// least one holds one.
-pub const PITY_LEGENDARY_PACKS: usize = 20;
-/// SPEC §14.4: the longest an account waits for a Mythic: of any 30 card packs in a row, at
-/// least one holds one. The longest wait of all, as SPEC §14.4 requires.
-pub const PITY_MYTHIC_PACKS: usize = 30;
-/// SPEC §14.5, R1953000, R1999000: the points that fill the card token bar (#1953: 200). On any
-/// collection a card pack's slots add about 8.65 points under `CARD_TIER_WEIGHTS` (four slots at
-/// 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
-/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`). The cosmetic token bar takes a size of
-/// its own at each step of its cycle (`CosmeticTokenStep::bar_size`, R2728000).
-pub const CARD_TOKEN_BAR_SIZE: i64 = 200;
-/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Rare cosmetic token
-/// (#2728: 50), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE` packs.
-pub const COSMETIC_TOKEN_BAR_SIZE_RARE: i64 = 50;
-/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay an Epic cosmetic token
-/// (#2728: 75), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC` packs.
-pub const COSMETIC_TOKEN_BAR_SIZE_EPIC: i64 = 75;
-/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Legendary cosmetic token
-/// (#2728: 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY` packs.
-pub const COSMETIC_TOKEN_BAR_SIZE_LEGENDARY: i64 = 100;
-/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a cosmetic pack (#2728:
-/// 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK` packs.
-pub const COSMETIC_TOKEN_BAR_SIZE_PACK: i64 = 100;
-// SPEC §14.5, R2728000: a step of no points would pay for ever
-// (`economy::tokens::settle_cosmetic_bar`).
-const _: () = assert!(
-    COSMETIC_TOKEN_BAR_SIZE_RARE > 0
-        && COSMETIC_TOKEN_BAR_SIZE_EPIC > 0
-        && COSMETIC_TOKEN_BAR_SIZE_LEGENDARY > 0
-        && COSMETIC_TOKEN_BAR_SIZE_PACK > 0
-);
-/// SPEC §14.5, R1953000, R1999000: the points each opened slot of a card pack adds to each token
-/// bar, whatever it grants, by the card rarity its slot rolled, pity's force included (#1953: 1,
-/// 2, 3, 5 and 10).
-pub const TOKEN_BAR_POINTS_BY_CARD_RARITY: RarityPoints = RarityPoints {
-    common: 1,
-    rare: 2,
-    epic: 3,
-    legendary: 5,
-    mythic: 10,
-};
-/// SPEC §14.5, §14.6, R1306001, R1953000, R1999000: the points each opened slot of a cosmetic pack
-/// adds to each token bar, whatever it grants, by the cosmetic rarity it rolled, not the one it
-/// fell to (#1953: 1, 2, 3, 5 and 10, as a card's).
-pub const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY: RarityPoints = RarityPoints {
-    common: 1,
-    rare: 2,
-    epic: 3,
-    legendary: 5,
-    mythic: 10,
-};
-/// SPEC §14.5: the card packs the card token bar takes to fill, on average (#1333's table: ~30;
-/// #1953's points and size: 23, `CARD_TOKEN_BAR_SIZE` over the mean points of a pack, rounded,
-/// held by `economy/math.rs`).
-pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 23;
-/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Rare step, on
-/// average (#2728: 6, `COSMETIC_TOKEN_BAR_SIZE_RARE` over the mean points of a pack, rounded, held
-/// by `economy/math.rs`).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE: usize = 6;
-/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Epic step, on
-/// average (#2728: 9).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC: usize = 9;
-/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Legendary step, on
-/// average (#2728: 12).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY: usize = 12;
-/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its cosmetic pack step,
-/// on average (#2728: 12).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK: usize = 12;
-/// SPEC §14.5, R2728000: the steps the cosmetic token bar pays, in order, verbatim (#2728), each at
-/// its own size (`CosmeticTokenStep::bar_size`).
-pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
-    CosmeticTokenStep::Rare,
-    CosmeticTokenStep::Epic,
-    CosmeticTokenStep::Legendary,
-    CosmeticTokenStep::Rare,
-    CosmeticTokenStep::Epic,
-    CosmeticTokenStep::CosmeticPack,
-];
-/// SPEC §14.6: a cosmetic pack's slots (#1333's table: 5), each rolling `COSMETIC_TIER_WEIGHTS`,
-/// the floored one at `COSMETIC_PACK_FLOOR_RARITY` (R1339000).
-pub const COSMETIC_PACK_SLOTS: usize = 5;
-/// #1306 gives no value; four to one, `PACK_UNOWNED_WEIGHTS` turned around, toward the cards the
-/// account owns.
-pub const COSMETIC_PACK_CARD_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
-    owned: 4.0,
-    unowned: 1.0,
-};
-/// SPEC §14.6: the cosmetic packs that fill the Chase Shard bar (#1333's table: 10). A chase
-/// also drops when a duplicate's roll or a cosmetic pack slot lands on Legendary or Mythic
-/// (R1333000), so no constant holds a separate chase rate.
-pub const CHASE_SHARD_PACKS: i64 = 10;
 /// SPEC §14.7: the levels of a set track (#1333's table: 100), whose whole curve costs 495,000 XP
-/// (`total_xp_for_level` in `economy/math.rs`), a set's lifetime of play.
+/// (`total_xp_for_level` in `crates/shared/src/economy/math.rs`), a set's lifetime of play.
 pub const SET_TRACK_LEVELS: u32 = 100;
-/// SPEC §14.7: the XP step of the level curve: going from level n to the next costs this times
-/// n, uncapped (#1333's table: 100), so level 10 is at 4,500 XP and level 100 at 495,000 XP.
-pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
 /// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
 pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
 /// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
@@ -2907,13 +1397,6 @@ pub const STARTER_CARDS: &[&str] = &[
     "core-070", "core-072", "core-073", "core-074", "core-077", "core-080", "core-081", "core-088",
     "core-089", "core-091",
 ];
-
-// ---- The pack roll (SPEC §14.3, #1301) ----
-// PUBLIC, like the collection economy's above, so it is exported to
-// `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs`.
-
-/// SPEC §14.3: the name a request gives the global card pack; a set's pack goes by its set's name.
-pub const GLOBAL_PACK_NAME: &str = "global";
 
 // ---- Dev accounts (SPEC §14.10, #1300) ----
 

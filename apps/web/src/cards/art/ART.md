@@ -47,7 +47,12 @@ asset tests out).
 
 The Stinkyscape set's entries (`stinkyscape-…`) draw `stinkyscape.ts`'s procedural art instead of
 `procedural.ts`'s: a space backdrop under one subject per family, each weapon the weapon its name says
-(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins.
+(R2170000). It is the same fallback as the rest: a delivered file for one of its cards still wins. Two
+cards have a look of their own (R3142002): a Human Unit whose name holds "drone" (the Drone Commander) is the
+`crew` family's `commander`, an officer with a drone hovering behind her, where its name alone sends a card to
+the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
+a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
+and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's.
 
 ## The Training Grounds set's own art
 
@@ -56,6 +61,14 @@ the same way: a training yard under one subject per family, its dummies, ogres, 
 Felinors, runes, posters and Golem each what the card is (R2202000). Its Legacy cards #41–#60
 (`SNAPSHOT_ART`) draw their Core card's subject in the yard, each with a touch of its own
 (`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id.
+
+## A fused card's art (R3045000)
+
+A fusion joins its ingredients' names and unions their tags, which this art reads. So `<CardArt>` first resolves the card
+whose art it draws (`fusedArt.ts`): a fused definition holding a Miner (Stinkyscape #62 to #66) or a Weapon-tagged card
+draws the last ingredient that is neither, the host an Equip was fused onto, by that card's id, name and tags, so its
+delivered file, family, seed and theme are the host's. Any other card, and a fusion whose ingredients a digest id hides,
+draws as it is handed; a Starship in play draws its own (R2249000).
 
 ## The full-art cards' moving art
 
@@ -138,3 +151,20 @@ apart (`|backdrop`, `|subject`). A delivered file has no parts, so a window draw
 the painter, and a Starship in play and a Legacy card, whose painters draw one picture
 (`hasArtParts`), are never offered Out of frame. The constants were set by eye on the component
 spec's screenshot (`card-versions-part-4`).
+
+## Part 5's pictures (R2944001)
+
+Immersive (`"depth"`) and Prismatic (`"prismatic"`) draw no picture of their own either: each lays the
+normal picture under one SVG filter. Immersive's window draws the picture's `"backdrop"` as far off
+(`depthSvg`, `dp-haze`): softened by `DEPTH_BLUR`, its colour dulled to `DEPTH_SATURATE` and seen
+through sky-blue air at `DEPTH_HAZE_MIX`; over it a near layer (CardFace's `.cf-immersive`, the
+window's own box and shape) draws the `"subject"` as it is, unfiltered, so the two line up as Out of
+frame's do and the subject stands out of the haze. A Starship in play and a Legacy card, whose
+painters draw one picture (`hasArtParts`), draw it whole and hazed with no near layer; the Collection's
+tile shows the whole picture hazed. Prismatic (`prismaticSvg`, `pr-chrome`) greys the picture, bands
+its grey through `PRISMATIC_CHROME_TABLE`, light and dark in turn as polished metal catches its
+surroundings, maps it from slate to near-white chrome and lays an iridescent sheen over it, corner to
+corner, `PRISMATIC_SHEEN`: its no-gold spectrum there and back, so no two neighbours mix to gold. A
+Radiant face washes its painted picture back over both (`dp-wash`, `pr-wash`). The cache keys each
+apart (`|depth`, `|prismatic`). The constants were set by eye on the component spec's screenshot
+(`card-versions-part-5`).

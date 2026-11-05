@@ -23,14 +23,14 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant,
-    CustomCardWrite, Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
-    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode,
-    ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding,
-    SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow,
-    Tx, UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
+    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant, Db,
+    DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
+    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
+    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayWithMode, ResultRow,
+    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, StatsTotalsQuery,
+    StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -481,7 +481,7 @@ pub const TRUNCATE: &str = "truncate
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
   public.matches,
-  public.deck_versions, public.trios, public.decks, public.custom_cards,
+  public.deck_versions, public.trios, public.decks,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
   public.code_attempts, public.invite_codes, public.bots, public.profiles, auth.users
@@ -2435,286 +2435,6 @@ mod deck_versions {
         r2100000_drops_the_oldest_past_the_cap,
         r2100000_keeps_nothing_for_a_deck_that_is_not_the_profile_s,
         r2100000_deleting_a_deck_or_its_account_deletes_its_versions,
-    );
-}
-
-// Custom cards on the account (SPEC §12.9, R915008; migration 0037)
-
-mod custom_cards {
-    use super::*;
-
-    /// A server-minted id (R915000): `custom-` and 32 lowercase hex digits.
-    fn custom_id() -> String {
-        format!("custom-{}", uuid::Uuid::new_v4().simple())
-    }
-
-    /// A Unit's frame within §12.2, with a keyword and a number, as the engine's `CustomFrame` reads it.
-    fn frame(name: &str) -> Value {
-        json!({
-            "name": name,
-            "type": "Unit",
-            "cost": 2,
-            "rarity": "Rare",
-            "attack": 2,
-            "health": 3,
-            "keywords": ["Taunt"],
-            "text": "Cry: Deal {dmg}.",
-            "params": [{ "key": "dmg", "base": 1, "radiant": 2 }],
-        })
-    }
-
-    fn write(harness: &StoreHarness, profile_id: &str, over: Value) -> CustomCardWrite {
-        from(spread(
-            json!({
-                "id": custom_id(),
-                "profileId": profile_id,
-                "frame": frame("Spark"),
-                "source": "return Card { cry = function(c, n) c:damage(\"an enemy\", n.dmg) end }",
-                "builder": { "trigger": "cry", "steps": [{ "verb": "damage", "n": "dmg" }] },
-                "at": harness.now(),
-            }),
-            over,
-        ))
-    }
-
-    /// The card a create of `card` makes: version 1, made and saved at `card.at`.
-    fn created(card: &CustomCardWrite) -> SavedCustomCard {
-        let shown = j(card);
-        from(json!({
-            "profileId": shown["profileId"],
-            "card": {
-                "id": shown["id"],
-                "version": 1,
-                "frame": shown["frame"],
-                "source": shown["source"],
-                "builder": shown["builder"],
-            },
-            "createdAt": shown["at"],
-            "updatedAt": shown["at"],
-        }))
-    }
-
-    async fn r915008_lists_nothing_before_a_card_is_made(harness: &StoreHarness) {
-        let profile = active_profile(harness, None).await;
-        assert!(q!(harness, t => t.custom_cards_list(&profile.id)).is_empty());
-        assert!(q!(harness, t => t.custom_cards_get(&profile.id, &custom_id())).is_none());
-    }
-
-    async fn r915008_creates_a_card_at_version_1_and_reads_it_back_exactly(harness: &StoreHarness) {
-        let profile = active_profile(harness, None).await;
-        let card = write(harness, &profile.id, json!({}));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_create(&card, 50))),
-            "created"
-        );
-        let expected = created(&card);
-        assert_eq!(
-            q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
-            Some(expected.clone())
-        );
-        assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)), vec![expected]);
-
-        let vanilla = write(harness, &profile.id, json!({ "source": "", "builder": null }));
-        q!(harness, t => t.custom_cards_create(&vanilla, 50));
-        let read = must(
-            q!(harness, t => t.custom_cards_get(&profile.id, &vanilla.id)),
-            "the vanilla card",
-        );
-        assert_eq!(read, created(&vanilla));
-        assert!(absent(&j(&read.card), "builder"));
-    }
-
-    async fn r915008_lists_a_profile_s_cards_oldest_first_and_only_its_own(harness: &StoreHarness) {
-        let a = active_profile(harness, None).await;
-        let b = active_profile(harness, None).await;
-        let now = harness.now();
-        let second = write(harness, &a.id, json!({ "frame": frame("Second"), "at": now + 2 }));
-        let first = write(harness, &a.id, json!({ "frame": frame("First"), "at": now + 1 }));
-        q!(harness, t => t.custom_cards_create(&second, 50));
-        q!(harness, t => t.custom_cards_create(&first, 50));
-        let theirs = write(harness, &b.id, json!({}));
-        q!(harness, t => t.custom_cards_create(&theirs, 50));
-        let names: Vec<Value> = q!(harness, t => t.custom_cards_list(&a.id))
-            .iter()
-            .map(|saved| j(saved)["card"]["frame"]["name"].clone())
-            .collect();
-        assert_eq!(names, vec![json!("First"), json!("Second")]);
-        assert!(q!(harness, t => t.custom_cards_get(&a.id, &theirs.id)).is_none());
-    }
-
-    async fn r915008_refuses_a_create_past_the_cap_and_still_saves_at_the_cap(harness: &StoreHarness) {
-        let profile = active_profile(harness, None).await;
-        let cards = [
-            write(harness, &profile.id, json!({})),
-            write(harness, &profile.id, json!({})),
-        ];
-        for card in &cards {
-            assert_eq!(lit(&q!(harness, t => t.custom_cards_create(card, 2))), "created");
-        }
-        let third = write(harness, &profile.id, json!({}));
-        assert_eq!(lit(&q!(harness, t => t.custom_cards_create(&third, 2))), "limit");
-        assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)).len(), 2);
-        assert!(q!(harness, t => t.custom_cards_get(&profile.id, &third.id)).is_none());
-        let other = active_profile(harness, None).await;
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_create(&write(harness, &other.id, json!({})), 2))),
-            "created"
-        );
-        let edited: CustomCardWrite = from(spread(j(&cards[0]), json!({ "frame": frame("Renamed") })));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
-            "updated"
-        );
-    }
-
-    async fn r915008_saves_a_card_whole_counting_its_version_and_keeping_when_it_was_made(
-        harness: &StoreHarness,
-    ) {
-        let profile = active_profile(harness, None).await;
-        let card = write(harness, &profile.id, json!({}));
-        q!(harness, t => t.custom_cards_create(&card, 50));
-        let made_at = card.at;
-        let edited: CustomCardWrite = from(spread(
-            j(&card),
-            json!({
-                "frame": frame("Big Spark"),
-                "source": "return Card {}",
-                "builder": null,
-                "at": made_at + 5_000,
-            }),
-        ));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
-            "updated"
-        );
-        let read = must(
-            q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
-            "the saved card",
-        );
-        let expected: SavedCustomCard = from(spread(
-            j(&created(&edited)),
-            json!({
-                "card": spread(j(&created(&edited))["card"].clone(), json!({ "version": 2 })),
-                "createdAt": made_at,
-                "updatedAt": made_at + 5_000,
-            }),
-        ));
-        assert_eq!(read, expected);
-        assert!(absent(&j(&read.card), "builder"));
-
-        let again: CustomCardWrite = from(spread(j(&edited), json!({ "at": made_at + 9_000 })));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_update(&again, 2))),
-            "updated"
-        );
-        assert_eq!(
-            j(&must(
-                q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
-                "the card"
-            ))["card"]["version"],
-            3
-        );
-    }
-
-    async fn r915008_refuses_a_stale_save_and_another_profile_s_card_writing_nothing(harness: &StoreHarness) {
-        let owner = active_profile(harness, None).await;
-        let other = active_profile(harness, None).await;
-        let card = write(harness, &owner.id, json!({}));
-        q!(harness, t => t.custom_cards_create(&card, 50));
-        let first: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("First save") })));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_update(&first, 1))),
-            "updated"
-        );
-
-        let late: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("Late save") })));
-        assert_eq!(lit(&q!(harness, t => t.custom_cards_update(&late, 1))), "stale");
-        let theirs: CustomCardWrite = from(spread(
-            j(&card),
-            json!({ "profileId": other.id, "frame": frame("Mine now") }),
-        ));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_update(&theirs, 2))),
-            "missing"
-        );
-        let nobody = write(harness, &owner.id, json!({}));
-        assert_eq!(
-            lit(&q!(harness, t => t.custom_cards_update(&nobody, 1))),
-            "missing"
-        );
-
-        let read = must(
-            q!(harness, t => t.custom_cards_get(&owner.id, &card.id)),
-            "the owner's card",
-        );
-        assert_eq!(j(&read)["card"]["frame"]["name"], "First save");
-        assert_eq!(read.card.version, 2);
-        assert!(q!(harness, t => t.custom_cards_list(&other.id)).is_empty());
-        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &nobody.id)).is_none());
-    }
-
-    async fn r915008_refuses_an_id_already_held_whoever_holds_it(harness: &StoreHarness) {
-        let owner = active_profile(harness, None).await;
-        let other = active_profile(harness, None).await;
-        let card = write(harness, &owner.id, json!({}));
-        q!(harness, t => t.custom_cards_create(&card, 50));
-        let clash: CustomCardWrite = from(spread(
-            j(&card),
-            json!({ "profileId": other.id, "frame": frame("Clash") }),
-        ));
-        assert!(call!(harness, t => t.custom_cards_create(&clash, 50)).is_err());
-        assert!(q!(harness, t => t.custom_cards_list(&other.id)).is_empty());
-        assert_eq!(
-            j(&must(
-                q!(harness, t => t.custom_cards_get(&owner.id, &card.id)),
-                "the card"
-            ))["card"]["frame"]["name"],
-            "Spark"
-        );
-    }
-
-    async fn r915008_deletes_only_the_owner_s_card(harness: &StoreHarness) {
-        let owner = active_profile(harness, None).await;
-        let other = active_profile(harness, None).await;
-        let card = write(harness, &owner.id, json!({}));
-        let kept = write(harness, &owner.id, json!({}));
-        q!(harness, t => t.custom_cards_create(&card, 50));
-        q!(harness, t => t.custom_cards_create(&kept, 50));
-
-        assert!(!q!(harness, t => t.custom_cards_remove(&other.id, &card.id)));
-        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &card.id)).is_some());
-        assert!(q!(harness, t => t.custom_cards_remove(&owner.id, &card.id)));
-        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &card.id)).is_none());
-        assert!(!q!(harness, t => t.custom_cards_remove(&owner.id, &card.id)));
-        let left: Vec<String> = q!(harness, t => t.custom_cards_list(&owner.id))
-            .into_iter()
-            .map(|saved| saved.card.id)
-            .collect();
-        assert_eq!(left, vec![kept.id.clone()]);
-    }
-
-    async fn r915008_deleting_an_account_deletes_its_cards(harness: &StoreHarness) {
-        let gone = active_profile(harness, None).await;
-        let stays = active_profile(harness, None).await;
-        q!(harness, t => t.custom_cards_create(&write(harness, &gone.id, json!({})), 50));
-        let kept = write(harness, &stays.id, json!({}));
-        q!(harness, t => t.custom_cards_create(&kept, 50));
-
-        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
-        assert!(q!(harness, t => t.custom_cards_list(&gone.id)).is_empty());
-        assert_eq!(q!(harness, t => t.custom_cards_list(&stays.id)).len(), 1);
-    }
-
-    both_stores!(
-        r915008_lists_nothing_before_a_card_is_made,
-        r915008_creates_a_card_at_version_1_and_reads_it_back_exactly,
-        r915008_lists_a_profile_s_cards_oldest_first_and_only_its_own,
-        r915008_refuses_a_create_past_the_cap_and_still_saves_at_the_cap,
-        r915008_saves_a_card_whole_counting_its_version_and_keeping_when_it_was_made,
-        r915008_refuses_a_stale_save_and_another_profile_s_card_writing_nothing,
-        r915008_refuses_an_id_already_held_whoever_holds_it,
-        r915008_deletes_only_the_owner_s_card,
-        r915008_deleting_an_account_deletes_its_cards,
     );
 }
 
@@ -10698,6 +10418,140 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_news_claims_get(&owner.id)).len(), 2);
     }
 
+    /// R3191000: Claim all's batch writes leave what the same writes one at a time would: the
+    /// claims answer the ids the profile did not hold, in the order given, and a duplicate or an id
+    /// that is no slug is refused; a payout moves each balance by the sum of its grants and writes
+    /// one ledger row per grant, in order; a spend, a second account or a key that does not fit its
+    /// item is refused, writing nothing; and an empty batch writes nothing.
+    async fn r3191000_batch_news_claims_and_payouts_write_what_one_at_a_time_would(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let ids = |list: &[&str]| list.iter().map(|id| (*id).to_string()).collect::<Vec<String>>();
+
+        assert!(q!(harness, t => t.economy_news_claim(&owner.id, "held", now)));
+        assert_eq!(
+            q!(harness, t => t.economy_news_claim_all(&owner.id, &ids(&["zeta", "held", "alpha"]), now + 1)),
+            ids(&["zeta", "alpha"])
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claim_all(&owner.id, &ids(&["zeta"]), now + 2)),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claim_all(&owner.id, &[], now + 2)),
+            Vec::<String>::new()
+        );
+        for refused in [ids(&["fine", "fine"]), ids(&["fine", "Not-A-Slug"])] {
+            assert!(
+                call!(harness, t => t.economy_news_claim_all(&owner.id, &refused, now)).is_err(),
+                "{}: {refused:?}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&owner.id)),
+            ids(&["alpha", "held", "zeta"])
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_news_claims_get(&other.id)),
+            Vec::<String>::new()
+        );
+
+        let news_jlore = |delta: i64, reference: &str, at: i64| JloreGrant {
+            reference: Some(reference.to_string()),
+            ..jlore(&owner.id, delta, "news", false, at)
+        };
+        // The first batch makes the wallet, the second adds to it.
+        q!(harness, t => t.economy_jlore_grant_all(&[news_jlore(20, "a", now), news_jlore(30, "b", now + 1)]));
+        q!(harness, t => t.economy_jlore_grant_all(&[news_jlore(5, "c", now + 2)]));
+        q!(harness, t => t.economy_jlore_grant_all(&[]));
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&owner.id)), 55);
+
+        let news_item = |name: &str, key: &str, delta: i64, reference: &str| InventoryGrant {
+            reason: from(json!("news")),
+            reference: Some(reference.to_string()),
+            ..item(&owner.id, name, key, delta, now)
+        };
+        q!(harness, t => t.economy_inventory_grant_all(&[
+            news_item("global_pack", "", 1, "d"),
+            news_item("cosmetic_token", "Epic", 1, "e"),
+            news_item("global_pack", "", 2, "f"),
+        ]));
+        q!(harness, t => t.economy_inventory_grant_all(&[news_item("global_pack", "", 1, "g")]));
+        q!(harness, t => t.economy_inventory_grant_all(&[]));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_inventory_get(&owner.id))),
+            json!([
+                { "item": "cosmetic_token", "key": "Epic", "count": 1 },
+                { "item": "global_pack", "key": "", "count": 4 },
+            ])
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        let rows = |refs: Vec<(Option<String>, i64)>| refs;
+        assert_eq!(
+            rows(
+                ledger
+                    .jlore
+                    .iter()
+                    .map(|row| (row.reference.clone(), row.delta))
+                    .collect()
+            ),
+            [("a", 20), ("b", 30), ("c", 5)].map(|(id, delta)| (Some(id.to_string()), delta))
+        );
+        assert_eq!(
+            rows(
+                ledger
+                    .inventory
+                    .iter()
+                    .map(|row| (row.reference.clone(), row.delta))
+                    .collect()
+            ),
+            [("d", 1), ("e", 1), ("f", 2), ("g", 1)].map(|(id, delta)| (Some(id.to_string()), delta))
+        );
+        assert!(ledger.jlore.iter().all(|row| j(&row.reason) == json!("news")));
+        assert!(ledger.inventory.iter().all(|row| j(&row.reason) == json!("news")));
+
+        let before = economy_of(harness, &owner.id).await;
+        let theirs = JloreGrant {
+            profile_id: other.id.clone(),
+            ..news_jlore(10, "h", now)
+        };
+        for (what, refused) in [
+            (
+                "a spend",
+                vec![news_jlore(10, "h", now), news_jlore(-1, "i", now)],
+            ),
+            ("two accounts", vec![news_jlore(10, "h", now), theirs]),
+        ] {
+            assert!(
+                call!(harness, t => t.economy_jlore_grant_all(&refused)).is_err(),
+                "{}: {what}",
+                harness.name
+            );
+        }
+        for (what, refused) in [
+            ("a spend", news_item("global_pack", "", -1, "j")),
+            (
+                "a key the item does not take",
+                news_item("global_pack", "Core", 1, "k"),
+            ),
+        ] {
+            assert!(
+                call!(harness, t => t.economy_inventory_grant_all(&[news_item("card_token", "", 1, "l"), refused.clone()]))
+                    .is_err(),
+                "{}: {what}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            economy_of(harness, &owner.id).await,
+            before,
+            "a refused batch writes nothing"
+        );
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&other.id)), 0);
+    }
+
     /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
     /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
     /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
@@ -10896,6 +10750,7 @@ mod economy {
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
+        r3191000_batch_news_claims_and_payouts_write_what_one_at_a_time_would,
         practice_claims_count_once_per_bucket_and_utc_day,
         r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
         r3013001_a_stamp_is_kept_only_at_or_below_its_level,

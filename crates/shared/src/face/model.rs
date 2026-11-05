@@ -19,11 +19,12 @@ use jackioh_engine::wire::{
 use crate::config::TEMPORARY_LAST_COUNT;
 
 use super::chinese::{
-    CHINESE_COMMA, all_tribes_word, chinese_def, chinese_keyword, chinese_preview_label, is_glitch,
-    keyword_kind_word, tag_word, type_word,
+    CHINESE_COMMA, all_tribes_word, chinese_def, chinese_keyword, chinese_name, chinese_preview_label,
+    is_glitch, keyword_kind_word, tag_word, type_word,
 };
 use super::data::ShortForm;
 use super::diff::radiant_marks;
+use super::fused::{DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, holds_dormant_starship};
 use super::glitch::{glitch_def, glitch_words};
 use super::glossary::{glossary_for, state_terms};
 use super::power::{
@@ -66,6 +67,15 @@ impl Lookup<'_> {
         } else {
             found.clone()
         })
+    }
+}
+
+/// R3045000: the Dormant Starship's catalog name, in the face's language.
+fn hull_name(chinese: bool) -> String {
+    if chinese {
+        chinese_name(DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, None)
+    } else {
+        DORMANT_STARSHIP_NAME.to_string()
     }
 }
 
@@ -360,9 +370,16 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         chinese,
         values: &[],
     };
+    // R3045000: a Starship keeps the hull's name whatever was fused into it (the engine joins the names): the name it
+    // launched under, else the Dormant Starship's. The view says a unit is a Starship; a fused definition says so
+    // too where no view does (a card the log or the graveyard names).
+    let holds_hull = in_play.is_some_and(|play| play.starship.is_some())
+        || source.def.as_ref().is_some_and(holds_dormant_starship);
+    let hull = holds_hull.then(|| hull_name(chinese));
     let name = in_play
         .and_then(|play| play.starship.as_ref())
         .and_then(|ship| ship.name.clone())
+        .or(hull)
         .or_else(|| def.as_ref().map(|def| def.name.clone()))
         .or_else(|| source.name.clone())
         .unwrap_or_else(|| source.def_id.clone());

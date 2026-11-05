@@ -8,6 +8,7 @@ use jackioh_engine::wire::{
 };
 
 use crate::face::chinese::{chinese_name, is_glitch};
+use crate::face::fused::{DORMANT_STARSHIP_NAME, holds_dormant_starship};
 use crate::face::glitch::glitch_words;
 use crate::face::live::{HIDDEN_CARD, NamedCard};
 use crate::face::types::DefMap;
@@ -194,13 +195,18 @@ impl<'a> Names<'a> {
     }
 
     /// A card's printed name, or its def id when nothing names it; Glitch's, corrupted as a lookup answers for
-    /// it (`face/glitch.rs`).
+    /// it (`face/glitch.rs`); a fusion holding the Dormant Starship, the hull's (R3045000: the engine joins the
+    /// pieces' names onto the hull's, and the card is named for the hull, as its face is, `face/model.rs`).
     fn english(&self, def_id: &str) -> (String, Option<&'a CardDef>) {
         let def = self.definition(def_id);
         let name = if is_glitch(def_id) {
             glitch_words().name
         } else {
-            def.map_or_else(|| def_id.to_string(), |def| def.name.clone())
+            match def {
+                Some(def) if holds_dormant_starship(def) => DORMANT_STARSHIP_NAME.to_string(),
+                Some(def) => def.name.clone(),
+                None => def_id.to_string(),
+            }
         };
         (name, def)
     }

@@ -578,6 +578,128 @@ fn turn_lines_name_the_seat_and_an_extra_turn_says_so() {
     );
 }
 
+// ---- R3045000: a fused Dormant Starship is named for its hull
+
+/// A fused definition shaped as the engine's Fuse builds one (R77, R102, R179): the first ingredient's card with
+/// the names joined and the ingredients listed; an ingredient that is itself a fusion goes in parentheses in the id.
+fn fused_def(ingredients: &[Value], n: u32) -> Value {
+    let spelled: Vec<String> = ingredients
+        .iter()
+        .map(|def| {
+            let id = def["id"].as_str().expect("an id");
+            if def.get("ingredients").is_some() {
+                format!("({id})")
+            } else {
+                id.to_string()
+            }
+        })
+        .collect();
+    let id = format!("t-{n}:{}", spelled.join("+"));
+    let names: Vec<&str> = ingredients
+        .iter()
+        .map(|def| def["name"].as_str().expect("a name"))
+        .collect();
+    let mut def = ingredients[0].clone();
+    def["id"] = json!(id);
+    def["index"] = json!(id);
+    def["name"] = json!(names.join(" + "));
+    def["ingredients"] = json!(
+        ingredients
+            .iter()
+            .map(|part| json!({ "defId": part["id"] }))
+            .collect::<Vec<_>>()
+    );
+    def
+}
+
+fn catalog_def(def_id: &str) -> Value {
+    ready();
+    serde_json::to_value(registered_catalog().get(def_id).expect("a catalog card")).expect("JSON")
+}
+
+/// A view that carries the definitions its cards name (R243).
+fn with_defs(defs: &[&Value], events: Value) -> PlayerView {
+    ready();
+    let defs: serde_json::Map<String, Value> = defs
+        .iter()
+        .map(|def| (def["id"].as_str().expect("an id").to_string(), (*def).clone()))
+        .collect();
+    serde_json::from_value(json!({
+        "viewer": "p1", "turn": 3, "active": "p1", "phase": "main",
+        "you": side("p1", json!({})), "opponent": side("p2", json!({ "hand": { "count": 4 } })),
+        "pending": null, "events": events, "result": null, "clockMs": null, "defs": defs,
+    }))
+    .expect("a PlayerView")
+}
+
+const HULL: &str = "stinkyscape-t-dormant-starship";
+
+fn fused_event(def: &Value) -> Value {
+    json!({ "type": "fused", "instanceIds": ["u1", "u2"], "resultInstanceId": "u1", "defId": def["id"] })
+}
+
+#[test]
+fn r3045000_the_fused_line_names_the_dormant_starship_not_the_pieces_the_engine_joined_onto_its_name() {
+    let once = fused_def(&[catalog_def(HULL), catalog_def("stinkyscape-062")], 1);
+    let twice = fused_def(&[once.clone(), catalog_def("stinkyscape-050")], 2);
+    assert_eq!(once["name"], "Dormant Starship + Miner v1");
+    // The view carries the outer fusion alone; the inner one is read from the id it spells (R179).
+    let view = with_defs(&[&twice], json!([fused_event(&once), fused_event(&twice)]));
+    let view_once = with_defs(&[&once], json!([fused_event(&once)]));
+    assert_eq!(english(&view_once), ["2 cards fused into Dormant Starship"]);
+    assert_eq!(english(&view)[1], "2 cards fused into Dormant Starship");
+    // The card that line opens is the fusion itself, whose face is the Starship's too.
+    let lines: Vec<LogLine> = call(&view, Locale::En).into_iter().flatten().collect();
+    assert_eq!(
+        lines[1].card.as_ref().map(|card| card.def_id.clone()),
+        twice["id"].as_str().map(str::to_string)
+    );
+}
+
+#[test]
+fn r3045000_a_card_named_by_its_definition_alone_is_the_hull_too() {
+    let once = fused_def(&[catalog_def(HULL), catalog_def("stinkyscape-062")], 1);
+    let view = with_defs(
+        &[&once],
+        json!([
+            { "type": "cardPlayed", "player": "p2", "instanceId": "e1", "defId": once["id"], "costPaid": 0 },
+            { "type": "destroyed", "instanceId": "e1", "defId": once["id"], "owner": "p2", "controller": "p2", "attack": 0, "maxHealth": 3, "killerId": null },
+        ]),
+    );
+    let lines = english(&view);
+    assert_eq!(lines[0], "Opponent played Dormant Starship for 0");
+    assert_eq!(lines[1], "Dormant Starship was destroyed");
+    assert!(!lines.join("\n").contains("Miner v1"));
+}
+
+#[test]
+fn r3045000_any_other_fused_card_is_named_by_what_it_was_fused_of() {
+    let equipped = fused_def(&[catalog_def("stinkyscape-050"), catalog_def("core-020")], 3);
+    let view = with_defs(&[&equipped], json!([fused_event(&equipped)]));
+    assert_eq!(
+        english(&view),
+        [format!(
+            "2 cards fused into {} + {}",
+            name_of("stinkyscape-050"),
+            name_of("core-020")
+        )]
+    );
+}
+
+#[test]
+fn r3045000_a_reader_of_chinese_reads_the_hulls_chinese_name() {
+    let once = fused_def(&[catalog_def(HULL), catalog_def("stinkyscape-062")], 1);
+    let twice = fused_def(&[once.clone(), catalog_def("stinkyscape-050")], 2);
+    let hull = chinese_name_of(HULL);
+    assert_ne!(hull, "Dormant Starship");
+    for fused in [&once, &twice] {
+        let view = with_defs(&[fused], json!([fused_event(fused)]));
+        let zh = said(&view, Locale::ZhCn).remove(0);
+        assert!(zh.contains(&hull), "{zh}");
+        assert!(!zh.contains('+'), "{zh}");
+    }
+}
+
 // ---- #2252: a play names what it aimed at, and a hit off combat what dealt it
 
 const SPELL: &str = "core-044";
@@ -827,6 +949,33 @@ fn a_call_to_chaos_names_its_effects_in_the_words_the_reveal_shows_even_when_the
 }
 
 #[test]
+fn every_effect_the_three_call_to_chaos_cards_can_roll_has_its_reel_words() {
+    use jackioh_engine::subsystems::call_to_chaos::CHAOS_EFFECTS;
+    use jackioh_engine::subsystems::call_to_chaos_meditative::CHAOS_MED_EFFECTS;
+    use jackioh_engine::subsystems::call_to_chaos_plus::CHAOS_PLUS_EFFECTS;
+    use jackioh_shared::face::data::CHAOS_NAMES;
+    for (edition, effects) in [
+        ("core-095", CHAOS_EFFECTS),
+        ("classicplus-073", CHAOS_PLUS_EFFECTS),
+        ("meditative-095", CHAOS_MED_EFFECTS),
+    ] {
+        let names = find(CHAOS_NAMES, edition).expect("the edition's table");
+        for effect in effects {
+            assert!(
+                find(names, effect.label).is_some(),
+                "{edition} has no reel words for {:?}",
+                effect.label
+            );
+        }
+        assert_eq!(
+            names.len(),
+            effects.len(),
+            "{edition} names a clause the engine no longer rolls"
+        );
+    }
+}
+
+#[test]
 fn coins_and_dice_read_in_the_words_the_panel_lands_on() {
     let rolled = |kind: &str, sides: i32, rolls: Value, def_id: &str| {
         json!({ "type": "rolled", "player": "p1", "instanceId": if def_id == "hidden" { "hidden" } else { "c1" },
@@ -968,11 +1117,15 @@ fn sentences() -> Vec<String> {
         include_str!("../src/log/names.rs"),
     ] {
         let source = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let mut previous = "";
         for line in source
             .lines()
             .map(str::trim)
             .filter(|line| !line.starts_with("//"))
         {
+            // A parameter's name that rustfmt put on a line of its own is no sentence.
+            let named_param = ends_in_call(previous, "p(");
+            previous = line;
             let mut rest = line;
             while let Some(open) = rest.find('"') {
                 let body = &rest[open + 1..];
@@ -988,7 +1141,7 @@ fn sentences() -> Vec<String> {
                 }
                 let before = &rest[..open];
                 let after = body[close + 1..].trim();
-                let alone = before.trim().is_empty() && (after.is_empty() || after == ",");
+                let alone = before.trim().is_empty() && (after.is_empty() || after == ",") && !named_param;
                 let sentence = ends_in_call(before, "s(")
                     || ends_in_call(before, "say(")
                     || ends_in_call(before, "unwrap_or(")

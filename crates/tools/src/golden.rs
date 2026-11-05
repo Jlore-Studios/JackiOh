@@ -13,8 +13,8 @@
 //! each deck keeping its size; a token cannot be in a deck (§2.6 L3), so it is forced through the card
 //! whose `refs` name it (R279), and a token no deck card names, a card of an unshipped set (R1420) and
 //! an id the catalog lacks are refused. A Core card and its Legacy card are two cards, forced together
-//! (R2511001). The file replays with `check --file` on any build: `luau diff` and `classify` record
-//! with it and have a parent build replay it. `golden bless` fails, pointing to `record` (#2578).
+//! (R2511001). The file replays with `check --file` on any build: `classify` records with it and has a
+//! parent build replay it. `golden bless` fails, pointing to `record` (#2578).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -661,11 +661,12 @@ mod tests {
         for id in ["classic-t-glitch", "no-such-card"] {
             assert!(resolve_force(&ids(&[id])).is_err(), "{id}");
         }
-        // The Coin was such a token until the Meditative set shipped in v0.3.5: Meditative #27
-        // Clip-Farming Lawyer names it, so it carries it now.
+        // The Coin was such a token until the Meditative set shipped in v0.3.5, when Meditative #27
+        // Clip-Farming Lawyer named it. Classic #57 Echo names it too since #3048 (its text while no
+        // Spell has been played, R3048000), and the first card by id carries it.
         assert_eq!(
             resolve_force(&ids(&["core-t-coin"])).unwrap(),
-            ids(&["meditative-027"])
+            ids(&["classic-057"])
         );
     }
 }

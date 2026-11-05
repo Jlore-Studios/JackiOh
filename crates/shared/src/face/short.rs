@@ -7,6 +7,17 @@
 //! "colon", up to its first colon (the Call to Chaos editions, whose list must stay whole in the catalog,
 //! R436); "clamp", the whole text, cut by the box at its last line (#1563, #1704, #1828).
 //!
+//! The faces that clamp, by the issue that put them over the limit: Stinkyscape's (R1857000,
+//! docs/stinkyscape-set.md ST13) every face its rows put over, unless the card's part wrote its own; #4.5's and
+//! #26's base faces take lines or a colon (#2067); the held Training Grounds set (R2194000,
+//! docs/training-grounds-set.md TG5), Call to Chaos #39 "colon" and the Radiant face of #16 clamping (#38's did
+//! until issue #3139 made its text one short line); #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant
+//! face; issue #3139: Core #65 and #89, whose new last lines put both their faces over the limit, and Core
+//! #52's Radiant face; issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and
+//! draw lines put them over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
+//! new keyword line (Divine Shield, Tradable) makes a seventh line; and Meditative #9's Radiant face, whose Cry
+//! and Aura run to seven lines (R3134001).
+//!
 //! Only a face printing its catalog text takes a short form (in play #98 prints its rolled power and a Call
 //! to Chaos "???", `power.rs`). In play the Summit prints only its header and the next Ascent line (#814,
 //! R280); a face in play past the preview's limit clamps rather than shrinking its art, which the client's

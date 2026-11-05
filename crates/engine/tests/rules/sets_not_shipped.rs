@@ -680,6 +680,7 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
             Tag::Legacy,
             Tag::Resource,
             Tag::Faction,
+            Tag::Starship,
             Tag::Token,
         ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
@@ -968,7 +969,8 @@ mod issue_2521_resource_and_faction_follow_legacy {
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        assert_eq!(at(Tag::Token), Some(legacy + 1 + TAGS.len()));
+        // Issue #3038's Starship follows them (R3038000), and Token stays last.
+        assert_eq!(at(Tag::Starship), Some(legacy + 1 + TAGS.len()));
         assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 
@@ -1035,7 +1037,10 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
             at(SetName::TrainingGrounds),
             at(SetName::Stinkyscape).map(|at| at + 1)
         );
-        assert_eq!(CATALOG_SETS.last(), Some(&SetName::TrainingGrounds));
+        // A set the catalog orders after it is held, not shipped (R3114000: a set is added as a held
+        // row), so it stays the newest shipped set (R1371).
+        let after = at(SetName::TrainingGrounds).map_or(CATALOG_SETS.len(), |at| at + 1);
+        assert!(CATALOG_SETS[after..].iter().all(|set| !set_ships(*set)));
         assert!(set_ships(SetName::TrainingGrounds));
         assert_eq!(SHIPPED_SETS.last(), Some(&SetName::TrainingGrounds));
         assert!(set_is_open(SetName::TrainingGrounds));

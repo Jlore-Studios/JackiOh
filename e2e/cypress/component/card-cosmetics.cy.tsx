@@ -17,6 +17,12 @@ import { unit } from "../../../apps/web/src/test/fixtures.ts";
 
 const DEF_ID = "core-004";
 
+/**
+ * A Unit that prints no full art, for the board minion's ring (R3046000: a full-art minion's panel is inset as a full
+ * face's is, so its border shows as the face's edge and it lays no ring), and the Unit that does.
+ */
+const PLAIN_MINION_ID = "core-002";
+
 /** A hand-sized full face, 5:7. */
 const FACE_BOX = { width: 150, height: 210 } as const;
 
@@ -34,18 +40,23 @@ const FOILS = ITEMS.filter((item) => item.kind === "foil");
 
 const BORDERS = ITEMS.filter((item) => item.kind === "border");
 
-function face() {
-  return faceModel({ defId: DEF_ID, def: CATALOG[DEF_ID], radiant: false });
+function face(defId: string = DEF_ID) {
+  return faceModel({ defId, def: CATALOG[defId], radiant: false });
 }
 
-function Pair({ minion = false }: { minion?: boolean }) {
-  const box = minion ? MINION_BOX : FACE_BOX;
-  const u = unit("p1", { defId: DEF_ID });
+/** A worn face beside a plain one: a full face of DEF_ID, or a board minion of `minion` (a card id). */
+function Pair({ minion = null }: { minion?: string | null }) {
+  const box = minion === null ? FACE_BOX : MINION_BOX;
+  const u = unit("p1", { defId: minion ?? DEF_ID });
   return (
     <div style={{ display: "flex", gap: 12, padding: 12, background: "#1b1f2b" }}>
       {(["worn", "plain"] as const).map((which) => (
         <div key={which} data-which={which} style={{ ...box, flex: "none", position: "relative" }}>
-          {minion ? <MinionFace face={face()} unit={u} worn={which === "worn"} /> : <CardFace face={face()} worn={which === "worn"} />}
+          {minion === null ? (
+            <CardFace face={face()} worn={which === "worn"} />
+          ) : (
+            <MinionFace face={face(minion)} unit={u} worn={which === "worn"} />
+          )}
         </div>
       ))}
     </div>
@@ -77,7 +88,7 @@ function moving(cf: HTMLElement): boolean {
 }
 
 function clearPicks(): void {
-  for (const kind of CARD_SLOT_KINDS) writeCardPick(DEF_ID, kind, null);
+  for (const id of [DEF_ID, PLAIN_MINION_ID]) for (const kind of CARD_SLOT_KINDS) writeCardPick(id, kind, null);
 }
 
 describe("R1295000 the card cosmetics on a face", () => {
@@ -121,6 +132,7 @@ describe("R1295000 the card cosmetics on a face", () => {
       // A command, so that each border is the pick when its own faces mount, not the last one's.
       cy.then(() => {
         writeCardPick(DEF_ID, "border", border.id);
+        writeCardPick(PLAIN_MINION_ID, "border", border.id);
       });
 
       cy.mount(<Pair />);
@@ -129,7 +141,7 @@ describe("R1295000 the card cosmetics on a face", () => {
         expect(edge, `${border.id}'s edge on the full face`).to.not.equal("none");
       });
 
-      cy.mount(<Pair minion />);
+      cy.mount(<Pair minion={PLAIN_MINION_ID} />);
       cy.document().should((doc) => {
         const scaleOf = (which: "worn" | "plain"): Element => {
           const scale = faceOf(doc, which).querySelector(".cf-scale");
@@ -144,6 +156,40 @@ describe("R1295000 the card cosmetics on a face", () => {
           getComputedStyle(scaleOf("plain")).boxShadow,
         );
         expect(getComputedStyle(scaleOf("plain"), "::before").content, "the plain minion has no ring").to.equal("none");
+        edges.push(edge);
+      });
+    }
+    cy.then(() => {
+      expect(new Set(edges).size, "each border has an edge of its own").to.equal(BORDERS.length);
+    });
+  });
+
+  // R3046000: a full-art minion's art fills its face, so it takes the full face's inset panel and shows the border as
+  // the face's edge round the art, as a full face does, and lays no ring over the panel.
+  it("R1295000 R3046000 a worn full-art minion wears the border as the face's edge, with no ring", () => {
+    const edges: string[] = [];
+    for (const border of BORDERS) {
+      let edge = "";
+      cy.then(() => {
+        writeCardPick(DEF_ID, "border", border.id);
+      });
+
+      cy.mount(<Pair />);
+      cy.document().should((doc) => {
+        edge = getComputedStyle(faceOf(doc, "worn")).backgroundImage;
+        expect(edge, `${border.id}'s edge on the full face`).to.not.equal("none");
+      });
+
+      cy.mount(<Pair minion={DEF_ID} />);
+      cy.document().should((doc) => {
+        const worn = faceOf(doc, "worn");
+        expect(worn.getAttribute("data-full-art"), "the minion is full art").to.equal("true");
+        expect(getComputedStyle(worn).backgroundImage, `${border.id}'s edge is the minion's own`).to.equal(edge);
+        const scale = worn.querySelector(".cf-scale");
+        if (scale === null) throw new Error("no panel");
+        expect(getComputedStyle(scale, "::before").content, `${border.id} lays no ring over the panel`).to.equal("none");
+        const rim = scale.getBoundingClientRect().left - worn.getBoundingClientRect().left;
+        expect(rim, `${border.id}'s edge shows round the art`).to.be.greaterThan(0.4);
         edges.push(edge);
       });
     }

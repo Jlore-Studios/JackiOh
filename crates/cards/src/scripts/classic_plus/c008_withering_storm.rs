@@ -1,4 +1,4 @@
-//! C+ #8 Withering Storm (SPEC §8.7 row 8). (2) Spell, Rare.
+//! C+ #8 Withering Storm (SPEC §8.7 row 8). (1) Spell ((2) until issue #3138), Rare.
 //! One Degrade (R386) on each of {cards} different random cards of the opponent's deck, drawn among the
 //! cards a Degrade can change (R60; all of them when fewer), then draw {draw}. Radiant: one Degrade on
 //! every card of their deck. The changes stay hidden from both players while in the deck (R311).
@@ -131,6 +131,19 @@ mod tests {
     /// Whether a Degrade left anything on the card (its cost or its tuning).
     fn was_changed(card: &CardInstance) -> bool {
         card.cost_mod != 0 || card.tuning.is_some()
+    }
+
+    /// Issue #3138: it costs (1), from (2), on both faces: refused with no mana, played with 1.
+    #[test]
+    fn issue_3138_it_costs_1_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = setup(vanillas(6), radiant, None, two_stockpiles());
+            crate::expect_costs(&mut s, STORM, 1, json!({}));
+            s.state_mut().players.p1.mana.current = 1;
+            s.play(STORM, json!({}));
+            s.expect_mana(P1, 0);
+            assert!(!changed(s.events()).is_empty(), "radiant {radiant}: it resolved");
+        }
     }
 
     mod base {

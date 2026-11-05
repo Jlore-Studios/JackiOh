@@ -118,10 +118,24 @@ describe("R1017001 full-art faces", () => {
     }
   });
 
-  it("R1017001 a compact face (a face-up backrow card) keeps its window", () => {
-    const def = HEROES[0];
-    if (def === undefined) throw new Error("no hero card");
-    expect(faceOf(def.id, false, "compact").hasAttribute("data-full-art")).toBe(false);
+  it("R1017001 R3046000 a compact face (a face-up backrow card) prints full art too, its name below the art", () => {
+    // R1017001 kept the window of a compact face and a board minion; R3046000 amends it (fullArtBoard.test.tsx).
+    for (const def of HEROES) {
+      const cf = faceOf(def.id, false, "compact");
+      expect(cf.getAttribute("data-full-art"), def.id).toBe("true");
+      expect(cf.querySelector(".cf-art-frame > .cf-art")?.classList.contains("cf-art--full"), def.id).toBe(true);
+      expect(cf.querySelector(".card-type"), def.id).toBeNull();
+      expect(cf.querySelector(".card-name")?.textContent, def.id).toBe(def.name);
+      cleanup();
+    }
+  });
+
+  it("R1017001 a compact face of a card that is not full art keeps its window", () => {
+    const def = DEFS.find((each) => !isFullArtCard(each.id) && each.type === "Trap");
+    if (def === undefined) throw new Error("no Trap");
+    const cf = faceOf(def.id, false, "compact");
+    expect(cf.hasAttribute("data-full-art")).toBe(false);
+    expect(cf.querySelector(".card-type")).not.toBeNull();
   });
 
   it("R1017001 with the Full-art cards setting off, a hero's card prints its text like any card", () => {

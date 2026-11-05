@@ -1,6 +1,6 @@
 //! The golden replay (SURFACE §13.3), its pure half: the canonical texts, one recorded game's replay
 //! to its first `Mismatch` and the hotseat fixture's fold. `cargo jackioh golden check --file` replays a
-//! `golden record` file with it, on this build or another (`luau diff`, `classify`), and the engine's
+//! `golden record` file with it, on this build or another (`classify`), and the engine's
 //! `tests/golden.rs` folds the hotseat fixture with it. No committed traces now (#1641, #2578).
 //!
 //! A mismatch carries the Rust side's canonical text (`text`) and never writes it: the engine's
@@ -32,9 +32,11 @@ pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.
 /// A change to what the state RECORDS about the same game leaves the log as it is and moves the hash alone:
 /// R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and R457 (§6.2; B5 E4), R943's Created
 /// mark and R982's last element (R1420), and #1837's tags (R1837000). A change to the game itself re-records
-/// the log (R244, R275, R276, R360–R366; #2179's Core #81 Radiant Saintess, #2368's mulligan, R2368000);
-/// where Cypress cannot be fetched, run spec 01's policy against the engine, first on the base build.
-pub const HOTSEAT_HASH: &str = "972f5b85";
+/// the log (R244, R275, R276, R360–R366; #2179's Core #81 Radiant Saintess, #2368's mulligan, R2368000; #3136's
+/// Can't Defend on Core #3, which took away the switch to Defense that kept a turn from ending by itself, and
+/// Core #20's 6 attack, which left the last hit one short); where Cypress cannot be fetched, run spec 01's policy
+/// against the engine, first on the base build.
+pub const HOTSEAT_HASH: &str = "512357ea";
 
 /// A game's first divergence from its trace.
 pub struct Mismatch {

@@ -1,4 +1,4 @@
-//! Stinkyscape #52 Cannon v3 (SPEC §8.10 row 52). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
+//! Stinkyscape #52 Cannon v3 (SPEC §8.10 row 52). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy Unit." — damage 5
 //!   Radiant: the same text — damage 10
@@ -108,7 +108,7 @@ mod tests {
 
     const DAMAGE: i32 = 5;
     const RADIANT_DAMAGE: i32 = 10;
-    const RADIANT_HEALTH: i32 = 8;
+    const RADIANT_HEALTH: i32 = 4;
     const ARMOR: i32 = 3;
 
     fn at(target: &str) -> Value {

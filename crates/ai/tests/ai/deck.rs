@@ -16,7 +16,7 @@ use jackioh_ai::{
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardDef, CardType, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, Difficulty, MAX_MANA,
     PerPlayerOpt, Tag, Value, create_game, create_rng, def_of, json, json_as, query, query_cost,
-    registered_catalog, validate_deck,
+    registered_catalog, validate_deck, with_pool_shift,
 };
 
 use super::support::{ai_pool, register_cards};
@@ -695,7 +695,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // and each set after it (#1187, #1884, #2204) was in any pool, so the literals gate them (R1390: a
         // gate deals what the draw dealt before). A patch that moves the builder's curve or picks re-deals
         // the pins, their seeds stopping at the same cursors (#831, #1149, #1194, #1704, #2179, #2657; #1151
-        // the themed pin only, #2521 the human and themed pins).
+        // the themed pin only, #2521 the human and themed pins, #3042 the hard, human and themed pins, #3139 and
+        // #3138 the human, easy and hard pins: Living Bomb costs (2), Snom Bunny Mind Control (5) and a dozen
+        // Meditative and Classic+ cards move cost, which moves the curve's buckets).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -718,10 +720,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-078",
                     "core-012",
                     "core-010",
-                    "core-056",
-                    "classicplus-007",
+                    "core-055",
+                    "classicplus-005",
                     "classicplus-034",
-                    "core-077",
+                    "core-076",
                     "classicplus-026",
                 ],
             ),
@@ -741,15 +743,15 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-015",
                     "core-004",
                     "core-052",
-                    "core-092",
-                    "classicplus-002",
+                    "core-091",
+                    "classicplus-001",
                     "classicplus-044",
                     "core-032",
-                    "classic-050",
+                    "classic-049",
+                    "classicplus-066",
+                    "classic-006",
                     "classicplus-067",
-                    "classic-005",
-                    "classicplus-068",
-                    "core-026",
+                    "core-042",
                     "core-053",
                 ],
             ),
@@ -778,17 +780,17 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-020",
                     "classic-066",
                     "classicplus-012",
-                    "classic-080",
+                    "classic-077",
                     "classic-020",
                     "classicplus-003",
                     "classic-060",
-                    "classicplus-008",
+                    "classicplus-007",
                     "classicplus-038",
                     "core-029",
-                    "classic-014",
+                    "classic-010",
+                    "classic-006",
                     "classic-009",
-                    "classic-004",
-                    "classicplus-019",
+                    "classicplus-018",
                 ],
             ),
             (
@@ -810,29 +812,34 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-066",
                     "classicplus-037",
                     "core-001",
-                    "core-078",
-                    "core-071",
+                    "core-085",
+                    "core-072",
                     "core-066",
                     "classicplus-063",
-                    "core-098",
+                    "core-089",
                     "classic-083",
                     "classicplus-026",
                 ],
             ),
         ];
-        for (seed, size, literal, cursor, expected) in pins {
-            for literal in [literal.clone(), {
-                let mut with_null = literal.clone();
-                with_null["leanSet"] = Value::Null;
-                with_null
-            }] {
-                let mut rng = create_rng(seed, 0);
-                let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
-                assert_eq!(traced.deck, expected, "{seed} {literal}");
-                assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
-                assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+        // These pins are recorded deals, so they read the pools as they are, not as the pool probe (#3117)
+        // rotates them: `gatedSets` (R1390) and R1420 keep a later set out of the pool they name, and a
+        // set's release re-pins them by design, so a pool roll is not what they guard.
+        with_pool_shift(0, || {
+            for (seed, size, literal, cursor, expected) in pins {
+                for literal in [literal.clone(), {
+                    let mut with_null = literal.clone();
+                    with_null["leanSet"] = Value::Null;
+                    with_null
+                }] {
+                    let mut rng = create_rng(seed, 0);
+                    let traced = build_ai_deck_traced(&mut rng, size, &options(literal.clone()));
+                    assert_eq!(traced.deck, expected, "{seed} {literal}");
+                    assert_eq!(rng.cursor(), cursor, "{seed} {literal}");
+                    assert_eq!(traced.lean_forced, 0, "{seed} {literal}");
+                }
             }
-        }
+        });
         assert_eq!(AiDeckOptions::default().lean_set, None);
         assert_eq!(
             serde_json::to_value(AiDeckOptions::default()).ok(),

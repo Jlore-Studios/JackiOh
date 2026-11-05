@@ -1,8 +1,19 @@
 {
   "forms": {
+    "core-052": {
+      "radiant": "clamp"
+    },
     "core-093": {
       "base": 2,
       "radiant": 2
+    },
+    "core-065": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "core-089": {
+      "base": "clamp",
+      "radiant": "clamp"
     },
     "core-095": {
       "base": "colon",
@@ -32,6 +43,10 @@
     "classicplus-034": {
       "base": "clamp"
     },
+    "classicplus-037": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
     "classicplus-073": {
       "base": "colon",
       "radiant": "colon"
@@ -39,6 +54,13 @@
     "meditative-008": {
       "base": 2,
       "radiant": 2
+    },
+    "meditative-009": {
+      "radiant": "clamp"
+    },
+    "meditative-020": {
+      "base": "clamp",
+      "radiant": "clamp"
     },
     "meditative-022": {
       "base": 1,
@@ -53,6 +75,7 @@
       "radiant": 3
     },
     "meditative-040": {
+      "base": "clamp",
       "radiant": "clamp"
     },
     "meditative-045": {
@@ -64,6 +87,14 @@
       "radiant": "clamp"
     },
     "meditative-049-2": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "meditative-054": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "meditative-081": {
       "base": "clamp",
       "radiant": "clamp"
     },
@@ -90,6 +121,10 @@
       "radiant": "clamp"
     },
     "meditativeplus-020": {
+      "radiant": "clamp"
+    },
+    "meditativeplus-022": {
+      "base": "clamp",
       "radiant": "clamp"
     },
     "meditativeplus-024": {
@@ -203,9 +238,6 @@
       "radiant": "clamp"
     },
     "traininggrounds-016": {
-      "radiant": "clamp"
-    },
-    "traininggrounds-038": {
       "radiant": "clamp"
     },
     "traininggrounds-039": {

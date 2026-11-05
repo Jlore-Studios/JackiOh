@@ -10,6 +10,13 @@
 //! spellings, which match like terms but print plain (R910000: "your exile" is the pile), only at a word
 //! boundary (so "Locking" and "taunt" stay plain). A match extends over a following ` <digits|X|♾️>` and
 //! then a `:`, so "Cry:", "Armor 2", "Combo 2:" and "Activate ♾️:" (R384) are each one term.
+//!
+//! Some rules carry a ruling a player reads in them: Flashback's play spends it, so a card is flashed back once
+//! (R783013, upheld by R3039001); Starship is a tag since #3038, which the Starship term names, while the
+//! keyword kind stays for the shipped snapshots (R3038000, R3038001), so the term keeps its §6.1 row; Dormant is
+//! a status no effect reaches until the card awakens (R1839000), and never again once it has (R3039000). "Start
+//! of game" is no term: Heroic Power's Cry took its place, so no card prints it and its §6.2 row is rules-only
+//! (R3134002).
 
 use jackioh_engine::wire::{Enchantment, KeywordKind};
 

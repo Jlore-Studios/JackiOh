@@ -1,14 +1,15 @@
 //! #1697, SPEC §9.3: a self-play match carries the setup inputs `create_game` takes beyond its decks
-//! and handicaps: dealt seats (R433), last boards (R417, R564) and Glitch boards (R678). Each reaches
-//! the game `play_match` creates and the fold `MatchConfig::fold_args` hands `fold`, a config that sets
-//! none is the game and the JSON it was before, and C+ #29 Portal to the Past, which reads the last
-//! board, resolves in an AI game.
+//! and handicaps: dealt seats (R433), last boards (R417, R564), Glitch boards (R678) and deck marks
+//! (R2702000, a dungeon run's fight, #3065). Each reaches the game `play_match` creates and the fold
+//! `MatchConfig::fold_args` hands `fold`, a config that sets none is the game and the JSON it was
+//! before, and C+ #29 Portal to the Past, which reads the last board, resolves in an AI game.
 
 use jackioh_ai::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match};
 use jackioh_engine::testkit::{
-    ActionBody, FoldArgs, GameState, LastBoardEntry, PLAYER_IDS, PerPlayer, PlayerId, fold, hash_state, json,
-    legal_actions,
+    ActionBody, CardInstance, DeckMark, FoldArgs, GameState, LastBoardEntry, PLAYER_IDS, PerPlayer,
+    PerPlayerOpt, PlayerId, fold, hash_state, json, legal_actions,
 };
+use jackioh_engine::tuning::is_tuned;
 
 use super::support::{random_decks, register_cards};
 
@@ -23,6 +24,8 @@ const PORTAL_SLOT: usize = 0;
 const PORTAL_SEEDS: i32 = 8;
 /// Actions the all-inputs game plays: enough for the first turns, short enough to stay fast.
 const SETUP_ACTIONS: usize = 12;
+/// R2702000: the Buffs each marked card takes.
+const MARK_UPGRADES: i32 = 1;
 
 fn board(def_id: &str) -> Vec<LastBoardEntry> {
     vec![LastBoardEntry {
@@ -137,6 +140,7 @@ fn every_setup_input_reaches_the_game_and_its_fold() {
             dealt: Some(vec![PlayerId::P2]),
             last_boards: Some((board(P1_BOARD_CARD), board(P2_BOARD_CARD))),
             glitch_boards: Some((board(P2_BOARD_CARD), board(P1_BOARD_CARD))),
+            ..MatchSetup::default()
         },
     );
     config.max_actions = Some(SETUP_ACTIONS);
@@ -189,6 +193,94 @@ fn every_setup_input_reaches_the_game_and_its_fold() {
     for key in ["dealt", "lastBoards", "glitchBoards"] {
         assert!(written.get(key).is_some(), "{key}");
     }
+    assert!(written.get("setup").is_none());
+    assert_eq!(
+        serde_json::from_value::<MatchConfig>(written).expect("a config deserializes"),
+        config
+    );
+}
+
+/// Every card `seat` holds in hand and library.
+fn hand_and_library(state: &GameState, seat: PlayerId) -> Vec<&CardInstance> {
+    let side = &state.players[seat];
+    side.hand.iter().chain(side.library.iter()).collect()
+}
+
+#[test]
+fn r2702000_a_config_with_deck_marks_deals_its_cards_radiant_and_buffed_and_its_record_folds_with_them() {
+    register_cards();
+    // Every card of P1's list is marked, so that some card took a Buff never rests on one card's draw.
+    let decks = random_decks("match-setup-marks");
+    let marks = PerPlayerOpt {
+        p1: Some(
+            (0..decks.0.len())
+                .map(|index| DeckMark {
+                    index,
+                    radiant: true,
+                    upgrades: MARK_UPGRADES,
+                })
+                .collect(),
+        ),
+        p2: None,
+    };
+    let mut config = random_vs_random(
+        "match-setup-marks",
+        MatchSetup {
+            deck_marks: Some(marks.clone()),
+            ..MatchSetup::default()
+        },
+    );
+    config.max_actions = Some(SETUP_ACTIONS);
+    let mut first: Option<GameState> = None;
+    let record = {
+        let mut hooks = MatchHooks {
+            after_action: Some(Box::new(|before, _after, _seat, _action| {
+                if first.is_none() {
+                    first = Some(before.clone());
+                }
+            })),
+            ..MatchHooks::default()
+        };
+        play_match(&config, &mut hooks)
+    };
+    let first = first.expect("the match took an action");
+    assert!(record.thrown.is_empty(), "{:?}", record.thrown);
+
+    assert_eq!(
+        first
+            .opening
+            .as_ref()
+            .and_then(|opening| opening.deck_marks.clone()),
+        Some(marks)
+    );
+    let p1 = hand_and_library(&first, PlayerId::P1);
+    assert!(
+        p1.iter().all(|card| card.radiant),
+        "every marked card is dealt Radiant"
+    );
+    assert!(
+        p1.iter().any(|card| card.cost_mod < 0 || is_tuned(card)),
+        "a marked card took its Buff"
+    );
+    assert!(
+        hand_and_library(&first, PlayerId::P2)
+            .iter()
+            .all(|card| !card.radiant && !is_tuned(card)),
+        "P2's unmarked cards are dealt as printed"
+    );
+
+    let replayed = fold(&config.fold_args(record.log.clone()));
+    assert!(replayed.errors.is_empty(), "{:?}", replayed.errors);
+    assert_eq!(hash_state(&replayed.state), record.hash);
+    let unmarked = fold(&FoldArgs {
+        deck_marks: None,
+        ..config.fold_args(record.log.clone())
+    });
+    assert_ne!(hash_state(&unmarked.state), record.hash);
+
+    // The marks are written beside the config's other keys, and read back from them.
+    let written = serde_json::to_value(&config).expect("a config serializes");
+    assert!(written.get("deckMarks").is_some());
     assert!(written.get("setup").is_none());
     assert_eq!(
         serde_json::from_value::<MatchConfig>(written).expect("a config deserializes"),

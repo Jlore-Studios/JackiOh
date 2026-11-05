@@ -47,12 +47,14 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     #[test]
     fn r70_a_cast_on_draw_spell_s_echo_repeat_resolves_before_the_draw_repeats_2_4_10_5_step_6() {
         register_all();
-        // p1 has Twinspell's grant up. The start-of-turn draw takes #27 Blood Ridden, which casts itself
-        // (R70: a cast Spell takes Twinspell's Echo). Its resolution and its Echo repeat (§10.5 step 6)
-        // find no card in p1's hand to make Radiant; only then does the draw repeat (§2.4).
+        // p1 activates Twinspell, so the next Spell p1 plays this turn gains Echo +1 (R3044000), then plays
+        // #75 Infinite Reserves, a Field Spell, which leaves the grant waiting. Its Cry's draw takes #27
+        // Blood Ridden, which casts itself (R70: a cast Spell takes the grant). Its resolution and its Echo
+        // repeat (§10.5 step 6) find no card in p1's hand to make Radiant; only then does the draw repeat
+        // (§2.4).
         let mut g = scenario(json!({
             "p1": {
-                "hand": [TWINSPELL],
+                "hand": [TWINSPELL, INFINITE_RESERVES],
                 "field": [{ "def": VANILLA, "lane": 1 }],
                 "library": [BLOOD_RIDDEN, VANILLA, VANILLA],
             },
@@ -60,11 +62,10 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         }));
 
         g.play(TWINSPELL, json!({}));
-        g.end_turn(); // p1 → p2
-        g.end_turn(); // p2 → p1: the start-of-turn draw casts Blood Ridden
+        g.activate(TWINSPELL, json!({}));
+        g.play(INFINITE_RESERVES, json!({})); // its Cry's draw casts Blood Ridden
 
-        assert_eq!(g.state().active, P1);
-        // Both resolutions ran: 7 health each (R18), and the grant was spent (R30).
+        // Both resolutions ran: 7 health each (R18), and the grant was spent.
         g.expect_health(P1, 16);
         g.expect_in_zone(BLOOD_RIDDEN, "graveyard");
         let drawn_after: Vec<CardInstance> = g
@@ -343,13 +344,16 @@ mod r210_the_tribute_a_play_pays {
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
         let guard = g.card(RIGHT_HOUSE).clone();
+        // The turn of the play: with Can't Defend (issue #3136) the defender has no switch to Defense left
+        // to keep the turn going, so the Rock's cost may end it and the state's turn move on.
+        let turn = g.state().turn;
         g.play(ROCK, json!({ "zone": 2, "tributes": [guard.id] }));
 
         // §6.3 Sacrifice "counts as a death"; §6.1 Reborn: "first death: return at 1 health".
         g.expect_in_zone(&guard.id, "field");
         assert_eq!(g.unit(P1, 1).map(|card| card.id.clone()), Some(guard.id.clone()));
         assert_eq!(g.card(&guard.id).reborn_spent, Some(true));
-        assert_eq!(g.card(&guard.id).summoned_turn, Some(g.state().turn));
+        assert_eq!(g.card(&guard.id).summoned_turn, Some(turn));
     }
 
     #[test]
@@ -423,7 +427,7 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
 }
 
 const RECYCLER: &str = "classic-064"; // C #64 Malzahar's Recycler: "Whenever you discard cards, draw that many."
-const INTROSPECTION: &str = "meditative-007"; // M #7: "End of turn: ... Draw 1. ..."
+const ALUNETH: &str = "meditative-080"; // M #80: "End of turn: Draw 3. They cost (1) less." (M #7 Introspection drew at the end of turn until #3140.)
 
 mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     use super::*;
@@ -432,13 +436,14 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     fn r2067000_r2179002_an_end_turn_s_hinders_beside_both_players_recyclers_stop_at_the_actions_cap() {
         register_all();
         // Fuzz seed 9688's loop of #33's Hinders and #64's draws (R217): a cast on draw is no play (#2179,
-        // R2179002), so one library runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60
-        // (chains of 20, R58). The same action then starts p2's turn, whose draw sets off p2's Hinders and
-        // Recycler, and the cap counts either side's casts.
+        // R2179002), so one library runs dry first: p1's end of turn (M #80 Aluneth's draws, M #7 Introspection's
+        // until #3140 moved it to the start of the turn) casts its Hinders in chains of 20 (R58). The same action
+        // then starts p2's turn, whose draw sets off p2's Hinders and Recycler, and the cap counts either side's
+        // casts.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [VANILLA, VANILLA],
-                "backrow": [INTROSPECTION, RECYCLER, CLONE_MACHINE],
+                "backrow": [ALUNETH, RECYCLER, CLONE_MACHINE],
                 "library": vec![HINDER; LIBRARY_CAP as usize],
             },
             "p2": {

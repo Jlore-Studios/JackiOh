@@ -17,6 +17,9 @@
 // CSP the build wrote into _headers to let the page reach Supabase and the server's sockets. A VITE_
 // variable in the environment that differs from the committed file's is refused too: one held
 // staging's publishable key, so production's pages could not sign in (2026-11-04).
+// #3127, R3127000: 404.html, which Cloudflare serves with a 404 status, is the client's own page: it must
+// load index.html's entry script, ask not to be indexed and name no canonical address. #3183: and no file
+// may come near Cloudflare Workers' cap on one asset, nor ship the engine uncompressed (check-assets.mjs).
 //
 // Exits 1, listing every problem, when anything is missing.
 
@@ -27,6 +30,8 @@ import { parseEnv } from "node:util";
 
 import { loadEnv } from "vite";
 
+import { assetProblems } from "./check-assets.mjs";
+
 const WEB = fileURLToPath(new URL("..", import.meta.url));
 const args = process.argv.slice(2);
 const staging = args.includes("--staging");
@@ -35,6 +40,8 @@ const file = staging ? ".env.staging" : ".env.production";
 
 const REQUIRED = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY", "VITE_SERVER_HTTP_URL", "VITE_SERVER_WS_URL"];
 const SERVED = ["index.html", "404.html", "_redirects", "_headers", "sitemap.xml", "almanac/index.html"];
+/** The module script Vite's build puts in index.html: the client's entry. */
+const ENTRY = /<script\b[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/u;
 
 const preset = Object.fromEntries(Object.entries(process.env).filter(([name]) => name.startsWith("VITE_")));
 const env = {
@@ -57,6 +64,19 @@ for (const [name, value] of Object.entries(preset)) {
 for (const served of SERVED) {
   if (!existsSync(join(dist, served))) problems.push(`${served} is missing from ${dist}`);
 }
+
+// R3127000: static-pages.ts writes 404.html from index.html; a 404 that lost the entry script, or that
+// crawlers may index or that names a canonical address, is not that page. A missing file is reported above.
+const page = (name) => (existsSync(join(dist, name)) ? readFileSync(join(dist, name), "utf8") : "");
+const entry = ENTRY.exec(page("index.html"))?.[1];
+const notFound = page("404.html");
+if (entry === undefined) {
+  if (existsSync(join(dist, "index.html"))) problems.push("index.html loads no module script");
+} else if (notFound !== "" && !notFound.includes(`src="${entry}"`)) {
+  problems.push(`404.html does not load the client's entry script (${entry})`);
+}
+if (notFound !== "" && !notFound.includes('<meta name="robots" content="noindex" />')) problems.push("404.html is not noindex");
+if (/rel="canonical"/u.test(notFound)) problems.push("404.html names a canonical address");
 
 const assets = join(dist, "assets");
 const scripts = existsSync(assets) ? readdirSync(assets).filter((name) => name.endsWith(".js")) : [];
@@ -84,6 +104,9 @@ for (const name of ["VITE_SUPABASE_URL", "VITE_SERVER_WS_URL"]) {
 }
 const left = /%[A-Z][A-Z0-9_]*%/u.exec(headers)?.[0];
 if (left !== undefined) problems.push(`_headers still holds ${left}, which the build did not fill`);
+
+// #3183: what `wrangler deploy` would refuse (a file over Workers' cap on one asset), or an uncompressed module.
+if (existsSync(dist)) problems.push(...assetProblems(dist));
 
 if (problems.length > 0) {
   console.error(`check-production-bundle: this build must not be deployed (${problems.length} problem(s)):`);

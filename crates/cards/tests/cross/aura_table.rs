@@ -1,8 +1,8 @@
 //! #892: `layers::AuraTable` over the shipped auras — Jlockeed's Weapons (core-014), Spikey Pillow
-//! (core-065-1) and Siphon Squad (classic-088), kept in Rust, and Big D-fender (core-001) and
-//! Suppressive Aura (core-046), in Luau — reads every unit as `layers::unit_view` reads it alone, from
-//! both sides' units and backrows: a Vanilla'd source projects nothing (§6.1, §6.3) and a card dormant
-//! under a Stack takes no aura (§3.2, R13).
+//! (core-065-1), Siphon Squad (classic-088), Big D-fender (core-001) and Suppressive Aura (core-046) —
+//! reads every unit as `layers::unit_view` reads it alone, from both sides' units and backrows: a
+//! Vanilla'd source projects nothing (§6.1, §6.3) and a card dormant under a Stack takes no aura (§3.2,
+//! R13).
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -72,18 +72,18 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         (
             "p1 lane 1 Mr. Vanilla",
             s.unit_at(P1, 1),
-            view(6, 3, armed(&[]), 0, Position::Atk),
+            view(5, 3, armed(&[]), 0, Position::Atk),
         ),
         (
             "p1 lane 2 Big D-fender",
             s.unit_at(P1, 2),
-            view(2, 6, armed(&[]), 0, Position::Atk),
+            view(1, 6, armed(&[]), 0, Position::Atk),
         ),
         (
             "p1 lane 3 Midrange Menace",
             s.unit_at(P1, 3),
             view(
-                11,
+                10,
                 8,
                 vec![
                     Keyword::Taunt,
@@ -99,7 +99,7 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         (
             "p1 lane 4 Back Breaker",
             s.unit_at(P1, 4),
-            view(5, 1, armed(&[Keyword::Stack]), 0, Position::Atk),
+            view(4, 1, armed(&[Keyword::Stack]), 0, Position::Atk),
         ),
         (
             "p1 dormant Mr. Vanilla",

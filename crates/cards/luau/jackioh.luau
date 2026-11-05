@@ -320,6 +320,7 @@ complicated: boolean?,
 everySet: boolean?,
 dealsDamage: boolean?,
 keywords: {KeywordKind}?,
+turnHook: TurnHookFilter?,
 }
 
 export type CellScope = {
@@ -647,6 +648,7 @@ player: PlayerSpec?,
 
 export type DiscardHandAtTurnEndArgs = {
 turn: DiscardHandTurn,
+count: number?,
 }
 
 export type DiscardHandTurn = "this" | "next"
@@ -2410,6 +2412,7 @@ carrier: boolean?,
 fusesCarried: boolean?,
 radiantPlaysTagged: {Tag}?,
 copiesLastSpell: boolean?,
+copyFallback: string?,
 cantBeAttacked: boolean?,
 attackedOnlyFromLane: boolean?,
 cantAttackOrBeAttacked: boolean?,
@@ -2535,7 +2538,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,
@@ -2712,6 +2715,8 @@ delta: number,
 } | {
 ["kind"]: "none",
 }
+
+export type TurnHookFilter = "start" | "end" | "either"
 
 export type TurnView = {
 number: number,
@@ -4403,12 +4408,12 @@ J.config = {
 	CALL_TO_CHAOS_ETERNAL_CAP = 3,
 	CAST_ON_DRAW_CHAIN_CAP = 20,
 	CHAIN_OF_THOUGHT_REPEATS = 4,
-	CHAOS_MED_ACCLAIMED = 3,
+	CHAOS_MED_ACCLAIMED = 2,
 	CHAOS_MED_CN_CARDS = 2,
 	CHAOS_MED_COST = 0,
-	CHAOS_MED_FUSE_COPIES = 2,
-	CHAOS_MED_HEAL = 6,
-	CHAOS_MED_HERO_ARMOR = 6,
+	CHAOS_MED_FUSE_COPIES = 1,
+	CHAOS_MED_HEAL = 5,
+	CHAOS_MED_HERO_ARMOR = 5,
 	CHAOS_MED_NERFS = 1,
 	CHAOS_MED_PRIME_CARDS = 2,
 	CRAFTED_CARD_COST = 0,

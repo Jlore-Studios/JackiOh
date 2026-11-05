@@ -1,10 +1,11 @@
 //! `golden record` then `golden check` on the built `jackioh` (#1641, #2578): five recorded games
 //! replay clean, and a state hash doctored in the first is named by seed, step, hash and action, with
-//! exit 1; `golden check` with no file folds the hotseat fixture alone; and `golden bless`, retired with
-//! the 240 committed games, fails pointing to `golden record`.
+//! exit 1; `--force` puts the cards named in both decks of every game recorded (#559); `golden check`
+//! with no file folds the hotseat fixture alone; and `golden bless`, retired with the 240 committed
+//! games, fails pointing to `golden record`.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use serde_json::Value;
@@ -12,6 +13,9 @@ use serde_json::Value;
 use jackioh_engine::testkit::golden::HOTSEAT_HASH;
 
 const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
+
+/// Two Core cards, forced into every deck.
+const FORCED: [&str; 2] = ["core-055", "core-024"];
 
 /// A directory for one test, empty, under the temporary directory.
 fn scratch(test: &str) -> PathBuf {
@@ -83,6 +87,75 @@ fn golden_record_then_check_file_replays_clean_and_a_doctored_state_hash_is_name
     assert!(out.contains("1 diverged"), "{out}");
 
     let _ = fs::remove_dir_all(&dir);
+}
+
+fn record(seeds: &str, force: &str, out: &Path) {
+    let output = jackioh(&[
+        "golden",
+        "record",
+        "--seeds",
+        seeds,
+        "--force",
+        force,
+        "--out",
+        out.to_str().unwrap(),
+    ]);
+    assert!(output.status.success(), "{}{}", stdout(&output), stderr(&output));
+}
+
+#[test]
+fn golden_record_forces_the_cards_into_both_decks_of_every_game_and_replays_clean() {
+    let dir = scratch("record");
+    let file = dir.join("forced.jsonl");
+    // One plain seed and two handicapped ones, whose decks differ in size.
+    record("200..202", &FORCED.join(","), &file);
+
+    let text = fs::read_to_string(&file).unwrap();
+    let games: Vec<Value> = text
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(games.len(), 3);
+    for game in &games {
+        for seat in 0..2 {
+            let deck: Vec<&str> = game["args"]["decks"][seat]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| id.as_str().unwrap())
+                .collect();
+            for id in FORCED {
+                assert!(
+                    deck.contains(&id),
+                    "{} seat {seat}: no {id} in {deck:?}",
+                    game["seed"]
+                );
+            }
+            let mut sorted = deck.clone();
+            sorted.sort_unstable();
+            sorted.dedup();
+            assert_eq!(
+                sorted.len(),
+                deck.len(),
+                "{} seat {seat}: a card twice",
+                game["seed"]
+            );
+        }
+    }
+
+    let checked = jackioh(&["golden", "check", "--file", file.to_str().unwrap()]);
+    assert!(
+        checked.status.success(),
+        "{}{}",
+        stdout(&checked),
+        stderr(&checked)
+    );
+    assert!(
+        stdout(&checked).contains("3 of 3 games replayed identically"),
+        "{}",
+        stdout(&checked)
+    );
+    fs::remove_dir_all(&dir).unwrap();
 }
 
 #[test]

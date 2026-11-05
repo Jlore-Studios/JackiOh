@@ -1,4 +1,4 @@
-//! S #47 Circadian Fullcycler (SPEC §8.10 row 47): (3) Field Spell ((2) with Brittle 5 until #2657), Epic, a card of the Stinkyscape set.
+//! S #47 Circadian Fullcycler (SPEC §8.10 row 47): (4) Field Spell ((3) until #3041; (2) with Brittle 5 until #2657), Epic, a card of the Stinkyscape set.
 //!   Base:    "Brittle 3. Aura: The AI plays each of your turns. End of turn: Summon a Drone Corvette."
 //!   Radiant: "Brittle 3. Aura: The AI plays each of your turns. End of turn: Summon a Radiant Drone
 //!             Corvette."
@@ -107,9 +107,10 @@ mod tests {
     #[test]
     fn r1844000_played_mid_turn_it_waits_for_your_next_turn() {
         let mut s = scenario(json!({
-            "p1": { "hand": [FULLCYCLER, VANILLA], "library": filler(6) },
+            "p1": { "hand": [FULLCYCLER, VANILLA], "library": filler(6), "mana": 5 },
             "p2": { "hand": [FILLER, FILLER], "library": filler(6) },
         }));
+        // (4) leaves 1 of 5, enough for the Vanilla, so R82 does not end the turn as it is played.
         s.play(FULLCYCLER, json!({ "zone": 1 }));
         assert!(!engaged(s.last_events(), P1), "the turn it arrives is p1's own");
         assert_eq!(s.state().active, P1);
