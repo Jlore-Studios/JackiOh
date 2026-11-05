@@ -16312,9 +16312,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-05T23:27:25Z",
-      "owner_why": "its turn came (#3243, which it waited behind, closed), and the lane that approved it resolves it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-05T23:42:12Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-05T19:53:30Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
@@ -16962,7 +16962,7 @@
       }
     },
     "3250": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -16984,12 +16984,12 @@
       "interruptions": 0,
       "issue": 3229,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-6",
       "queued_at": "2026-11-05T23:27:25Z",
-      "run_id": "42111617440",
+      "run_id": "pending:44fd0cb1-1793922097",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17010,16 +17010,9 @@
         "run": "42099376094"
       },
       "source": "conflict",
-      "started_at": "2026-11-05T21:19:37Z",
+      "started_at": "2026-11-05T23:42:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-05T23:27:25Z",
-        "until": "2026-11-05T23:57:25Z",
-        "why": "#3243, which it waited behind, closed"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17355,9 +17348,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T23:41:22Z",
+    "at": "2026-11-05T23:42:12Z",
     "url": "",
-    "what": "revise #3245 on claude-8"
+    "what": "revise #3250 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T23:26:45Z",
