@@ -41,7 +41,7 @@ export const statsTestid = {
   /** R3022000: a card's tier (a table row's or a grid item's) and the line under the cards that says what tiers mean. */
   tierCell: "stats-tier-cell",
   tiersNote: "stats-tiers-note",
-  /** R3184000: under a tier, while the ranges show, the share of the card's Adjusted range inside it. */
+  /** R3184001: under a tier, with the ranges shown, the share of the card's Adjusted range inside it. */
   tierFit: "stats-tier-fit",
   /** R2895000: the Cards tab's Show 95% ranges toggle, a row's two ranges and the line that says what they mean. */
   rangesToggle: "stats-ranges-toggle",

@@ -1,10 +1,11 @@
-// Tests for the Created cards panel of /stats (SPEC §9.11, R2089000).
+// Tests for the Created cards panel of /stats (SPEC §9.11, R2089000) and its sorting (R3184002).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { PublicCreatedStat } from "../net/api.ts";
 import { CreatedPanel } from "./CreatedPanel.tsx";
+import { statsTestid } from "./testids.ts";
 
 const COIN: PublicCreatedStat = {
   id: "coin",
@@ -37,97 +38,112 @@ describe("CreatedPanel", () => {
   });
 });
 
-/** A Created card: its seats, and each figure as games and a rate (`[games, rate]`). */
-function stat(
-  id: string,
-  name: string,
-  used: [number, number | null],
-  notUsed: [number, number | null],
-  radiant: [number, number | null],
-  normal: [number, number | null],
-  delta: number | null,
-): PublicCreatedStat {
-  return {
-    ...COIN,
-    id,
-    name,
-    games: used[0] + notUsed[0],
-    createdPlayedGames: used[0],
-    createdPlayedWinRate: used[1],
-    createdNotPlayedGames: notUsed[0],
-    createdNotPlayedWinRate: notUsed[1],
-    createdPlayedRadiantGames: radiant[0],
-    createdPlayedRadiantWinRate: radiant[1],
-    createdPlayedNormalGames: normal[0],
-    createdPlayedNormalWinRate: normal[1],
-    createdPlayedDelta: delta,
-  };
-}
-
-describe("R3184000 sorting the Created cards", () => {
-  // In the server's order. Below the floor of 20: The Coin's Not used, Rush Token's Used Radiant and every Ghoul Token figure.
-  const ROWS = [
-    stat("coin", "The Coin", [30, 0.5], [10, 0.4], [0, null], [30, 0.5], null),
-    stat("rush", "Rush Token", [30, 0.6], [25, 0.52], [8, 0.75], [22, 0.545], 0.08),
-    stat("sheep", "Sheep Token", [21, 0.7], [24, 0.45], [21, 0.7], [0, null], 0.25),
-    stat("ghoul", "Ghoul Token", [12, 0.9], [0, null], [0, null], [12, 0.9], null),
+describe("R3184002 the Created cards table sorts by every column", () => {
+  const made = (over: Partial<PublicCreatedStat>): PublicCreatedStat => ({ ...COIN, ...over });
+  // The server's order, and each row's figures with a floor of 20 games ("—" below it).
+  const ROWS: PublicCreatedStat[] = [
+    // Games 55; Used 60%, Not used 52%, Radiant — (8 seats), normal 55%, delta +8.
+    made({
+      id: "rush",
+      name: "Rush Token",
+      games: 55,
+      createdPlayedGames: 30,
+      createdPlayedWinRate: 0.6,
+      createdNotPlayedGames: 25,
+      createdNotPlayedWinRate: 0.52,
+      createdPlayedRadiantGames: 8,
+      createdPlayedRadiantWinRate: 0.75,
+      createdPlayedNormalGames: 22,
+      createdPlayedNormalWinRate: 12 / 22,
+      createdPlayedDelta: 0.08,
+    }),
+    // Games 45; Used 70%, Not used 50%, Radiant 65%, normal — (5 seats), delta +20.
+    made({
+      id: "sprite",
+      name: "Spark Sprite",
+      games: 45,
+      createdPlayedGames: 25,
+      createdPlayedWinRate: 0.7,
+      createdNotPlayedGames: 20,
+      createdNotPlayedWinRate: 0.5,
+      createdPlayedRadiantGames: 20,
+      createdPlayedRadiantWinRate: 0.65,
+      createdPlayedNormalGames: 5,
+      createdPlayedNormalWinRate: 0.6,
+      createdPlayedDelta: 0.2,
+    }),
+    // Games 45, as many as Spark Sprite; Used 50%, Not used — (15 seats), Radiant —, normal 50%, no delta.
+    made({ games: 45, createdNotPlayedGames: 15, createdPlayedNormalGames: 30, createdPlayedNormalWinRate: 0.5 }),
+    // Below the floor: every figure "—".
+    made({
+      id: "ember",
+      name: "Ember",
+      games: 12,
+      createdPlayedGames: 7,
+      createdPlayedWinRate: 0.9,
+      createdNotPlayedGames: 5,
+      createdNotPlayedWinRate: 0.2,
+      createdPlayedRadiantGames: 2,
+      createdPlayedRadiantWinRate: 1,
+      createdPlayedNormalGames: 5,
+      createdPlayedNormalWinRate: 0.8,
+      createdPlayedDelta: null,
+      hasEnoughGames: false,
+    }),
   ];
 
-  function renderRows(): HTMLElement {
+  function renderTable(): { headers: () => HTMLElement[]; order: () => (string | null)[] } {
     render(<CreatedPanel created={ROWS} minSample={20} nameOf={(_id, name) => name} />);
-    return screen.getByRole("table");
+    const table = screen.getByTestId(statsTestid.createdTable);
+    return {
+      headers: () => within(table).getAllByRole("columnheader"),
+      order: () => [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id")),
+    };
   }
 
-  const order = (table: HTMLElement): (string | null)[] =>
-    [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
-
-  it("R3184000 keeps the server's order until a header is clicked", () => {
-    const table = renderRows();
-    expect(order(table)).toEqual(["coin", "rush", "sheep", "ghoul"]);
-    for (const header of within(table).getAllByRole("columnheader")) {
+  it("R3184002 keeps the server's order until a header is pressed, every header unsorted", () => {
+    const { headers, order } = renderTable();
+    expect(order()).toEqual(["rush", "sprite", "coin", "ember"]);
+    for (const header of headers()) {
       expect(header).toHaveAttribute("aria-sort", "none");
       expect(header.textContent).not.toMatch(/[↑↓]/);
     }
   });
 
-  it("R3184000 sorts by every column both ways, high first on a first click, a row with no figure last", () => {
-    const table = renderRows();
-    // Each column's order on a first click, then a second.
-    const expected: [string, string[], string[]][] = [
-      ["Games", ["rush", "sheep", "coin", "ghoul"], ["ghoul", "coin", "sheep", "rush"]],
-      ["Used", ["sheep", "rush", "coin", "ghoul"], ["coin", "rush", "sheep", "ghoul"]],
-      ["Not used", ["rush", "sheep", "coin", "ghoul"], ["sheep", "rush", "coin", "ghoul"]],
-      ["Used Radiant", ["sheep", "coin", "rush", "ghoul"], ["sheep", "coin", "rush", "ghoul"]],
-      ["Used normal", ["rush", "coin", "sheep", "ghoul"], ["coin", "rush", "sheep", "ghoul"]],
-      ["Used vs not used", ["sheep", "rush", "coin", "ghoul"], ["rush", "sheep", "coin", "ghoul"]],
+  it("R3184002 a figure's first press sorts descending and the next ascending, a row with none last either way", () => {
+    const { headers, order } = renderTable();
+    // Columns: Card, Games, Used, Not used, Used Radiant, Used normal, Used vs not used.
+    const cases: [number, string, (string | null)[], (string | null)[]][] = [
+      // Games: Spark Sprite and The Coin tie, and keep the server's order both ways.
+      [1, "Games", ["rush", "sprite", "coin", "ember"], ["ember", "sprite", "coin", "rush"]],
+      [2, "Used", ["sprite", "rush", "coin", "ember"], ["coin", "rush", "sprite", "ember"]],
+      [3, "Not used", ["rush", "sprite", "coin", "ember"], ["sprite", "rush", "coin", "ember"]],
+      [4, "Used Radiant", ["sprite", "rush", "coin", "ember"], ["sprite", "rush", "coin", "ember"]],
+      [5, "Used normal", ["rush", "coin", "sprite", "ember"], ["coin", "rush", "sprite", "ember"]],
+      [6, "Used vs not used", ["sprite", "rush", "coin", "ember"], ["rush", "sprite", "coin", "ember"]],
     ];
-    for (const [label, first, second] of expected) {
-      const header = within(table).getByRole("columnheader", { name: new RegExp(`^${label}( [↑↓])?$`) });
-      fireEvent.click(header);
-      expect(order(table), `${label} descending`).toEqual(first);
-      expect(header).toHaveAttribute("aria-sort", "descending");
-      expect(header).toHaveTextContent(`${label} ↓`);
-      fireEvent.click(header);
-      expect(order(table), `${label} ascending`).toEqual(second);
-      expect(header).toHaveAttribute("aria-sort", "ascending");
-      expect(header).toHaveTextContent(`${label} ↑`);
+    for (const [at, label, descending, ascending] of cases) {
+      fireEvent.click(headers()[at]!);
+      expect(headers()[at]).toHaveAttribute("aria-sort", "descending");
+      expect(headers()[at]).toHaveTextContent(`${label} ↓`);
+      expect(order()).toEqual(descending);
+      fireEvent.click(headers()[at]!);
+      expect(headers()[at]).toHaveAttribute("aria-sort", "ascending");
+      expect(headers()[at]).toHaveTextContent(`${label} ↑`);
+      expect(order()).toEqual(ascending);
+      // Only the pressed header is sorted.
+      expect(headers().filter((header) => header.getAttribute("aria-sort") !== "none")).toEqual([headers()[at]]);
     }
   });
 
-  it("R3184000 sorts by name A to Z first, as the page shows it, and the keyboard sorts as a click does", () => {
-    const table = renderRows();
-    const card = within(table).getByRole("columnheader", { name: /^Card/ });
-    fireEvent.keyDown(card, { key: "Enter" });
-    expect(order(table)).toEqual(["ghoul", "rush", "sheep", "coin"]);
-    expect(card).toHaveAttribute("aria-sort", "ascending");
-    fireEvent.keyDown(card, { key: " " });
-    expect(order(table)).toEqual(["coin", "sheep", "rush", "ghoul"]);
-    expect(card).toHaveAttribute("aria-sort", "descending");
-
-    // Another column takes the sort over: only its header holds it.
-    const games = within(table).getByRole("columnheader", { name: /^Games/ });
-    fireEvent.click(games);
-    expect(card).toHaveAttribute("aria-sort", "none");
-    expect(games).toHaveAttribute("aria-sort", "descending");
+  it("R3184002 the card's name sorts ascending first, and the keyboard sorts as a press does", () => {
+    const { headers, order } = renderTable();
+    fireEvent.keyDown(headers()[0]!, { key: "Enter" });
+    expect(headers()[0]).toHaveAttribute("aria-sort", "ascending");
+    expect(headers()[0]).toHaveTextContent("Card ↑");
+    expect(order()).toEqual(["ember", "rush", "sprite", "coin"]);
+    fireEvent.keyDown(headers()[0]!, { key: " " });
+    expect(headers()[0]).toHaveAttribute("aria-sort", "descending");
+    expect(order()).toEqual(["coin", "sprite", "rush", "ember"]);
   });
 });

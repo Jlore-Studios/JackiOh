@@ -1,58 +1,88 @@
-// Tests for a card's tier fit on /stats (SPEC §9.11, R3184000).
+// Tests for a card's tier fit on /stats (SPEC §9.11, R3184001).
 
 import { describe, expect, it } from "vitest";
 
-import { tierBounds, tierFit } from "./tierFit.ts";
+import type { PublicCardStat, PublicStatsTiers } from "../net/api.ts";
+import { cardTierFit, tierBand, tierFit } from "./tierFit.ts";
 
-/** The server's band (R3022000): 45% to 55%. */
-const BAND = { bandLow: 0.45, bandHigh: 0.55 };
+/** R3022000's band, 45% to 55%: A to D are 2.5 points each. */
+const LOW = 0.45;
+const HIGH = 0.55;
+const TIERS: PublicStatsTiers = { center: 0, spread: 0.05, cards: 0, bandLow: LOW, bandHigh: HIGH };
 
-describe("R3184000 tier fit", () => {
-  it("R3184000 splits the band into quarters from the top, with S and F open beyond it", () => {
-    const close = (tier: "S" | "A" | "B" | "C" | "D" | "F"): [number, number] => {
-      const { low, high } = tierBounds(tier, BAND);
-      return [Number(low.toFixed(4)), Number(high.toFixed(4))];
-    };
-    expect(close("S")).toEqual([0.55, Number.POSITIVE_INFINITY]);
-    expect(close("A")).toEqual([0.525, 0.55]);
-    expect(close("B")).toEqual([0.5, 0.525]);
-    expect(close("C")).toEqual([0.475, 0.5]);
-    expect(close("D")).toEqual([0.45, 0.475]);
-    expect(close("F")).toEqual([Number.NEGATIVE_INFINITY, 0.45]);
+/** A card with enough games, tier B, its Adjusted range 49% to 53%. */
+const CARD: PublicCardStat = {
+  id: "core-001",
+  name: "Spark Pup",
+  cost: 1,
+  rarity: "Common",
+  set: "core",
+  games: 50,
+  winRate: 0.6,
+  drawnGames: 40,
+  drawnWinRate: 0.65,
+  playedGames: 30,
+  playedWinRate: 0.7,
+  drawnNotPlayedGames: 10,
+  drawnNotPlayedWinRate: 0.5,
+  playedDelta: 0.2,
+  adjustedWinRate: 0.51,
+  adjustedLow: 0.49,
+  adjustedHigh: 0.53,
+  tier: "B",
+  playRate: 0.5,
+  hasEnoughGames: true,
+};
+
+describe("R3184001 tier fit", () => {
+  it("R3184001 a tier's band: S and F open beyond the band's edges, A to D its quarters from the top", () => {
+    expect(tierBand("S", LOW, HIGH)).toEqual([HIGH, Infinity]);
+    expect(tierBand("F", LOW, HIGH)).toEqual([-Infinity, LOW]);
+    for (const [tier, from, to] of [
+      ["A", 0.525, 0.55],
+      ["B", 0.5, 0.525],
+      ["C", 0.475, 0.5],
+      ["D", 0.45, 0.475],
+    ] as const) {
+      const [low, high] = tierBand(tier, LOW, HIGH);
+      expect(low).toBeCloseTo(from, 12);
+      expect(high).toBeCloseTo(to, 12);
+    }
   });
 
-  it("R3184000 is the share of the range inside the tier's quarter, to a whole percent", () => {
-    // B is 50% to 52.5%: a range of 49% to 54% has 2.5 of its 5 points inside.
-    expect(tierFit("B", 0.49, 0.54, BAND)).toBe(50);
-    // Wholly inside.
-    expect(tierFit("B", 0.505, 0.52, BAND)).toBe(100);
-    // Wholly outside.
-    expect(tierFit("A", 0.4, 0.5, BAND)).toBe(0);
-    // 47.5% to 50% of 46% to 52%: 2.5 of 6 points, 41.7%, shown 42%.
-    expect(tierFit("C", 0.46, 0.52, BAND)).toBe(42);
+  it("R3184001 the share of the range inside its tier's band", () => {
+    // B: 50% to 52.5% of a 49% to 53% range, 2.5 of 4 points.
+    expect(tierFit("B", 0.49, 0.53, LOW, HIGH)).toBeCloseTo(0.625, 12);
+    // Wholly inside, and wholly outside (an A whose range sits in B).
+    expect(tierFit("B", 0.505, 0.52, LOW, HIGH)).toBeCloseTo(1, 12);
+    expect(tierFit("A", 0.5, 0.52, LOW, HIGH)).toBe(0);
+    // An A above the band whose range still reaches 50%: only 52.5% to 55% of 49% to 63% is A's.
+    expect(tierFit("A", 0.49, 0.63, LOW, HIGH)).toBeCloseTo(0.025 / 0.14, 12);
   });
 
-  it("R3184000 reads S's stretch as the band's top and up, and F's as its bottom and down", () => {
-    // 53% to 63%: 8 of 10 points above 55%.
-    expect(tierFit("S", 0.53, 0.63, BAND)).toBe(80);
-    expect(tierFit("S", 0.56, 0.7, BAND)).toBe(100);
-    // 40% to 46%: 5 of 6 points below 45%.
-    expect(tierFit("F", 0.4, 0.46, BAND)).toBe(83);
-    expect(tierFit("F", 0.3, 0.44, BAND)).toBe(100);
+  it("R3184001 S and F are open-ended: all of the range past the band's edge is theirs", () => {
+    // S: 55% up, so 6 of 53% to 61%'s 8 points; a range wholly above the band is wholly S.
+    expect(tierFit("S", 0.53, 0.61, LOW, HIGH)).toBeCloseTo(0.75, 12);
+    expect(tierFit("S", 0.56, 0.7, LOW, HIGH)).toBe(1);
+    // F: 45% down, so 7 of 38% to 46%'s 8 points.
+    expect(tierFit("F", 0.38, 0.46, LOW, HIGH)).toBeCloseTo(0.875, 12);
+    expect(tierFit("F", 0.3, 0.44, LOW, HIGH)).toBe(1);
   });
 
-  it("R3184000 a range of no width is all inside its tier or all outside it", () => {
-    expect(tierFit("B", 0.51, 0.51, BAND)).toBe(100);
-    expect(tierFit("A", 0.51, 0.51, BAND)).toBe(0);
-    expect(tierFit("S", 0.6, 0.6, BAND)).toBe(100);
-    expect(tierFit("F", 0.6, 0.6, BAND)).toBe(0);
+  it("R3184001 a range of no width is wholly in its tier or wholly out", () => {
+    expect(tierFit("B", 0.51, 0.51, LOW, HIGH)).toBe(1);
+    expect(tierFit("B", 0.53, 0.53, LOW, HIGH)).toBe(0);
+    expect(tierFit("S", 0.6, 0.6, LOW, HIGH)).toBe(1);
+    expect(tierFit("F", 0.46, 0.46, LOW, HIGH)).toBe(0);
   });
 
-  it("R3184000 is nothing with no tier, no range or no band", () => {
-    expect(tierFit(null, 0.49, 0.54, BAND)).toBeNull();
-    expect(tierFit(undefined, 0.49, 0.54, BAND)).toBeNull();
-    expect(tierFit("B", null, 0.54, BAND)).toBeNull();
-    expect(tierFit("B", 0.49, undefined, BAND)).toBeNull();
-    expect(tierFit("B", 0.49, 0.54, undefined)).toBeNull();
+  it("R3184001 a card's fit, and none below the floor, with no tier, no range or no band", () => {
+    expect(cardTierFit(CARD, TIERS)).toBeCloseTo(0.625, 12);
+    expect(cardTierFit({ ...CARD, hasEnoughGames: false }, TIERS)).toBeNull();
+    expect(cardTierFit({ ...CARD, tier: null }, TIERS)).toBeNull();
+    expect(cardTierFit({ ...CARD, tier: undefined }, TIERS)).toBeNull();
+    expect(cardTierFit({ ...CARD, adjustedLow: null }, TIERS)).toBeNull();
+    expect(cardTierFit({ ...CARD, adjustedHigh: undefined }, TIERS)).toBeNull();
+    expect(cardTierFit(CARD, undefined)).toBeNull();
   });
 });

@@ -1,43 +1,35 @@
-// R3184000: how firmly a card sits in its tier on /stats (SPEC §9.11, issue #3184): the share of its Adjusted 95%
-// range that falls inside its tier's stretch of rates. The stretches come from the server's band (`tiers.bandLow`
-// to `tiers.bandHigh`, R3022000): S is the band's top and up, F its bottom and down, and A, B, C and D split the
-// band into quarters from the top.
+// How firmly a card sits in its tier on /stats (SPEC §9.11, R3184001): the share of its Adjusted 95% range
+// (R2895000) that lies inside its tier's band (R3022000). The tiers and ranges are the server's; this only
+// measures one against the other (CLAUDE.md rule 7).
 
+import type { PublicCardStat, PublicStatsTiers } from "../net/api.ts";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 
-/** R3022000: the tiers inside the band, from the top; each holds an equal share of it. */
+/** R3022000: the tiers that split the band into equal parts, from the top. */
 const BAND_TIERS: readonly CardTier[] = ["A", "B", "C", "D"];
 
-/** Unit conversion, not configuration: a share of 0..1 as a percentage. */
-const PERCENT = 100;
-
-/** The band the tiers split, as fractions: `PublicStatsTiers`' `bandLow` and `bandHigh`. */
-export type TierBand = { bandLow: number; bandHigh: number };
-
-/** A tier's stretch of rates, as fractions; S's has no top and F's no bottom. */
-export function tierBounds(tier: CardTier, band: TierBand): { low: number; high: number } {
-  if (tier === "S") return { low: band.bandHigh, high: Number.POSITIVE_INFINITY };
-  if (tier === "F") return { low: Number.NEGATIVE_INFINITY, high: band.bandLow };
-  const step = (band.bandHigh - band.bandLow) / BAND_TIERS.length;
-  const from = BAND_TIERS.indexOf(tier);
-  return { low: band.bandHigh - (from + 1) * step, high: band.bandHigh - from * step };
+/** R3184001: a tier's band, low to high: S from the band's top up, F from its bottom down, A to D its quarters from the top. */
+export function tierBand(tier: CardTier, bandLow: number, bandHigh: number): readonly [number, number] {
+  if (tier === "S") return [bandHigh, Infinity];
+  if (tier === "F") return [-Infinity, bandLow];
+  const step = (bandHigh - bandLow) / BAND_TIERS.length;
+  const top = bandHigh - BAND_TIERS.indexOf(tier) * step;
+  return [top - step, top];
 }
 
 /**
- * The share of the range `low` to `high` inside `tier`'s stretch, to a whole percent: the overlap of the two over
- * the range's width. A range of no width is the rate itself, all inside (100) or all outside (0). Null when there is
- * no tier, no range or no band.
+ * R3184001: the share, 0 to 1, of the range `low` to `high` inside `tier`'s band. A range of no width is its one
+ * point, the rate: wholly inside the band or wholly outside it.
  */
-export function tierFit(
-  tier: CardTier | null | undefined,
-  low: number | null | undefined,
-  high: number | null | undefined,
-  band: TierBand | null | undefined,
-): number | null {
-  if (!tier || typeof low !== "number" || typeof high !== "number" || !band) return null;
-  const bounds = tierBounds(tier, band);
-  const width = high - low;
-  if (width <= 0) return low >= bounds.low && low <= bounds.high ? PERCENT : 0;
-  const overlap = Math.max(0, Math.min(high, bounds.high) - Math.max(low, bounds.low));
-  return Math.round((overlap / width) * PERCENT);
+export function tierFit(tier: CardTier, low: number, high: number, bandLow: number, bandHigh: number): number {
+  const [from, to] = tierBand(tier, bandLow, bandHigh);
+  if (high <= low) return low >= from && low <= to ? 1 : 0;
+  return Math.max(0, Math.min(high, to) - Math.max(low, from)) / (high - low);
+}
+
+/** R3184001: a card's tier fit, or null for a card below the floor, with no tier or no Adjusted range, or with no band. */
+export function cardTierFit(card: PublicCardStat, tiers: PublicStatsTiers | undefined): number | null {
+  if (!card.hasEnoughGames || !card.tier || !tiers) return null;
+  if (typeof card.adjustedLow !== "number" || typeof card.adjustedHigh !== "number") return null;
+  return tierFit(card.tier, card.adjustedLow, card.adjustedHigh, tiers.bandLow, tiers.bandHigh);
 }

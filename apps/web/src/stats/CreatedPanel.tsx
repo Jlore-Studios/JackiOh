@@ -1,10 +1,10 @@
 // The Created cards of /stats (SPEC §9.11, R2089000), below the Cards tab's table: the cards made during a
 // game (tokens, generated and Discovered cards, copies, transforms' results, The Coin). A row counts the seats
 // that made a copy: Used, split by a copy Radiant at its first use, and Not used, the baseline. The figures and
-// R654's floor ("—" below it) are the server's (CLAUDE.md rule 7), and so is the order until a column's header is
-// clicked: each sorts the rows, a row with no figure in it last (R3184000). It scrolls, never fixed (R1646000).
+// R654's floor ("—" below it) are the server's (CLAUDE.md rule 7); the rows keep the server's order until a
+// header sorts them (R3184002). It scrolls, never fixed (R1646000).
 
-import { useId, useState, type KeyboardEvent, type ReactElement } from "react";
+import { useId, useState, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import type { PublicCreatedStat } from "../net/api.ts";
 import { faceRate, formatPlayedDelta } from "./model.ts";
@@ -20,23 +20,14 @@ export function rateText(games: number, rate: number | null, minSample: number):
   return shown === null ? "—" : `${Math.round(shown * PERCENT)}%`;
 }
 
-/** R3184000: the table's columns, each a sort. */
-const CREATED_COLUMNS = ["name", "games", "used", "notUsed", "usedRadiant", "usedNormal", "delta"] as const;
-type CreatedColumn = (typeof CREATED_COLUMNS)[number];
-type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
+/** R3184002: the Created table's columns, every one sortable. */
+export type CreatedColumn = "name" | "games" | "used" | "notUsed" | "usedRadiant" | "usedNormal" | "delta";
 
-const CREATED_LABELS: Record<CreatedColumn, string> = {
-  name: "Card",
-  games: "Games",
-  used: "Used",
-  notUsed: "Not used",
-  usedRadiant: "Used Radiant",
-  usedNormal: "Used normal",
-  delta: "Used vs not used",
-};
+/** R3184002: a header's sort: the column and its direction. */
+export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
 
-/** R3184000: a row's figure in a numeric column as it is shown, null when it shows "—". */
-function figureOf(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, minSample: number): number | null {
+/** R3184002: a column's figure as the row shows it: its games, or its rate or delta, null for "—". */
+function figure(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, minSample: number): number | null {
   switch (col) {
     case "games":
       return card.games;
@@ -54,8 +45,8 @@ function figureOf(card: PublicCreatedStat, col: Exclude<CreatedColumn, "name">, 
 }
 
 /**
- * R3184000: the rows in `sort`'s order, the server's with none. A name sorts as the page shows it; a row with no
- * figure in the column (below the floor, or none) goes after those with one either way, and ties keep the server's order.
+ * R3184002: the rows in a header's order: a row with no figure (below the floor, or none) after those with one,
+ * either way, and rows that tie in the server's order. No sort keeps the server's order.
  */
 export function sortCreated(
   created: readonly PublicCreatedStat[],
@@ -64,21 +55,48 @@ export function sortCreated(
   nameOf: (id: string, name: string) => string,
   language?: string,
 ): PublicCreatedStat[] {
-  const rows = [...created];
-  if (sort === null) return rows;
+  if (sort === null) return [...created];
   const flip = sort.dir === "desc" ? -1 : 1;
   const { col } = sort;
-  if (col === "name") {
-    return rows.sort((a, b) => nameOf(a.id, a.name).localeCompare(nameOf(b.id, b.name), language) * flip);
-  }
-  return rows.sort((a, b) => {
-    const aFigure = figureOf(a, col, minSample);
-    const bFigure = figureOf(b, col, minSample);
-    if (aFigure !== null && bFigure === null) return -1;
-    if (aFigure === null && bFigure !== null) return 1;
-    if (aFigure === null || bFigure === null) return 0;
-    return (aFigure - bFigure) * flip;
+  return [...created].sort((a, b) => {
+    if (col === "name") return nameOf(a.id, a.name).localeCompare(nameOf(b.id, b.name), language) * flip;
+    const x = figure(a, col, minSample);
+    const y = figure(b, col, minSample);
+    if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+    return (x - y) * flip;
   });
+}
+
+/** R3184002: a sortable header: the first press sorts descending (a name ascending), the next flips it. */
+function SortHeader({
+  col,
+  label,
+  sort,
+  onSort,
+}: {
+  col: CreatedColumn;
+  label: string;
+  sort: CreatedSort | null;
+  onSort: (col: CreatedColumn) => void;
+}): ReactElement {
+  const dir = sort?.col === col ? sort.dir : null;
+  return (
+    <th
+      scope="col"
+      className="stats-th stats-th--sortable"
+      aria-sort={dir === null ? "none" : dir === "asc" ? "ascending" : "descending"}
+      onClick={() => onSort(col)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSort(col);
+        }
+      }}
+      tabIndex={0}
+    >
+      {dir === null ? label : `${label} ${dir === "asc" ? "↑" : "↓"}`}
+    </th>
+  );
 }
 
 export function CreatedPanel({
@@ -93,22 +111,17 @@ export function CreatedPanel({
 }): ReactElement | null {
   const locale = useLocale();
   const titleId = useId();
-  // R3184000: none until a header is clicked, the server's order.
   const [sort, setSort] = useState<CreatedSort | null>(null);
   if (created.length === 0) return null;
 
-  const rows = sortCreated(created, sort, minSample, nameOf, locale === "en" ? undefined : locale);
-  // A first click sorts a figure high to low and a name A to Z; a second click turns it round.
-  const sortBy = (col: CreatedColumn): void =>
+  const onSort = (col: CreatedColumn): void =>
     setSort((now) =>
-      now?.col === col ? { col, dir: now.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "name" ? "asc" : "desc" },
+      now?.col === col
+        ? { col, dir: now.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: col === "name" ? "asc" : "desc" },
     );
-  const onHeaderKey = (col: CreatedColumn) => (event: KeyboardEvent<HTMLTableCellElement>): void => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      sortBy(col);
-    }
-  };
+  const rows = sortCreated(created, sort, minSample, nameOf, locale === "en" ? undefined : locale);
+  const header = { sort, onSort };
 
   return (
     <section className="stats-created-panel" data-testid={statsTestid.createdPanel}>
@@ -123,23 +136,13 @@ export function CreatedPanel({
         <table className="stats-table" data-testid={statsTestid.createdTable}>
           <thead>
             <tr>
-              {CREATED_COLUMNS.map((col) => {
-                const active = sort?.col === col ? sort.dir : null;
-                return (
-                  <th
-                    key={col}
-                    scope="col"
-                    className="stats-th stats-th--sortable"
-                    aria-sort={active === null ? "none" : active === "asc" ? "ascending" : "descending"}
-                    onClick={() => sortBy(col)}
-                    onKeyDown={onHeaderKey(col)}
-                    tabIndex={0}
-                  >
-                    {t(CREATED_LABELS[col])}
-                    {active !== null && ` ${active === "asc" ? "↑" : "↓"}`}
-                  </th>
-                );
-              })}
+              <SortHeader col="name" label={t("Card")} {...header} />
+              <SortHeader col="games" label={t("Games")} {...header} />
+              <SortHeader col="used" label={t("Used")} {...header} />
+              <SortHeader col="notUsed" label={t("Not used")} {...header} />
+              <SortHeader col="usedRadiant" label={t("Used Radiant")} {...header} />
+              <SortHeader col="usedNormal" label={t("Used normal")} {...header} />
+              <SortHeader col="delta" label={t("Used vs not used")} {...header} />
             </tr>
           </thead>
           <tbody>

@@ -1,13 +1,13 @@
 // `/stats`: public card and player statistics, signed out and in (SPEC §9.11, R654), on three tabs: Cards
 // (the filters, not columns, cover cost, rarity and keyword, R2446000), Sets (R1966000) and Players (public
 // aggregates, fun stats from #125). No provisional banner and no reading notes (R2325000): the page never
-// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games". The Cards
-// tab shows no When drawn, Drawn vs not drawn, Radiant or Normal column: the Adjusted win rate reads a card
-// better (R3184000). The patch bar (R1973002): a patch is the window the cards share (R1973001), so a micro
-// is never a step of its own. The Cards tab also holds the games panel (R1994000), the Created cards
-// (R2089000) and, behind Show tokens, off by default, the tokens (R2370000). The card drill-down shows the
-// faces (a full-art card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn
-// curve and co-played synergy.
+// names a data source or the gate (R661). Below the per-row floor a row reads "not enough games". The Adjusted
+// win rate leads (R2777000), so the table shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000);
+// with the ranges shown, a tier says how much of the card's range is in it (R3184001). The patch bar
+// (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own. The
+// Cards tab also holds the games panel (R1994000), the Created cards (R2089000, sortable, R3184002) and,
+// behind Show tokens, off by default, the tokens (R2370000). The card drill-down shows the faces (a full-art
+// card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -50,7 +50,7 @@ import { neighbours, offeredPatches, patchIndex, patchName, patchTarget, type Pa
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { tierFit } from "../stats/tierFit.ts";
+import { cardTierFit } from "../stats/tierFit.ts";
 import { TokensPanel } from "../stats/TokensPanel.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
@@ -127,23 +127,10 @@ function setPercent(rate: number, signed = false): string {
 
 type TabKey = "cards" | "sets" | "players";
 type ViewKey = "table" | "grid";
-type SortColumn =
-  | "name"
-  | "games"
-  | "tier"
-  | "adjustedWinRate"
-  | "winRate"
-  | "playRate";
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
-const SORT_COLUMNS: readonly SortColumn[] = [
-  "name",
-  "games",
-  "tier",
-  "adjustedWinRate",
-  "winRate",
-  "playRate",
-] as const;
+const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
@@ -189,6 +176,16 @@ function percentText(fraction: number): string {
   return `${String(Number((fraction * 100).toFixed(1)))}%`;
 }
 
+/** R3184001: under a tier, the share of the card's Adjusted range inside the tier's band, to a whole percent; nothing without one. */
+function TierFitText({ fit }: { fit: number | null }): ReactElement | null {
+  if (fit === null) return null;
+  return (
+    <span className="stats-sample-hint stats-range" data-testid={statsTestid.tierFit}>
+      {`${Math.round(fit * 100)}%`}
+    </span>
+  );
+}
+
 /** R3022000: a card's tier chip, or "—" below the floor or from a server deployed before tiers. */
 function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid: string }): ReactElement {
   if (!tier) return <span data-testid={testid}>—</span>;
@@ -199,22 +196,13 @@ function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid:
   );
 }
 
-/** R3184000: under a tier chip, while the ranges show, how much of the card's Adjusted range lies inside its tier. */
-function TierFitText({ fit }: { fit: number | null }): ReactElement | null {
-  if (fit === null) return null;
-  return (
-    <span className="stats-sample-hint stats-range" data-testid={statsTestid.tierFit}>
-      {`${fit}%`}
-    </span>
-  );
-}
-
 /** R2777000: the table's default order, the adjusted win rate descending. */
 const DEFAULT_SORT: SortColumn = "adjustedWinRate";
 
 /**
  * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
- * `keyword`) is the default, the adjusted win rate descending (R2777000), its direction too.
+ * `keyword`, or R3184000's `drawnWinRate`, `drawnDelta`, `radiantWinRate` or `normalWinRate`) is the default,
+ * the adjusted win rate descending (R2777000), its direction too.
  */
 function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
   const asked = params.get("sort");
@@ -581,7 +569,7 @@ export default function StatsRoute(): ReactElement {
       shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
     list.sort((a, b) => {
       if (sortCol === "tier") {
-        // R3022000: by tier, S first descending; a card without one after those with one.
+        // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
         const aRank = tierRank(a.tier);
@@ -589,9 +577,9 @@ export default function StatsRoute(): ReactElement {
         if (aRank >= 0 && bRank < 0) return -1;
         if (aRank < 0 && bRank >= 0) return 1;
         if (aRank !== bRank) return (aRank - bRank) * flip;
-        // R3184000: within a tier by its fit, shown or not, a card with none after those with one; then by its adjusted rate.
-        const aFit = tierFit(a.tier, a.adjustedLow, a.adjustedHigh, tiers);
-        const bFit = tierFit(b.tier, b.adjustedLow, b.adjustedHigh, tiers);
+        // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
+        const aFit = cardTierFit(a, tiers);
+        const bFit = cardTierFit(b, tiers);
         if (aFit !== null && bFit === null) return -1;
         if (aFit === null && bFit !== null) return 1;
         if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
@@ -987,9 +975,7 @@ export default function StatsRoute(): ReactElement {
                         <dt>{t("Tier")}</dt>
                         <dd>
                           <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
-                          {showRanges && card.hasEnoughGames && (
-                            <TierFitText fit={tierFit(card.tier, card.adjustedLow, card.adjustedHigh, tiers)} />
-                          )}
+                          {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                         </dd>
                         <dt>{t("Adjusted")}</dt>
                         <dd>
@@ -1148,9 +1134,7 @@ export default function StatsRoute(): ReactElement {
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td">
                             <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
-                            {showRanges && card.hasEnoughGames && (
-                              <TierFitText fit={tierFit(card.tier, card.adjustedLow, card.adjustedHigh, tiers)} />
-                            )}
+                            {showRanges && <TierFitText fit={cardTierFit(card, tiers)} />}
                           </td>
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
                             {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
@@ -1220,8 +1204,7 @@ export default function StatsRoute(): ReactElement {
             {showRanges && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
               <p className="stats-sample-hint" data-testid={statsTestid.rangesNote}>
                 {t("A range is where the card's true rate most likely sits, 95% sure. Two cards whose ranges overlap may be no different.")}
-                {/* R3184000: what the percent under a tier is */}
-                {tiers && ` ${t("The percent under a tier is how much of the card's Adjusted range lies inside that tier.")}`}
+                {tiers && ` ${t("The percentage under a tier is how much of the card's Adjusted range lies inside that tier.")}`}
               </p>
             )}
 
