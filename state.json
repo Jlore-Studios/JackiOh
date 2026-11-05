@@ -17653,7 +17653,7 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-6",
-      "run_id": "pending:7f20bf5f-1793874451",
+      "run_id": "42010949915",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-05T10:28:06Z",
       "stop_requested": false,
