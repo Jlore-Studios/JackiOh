@@ -67,7 +67,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-046` | Suppressive Aura | Field Spell | cast bolt; aura void board | 1.28 | bolt | cast: the census agrees (bolt) |
 | `core-047` | Fig of Life | Spell | cast mend | 1.24 | none: no motif reads healed | cast: no census family reads healed, which mend (#2793) reads |
 | `core-048` | 5pek Controller | Spell | cast shift | 1.00 | none: no motif reads positionSwitched | cast: no census family reads swapped, rotated, positionSwitched and flickered, which shift (#2786) reads |
-| `core-049` | Snom Bunny Mind Control | Spell | cast tether Dark/curse | 1.45 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
+| `core-049` | Snom Bunny Mind Control | Spell | cast tether Dark/curse | 1.54 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
 | `core-050` | K-Pop Fanatic | Unit | none: no motif reads marked, its Allure; the mark's own row plays | — | bolt | the census's bolt is its Allured card's later kills; no motif reads `marked`, its Allure, and the mark's own row plays |
 | `core-051` | KY's Private Tutor | Spell | cast send Nerd/chalk | 1.35 | none: no motif reads promptAnswered | cast: the census reads its prompt; its Discover adds the card to the hand (addedToHand), which send (#2793) reads |
 | `core-051-1` | KY's Empty Notebook | Spell | cast send Nerd/ink | 0.97 | not in census | cast: a token the census never played; its cards shuffle in (shuffledIn), which send (#2793) reads, in Nerd's ink beside its Tutor's chalk |

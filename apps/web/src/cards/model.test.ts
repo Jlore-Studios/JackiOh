@@ -577,7 +577,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     const f = faceModel({ defId: fused.id, def: fused, radiant: false, liveCost: 4, inPlay: {} });
     expect(f).toMatchObject({ known: true, name: "Tempo Timmy + Corpse Eater", type: "Unit", tags: ["Human"] });
     expect(f.text.full).toBe(`${def("core-011").base.text}\n${def("core-089").base.text}`);
-    expect(f.keywords.map((keyword) => keyword.kind)).toEqual(["Rush", "First Strike"]);
+    expect(f.keywords.map((keyword) => keyword.kind)).toEqual(["Rush", "First Strike", "Brittle"]);
     expect(f.stats).toMatchObject({ attack: 5, health: 5 });
   });
 

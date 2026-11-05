@@ -1,9 +1,18 @@
-//! #65 Masochism Mask (SPEC §8.3, §6.2, §10.6, R18, R62).
+//! #65 Masochism Mask (SPEC §8.3, §6.2, §10.6, R18, R62, R3139001).
 //!
 //! Base: "Start of turn: choose one: exile the bottom card of your library, lose 3 health, or summon
-//! a Spikey Pillow". Radiant: "Choose twice from: nothing, exile bottom, lose 3, summon Spikey
-//! Pillow" — a restated clause, so it replaces the base's single pick (§8 Conventions); the
-//! Quickdraw tag and the start-of-turn timing are kept.
+//! a Spikey Pillow. After you take {downsides} downsides from this, make your hand Radiant". Radiant:
+//! "Choose twice from: nothing, exile bottom, lose 3, summon Spikey Pillow" — a restated clause, so it
+//! replaces the base's single pick (§8 Conventions); the Quickdraw tag, the start-of-turn timing and the
+//! last sentence are kept on both faces.
+//!
+//! A downside is a pick of the Mask's own Start-of-turn Choose that is not "nothing": exile the bottom card,
+//! lose health, summon a Spikey Pillow (R3139001). A count in the card's memory (`remember`, key
+//! `DOWNSIDES`) rises by one per downside, after the downside's own effect; at the `downsides`th the whole
+//! hand becomes Radiant (`make_hand_radiant`, the Call to Chaos effect, §6.3 Make Radiant) and the count
+//! restarts at 0, so it repeats every `downsides`. The Radiant face's two picks count one by one and its
+//! "nothing" counts none; the opponent's turn asks nothing, so counts none. The count lives on the
+//! instance, so it goes when the Mask leaves the field (R78). `script_v0_5_11o` keeps the Mask without it.
 //!
 //! §8.3's Engine cell: "Two sequential pending choices; 'lose' is not damage". §6.2: Quickdraw is
 //! the `quickdraw` static flag. §10.6, §10.1: each prompt is a `PendingChoice` re-entering a named
@@ -12,7 +21,7 @@
 //! R18: "lose 3 health" is not damage: `lose_health` skips the §4.4 pipeline. R62: start-of-turn
 //! triggers run before the draw, so "the bottom card" is the bottom before this turn's draw.
 
-use jackioh_engine::effects::{choose_mode, chosen_options, exile_bottom_of_library, lose_health, summon};
+use jackioh_engine::effects::{choose_mode, chosen_options, exile_bottom_of_library, lose_health, remember, summon};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-065";
@@ -25,6 +34,9 @@ const SPIKEY_PILLOW: &str = "core-065-1";
 const EXILE_BOTTOM: &str = "exile bottom";
 const SUMMON_PILLOW: &str = "summon Spikey Pillow";
 const NOTHING: &str = "nothing";
+
+/// The Mask's memory of the downsides taken since the hand last became Radiant (R3139001).
+const DOWNSIDES: &str = "downsides";
 
 /// "lose 3": the declared number `loss` (R386) as the card stands when the prompt opens.
 fn lose_option(ctx: &EffectContext<'_>) -> String {
@@ -57,12 +69,31 @@ fn effects_for(ctx: &EffectContext<'_>, option: Option<&str>) -> Vec<Effect> {
     }
 }
 
+/// One pick, answered: its effect, then, for a downside, the count and, at the `downsides`th, the whole
+/// hand made Radiant and the count back to 0 (R3139001). A downside is exactly a pick with an effect:
+/// "nothing" and a pick that named no option have none and count none.
+fn after_pick(ctx: &EffectContext<'_>, option: Option<&str>, counting: bool) -> Vec<Effect> {
+    let mut effects = effects_for(ctx, option);
+    if !counting || effects.is_empty() {
+        return effects;
+    }
+    let taken = recalled(ctx, DOWNSIDES).and_then(|stored| stored.as_i64()).map_or(0, |n| n as i32) + 1;
+    if taken >= param(ctx, "downsides") {
+        effects.push(subsystems::make_hand_radiant());
+        effects.push(remember(json_as(json!({ "key": DOWNSIDES, "value": 0 }))));
+    } else {
+        effects.push(remember(json_as(json!({ "key": DOWNSIDES, "value": taken }))));
+    }
+    effects
+}
+
 /// The answered pick: §10.6 delivers a mode selection in `ctx.targets`, which is what this reads.
 fn pick_of(ctx: &EffectContext) -> Option<String> {
     chosen_options(ctx).into_iter().next()
 }
 
-fn base() -> Script {
+/// `counting`: whether the downsides are counted toward the Radiant hand, since issue #3139.
+fn base(counting: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -77,16 +108,16 @@ fn base() -> Script {
         })),
         resume: IndexMap::from([(
             STEP_FIRST,
-            hook(|ctx| {
+            hook(move |ctx| {
                 let picked = pick_of(ctx);
-                effects_for(ctx, picked.as_deref())
+                after_pick(ctx, picked.as_deref(), counting)
             }),
         )]),
         ..Script::default()
     }
 }
 
-fn radiant() -> Script {
+fn radiant(counting: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -104,9 +135,9 @@ fn radiant() -> Script {
             // again, as the "picked twice" check in `prompts.rs` is per-prompt.
             (
                 STEP_FIRST,
-                hook(|ctx| {
+                hook(move |ctx| {
                     let picked = pick_of(ctx);
-                    let mut effects = effects_for(ctx, picked.as_deref());
+                    let mut effects = after_pick(ctx, picked.as_deref(), counting);
                     effects.push(choose_mode(json_as(json!({
                         "options": radiant_options(ctx),
                         "step": STEP_SECOND,
@@ -117,9 +148,9 @@ fn radiant() -> Script {
             ),
             (
                 STEP_SECOND,
-                hook(|ctx| {
+                hook(move |ctx| {
                     let picked = pick_of(ctx);
-                    effects_for(ctx, picked.as_deref())
+                    after_pick(ctx, picked.as_deref(), counting)
                 }),
             ),
         ]),
@@ -129,15 +160,24 @@ fn radiant() -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: base(),
-        radiant: radiant(),
+        base: base(true),
+        radiant: radiant(true),
     }
 }
 
-// #65 Masochism Mask — SPEC §8.3, §10.6, BUILD M4-T4 row 65.
+/// R767000: the script v0.5.11o and the versions before it ran, with no count of downsides; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts {
+        base: base(false),
+        radiant: radiant(false),
+    }
+}
+
+// #65 Masochism Mask — SPEC §8.3, §10.6, BUILD M4-T4 row 65, R3139001.
 #[cfg(test)]
 mod tests {
-    use super::script;
+    use super::{script, script_v0_5_11o};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -165,6 +205,39 @@ mod tests {
             .as_ref()
             .map(|pending| pending.options.iter().map(|option| option.label.clone()).collect())
             .unwrap_or_default()
+    }
+
+    /// p1's hand, one flag per card: whether it is Radiant.
+    fn radiance(s: &Scenario) -> Vec<bool> {
+        s.hand(P1).iter().map(|card| card.radiant).collect()
+    }
+
+    /// p1's hand as the Mask's trigger saw it: without the card the turn's draw added after it (R62, the
+    /// start-of-turn triggers run before the draw), the last one.
+    fn held_before_the_draw(s: &Scenario) -> Vec<bool> {
+        let mut flags = radiance(s);
+        flags.pop();
+        flags
+    }
+
+    /// The downsides the Mask has counted since the hand last became Radiant (0 before the first).
+    fn counted(s: &Scenario) -> i64 {
+        s.card(MASK).memory.get("downsides").and_then(Value::as_i64).unwrap_or(0)
+    }
+
+    /// A Mask with `taken` downsides already counted, a bare hand to make Radiant and a deep library.
+    fn counting(face_radiant: bool, taken: i64) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [MENACE, TIMMY],
+                "backrow": [{ "def": MASK, "radiant": face_radiant }],
+                "library": crate::filler(30),
+                "armor": 5,
+            },
+            "p2": { "hand": [MENACE], "field": [MENACE] },
+        }));
+        s.card_mut(MASK).memory.insert("downsides".to_string(), json!(taken));
+        s
     }
 
     fn mask_scenario(face_radiant: bool) -> Scenario {
@@ -324,6 +397,145 @@ mod tests {
 
             s.expect_in_zone(POSTDOC, "exile");
             s.expect_health(P1, 27);
+        }
+
+        // Issue #3139, R3139001: "After you take {downsides} downsides from this, make your hand Radiant."
+
+        #[test]
+        fn r3139001_the_sixth_downside_makes_the_whole_hand_radiant_and_the_count_restarts() {
+            let mut s = counting(false, 0);
+            for n in 1..=5 {
+                s.start_turn().answer(json!(LOSE_THREE));
+                assert_eq!(counted(&s), n, "after downside {n}");
+                assert!(!radiance(&s).iter().any(|&radiant| radiant), "after downside {n}: no card is Radiant yet");
+            }
+
+            s.start_turn().answer(json!(LOSE_THREE));
+
+            // The 6th: every card in the hand, the five drawn since the start included, and the count back to 0.
+            // The turn's own draw comes after the trigger (R62), so that card is plain.
+            assert_eq!(radiance(&s).len(), 2 + 6);
+            assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant), "{:?}", radiance(&s));
+            assert_eq!(radiance(&s).iter().filter(|&&radiant| !radiant).count(), 1);
+            assert_eq!(counted(&s), 0);
+            s.expect_health(P1, 30 - 6 * 3);
+            // The count starts over: the cards drawn after it are plain (the hand holds 10 at most, §2.4).
+            for n in 1..=2 {
+                s.start_turn().answer(json!(EXILE_BOTTOM));
+                assert_eq!(counted(&s), n);
+            }
+            assert_eq!(radiance(&s).len(), 10);
+            assert_eq!(radiance(&s).iter().filter(|&&radiant| !radiant).count(), 1 + 2, "the cards drawn since are plain");
+            // It repeats every 6: four more downsides take it to the next 6th and the hand is Radiant again.
+            for _ in 0..3 {
+                s.start_turn().answer(json!(EXILE_BOTTOM));
+            }
+            assert_eq!(counted(&s), 5);
+            s.start_turn().answer(json!(SUMMON_PILLOW));
+            assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant), "{:?}", radiance(&s));
+            assert_eq!(counted(&s), 0);
+        }
+
+        /// Every pick that is not "nothing" is a downside: the exile, the lost health and the Pillow count alike.
+        #[test]
+        fn r3139001_each_of_the_three_downsides_counts_one() {
+            for pick in [EXILE_BOTTOM, LOSE_THREE, SUMMON_PILLOW] {
+                let mut s = counting(false, 4);
+                s.start_turn().answer(json!(pick));
+                assert_eq!(counted(&s), 5, "{pick}");
+                assert!(!radiance(&s).iter().any(|&radiant| radiant), "{pick}");
+                s.start_turn().answer(json!(pick));
+                assert_eq!(counted(&s), 0, "{pick}");
+                assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant), "{pick}");
+            }
+        }
+
+        /// The downside's own effect resolves too, in the pick that makes the hand Radiant.
+        #[test]
+        fn r3139001_the_sixth_downside_still_does_what_it_says() {
+            let mut s = counting(false, 5);
+            s.start_turn().answer(json!(LOSE_THREE));
+            s.expect_health(P1, 27);
+            assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant));
+        }
+
+        #[test]
+        fn r3139001_the_radiant_face_s_nothing_counts_none() {
+            let mut s = counting(true, 0);
+            s.start_turn().answer(json!(NOTHING)).answer(json!(NOTHING));
+            assert_eq!(counted(&s), 0);
+
+            // One downside and one nothing is one.
+            s.start_turn().answer(json!(NOTHING)).answer(json!(LOSE_THREE));
+            assert_eq!(counted(&s), 1);
+            s.start_turn().answer(json!(SUMMON_PILLOW)).answer(json!(NOTHING));
+            assert_eq!(counted(&s), 2);
+            assert!(!radiance(&s).iter().any(|&radiant| radiant));
+        }
+
+        /// The Radiant face's double pick counts each pick: three turns of two reach the 6th.
+        #[test]
+        fn r3139001_the_radiant_face_counts_each_of_its_two_picks_so_three_turns_make_the_hand_radiant() {
+            let mut s = counting(true, 0);
+            for turn in 1..=2 {
+                s.start_turn().answer(json!(LOSE_THREE)).answer(json!(EXILE_BOTTOM));
+                assert_eq!(counted(&s), 2 * turn);
+                assert!(!radiance(&s).iter().any(|&radiant| radiant));
+            }
+
+            s.start_turn().answer(json!(SUMMON_PILLOW)).answer(json!(EXILE_BOTTOM));
+
+            assert_eq!(counted(&s), 0);
+            assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant));
+        }
+
+        /// The count crosses the threshold mid-turn: the first pick is the 6th, the second starts a new count.
+        #[test]
+        fn r3139001_the_second_pick_of_a_turn_starts_the_next_count_when_the_first_was_the_6th() {
+            let mut s = counting(true, 5);
+
+            s.start_turn().answer(json!(LOSE_THREE));
+            assert_eq!(counted(&s), 0);
+            assert!(radiance(&s).iter().all(|&radiant| radiant));
+            s.answer(json!(EXILE_BOTTOM));
+
+            assert_eq!(counted(&s), 1);
+        }
+
+        /// The Mask only asks on its controller's turn, so the opponent's turn counts none.
+        #[test]
+        fn r3139001_the_opponent_s_turn_counts_none() {
+            let mut s = counting(false, 3);
+            s.end_turn();
+            assert_eq!(s.state().active, PlayerId::P2);
+            s.start_turn();
+
+            assert!(s.state().pending.is_none());
+            assert_eq!(counted(&s), 3);
+            assert!(!radiance(&s).iter().any(|&radiant| radiant));
+        }
+
+        /// A Degrade or Buff moves the declared 6: an Upgrade makes it the 5th.
+        #[test]
+        fn r386_r3139001_the_downsides_are_a_declared_number_an_upgrade_makes_it_5() {
+            let mut s = counting(false, 4);
+            assert_eq!(crate::upgrade_number(&mut s, MASK, "downsides"), 5);
+
+            s.start_turn().answer(json!(LOSE_THREE));
+
+            assert_eq!(counted(&s), 0);
+            assert!(held_before_the_draw(&s).iter().all(|&radiant| radiant));
+        }
+
+        /// R767000: through v0.5.11o the Mask counted nothing and made no hand Radiant.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11o_counts_no_downsides() {
+            crate::under_kept(MASK, script_v0_5_11o(), || {
+                let mut s = counting(false, 5);
+                s.start_turn().answer(json!(LOSE_THREE));
+                assert!(!radiance(&s).iter().any(|&radiant| radiant));
+                assert_eq!(counted(&s), 5, "the count it never wrote stays as it was");
+            });
         }
     }
 }

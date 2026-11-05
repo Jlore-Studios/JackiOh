@@ -420,8 +420,8 @@ core-043: # Big Felinor
     death: Landed on my back?
   zh:
     name: 大猫族
-    base: 战吼：消灭所有非猫族单位。
-    radiant: 战吼：消灭所有敌方非猫族单位。
+    base: 战吼：消灭{destroys}个随机非猫族单位。
+    radiant: 战吼：消灭{destroys}个随机敌方非猫族单位。
 core-044: # True Strike
   flavour: Aim once. Hit once. Leave.
   voice:
@@ -470,8 +470,8 @@ core-049: # Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: Snom兔精神控制
-    base: 夺取一个敌方单位。
-    radiant: 夺取一个敌方单位。使其变为光辉。
+    base: "结余减费。\n夺取一张敌方牌。"
+    radiant: "结余减费。\n夺取一张敌方牌。使其变为光辉。"
 core-050: # K-Pop Fanatic
   flavour: She knows every lyric, every member, and where your stuff is.
   voice:
@@ -570,8 +570,8 @@ core-059: # Unbiased Immigration
     cast: Welcome in, whoever you are!
   zh:
     name: 无偏见移民
-    base: "回合开始时：将一张随机牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
-    radiant: "回合开始时：将一张随机光辉牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
+    base: "激活：将一张随机牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
+    radiant: "激活：将一张随机光辉牌置入你的手牌。\n加码(4)：其法力值消耗为({setCost})。"
 core-060: # Bear Honeypot
   flavour: Sweet bait, fuzzy teeth.
   voice:
@@ -620,8 +620,8 @@ core-065: # Masochism Mask
     cast: Hurts so good.
   zh:
     name: 受虐面具
-    base: 回合开始时：抉择：放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。
-    radiant: 回合开始时：抉择两次：什么都不做，放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。
+    base: "回合开始时：抉择：放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。\n在你受到此牌的{downsides}个负面效果后，使你的手牌变为光辉。"
+    radiant: "回合开始时：抉择两次：什么都不做，放逐你牌库最底部的牌，失去{loss}点生命值，或者召唤一个尖刺枕头。\n在你受到此牌的{downsides}个负面效果后，使你的手牌变为光辉。"
 core-065-1: # Spikey Pillow
   flavour: It looks comfortable. Do not sit on it.
   voice:
@@ -838,8 +838,8 @@ core-089: # Corpse Eater
     death: Finally... full.
   zh:
     name: 噬尸者
-    base: "突袭\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。"
-    radiant: "突袭，圣盾\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。"
+    base: "突袭，易碎1\n当这张牌在你的手牌中时，它会获得每个死亡的单位的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
+    radiant: "突袭，圣盾，易碎3\n当这张牌在你的手牌中时，它会获得每个死亡的单位两倍的攻击力和生命值。\n此单位攻击一个单位后，它可以再次攻击。"
 core-090: # Super-Virus Injection
   flavour: Spread it around. Let them shuffle it themselves.
   voice:
@@ -1057,8 +1057,8 @@ classic-004: # Palantir
     cast: The seeing stone shows me everything.
   zh:
     name: 帕兰提尔
-    base: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(1)的法术时，献祭这张牌以夺取它，并由你施放它。"
-    radiant: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(1)的法术时，夺取它并由你施放它。一旦这张牌已夺取{threshold}张法术，献祭这张牌。"
+    base: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(2)的法术时，献祭这张牌以夺取它，并由你施放它。"
+    radiant: "光环：你的对手每回合最多只能抽{drawLimit}张牌。\n当你的对手打出一张法力值消耗为(2)的法术时，夺取它并由你施放它。一旦这张牌已夺取{threshold}张法术，献祭这张牌。"
     previews:
       Once it has stolen {threshold}: 已夺取{threshold}张法术
 classic-005: # Tesla
@@ -1578,8 +1578,8 @@ classic-062: # Living Bomb
     cast: Tick, tock. Tick, tock.
   zh:
     name: 活动炸弹
-    base: 在每名玩家的回合开始时：消灭该玩家控制的所有带有瘟疫指示物的永久物。
-    radiant: 在你对手的回合开始时：消灭其控制的所有带有瘟疫指示物的永久物。
+    base: "战吼：放置一个瘟疫指示物。\n在每名玩家的回合开始时：消灭该玩家控制的所有带有瘟疫指示物的永久物。"
+    radiant: "激活：放置一个瘟疫指示物。\n在你对手的回合开始时：消灭其控制的所有带有瘟疫指示物的永久物。"
 classic-063: # Crop Dusting
   flavour: Low flight, fine mist, wide spread.
   voice:
@@ -1650,8 +1650,8 @@ classic-070: # Book of Plague
     cast: Do not lick the pages.
   zh:
     name: 瘟疫之书
-    base: 放置{tokens}个瘟疫指示物。
-    radiant: 放置{tokens}个瘟疫指示物。
+    base: 抉择：放置{tokens}个瘟疫指示物，或者将{cards}张随机瘟疫牌置入你的手牌。
+    radiant: 抉择：放置{tokens}个瘟疫指示物，或者将{cards}张随机光辉瘟疫牌置入你的手牌。
 classic-071: # Lane Eater
   flavour: It eats the lane, the plates and the floor.
   voice:
@@ -6801,8 +6801,8 @@ traininggrounds-038: # Tutorial Master
     death: Class dismissed.
   zh:
     name: 教程大师
-    base: "战吼：将{cards}张随机训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。\n亡语：将{cards}张随机训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。"
-    radiant: "战吼：将{cards}张随机光辉训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。\n亡语：将{cards}张随机光辉训练场牌置入你的手牌。它们的法力值消耗减少({discount})点。"
+    base: 战吼与亡语：将{cards}张随机训练场牌置入你的手牌。
+    radiant: 战吼与亡语：将{cards}张随机光辉训练场牌置入你的手牌。
 traininggrounds-039: # Call to Chaos (Training-Grounds Edition)
   flavour: The final exam, graded by dice.
   voice:
@@ -6873,8 +6873,8 @@ traininggrounds-045: # Legacy: Jlockeed's Weapons
     cast: Defense contract approved.
   zh:
     name: 传统：Jlockeed军火
-    base: 光环：你的单位拥有+{attack}攻击力、突袭和先攻。
-    radiant: 光环：你的单位拥有+{attack}攻击力、突袭和先攻。
+    base: 光环：你的单位拥有+{attack}攻击力和突袭。
+    radiant: 光环：你的单位拥有+{attack}攻击力和突袭。
 traininggrounds-046: # Legacy: Hit Job
   flavour: Clean, quiet, and billed by the hour.
   voice:
@@ -6935,8 +6935,8 @@ traininggrounds-052: # Legacy: Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: 传统：Snom兔精神控制
-    base: 夺取一个敌方单位。
-    radiant: 夺取一个敌方单位。使其变为光辉。
+    base: 夺取一个敌方单位。将其攻击力和生命值变为4/4。
+    radiant: 夺取一张敌方牌。
 traininggrounds-053: # Legacy: Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
   voice:

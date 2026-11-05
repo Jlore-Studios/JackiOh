@@ -48,18 +48,22 @@ const YILES_VIRUS: &str = "meditative-049-2";
 const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
 const LIVING_MANA_POTION: &str = "meditativeplus-011";
+const LIVING_BOMB: &str = "classic-062";
+const UNBIASED_IMMIGRATION: &str = "core-059";
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 72] = [
+const ACTIVATE_CARDS: [&str; 74] = [
     HEROIC_POWER,
     TWINSPELL,
+    UNBIASED_IMMIGRATION,
     INFINISCEPTER,
     NOSE_HUNTER,
     POWER_TO_PUNISH,
     TURTINATOR,
     DEVILS_PACT,
     TRANSMUTABLE_TOXINS,
+    LIVING_BOMB,
     MALZAHARS_RECYCLER,
     CORPSE_PLANTATION,
     MUTATE_SPELL,
@@ -280,6 +284,83 @@ fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_h
         by_script, covered,
         "a script's Activate does not match its card's text"
     );
+}
+
+/// Issue #3139: Core #59's Activate (both faces), once a turn with no price, as a client uses it.
+mod c_n59_unbiased_immigration {
+    use super::*;
+
+    fn standing(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "backrow": [on(UNBIASED_IMMIGRATION, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    fn adds_a_card(radiant: bool) {
+        let mut s = standing(radiant);
+        let id = s.card(UNBIASED_IMMIGRATION).id.clone();
+        let hand = s.hand(P1).len();
+        let mana = s.state().players.p1.mana.current;
+        let events = activate_listed(&mut s, UNBIASED_IMMIGRATION, any);
+        assert_eq!(s.hand(P1).len(), hand + 1);
+        assert_eq!(s.state().players.p1.mana.current, mana, "no price");
+        let added: Vec<&GameEvent> = events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::AddedToHand { .. }))
+            .collect();
+        assert_eq!(added.len(), 1);
+        let GameEvent::AddedToHand { instance_id, .. } = added[0] else {
+            unreachable!("filtered to an add")
+        };
+        assert_eq!(s.card(instance_id.as_str()).radiant, radiant);
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_base_activate_adds_a_random_card_once_a_turn() {
+        adds_a_card(false);
+    }
+
+    #[test]
+    fn r384_radiant_activate_adds_a_random_radiant_card_once_a_turn() {
+        adds_a_card(true);
+    }
+}
+
+/// Issue #3139: Classic #62's Radiant face Activates a Plague Counter (R689's prompt), once a turn; the base
+/// face has the Cry instead and lists no Activate.
+mod c_n62_living_bomb {
+    use super::*;
+
+    fn standing(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "backrow": [on(LIVING_BOMB, radiant)], "field": [VANILLA], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "field": [MENACE], "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    #[test]
+    fn r384_r689_radiant_activate_places_a_plague_counter_on_the_permanent_a_prompt_names_once_a_turn() {
+        let mut s = standing(true);
+        let id = s.card(LIVING_BOMB).id.clone();
+        activate_listed(&mut s, LIVING_BOMB, any);
+        let prey = s.card(MENACE).id.clone();
+        assert!(
+            s.state().pending.is_some(),
+            "R689: one prompt names the permanent"
+        );
+        s.answer(json!(prey));
+        assert_eq!(s.card(MENACE).counters.plague, Some(1));
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_the_base_face_lists_no_activate() {
+        let s = standing(false);
+        let id = s.card(LIVING_BOMB).id.clone();
+        assert!(listed(&s, &id).is_empty());
+    }
 }
 
 mod c_n98_heroic_power {

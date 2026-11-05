@@ -7,11 +7,11 @@
 //! R2689000 counts the start-of-turn and end-of-turn part of a price once for each time its controller's
 //! turn runs it, and prices the start of the opponent's turn too.
 //!
-//! The cards: Mana Well (Radiant 2), Rush Token Farm, Unbiased Immigration, Masochism Mask (a prompt),
+//! The cards: Mana Well (Radiant 2), Rush Token Farm, Masochism Mask (a prompt),
 //! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),
 //! three Field Spells with no turn hook, and Mr. Vanilla. For R2689000: Joint Filing (meditative-009), a
 //! (2) Field Spell, "Aura: Your Start of turn and End of turn effects trigger an extra time" (Radiant two);
-//! Living Bomb (classic-062), a (1) Field Spell, Radiant "At the start of your opponent's turn: Destroy
+//! Living Bomb (classic-062), a (2) Field Spell, Radiant "At the start of your opponent's turn: Destroy
 //! every permanent they control with a Plague Token on it"; and Fed Fauci (core-091), a (2) 1/6 Rush,
 //! "Start of turn: +1 mana per Plague Counter".
 
@@ -22,6 +22,7 @@ use super::support::{AI, HUMAN, close, register_cards, unit};
 
 const MANA_WELL: &str = "core-006";
 const RUSH_TOKEN_FARM: &str = "core-058";
+/// An Activate since issue #3139, so a Field Spell with no turn hook: the budget boards hold it as a crowd card.
 const UNBIASED_IMMIGRATION: &str = "core-059";
 const MASOCHISM_MASK: &str = "core-065";
 const ACE_IN_THE_HOLE: &str = "classic-065";
@@ -134,11 +135,7 @@ fn r2477000_an_own_mana_well_prices_the_crystal_it_gains() {
 
 #[test]
 fn r2477000_an_own_hook_field_spell_scores_above_a_hookless_one_of_its_cost() {
-    for (hooked, hookless) in [
-        (RUSH_TOKEN_FARM, POWER_TO_THRIVE),
-        (UNBIASED_IMMIGRATION, POWER_TO_THRIVE),
-        (MANA_WELL, LEVEL_UP),
-    ] {
+    for (hooked, hookless) in [(RUSH_TOKEN_FARM, POWER_TO_THRIVE), (MANA_WELL, LEVEL_UP)] {
         let with_hook = board("ai-hook-pair", json!([]), json!([hooked]), json!([]));
         let without = board("ai-hook-pair", json!([]), json!([hookless]), json!([]));
         close(

@@ -1951,6 +1951,47 @@ mod r1869002_i2_a_kill_credit {
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 
+    /// R3139004: Core #89 Corpse Eater is readied by an attack on a Unit it survives, kill or no kill, so its
+    /// repeat attacks are no extra attack to I2. It has Rush and entered this turn as the setup's cards do.
+    #[test]
+    fn r3139004_a_corpse_eater_attacks_the_units_it_survives_again_with_no_violation() {
+        const EATER: &str = "core-089";
+        const FENDER: &str = "core-001"; // 0/7: it hits back for nothing and does not die to the 2 attack.
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": EATER, "lane": 1 }], "hand": [VANILLA] },
+            "p2": { "field": [{ "def": FENDER, "lane": 1 }, { "def": FENDER, "lane": 2 }], "hand": [VANILLA] },
+        }));
+        let eater = g.unit_at(PlayerId::P1, 1).id;
+        let first = g.unit_at(PlayerId::P2, 1).id;
+        let second = g.unit_at(PlayerId::P2, 2).id;
+        let turn = g.state().turn;
+        for id in [&eater, &first, &second] {
+            find_instance_mut(g.state_mut(), id)
+                .expect("a Fender or the Eater")
+                .summoned_turn = Some(turn);
+        }
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.enter(&eater);
+        monitor.enter(&first);
+        monitor.enter(&second);
+
+        for target in [&first, &second, &first] {
+            let declared = attack(&eater, target);
+            assert_eq!(
+                monitor.before(g.state(), PlayerId::P1, &declared),
+                no_violations()
+            );
+            g.attack(eater.as_str(), target.as_str());
+            assert_eq!(
+                monitor.after(g.last_events(), g.state()),
+                no_violations(),
+                "attack on {target}"
+            );
+        }
+        // Three attacks on Units it survived, each readying the next; the monitor read no extra attack.
+        assert!(!g.card(eater.as_str()).exertion.attacked);
+    }
+
     #[test]
     fn r1869002_r636_a_windfury_tmack_trav_s_kill_on_its_second_attack_gives_it_two_more() {
         let mut g = scenario(json!({
@@ -2377,7 +2418,7 @@ mod r1279000_opponent_held_prompt_off_turn {
         scenario(setup)
     }
 
-    /// p1's Palantir steals what p2 plays and casts it as p1 (R831001): p2 is active, and p1 the card's
+    /// p1's Palantir steals what p2 plays, a (2) Cost Spell, and casts it as p1 (R831001, R3139000): p2 is active, and p1 the card's
     /// controller, so what its Cry asks p2 for, p2 holds on its own turn.
     fn palantir_board(p1: Value, p2: Value) -> Scenario {
         let mut p1 = p1;
@@ -2584,10 +2625,11 @@ mod r1279000_opponent_held_prompt_off_turn {
             assert!(w.is_clean(), "{caster}: {:?}", w.found);
         }
 
-        // Stolen and cast by p1's Palantir on p2's turn, it asks p2 at once, who is active.
+        // Stolen and cast by p1's Palantir on p2's turn, it asks p2 at once, who is active. A `costMod` of 1
+        // makes the (1) Cost Pickle the (2) Cost Spell Palantir answers (R3139000).
         let mut w = Watched::new(palantir_board(
             json!({ "hand": [STOCKPILE], "library": CASTER_DECK }),
-            json!({ "hand": [PICKLE, STOCKPILE], "library": HOLDER_DECK }),
+            json!({ "hand": [{ "def": PICKLE, "costMod": 1 }, STOCKPILE], "library": HOLDER_DECK }),
         ));
         w.act(|g| {
             g.play(PICKLE, json!({}));
@@ -2610,11 +2652,12 @@ mod r1279000_opponent_held_prompt_off_turn {
             assert!(w.is_clean(), "{drawer}: {:?}", w.found);
         }
 
-        // p1's Palantir has p1 draw on p2's turn: the keep is p1's, so it waits for p1's turn.
+        // p1's Palantir has p1 draw on p2's turn: the keep is p1's, so it waits for p1's turn. The Stockpile is
+        // a (2) Cost one by a `costMod` of 1 (R3139000).
         let mut w = Watched::new(palantir_board(
             json!({ "hand": [VANILLA, MENACE], "library": [FELINORS, SEVEN, TIMMY] }),
             json!({
-                "hand": [STOCKPILE, VANILLA],
+                "hand": [{ "def": STOCKPILE, "costMod": 1 }, VANILLA],
                 "backrow": [{ "def": INCOME_TAX, "faceUp": false, "radiant": true }],
                 "library": [VANILLA, VANILLA],
             }),

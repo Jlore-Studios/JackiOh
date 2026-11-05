@@ -1449,18 +1449,29 @@
     "flavor": "Beast",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "destroys",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 8,
     "base": {
       "attack": 3,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Destroy all non-Felinor Units."
+      "text": "Cry: Destroy {destroys|random non-Felinor Unit|random non-Felinor Units}."
     },
     "radiant": {
       "attack": 6,
       "health": 20,
       "keywords": [],
-      "text": "Cry: Destroy all enemy non-Felinor Units."
+      "text": "Cry: Destroy {destroys|random enemy non-Felinor Unit|random enemy non-Felinor Units}."
     }
   },
   "core-044": {
@@ -1654,15 +1665,15 @@
     "rarity": "Rare",
     "flavor": "Dark",
     "token": false,
-    "cost": 4,
+    "cost": 5,
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit."
+      "text": "Float reduces cost.\nSteal an enemy card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Make it Radiant."
+      "text": "Float reduces cost.\nSteal an enemy card. Make it Radiant."
     }
   },
   "core-050": {
@@ -2075,11 +2086,11 @@
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
     }
   },
   "core-060": {
@@ -2282,16 +2293,24 @@
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "downsides",
+        "base": 6,
+        "radiant": 6,
+        "better": "down",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow.\nAfter you take {downsides|downside|downsides} from this, make your hand Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow.\nAfter you take {downsides|downside|downsides} from this, make your hand Radiant."
     }
   },
   "core-065-1": {
@@ -3210,9 +3229,13 @@
       "keywords": [
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
         }
       ],
-      "text": "Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies."
+      "text": "Rush, Brittle 1\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     },
     "radiant": {
       "attack": 4,
@@ -3223,9 +3246,13 @@
         },
         {
           "kind": "Divine Shield"
+        },
+        {
+          "kind": "Brittle",
+          "n": 3
         }
       ],
-      "text": "Rush, Divine Shield\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush, Divine Shield, Brittle 3\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
     }
   },
   "core-090": {
@@ -4159,11 +4186,11 @@
     "loc": 43,
     "base": {
       "keywords": [],
-      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (1) Cost Spell, Tribute this to steal and cast it."
+      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (2) Cost Spell, Tribute this to steal and cast it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (1) Cost Spell, steal and cast it. Once it has stolen {threshold}, Tribute this."
+      "text": "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.\nWhen your opponent plays a (2) Cost Spell, steal and cast it. Once it has stolen {threshold}, Tribute this."
     }
   },
   "classic-005": {
@@ -6322,15 +6349,15 @@
     "rarity": "Rare",
     "flavor": "Toxic",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
+      "text": "Cry: Place a Plague Counter.\nAt the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
+      "text": "Activate: Place a Plague Counter.\nAt the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
     }
   },
   "classic-063": {
@@ -6606,16 +6633,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters}."
+      "text": "Choose one: Place {tokens|Plague Counter|Plague Counters}, or add {cards|random Plague card|random Plague cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters}."
+      "text": "Choose one: Place {tokens|Plague Counter|Plague Counters}, or add {cards|random Radiant Plague card|random Radiant Plague cards} to your hand."
     }
   },
   "classic-071": {
@@ -28006,14 +28041,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
       }
     ],
     "loc": 22,
@@ -28021,13 +28048,13 @@
       "attack": 4,
       "health": 16,
       "keywords": [],
-      "text": "Cry: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand. They cost ({discount}) less.\nDeath: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand. They cost ({discount}) less."
+      "text": "Cry & Death: Add {cards|random Training Grounds card|random Training Grounds cards} to your hand."
     },
     "radiant": {
       "attack": 8,
       "health": 32,
       "keywords": [],
-      "text": "Cry: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand. They cost ({discount}) less.\nDeath: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand. They cost ({discount}) less."
+      "text": "Cry & Death: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand."
     }
   },
   "traininggrounds-039": {
@@ -28291,8 +28318,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -28301,11 +28328,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} Attack and Rush."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} Attack and Rush."
     }
   },
   "traininggrounds-046": {
@@ -28514,11 +28541,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit."
+      "text": "Steal an enemy Unit. Set its stats to 4/4."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Make it Radiant."
+      "text": "Steal an enemy card."
     }
   },
   "traininggrounds-053": {

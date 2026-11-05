@@ -432,8 +432,8 @@ mod tests {
         #[test]
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 4.
-                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 6 },
+                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
+                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 7 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -698,8 +698,8 @@ mod tests {
         #[test]
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 4.
-                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 6 },
+                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 5.
+                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 7 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
@@ -852,7 +852,7 @@ mod tests {
         #[test]
         fn r437_r76_a_steal_that_fizzles_on_a_card_already_this_player_s_takes_the_mark_away_too() {
             let mut g = scenario(json!({
-                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 6 },
+                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 7 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);

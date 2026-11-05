@@ -275,7 +275,7 @@ mod tests {
 
     const PICKLE: &str = "classic-008";
     const FILLER: &str = "core-005"; // (1) Spell, p1's spare card (§2.5).
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals and casts a (1) Spell the opponent plays.
+    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals and casts a (2) Cost Spell the opponent plays.
     const MY_DECK: [&str; 4] = ["core-019", "core-025", "core-012", "core-020"];
     const THEIR_HAND: [&str; 3] = ["core-008", "core-011", "core-015"];
     const THEIR_DECK: [&str; 4] = ["core-006", "core-035", "core-048", "core-039"];
@@ -387,8 +387,9 @@ mod tests {
             #[test]
             fn r1279000_a_pickle_cast_on_the_opponent_s_turn_asks_at_once() {
                 crate::register_all();
-                // p2 plays Pickle into p1's Palantir, which steals and casts it (R831001): the Cry
-                // runs as p1 with the holder active, so the first question opens at once.
+                // p2 plays Pickle, made a (2) Cost one by a `costMod` of 1, into p1's Palantir, which steals and
+                // casts it (R831001, R3139000): the Cry runs as p1 with the holder active, so the first question
+                // opens at once.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -397,7 +398,7 @@ mod tests {
                         "library": MY_DECK.to_vec(),
                     },
                     "p2": {
-                        "hand": [PICKLE, FILLER],
+                        "hand": [{ "def": PICKLE, "costMod": 1 }, FILLER],
                         "library": THEIR_DECK.to_vec(),
                     },
                 }));

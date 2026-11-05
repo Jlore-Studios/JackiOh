@@ -71,7 +71,7 @@ mod tests {
     const ZAO_GAO: &str = "core-080"; // (2) Spell: discard 2 random cards; summon 2 Rush Tokens with 2 random keywords.
     const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2, heal your hero 2.
     const SHEEPISH: &str = "core-041"; // (1) Trap: when your opponent plays a Unit, after its Cry, transform it into a Sheep.
-    const MIND_CONTROL: &str = "core-049"; // (4) Spell: steal target enemy permanent.
+    const MIND_CONTROL: &str = "core-049"; // (5) Spell: steal an enemy card.
     const FIENDER: &str = "core-092"; // (2) Unit, Stack.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const GARY: &str = "core-004"; // (1) Unit 1/1
@@ -328,7 +328,7 @@ mod tests {
             #[test]
             fn r2618000_aura_judged_by_owner_a_stolen_unit_of_theirs_dying_on_your_side_is_yours_and_reaches_your_graveyard() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }], "mana": 7 },
+                    "p1": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }], "mana": 8 },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
                 }));
                 let vanilla = s.card(VANILLA).clone();
@@ -346,7 +346,7 @@ mod tests {
             fn r2618000_aura_judged_by_owner_a_unit_of_yours_they_stole_dying_on_their_side_is_exiled() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }, VANILLA] },
-                    "p2": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "mana": 7 },
+                    "p2": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "mana": 8 },
                     "active": "p2",
                 }));
                 let vanilla = s.card(VANILLA).clone();

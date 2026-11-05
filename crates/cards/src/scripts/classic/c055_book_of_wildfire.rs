@@ -58,7 +58,7 @@ mod tests {
     const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
     const FILLER: &str = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
-    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a (1) Cost Spell, Tribute this to steal it and cast it yourself.
+    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a (2) Cost Spell, Tribute this to steal it and cast it yourself.
     const BOOK_OF_FLAME: &str = "classic-016";
 
     use crate::js;
@@ -232,8 +232,9 @@ mod tests {
             }
 
             #[test]
-            fn r831001_c_4_palantirs_base_face_steals_this_with_no_prompt_and_casts_it_at_your_hero() {
-                let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "backrow": [PALANTIR], "hand": [FILLER] } }));
+            fn r831001_r3139000_c_4_palantirs_base_face_steals_this_at_2_with_no_prompt_and_casts_it_at_your_hero() {
+                // A `costMod` of 1 makes the (1) Cost Wildfire the (2) Cost Spell Palantir answers.
+                let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "costMod": 1 }, FILLER] }, "p2": { "backrow": [PALANTIR], "hand": [FILLER] } }));
                 let wildfire = s.card(WILDFIRE).clone();
                 s.play(&wildfire, json!({ "targets": [hero("p2")] }));
                 assert!(s.state().pending.is_none());

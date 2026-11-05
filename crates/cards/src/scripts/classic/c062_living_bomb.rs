@@ -1,8 +1,14 @@
-//! C #62 Living Bomb (SPEC §8.6 row 62). (1) Field Spell, Rare.
-//!   Base:    "At the start of each player's turn: Destroy every permanent that player controls with a
-//!            Plague Counter on it."
-//!   Radiant: "At the start of your opponent's turn: Destroy every permanent they control with a Plague
-//!            Token on it."
+//! C #62 Living Bomb (SPEC §8.6 row 62). (2) Field Spell, Rare, Plague.
+//!   Base:    "Cry: Place a Plague Counter. / At the start of each player's turn: Destroy every permanent
+//!            that player controls with a Plague Counter on it."
+//!   Radiant: "Activate: Place a Plague Counter. / At the start of your opponent's turn: Destroy every
+//!            permanent they control with a Plague Counter on it."
+//!
+//! Since issue #3139 it costs (2) and places Plague Counters itself: the base face with a Cry, the Radiant
+//! face, in its place, with an Activate (once a turn, R384; two separate gains, no Cry on the Radiant face).
+//! Both are `place_plague_tokens` of one (§6.3, R689): a single prompt names the permanent, of either
+//! side and face-down ones by id alone (R177), Living Bomb itself among them. `script_v0_5_11o` keeps the
+//! card with neither, cost (1), for replays (R767000).
 //!
 //! R400: at the start of a player's turn, every permanent that player controls with a Plague Counter
 //! is destroyed (face-down cards and Living Bomb included; §6.3). All die together at the state
@@ -11,7 +17,7 @@
 //! Hooks queue at R62's start-of-turn trigger point in R68's order: `startOfTurn` on own turn (base),
 //! `startOfOpponentTurn` on opponent's turn, queued after the active player's own hooks.
 
-use jackioh_engine::effects::destroy;
+use jackioh_engine::effects::{destroy, place_plague_tokens};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-062";
@@ -39,7 +45,48 @@ fn at_opponents_turn() -> Hook {
     })
 }
 
+/// "Place a Plague Counter" (R689): one placement on the permanent a prompt names.
+fn place_a_counter() -> Effect {
+    place_plague_tokens(json_as(json!({ "count": 1 })))
+}
+
+/// "Activate: Place a Plague Counter" (R384): once a turn, no price.
+fn place_activation() -> ActivationDecl {
+    ActivationDecl {
+        id: "plague".to_string(),
+        label: "Place a Plague Counter".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(|_ctx| vec![place_a_counter()]),
+    }
+}
+
 pub fn script() -> CardScripts {
+    let at_opponents_turn = at_opponents_turn();
+
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![place_a_counter()])),
+        start_of_turn: Some(at_your_turn()),
+        start_of_opponent_turn: Some(at_opponents_turn.clone()),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        activations: vec![place_activation()],
+        start_of_opponent_turn: Some(at_opponents_turn),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
+
+/// R767000: the script v0.5.11o and the versions before it ran, with no Cry and no Activate; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_11o() -> CardScripts {
     let at_opponents_turn = at_opponents_turn();
 
     let base = Script {
@@ -58,9 +105,11 @@ pub fn script() -> CardScripts {
 
 // C #62 Living Bomb (SPEC §8.6 row 62): at the start of each player's turn, in R68's order,
 // destroy every permanent that player controls with a Plague Counter (R400; Indestructible stays,
-// R46; tokens cleared on leave, R78). Radiant: only at the start of opponent's turn.
+// R46; tokens cleared on leave, R78). Radiant: only at the start of opponent's turn. Since issue #3139 the
+// base face places a Plague Counter as its Cry and the Radiant face as an Activate, once a turn (R689, R384).
 #[cfg(test)]
 mod tests {
+    use super::script_v0_5_11o;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -126,6 +175,41 @@ mod tests {
         ids.into_iter().collect()
     }
 
+    /// The instance ids the open placement prompt offers (R689).
+    fn option_ids(s: &Scenario) -> BTreeSet<String> {
+        must(s.state().pending.as_ref(), "an open prompt")
+            .options
+            .iter()
+            .filter_map(|option| match &option.selection {
+                Selection::Instance { instance_id } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn placements(s: &Scenario) -> Vec<i32> {
+        s.events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::CounterChanged { placed: Some(placed), .. } => Some(*placed),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// p1 holds a Living Bomb (`radiant`'s face) with the mana to play it (2), and `board` is p2's side.
+    fn in_hand(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "hand": [{ "def": BOMB, "radiant": radiant }, FILLER], "field": [VANILLA], "library": lib(4) },
+            "p2": {
+                "hand": [FILLER],
+                "field": [{ "def": MENACE, "lane": 1 }],
+                "backrow": [{ "def": MANA_WELL, "lane": 1 }, { "def": PAWN, "faceUp": false, "lane": 2 }],
+                "library": lib(4),
+            },
+        }))
+    }
+
     mod c_62_living_bomb {
         use super::*;
 
@@ -137,6 +221,67 @@ mod tests {
 
         mod base {
             use super::*;
+
+            /// Issue #3139: "Cry: Place a Plague Counter." One prompt names the permanent, of either side,
+            /// face-down ones by id alone, Living Bomb itself among them (R689, R177).
+            #[test]
+            fn r689_its_cry_places_one_counter_on_the_permanent_a_single_prompt_names() {
+                let mut s = in_hand(false);
+                let mine = s.card(VANILLA).clone();
+                let menace = s.card(MENACE).clone();
+                let well = s.card(MANA_WELL).clone();
+                let pawn = s.card(PAWN).clone();
+
+                s.play(BOMB, json!({ "zone": 1 }));
+
+                let bomb = s.card(BOMB).clone();
+                assert_eq!(must(s.state().pending.as_ref(), "the placement prompt").player_id, P1);
+                assert_eq!(
+                    option_ids(&s),
+                    set_of(vec![mine.id.clone(), menace.id.clone(), well.id.clone(), pawn.id.clone(), bomb.id.clone()])
+                );
+                s.answer(json!(menace.id));
+
+                assert!(s.state().pending.is_none());
+                assert_eq!(placements(&s), vec![1]);
+                assert_eq!(s.card(&menace).counters.plague, Some(1));
+                for other in [&mine, &well, &pawn, &bomb] {
+                    assert_eq!(s.card(other).counters.plague.unwrap_or(0), 0);
+                }
+                s.expect_mana(P1, 2);
+            }
+
+            /// The counter the Cry placed is the Bomb's own weapon: the enemy Unit it names is destroyed at the
+            /// start of the enemy's turn (R400).
+            #[test]
+            fn r400_the_unit_its_cry_marks_is_destroyed_at_the_start_of_that_players_turn() {
+                let mut s = in_hand(false);
+                let menace = s.card(MENACE).clone();
+                s.play(BOMB, json!({ "zone": 1 }));
+                s.answer(json!(menace.id));
+
+                s.end_turn();
+
+                assert_eq!(s.state().active, P2);
+                s.expect_in_zone(&menace, "graveyard");
+            }
+
+            #[test]
+            fn r689_it_costs_2() {
+                crate::register_all();
+                assert_eq!(serde_json::to_value(crate::card_def(BOMB).cost).unwrap(), json!(2));
+                let mut s = in_hand(false);
+                s.state_mut().players.p1.mana.current = 1;
+                s.expect_refused(|s| s.play(BOMB, json!({ "zone": 1 })));
+            }
+
+            #[test]
+            fn r689_it_has_no_activate() {
+                crate::register_all();
+                assert!(super::super::super::script().base.activations.is_empty());
+                let mut s = scenario(json!({ "p1": { "backrow": [BOMB], "hand": [FILLER], "field": [VANILLA] }, "p2": { "hand": [FILLER] } }));
+                s.expect_refused(|s| s.activate(BOMB, json!({})));
+            }
 
             #[test]
             fn r400_at_the_start_of_the_opponents_turn_every_permanent_they_control_with_a_token_is_destroyed_face_down_ones_included() {
@@ -361,6 +506,66 @@ mod tests {
         mod radiant {
             use super::*;
 
+            /// Issue #3139: the Radiant face has the Activate in place of the Cry: playing it places nothing.
+            #[test]
+            fn r384_playing_it_places_no_counter_and_asks_nothing_it_has_no_cry() {
+                let mut s = in_hand(true);
+
+                s.play(BOMB, json!({ "zone": 1 }));
+
+                assert!(s.state().pending.is_none());
+                assert!(placements(&s).is_empty());
+                s.expect_in_zone(BOMB, "field");
+            }
+
+            #[test]
+            fn r384_r689_its_activate_places_one_counter_on_the_permanent_a_prompt_names_once_a_turn() {
+                let mut s = in_hand(true);
+                let menace = s.card(MENACE).clone();
+                s.play(BOMB, json!({ "zone": 1 }));
+
+                s.activate(BOMB, json!({}));
+
+                assert_eq!(must(s.state().pending.as_ref(), "the placement prompt").player_id, P1);
+                s.answer(json!(menace.id));
+                assert!(s.state().pending.is_none());
+                assert_eq!(placements(&s), vec![1]);
+                assert_eq!(s.card(&menace).counters.plague, Some(1));
+                // Once a turn (R384): a second activation is refused...
+                s.expect_refused(|s| s.activate(BOMB, json!({})));
+                // ...and it serves again on the next turn of its controller.
+                s.end_turn();
+                s.end_turn();
+                assert_eq!(s.state().active, P1);
+                s.activate(BOMB, json!({}));
+                s.answer(json!(s.card(MANA_WELL).id));
+                assert_eq!(s.card(MANA_WELL).counters.plague, Some(1));
+            }
+
+            /// The Radiant face's counter is destroyed on the enemy's turn only (R400).
+            #[test]
+            fn r400_the_permanent_its_activate_marks_is_destroyed_at_the_opponents_turn_start() {
+                let mut s = in_hand(true);
+                let menace = s.card(MENACE).clone();
+                s.play(BOMB, json!({ "zone": 1 }));
+                s.activate(BOMB, json!({}));
+                s.answer(json!(menace.id));
+
+                s.end_turn();
+
+                s.expect_in_zone(&menace, "graveyard");
+            }
+
+            #[test]
+            fn r384_only_its_controller_activates_it() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [VANILLA], "library": lib(2) },
+                    "p2": { "hand": [FILLER], "backrow": [{ "def": BOMB, "radiant": true }], "library": lib(2) },
+                }));
+                s.expect_refused(|s| s.activate(BOMB, json!({})));
+                assert!(placements(&s).is_empty());
+            }
+
             #[test]
             fn r400_at_the_start_of_the_opponents_turn_it_destroys_their_plagued_permanents_face_down_ones_included() {
                 crate::register_all();
@@ -405,6 +610,23 @@ mod tests {
                 s.end_turn();
 
                 s.expect_in_zone(ROCK, "field");
+            }
+        }
+
+        /// R767000: through v0.5.11o it had no Cry and no Activate, and cost (1) in the catalog it folded under.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11o_places_nothing_on_either_face() {
+            let kept = script_v0_5_11o();
+            assert!(kept.base.cry.is_none() && kept.radiant.cry.is_none());
+            assert!(kept.base.activations.is_empty() && kept.radiant.activations.is_empty());
+            for radiant in [false, true] {
+                crate::under_kept(BOMB, script_v0_5_11o(), || {
+                    let mut s = in_hand(radiant);
+                    s.play(BOMB, json!({ "zone": 1 }));
+                    assert!(s.state().pending.is_none(), "radiant {radiant}");
+                    assert!(placements(&s).is_empty(), "radiant {radiant}");
+                    s.expect_refused(|s| s.activate(BOMB, json!({})));
+                });
             }
         }
     }

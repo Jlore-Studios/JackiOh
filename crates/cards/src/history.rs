@@ -19,10 +19,10 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
-    c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime, c032_felinor_feelings, c035_prep,
-    c039_outbreak, c047_recurring_felinor, c052_final_gambit, c057_echo, c064_malzahars_recycler,
-    c088_siphon_squad, c090_in_too_deep,
+    c004_palantir, c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep,
+    c020_the_power_to_punish, c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime,
+    c032_felinor_feelings, c035_prep, c039_outbreak, c047_recurring_felinor, c052_final_gambit, c057_echo,
+    c062_living_bomb, c064_malzahars_recycler, c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c019_1_top_loser, c023_dropshipping, c030_felinor_fuser,
@@ -32,9 +32,10 @@ use crate::scripts::classic_plus::{
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
-    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
-    c065_1_spikey_pillow, c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell,
-    c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
+    c043_big_felinor, c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook,
+    c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms,
+    c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell, c080_zao_gao, c081_radiant_saintess,
+    c083_transmogulate, c084_going_long, c089_corpse_eater,
 };
 use crate::scripts::meditative::{
     c005_death_by_1000_cuts, c017_true_craft_a_card, c018_expedition12, c019_expedition123,
@@ -58,7 +59,10 @@ use crate::scripts::stinkyscape::{
     c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
     c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
-use crate::scripts::training_grounds::c036_training_dummy;
+use crate::scripts::training_grounds::{
+    c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
+    c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
+};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -522,10 +526,61 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c033_drone_core_vii::script_v0_5_11o,
     ),
     (c018_1_melchior::ID, "v0.5.11p", c018_1_melchior::script_v0_5_11o),
+    (c004_palantir::ID, "v0.5.11p", c004_palantir::script_v0_5_11o),
+    (
+        c062_living_bomb::ID,
+        "v0.5.11p",
+        c062_living_bomb::script_v0_5_11o,
+    ),
+    (
+        c070_book_of_plague::ID,
+        "v0.5.11p",
+        c070_book_of_plague::script_v0_5_11o,
+    ),
+    (
+        c043_big_felinor::ID,
+        "v0.5.11p",
+        c043_big_felinor::script_v0_5_11o,
+    ),
+    (
+        c049_snom_bunny_mind_control::ID,
+        "v0.5.11p",
+        c049_snom_bunny_mind_control::script_v0_5_11o,
+    ),
+    (
+        c059_unbiased_immigration::ID,
+        "v0.5.11p",
+        c059_unbiased_immigration::script_v0_5_11o,
+    ),
+    (
+        c065_masochism_mask::ID,
+        "v0.5.11p",
+        c065_masochism_mask::script_v0_5_11o,
+    ),
+    (
+        c089_corpse_eater::ID,
+        "v0.5.11p",
+        c089_corpse_eater::script_v0_5_11o,
+    ),
+    (
+        c038_tutorial_master::ID,
+        "v0.5.11p",
+        c038_tutorial_master::script_v0_5_11o,
+    ),
+    (
+        c045_jlockeeds_weapons::ID,
+        "v0.5.11p",
+        c045_jlockeeds_weapons::script_v0_5_11o,
+    ),
     (
         c153_stimmycheck::ID,
         "v0.5.11p",
         c153_stimmycheck::script_v0_5_11o,
+    ),
+    (
+        c052_legacy_snom_bunny_mind_control::ID,
+        "v0.5.11p",
+        c052_legacy_snom_bunny_mind_control::script_v0_5_11o,
     ),
 ];
 

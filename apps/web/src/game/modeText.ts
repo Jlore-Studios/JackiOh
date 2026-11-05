@@ -87,6 +87,11 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     discover: { label: "Discover a Unit", detail: "Discover a Unit and make it Radiant." },
     copies: { label: "Draw and copy", detail: "Draw 1, then fill your hand with copies of it." },
   },
+  // C #70 Book of Plague: the counts are the card's and its Radiant face's, so the details name none.
+  "classic-070": {
+    counters: { label: "Plague Counters", detail: "Place Plague Counters on a permanent you choose." },
+    cards: { label: "Plague cards", detail: "Add random Plague cards to your hand." },
+  },
   // C #8 Pickle: the opponent answers, so the words are theirs; the engine's labels carry the counts.
   "classic-008": {
     discard: { label: "Discard", detail: "You discard at random from your hand." },
@@ -264,6 +269,11 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   "classicplus-007": {
     defender: { label: "Radiant Right-house defender", detail: "Spend a Plague Counter to summon a Radiant Right-house defender." },
     attacker: { label: "Radiant Wrong-House Attacker", detail: "Spend a Plague Counter to summon a Radiant Wrong-House Attacker." },
+  },
+  // C #70 Book of Plague, radiant: the cards it adds are Radiant.
+  "classic-070": {
+    counters: { label: "Plague Counters", detail: "Place Plague Counters on a permanent you choose." },
+    cards: { label: "Radiant Plague cards", detail: "Add random Radiant Plague cards to your hand." },
   },
   // M #98 Showdown, radiant.
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),

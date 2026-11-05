@@ -84,7 +84,7 @@ gallery plays every entry.
 | `classic-059` | Plague Doctor | Unit | cry bolt | 1.08 | bolt | cry: the census agrees (bolt) |
 | `classic-060` | Pile On | Spell | cast conjure Physical/sport | 1.75 | none: no motif reads summoned | cast: no census family reads summoned, which conjure (#2786) reads; sport sub-look |
 | `classic-061` | Plague Bringer Goliath | Unit | cry tally | 1.36 | offering | cry: the census's offering read its Tribute, a cost; its Cry places counters, which tally (#2786) reads |
-| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.19 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
+| `classic-062` | Living Bomb | Field Spell | cast nova; trigger nova; aura toxic board | 1.28 | bolt | cast and trigger: its kills of every countered permanent land at once, which nova draws; a set-piece candidate |
 | `classic-063` | Crop Dusting | Trap | cast tally | 1.08 | nova | cast: the census's nova read fatigue; it places counters, which tally (#2786) reads |
 | `classic-064` | Malzahar's Recycler | Field Spell | cast flight; trigger flight; aura arcane side | 1.19 | bolt | cast and trigger: fatigue; it draws, which flight (#2786) reads |
 | `classic-065` | Ace in the Hole | Trap | cast conjure | 1.16 | none: vanilla | cast: its Recruit summons, which conjure (#2786) reads |

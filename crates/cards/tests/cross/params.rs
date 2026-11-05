@@ -625,6 +625,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-029", EITHER_WAY),
         ("classic-064", EITHER_WAY),
         ("traininggrounds-034", EITHER_WAY),
+        ("traininggrounds-052", EITHER_WAY),
         ("classicplus-t-ai-03", AI_PRINTED),
         ("classicplus-t-ai-04", AI_PRINTED),
         ("classicplus-t-ai-05", AI_PRINTED),
