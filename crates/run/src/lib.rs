@@ -313,6 +313,11 @@ pub enum RunNodeKind {
 }
 
 impl RunNodeKind {
+    /// A mini-boss or the boss: `cargo jackioh run-sim` (#3165) tallies these fights apart.
+    pub fn is_boss(self) -> bool {
+        matches!(self, RunNodeKind::MiniBoss | RunNodeKind::Boss)
+    }
+
     pub fn is_fight(self) -> bool {
         matches!(
             self,
@@ -322,10 +327,6 @@ impl RunNodeKind {
                 | RunNodeKind::MiniBoss
                 | RunNodeKind::Boss
         )
-    }
-
-    pub fn is_boss(self) -> bool {
-        matches!(self, RunNodeKind::MiniBoss | RunNodeKind::Boss)
     }
 }
 
