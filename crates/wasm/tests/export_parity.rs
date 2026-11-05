@@ -62,8 +62,10 @@ const SHARED: &[&str] = &[
 /// decisions (pack rolls, pity, the token bars) of `jackioh-shared`, which no custom-card practice game or
 /// card creator plays, rates or makes (practice runs on the host machine after the Luau module is gone,
 /// #3099), and R3100000's combat forecast, which only a tutorial lesson asks for and a lesson holds no
-/// custom card: so the Luau module that leaves with #3097 never binds them. Their other wrapper is the C
-/// module's (#3093), as the host contract of `crates/shared/README.md` says.
+/// custom card: so the Luau module that leaves with #3097 never binds them, nor #3103's `bots` and
+/// `bot_decide`, the ladder bots' decisions and the move a bot owes, which are the machine's and the
+/// queue's. Their other wrapper is the C module's (#3093), as the host contract of
+/// `crates/shared/README.md` says.
 const NORMAL_ONLY: &[&str] = &[
     "combat_forecast",
     "learned_parity",
@@ -76,6 +78,8 @@ const NORMAL_ONLY: &[&str] = &[
     "host",
     "loadout",
     "ranked",
+    "bots",
+    "bot_decide",
     "economy",
 ];
 
