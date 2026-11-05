@@ -28368,10 +28368,6 @@
       "refused_until": "2026-11-02T02:50:00Z",
       "spent": [
         {
-          "at": "2026-10-27T18:32:22Z",
-          "minutes": 68.7
-        },
-        {
           "at": "2026-10-27T18:52:26Z",
           "minutes": 12.3
         },
@@ -29166,16 +29162,13 @@
         {
           "at": "2026-11-05T04:47:07Z",
           "minutes": 2.0
+        },
+        {
+          "at": "2026-11-05T05:24:33Z",
+          "minutes": 22.7
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-26T22:16:55Z",
-          "cache": 9148120,
-          "cost": 5.092,
-          "input": 154,
-          "output": 85365
-        },
         {
           "at": "2026-10-27T01:59:23Z",
           "cache": 15777902,
@@ -30568,14 +30561,21 @@
           "cost": 1.07,
           "input": 29,
           "output": 10972
+        },
+        {
+          "at": "2026-11-05T05:24:33Z",
+          "cache": 7372836,
+          "cost": 1.643,
+          "input": 120,
+          "output": 35763
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-05T08:50:00Z",
-          "utilization": 0.11
+          "utilization": 0.08
         },
-        "observed_at": "2026-11-05T05:12:56Z",
+        "observed_at": "2026-11-05T05:24:33Z",
         "status": "allowed"
       }
     },
@@ -32562,6 +32562,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-05T04:06:34Z,claude-8,ping,before,41965396321,4,2026-11-05T08:50:00Z,,,allowed,85,,",
+      "2026-11-05T04:07:06Z,claude-8,stream,call,41965396321,5,2026-11-05T08:50:00Z,,,allowed,85,,",
+      "2026-11-05T04:07:51Z,claude-8,stream,call,41965396321,6,2026-11-05T08:50:00Z,,,allowed,85,,",
+      "2026-11-05T04:09:21Z,claude-8,stream,call,41965396321,7,2026-11-05T08:50:00Z,,,allowed,85,,",
+      "2026-11-05T04:14:06Z,claude-8,stream,call,41965396321,8,2026-11-05T08:50:00Z,,,allowed,85,,",
+      "2026-11-05T04:29:32Z,claude-8,stream,call,41965396321,8,2026-11-05T08:50:00Z,,,allowed,85,,"
+    ]
   },
   "version": 1
 }
