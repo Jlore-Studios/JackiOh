@@ -1,5 +1,5 @@
 // R3156000 (#3156): the front screen's Dev button, a dev account's door to the Dev tools on a computer.
-// jsdom has no media queries, so each test answers `DEV_PANEL_QUERY` itself.
+// jsdom has no media queries, so each test answers `DEV_PANEL_HIDDEN_QUERY` itself.
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MeResponse } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
 import { DevButton, devButtonTestid } from "./DevButton.tsx";
-import { DEV_PANEL_MIN_WIDTH_PX, DEV_PANEL_QUERY } from "./devPanel.ts";
+import { DEV_PANEL_HIDDEN_QUERY, DEV_PANEL_MIN_WIDTH_PX } from "./devPanel.ts";
 import { devToolsTestid } from "./DevTools.tsx";
 
 const TOKEN = "token-1";
@@ -28,14 +28,14 @@ function ready(isDev: boolean | undefined): Account {
   return { kind: "ready", token: TOKEN, me: me(isDev) };
 }
 
-/** Answers `DEV_PANEL_QUERY` with `onComputer`, every other query as the setup does. */
+/** Answers `DEV_PANEL_HIDDEN_QUERY` for a computer's window or a phone's, every other query as the setup does. */
 function screenIs(onComputer: boolean): void {
   const original = window.matchMedia;
   vi.stubGlobal("matchMedia", (query: string): MediaQueryList => {
-    if (query !== DEV_PANEL_QUERY) return original(query);
+    if (query !== DEV_PANEL_HIDDEN_QUERY) return original(query);
     return {
       media: query,
-      matches: onComputer,
+      matches: !onComputer,
       onchange: null,
       addEventListener: () => undefined,
       removeEventListener: () => undefined,
@@ -66,8 +66,9 @@ afterEach(() => {
 });
 
 describe("R3156000 the front screen's Dev button", () => {
-  it("R3156000 a computer's window: a wide one whose main pointer is fine", () => {
-    expect(DEV_PANEL_QUERY).toBe(`(min-width: ${String(DEV_PANEL_MIN_WIDTH_PX)}px) and (pointer: fine)`);
+  it("R3156000 a computer's window is any but a phone's or a tablet's: as narrow as the board's line, or a coarse pointer", () => {
+    expect(DEV_PANEL_HIDDEN_QUERY).toBe(`(max-width: ${String(DEV_PANEL_MIN_WIDTH_PX - 1)}px), (pointer: coarse)`);
+    expect(DEV_PANEL_MIN_WIDTH_PX).toBe(1025);
   });
 
   it("R3156000 shows for a dev account on a computer and opens the Dev tools in a dialog", async () => {

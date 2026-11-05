@@ -1,5 +1,5 @@
 // R3156000 (#3156): the Dev tools' door on the front screen, a button in the top bar beside the
-// account's, for a dev account on a computer (`DEV_PANEL_QUERY`). It opens the Dev tools
+// account's, for a dev account on a computer (no `DEV_PANEL_HIDDEN_QUERY` window). It opens the Dev tools
 // (`DevTools.tsx`) in a dialog over the front screen. The server decides (CLAUDE.md rule 7): the
 // button shows only when `/api/auth/me` says `isDev`, and every tool's route checks
 // `DEV_PROFILE_IDS` again. Escape, Back (R2127000) and the scrim close the dialog, as the friends
@@ -12,7 +12,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import type { Account } from "../net/gate.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
 import DevTools from "./DevTools.tsx";
-import { DEV_PANEL_QUERY } from "./devPanel.ts";
+import { DEV_PANEL_HIDDEN_QUERY } from "./devPanel.ts";
 
 import "../auth/tavern.css";
 import "./dev-panel.css";
@@ -27,7 +27,7 @@ export const devButtonTestid = {
 function queryList(): MediaQueryList | null {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
   try {
-    return window.matchMedia(DEV_PANEL_QUERY);
+    return window.matchMedia(DEV_PANEL_HIDDEN_QUERY);
   } catch {
     return null;
   }
@@ -42,11 +42,13 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
+/** A host with no media queries shows no button: it cannot say it is a computer. */
 function onComputer(): boolean {
-  return queryList()?.matches === true;
+  const list = queryList();
+  return list !== null && !list.matches;
 }
 
-/** Whether this window is a computer's (`DEV_PANEL_QUERY`), kept current by the query's `change` event. */
+/** Whether this window is a computer's (not `DEV_PANEL_HIDDEN_QUERY`'s), kept current by the query's `change` event. */
 export function useOnComputer(): boolean {
   return useSyncExternalStore(subscribe, onComputer, () => false);
 }

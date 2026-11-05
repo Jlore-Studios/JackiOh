@@ -37,7 +37,7 @@ import {
 } from "./landingFan.ts";
 import { siteFooterTestid } from "./SiteFooter.tsx";
 import { devButtonTestid } from "./DevButton.tsx";
-import { DEV_PANEL_QUERY } from "./devPanel.ts";
+import { DEV_PANEL_HIDDEN_QUERY } from "./devPanel.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -86,11 +86,11 @@ function serve(answer: MeAnswer): void {
   );
 }
 
-/** R3156000: this window is a computer's, as `DEV_PANEL_QUERY` asks. */
+/** R3156000: this window is a computer's, no phone's or tablet's (`DEV_PANEL_HIDDEN_QUERY`). */
 function onComputer(): void {
   const original = window.matchMedia;
   vi.stubGlobal("matchMedia", (query: string) =>
-    query === DEV_PANEL_QUERY ? ({ ...original(query), media: query, matches: true } as MediaQueryList) : original(query),
+    query === DEV_PANEL_HIDDEN_QUERY ? ({ ...original(query), media: query, matches: false } as MediaQueryList) : original(query),
   );
 }
 
