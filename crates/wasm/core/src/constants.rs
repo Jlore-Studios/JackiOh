@@ -71,6 +71,9 @@ pub fn constants() -> Result<String, String> {
         TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
         VOTE_TALLY_SIZE,
     );
+    // R1420, R3114000: the sets that ship, read from the set table, which `engineConfig.ts` holds
+    // beside the config constants.
+    put(&mut all, "SHIPPED_SETS", &jackioh_engine::SHIPPED_SETS)?;
     put_shared!(
         all;
         MS_PER_SECOND, SERIES_WINS_NEEDED, SERIES_MAX_GAMES, SERIES_PICK_SECONDS, TURN_CLOCK_SECONDS,

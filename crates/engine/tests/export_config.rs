@@ -65,9 +65,6 @@ export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbP
 struct Constant {
     name: &'static str,
     annotation: Option<&'static str>,
-    /// Written `<value> as const satisfies <type>` rather than annotated, so TypeScript keeps each
-    /// literal of a list (`SHIPPED_SETS[0]` is `"Core"`, never `undefined`) and still checks its type.
-    satisfies: Option<&'static str>,
     json: String,
 }
 
@@ -81,16 +78,7 @@ fn constant<T: Serialize + ?Sized>(
     Constant {
         name,
         annotation,
-        satisfies: None,
         json,
-    }
-}
-
-/// A constant written `as const satisfies <bound>` (`Constant::satisfies`).
-fn literal<T: Serialize + ?Sized>(name: &'static str, bound: &'static str, value: &T) -> Constant {
-    Constant {
-        satisfies: Some(bound),
-        ..constant(name, None, value)
     }
 }
 
@@ -194,8 +182,13 @@ fn engine_config_ts() -> String {
         constant("SANDBOX_HERO_HEALTH_MAX", None, &SANDBOX_HERO_HEALTH_MAX),
         constant("SANDBOX_MANA_MAX", None, &SANDBOX_MANA_MAX),
         // R1420, R3114000: the sets that ship, in catalog order, which the client reads rather than
-        // restating the set table.
-        literal("SHIPPED_SETS", "readonly SetName[]", &SHIPPED_SETS),
+        // restating the set table. Never empty (Core ships), and typed so, so `SHIPPED_SETS[0]` is a
+        // `SetName`, never `undefined`.
+        constant(
+            "SHIPPED_SETS",
+            Some("readonly [SetName, ...SetName[]]"),
+            &SHIPPED_SETS,
+        ),
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
         // R1705005: the human seat's handicap in a lesson.
@@ -214,18 +207,14 @@ fn engine_config_ts() -> String {
 
     let mut text = String::from(HEADER);
     for constant in &constants {
-        match (constant.annotation, constant.satisfies) {
-            (Some(annotation), _) => {
+        match constant.annotation {
+            Some(annotation) => {
                 text.push_str(&format!(
                     "export const {}: {} = {};\n",
                     constant.name, annotation, constant.json
                 ));
             }
-            (None, Some(bound)) => text.push_str(&format!(
-                "export const {} = {} as const satisfies {};\n",
-                constant.name, constant.json, bound
-            )),
-            (None, None) => text.push_str(&format!("export const {} = {};\n", constant.name, constant.json)),
+            None => text.push_str(&format!("export const {} = {};\n", constant.name, constant.json)),
         }
     }
     text

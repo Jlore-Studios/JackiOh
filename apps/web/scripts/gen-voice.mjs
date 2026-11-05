@@ -335,7 +335,7 @@ function catalogProblems(catalog, table, expected) {
 /** R1420: the sets that ship, as `src/wire/engineConfig.ts` lists them (generated, R3114000). */
 function shippedSets() {
   const text = fs.readFileSync(ENGINE_CONFIG, "utf8");
-  const match = /export const SHIPPED_SETS = (\[[^\]]*\]) as const satisfies readonly SetName\[\];/.exec(text);
+  const match = /export const SHIPPED_SETS: readonly \[SetName, \.\.\.SetName\[\]\] = (\[[^\]]*\]);/.exec(text);
   if (!match) throw new Error(`${ENGINE_CONFIG}: no SHIPPED_SETS`);
   return new Set(JSON.parse(match[1]));
 }
