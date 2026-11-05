@@ -758,6 +758,20 @@ pub fn series(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::series::apply(&call))
 }
 
+// The match host's machine (#3101; SPEC §9.2, §9.3, §9.5)
+
+/// One call of `jackioh_shared::host`, the match host's decisions the server calls natively: the input is
+/// a `HostCall` (`{ "call": "stepDuel", "host": …, "event": …, "now": … }`), the output a `HostAnswer`
+/// (`{ "answer": "stepped", "host": …, "outputs": [ … ] }`, or the read). The host holds the `DuelHost` as
+/// JSON and hands it back on every call, and passes the time in (`crates/shared/README.md`, the host
+/// contract); the outputs are carried out by the host in order. The machine reduces under the catalog
+/// this module registered. No decision is made here.
+pub fn host(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::host::boundary::HostCall = parse("host: the call", call_json)?;
+    jackioh_cards::register_all();
+    to_json(&jackioh_shared::host::boundary::apply(call))
+}
+
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
 // mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
 // feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only
