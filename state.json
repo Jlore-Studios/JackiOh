@@ -14964,9 +14964,7 @@
       "source": "",
       "started_at": "2026-11-05T01:40:44Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6647214495"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
         "approvals": [],
