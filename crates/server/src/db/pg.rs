@@ -254,7 +254,7 @@ fn loadouts_or_none(value: Option<Value>) -> Result<Option<(Loadout, Loadout)>, 
 }
 
 /// R3049000: `matches.win_rates`, the game's kept win-rate snapshot, or `null` on a match handed none
-/// and on one from before 0083.
+/// and on one from before 0084.
 fn win_rates_or_none(value: Option<Value>) -> Result<Option<WinRateTable>, StoreError> {
     value
         .filter(|value| !value.is_null())
@@ -2884,7 +2884,7 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
             m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1),
         )?)
         .bind(json_or_null(&m.loadouts)?)
-        // R3049000: the game's kept win-rate snapshot (migration 0083), null when handed none.
+        // R3049000: the game's kept win-rate snapshot (migration 0084), null when handed none.
         .bind(json_or_null(&m.win_rates)?)
         .execute(&mut **t)
         .await

@@ -1,7 +1,8 @@
 // Lesson 3 data (SPEC §9.10, R291, R2434001, R2533001); ../lessons.ts defines its fields and
 // ../scripts/casting.ts is the coach: units the first two lessons taught and spells, no Aura, Death,
 // backrow card, Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal
-// (`scripts/lesson-deal.ts casting`).
+// (`scripts/lesson-deal.ts casting`). Seed "-9" until #3128, whose costs (In a hurry's among them) took
+// the coach's line to 13 turns there; "-81" wins within 9 and shows every moment.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -11,7 +12,7 @@ export const lesson: TutorialLesson = {
   title: "Spells",
   summary: "Cards that act once and are gone: damage, removal, healing and more.",
   discoveries: ["spell", "removal"],
-  seed: "tg-casting-9",
+  seed: "tg-casting-81",
   humanSeat: "p1",
   poolHold: true,
   humanDeck: [

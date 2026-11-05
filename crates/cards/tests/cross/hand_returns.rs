@@ -201,6 +201,8 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
         g.end_turn();
         assert_eq!(g.state().active, P1);
         assert_eq!(g.hand(P1).len(), 10);
+        // Twinspell's Activate gives Craft a Card an Echo repeat, whose card the full hand burns.
+        g.activate(TWINSPELL, json!({}));
         g.play(CRAFT, json!({}));
         let mut i = 0;
         while i < 4 {

@@ -4,6 +4,9 @@
 //! loop, so a prompt inside one repeat pauses the rest until it is answered (§10.5 step 6).
 //! R30 Twinspell lifetime: "Stays until a spell is played, then goes to the GY" (#79, §8).
 //!
+//! R3048001: an Echo X that reads the mana left once the card is paid for. R3048002: a card that keeps
+//! its targets asks none for its Echo repeats.
+//!
 //! Fixtures are prefixed `ec-` and indexed above 1500 so they cannot collide (BUILD §0).
 
 use jackioh_engine::effects::add_to_hand as add_to_hand_effect;
@@ -95,6 +98,47 @@ fn echo_x_printed() -> CardDef {
     def("echo-x-printed", "Spell", 1532, json!({}))
 }
 
+/// R3048001: a (1) Spell whose Echo X is the mana left once it is paid for (Meditative #5's shape).
+fn echo_x_left() -> CardDef {
+    def("echo-x-left", "Spell", 1533, json!({ "cost": 1 }))
+}
+
+/// R3048002: a Spell with one declared Unit, hit for 1, whose Echo repeats keep that pick.
+fn keeps() -> CardDef {
+    def("keeps", "Spell", 1534, json!({}))
+}
+
+/// The same without the flag: each Echo repeat asks its target afresh (R81).
+fn asks() -> CardDef {
+    def("asks", "Spell", 1535, json!({}))
+}
+
+/// A Unit to hit, with 9 health.
+fn wall() -> CardDef {
+    def(
+        "wall",
+        "Unit",
+        1536,
+        json!({
+            "base": { "attack": 1, "health": 9, "keywords": [], "text": "wall" },
+            "radiant": { "attack": 2, "health": 18, "keywords": [], "text": "wall" },
+        }),
+    )
+}
+
+/// A Unit that dies to the second hit it takes, with 2 health.
+fn pawn() -> CardDef {
+    def(
+        "pawn",
+        "Unit",
+        1537,
+        json!({
+            "base": { "attack": 1, "health": 2, "keywords": [], "text": "pawn" },
+            "radiant": { "attack": 2, "health": 4, "keywords": [], "text": "pawn" },
+        }),
+    )
+}
+
 fn defs() -> Vec<CardDef> {
     vec![
         twinspell(),
@@ -105,6 +149,11 @@ fn defs() -> Vec<CardDef> {
         echo_x(),
         echo_x_grow(),
         echo_x_printed(),
+        echo_x_left(),
+        keeps(),
+        asks(),
+        wall(),
+        pawn(),
     ]
 }
 
@@ -131,6 +180,22 @@ fn grant_echo(amount: i32) -> Effect {
             ModifierKind::EchoNextSpell { amount, source_id },
         );
     })
+}
+
+/// R3048001: the mana its controller holds unspent, which at step 4 is the mana left once paid.
+fn mana_left_echo() -> Option<EchoXHook> {
+    Some(read_hook(|args| {
+        unspent_mana_of(args.state, args.self_.controller)
+    }))
+}
+
+/// One declared Unit on either side (Meditative #5's declaration).
+fn one_unit() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
+fn hit_chosen() -> Hook {
+    hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))])
 }
 
 fn hit_two() -> Hook {
@@ -208,6 +273,33 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
+    scripts.insert(
+        echo_x_left().id,
+        both(Script {
+            echo_x: mana_left_echo(),
+            cry: Some(hit_two()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        keeps().id,
+        both(Script {
+            targets: one_unit(),
+            echo_keeps_targets: true,
+            cry: Some(hit_chosen()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        asks().id,
+        both(Script {
+            targets: one_unit(),
+            cry: Some(hit_chosen()),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(wall().id, both(Script::default()));
+    scripts.insert(pawn().id, both(Script::default()));
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
     resume.insert(
         "picked",
@@ -678,5 +770,226 @@ mod r802_computed_echo_x {
         settle(&mut bench.sink(&mut state), Default::default());
         // p1's max mana, 3: four resolutions, though p2's is 1.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 8);
+    }
+}
+
+mod r3048001_echo_x_reads_the_mana_left_once_paid {
+    use super::*;
+
+    /// p1 with `mana` to spend, playing the (1) Spell from hand.
+    fn play_with(seed: &str, mana: i32) -> GameState {
+        let mut state = playing(seed);
+        state.players.p1.mana.current = mana;
+        let card = hand_card(&mut state, &echo_x_left().id, PlayerId::P1);
+        act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        )
+    }
+
+    #[test]
+    fn r3048001_x_is_the_mana_left_after_the_cards_own_price_is_paid() {
+        // 4 mana, (1) paid: X = 3, four resolutions of 2.
+        let after = play_with("r3048001-four", 4);
+        assert_eq!(after.players.p1.mana.current, 3);
+        assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 8);
+        assert_eq!(echo_queue(&after), Vec::<EchoItem>::new());
+    }
+
+    #[test]
+    fn r3048001_with_exactly_its_price_it_resolves_once() {
+        // 1 mana, (1) paid: X = 0, no repeat.
+        let after = play_with("r3048001-one", 1);
+        assert_eq!(after.players.p1.mana.current, 0);
+        assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 2);
+    }
+
+    #[test]
+    fn r3048001_max_mana_is_not_read() {
+        let mut state = playing("r3048001-max");
+        state.players.p1.mana.max = 9;
+        state.players.p1.mana.current = 2;
+        let card = hand_card(&mut state, &echo_x_left().id, PlayerId::P1);
+        let after = act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
+        );
+        // X = 1, not 9: two resolutions.
+        assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 4);
+    }
+
+    #[test]
+    fn r3048001_a_cast_pays_nothing_so_its_x_is_the_mana_its_caster_holds() {
+        let mut state = playing("r3048001-cast");
+        state.players.p1.mana.current = 3;
+        let card = hand_card(&mut state, &echo_x_left().id, PlayerId::P1);
+        let mut bench = Bench::new(&state);
+        cast_card(&mut bench.sink(&mut state), &card, Default::default());
+        settle(&mut bench.sink(&mut state), Default::default());
+        // X = 3, nothing paid: four resolutions.
+        assert_eq!(state.players.p1.mana.current, 3);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 8);
+    }
+}
+
+mod r3048002_a_card_that_keeps_its_targets_asks_none_for_its_echo_repeats {
+    use super::*;
+
+    /// p1 with two Units opposite and `echo` repeats owed, `first` played at the Unit in lane 1.
+    fn play_at_lane_one(
+        seed: &str,
+        spell: &CardDef,
+        first: &CardDef,
+        echo: i32,
+    ) -> (ReduceResult, CardInstance, CardInstance) {
+        let mut state = playing(seed);
+        state.players.p1.mana.current = 4;
+        let hit = put(
+            &mut state,
+            &first.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let other = put(
+            &mut state,
+            &wall().id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        pending_echo(&mut state, PlayerId::P1, echo);
+        let card = hand_card(&mut state, &spell.id, PlayerId::P1);
+        let played = act_result(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": card.id,
+                "playerId": "p1",
+                "targets": [{ "pick": "instance", "instanceId": hit.id }],
+            }),
+        );
+        assert_eq!(played.error, None);
+        (played, hit, other)
+    }
+
+    fn hit_ids(result: &ReduceResult) -> Vec<Value> {
+        pluck(&result.events, GameEventType::Damage, "targetId")
+    }
+
+    #[test]
+    fn r3048002_every_repeat_hits_the_first_resolutions_pick_and_nothing_is_asked() {
+        let (played, hit, _) = play_at_lane_one("r3048002-kept", &keeps(), &wall(), 3);
+        assert_eq!(played.state.pending, None);
+        assert_eq!(hit_ids(&played), vec![json!(hit.id); 4]);
+        assert_eq!(echo_queue(&played.state), Vec::<EchoItem>::new());
+        assert_eq!(
+            find_instance(&played.state, &hit.id).map(|unit| unit.damage),
+            Some(4)
+        );
+    }
+
+    #[test]
+    fn r3048002_without_the_flag_each_repeat_asks_a_fresh_target() {
+        let (played, hit, other) = play_at_lane_one("r3048002-asked", &asks(), &wall(), 2);
+        let pending = played
+            .state
+            .pending
+            .clone()
+            .expect("the repeat asks for its target");
+        assert_eq!(pending.kind, PromptKind::Target);
+        assert_eq!(hit_ids(&played), vec![json!(hit.id)]);
+        // The prompt offers the other Unit too, and answering it hits that one.
+        let offered: Vec<Selection> = pending
+            .options
+            .iter()
+            .map(|option| option.selection.clone())
+            .collect();
+        let pick = Selection::Instance {
+            instance_id: other.id.clone(),
+        };
+        assert!(offered.contains(&pick));
+        let answered = act(
+            &played.state,
+            json!({
+                "type": "answer",
+                "choiceId": pending.id,
+                "selection": [pick],
+                "playerId": "p1",
+            }),
+        );
+        assert_eq!(
+            answered.pending.as_ref().map(|open| open.kind),
+            Some(PromptKind::Target)
+        );
+    }
+
+    #[test]
+    fn r3048002_r76_r90_a_pick_that_dies_mid_way_fizzles_the_repeats_left_and_nothing_is_asked() {
+        // The 2-health pawn takes the first resolution and the first repeat and dies at the check
+        // closing it; the other Unit stands, a legal pick the card must not fall back on.
+        let (played, pawn, other) = play_at_lane_one("r3048002-dies", &keeps(), &pawn(), 3);
+        assert_eq!(played.state.pending, None);
+        assert_eq!(hit_ids(&played), vec![json!(pawn.id); 2]);
+        assert!(in_pile(&played.state.players.p2.graveyard, &pawn.id));
+        let standing = find_instance(&played.state, &other.id).map(|unit| unit.damage);
+        assert_eq!(standing, Some(0));
+        assert_eq!(echo_queue(&played.state), Vec::<EchoItem>::new());
+    }
+
+    #[test]
+    fn r3048002_r174_a_pick_that_died_and_came_back_by_reborn_is_not_hit_again() {
+        let mut state = playing("r3048002-reborn");
+        let pawn = put(
+            &mut state,
+            &pawn().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &pawn.id)
+            .expect("the pawn stands")
+            .granted_keywords
+            .push(Keyword::Reborn);
+        pending_echo(&mut state, PlayerId::P1, 3);
+        let card = hand_card(&mut state, &keeps().id, PlayerId::P1);
+        let played = act_result(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": card.id,
+                "playerId": "p1",
+                "targets": [{ "pick": "instance", "instanceId": pawn.id }],
+            }),
+        );
+        assert_eq!(played.error, None);
+        assert_eq!(played.state.pending, None);
+        // Two hits kill it; the body Reborn returns is a new arrival, which the last two repeats pass by.
+        assert_eq!(hit_ids(&played), vec![json!(pawn.id); 2]);
+        let body = find_instance(&played.state, &pawn.id).expect("Reborn brought it back");
+        assert!(matches!(body.zone, Zone::Field { .. }), "{:?}", body.zone);
+    }
+
+    #[test]
+    fn r3048002_a_cast_keeps_its_pick_too() {
+        let mut state = playing("r3048002-cast");
+        let wall = put(
+            &mut state,
+            &wall().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        pending_echo(&mut state, PlayerId::P1, 2);
+        let card = hand_card(&mut state, &keeps().id, PlayerId::P1);
+        let mut bench = Bench::new(&state);
+        cast_card(
+            &mut bench.sink(&mut state),
+            &card,
+            CastOptions {
+                random: Some(true),
+                ..Default::default()
+            },
+        );
+        settle(&mut bench.sink(&mut state), Default::default());
+        // A random cast picked once, at random, and every repeat hit that pick.
+        assert_eq!(state.pending, None);
+        assert_eq!(find_instance(&state, &wall.id).map(|unit| unit.damage), Some(3));
     }
 }

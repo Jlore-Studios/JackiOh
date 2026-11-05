@@ -1,15 +1,16 @@
 //! S T-propagation-layer Drone Battleship (Propagation Layer) (SPEC §8.10 row T-propagation-layer): (5)
 //! Unit, Token (printed Mythic), 12/12 → 24/24, a token of the Stinkyscape set.
-//!   Base:    "Starship, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a Drone
-//!            Corvette."
-//!   Radiant: "Starship, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate: Summon a
-//!            Radiant Drone Corvette."
+//!   Base:    "Flying, Ranged, Can't attack\nActivate 2: Summon a Drone Interceptor.\nActivate: Summon a
+//!            Drone Corvette."
+//!   Radiant: "Flying, Ranged, Can't attack\nActivate 2: Summon a Radiant Drone Interceptor.\nActivate:
+//!            Summon a Radiant Drone Corvette."
 //! Engine: the middle of the Drone Battleship's pile (S #36, R1842000): beneath the Shield Layer it acts for
 //!   nothing and offers no Activate (R13); on top, two Activate abilities (R384), their uses counted apart
 //!   (R1751000): "Activate 2" summons a Drone Interceptor, twice a turn at most, and "Activate" a Drone
 //!   Corvette, once, each into the leftmost open unit zone (R64), no Cry (R1), the drone drawing its own
-//!   combat keywords as it arrives (R781004). Starship and Can't attack are catalog keywords. A unit token:
-//!   it ceases to exist off the field (R11). Radiant: Radiant drones.
+//!   combat keywords as it arrives (R781004). Flying, Ranged and Can't attack are catalog keywords. It is
+//!   no Starship (R3038002): no Starship tag, so it is never launched and no piece fuses into it. A unit
+//!   token: it ceases to exist off the field (R11). Radiant: Radiant drones.
 
 use jackioh_engine::prelude::*;
 
@@ -143,5 +144,54 @@ mod tests {
         activate(&mut s, "corvette");
         let drone = |def: &str| Some((def.to_string(), true));
         assert_eq!(drones(&s), vec![drone(INTERCEPTOR), drone(CORVETTE), None, None]);
+    }
+
+    /// R3038002: no Starship. It prints Flying and Ranged where it printed the Starship keyword and
+    /// carries no Starship tag, so it offers no launch and takes no piece: a dying piece summons its
+    /// controller a Dormant Starship instead.
+    #[test]
+    fn r3038002_it_has_flying_and_ranged_is_never_launched_and_takes_no_piece() {
+        use jackioh_engine::prelude::{STARSHIP_LAUNCH_ABILITY, is_launched_starship, tags_of};
+        const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
+        for radiant in [false, true] {
+            let (mut s, ship) = crate::built_starship(
+                "r3038002-propagation",
+                json!([{ "def": AP_ROUNDS, "lane": 2 }]),
+                json!({ "field": [{ "def": PROPAGATION, "lane": 1, "radiant": radiant }] }),
+                json!({}),
+            );
+            let layer = s.unit_at(P1, 1);
+            assert_eq!(layer.def_id, PROPAGATION);
+            let stats = s.stats(layer.id.as_str());
+            let kinds: Vec<KeywordKind> = stats.keywords.iter().map(Keyword::kind).collect();
+            assert!(kinds.contains(&KeywordKind::Flying), "{kinds:?}");
+            assert!(kinds.contains(&KeywordKind::Ranged), "{kinds:?}");
+            assert!(!kinds.contains(&KeywordKind::Starship), "{kinds:?}");
+            assert!(!tags_of(s.state(), &layer).contains(&Tag::Starship));
+            // The dead piece went into a Dormant Starship of its own, not into this.
+            assert_ne!(ship, layer.id);
+            assert!(is_dormant_starship(s.card(ship.as_str())));
+            let after = s.card(layer.id.as_str()).clone();
+            assert_eq!(after.starship, None, "no piece is fused into it");
+            assert_eq!(after.def_id, PROPAGATION);
+            let printed = if radiant { (24, 24) } else { (12, 12) };
+            assert_eq!((stats.attack, stats.health), printed, "radiant {radiant}");
+            // And no launch: neither offered nor taken.
+            assert!(!is_dormant_starship(&after) && !is_launched_starship(&after));
+            let launch = ActionBody::Activate {
+                instance_id: layer.id.clone(),
+                ability: Some(STARSHIP_LAUNCH_ABILITY.to_string()),
+                targets: None,
+                modes: None,
+                tributes: None,
+            };
+            assert!(!legal_actions(s.state(), P1).contains(&launch));
+            s.expect_refused(|s| {
+                s.activate(
+                    layer.id.as_str(),
+                    json!({ "ability": STARSHIP_LAUNCH_ABILITY }),
+                )
+            });
+        }
     }
 }

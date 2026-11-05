@@ -351,6 +351,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub slumber: Option<Slumber>,
+    /// R3039000: the card has awakened (`slumber::awaken_card`: its countdown, its Activate, an Awaken,
+    /// a Starship's launch), so it never enters Dormant again (`slumber::start_slumber_on_field`). Kept
+    /// in every zone and through R78's and R766's resets, like `flashback_spent`; a copy or a Transform
+    /// is a new card without it, and so is a fresh Dormant Starship. Only ever `Some(true)`; absent on
+    /// every other card, so a game where nothing awakens serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub awakened: Option<bool>,
     /// R1852000, R1852005: the card is a Starship — the Dormant Starship, whose hull text
     /// (`StaticFlags.starshipHull`) started this as it entered the field — and this is its memory: the
     /// pieces fused into it and, once it has launched, its name. A status, never text: R78's reset takes
@@ -366,9 +374,9 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub times_played: Option<i32>,
-    /// R783013: the card has used its Flashback, played from its graveyard by it, so it has no
-    /// Flashback any more, printed or given (`layers`). Kept in every zone and through R78's and
-    /// R766's resets, so the card is never offered from a graveyard by it again; a copy or a
+    /// R783013 (upheld by R3039001): the card has used its Flashback, played from its graveyard by it,
+    /// so it has no Flashback any more, printed or given (`layers`). Kept in every zone and through
+    /// R78's and R766's resets, so the card is never offered from a graveyard by it again; a copy or a
     /// Transform is a new card without it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
@@ -1155,8 +1163,8 @@ pub struct Marketplace {
     pub quotes: Vec<ResourceQuote>,
 }
 
-/// R1853005, R2250002: one lot at the Marketplace: a card of `def_id`, at `price` Credits (`base` before
-/// it moved), offered to `owner` alone, `stock` of it and the copies each player has bought.
+/// R1853005, R2250002, R3047002: one lot at the Marketplace: a card of `def_id`, at `price` Credits (`base`
+/// before it moved), offered to `owner` alone, `stock` of it and the copies each player has bought.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1185,6 +1193,16 @@ pub struct MarketOffer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub fixed: Option<bool>,
+    /// R3047002: the Buffs the lot was rolled with, each landed on the card bought (R3047003) and each
+    /// raising `base`. Absent on a lot with none, a Nerfed or a fixed one among them (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub buffs: Option<i32>,
+    /// R3047002: the Nerfs the lot was rolled with, each landed on the card bought (R3047003) and each
+    /// lowering `base`. Absent on a lot with none, a Buffed or a fixed one among them (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub nerfs: Option<i32>,
 }
 
 /// R1853002: what a Resource of `def_id` sells for at the Marketplace this turn, on each face.
@@ -2575,6 +2593,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         frozen: None,
         slumber: None,
+        awakened: None,
         starship: None,
         times_played: None,
         flashback_spent: None,

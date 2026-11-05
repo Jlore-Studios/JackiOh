@@ -141,16 +141,16 @@ mod r783000_reply {
 mod r783002_r783003_taunts {
     use super::*;
 
-    /// The AI's Flying Midrange Menace 9/9 Taunt against the enemy's Tempo Timmy 3/3 and Pointmaster 7/1.
+    /// The AI's Flying Midrange Menace 9/9 Taunt against the enemy's Tempo Timmy 3/3 and a 4-mana 7/7 (Pointmaster is a 6/1 since issue #3136).
     fn flying_menace(position: &str, flying_pointmaster: bool) -> GameState {
         let mut state = board(json!({
             "seed": "ai-flying-taunt",
             "p1": { "field": [{ "def": "core-019", "position": position }] },
-            "p2": { "field": ["core-011", "core-020"] },
+            "p2": { "field": ["core-011", "core-025"] },
         }));
         grant(&mut state, AI, "core-019", Keyword::Flying);
         if flying_pointmaster {
-            grant(&mut state, HUMAN, "core-020", Keyword::Flying);
+            grant(&mut state, HUMAN, "core-025", Keyword::Flying);
         }
         state
     }
@@ -174,7 +174,7 @@ mod r783002_r783003_taunts {
     fn r783002_ready_gap_counts_the_ground_attackers_past_a_lone_flying_taunt() {
         let mut state = board(json!({
             "seed": "ai-flying-gap",
-            "p1": { "field": ["core-011", "core-020"] },
+            "p1": { "field": ["core-011", "core-025"] },
             "p2": { "field": ["core-019"], "health": 10 },
         }));
         grant(&mut state, HUMAN, "core-019", Keyword::Flying);

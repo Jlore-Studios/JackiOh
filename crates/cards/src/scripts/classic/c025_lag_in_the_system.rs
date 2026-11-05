@@ -114,7 +114,7 @@ mod tests {
     const DIVIDEND: &str = "core-024"; // (X) Spell
     const BILLY: &str = "classicplus-069"; // (X) Unit
     const FELINORS: &str = "core-012"; // (2) Unit 3/4
-    const EXPERIMENT: &str = "core-085"; // (2) Trap
+    const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
     const SEVEN: &str = "core-025"; // (4) Unit 7/7
@@ -134,7 +134,7 @@ mod tests {
             "p2": {
                 "hand": [FELINORS, STOCKPILE],
                 "field": [VANILLA, SEVEN],
-                "backrow": [{ "def": BREAD, "faceUp": false }, EXPERIMENT],
+                "backrow": [{ "def": BREAD, "faceUp": false }, TWO_TRAP],
                 "library": [INFINITE, MENACE, SHEEPISH],
                 "graveyard": [VANILLA],
                 "exile": [REPLENISH],
@@ -183,7 +183,7 @@ mod tests {
                 assert_eq!(def_id_of(s.unit(P1, 2)), Some(MENACE.to_string()));
                 assert_eq!(def_id_of(s.backrow(P1, 2)), Some(MANA_WELL.to_string()));
                 assert_eq!(def_id_of(s.unit(P2, 2)), Some(SEVEN.to_string()));
-                assert_eq!(def_id_of(s.backrow(P2, 2)), Some(EXPERIMENT.to_string()));
+                assert_eq!(def_id_of(s.backrow(P2, 2)), Some(TWO_TRAP.to_string()));
                 assert_eq!(def_ids(&s.hand(P1)), vec![FELINORS, VANILLA]);
                 assert_eq!(def_ids(&s.pile(P1, "library")), vec![REPLENISH, SEVEN]);
                 assert_eq!(def_ids(&s.hand(P2)), vec![FELINORS, STOCKPILE]);
@@ -235,10 +235,10 @@ mod tests {
             #[test]
             fn r65_a_set_card_is_read_at_its_own_cost_a_2_trap_under_toe_cracker_costs_2_and_stays() {
                 let mut s = scenario(json!({
-                    "p1": { "hand": [LAG, FELINORS], "field": [TOE_CRACKER], "backrow": [{ "def": EXPERIMENT, "faceUp": false }] },
+                    "p1": { "hand": [LAG, FELINORS], "field": [TOE_CRACKER], "backrow": [{ "def": TWO_TRAP, "faceUp": false }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                let trap = s.card(EXPERIMENT).clone();
+                let trap = s.card(TWO_TRAP).clone();
                 s.play(LAG, json!({}));
                 s.expect_in_zone(&trap, "field");
                 s.expect_in_zone(TOE_CRACKER, "field");
@@ -401,10 +401,10 @@ mod tests {
             fn r65_their_hand_card_is_read_at_its_hand_cost_a_2_trap_under_their_toe_cracker_costs_0_and_goes() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": LAG, "radiant": true }, FELINORS] },
-                    "p2": { "hand": [EXPERIMENT, STOCKPILE], "field": [TOE_CRACKER], "library": [FELINORS] },
+                    "p2": { "hand": [TWO_TRAP, STOCKPILE], "field": [TOE_CRACKER], "library": [FELINORS] },
                 }));
                 s.play(LAG, json!({}));
-                s.expect_in_zone(EXPERIMENT, "exile");
+                s.expect_in_zone(TWO_TRAP, "exile");
                 s.expect_in_zone(STOCKPILE, "exile");
                 s.expect_in_zone(TOE_CRACKER, "field");
             }

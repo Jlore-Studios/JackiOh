@@ -3049,7 +3049,7 @@ mod win_rate_snapshot {
             "the live match",
         );
         assert_eq!(j(found)["winRates"], snapshot);
-        // A match handed none, as every match from before migration 0083, keeps none.
+        // A match handed none, as every match from before migration 0084, keeps none.
         let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
         q!(harness, t => t.matches_create(&plain));
         assert!(absent(

@@ -54,7 +54,7 @@
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
 
-  /* The portrait's box (cards.css `.cf .cf-portrait`), which the veils share. */
+  /* The portrait's box (cards.css `.cf .cf-portrait`; R3046000: a full-art unit's, below), which the veils share. */
   --kw-portrait-bottom: calc(var(--mf-stat, 28cqmin) + var(--mf-plate, 11cqh) * 0.5);
 }
 
@@ -166,6 +166,26 @@
   bottom: var(--kw-portrait-bottom);
   overflow: hidden;
   border-radius: 50%;
+}
+
+/* R3046000: a full-art unit's portrait is the whole art, a rectangle from the top of the panel to the name band
+   (cards.css), so the veils fill it, square, and the frames that stood round the oval portrait share its bottom edge.
+   Taunt's shield and the Stack's card edges stand behind the portrait, which now covers them, so they are not drawn:
+   Taunt keeps a steel ring over the art's edge (cards.css), the Stack its chip and its buried count. */
+.cf[data-layout="minion"][data-full-art="true"] {
+  --kw-portrait-bottom: var(--mf-plate, 11cqh);
+}
+
+.cf[data-layout="minion"][data-full-art="true"] .kw-fx[data-kw-layer="veil"] {
+  top: 0;
+  right: 0;
+  left: 0;
+  border-radius: 0;
+}
+
+.cf[data-layout="minion"][data-full-art="true"] .kw-fx[data-keyword-fx="Taunt"],
+.cf[data-layout="minion"][data-full-art="true"] .kw-fx[data-keyword-fx="Stack"] {
+  display: none;
 }
 
 /* Can't attack: crossed chains, and the portrait under them greyed to a stance. */

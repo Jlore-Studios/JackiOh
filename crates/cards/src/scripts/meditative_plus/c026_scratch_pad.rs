@@ -9,8 +9,9 @@
 //! Radiant on the Radiant face — or burns it on a full one (§2.4). The craft prompt carries the
 //! from-scratch flag (`CraftMode::Scratch`, R1182002): the client opens an empty canvas with no
 //! presets, tooltips or hints, while the engine still rolls M #17's four presets so the AI, the
-//! random policy and a timeout answer with one (R881). The recipes, the budget and the card a
-//! recipe makes are M #17's: "from scratch" is the canvas, not a smaller budget.
+//! random policy and a timeout answer with one (R881). The recipes and the card a recipe makes are
+//! M #17's: "from scratch" is the canvas, not a smaller budget. The budget is the crafter's whole,
+//! keyed on the prompt's mode, where M #17's own prompt has 80% of it (R3043000).
 //!
 //! EXILE THIS (R178): after the mint, Scratch Pad goes to its owner's exile, not the graveyard.
 //!
@@ -75,7 +76,7 @@ mod tests {
     use super::*;
     use jackioh_engine::replay::hash_state;
     use jackioh_engine::subsystems::ai_policy::choose_action;
-    use jackioh_engine::subsystems::craft::{compile_crafted_def, craft_id};
+    use jackioh_engine::subsystems::craft::{compile_crafted_def, craft_id, recipe_points};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -212,6 +213,30 @@ mod tests {
         }
 
         #[test]
+        fn r3043000_codes_on_the_crafters_whole_budget_where_true_craft_has_80_percent() {
+            for (cost, budget) in (0..=CRAFT_MAX_COST).zip([2, 7, 12, 17, 22]) {
+                assert_eq!(craft_points_budget(cost), budget);
+                // An N/1 Unit costs N points.
+                let unit = |points: i32| {
+                    json!({
+                        "cost": cost, "type": "Unit", "adjective": "Lazy", "noun": "Iterator",
+                        "attack": points, "health": 1, "keywords": [], "echo": 0, "hats": [],
+                    })
+                };
+                let mut s = coding(cost, false);
+                assert_eq!(recipe_points(&presets(&s)[0]), budget, "the Unit preset spends it all");
+                s.expect_refused_with(
+                    |s| s.answer(json!([{ "pick": "craft", "recipe": unit(budget + 1) }])),
+                    &format!("over the budget of {budget}"),
+                );
+                // The whole budget is over Meditative #17's from cost 1 on, and codes here.
+                assert!(cost == 0 || true_craft_points_budget(cost) < budget, "cost {cost}");
+                s.answer(json!([{ "pick": "craft", "recipe": unit(budget) }]));
+                assert_eq!(coded(s.state()).def_id, craft_id(&json_as(unit(budget))));
+            }
+        }
+
+        #[test]
         fn r881_the_policy_and_a_timeout_answer_with_a_preset() {
             let s = coding(3, false);
             let offered = presets(&s);
@@ -258,6 +283,27 @@ mod tests {
             let def = s.state().transient_defs.get(&card.def_id).expect("its definition").clone();
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(10), Some(12)]);
             s.expect_in_zone(ID, "exile");
+        }
+
+        #[test]
+        fn r3043000_the_radiant_face_codes_on_the_same_whole_budget() {
+            let budget = craft_points_budget(CRAFT_MAX_COST);
+            let unit = |points: i32| {
+                json!({
+                    "cost": CRAFT_MAX_COST, "type": "Unit", "adjective": "Lazy", "noun": "Iterator",
+                    "attack": points, "health": 1, "keywords": [], "echo": 0, "hats": [],
+                })
+            };
+            let mut s = coding(CRAFT_MAX_COST, true);
+            s.expect_refused_with(
+                |s| s.answer(json!([{ "pick": "craft", "recipe": unit(budget + 1) }])),
+                &format!("over the budget of {budget}"),
+            );
+            s.answer(json!([{ "pick": "craft", "recipe": unit(budget) }]));
+            let card = coded(s.state());
+            assert!(card.radiant);
+            let def = s.state().transient_defs.get(&card.def_id).expect("its definition").clone();
+            assert_eq!(def.radiant.attack, Some(CRAFT_RADIANT_MULTIPLIER * budget));
         }
     }
 }

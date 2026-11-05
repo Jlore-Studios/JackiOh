@@ -231,9 +231,10 @@ describe("CardDetail (B29)", () => {
     const def = defOf("core-043");
     expect(def.radiant.text).not.toBe(def.base.text);
     render(<CardDetail def={def} onClose={() => undefined} />);
-    expect(faceRoot(INSPECT_FACE_BASE).querySelector(".cf-text-base")).toHaveTextContent(def.base.text);
+    // The faces print their declared number filled in (issue #3139: Big Felinor destroys {destroys} Units).
+    expect(faceRoot(INSPECT_FACE_BASE).querySelector(".cf-text-base")).toHaveTextContent("Cry: Destroy 3 random non-Felinor Units.");
     expect(faceRoot(INSPECT_FACE_BASE).querySelector(".cf-mark")).toBeNull();
-    expect(faceRoot(INSPECT_FACE_RADIANT).querySelector(".cf-text-base")).toHaveTextContent(def.radiant.text);
+    expect(faceRoot(INSPECT_FACE_RADIANT).querySelector(".cf-text-base")).toHaveTextContent("Cry: Destroy 3 random enemy non-Felinor Units.");
     expect([...faceRoot(INSPECT_FACE_RADIANT).querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual([
       "enemy",
     ]);
