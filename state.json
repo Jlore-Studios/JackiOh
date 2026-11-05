@@ -15417,6 +15417,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-04T22:55:55Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "41939479625",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-05T00:11:29Z",
@@ -15429,6 +15430,7 @@
       "taken_asks": [
         "c:6644263694"
       ],
+      "verdict_rounds": 0,
       "waiting_comment": 6645383538
     },
     "3062": {
