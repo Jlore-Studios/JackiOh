@@ -16307,8 +16307,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-4",
-      "owner_since": "2026-11-05T19:24:17Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-05T23:27:25Z",
+      "owner_why": "its turn came (#3243, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-05T19:53:30Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
@@ -16874,12 +16874,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3229,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-11-05T21:17:54Z",
+      "queued_at": "2026-11-05T23:27:25Z",
       "run_id": "42111617440",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16900,9 +16900,17 @@
         "provider": "claude-4",
         "run": "42099376094"
       },
+      "source": "conflict",
       "started_at": "2026-11-05T21:19:37Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-4",
+        "since": "2026-11-05T23:27:25Z",
+        "until": "2026-11-05T23:57:25Z",
+        "why": "#3243, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -16922,17 +16930,6 @@
         "tiers": {
           "claude": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3243
-        ],
-        "ends": "2026-11-06T00:00:50Z",
-        "from_run": "42111617440",
-        "head": "5fb0d30af371ab3543d47d41504bc0fa0b052ed7",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-05T22:00:50Z"
       }
     },
     "3253": {
