@@ -16485,6 +16485,7 @@
       "run_id": "42089665451",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 85,
       "started_at": "2026-11-05T19:00:09Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -32510,9 +32511,33 @@
         "title": "Patch: the db (store contract) job builds the engine and the cards at opt-level 0, which cuts its compile",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-8",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "975bc92d0cd918383167a37f66fdcaccde505ffb",
+        "issue": 3196,
+        "merged_at": "2026-11-05T22:37:05Z",
+        "n": 85,
+        "pr": 3238,
+        "queued_at": "2026-11-05T22:37:05Z",
+        "sha": "80115f257d6a38835fa8b8d158b15c7dd4200567",
+        "status": "queued",
+        "title": "Patch: the component specs for R2803000's shift ghosts and phone frame budget hold up on a loaded runner",
+        "tries": 0
       }
     ],
-    "count": 84
+    "count": 85
   },
   "statistics": {
     "at": "2026-11-05T22:29:48Z"
