@@ -15484,6 +15484,13 @@
     "3189": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42045251204",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-05T14:41:18Z",
+        "until": "2026-11-05T15:11:18Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
