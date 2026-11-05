@@ -2,6 +2,10 @@
 // `apps/web/package.json` builds E2E in development: the handle exists there and never in production.
 // The fake port proves route requests and drawing only (CLAUDE.md rule 7).
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -525,6 +529,10 @@ describe("window.__jackioh in a production build", () => {
   it("publishes nothing: MODE=production removes the handle the twelve specs drive", async () => {
     vi.stubEnv("MODE", "production");
     vi.resetModules();
+    // A reset drops the loaded engine with the modules, and the board's log is written by it (jackioh-shared): load
+    // the fresh `wasm/index.ts` as setup.ts did.
+    const wasm = await import("../../wasm/index.ts");
+    wasm.loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../wasm/pkg/jackioh_wasm_bg.wasm")));
 
     const engine = await import("../../game/engine.ts");
     const route = await import("./hotseat.tsx");
