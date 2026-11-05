@@ -32462,7 +32462,8 @@
       "2026-11-05T04:03:39Z,claude-6,stream,call,41956960434,1,2026-11-05T09:00:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-05T04:34:08Z,41967549574,claude-8,opus,review,3126,medium,stopped,stop,0,0,0,0,,9,9,,,,,none,,0"
+      "2026-11-05T04:34:08Z,41967549574,claude-8,opus,review,3126,medium,stopped,stop,0,0,0,0,,9,9,,,,,none,,0",
+      "2026-11-05T04:25:34Z,41956960434,claude-6,opus,build,3112,hard,built,,76.5,182,53606,13127654,5.057,33,1,,,58.4,claude-6,fresh,,1"
     ]
   },
   "version": 1
