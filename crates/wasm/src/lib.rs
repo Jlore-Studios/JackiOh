@@ -393,6 +393,15 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, JsError> {
     js(wasm_core::validator(call, input_json))
 }
 
+// The Conquest series rules (SPEC §9.5, #3098: `jackioh-shared`, which the server calls natively)
+
+/// One call of the Conquest series rules: a `SeriesCall` as JSON in, a `SeriesAnswer` as JSON out. The
+/// host holds the series row and hands it back on every call (`crates/shared/README.md`).
+#[wasm_bindgen]
+pub fn series(call_json: &str) -> Result<String, JsError> {
+    js(wasm_core::series(call_json))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

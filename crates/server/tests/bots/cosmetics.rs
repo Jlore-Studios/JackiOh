@@ -19,7 +19,7 @@ use jackioh_server::db::store::{BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot,
 use jackioh_server::economy::store::{
     CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, EconomyLedger, EconomyReason, OwnedCosmetics,
 };
-use jackioh_server::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots};
+use jackioh_server::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots, DeckSlotsExt};
 
 use crate::support::deps::empty_test_app;
 use crate::support::store::q;
