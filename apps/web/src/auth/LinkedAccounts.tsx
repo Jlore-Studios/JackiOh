@@ -17,6 +17,7 @@ import {
   type OAuthProvider,
 } from "../net/auth.ts";
 import { t } from "../i18n/i18n.ts";
+import { forgetLinkAfterSignIn, linkAfterSignIn } from "../net/session.ts";
 import { takeLinkResult } from "./redirect.ts";
 
 import "./two-step.css";
@@ -28,6 +29,7 @@ export const linkedTestid = {
   unlink: "account-linked-unlink",
   retry: "account-linked-retry",
   notice: "account-linked-notice",
+  moving: "account-linked-moving",
   error: "account-linked-error",
 } as const;
 
@@ -44,6 +46,11 @@ function LinkedPanel({ token, providers }: { token: string; providers: OAuthProv
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [result] = useState(takeLinkResult);
+  // R3147002: the provider of the new account this device removed, to link here; said once.
+  const [moving] = useState(() => providers.find((provider) => provider === linkAfterSignIn()) ?? null);
+  useEffect(() => {
+    forgetLinkAfterSignIn();
+  }, []);
   const [notice, setNotice] = useState<string | null>(result === "linked" ? t("Linked. You can sign in with it now.") : null);
   // A link that came back with an error: the provider gives no reason worth showing.
   const [error, setError] = useState<string | null>(result === "failed" ? t(AUTH_MESSAGES.linkRefused) : null);
@@ -93,6 +100,13 @@ function LinkedPanel({ token, providers }: { token: string; providers: OAuthProv
   return (
     <div className="account-two-step" data-testid={linkedTestid.section}>
       <h3 className="account-heading">{t("Other ways to sign in")}</h3>
+      {moving !== null && phase.kind === "ready" && !phase.identities.some((entry) => entry.provider === moving) ? (
+        <p className="notice" data-testid={linkedTestid.moving} role="status">
+          {t("Link {provider} below to finish: from then on it signs in to this account.", {
+            provider: OAUTH_PROVIDER_LABELS[moving],
+          })}
+        </p>
+      ) : null}
       {phase.kind === "loading" ? <p>{t("Loading…")}</p> : null}
       {phase.kind === "unknown" ? (
         <div className="account-actions">
