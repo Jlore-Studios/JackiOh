@@ -35,7 +35,7 @@ const ECHO = "classic-057";
 const KNOWLEDGE = "classic-024";
 /** (1) Spell, no declared numbers: "Draw 2. Heal your hero 2." */
 const STOCKPILE = "core-005";
-const ECHO_SENTENCE = "This has the text of the last Spell either player played.";
+const ECHO_SENTENCE = "This has the text of the last Spell either player played, or of The Coin if none has been.";
 
 const lookup = lookupFromDefs(CATALOG);
 

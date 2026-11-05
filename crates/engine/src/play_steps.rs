@@ -2,8 +2,9 @@
 //! over one JSON record, a `PlayRun` (BUILD M3-T2/T3, R81, R90). A step that leaves a prompt open owes the
 //! rest to `state.work` as a `Resume` naming the step plus that record (§9.3), so nothing is held across a
 //! prompt in a local or a closure (the bug `work.rs` exists to prevent). Echo (R30, §6.1) is step 6
-//! re-running step 5 one repeat at a time off `state.echoQueue`, with fresh prompts. Steps 3, 5 and 6 keep
-//! their own cursor in the record, so a pause resumes where it stopped.
+//! re-running step 5 one repeat at a time off `state.echoQueue`, with fresh prompts (a card that keeps its
+//! targets, R3048002, asks none). Steps 3, 5 and 6 keep their own cursor in the record, so a pause
+//! resumes where it stopped.
 //!
 //! The announce (B5 E1, R448), between 3 and 4, is a window for Counters (§10.3); step 1 is the targeting
 //! point (B5 E5, E9, R450), step 3 may replace the card (R449), step 4 counts it (R451).
@@ -39,7 +40,8 @@ use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
     declared_targets, default_zone_for, equip_host_at, in_declared_order, interceptor_fits_decl,
     legal_selections_for, mode_option_allowed, play_made_radiant, play_uses, plays_on_stack, resolving_face,
-    targeting_decls_of, targeting_discards_required, targets_follow_modes, why_choices_refused,
+    selections_per_declaration, targeting_decls_of, targeting_discards_required, targets_follow_modes,
+    why_choices_refused,
 };
 use crate::play_counts::record_play;
 use crate::prompts::{
@@ -2176,8 +2178,8 @@ fn label_of(selection: &Selection, chooser: PlayerId) -> String {
 }
 
 /// R81: play choices travel in the `play` action once, so a repeat asks again (§10.6), each prompt
-/// carrying the run to `answer_play_prompt`. True once all are answered; one the board cannot
-/// satisfy is skipped and fizzles (R90, §8's conventions).
+/// carrying the run to `answer_play_prompt`; a card that keeps its targets asks none of them (R3048002).
+/// True once all are answered; one the board cannot satisfy is skipped and fizzles (R90, §8's conventions).
 fn ask_repeat_choices(
     sink: &mut EngineSink<'_>,
     run: &mut PlayRun,
@@ -2258,7 +2260,29 @@ fn cast_target_options(
     }
 }
 
-/// The repeat's target declarations, each offered in turn; false while one is waiting (R81).
+/// R3048002: the picks of an Echo repeat that keeps its first resolution's (`Script.echo_keeps_targets`),
+/// for one declaration: those of `first` the declaration still offers (`options`) whose card has not
+/// left the field since the choices were made (R174: a Reborn body is a new arrival, R83). None left
+/// is a repeat with nothing to hit, which fizzles (R76, R90).
+fn kept_picks(
+    state: &GameState,
+    run: &PlayRun,
+    first: &[Selection],
+    options: &[Selection],
+) -> Vec<Selection> {
+    first
+        .iter()
+        .filter(|pick| options.contains(pick))
+        .filter(|pick| match (pick, run.exits_from) {
+            (Selection::Instance { instance_id }, Some(from)) => !left_field_after(state, from, instance_id),
+            _ => true,
+        })
+        .cloned()
+        .collect()
+}
+
+/// The repeat's target declarations, each offered in turn; false while one is waiting (R81). A card
+/// that keeps its targets (R3048002) asks none: each Echo repeat takes the first resolution's picks.
 fn ask_repeat_targets(
     sink: &mut EngineSink<'_>,
     run: &mut PlayRun,
@@ -2273,9 +2297,25 @@ fn ask_repeat_targets(
         .unwrap_or_default();
     let targets = active_target_decls(&declared_targets(sink.state, card), &chosen_modes);
     let start = run.repeat.as_ref().map_or(0, |repeat| repeat.decl_at);
+    // R3048002: a copier keeps what the Spell it copied says (`card` is the text it runs).
+    let keeps = step == PlayStepName::Echo && crate::scripts::script_of(sink.state, card).echo_keeps_targets;
+    let first_picks = if keeps {
+        selections_per_declaration(sink.state, run.player, card, &targets, &run.targets)
+    } else {
+        Vec::new()
+    };
     for (at, decl) in targets.iter().enumerate().skip(start) {
         if let Some(repeat) = run.repeat.as_mut() {
             repeat.decl_at = at + 1;
+        }
+        if keeps {
+            let options = legal_selections_for(sink.state, run.player, card, decl);
+            let first: &[Selection] = first_picks.get(at).map_or(&[], Vec::as_slice);
+            let picks = kept_picks(sink.state, run, first, &options);
+            if let Some(repeat) = run.repeat.as_mut() {
+                repeat.targets.extend(picks);
+            }
+            continue;
         }
         let options = cast_target_options(sink.state, run, card, decl);
         if options.is_empty() {

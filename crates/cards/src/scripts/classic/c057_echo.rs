@@ -1,17 +1,22 @@
 //! C #57 Echo (SPEC §8.6 row 57, BUILD M9 Classic row C 57). (1) Spell, Epic.
-//!   Base:    "This has the text of the last Spell either player played."
-//!   Radiant: "Echo 1 / This has the text of the last Spell either player played."
+//!   Base:    "This has the text of the last Spell either player played, or of The Coin if none has been."
+//!   Radiant: "Echo 1 / This has the text of the last Spell either player played, or of The Coin if none
+//!            has been."
+//!   Through v0.5.11o: with no Spell played yet it had no text and did nothing (`script_v0_5_11o`, kept,
+//!   R767000).
 //!
 //! The card is a flag and a record; the text it has is B5 E14's subsystem, with its own engine tests
 //! through fixture cards. `lastSpell` (§10.1) is overwritten by every Spell play and cast (R70), never
-//! by a cast on draw, which is no play (R2179002), and never cleared; a countered Spell was never played. In hand the view carries that face under Echo's
-//! name, as R243 does for a fused card.
+//! by a cast on draw, which is no play (R2179002), and never cleared; a countered Spell was never played.
+//! In hand the view carries that face under Echo's name, as R243 does for a fused card.
 //!   - `copiesLastSpell` makes the running text the last Spell's face (R399): targets, modes, X (R545:
 //!     up to the mana left once Echo's own (1) is paid), resolution with Echo as "this", prompts, `preview`
 //!     and `conditionMet` (R546, R547), and the owner's hand view (`CardView.copies`). The copy is fixed
 //!     as the play begins (R546); in hand and in a deck it follows the record live.
-//!   - `recordsPlayAs` (B5 E4) records the Spell Echo copied, nothing when it copied nothing, so two
-//!     Echoes never loop (R399).
+//!   - `copyFallback` is The Coin (R3048000): with no Spell played yet (`lastSpell` null) Echo has The
+//!     Coin's base-face text, resolves it and records it as the Spell it copied.
+//!   - `recordsPlayAs` (B5 E4) records the Spell Echo copied, The Coin when none had been played, so two
+//!     Echoes never loop (R399, R3048000).
 //!   - The Radiant "Echo 1" is §6.2's numbered keyword (`staticFlags.echo`) that Degrade and Upgrade move
 //!     (R386), added to any Echo the copied face prints (R546); it is no `params` entry, so nothing reads `param`.
 //!   - "Echo" is a rules word: "Echo 1" on other cards is no reference to this card (R381).
@@ -20,38 +25,50 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-057";
 
-/// B5 E4, R399: the Spell Echo copied, on its face, or nothing when it copied nothing.
+/// B5 E4, R399, R3048000: the Spell Echo copied, on its face: the last Spell played, or The Coin.
 fn records_play_as() -> RecordsPlayAsHook {
     read_hook(|args| subsystems::copied_text_of(args.state, args.self_))
 }
 
+/// One face of Echo: it copies the last Spell's text, The Coin's while none has been played unless
+/// `fallback` is off (the kept script's), and the Radiant face adds Echo 1.
+fn echo(radiant: bool, fallback: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            copies_last_spell: Some(true),
+            copy_fallback: fallback.then(|| COIN_DEF_ID.to_string()),
+            echo: radiant.then_some(1),
+            ..StaticFlags::default()
+        }),
+        records_play_as: Some(records_play_as()),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script {
-        static_flags: Some(StaticFlags { copies_last_spell: Some(true), ..StaticFlags::default() }),
-        records_play_as: Some(records_play_as()),
-        ..Script::default()
-    };
+    // §6.2: Echo 1 on the Radiant face — the copied text resolves once more, with fresh prompts.
+    CardScripts { base: echo(false, true), radiant: echo(true, true) }
+}
 
-    // §6.2: Echo 1 — the copied text resolves once more, with fresh prompts.
-    let radiant = Script {
-        static_flags: Some(StaticFlags { copies_last_spell: Some(true), echo: Some(1), ..StaticFlags::default() }),
-        records_play_as: Some(records_play_as()),
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
+/// R767000: the scripts v0.5.11o and the versions before it ran, kept for their replays: with no Spell
+/// played yet Echo had no text, played nothing and recorded nothing (R399).
+pub fn script_v0_5_11o() -> CardScripts {
+    CardScripts { base: echo(false, false), radiant: echo(true, false) }
 }
 
 // C #57 Echo, SPEC §8.6 row 57, R399: the Radiant Echo is a numbered keyword Degrade and Upgrade move
 // as an X (R386), so its R386 proof steps that X. Rulings R545 (an X-cost text), R546 (the copy fixed
-// as the play begins; "this" is Echo) and R547 (static text: Cast on draw yes, end-of-turn return no).
+// as the play begins; "this" is Echo), R547 (static text: Cast on draw yes, end-of-turn return no) and
+// R3048000 (with no Spell played yet, The Coin's text).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
+    use super::{script, script_v0_5_11o};
     use crate::scenario;
 
     const ECHO: &str = "classic-057";
+    const COIN: &str = "core-t-coin"; // (0) Spell: Gain {mana} mana this turn (1, Radiant 2).
     const WILDFIRE: &str = "classic-055"; // (1) Spell: Deal {damage} damage (4, Radiant 8), a declared target.
     const GRAND: &str = "classic-072"; // Trap: counters the opponent's non-Unit plays.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
@@ -120,25 +137,59 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r399_with_no_spell_played_yet_it_has_no_text_no_choices_it_resolves_to_nothing_and_records_nothing() {
+            fn r3048000_with_no_spell_played_yet_it_has_the_coins_text_no_choices_it_gains_1_mana_and_records_the_coin() {
                 let mut s = scenario(json!({ "p1": { "hand": [ECHO, VANILLA] } }));
+                assert!(last_spell_played(s.state()).is_none());
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
-                assert!(card.get("copies").is_none());
+                assert_eq!(card["copies"]["defId"], COIN);
+                assert_eq!(card["copies"]["radiant"], false);
+                // The Coin declares nothing, so Echo's play declares nothing.
                 assert_eq!(
                     echo_plays(&s, PlayerId::P1).iter().map(|play| play["targets"].clone()).collect::<Vec<Value>>(),
                     vec![Value::Null],
                 );
                 s.play(ECHO, json!({}));
-                assert!(s
-                    .last_events()
-                    .iter()
-                    .map(js)
-                    .filter(|event| event["type"] == "damage" || event["type"] == "drawn")
-                    .collect::<Vec<Value>>()
-                    .is_empty());
+                assert!(s.state().pending.is_none());
                 s.expect_in_zone(ECHO, "graveyard");
-                s.expect_mana(PlayerId::P1, 3);
-                assert!(last_spell_played(s.state()).is_none());
+                // 4 mana, Echo's (1) paid, then The Coin's "Gain 1 mana" once.
+                s.expect_mana(PlayerId::P1, 4);
+                // What it copied is the last Spell, so a second Echo copies The Coin too, never Echo.
+                assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": COIN, "radiant": false }));
+            }
+
+            #[test]
+            fn r3048000_once_a_spell_has_been_played_it_is_copied_and_the_coin_is_not() {
+                let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, ECHO, VANILLA] }, "p2": { "field": [MENACE] } }));
+                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                assert_eq!(
+                    own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),
+                    Some(json!(WILDFIRE)),
+                );
+                s.play(ECHO, json!({ "targets": at_p2() }));
+                assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4]);
+                // Wildfire (1) and Echo (1): no mana came from The Coin.
+                s.expect_mana(PlayerId::P1, 2);
+                assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": WILDFIRE, "radiant": false }));
+            }
+
+            #[test]
+            fn r3048000_r767000_the_kept_script_has_no_text_before_any_spell_and_records_nothing() {
+                let fallback = |face: &Script| face.static_flags.as_ref().and_then(|flags| flags.copy_fallback.clone());
+                let kept = script_v0_5_11o();
+                assert_eq!(fallback(&kept.base), None);
+                assert_eq!(fallback(&kept.radiant), None);
+                let now = script();
+                assert_eq!(fallback(&now.base).as_deref(), Some(COIN));
+                assert_eq!(fallback(&now.radiant).as_deref(), Some(COIN));
+                crate::under_kept(ECHO, kept.clone(), || {
+                    let mut s = scenario(json!({ "p1": { "hand": [ECHO, VANILLA] } }));
+                    let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
+                    assert!(card.get("copies").is_none());
+                    s.play(ECHO, json!({}));
+                    s.expect_in_zone(ECHO, "graveyard");
+                    s.expect_mana(PlayerId::P1, 3);
+                    assert!(last_spell_played(s.state()).is_none());
+                });
             }
 
             #[test]
@@ -503,12 +554,27 @@ mod tests {
             }
 
             #[test]
-            fn r399_with_nothing_to_copy_it_does_nothing_and_its_echo_repeats_nothing() {
+            fn r3048000_with_no_spell_played_yet_its_echo_1_repeats_the_coins_text() {
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": ECHO, "radiant": true }, VANILLA] } }));
                 s.play(ECHO, json!({}));
                 assert!(s.state().pending.is_none());
-                assert!(!s.last_events().iter().map(js).any(|event| event["type"] == "damage"));
                 s.expect_in_zone(ECHO, "graveyard");
+                // 4 mana, Echo's (1) paid, then The Coin's base "Gain 1 mana" twice: the play and its repeat.
+                s.expect_mana(PlayerId::P1, 5);
+                assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": COIN, "radiant": false }));
+            }
+
+            #[test]
+            fn r3048000_once_a_spell_has_been_played_a_radiant_echo_repeats_that_spell_not_the_coin() {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] },
+                    "p2": { "field": [MENACE], "hand": [VANILLA] },
+                }));
+                s.play(WILDFIRE, json!({ "targets": at_p2() }));
+                s.play(ECHO, json!({ "targets": at_p2() }));
+                s.answer(at_p2());
+                assert_eq!(hits(s.events(), "hero-p2"), vec![4, 4, 4]);
+                s.expect_mana(PlayerId::P1, 2);
             }
         }
     }

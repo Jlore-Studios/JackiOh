@@ -1068,6 +1068,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                     _ => Some(concat(tagged)),
                 },
                 copies_last_spell: flags(|f| f.copies_last_spell),
+                copy_fallback: defined.iter().find_map(|f| f.copy_fallback.clone()),
                 judges_plays: flags(|f| f.judges_plays),
                 hears_emotes: flags(|f| f.hears_emotes),
                 exiles_on_damage: flags(|f| f.exiles_on_damage),
@@ -1220,6 +1221,8 @@ fn combine_objects(records: &[Script]) -> Script {
         ally_attack: hooks(|s| s.ally_attack.clone(), "allyAttack"),
         plague_multiplier: None,
         echo_x: None,
+        // R3048002: a fusion keeps the picks of every Echo repeat when an ingredient's text says so.
+        echo_keeps_targets: records.iter().any(|s| s.echo_keeps_targets),
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),
         quests: combine_quests(records),

@@ -505,6 +505,12 @@ pub struct StaticFlags {
     /// `conditionMet`. The card keeps its own name, cost, type and tags, and its own other flags (Echo).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copies_last_spell: Option<bool>,
+    /// R3048000, Classic #57 Echo: the definition whose base-face text a `copiesLastSpell` card has
+    /// while no Spell has been played yet (`state.lastSpell` is null), Echo's The Coin
+    /// (`COIN_DEF_ID`). It is what the play then records (R399). Absent, the copier has no text then.
+    /// Named by the card, so a copier without it (a fixture's) still has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_fallback: Option<String>,
     // Static flags by workstream: damage and combat (E5, E6, E8, E35)
     /// B5 E35: no attack may be made on this unit, declared or forced (Classic+ #51 J15 Fighter).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1091,6 +1097,12 @@ pub struct Script {
     /// queued (§10.5 step 4), so X stays fixed while it resolves. The larger of it and
     /// `staticFlags.echo` is the printed Echo, which tuning and Twinspell add to (`echo::printed_echo`).
     pub echo_x: Option<EchoXHook>,
+    /// R3048002 (Meditative #5 Death by 1000 cuts): every Echo repeat of this card takes the picks its
+    /// first resolution took, asking nothing (`play_steps::ask_repeat_targets`), where an Echo repeat
+    /// otherwise asks its targets afresh (§6.2 Echo, R81). A pick that has left the field, or that the
+    /// card no longer reaches, is dropped and its repeat fizzles on it (R76, R90). Modes are still asked.
+    /// A fusion has it when an ingredient does.
+    pub echo_keeps_targets: bool,
     /// B5 E26, R464: triggers this card answers while in its owner's library (Classic+ #37 Wardrum). It is
     /// hidden (§9.1), so its queue entries take no number (R177) and, within a side, follow the hand's and
     /// precede the graveyard's in creation order, never library order (`triggers::trigger_holders_of`).

@@ -778,3 +778,118 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         );
     }
 }
+
+mod r3048000_a_copier_naming_a_fallback_has_its_text_before_any_spell {
+    use super::*;
+
+    /// `ct-ping`'s base face hits the enemy hero for 1, its Radiant face for 3.
+    const PING_BASE: i64 = 1;
+
+    #[test]
+    fn r3048000_with_no_spell_played_yet_it_has_the_fallbacks_text_and_plays_it() {
+        let mut state = game("ct-fallback", 9);
+        let echo = hand(&mut state, P1, &CT.echo_fallback.id, false);
+        assert_eq!(
+            json_of(copied_text_of(&state, &echo)),
+            json!({ "defId": CT.ping.id, "radiant": false })
+        );
+        assert_eq!(
+            json_of(plays_of(&state, P1, &echo.id)),
+            json!([{ "type": "play", "instanceId": echo.id }])
+        );
+        let ReduceResult {
+            state: after, events, ..
+        } = act_as(&state, P1, json!({ "type": "play", "instanceId": echo.id }));
+        assert_eq!(hero_hits(&events, P2), vec![PING_BASE]);
+        assert_eq!(events_of_type(&events, GameEventType::CardPlayed).len(), 1);
+        assert!(ids(&after.players.p1.graveyard).contains(&echo.id));
+    }
+
+    #[test]
+    fn r3048000_it_records_the_fallback_as_the_spell_it_copied_so_a_second_copier_copies_it_too() {
+        let mut state = game("ct-fallback-record", 9);
+        let first = hand(&mut state, P1, &CT.echo_fallback.id, false);
+        let second = hand(&mut state, P1, &CT.echo_fallback.id, false);
+        assert_eq!(json_of(last_spell_played(&state)), Value::Null);
+        state = act_as(&state, P1, json!({ "type": "play", "instanceId": first.id })).state;
+        assert_eq!(
+            json_of(last_spell_played(&state)),
+            json!({ "defId": CT.ping.id, "radiant": false })
+        );
+        let ReduceResult {
+            state: after, events, ..
+        } = act_as(&state, P1, json!({ "type": "play", "instanceId": second.id }));
+        assert_eq!(hero_hits(&events, P2), vec![PING_BASE]);
+        // Never the copier itself: the record is still the Spell both copied.
+        assert_eq!(
+            json_of(last_spell_played(&after)),
+            json!({ "defId": CT.ping.id, "radiant": false })
+        );
+    }
+
+    #[test]
+    fn r3048000_the_fallbacks_base_face_is_had_whatever_face_the_copier_wears() {
+        let mut state = game("ct-fallback-radiant", 9);
+        let echo = hand(&mut state, P1, &CT.echo_fallback.id, true);
+        assert_eq!(
+            json_of(copied_text_of(&state, &echo)),
+            json!({ "defId": CT.ping.id, "radiant": false })
+        );
+        let events = act_as(&state, P1, json!({ "type": "play", "instanceId": echo.id })).events;
+        // The Radiant `ct-ping` would hit for 3.
+        assert_eq!(hero_hits(&events, P2), vec![PING_BASE]);
+    }
+
+    #[test]
+    fn r3048000_once_a_spell_has_been_played_that_spell_is_copied_and_the_fallback_is_not() {
+        let mut state = play_spell(game("ct-fallback-played", 9), &CT.bolt.id, false, P1);
+        let echo = hand(&mut state, P1, &CT.echo_fallback.id, false);
+        assert_eq!(
+            json_of(copied_text_of(&state, &echo)),
+            json!({ "defId": CT.bolt.id, "radiant": false })
+        );
+        let events = act_as(
+            &state,
+            P1,
+            json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() }),
+        )
+        .events;
+        assert_eq!(hero_hits(&events, P2), vec![2]);
+    }
+
+    #[test]
+    fn r3048000_a_field_spell_is_no_spell_so_the_fallback_stays_in_force() {
+        let mut state = play_spell(game("ct-fallback-field", 9), &CT.field.id, false, P1);
+        let echo = hand(&mut state, P1, &CT.echo_fallback.id, false);
+        assert_eq!(json_of(last_spell_played(&state)), Value::Null);
+        assert_eq!(
+            json_of(copied_text_of(&state, &echo)),
+            json!({ "defId": CT.ping.id, "radiant": false })
+        );
+    }
+
+    #[test]
+    fn r3048000_r243_the_owners_hand_view_shows_the_fallback_and_the_opponents_never_names_the_card() {
+        let mut state = game("ct-fallback-view", 9);
+        let echo = hand(&mut state, P1, &CT.echo_fallback.id, false);
+        let own = json_of(view_for(&state, P1));
+        let card = held_in(&own["you"]["hand"], &echo.id);
+        assert_eq!(card["defId"], json!(CT.echo_fallback.id));
+        assert_eq!(card["copies"], json!({ "defId": CT.ping.id, "radiant": false }));
+        let theirs = serde_json::to_string(&json_of(view_for(&state, P2))).expect("a view serializes");
+        assert!(!theirs.contains(&echo.id));
+        assert!(!theirs.contains("copies"));
+    }
+
+    #[test]
+    fn r3048000_a_copier_that_names_no_fallback_still_has_no_text_with_no_spell_played() {
+        let mut state = game("ct-no-fallback", 9);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
+        assert_eq!(json_of(copied_text_of(&state, &echo)), Value::Null);
+        let ReduceResult {
+            state: after, events, ..
+        } = act_as(&state, P1, json!({ "type": "play", "instanceId": echo.id }));
+        assert_eq!(events_of_type(&events, GameEventType::Damage).len(), 0);
+        assert_eq!(json_of(last_spell_played(&after)), Value::Null);
+    }
+}
