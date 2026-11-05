@@ -15348,9 +15348,7 @@
     },
     "3061": {
       "action": "plan",
-      "asks": [
-        "c:6644263694"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-04T23:30:14Z",
         "difficulty": "hard",
@@ -15369,28 +15367,29 @@
         "reason": "planned on sonnet",
         "trail": "6p crates/engine/src/wire/view.rs; grep -n \\\"pub activations\\\\|activations:\\\" crates/engine/src/wire/view.rs crates/engine/sr\u2026\n- Bash: {\"command\": \"sed -n 740,760p crates/engine/src/wire/view.rs; sed -n 195,208p crates/engine/src/wire/view.rs; sed -n 545,552p crates/engine/src/wire/view.rs; grep -n \\\"BackrowView\\\" crates/engine/src/\u2026\n- Bash: {\"command\": \"grep -n \\\"field_card_view(\\\\|with_activations(\\\\|activations\\\" crates/engine/src/view_for.rs | head -30; grep -n \\\"pub enum BackrowView\\\\|pub struct PublicBackrowView\\\\|pub struct FaceDo\u2026\n- Bash: {\"command\": \"sed -n 370,470p crates/engine/tests/rules/play_reason.rs; grep -n \\\"mod \\\\|^use \\\" crates/engine/tests/rules/main.rs 2>/dev/null | head -5; ls crates/engine/tests/ crates/engine/tests/ru\u2026\n- Bash: {\"command\": \"grep -n \\\"play_reason_violations\\\\|hidden_information_violations\\\" crates/engine/src/testkit/*.rs crates/engine/src/lib.rs | head; grep -rn \\\"play_reason\\\\|mod activate;\\\" crates/engine/\u2026\n- Bash: {\"command\": \"grep -rn \\\"play_reason\\\\|graveyard_play_reason\\\" crates/engine/tests/*.rs crates/engine/tests/rules/mod.rs 2>/dev/null | head; grep -n \\\"pub use\\\\|pub mod invariants\\\" crates/engine/src/\u2026\n- Bash: {\"command\": \"git show 1a05687df8 -- spec/pending/2975.md spec/rulings/R979000.md crates/tools/src/fuzz.rs | cut -c1-900; ls spec/pending | head; \"}\n- Bash: {\"command\": \"cat spec/pending/3070.md | cut -c1-600; grep -n \\\"usable\\\\|activations\\\" spec/10-engine-guide.md | cut -c1-400 | head; grep -rn \\\"usable\\\" spec/rulings/*.md | cut -c1-300 | head\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\\|^### \\\" spec/10-engine-guide.md | sed -n 1,60p; grep -n \\\"R384\\\" spec/10-engine-guide.md | cut -c1-200; cat spec/rulings/R0384.md | cut -c1-1500 | head -40\"}\n- Bash: {\"command\": \"sed -n 182,222p spec/10-engine-guide.md | cut -c1-700; grep -n \\\"Activate\\\\|activation\\\" spec/10-engine-guide.md | sed -n 1,30p | cut -c1-160\"}\n- Bash: {\"command\": \"grep -n \\\"fn subsets_for\\\" -A60 crates/engine/src/play_choices.rs | head -100; grep -n \\\"fn unmet_requirement\\\" -A12 crates/engine/src/play_choices.rs\"}\n- Bash: {\"command\": \"grep -n \\\"Job Application\\\" crates/cards/src/scripts/stinkyscape/c112_job_application.rs | head -5; sed -n 395,470p crates/engine/tests/rules/play_reason.rs | head -5; grep -n \\\"fn ghost\u2026\n- Bash: {\"command\": \"grep -rn '\\\"stinkyscape-112\\\"' -A4 crates/cards/catalog.json 2>/dev/null | head -8; ls crates/cards | head; grep -n \\\"fn name_of\\\" -A8 crates/engine/src/play_choices.rs | head -15\"}\n- Bash: {\"command\": \"sed -n 1,62p crates/engine/src/subsystems/activate.rs; sed -n 160,196p crates/engine/src/subsystems/activate.rs\"}\n- Bash: {\"command\": \"sed -n 120,160p crates/engine/src/subsystems/activate.rs; grep -n \\\"carried\\\" crates/engine/src/view_for.rs | head -12; grep -n \\\"pub fn active_units_of\\\\|pub fn acts_on_field\\\\|pub fn s\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/tests/rules.rs; sed -n 1,12p crates/engine/tests/rules_2.rs; grep -n \\\"activate\\\\|play_reason\\\\|graveyard_play_reason\\\\|invariants\\\" crates/engine/tests/rules/\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/tests/rules/mod.rs; grep -n \\\"play_reason\\\\|pub mod p\\\" crates/engine/tests/rules/mod_2.rs | head; ls crates/engine/tests/rules/mod*.rs; grep -n \\\"activ\\\" crat\u2026\n- Bash: {\"command\": \"grep -rn \\\"BackrowView\\\" crates/engine/tests/rules/*.rs | head -5; grep -n \\\"pub use view::\\\\|pub use\\\" crates/engine/src/wire/mod.rs | head -10; grep -n \\\"pub fn create_invariant_monito\u2026\n- Bash: {\"command\": \"grep -rn \\\"data-usable\\\\|usable\\\" e2e/cypress apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"wire/\\\\|\\\\.test\\\\.\\\" | head -20; grep -rn \\\"ActivateControl\\\\|activations\\\" apps/web\u2026\n- Bash: {\"command\": \"sed -n 55,100p apps/web/src/game/ActivateControl.tsx; grep -n \\\"usable\\\" apps/web/src/game/*.ts apps/web/src/game/drag/*.ts | grep -v test | head\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/engine/tests/golden.rs | cut -c1-200; ls crates/engine/tests/golden | head\"}\n- Bash: {\"command\": \"ls crates/tools/src | head -50; grep -rn \\\"proven_in\\\" crates/tools/src/spec*.rs | head -20\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/tools/src/spec.rs\"}\n- Bash: {\"command\": \"head -12 spec/rulings/R1865000.md | cut -c1-400; sed -n 1,30p spec/rulings/R3070000.md 2>/dev/null | head -12 | cut -c1-300; ls spec/rulings | tail -5; grep -n \\\"R3061\\\\|3061\\\" spec/INDE\u2026\n- Bash: {\"command\": \"sed -n 220p spec/10-engine-guide.md | cut -c700-2500; sed -n 192p spec/10-engine-guide.md | grep -o \\\"its Activate uses this turn[^;]*;\\\"; ls spec/rulings | grep -E \\\"R0090|R1200|R0703|R\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/cards/tests/cross/activate_listed.rs; grep -n \\\"usable\\\\|activation_views\\\" crates/cards/tests/cross/*.rs | head\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\.usable\\\\|\\\\\\\"usable\\\\\\\"\\\" crates --include=*.rs | grep -v \\\"^crates/engine/src/subsystems/activate.rs\\\" | head -30\"}\n- Bash: {\"command\": \"grep -rn \\\"usable\\\" crates/engine/README.md docs/v0.3.0/SURFACE.md docs/architecture.md crates/wasm/README.md 2>/dev/null | cut -c1-300 | head; grep -n \\\"playReason\\\" docs/v0.3.0/SURFACE\u2026\n- Bash: {\"command\": \"sed -n 1660,1700p crates/engine/src/wire/catalog_types.rs; grep -n \\\"pub struct PlayChoices\\\" -B3 -A8 crates/engine/src/play_choices.rs | head -20; grep -n \\\"TargetFilter\\\" -A30 crates/e\u2026\n- Bash: {\"command\": \"grep -n \\\"UNRESOLVED_MARKERS\\\" -A24 crates/tools/src/spec.rs | head -50\"}\n- Bash: {\"command\": \"grep -n \\\"RULING_MARKERS\\\\|fn unlinked_markers\\\\|ruling marker\\\" crates/tools/src/spec.rs | head -12\"}\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-3061/.bot-plan.md\", \"content\": \"# Draft plan for #3061 (planner notes)\\n\\nRating: hard (rule 1: crates/engine/src/ view + listing + fuzz monitor).\\n\\nRead \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 1: it changes how the engine's view and listing (`crates/engine/src/subsystems/activate.rs`) decide `usable` and `reason`, and adds a fuzz-monitor check; the issue itself asks for the hard label.\"} --> ## Goal An ability on the field that `legalActions`\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "",
-      "owner_since": "2026-11-04T23:49:00Z",
-      "owner_why": "released from its hold: `claude-1` has no runner free where it runs",
+      "owner": "claude-3",
+      "owner_since": "2026-11-05T00:11:29Z",
+      "owner_why": "it plans it; released from its hold: `claude-1` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-04T23:30:16Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-4",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-1",
+      "provider": "claude-3",
       "queued_at": "2026-11-04T22:55:55Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41934708788",
+      "run_id": "pending:34f425bc-1793837460",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T23:33:49Z",
+      "started_at": "2026-11-05T00:11:29Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6644263694"
+      ],
       "waiting_comment": 6645383538
     },
     "3062": {
@@ -16006,9 +16005,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T00:10:46Z",
+    "at": "2026-11-05T00:11:29Z",
     "url": "",
-    "what": "build #3063 on claude-3"
+    "what": "plan #3061 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-04T23:55:50Z",
