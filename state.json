@@ -15603,6 +15603,13 @@
         "reason": "`claude-3` stops: it refused a call; its limit resets at 2026-11-05T07:50:00Z",
         "trail": ""
       },
+      "hold": {
+        "ends": "2026-11-05T09:36:02Z",
+        "owner": "claude-3",
+        "since": "2026-11-05T07:36:02Z",
+        "until": "2026-11-05T07:50:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
