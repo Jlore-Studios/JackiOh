@@ -11,6 +11,16 @@
   --auth-error: var(--opponent);
   --auth-dim: var(--text-dim);
   --auth-gap: 10px;
+  /* R3217000: the one size of Google's and Roblox's buttons. The width and the height repeat
+     OAUTH_BUTTON_WIDTH_PX and OAUTH_BUTTON_HEIGHT_PX (auth/googleIdentity.ts), which GIS draws its
+     button at; oauth-row.test.ts holds them equal. The bleed lets two buttons and their gap fit the
+     panel's 386 px inner width at 440 px, inside the panel's own padding. */
+  --auth-oauth-width: 200px;
+  --auth-oauth-height: 40px;
+  --auth-oauth-gap: 6px;
+  --auth-oauth-bleed: 12px;
+  --auth-oauth-pad: 12px;
+  --auth-oauth-mark-gap: 10px;
 }
 
 /* 16px at least: iOS Safari zooms the whole page into any focused field smaller than that, and the
@@ -81,26 +91,60 @@
   min-height: 44px;
 }
 
-/* #1890: Google's own sign-in button (its branding guidelines' light theme), in the palette's
-   nearest colors: white, a grey edge, near-black text and the unaltered "G", in place of the
-   tavern's wood. The extra :not() outranks the
-   tavern's button rule (tavern.css), which carries four. */
-.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-google:not(.link-button) {
-  display: inline-flex;
-  flex: 1 1 100%;
-  align-items: center;
+/* R3217000: the providers' row. Google's and Roblox's buttons sit side by side, centered, with an even
+   gap, and wrap one above the other only when the panel is too narrow for both; a lone one is
+   centered. The five-class prefix outranks tavern.css's phone `row-gap: 0` (three). */
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions {
   justify-content: center;
-  gap: 10px;
-  padding: 8px 16px;
+  gap: var(--auth-oauth-gap);
+  margin-inline: calc(-1 * var(--auth-oauth-bleed));
+}
+
+/* R3217000: the ONE rule that sizes Google's button (R666's, #1890) and Roblox's (R3147000): height,
+   width, corner radius, padding, mark size and gap, text size and weight. A brand below sets only its
+   colors, so the pair cannot drift apart. The extra :not() outranks the tavern's button rule
+   (tavern.css), which carries four. The focus ring is tavern.css's gold one, drawn outside the box,
+   and hover and disabled change colors only, so nothing moves. */
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-branded:not(.link-button) {
+  display: inline-flex;
+  flex: 0 0 var(--auth-oauth-width);
+  align-items: center;
+  box-sizing: border-box;
+  width: var(--auth-oauth-width);
+  height: var(--auth-oauth-height);
+  min-height: var(--auth-oauth-height);
+  padding: 0 var(--auth-oauth-pad);
+  gap: var(--auth-oauth-mark-gap);
   border: 1px solid var(--pal-grey-500);
   border-radius: 4px;
-  background: var(--pal-white);
-  color: color-mix(in srgb, var(--pal-black) 88%, var(--pal-white));
   font-family: var(--font-text);
-  font-size: var(--type-lg);
+  font-size: var(--type-md);
   font-weight: 500;
+  white-space: nowrap;
   text-shadow: none;
   box-shadow: none;
+}
+
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-branded:not(.link-button):disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* The words fill what the mark leaves, centered; one too long for it ends in an ellipsis. */
+.auth-screen .auth-oauth .auth-oauth-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+}
+
+/* #1890: Google's own sign-in button (its branding guidelines' light theme), in the palette's
+   nearest colors: white, a grey edge, near-black text and the unaltered "G", in place of the
+   tavern's wood. */
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-google:not(.link-button) {
+  background: var(--pal-white);
+  color: color-mix(in srgb, var(--pal-black) 88%, var(--pal-white));
 }
 
 .tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-google:not(.link-button):hover:not(:disabled) {
@@ -109,15 +153,30 @@
   color: color-mix(in srgb, var(--pal-black) 88%, var(--pal-white));
 }
 
-.auth-screen .auth-oauth .auth-oauth-mark {
-  flex: none;
+/* R3217000: Roblox's button, its black face and white words and logo, in the palette's nearest colors. */
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-roblox:not(.link-button) {
+  background: var(--pal-black);
+  color: var(--pal-white);
 }
 
-/* R2983000: the slot Google Identity Services draws its own button in, centered where R666's
-   Google button stood; empty while GIS loads, when R666's button shows in its place. */
+.tavern.app-shell.auth-screen .auth-oauth .auth-actions button.auth-oauth-roblox:not(.link-button):hover:not(:disabled) {
+  border-color: var(--pal-grey-500);
+  background: color-mix(in srgb, var(--pal-black) 85%, var(--pal-white));
+  color: var(--pal-white);
+}
+
+.auth-screen .auth-oauth .auth-oauth-mark {
+  flex: none;
+  object-fit: contain;
+}
+
+/* R2983000: the slot Google Identity Services draws its own button in, where R666's Google button
+   stood; empty while GIS loads, when R666's button shows in its place. It is as wide as the button
+   GIS draws in it (`GIS_BUTTON.width`), which is R3217000's width. */
 .auth-screen .auth-oauth .auth-google {
   display: flex;
-  flex: 1 1 100%;
+  flex: 0 0 var(--auth-oauth-width);
+  width: var(--auth-oauth-width);
   justify-content: center;
 }
 

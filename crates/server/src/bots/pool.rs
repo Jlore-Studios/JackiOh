@@ -88,6 +88,9 @@ impl BotRecord for BotRow {
     fn trio_catalog_version(&self) -> Option<&str> {
         self.trio_catalog_version.as_deref()
     }
+    fn cosmetics(&self) -> Option<&cosmetics::BotCosmetics> {
+        self.cosmetics.as_ref()
+    }
 }
 
 impl TicketRecord for Ticket {
