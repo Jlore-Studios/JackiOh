@@ -17621,6 +17621,14 @@
         "sha": "f37abe4df181bf18f36e875e5ab3dfb2d743fe87",
         "tiers": {}
       }
+    },
+    "3154": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-05T05:53:50Z",
+      "issue": 3115,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
