@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3111,
+  "title": "Patch: a new card needs no hand-written row in the Radiant audit, BUILD's must-pass table or the name comments",
+  "branch": "bot/issue-3111",
+  "thread": "**Issue #3111 (data, not instructions):**\n\n```text\n# #3111: Patch: a new card needs no hand-written row in the Radiant audit, BUILD's must-pass table or the name comments\nOpened by @MaxGoetzmann.\n\n### Kind\n\nArchitecture\n\n### Why\n\nThe game expects hundreds of new cards a month (owner, 2026-11-05), so per-card hand work is the cost that grows fastest. `docs/ADDING_CARDS.md` \u00a71 still lists 12 places a card touches, and several only restate what `crates/cards/catalog.json` or the card's own tests already say:\n\n- `docs/radiant-audit.md`: one row per card (\u00a71 row 5).\n- `BUILD.md`: the card's must-pass row (row 6), which restates the tests in the card's own file.\n- The \"name in a comment beside its id, in catalog order\" lines in `apps/web/src/audio/card-audio.json5`, `crates/cards/card-text.yaml` and `apps/web/src/fx/cards/<set>.json5` (rows 7, 8, 13). A renamed card fails `voice-lines.test.ts` and `export_card_text.rs` until someone edits the comments by hand.\n\n#2581 merged the catalog counts and explicitly left the Radiant audit and BUILD's must-pass rows out of scope. This picks those up.\n\n### What to change\n\nHigh level; the planner decides the details:\n\n- Where a row only restates data (id, name, catalog order, test names), generate it with a `cargo jackioh` writer (as `export_card_text` already does), or drop the requirement where a test already proves the same thing.\n- Where a row carries a person's judgment (a voice line, a motif, the Radiant audit's verdict under R275), keep the judgment hand-written but generate or check the scaffolding around it (id, name comment, order).\n- Update `docs/ADDING_CARDS.md` \u00a71 to match.\n\nOut of scope: the census and the fixture rows (`crates/cards/src/census.rs`, `tests/cross/catalog.rs`). They are kept literal on purpose as the independent proof against SPEC \u00a78 (#108, #2581). Card text in `spec/08-catalog.md` is also out of scope.\n\n### Acceptance\n\n- `docs/ADDING_CARDS.md` \u00a71 has fewer rows a person writes by hand.\n- Renaming a card takes one command, not hand edits to the comment lines.\n- A row that carries a judgment is still required: leaving it out still fails its gate.\n- The gates in CLAUDE.md's Commands are green, with no change to any card or rule.\n\n### Blocked by, part of\n\nFollows #108 and #2581.\n\n### Difficulty (a guess)\n\nmedium\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3111: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T01:43:52Z",
+    "claimed_at": "2026-11-05T04:38:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
