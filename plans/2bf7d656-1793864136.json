@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3158,
+  "title": "CI: super run failed on a production candidate",
+  "branch": "bot/issue-3158",
+  "thread": "**Issue #3158 (data, not instructions):**\n\n```text\n# #3158: CI: super run failed on a production candidate\nOpened by @github-actions[bot].\n\n[super run 41978120849](https://github.com/Jlore-Studios/JackiOh/actions/runs/41978120849) on #3150, the promotion of `02343deae928` into production, failed:\n\n| Job | Result |\n|---|---|\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41978120849/job/127086397572) | cancelled |\n| [fuzz (1/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/41978120849/job/127086397634) | cancelled |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: production waits on this run, so it is yours and it comes first (`priority:high`). #3150 promotes `02343deae928`, a commit of `main`, so the fix lands on `main` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on `main`, the next daily run there that passes promotes it, or a `/promote` on the production issue tests the newer commit sooner.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3158: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-05T07:35:17Z",
+    "claimed_at": "2026-11-05T07:36:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3158 needs a plan",
+    "#3127 is held for `claude-3` until 01:50 (it refused a call)",
+    "#3065 is held for `claude-3` until 01:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3015 skipped: it waits for #2944 to close first",
+    "#3016 skipped: it waits for #3015 to close first",
+    "#3017 skipped: it waits for #3015 to close first"
+  ]
+}
