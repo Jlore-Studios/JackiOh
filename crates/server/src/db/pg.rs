@@ -29,7 +29,7 @@ use jackioh_engine::wire::{
     CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, RecordsKey,
     StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
 };
-use jackioh_engine::{Action, CustomCard, LastBoardEntry, LeanPick, PlayerId};
+use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
 use crate::bots::cosmetics::BotCosmetics;
@@ -37,19 +37,18 @@ use crate::config::{NANOS_PER_MS, RATING_DEVIATION_START, RATING_START, RATING_V
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
-    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite,
-    DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery,
-    InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
-    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide,
-    SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
-    TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome,
-    TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
-    deck_version_step,
+    CollectionGrant, ConsentRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck,
+    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
+    MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
+    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
+    RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput,
+    RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
+    SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
+    TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
+    UsernameClaimOutcome, deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -1014,34 +1013,6 @@ fn outcome_of<T: DeserializeOwned>(
         stringify(&value),
         allowed.join(", ")
     )))
-}
-
-/// Exactly what `app.create_custom_card` and `app.update_custom_card` return (migration 0037).
-const CUSTOM_CARD_CREATE_OUTCOMES: &[&str] = &["created", "limit"];
-const CUSTOM_CARD_UPDATE_OUTCOMES: &[&str] = &["updated", "stale", "missing"];
-
-/// `public.custom_cards`' columns (migration 0037, R915008).
-macro_rules! custom_card_columns {
-    () => {
-        "id, profile_id, version, frame, source, builder, created_at, updated_at"
-    };
-}
-
-/// One `public.custom_cards` row as the port's card. The frame is read straight into the engine's
-/// `CustomFrame`, so a row some other writer made that is not one fails here, by name.
-fn to_custom_card(row: &PgRow) -> Result<SavedCustomCard, StoreError> {
-    Ok(SavedCustomCard {
-        profile_id: uuid_text(row, "profile_id")?,
-        card: CustomCard {
-            id: get(row, "id")?,
-            version: get(row, "version")?,
-            frame: json_col(row, "frame")?,
-            source: get(row, "source")?,
-            builder: get(row, "builder")?,
-        },
-        created_at: ms_of(get(row, "created_at")?),
-        updated_at: ms_of(get(row, "updated_at")?),
-    })
 }
 
 struct TutorialDbRow {
@@ -2739,135 +2710,6 @@ pub async fn trios_remove(t: &mut PgTx<'_>, profile_id: &str, trio_id: &str) -> 
     run_as(t, Some(profile_id)).await?;
     let done = sqlx::query("delete from public.trios where id = $1::uuid and profile_id = $2::uuid")
         .bind(trio_id)
-        .bind(profile_id)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    Ok(done.rows_affected() == 1)
-}
-
-// Custom cards on the account (SPEC §12.9, R915008, migration 0037)
-//
-// A create and a save are one call each to `app.create_custom_card` and `app.update_custom_card`, which count
-// the cap under the profile lock and the version under the card's; the rest are single statements.
-
-/// Oldest first, ties on the id's bytes (`collate "C"`, so a collation that skips hyphens cannot
-/// order them otherwise than the in-memory store does).
-pub async fn custom_cards_list(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-) -> Result<Vec<SavedCustomCard>, StoreError> {
-    run_as(t, Some(profile_id)).await?;
-    let rows = sqlx::query(concat!(
-        "select ",
-        custom_card_columns!(),
-        " from public.custom_cards where profile_id = $1::uuid order by created_at, id collate \"C\""
-    ))
-    .bind(profile_id)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    rows.iter().map(to_custom_card).collect()
-}
-
-pub async fn custom_cards_get(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    card_id: &str,
-) -> Result<Option<SavedCustomCard>, StoreError> {
-    run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query(concat!(
-        "select ",
-        custom_card_columns!(),
-        " from public.custom_cards where profile_id = $1::uuid and id = $2::text"
-    ))
-    .bind(profile_id)
-    .bind(card_id)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    row.as_ref().map(to_custom_card).transpose()
-}
-
-/// The cap is the smaller of `max_cards` and `app.settings.max_custom_cards` (KNOWN DIVERGENCES,
-/// caps).
-pub async fn custom_cards_create(
-    t: &mut PgTx<'_>,
-    card: &CustomCardWrite,
-    max_cards: i64,
-) -> Result<CustomCardCreateOutcome, StoreError> {
-    let max_cards = i32::try_from(max_cards).unwrap_or(i32::MAX);
-    run_as(t, Some(card.profile_id.as_str())).await?;
-    let row = sqlx::query(concat!(
-        "select app.create_custom_card($1::uuid, $2::text, $3::jsonb, $4::text, $5::jsonb, ",
-        ts!("$6"),
-        ", $7::int) as outcome"
-    ))
-    .bind(card.profile_id.as_str())
-    .bind(card.id.as_str())
-    .bind(json(&card.frame)?)
-    .bind(card.source.as_str())
-    .bind(json_or_null(&card.builder)?)
-    .bind(card.at)
-    .bind(max_cards)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let outcome = match row {
-        None => None,
-        Some(row) => get::<Option<String>>(&row, "outcome")?,
-    };
-    outcome_of(
-        "app.create_custom_card",
-        "0037",
-        CUSTOM_CARD_CREATE_OUTCOMES,
-        outcome,
-    )
-}
-
-pub async fn custom_cards_update(
-    t: &mut PgTx<'_>,
-    card: &CustomCardWrite,
-    replaces: i32,
-) -> Result<CustomCardUpdateOutcome, StoreError> {
-    run_as(t, Some(card.profile_id.as_str())).await?;
-    let row = sqlx::query(concat!(
-        "select app.update_custom_card($1::uuid, $2::text, $3::int, $4::jsonb, $5::text, $6::jsonb, ",
-        ts!("$7"),
-        ") as outcome"
-    ))
-    .bind(card.profile_id.as_str())
-    .bind(card.id.as_str())
-    .bind(replaces)
-    .bind(json(&card.frame)?)
-    .bind(card.source.as_str())
-    .bind(json_or_null(&card.builder)?)
-    .bind(card.at)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let outcome = match row {
-        None => None,
-        Some(row) => get::<Option<String>>(&row, "outcome")?,
-    };
-    outcome_of(
-        "app.update_custom_card",
-        "0037",
-        CUSTOM_CARD_UPDATE_OUTCOMES,
-        outcome,
-    )
-}
-
-/// Not an `app.*` function, as `decks_remove`: a delete of the profile's own row has nothing to
-/// decide. A deck naming the card keeps naming it (§12.9).
-pub async fn custom_cards_remove(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    card_id: &str,
-) -> Result<bool, StoreError> {
-    run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("delete from public.custom_cards where id = $1::text and profile_id = $2::uuid")
-        .bind(card_id)
         .bind(profile_id)
         .execute(&mut **t)
         .await
@@ -8003,19 +7845,17 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //    bad name (D1, T1), too many cards (D2) or copies of one id (D4) and a malformed cards value; the
 //    in-memory store checks none, because `check_deck_draft` / `check_trio_draft` refuse them first. Stricter
 //    by design (§9.4's "defense in depth"). D3 (a deckable card) is checked by neither store.
-//  * tutorial, player settings and custom card strictness: the SQL raises where the in-memory store checks
+//  * tutorial and player settings strictness: the SQL raises where the in-memory store checks
 //    nothing, because the route refuses first. `app.merge_tutorial_progress` (0011, R320) raises on an
 //    inactive profile, a bad lesson id, a choice with no time or a missing profile row
 //    (`src/api/tutorial.rs`); its cap is the smaller of the caller's and `app.settings.tutorial_lessons_max`.
 //    `app.merge_player_settings` (0018, R633) raises on an inactive profile or a malformed group
 //    (`src/api/settings.rs`); its caps are the smaller of the caller's and `app.settings`'
 //    `player_settings_groups_max` / `player_settings_bytes_max`, the byte cap counting the text jsonb prints
-//    (`jsonb_text_bytes`). `app.create_custom_card` / `app.update_custom_card` (0037, R915008) and
-//    `public.custom_cards`' checks refuse a missing or inactive profile and a bad id, version, frame, source
-//    or builder (`src/api/custom_cards.rs` refuses what the engine's validator does, R915001).
-//  * caps. The port passes the cap (`max_decks`, `max_trios`, `max_cards`); the SQL applies the smaller of it
+//    (`jsonb_text_bytes`).
+//  * caps. The port passes the cap (`max_decks`, `max_trios`); the SQL applies the smaller of it
 //    and `app.settings.max_saved_decks` / `max_saved_trios` (0007, mirroring `MAX_SAVED_DECKS` and
-//    `MAX_SAVED_TRIOS`) / `max_custom_cards` (0037, mirroring `CUSTOM_CARDS_PER_ACCOUNT`). Equal today;
+//    `MAX_SAVED_TRIOS`). Equal today;
 //    raising a cap in `src/config.rs` alone raises it only in memory, as for the redemption limits.
 //  * deck and trio timestamps. `app.upsert_deck` / `app.upsert_trio` take one instant: `updated_at` always,
 //    `created_at` too when the row is new, and this store hands them `updated_at`. The fake stores a new
