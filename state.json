@@ -17610,6 +17610,13 @@
     "3162": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-05T10:25:40Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No rule in the hard list applies: the fix is one shell script and one README sentence, with no engine, AI, cross-crate, migration or 40-file change."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
