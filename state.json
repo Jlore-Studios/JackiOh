@@ -32962,6 +32962,9 @@
       "2026-11-05T07:09:39Z,claude-3,stream,call,41983667083,98,2026-11-05T07:50:00Z,,,allowed_warning,,,",
       "2026-11-05T07:10:54Z,claude-3,stream,call,41983667083,99,2026-11-05T07:50:00Z,,,allowed_warning,,,",
       "2026-11-05T07:13:07Z,claude-3,refusal,call,41983667083,100,2026-11-05T07:50:00Z,,,rejected,,,2026-11-05T07:50:00Z"
+    ],
+    "runs": [
+      "2026-11-05T07:13:08Z,41983667083,claude-3,opus,plan,3127,medium,interrupted,refusal,6.5,83,44439,6094195,1.8445,95,100,,,190.1,,fresh,,1"
     ]
   },
   "version": 1
