@@ -2,10 +2,11 @@
 // browser. apps/web's vitest suite proves which faces wear one (cards/stamps.test.tsx) and that no stamp colour is
 // Radiant's gold (cards/cosmetics.test.tsx); what only a layout engine can say is measured here: on the full face at
 // the inspect and hand-preview widths (normal, full art and the longest text), on a hand-size face and on the board
-// minion at its zone sizes, base and Radiant, the stamp draws inside the face and keeps clear of every part: the
-// cost gem, the rarity gem, the set mark, the crest, the name, the type line, the rules box (with Radiant's gold
-// marks in it), the stats, the state rail and, on the minion, the keyword marks, the zzz, the Vanilla stamp and the
-// portrait's oval.
+// minion at its zone sizes (normal and full art), base and Radiant, the stamp draws inside the face and keeps clear of
+// every part: the cost gem, the rarity gem, the set mark, the crest, the name, the type line, the rules box (with
+// Radiant's gold marks in it), the stats, the state rail and, on the minion, the keyword marks, the zzz, the Vanilla
+// stamp and, in its normal look, the portrait's oval. A full-art minion's art lies under every part (R3046000), as a
+// full face's does.
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) of a card whose account copy wears the top stamp
 // (the most ornate, with its ribbon tails), shown in a look by `FullArtShown` as card-versions.cy.tsx shows one.
@@ -121,16 +122,20 @@ function Faces() {
           )),
         )}
         {MINION_SIZES.flatMap(({ width, height }) =>
-          [false, true].flatMap((radiant) =>
-            [false, true].map((busy) => {
-              const u = unit("p1", { defId: MINION, radiant, ...(busy ? BUSY : {}) });
-              const face = faceModel({ defId: MINION, def: CATALOG[MINION] as CardDef, radiant, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords } });
-              return (
-                <div key={`minion-${String(width)}-${String(radiant)}-${String(busy)}`} data-face={`minion-${String(width)}-${radiant ? "radiant" : "base"}-${busy ? "busy" : "bare"}`} style={{ width, height, flex: "none", position: "relative" }}>
-                  <MinionFace face={face} unit={u} worn />
-                </div>
-              );
-            }),
+          looks.flatMap((look) =>
+            [false, true].flatMap((radiant) =>
+              [false, true].map((busy) => {
+                const u = unit("p1", { defId: MINION, radiant, ...(busy ? BUSY : {}) });
+                const face = faceModel({ defId: MINION, def: CATALOG[MINION] as CardDef, radiant, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords } });
+                return (
+                  <div key={`minion-${String(width)}-${look.name}-${String(radiant)}-${String(busy)}`} data-face={`minion-${String(width)}-${look.name}-${radiant ? "radiant" : "base"}-${busy ? "busy" : "bare"}`} style={{ width, height, flex: "none", position: "relative" }}>
+                    <FullArtShown defId={MINION} pick={look.pick} augments={[]}>
+                      <MinionFace face={face} unit={u} worn />
+                    </FullArtShown>
+                  </div>
+                );
+              }),
+            ),
           ),
         )}
       </div>
@@ -165,7 +170,7 @@ describe("R3013002 a card's proficiency stamp on real faces", () => {
     cy.mount(<Faces />);
     cy.document().should((doc) => {
       const all = faces(doc);
-      expect(all.length).to.eq(WIDTHS.length * CARDS.length * 2 * 2 + WIDTHS.length * 2 + CARDS.length * 2 + MINION_SIZES.length * 2 * 2);
+      expect(all.length).to.eq(WIDTHS.length * CARDS.length * 2 * 2 + WIDTHS.length * 2 + CARDS.length * 2 + MINION_SIZES.length * 2 * 2 * 2);
       for (const [where, cf] of all) {
         const face = cf.getBoundingClientRect();
         const minion = cf.getAttribute("data-layout") === "minion";
@@ -189,7 +194,11 @@ describe("R3013002 a card's proficiency stamp on real faces", () => {
           }
         }
         if (minion) {
-          for (const portrait of boxes(cf, ".cf-portrait")) expect(entersOval(stamp, portrait), `${where}: the stamp covers the portrait`).to.eq(false);
+          expect(full, `${where}: the look it is shown in`).to.eq(where.includes("-full-"));
+          // R3046000: a full-art Unit's art fills its face under every part, as a full face's does; the normal look keeps its oval.
+          if (!full) {
+            for (const portrait of boxes(cf, ".cf-portrait")) expect(entersOval(stamp, portrait), `${where}: the stamp covers the portrait`).to.eq(false);
+          }
         }
       }
     });
