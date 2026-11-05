@@ -1,12 +1,14 @@
 //! `jackioh`, the project's command-line tools (SURFACE §12), run as `cargo jackioh <cmd>`, one
 //! subcommand per row of §12's table. Exit codes: 0 on success, 1 on a failed check (a `run` that
-//! returns `Err`), 2 on bad usage (clap). Output goes to stdout; nothing is interactive.
+//! returns `Err`), 2 on bad usage (clap). Output goes to stdout (a fuzz wave's progress lines go to
+//! stderr, `seed_watch.rs`); nothing is interactive.
 
 mod agent;
 mod arena;
 mod board;
 mod card_lists;
 mod catalog;
+mod changed;
 mod claims;
 mod classify;
 mod dealt_fit;
@@ -17,7 +19,6 @@ mod fuzz;
 mod fx_census;
 mod gate;
 mod golden;
-mod luau;
 mod names;
 mod patches;
 mod positions;
@@ -26,6 +27,7 @@ mod replay;
 mod retcon;
 mod run_sim;
 mod sample_size;
+mod seed_watch;
 mod selfplay;
 mod selfplay_records;
 mod spec;
@@ -78,8 +80,6 @@ enum Command {
     Stats(stats::Args),
     /// Golden traces: `golden check`, `golden record` (part 23; `bless` retired in #2578).
     Golden(golden::Args),
-    /// Two builds compared: `luau diff`, `luau bench`.
-    Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
     /// A card's name comments, written from catalog.json (#3111).
@@ -114,7 +114,6 @@ fn main() -> ExitCode {
         Command::Sweep(args) => sweep::run(args),
         Command::Stats(args) => stats::run(args),
         Command::Golden(args) => golden::run(args),
-        Command::Luau(args) => luau::run(args),
         Command::Spec(args) => spec::run(args),
         Command::Names(args) => names::run(args),
         Command::Arena(args) => arena::run(args),

@@ -195,13 +195,9 @@ pub fn carried_versions() -> Result<String, String> {
 // refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never a
 // module error: only JSON that does not parse is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
-pub fn run_content(custom_cards_json: &str) -> Result<String, String> {
-    let custom: Vec<engine::CustomCard> = parse("runContent: the custom cards", custom_cards_json)?;
-    to_json(&jackioh_run::run_catalog_content(
-        engine::registered_catalog(),
-        &custom,
-    ))
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
+pub fn run_content() -> Result<String, String> {
+    to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -739,16 +735,6 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
             let raw: String = parse(call, input_json)?;
             to_json(&validator::normalize_name(&raw))
         }
-        // R915001, R915000: a custom card's frame judged, and the definition it builds, with no Luau:
-        // the script is the Luau module's to check.
-        "validateCustomCard" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::validate_custom_card(&card))
-        }
-        "customDef" => {
-            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
-            to_json(&jackioh_engine::custom::custom_def(&card))
-        }
         other => Err(format!("validator: no such call {other:?}")),
     }
 }
@@ -764,6 +750,19 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
 pub fn series(call_json: &str) -> Result<String, String> {
     let call: jackioh_shared::series::SeriesCall = parse("series: the call", call_json)?;
     to_json(&jackioh_shared::series::apply(&call))
+}
+
+// The loadout visibility rule (SPEC §10.8, R1834003, R3013002; #3102)
+
+/// One call of `jackioh_shared::loadout`, the rule that keeps a decklist from leaking through a seat's
+/// cosmetics, which the server calls natively: the input is a `LoadoutCall`
+/// (`{ "call": "cardsDue", "shown": …, "loadouts": …, "sent": … }`), the output a `LoadoutAnswer`
+/// (`{ "dealt": … }`, `{ "shown": … }` or `{ "due": { "cards": …, "sent": … } }`). The host holds the deal
+/// of a match and each receiver's `sent` set and hands them back on every call (`crates/shared/README.md`,
+/// the host contract). No decision is made here.
+pub fn loadout(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::loadout::LoadoutCall = parse("loadout: the call", call_json)?;
+    to_json(&jackioh_shared::loadout::apply(&call))
 }
 
 // The match host's machine (#3101; SPEC §9.2, §9.3, §9.5)
@@ -932,10 +931,10 @@ pub use duos_bodies::{duos_begin, duos_create, duos_legal_actions, duos_reduce, 
 mod run_body_tests {
     use super::*;
 
-    /// The content Part B's tests deal from: the catalog's, no custom card.
+    /// The content Part B's tests deal from: the catalog's.
     fn content() -> RunContent {
         jackioh_cards::register_all();
-        jackioh_run::run_catalog_content(engine::registered_catalog(), &[])
+        jackioh_run::run_catalog_content(engine::registered_catalog())
     }
 
     /// Unlocks at the ladder's top, so any Common/Rare ordering of the starter is valid.
@@ -983,7 +982,7 @@ mod run_body_tests {
     #[test]
     fn run_content_body_serializes_content() {
         let content = content();
-        let text = run_content("[]").unwrap();
+        let text = run_content().unwrap();
         assert_eq!(serde_json::from_str::<RunContent>(&text).unwrap(), content);
     }
 
@@ -1251,6 +1250,53 @@ mod series_body_tests {
         for call in ["", "{}", r#"{"call":"nope"}"#, r#"{"call":"beginGame"}"#] {
             let error = series(call).unwrap_err();
             assert!(error.starts_with("series: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod loadout_body_tests {
+    use super::*;
+
+    /// The body is `jackioh_shared::loadout::apply` over JSON: the `sent` set it answers is the next call's input.
+    #[test]
+    fn loadout_body_answers_the_due_cards_and_the_set_to_keep() {
+        let loadouts = json!([
+            { "seat": { "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" },
+              "cards": [{ "cardId": "core-001", "foil": "foil-cracked-ice" }] },
+            { "seat": { "table": "t", "field": "f", "cardBack": "b", "foil": "o", "finish": "i", "border": "r" } },
+        ]);
+        let call = json!({
+            "call": "cardsDue", "shown": [["p1", "core-001"], ["p2", "core-002"]], "loadouts": loadouts,
+        });
+        let due: Value = serde_json::from_str(&loadout(&call.to_string()).unwrap()).unwrap();
+        assert_eq!(
+            due["due"]["cards"],
+            json!([{ "seat": "p1", "cards": [{ "cardId": "core-001", "foil": "foil-cracked-ice" }] }])
+        );
+        assert_eq!(
+            due["due"]["sent"],
+            json!([["p1", "core-001"], ["p2", "core-002"]])
+        );
+
+        // Handed back, nothing is sent twice.
+        let again = json!({
+            "call": "cardsDue", "shown": [["p1", "core-001"]], "loadouts": loadouts, "sent": due["due"]["sent"],
+        });
+        let again: Value = serde_json::from_str(&loadout(&again.to_string()).unwrap()).unwrap();
+        assert_eq!(again["due"]["cards"], json!([]));
+    }
+
+    #[test]
+    fn loadout_body_refuses_a_call_that_does_not_parse() {
+        for call in [
+            "",
+            "{}",
+            r#"{"call":"nope"}"#,
+            r#"{"call":"shownDefs","dealt":{}}"#,
+        ] {
+            let error = loadout(call).unwrap_err();
+            assert!(error.starts_with("loadout: the call"), "{call:?}: {error}");
         }
     }
 }

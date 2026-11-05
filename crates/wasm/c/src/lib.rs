@@ -178,16 +178,10 @@ pub extern "C" fn carried_versions() -> i32 {
 // A run-rule refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason),
 // never the failed status: only JSON that does not parse, or an argument that is not text, is one.
 
-/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog.
 #[unsafe(no_mangle)]
-pub extern "C" fn run_content(custom_cards_json_ptr: *const u8, custom_cards_json_len: usize) -> i32 {
-    boundary(|| {
-        wasm_core::run_content(arg(
-            "runContent: the custom cards",
-            custom_cards_json_ptr,
-            custom_cards_json_len,
-        )?)
-    })
+pub extern "C" fn run_content() -> i32 {
+    boundary(wasm_core::run_content)
 }
 
 /// `null` when the setup may start a run, else the reason.
@@ -786,6 +780,16 @@ pub extern "C" fn validator(
 #[unsafe(no_mangle)]
 pub extern "C" fn series(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
     boundary(|| wasm_core::series(arg("series: the call", call_json_ptr, call_json_len)?))
+}
+
+// The loadout visibility rule (SPEC §10.8, #3102: `jackioh-shared`, which the server calls natively)
+
+/// One call of the loadout visibility rule: a `LoadoutCall` as JSON in, a `LoadoutAnswer` as JSON out. The
+/// host holds the match's deal and each receiver's `sent` set and hands them back on every call
+/// (`crates/shared/README.md`, the host contract). Only a call that does not parse is a failed status.
+#[unsafe(no_mangle)]
+pub extern "C" fn loadout(call_json_ptr: *const u8, call_json_len: usize) -> i32 {
+    boundary(|| wasm_core::loadout(arg("loadout: the call", call_json_ptr, call_json_len)?))
 }
 
 // The match host's machine (SPEC §9.5, #3101: `jackioh-shared`, which the server calls natively)
