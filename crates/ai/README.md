@@ -366,10 +366,12 @@ and, once a network ships, its inference in the search, so the two never read a 
 
 ```rust
 pub const FEATURES_VERSION: u32;
+pub const FEATURES_READ_SINCE: u32;                                  // the oldest layout a network may be fitted on
 pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
 pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
 pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
 pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
+pub fn card_id_of_key(key: &str) -> Option<(&str, &str)>;           // a key's zone and card id, when it names one
 ```
 
 - It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
@@ -388,8 +390,17 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
   and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
   Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
   know is no input at all.
+- **sparse, what a card is** (R3112000): each card with an id key also has
+  `<zone>.<attribute>:<side>:<value>` keys for its running face's type, its printed cost (`query_cost`)
+  and tags, its running face's keywords (counted as the dense counts count them) and printed attack and
+  health, each number clamped at `ATTRIBUTE_TOP`, and `<zone>.face:<side>:Radiant` when it is Radiant.
+  A card a network has no id row for still moves it through the keys it shares with the cards it was
+  fitted on.
 - `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
-  version they were fitted on.
+  version they were fitted on. `FEATURES_READ_SINCE` is the oldest version a network may be fitted on
+  and still ship: every version since it only added sparse keys, which such a network has no row for,
+  so it reads this build's features as it was fitted (R3112001). A change to the dense layout or to
+  what an existing key means raises it to `FEATURES_VERSION`.
 
 ## The learned evaluation (#466, #1010)
 
@@ -401,6 +412,8 @@ pub enum EvalKind { Hand, Learned }
 pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
 pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
 pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
+impl Learned<'a> { pub fn known_card_ids(&self) -> Vec<&'a str>; }   // the ids its keys name, sorted
+pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards;   // { named, unknown }
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
@@ -417,6 +430,9 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
   turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
   file may be the null network, whose correction is zero everywhere.
+- `unknown_cards` counts the copies of cards a row names by id and how many of them name an id the
+  network has no row for (`known_card_ids`); `cargo jackioh positions` sums them over its rows and
+  prints their share, `unknownShare`, so a refit is asked for by that number (R3112002).
 - Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm, for a float network
   (`"format": 1`, `Learned::Float`), which part 5's native screen measures. The network that ships is
   an integer one (`"format": 2`, `Learned::Int`, `src/learned/int.rs`, #1011): `training/ml`'s

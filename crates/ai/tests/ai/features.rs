@@ -118,16 +118,100 @@ fn r1012004_a_radiant_card_in_the_seats_own_hand_is_an_input_of_its_own() {
         "{:?}",
         after.sparse
     );
-    let others: Vec<_> = after
-        .sparse
-        .iter()
-        .filter(|pair| **pair != key)
-        .cloned()
+    // The keys that name a card by id; what the card is follows its Radiant face (R3112000's test).
+    let ids = |sparse: &[(String, i32)]| -> Vec<(String, i32)> {
+        sparse
+            .iter()
+            .filter(|(key, _)| card_id_of_key(key).is_some())
+            .cloned()
+            .collect()
+    };
+    let others: Vec<_> = ids(&after.sparse)
+        .into_iter()
+        .filter(|pair| *pair != key)
         .collect();
-    assert_eq!(others, before.sparse);
+    assert_eq!(others, ids(&before.sparse));
 
     assert_eq!(
         features_of(&plain, PlayerId::P2),
         features_of(&radiant, PlayerId::P2)
     );
+}
+
+/// R3112000, R185: beside its id, each card the seat can name has the keys of what it is, read from its
+/// definition and its running face: its type, printed cost, tags, keywords, printed attack and health
+/// (clamped at `ATTRIBUTE_TOP`) and its Radiant face. The enemy's hand and face-down trap give none; the
+/// seat that owns the trap reads it.
+#[test]
+fn r3112000_r185_the_features_name_what_each_card_the_seat_can_read_is() {
+    let state = build("features-attr", p2_a(), p1_side());
+    let def = |id: &str| jackioh_engine::find_def(Some(&state), id).expect("a catalog card");
+    let top = |value: i32| value.clamp(0, ATTRIBUTE_TOP);
+    let found = features_of(&state, AI);
+    let keys: Vec<&str> = found.sparse.iter().map(|(key, _)| key.as_str()).collect();
+    let has = |key: String| assert!(keys.contains(&key.as_str()), "{key} in {keys:?}");
+
+    let timmy = def("core-011");
+    has("board.type:own:Unit".to_string());
+    has(format!("board.cost:own:{}", top(query_cost(timmy))));
+    for tag in &timmy.tags {
+        has(format!("board.tag:own:{}", tag.as_str()));
+    }
+    for keyword in &timmy.base.keywords {
+        has(format!("board.kw:own:{}", keyword.kind().as_str()));
+    }
+    has(format!(
+        "board.attack:own:{}",
+        top(timmy.base.attack.expect("a Unit's attack"))
+    ));
+    has(format!(
+        "board.health:own:{}",
+        top(timmy.base.health.expect("a Unit's health"))
+    ));
+    has("board.type:enemy:Unit".to_string());
+    assert_eq!(def("core-008").type_, CardType::Unit);
+    assert_eq!(def("core-035").type_, CardType::Spell);
+    has("hand.type:own:Unit".to_string());
+    has("hand.type:own:Spell".to_string());
+    assert!(
+        !keys.iter().any(|key| key.starts_with("backrow")),
+        "the face-down trap gives no key: {keys:?}"
+    );
+    assert!(
+        !keys
+            .iter()
+            .any(|key| key.starts_with("hand") && key.contains(":enemy:")),
+        "the enemy's hand gives no key: {keys:?}"
+    );
+    assert!(!keys.iter().any(|key| key.contains("Radiant")), "{keys:?}");
+
+    let theirs = features_of(&state, PlayerId::P2);
+    assert!(
+        theirs
+            .sparse
+            .iter()
+            .any(|(key, _)| key == "backrow.type:own:Trap"),
+        "{:?}",
+        theirs.sparse
+    );
+
+    // A Radiant card in hand is read by its Radiant face, and the other seat sees no change.
+    let mut radiant = clone(&state);
+    let at = radiant.players[AI]
+        .hand
+        .iter()
+        .position(|card| card.def_id == "core-008")
+        .expect("core-008 is in hand");
+    radiant.players[AI].hand[at].radiant = true;
+    let glowing = features_of(&radiant, AI);
+    let keys: Vec<&str> = glowing.sparse.iter().map(|(key, _)| key.as_str()).collect();
+    let face = &def("core-008").radiant;
+    for key in [
+        "hand.face:own:Radiant".to_string(),
+        format!("hand.attack:own:{}", top(face.attack.expect("a Unit's attack"))),
+        format!("hand.health:own:{}", top(face.health.expect("a Unit's health"))),
+    ] {
+        assert!(keys.contains(&key.as_str()), "{key} in {keys:?}");
+    }
+    assert_eq!(theirs, features_of(&radiant, PlayerId::P2));
 }

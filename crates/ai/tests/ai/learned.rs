@@ -92,7 +92,7 @@ fn close(a: f64, b: f64) -> bool {
 /// Lends the fixture's network to `run`, with the fixture's cases.
 fn with_tiny<R>(run: impl FnOnce(&Network<'_>, &[Case]) -> R) -> R {
     let fixture: Fixture = serde_json::from_str(TINY).expect("the fixture parses");
-    assert_eq!(fixture.network.features_version, FEATURES_VERSION);
+    assert!((FEATURES_READ_SINCE..=FEATURES_VERSION).contains(&fixture.network.features_version));
     let owned = Owned::of(fixture.network);
     let keys: Vec<&str> = owned.keys.iter().map(String::as_str).collect();
     let mut inputs = owned.json.width;
@@ -601,4 +601,155 @@ fn r3038003_a_piece_on_either_field_or_in_the_seats_own_hand_is_a_starship_the_r
         "no piece is left on the field"
     );
     assert!(holds_starship(after, p1) && holds_starship(after, p2), "the hull");
+}
+
+/// One Unit on p1's board and nothing else.
+fn solo_board(seed: &str, unit: &str) -> GameState {
+    jackioh_cards::register_all();
+    scenario(json!({ "seed": seed, "p1": { "field": [unit] }, "p2": {} }))
+        .state()
+        .clone()
+}
+
+/// `features` less every key that does not name a card by id: what a network fitted before
+/// `FEATURES_VERSION` 3 could read of it (R3112000).
+fn ids_only(features: &Features) -> Features {
+    Features {
+        dense: features.dense.clone(),
+        sparse: features
+            .sparse
+            .iter()
+            .filter(|(key, _)| card_id_of_key(key).is_some())
+            .cloned()
+            .collect(),
+    }
+}
+
+/// R3112000: a network with rows for one card and what it is, and none for another card's id, still
+/// moves on the other card through the keys of what the two share.
+#[test]
+fn r3112000_a_card_with_no_id_row_still_moves_the_evaluation_through_what_it_is() {
+    let known = solo_board("learned-3112-known", "core-011");
+    let fresh = solo_board("learned-3112-fresh", "core-008");
+    let trained = features_of(&known, PlayerId::P1);
+    let keys: Vec<&str> = trained.sparse.iter().map(|(key, _)| key.as_str()).collect();
+    assert!(keys.contains(&"board:own:core-011"), "{keys:?}");
+    assert!(!keys.contains(&"board:own:core-008"), "{keys:?}");
+    assert!(keys.windows(2).all(|pair| pair[0] < pair[1]), "keys sorted");
+
+    let zeros = vec![0.0; dense_len()];
+    let ones = vec![1.0; dense_len()];
+    let sparse_in = vec![0.25; keys.len()];
+    let network = Network {
+        features_version: FEATURES_VERSION,
+        catalog: "",
+        width: 1,
+        mean: &zeros,
+        scale: &ones,
+        keys: &keys,
+        dense_in: &zeros,
+        sparse_in: &sparse_in,
+        bias: &[0.0],
+        head: &[],
+        out_w: &[1.0],
+        out_b: 0.0,
+        linear: &[],
+        hand_a: 1.0,
+        hand_b: 0.0,
+        hand_unit: 100.0,
+    };
+
+    let seen = features_of(&fresh, PlayerId::P1);
+    assert!(
+        seen.sparse.iter().any(|(key, _)| key == "board.type:own:Unit"),
+        "{:?}",
+        seen.sparse
+    );
+    assert_eq!(network.correction(&ids_only(&seen)), 0.0, "its id has no row");
+    assert!(
+        network.correction(&seen) > 0.0,
+        "what it shares with core-011 moves it"
+    );
+    assert_ne!(
+        finalist_score_with(
+            &fresh,
+            PlayerId::P1,
+            NextSwing::Seat,
+            EvalKind::Learned,
+            &Learned::Float(network),
+            Prices::NONE,
+        ),
+        evaluate(&fresh, PlayerId::P1, NextSwing::Seat, &AI_EVAL)
+    );
+}
+
+/// R3112001: a network fitted before version 3 has rows only for keys that name a card by id, so this
+/// build's features give it exactly the correction their id keys alone give it: it reads them as it
+/// was fitted. The tiny fixture is such a network, and so is the shipped one until a refit.
+#[test]
+fn r3112001_a_network_fitted_before_version_3_reads_this_build_s_features_as_it_was_fitted() {
+    let solo = state();
+    let features = features_of(&solo, PlayerId::P1);
+    let ids = ids_only(&features);
+    assert!(
+        ids.sparse.len() < features.sparse.len(),
+        "the features hold the keys of what each card is: {:?}",
+        features.sparse
+    );
+    with_tiny(|network, _| {
+        assert!(network.features_version < FEATURES_VERSION);
+        assert!(
+            network.keys.iter().all(|key| card_id_of_key(key).is_some()),
+            "{:?}",
+            network.keys
+        );
+        let correction = network.correction(&features);
+        assert_ne!(correction, 0.0, "the network moves this position");
+        assert_eq!(correction.to_bits(), network.correction(&ids).to_bits());
+    });
+    if LEARNED.features_version() < FEATURES_VERSION {
+        assert!(
+            LEARNED.keys().iter().all(|key| card_id_of_key(key).is_some()),
+            "a network fitted on version {} names only card ids",
+            LEARNED.features_version()
+        );
+        assert_eq!(
+            LEARNED.correction(&features).to_bits(),
+            LEARNED.correction(&ids).to_bits()
+        );
+    }
+}
+
+/// R3112002: `unknown_cards` counts each copy a position names once (a Radiant card in hand by its
+/// `hand` key alone, and no attribute key), and of them the ones whose id the network has no row
+/// for; `known_card_ids` names each id a network's keys name, once, sorted.
+#[test]
+fn r3112002_unknown_cards_counts_each_copy_once_and_the_ids_with_no_row() {
+    let sparse: Vec<(String, i32)> = [
+        ("backrow:enemy:core-041", 1),
+        ("board.cost:own:1", 2),
+        ("board:own:core-011", 2),
+        ("hand:own:core-008", 1),
+        ("hand_radiant:own:core-008", 1),
+    ]
+    .iter()
+    .map(|(key, count)| ((*key).to_string(), *count))
+    .collect();
+    assert_eq!(
+        unknown_cards(&sparse, &["core-011"]),
+        UnknownCards { named: 4, unknown: 2 }
+    );
+    assert_eq!(unknown_cards(&sparse, &[]), UnknownCards { named: 4, unknown: 4 });
+    with_tiny(|network, _| {
+        let known = Learned::Float(*network).known_card_ids();
+        assert!(!known.is_empty());
+        assert!(
+            known.windows(2).all(|pair| pair[0] < pair[1]),
+            "sorted, each once"
+        );
+        for key in network.keys {
+            let (_, id) = card_id_of_key(key).expect("an id key");
+            assert!(known.binary_search(&id).is_ok(), "{id}");
+        }
+    });
 }

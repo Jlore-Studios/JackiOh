@@ -73,7 +73,7 @@ const UNMIGRATED: Record<string, number> = {
   "emotes/portrait.css": 5,
   "fx/fx.css": 122,
   "game/deckbuilder/deckbuilder.css": 91,
-  "game/deckbuilder/workshop.css": 17,
+  "game/deckbuilder/workshop.css": 16,
   "game/table.css": 181,
   "i18n/language.css": 6,
   "packs/pack-object.css": 44,

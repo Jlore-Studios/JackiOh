@@ -1,5 +1,5 @@
 // R2119000: the undo hold and its toast, on a manual clock. Each screen's own tests check what its
-// request and its Undo do (the workshop, the creator, Play together).
+// request and its Undo do (the workshop, Play together).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

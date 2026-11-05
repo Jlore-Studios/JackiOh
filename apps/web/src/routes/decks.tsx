@@ -4,13 +4,11 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import type { CardDefs, CustomCard } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import { FULL_ART_GATED, OwnCopy } from "../cards/fullArt.ts";
 import { CardDefsProvider } from "../cards/index.ts";
-import { customDefsOf, useCustomCards } from "../creator/useCustomCards.ts";
 import { ownedPortraits, PortraitsOwned, type PortraitOwnership } from "../emotes/ownedPortraits.ts";
 import { t } from "../i18n/i18n.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
@@ -48,18 +46,6 @@ type Loaded = {
   decks: DecksResponse;
   portraits: PortraitOwnership;
 };
-
-const NO_CUSTOM: readonly CustomCard[] = [];
-
-/** R915005: the catalog and collection with the account's custom cards, each owned once. */
-function withCustom(data: Loaded, customDefs: CardDefs): { catalog: CatalogSnapshot; collection: Collection | null } {
-  const ids = Object.keys(customDefs);
-  if (ids.length === 0) return { catalog: data.catalog, collection: data.collection };
-  return {
-    catalog: { ...data.catalog, cards: { ...data.catalog.cards, ...customDefs } },
-    collection: data.collection === null ? null : { ...data.collection, ...Object.fromEntries(ids.map((id) => [id, 1])) },
-  };
-}
 
 /**
  * R2125000: what the last visit read, or null on a first visit. A collection or cosmetics list not kept
@@ -119,12 +105,6 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
   const token = account.kind === "ready" ? account.token : null;
   const profileId = account.kind === "ready" ? account.me.profile.id : null;
   const blocked = account.kind === "ready" && account.me.needsInviteCode;
-  // §12.9: an active account's custom cards, beside the catalog.
-  const custom = useCustomCards(account.kind === "ready" && account.me.profile.status === "active" && !blocked ? token : null);
-  const customCards = custom.state.kind === "ready" ? custom.state.cards : NO_CUSTOM;
-  const customDefs = useMemo(() => customDefsOf(customCards), [customCards]);
-  const readyData = screen.kind === "ready" ? screen.data : null;
-  const shelf = useMemo(() => (readyData === null ? null : withCustom(readyData, customDefs)), [readyData, customDefs]);
 
   // Keep the token and profile together so renewals differ from account changes (R194).
   const sessionRef = useRef<{ token: string | null; profileId: string | null }>({ token, profileId });
@@ -274,7 +254,7 @@ export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portra
   }
 
   // R279: a reference in a card's text shows the card the catalog names.
-  const { catalog, collection } = shelf ?? { catalog: screen.data.catalog, collection: screen.data.collection };
+  const { catalog, collection } = screen.data;
   return (
     <CardDefsProvider defs={catalog.cards}>
       {/* R1313000: every face here is the viewer's own, and prints the full arts they own. */}

@@ -253,7 +253,9 @@ so inference must cost microseconds.
 **Recommendation: B.** It is the smallest shape that can learn what the hand eval cannot see. C is
 the step up if B's per-card worth is too coarse. A card id the weights do not know (a new card, or
 a custom card, #915) gets no sparse feature and is valued by its dense stats alone, so a new card
-never breaks the AI.
+never breaks the AI. Since `FEATURES_VERSION` 3 (#3112, R3112000) it also has keys for what it is
+(its type, cost, tags, keywords, printed stats and Radiant face), so it shares what the network
+learned of cards like it.
 
 ### D6. Where it plugs into the search
 
@@ -382,9 +384,13 @@ small.
 ### D10. Patches and versions
 
 The weights record `FEATURES_VERSION` and the catalog version they were trained on. A
-`FEATURES_VERSION` mismatch is refused at build time (a test). A catalog mismatch is allowed:
-the cards' dense stats are read live, and only their learned extra worth is stale. The gather lane
-already plays every patch, so retraining per patch is cheap (D1, D3).
+`FEATURES_VERSION` this build does not read as it was fitted is refused at build time (a test): one
+after this build's, or before `FEATURES_READ_SINCE`, to which a later version did more than add
+sparse keys (R3112001). A
+catalog mismatch is allowed: the cards' dense stats are read live, and only their learned extra
+worth is stale. The gather lane already plays every patch, so retraining per patch is cheap (D1,
+D3). How stale it is, `cargo jackioh positions` measures on every retrain: `unknownShare`, the share
+of the cards its rows name that the build's network has no row for (R3112002).
 
 ## The parts
 

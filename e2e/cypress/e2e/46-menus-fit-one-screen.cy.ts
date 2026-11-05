@@ -16,7 +16,6 @@ import {
   CARD_POOL,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
-  CREATOR_SCREEN,
   PLAY_QUEUE,
   PLAY_SIGN_IN,
   REPLAYS_ROOT,
@@ -265,12 +264,6 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         it("R1581000 /leaderboard", () => {
           cy.visitAs(accounts.p1(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
-          expectOnScreen(viewport, ONE_SCREEN);
-        });
-
-        it("R1581000 /creator", () => {
-          cy.visitAs(accounts.p1(), routes.creator());
-          cy.get(ts(CREATOR_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
