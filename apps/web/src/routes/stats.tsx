@@ -6,7 +6,7 @@
 // patch bar (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of
 // its own. The Cards tab also holds the games panel (R1994000), the Created cards (R2089000) and, behind
 // Show tokens, off by default, the tokens (R2370000). The card drill-down shows the faces (a full-art
-// card's art as the viewer picks it, R2756000), patch history, turn curve and co-played synergy.
+// card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -15,7 +15,7 @@ import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
-import { FULL_ART_STRIP_TIERS, FULL_ARTS_OF_CARD, FullArtShown, OwnCopy, fullArtPickOf, fullArtSource, isFullArtCard, type FullArtTier } from "../cards/fullArt.ts";
+import { FullArtShown, OwnCopy, fullArtSource } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
@@ -30,6 +30,7 @@ import {
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
+import type { CardTier } from "../wire/generated/CardTier.ts";
 import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
@@ -101,24 +102,6 @@ function tokensOf(def: CardDef): CardDef[] {
 }
 
 /**
- * R2756000: the arts a card's drill-down offers: its normal face, then each tier it has a full art of, commonest
- * first (a listed token's are its parent's, R2655002); none for a card without full art. R2715000: in the
- * Collection's order, the Animated art first.
- */
-function artsOf(defId: string): DrillDownArt[] {
-  if (!isFullArtCard(defId)) return [];
-  const tiers = FULL_ARTS_OF_CARD.get(fullArtSource(defId));
-  return ["normal", ...FULL_ART_STRIP_TIERS.filter((tier) => tiers?.has(tier) === true)];
-}
-
-/** R2756000: `art` as the full-art pick `FullArtShown` takes for `defId`'s faces: `false` for the normal face, else that tier's (R2655000). */
-function artPick(defId: string, art: DrillDownArt): boolean | string {
-  const source = fullArtSource(defId);
-  const id = art === "normal" ? undefined : FULL_ARTS_OF_CARD.get(source)?.get(art);
-  return id === undefined ? false : fullArtPickOf(source, id);
-}
-
-/**
  * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
  * at, from the response's patch list; a server without one names the version before.
  */
@@ -146,6 +129,7 @@ type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
   | "games"
+  | "tier"
   | "adjustedWinRate"
   | "winRate"
   | "drawnWinRate"
@@ -155,21 +139,10 @@ type SortColumn =
   | "playRate";
 type SortDirection = "asc" | "desc";
 
-/** R2756000: the art the drill-down's faces print: the normal face, or one of the card's full arts by tier. */
-type DrillDownArt = "normal" | FullArtTier;
-
-/** R2756000: each art choice's button, in English, put through `t()` where it is drawn as `SORT_LABELS` are. */
-const ART_LABELS: Record<DrillDownArt, string> = {
-  normal: "No full art",
-  Animated: "Animated",
-  Epic: "Epic",
-  Legendary: "Legendary",
-  Mythic: "Mythic",
-};
-
 const SORT_COLUMNS: readonly SortColumn[] = [
   "name",
   "games",
+  "tier",
   "adjustedWinRate",
   "winRate",
   "drawnWinRate",
@@ -182,6 +155,7 @@ const SORT_COLUMNS: readonly SortColumn[] = [
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
+  tier: "Tier",
   adjustedWinRate: "Adjusted",
   winRate: "Win rate",
   drawnWinRate: "When drawn",
@@ -213,6 +187,29 @@ function RangeText({ low, high, digits, testid }: { low?: number | null; high?: 
   );
 }
 
+/** R3022000: the tiers from the top, S (above the band, a nerf candidate) to F (below it, a buff candidate). */
+const TIER_ORDER: readonly CardTier[] = ["S", "A", "B", "C", "D", "F"];
+
+/** R3022000: a tier's place from the bottom, so a descending sort puts S first; -1 for none. */
+function tierRank(tier: CardTier | null | undefined): number {
+  return tier ? TIER_ORDER.length - TIER_ORDER.indexOf(tier) : -1;
+}
+
+/** R3022000: a band edge or a spread as the tiers' note reads it, a percent to a tenth at most ("45%", "52.5%"). */
+function percentText(fraction: number): string {
+  return `${String(Number((fraction * 100).toFixed(1)))}%`;
+}
+
+/** R3022000: a card's tier chip, or "—" below the floor or from a server deployed before tiers. */
+function TierChip({ tier, testid }: { tier: CardTier | null | undefined; testid: string }): ReactElement {
+  if (!tier) return <span data-testid={testid}>—</span>;
+  return (
+    <span className="stats-tier" data-tier={tier} data-testid={testid}>
+      {tier}
+    </span>
+  );
+}
+
 /** R2777000: the table's default order, the adjusted win rate descending. */
 const DEFAULT_SORT: SortColumn = "adjustedWinRate";
 
@@ -228,21 +225,21 @@ function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection 
 }
 
 /**
- * R2777001: the match types the page reads, Constructed (Best of 1 and Conquest together) first and the default,
- * then All Random, then each constructed mode alone. No figure mixes chosen decks with dealt ones, so every mode
- * together is not offered.
+ * R2777004: the match types the page reads. Every mode together comes first and is what the page opens on, then
+ * Constructed (Best of 1 and Conquest together, R2777001), All Random, and each constructed mode alone.
  */
-const MODES = ["constructed", "random", "bo1", "bo3"] as const;
+const MODES = ["all", "constructed", "random", "bo1", "bo3"] as const;
 type StatsMode = (typeof MODES)[number];
-const DEFAULT_MODE: StatsMode = "constructed";
+const DEFAULT_MODE: StatsMode = "all";
 const MODE_LABELS: Record<StatsMode, string> = {
+  all: "All modes",
   constructed: "Constructed",
   random: "All Random",
   bo1: "Best of 1",
   bo3: "Conquest",
 };
 
-/** R2777001: the mode an address asks for; one the page does not offer (an old `all`, or none) is Constructed. */
+/** R2777004: the mode an address asks for; none, or one the page does not offer, is every mode. */
 function modeOf(params: URLSearchParams): StatsMode {
   const asked = params.get("mode");
   return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
@@ -331,9 +328,6 @@ export default function StatsRoute(): ReactElement {
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
-  // R2756000: the drill-down's art, kept from card to card as Show Radiant is; null until the viewer picks one,
-  // when the faces print what the Full-art cards setting says.
-  const [drillDownArt, setDrillDownArt] = useState<DrillDownArt | null>(null);
   const { fullArt: fullArtSetting } = useCardSettings();
 
   // R1966000: every set's cards, unfiltered, and the previous patch's for the change.
@@ -538,6 +532,8 @@ export default function StatsRoute(): ReactElement {
   }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
+  // R3022000: the field and band the tiers are read against; absent from a server deployed before them.
+  const tiers = cardStatsData?.tiers;
 
   const setsSince = setsData ? previousPatchOf(setsData)?.name : undefined;
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
@@ -589,7 +585,19 @@ export default function StatsRoute(): ReactElement {
     const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
       shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
     list.sort((a, b) => {
-      if (sortCol === "adjustedWinRate") {
+      if (sortCol === "tier") {
+        // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
+        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+        const aRank = tierRank(a.tier);
+        const bRank = tierRank(b.tier);
+        if (aRank >= 0 && bRank < 0) return -1;
+        if (aRank < 0 && bRank >= 0) return 1;
+        if (aRank !== bRank) return (aRank - bRank) * flip;
+        const aRate = a.adjustedWinRate ?? null;
+        const bRate = b.adjustedWinRate ?? null;
+        if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
+      } else if (sortCol === "adjustedWinRate") {
         // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
@@ -670,9 +678,6 @@ export default function StatsRoute(): ReactElement {
   const drillDownRadiantFace =
     drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
-  // R2756000: the arts offered and the one the faces print: the one picked, else the setting's Epic or the normal face.
-  const drillDownArts = drillDownDef ? artsOf(drillDownDef.id) : [];
-  const shownArt: DrillDownArt = drillDownArt ?? (fullArtSetting ? "Epic" : "normal");
 
   return (
     <CardDefsProvider defs={CATALOG}>
@@ -1044,6 +1049,10 @@ export default function StatsRoute(): ReactElement {
                         )}
                       </button>
                       <dl className="stats-grid-figures">
+                        <dt>{t("Tier")}</dt>
+                        <dd>
+                          <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
+                        </dd>
                         <dt>{t("Adjusted")}</dt>
                         <dd>
                           {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
@@ -1112,7 +1121,23 @@ export default function StatsRoute(): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
-                        title={t("50% plus how far drawing the card moves its deck's win rate, counted only as far as its games bear out")}
+                        title={t("S needs a nerf and F a buff: S is above the band and sure of it, F below it and sure of it, and A to D are the band's quarters")}
+                        aria-sort={sortCol === "tier" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("tier")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("tier");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Tier")} {sortCol === "tier" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
+                        title={t("50% plus how far drawing the card moves its deck's win rate beyond the average card's, counted only as far as its games bear out")}
                         aria-sort={sortCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("adjustedWinRate")}
                         onKeyDown={(e) => {
@@ -1258,6 +1283,9 @@ export default function StatsRoute(): ReactElement {
                             <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
+                          <td className="stats-td">
+                            <TierChip tier={card.hasEnoughGames ? card.tier : null} testid={statsTestid.tierCell} />
+                          </td>
                           <td className="stats-td" data-testid={statsTestid.adjustedCell}>
                             {card.hasEnoughGames ? adjustedText(card.adjustedWinRate) : "—"}
                             {showRanges && card.hasEnoughGames && (
@@ -1322,6 +1350,35 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </TableScroll>
+            )}
+
+            {/* R3022000: what the tiers mean, and the field the cards are read against */}
+            {tiers && !cardStatsLoading && !cardStatsError && filteredCards.length > 0 && (
+              <div className="stats-sample-hint stats-tiers-note" data-testid={statsTestid.tiersNote}>
+                <p>
+                  {t("Tier S is above {high} with its whole 95% range above 50%: a nerf candidate. Tier F is below {low} with its whole range below 50%: a buff candidate. A, B, C and D split the {low} to {high} band into quarters from the top.", {
+                    high: percentText(tiers.bandHigh),
+                    low: percentText(tiers.bandLow),
+                  })}
+                </p>
+                <p>
+                  {tiers.cards > 0
+                    ? t("Read against {cards} cards: the average card reads 50%, and real cards differ by about {spread} points (one standard deviation).", {
+                        cards: formatNumber(tiers.cards),
+                        spread: (tiers.spread * 100).toFixed(1),
+                      })
+                    : t("Too few cards have enough games to measure the rest against: the average card is taken to read 50%, and real cards to differ by about {spread} points.", {
+                        spread: (tiers.spread * 100).toFixed(1),
+                      })}
+                </p>
+                {typeof tiers.baseline === "number" && (
+                  <p>
+                    {t("A card that is almost never left undrawn, such as a Quickdraw card, and the Dormant Starship are read against the average deck, which wins {baseline} of its games.", {
+                      baseline: percentText(tiers.baseline),
+                    })}
+                  </p>
+                )}
+              </div>
             )}
 
             {/* R2895000: what a range means, while they show */}
@@ -1648,12 +1705,14 @@ export default function StatsRoute(): ReactElement {
               <div className="stats-drilldown-body">
                 {drillDownDef && drillDownFace && (
                   <div className="stats-drilldown-cards">
-                    {/* R2756000: the faces print the art picked. FullArtShown decides only an own copy's face (R1834000), so they
+                    {/* R3011000: the faces print the setting's still Epic while the Full-art cards setting is on, the
+                        normal face while it is off. FullArtShown decides only an own copy's face (R1834000), so they
                         are drawn as one; nothing else here reads OwnCopy (no inspect overlay, and CardFace's cosmetics follow
                         `worn`, left false). The page has no FullArtOwned above it, so every tier counts as owned, as in the Almanac
-                        (R1313000). No pick is written. */}
+                        (R1313000). Passing the setting down as the pick, rather than leaving the pick out, keeps the
+                        device's stored pick out of this public preview. No pick is written. */}
                     <OwnCopy own>
-                      <FullArtShown defId={fullArtSource(drillDownDef.id)} pick={artPick(drillDownDef.id, shownArt)}>
+                      <FullArtShown defId={fullArtSource(drillDownDef.id)} pick={fullArtSetting}>
                         <div className="stats-drilldown-faces">
                           <figure className="stats-drilldown-face">
                             <div className="stats-drilldown-card-preview">
@@ -1672,21 +1731,6 @@ export default function StatsRoute(): ReactElement {
                         </div>
                       </FullArtShown>
                     </OwnCopy>
-                    {drillDownArts.length > 0 && (
-                      <div className="stats-drilldown-actions" role="group" aria-label={t("Full art")} data-testid={statsTestid.drillDownArt}>
-                        {drillDownArts.map((art) => (
-                          <button
-                            key={art}
-                            type="button"
-                            className="stats-drilldown-action"
-                            aria-pressed={shownArt === art}
-                            onClick={() => setDrillDownArt(art)}
-                          >
-                            {t(ART_LABELS[art])}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"

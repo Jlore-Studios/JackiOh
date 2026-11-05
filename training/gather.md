@@ -15,8 +15,10 @@ development records (R1676000; `training/README.md`, The gather lane), and since
 every export's games itself and imports them as totals only (R1976000). On the owner's PC,
 `.github/workflows/gather.yml` plays each newly shipped patch's games the way this lane did, `stats
 --series gather`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>`, once the repository variable
-`GATHER_ON_PATCH` is `true`. The training box went back to the night bot (#682's audit), so this lane no
-longer has a home there. What follows is its contract for any box that still runs `loop.sh gather`.
+`GATHER_ON_PATCH` is `true`. No box runs this lane since 2026-11-04: the training box (the Muse box
+now, `bot/machine/README.md`) ran it until then, filing staging's database alone where gather.yml files
+both (R1933001), so `jackioh-train@gather` is disabled there. What follows is its contract for any box
+that still runs `loop.sh gather`.
 
 ## What it plays
 

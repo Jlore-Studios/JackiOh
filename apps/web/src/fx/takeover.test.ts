@@ -80,7 +80,7 @@ describe("R2722001 a Mythic takes over the board", () => {
     }
   });
 
-  it("R2722001 R670 the marquee Mythics take their own look, the rest the shared one, a Legendary none", () => {
+  it("R2722001 R670 R2803000 the marquee Mythics take their own look, the rest the shared one, a Legendary none", () => {
     expect(takeoverOf(planFx(entry([play("core-100"), summon("core-100")]), p1, env()))?.look).toBe("void");
     expect(takeoverOf(planFx(entry([fired("core-096")]), p1, env()))?.look).toBe("pawn");
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
@@ -92,9 +92,13 @@ describe("R2722001 a Mythic takes over the board", () => {
       expect(e.entrance?.tier).toBe("legendary");
       expect(takeoverOf(planFx(e, p1, env())), JSON.stringify(events)).toBeUndefined();
     }
-    // A Legendary Spell's cast, which no summon draws, takes its rays, gold burst and ring and its shake.
+    // A Legendary Spell's cast, which no summon draws, takes its rays, gold burst, ring with its
+    // echo (R2803000: the two-wave landing, one volume down) and its shake.
     const legend = entranceCues(entry([play("core-083")]), env(), 400);
-    expect(legend.map((c) => c.kind).sort()).toEqual(["burst", "rays", "ring", "shake"]);
+    expect(legend.map((c) => c.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
+    const rings = legend.filter((c) => c.kind === "ring");
+    expect(rings.length).toBe(2);
+    expect(rings[1]?.delayMs ?? 0).toBeGreaterThan(rings[0]?.delayMs ?? 0);
   });
 
   it("R2722001 intensity 0 plans none", () => {

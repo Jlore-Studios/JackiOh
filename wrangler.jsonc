@@ -48,7 +48,10 @@
     // JackiOh-Production; staging's below is JackiOh-Staging (docs/deploy-cloudflare.md section 8).
     "SUPABASE_URL": "https://fuzpvmjdejvbjcarypyi.supabase.co",
     "TRUSTED_PROXY_HOPS": "1",
-    "LADDER_BOTS": "on"
+    "LADDER_BOTS": "on",
+    // R3074000: the dev dashboard is strict here: every /api/admin route needs the two-step code,
+    // and a hand-set rating is off the public ladder until it is reset.
+    "DEV_STRICT": "on"
   },
   "env": {
     "staging": {
@@ -80,7 +83,10 @@
         "PUBLIC_ORIGINS": "https://staging.jackioh.com",
         "SUPABASE_URL": "https://exmjdaswedxhnzmpzqrq.supabase.co",
         "TRUSTED_PROXY_HOPS": "1",
-        "LADDER_BOTS": "on"
+        "LADDER_BOTS": "on",
+        // R3074000: staging may skip the dashboard's two-step code, and a hand-set rating stays on
+        // its ladder (SPEC §14.10).
+        "DEV_STRICT": "off"
       }
     }
   }

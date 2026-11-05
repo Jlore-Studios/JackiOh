@@ -689,6 +689,16 @@ describe("R508 the controller carries the human's last practice board", () => {
       expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config });
     }
   });
+
+  it("R2882000 today's deal starts with no last board, so every device deals it alike", async () => {
+    writeLastBoard([{ defId: "core-008", radiant: false }]);
+    const config = { ...CONFIG, dailyDeal: "2026-11-03" };
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    void controller.start(config);
+    await flush();
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config });
+  });
 });
 
 // R2706000, B25: a dungeon run's fight through the controller (DR14 part E, #2706).

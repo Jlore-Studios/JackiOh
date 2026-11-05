@@ -26,7 +26,7 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-001` | Doom Shroom | Trap | setPiece vortex | 1.55 | vanish | kept from #2800: its board clear's set piece |
 | `classicplus-002` | Groom Shroom | Trap | cast conjure Beast/felinor | 1.55 | volley | the census's pick is its window's turn, draw or stray events; the hook's own event decides, which conjure reads; a Trap's cast draws nothing in a game yet |
 | `classicplus-003` | Second Amendment Snake | Unit | death barrage; trigger tally | 1.28 | barrage | death: the census agrees (barrage); trigger: its end-of-turn Plague Counter is a counterChanged, which tally reads |
-| `classicplus-004` | Juhan Biggest Bat | Unit | cry mirror | 1.24 | none: no motif reads transformed | the census predates the motifs of #2786 and #2793; mirror reads the hook's commonest own event |
+| `classicplus-004` | Juhan Biggest Bat | Unit | cry transmute | 1.24 | none: no motif reads transformed | the census predates the motifs of #2786 and #2793; transmute reads the hook's commonest own event (R2803000: mirror folded into transmute) |
 | `classicplus-005` | Guy Att | Unit | cry bolt | 1.16 | bolt | the census agrees |
 | `classicplus-006` | Wrong-House Attacker | Unit | none: vanilla | — | none: vanilla | the census agrees |
 | `classicplus-007` | The House | Field Spell | cast tally; activate conjure; aura toxic zone | 1.36 | bolt | cast: its Cry's Plague Counters (counterChanged), which tally reads; activate: the Unit it summons, which conjure reads; its activate plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |

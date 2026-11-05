@@ -4,6 +4,8 @@
 // (R2875003) and whether a claim lands, so the count of unclaimed entries moves only on its answer.
 // A title and a summary show as the server sent them. A claim is a spend (R2378000): while one of the
 // tab's is out, every Claim waits, disabled and turning a loading wheel (`economy/spend.css`).
+// R3074003: a dev's post has no reward: it shows no reward, its button marks it read, and the
+// server's claim of it pays nothing.
 
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 
@@ -85,7 +87,7 @@ export function NewsList({
     setBusy(null);
     setError(failure);
     // R2982000: a single claim announces its own Jlore pay, as the run below announces its run's.
-    if (failure === null && news.find((entry) => entry.id === id)?.reward.kind === "jlore") announceWallet();
+    if (failure === null && news.find((entry) => entry.id === id)?.reward?.kind === "jlore") announceWallet();
   };
   // R2982000: one press claims every unclaimed entry through its own claim, newest first; the
   // first refusal stops the run, the earlier claims standing, and the wallet is announced once.
@@ -102,7 +104,7 @@ export function NewsList({
         setError(failure);
         break;
       }
-      if (target.reward.kind === "jlore") paidJlore = true;
+      if (target.reward?.kind === "jlore") paidJlore = true;
     }
     setClaimingAll(false);
     if (paidJlore) announceWallet();
@@ -127,7 +129,7 @@ export function NewsList({
       ) : null}
       <ul className="account-quests__list">
         {news.map((entry) => {
-          const reward = rewardWords(entry.reward);
+          const reward = entry.reward === null ? null : rewardWords(entry.reward);
           return (
             <li
               key={entry.id}
@@ -142,22 +144,22 @@ export function NewsList({
               </div>
               <p className="news-panel__summary entry-card__body">{entry.summary}</p>
               <div className="entry-card__footer">
-                <span className="account-quests__reward entry-card__pill">{reward}</span>
+                {reward === null ? null : <span className="account-quests__reward entry-card__pill">{reward}</span>}
                 {entry.claimed ? (
-                  <span data-testid={newsTestid.claimed}>{t("Claimed")}</span>
+                  <span data-testid={newsTestid.claimed}>{reward === null ? t("Read") : t("Claimed")}</span>
                 ) : (
                   <button
                     type="button"
                     className="spend-wait"
                     data-testid={newsTestid.claim}
-                    aria-label={t("Claim {reward}", { reward })}
+                    aria-label={reward === null ? t("Mark read") : t("Claim {reward}", { reward })}
                     disabled={waiting}
                     aria-busy={waiting}
                     onClick={() => {
                       void claim(entry.id);
                     }}
                   >
-                    {t("Claim")}
+                    {reward === null ? t("Mark read") : t("Claim")}
                   </button>
                 )}
               </div>

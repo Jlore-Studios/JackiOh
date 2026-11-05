@@ -1,5 +1,6 @@
 // The merge gates on a condition (#2986, section 1; the owner's decision of 2026-11-04, amended the
-// same day): a migration merges itself unless it loses data, changes access or edits one `main` has;
+// same day, and #3009's `UPDATE` with no `WHERE`): a migration merges itself unless it loses data,
+// changes access or edits one `main` has;
 // a lock or manifest unless a lock gains a package; `build.rs`, the server's Dockerfile and the
 // scripts but the two that deploy production merge themselves.
 package tests
@@ -96,6 +97,47 @@ func TestMergegate_AStringOrACommentCannotHideAStatement(t *testing.T) {
 	assertTrue(t, found != nil && found.Kind == mergegate.AccessKind, found)
 }
 
+// An `UPDATE` with no `WHERE` rewrites every row of its table, so it loses data (#3009): `UPDATE …
+// FROM` too, and inside a function's or a `DO` block's body. One with a `WHERE` merges itself.
+func TestMergegate_AnUpdateWithNoWhereLosesData(t *testing.T) {
+	for _, sql := range []string{
+		"update public.profiles set allow_spectators = false;",
+		"UPDATE ONLY public.profiles AS p SET rank = 0 RETURNING p.id;",
+		"update public.profiles p set rank = s.rank from public.season_ranks s;",
+		// A subquery's `WHERE` is not the update's, nor a `WHERE` in a string or a quoted name.
+		"update public.profiles set rank = (select max(rank) from public.season_ranks where season = 'v0.5');",
+		"update public.profiles set note = 'where it was', \"where\" = 1;",
+		// Inside a `WITH`, its own parentheses end it.
+		"with moved as (update public.decks set owner = null returning id) " +
+			"select * from public.decks where id in (select id from moved);",
+		"create function app.reset() returns void language sql as $$ update public.profiles set rank = 0 $$;",
+		"do $$ begin if true then update public.profiles set rank = 0; end if; end $$;",
+	} {
+		found := mergegate.Migration(sql)
+		if found == nil || found.Kind != mergegate.LossKind {
+			t.Errorf("%q: %v, want %q", sql, found, mergegate.LossKind)
+		}
+	}
+	found := mergegate.Migration("create table public.a (id int);\nupdate public.profiles\n  set rank = 0;\n")
+	assertEqual(t, found.Statement, "update public.profiles set rank = 0") // the comment names it
+	for _, sql := range []string{
+		"update public.profiles set rank = 0 where rank is null;",
+		"update public.profiles p set rank = s.rank from public.season_ranks s where s.id = p.id;",
+		"update public.profiles set rank = (select 1) where id in (select id from public.season_ranks);",
+		"with moved as (update public.decks set owner = null where owner = 'x' returning id) select 1;",
+		"create function app.f() returns void language sql as $$ update public.a set x = 1 where id = 2 $$;",
+		// Not an `UPDATE … SET` of a table: an upsert's, a trigger's, a lock's, a grant's word.
+		"insert into public.ranks (id, rank) values (1, 2) on conflict (id) do update set rank = excluded.rank;",
+		"create trigger t before update on public.profiles for each row execute function app.touch();",
+		"select * from public.decks for update skip locked;",
+		"alter table public.a add constraint a_fk foreign key (b) references public.b(id) on update cascade;",
+	} {
+		if found := mergegate.Migration(sql); found != nil {
+			t.Errorf("%q: %q in %q, want none", sql, found.Kind, found.Statement)
+		}
+	}
+}
+
 func TestMergegate_TheLocksPackages(t *testing.T) {
 	cargo := "version = 4\n\n[[package]]\nname = \"aho-corasick\"\nversion = \"1.1.5\"\n" +
 		"dependencies = [\n \"memchr\",\n]\n\n[[package]]\nname = \"memchr\"\nversion = \"2.7.4\"\n\n" +
@@ -188,6 +230,18 @@ func TestMergegate_AMigrationThatLosesDataOrChangesAccessWaitsForAPerson(t *test
 			"alter table public.a enable row level security;\n"})
 	mergegateWaits(t, h, number, said, "the migration `crates/server/migrations/0080_rls.sql` changes who may "+
 		"read or write what: `alter table public.a enable row level security`")
+}
+
+func TestMergegate_AMigrationThatUpdatesEveryRowWaitsForAPerson(t *testing.T) {
+	h, number, said := mergegateBuild(t, nil, map[string]any{
+		"crates/server/migrations/0080_rank.sql": "alter table public.profiles add column rank int;\n" +
+			"update public.profiles set rank = 0;\n"})
+	mergegateWaits(t, h, number, said, "the migration `crates/server/migrations/0080_rank.sql` loses data: "+
+		"`update public.profiles set rank = 0`")
+	h, number, said = mergegateBuild(t, nil, map[string]any{
+		"crates/server/migrations/0080_rank.sql": "alter table public.profiles add column rank int;\n" +
+			"update public.profiles set rank = 0 where rank is null;\n"})
+	mergegateMerges(t, h, number, said)
 }
 
 func TestMergegate_AnEditedOrDeletedMigrationWaitsForAPerson(t *testing.T) {

@@ -31,6 +31,10 @@ describe("R1303000 which practice games ask for a server seed", () => {
     expect(seedRequestOf(config({ deck: { kind: "preset", id: "no-such-preset" } }))).toBeNull();
   });
 
+  it("R2882000 today's deal asks for no seed: it plays its day's own", () => {
+    expect(seedRequestOf(config({ seed: "daily-2026-11-03", dailyDeal: "2026-11-03" }))).toBeNull();
+  });
+
   it("a random deck asks with the set it leans on, R1373's switch read as newest", () => {
     const base = { difficulty: "medium", humanSeat: "p2", catalog: CATALOG_VERSION };
     expect(seedRequestOf(config())).toEqual({ ...base, deck: { kind: "random", lean: null } });

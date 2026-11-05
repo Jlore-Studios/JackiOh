@@ -5,7 +5,8 @@
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance time.
 // #2974: the watched turn clock counts down from each frame's `clockMs` (fake `performance` and `setInterval`),
-// silently, and a finished game's status line says "Game over" after its socket closes.
+// silently, and a finished game's status line says "Game over" after its socket closes. R2990000, R2990001:
+// the watcher's dealt hand, its pick on the watch socket and the other watchers' relays, 1v1 and co-op.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +24,7 @@ import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import type { Friend } from "../net/social.ts";
+import { sidelineTestid } from "../sideline/testids.ts";
 import { baseView, card, duosView, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
 import { must, signIn, stubServer } from "../test/stubServer.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
@@ -847,5 +849,88 @@ describe("R2881000 watching a friend's co-op game", () => {
     expect(watchFriendOf(searchOf(coop))).toBe("f-ann");
     expect(watchCoopOf(searchOf(plain))).toBe(false);
     expect(plain).not.toContain("coop");
+  });
+});
+
+describe("R2990000 a watcher's emotes from the sidelines", () => {
+  const HAND = ["wave", "clap", "heart"];
+
+  function sentFrames(socket: FakeWatchSocket): unknown[] {
+    return socket.sent.map((text) => JSON.parse(text) as unknown);
+  }
+
+  function shows(): { watcher: string | null; text: string | null }[] {
+    return screen.queryAllByTestId(sidelineTestid.emote).map((show) => ({
+      watcher: show.getAttribute("data-watcher"),
+      text: show.querySelector(".sideline-emote__name")?.textContent ?? null,
+    }));
+  }
+
+  it("R2990000 a 1v1 watcher's pick goes out as {type:'emote'} and shows as You; another watcher's relay shows by name", () => {
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "spectatorHand", emotes: HAND });
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+
+    fireEvent.click(screen.getByTestId(sidelineTestid.menu));
+    expect(screen.getAllByRole("menuitem").map((item) => item.getAttribute("data-testid"))).toEqual(HAND.map((emote) => `emote-${emote}`));
+    fireEvent.click(screen.getByTestId("emote-clap"));
+
+    expect(sentFrames(socket)).toEqual([
+      { type: "hello", matchId: "m-watch", friendId: "f-ann" },
+      { type: "emote", emote: "clap" },
+    ]);
+    expect(shows()).toEqual([{ watcher: "", text: "You" }]);
+
+    socket.frame({ type: "spectatorEmote", watcher: "Bo#7", emote: "sob" });
+    expect(shows()).toEqual([
+      { watcher: "", text: "You" },
+      { watcher: "Bo#7", text: "Bo#7" },
+    ]);
+    // A relay is never answered.
+    expect(socket.sent).toHaveLength(2);
+  });
+
+  it("R2990001 the strip offers the hand the socket dealt only while it is open, and a hand with a voice line is no hand", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "spectatorHand", emotes: ["greetings", "wave"] });
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(screen.queryByTestId(sidelineTestid.strip)).toBeNull();
+
+    socket.frame({ type: "spectatorHand", emotes: HAND });
+    fireEvent.click(screen.getByTestId(sidelineTestid.menu));
+    expect(screen.getByTestId("emote-menu")).toBeInTheDocument();
+
+    socket.emit("close");
+    expect(connection("watch-status")).toBe("connecting");
+    expect(screen.queryByTestId(sidelineTestid.menu)).toBeNull();
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+
+    // The reopened socket offers the hand again, with the menu shut.
+    await advance(WATCH_RECONNECT_MS);
+    latest().emit("open");
+    expect(screen.getByTestId(sidelineTestid.menu)).toBeInTheDocument();
+    expect(screen.queryByTestId("emote-menu")).toBeNull();
+  });
+
+  it("R2990000 a co-op watch shows the strip: its pick goes out on the watch socket and the others' relays show by name", () => {
+    render(<WatchRoute matchId="m-watch" friendId="f-ann" coop />);
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "spectatorHand", emotes: HAND });
+    socket.frame({ type: "view", view: duosView(1), legal: [] });
+
+    expect(screen.getAllByTestId(sidelineTestid.strip)).toHaveLength(1);
+    socket.frame({ type: "spectatorEmote", watcher: "Bo#7", emote: "sob" });
+    expect(shows()).toEqual([{ watcher: "Bo#7", text: "Bo#7" }]);
+
+    fireEvent.click(screen.getByTestId(sidelineTestid.menu));
+    fireEvent.click(screen.getByTestId("emote-heart"));
+    expect(sentFrames(socket).at(-1)).toEqual({ type: "emote", emote: "heart" });
+    expect(shows().map((show) => show.text)).toEqual(["Bo#7", "You"]);
   });
 });

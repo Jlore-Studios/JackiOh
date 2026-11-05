@@ -1128,6 +1128,184 @@
   text-shadow: 0.25cqh 0.25cqh 0 var(--pal-white);
 }
 
+/* ------------------------------------------------------------------------- set showcase --- */
+
+/* R2943001: the Set showcase version wears its set's own look (`data-showcase`, pictures.ts `showcaseFamilyOf`): the
+   picture in its set's treatment (pictures.ts `showcaseSvg`) and, on a base face, its set's edge, bezel, window ring
+   and name banner, the palette's colours and no gold. The banner's shape and lettering are the set's on either face;
+   a Radiant face keeps its gold-foil frame, gold bezel and gilded banner, and R2943002 a worn border its edge and
+   bezel, the ring taking its colour. The panel (`--cf-frame`) stays the type's. */
+.cf[data-showcase="core"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-sky-300);
+  --cf-edge: radial-gradient(circle at 50% 30%, var(--pal-sky-300), var(--pal-blue-800) 55%, var(--pal-blue-900));
+}
+
+.cf[data-showcase="core"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.9cqw var(--cf-bezel),
+    0 0 0 1.6cqw var(--pal-blue-900),
+    0 0 2.4cqw 1.6cqw color-mix(in srgb, var(--pal-sky-300) 45%, transparent);
+}
+
+/* Core's capsule: a rounded banner, the name in the text face at its boldest. */
+.cf[data-showcase="core"] .card-name {
+  clip-path: none;
+  border-radius: 3.8cqh;
+  font-family: var(--font-text);
+  font-weight: 900;
+}
+
+.cf[data-showcase="core"]:not([data-radiant-face="true"]) .card-name {
+  background: var(--pal-blue-900);
+  color: var(--pal-white);
+  box-shadow: inset 0 0 0 0.4cqh var(--pal-sky-300);
+}
+
+.cf[data-showcase="classic"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-grey-500);
+  --cf-edge: repeating-linear-gradient(to bottom, var(--pal-stone-500) 0 6px, var(--pal-grey-500) 6px 7px);
+}
+
+.cf[data-showcase="classic"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 1.2cqw var(--cf-bezel),
+    0 0 0 1.6cqw var(--pal-black);
+}
+
+/* Classic's lintel: a square stone banner, the name spaced out in capitals as an inscription. */
+.cf[data-showcase="classic"] .card-name {
+  clip-path: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cf[data-showcase="classic"]:not([data-radiant-face="true"]) .card-name {
+  background: var(--pal-stone-500);
+  color: var(--pal-black);
+  text-shadow: none;
+  box-shadow:
+    inset 0 0.5cqh 0 var(--pal-grey-500),
+    inset 0 -0.5cqh 0 var(--pal-grey-500);
+}
+
+.cf[data-showcase="meditative"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-slate-100);
+  --cf-edge: linear-gradient(160deg, var(--pal-slate-900), var(--pal-slate-700) 50%, var(--pal-slate-900));
+}
+
+.cf[data-showcase="meditative"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.6cqw var(--cf-bezel),
+    0 0 0 1.4cqw var(--pal-slate-900);
+}
+
+/* Meditative's brush stroke: a banner with ragged ends, the name in italics as if brushed. */
+.cf[data-showcase="meditative"] .card-name {
+  clip-path: polygon(2% 18%, 6% 4%, 50% 0, 94% 6%, 99% 20%, 97% 50%, 100% 82%, 95% 96%, 50% 100%, 5% 94%, 0 78%, 3% 50%);
+  font-style: italic;
+}
+
+.cf[data-showcase="meditative"]:not([data-radiant-face="true"]) .card-name {
+  background: var(--pal-slate-100);
+  color: var(--pal-slate-900);
+  text-shadow: none;
+}
+
+.cf[data-showcase="stinkyscape"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-violet-500);
+  --cf-edge:
+    radial-gradient(circle at 22% 16%, var(--pal-violet-500), transparent 40%),
+    radial-gradient(circle at 80% 78%, var(--pal-violet-300), transparent 30%), linear-gradient(var(--pal-slate-900) 0 0);
+}
+
+.cf[data-showcase="stinkyscape"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 0.6cqw var(--cf-bezel),
+    0 0 0 1.4cqw var(--pal-slate-900),
+    0 0 2.4cqw 1.4cqw color-mix(in srgb, var(--pal-violet-500) 50%, transparent);
+}
+
+/* Stinkyscape's console: a flat banner, the name wide in capitals. */
+.cf[data-showcase="stinkyscape"] .card-name {
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 97% 100%, 3% 100%, 0 70%);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+.cf[data-showcase="stinkyscape"]:not([data-radiant-face="true"]) .card-name {
+  background: var(--pal-slate-900);
+  color: var(--pal-slate-100);
+  text-shadow: none;
+  box-shadow: inset 0 -0.4cqh 0 var(--pal-violet-500);
+}
+
+.cf[data-showcase="training-grounds"]:not([data-radiant-face="true"]):not([data-frame]) {
+  --cf-bezel: var(--pal-wood-600);
+  --cf-edge: repeating-linear-gradient(45deg, var(--pal-wood-600) 0 3px, var(--pal-stone-500) 3px 5px);
+}
+
+.cf[data-showcase="training-grounds"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
+  box-shadow:
+    0 0 0 1.2cqw var(--cf-bezel),
+    0 0 0 1.7cqw var(--pal-wood-800);
+}
+
+/* Training Grounds' plank: a square banner, the name in capitals at its boldest, as if burnt into the wood. */
+.cf[data-showcase="training-grounds"] .card-name {
+  clip-path: none;
+  border-radius: 0.6cqh;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.cf[data-showcase="training-grounds"]:not([data-radiant-face="true"]) .card-name {
+  background: var(--pal-wood-600);
+  color: var(--pal-white);
+  box-shadow:
+    inset 0 0.4cqh 0 var(--pal-wood-800),
+    inset 0 -0.4cqh 0 var(--pal-wood-800);
+}
+
+/* ------------------------------------------------------------------------- out of frame --- */
+
+/* R2943001: the Out of frame version: the picture's backdrop (CardArt's `part` "backdrop") in a smaller window, inset
+   OUT_OF_FRAME_WINDOW_TOP_PCT from the art frame's top and OUT_OF_FRAME_WINDOW_SIDE_PCT from each side (constants.ts)
+   on its foot, and its subject ("subject") cut out over it, a square OUT_OF_FRAME_SUBJECT_PCT of the frame's height
+   whose foot sinks OUT_OF_FRAME_SUBJECT_SINK_PCT below the frame's under the name banner, so it rises above the window
+   and past its sides over the frame. Both stay inside the art
+   frame (z-index 1), inside the clipped `.cf-scale`: the subject never passes the card's rim, a worn border's edge or a
+   Radiant face's gold edge, and the crest, name and type line (2), the gems and stats (3) and the rules box after it
+   lie over it. The cutout takes no foil over its empty corners (cosmetics.css's `.cf-art::after`); the window keeps it,
+   and a Radiant face its gold bezel. */
+.cf[data-version="version-out-of-frame"] .cf-art-frame > .cf-art:not(.cf-art--cutout) {
+  position: absolute;
+  inset: 30% 18% 0;
+  width: auto;
+  height: auto;
+}
+
+.cf[data-version="version-out-of-frame"] .cf-art-frame > .cf-art.cf-art--cutout {
+  position: absolute;
+  bottom: -10%;
+  left: 50%;
+  width: auto;
+  height: 115%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  background-color: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.cf[data-version="version-out-of-frame"] .cf-art.cf-art--cutout[data-art-pending="true"] {
+  background-image: none;
+}
+
+.cf[data-version="version-out-of-frame"] .cf-art.cf-art--cutout::before,
+.cf[data-version="version-out-of-frame"] .cf-art.cf-art--cutout::after {
+  content: none;
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {

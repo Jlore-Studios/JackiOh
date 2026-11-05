@@ -4,7 +4,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
-import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
@@ -542,6 +542,62 @@ describe("portraits and emotes", () => {
     h.client.sendEmote("sob");
     expect(h.socket().sent).toEqual([]);
     expect(h.client.snapshot().error).toBeNull();
+  });
+});
+
+// A watcher's emotes (R2990000, R2990001)
+describe("R2990000 the watchers' emote frames", () => {
+  it("R2990000 a `spectatorEmote` relay lands with a seq that bumps, so the same emote twice still notifies twice", () => {
+    const h = connected();
+    expect(h.client.snapshot().spectatorEmote).toBeNull();
+    let notified = 0;
+    const stop = h.client.subscribe(() => {
+      notified += 1;
+    });
+
+    h.socket().deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "clap" });
+    expect(h.client.snapshot().spectatorEmote).toEqual({ watcher: "Wes#13", emote: "clap", seq: 1 });
+    h.socket().deliver({ type: "spectatorEmote", watcher: "Wes#13", emote: "clap" });
+    expect(h.client.snapshot().spectatorEmote).toEqual({ watcher: "Wes#13", emote: "clap", seq: 2 });
+    expect(notified).toBe(2);
+    stop();
+    // A watcher's emote is no seat's: the opponent's emote is untouched.
+    expect(h.client.snapshot().emote).toBeNull();
+  });
+
+  it("R2990000 a `spectatorEmote` with no watcher's name, or anything but an emoji, is no frame", () => {
+    const h = connected();
+    for (const frame of [
+      { type: "spectatorEmote", watcher: "", emote: "clap" },
+      { type: "spectatorEmote", emote: "clap" },
+      { type: "spectatorEmote", watcher: 13, emote: "clap" },
+      { type: "spectatorEmote", watcher: "Wes#13", emote: "greetings" },
+      { type: "spectatorEmote", watcher: "Wes#13", emote: "poke" },
+    ]) {
+      expect(parseServerFrame(JSON.stringify(frame)), JSON.stringify(frame)).toBeNull();
+      h.socket().deliver(frame);
+    }
+    expect(h.client.snapshot().spectatorEmote).toBeNull();
+  });
+
+  it("R2990001 a `spectatorHand` is up to SPECTATOR_EMOTE_HAND_SIZE distinct emoji; a voice line, too many, a repeat or no list is no frame", () => {
+    const hand = ["sob", "wave", "clap", "fire", "party"].slice(0, SPECTATOR_EMOTE_HAND_SIZE);
+    expect(parseServerFrame(JSON.stringify({ type: "spectatorHand", emotes: hand }))).toEqual({ type: "spectatorHand", emotes: hand });
+    expect(parseServerFrame(JSON.stringify({ type: "spectatorHand", emotes: ["skull"] }))).toEqual({ type: "spectatorHand", emotes: ["skull"] });
+
+    const pool = ["sob", "yawn", "laugh", "angry", "wahWah", "wave", "clap", "thumbsUp"];
+    for (const emotes of [
+      [],
+      ["greetings", "sob"],
+      pool.slice(0, SPECTATOR_EMOTE_HAND_SIZE + 1),
+      ["sob", "sob"],
+      ["sob", "poke"],
+      "sob",
+      null,
+      undefined,
+    ]) {
+      expect(parseServerFrame(JSON.stringify({ type: "spectatorHand", emotes })), JSON.stringify(emotes)).toBeNull();
+    }
   });
 });
 

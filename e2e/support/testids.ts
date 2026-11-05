@@ -856,6 +856,21 @@ export const OPPONENT_AIM_ARROW = "opponent-aim-arrow";
 export const EMOTE_BUBBLE = "emote-bubble";
 export const EMOTE_MUTE_MENU = "emote-mute-menu";
 export const EMOTE_MUTE = "emote-mute";
+/** The emote picker (`EmoteMenu`), one `emote-<id>` item per emote of the hand it offers. */
+export const EMOTE_MENU = "emote-menu";
+
+export function emoteItemId(emote: string): string {
+  return `emote-${emote}`;
+}
+
+// R2990000, R2990004: the sideline strip, mirroring `sidelineTestid` in apps/web/src/sideline/testids.ts.
+/** `data-phone` on a phone layout. */
+export const SIDELINE_STRIP = "sideline-strip";
+/** One per show: `data-watcher` (empty for the sender's own), `data-emote`, `data-self`. */
+export const SIDELINE_EMOTE = "sideline-emote";
+/** A watcher's Send an emote, which opens `EMOTE_MENU`. */
+export const SIDELINE_MENU = "sideline-menu";
+export const SIDELINE_MUTE = "sideline-mute";
 // #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65).
 
 export const COOP_CREATE = "coop-create";

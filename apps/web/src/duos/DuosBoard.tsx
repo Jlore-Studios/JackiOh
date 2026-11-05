@@ -40,6 +40,7 @@ import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { useBoardBusy } from "../replay/ReplayPlayer.tsx";
+import type { GameSideline } from "../sideline/useSideline.ts";
 import { tradeOfferFor } from "../game/TradeControl.tsx";
 import { CardActions, type PingMarker } from "./CardActions.tsx";
 import { DUOS_BOTH_KEY } from "./config.ts";
@@ -66,6 +67,8 @@ export type DuosBoardProps = {
   economy?: GameEconomy | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
+  /** R2990004: the watchers' emotes, drawn on one board: the own one, or the teammate's while the portal shows it alone. */
+  sideline?: GameSideline;
 };
 
 type Showing = "own" | "teammate";
@@ -288,6 +291,7 @@ export function DuosBoard({
   jloreCapped,
   economy = null,
   replay = false,
+  sideline,
 }: DuosBoardProps): ReactElement {
   useLocale();
   // #1664: the result paid this seat's person, so the pill reads the wallet again, once however many views say so.
@@ -477,6 +481,7 @@ export function DuosBoard({
               matchStatus={showing === "own" ? chrome?.status : undefined}
               boardRail={showing === "own" ? rail : undefined}
               tradeBar={false}
+              sideline={sideline}
             />
             <CardActions
               key="actions-own"
@@ -534,6 +539,7 @@ export function DuosBoard({
           matchStatus={chrome?.status}
           boardRail={rail}
           tradeBar={false}
+          sideline={sideline}
         />
       ) : (
         <Game
@@ -546,6 +552,8 @@ export function DuosBoard({
           turnClock={chrome?.clock}
           matchStatus={chrome?.status}
           boardRail={rail}
+          // R2990004: the one board drawn keeps the strip while the portal shows the teammate's duel.
+          sideline={sideline}
         />
       )}
       {replay || showBoth ? null : (

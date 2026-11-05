@@ -1,0 +1,11 @@
+{
+  // The dashboard's page, its tests and its build files. The Worker in front of it runs on Cloudflare's
+  // runtime and has its own project (worker/tsconfig.json), which the `typecheck` script runs after this.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src", "*.ts"]
+}

@@ -21,8 +21,9 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   reaches the same container (`INSTANCE`, `max_instances: 1`). It is placed in eastern North
   America (`constraints.regions`, `locationHint`), beside Supabase's us-east-2.
 - **It sleeps.** After `SLEEP_AFTER` (10 minutes) with no request, the container is stopped (SIGTERM,
-  so the server drains), and the next request starts it again; that request waits for the boot. An
-  open WebSocket counts as a request in flight, so a live match, a watcher or a co-op room keeps it
+  so the server drains), and the next request starts it again; that request waits for the boot, up
+  to `START_WAIT_MS` (60 seconds, where the library's own wait is 20 and a slower boot's first caller
+  got a 500). An open WebSocket counts as a request in flight, so a live match, a watcher or a co-op room keeps it
   awake, and a signed-in tab keeps it awake with its presence beat (`PRESENCE_HEARTBEAT_MS`, 45 s).
   Memory and disk are billed only while it is awake.
 - **A deploy reaches the running server.** A container keeps the image it started with, so the

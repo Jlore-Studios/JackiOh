@@ -9,6 +9,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sessions"
 	statemod "github.com/Jlore-Studios/JackiOh/bot/go/internal/state"
@@ -62,6 +63,13 @@ func (x *Deliverer) keepSession(number int) {
 			x.dropSession(number, fmt.Sprintf("#%d's work goes on on #%d", number, pr))
 		}
 		number = pr
+	}
+	if queue.ArchivedOf(x.Record(number)) != nil {
+		// Handed to a person (#3009): its archived work keeps no session for a next run.
+		if x.Record(number).Obj("session").Len() > 0 {
+			x.dropSession(number, fmt.Sprintf("#%d is handed to a person", number))
+		}
+		return
 	}
 	session := x.Result.Obj("session")
 	text := ""

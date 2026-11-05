@@ -887,8 +887,12 @@ jobs:
           tar -xzf "$RUNNER_TEMP/web-wasm-luau.tgz"
       - name: the e2e client
         run: pnpm --dir apps/web exec vite build --mode development
+      # R3074000: the dev dashboard's own client, its development bundle (the one that reads the e2e
+      # session key), which spec 49 drives on :5174; its production and staging builds are web-check's.
+      - name: the dev dashboard's e2e client
+        run: pnpm --dir apps/admin build:e2e
       - name: pack them
-        run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist
+        run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist apps/admin/dist
       - uses: actions/upload-artifact@v4
         with:
           name: web-build
@@ -912,7 +916,7 @@ jobs:
           rust: "false"
       # Before the module is unpacked, so its generated JavaScript is never linted.
       - name: eslint
-        run: pnpm exec eslint apps/web apps/edge e2e
+        run: pnpm exec eslint apps/web apps/edge apps/admin e2e
       - uses: actions/download-artifact@v4
         with:
           name: web-build
@@ -924,6 +928,13 @@ jobs:
       # On Cloudflare's runtime types, not the DOM's (apps/edge/tsconfig.json).
       - name: typecheck the Worker
         run: pnpm --dir apps/edge typecheck
+      # R3074000: the dev dashboard, its page and its Worker, and both its deployed bundles, so a
+      # deploy never meets a build that fails (the production one's CSP names production's Supabase).
+      - name: typecheck and build the dev dashboard
+        run: |
+          pnpm --dir apps/admin typecheck
+          pnpm --dir apps/admin build
+          pnpm --dir apps/admin build:staging
       - name: typecheck the e2e specs and the component specs
         run: pnpm --dir e2e typecheck && pnpm --dir e2e typecheck:component
 
@@ -962,7 +973,7 @@ jobs:
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: vitest
         run: >-
-          pnpm exec vitest run --project web --project edge --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          pnpm exec vitest run --project web --project edge --project admin --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'
           --exclude '**/src/net/promote-production.test.ts'
 
