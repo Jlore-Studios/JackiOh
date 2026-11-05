@@ -1224,16 +1224,28 @@ pub struct BotStrength {
     pub seed_rating: f64,
 }
 
-/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the skill
-/// curve's readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them
-/// equal), the reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server
-/// bot-calibrate` measures the five strengths as built (their budget, temperature, missed-lethal
-/// chance and skill together, which the curve, measured at the arena's budget, does not) against each
-/// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
-/// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-/// The row is generation 13's calibration with the skill miss (R2214000), pasted over the curve's too
-/// (docs/bot-calibration.md, Results).
-pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, SKILL_ELO_ANCHOR];
+/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the Elo
+/// column of `SKILL_ELO_TABLE`, read off in `const`, so no number is stated twice: the curve's
+/// readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them equal), the
+/// reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server bot-calibrate` measures
+/// the five strengths as built (their budget, temperature, missed-lethal chance and skill together,
+/// which the curve, measured at the arena's budget, does not) against each other, and its `--write`
+/// rewrites the rows of `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot takes
+/// `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
+/// The rows are generation 13's calibration with the skill miss (R2214000) (docs/bot-calibration.md,
+/// Results).
+pub const BOT_SEED_RATINGS: [f64; SKILL_ELO_TABLE.len()] = seed_ratings_from_curve();
+
+/// R748000: `SKILL_ELO_TABLE`'s Elo column, which `BOT_SEED_RATINGS` is.
+const fn seed_ratings_from_curve() -> [f64; SKILL_ELO_TABLE.len()] {
+    let mut seeds = [0.0; SKILL_ELO_TABLE.len()];
+    let mut index = 0;
+    while index < seeds.len() {
+        seeds[index] = SKILL_ELO_TABLE[index].1;
+        index += 1;
+    }
+    seeds
+}
 
 /// R2575000: the search budget of `BOT_STRENGTHS[2]` and `[3]`: the practice AI's `AI_BUDGET` before
 /// issue #2575 doubled it, kept so that `BOT_SEED_RATINGS`, calibrated on it (R748000), still hold.
@@ -1350,9 +1362,10 @@ pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
 
 /// R747000, R748000: the Elo the reference, this build's AI at full skill, is held at in
 /// `SKILL_ELO_TABLE`, and the strongest bot's seed: 1200 from R1454 until generation 13's calibration
-/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results). Not a
-/// new player's `RATING_START`, because the pairing seats no bot for a player rated above every bot
-/// (R1453) and a player past the middle of the ladder would otherwise have none.
+/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results);
+/// `bot-calibrate --write` rewrites it with the rows. Not a new player's `RATING_START`, because the
+/// pairing seats no bot for a player rated above every bot (R1453) and a player past the middle of
+/// the ladder would otherwise have none.
 pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 
 /// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
@@ -1362,8 +1375,9 @@ pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 /// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
 /// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
 /// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
-/// rows since generation 13, and with the skill miss since R2214000 (docs/bot-calibration.md,
-/// Results); the live Glicko ratings (R603) are the ongoing calibration.
+/// rows since generation 13, and with the skill miss since R2214000: `bot-calibrate --write` rewrites
+/// them here (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the ongoing
+/// calibration.
 pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
     (0.0, 1517.0),
     (0.25, 1576.0),

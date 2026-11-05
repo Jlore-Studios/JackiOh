@@ -769,14 +769,18 @@ series still makes its picks.
   earned one's wear on the card it is owned on (of the people who own it there and play the card),
   each full art's wear rate and each non-starter's ownership rate. Aggregates only, no
   account id or username; it takes no option.
-- `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
+- `bots::calibrate` measures the seed ratings the skill curve holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
   `decide_styled` or the skill miss, and no clock), fits each strength's Elo offset from the
-  strongest and prints the two config rows; it reads no database, and its anchor is the seed of
-  record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`. The
-  seeds in `BOT_SEED_RATINGS` are the skill curve's (R747000, "Skill to Elo" below), which the
-  calibration checks for the strengths as built; a row pasted over them goes over the curve's too. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
+  strongest and prints the items to put in config; it reads no database, and its anchor is the seed
+  of record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`.
+  The curve (`SKILL_ELO_TABLE`, R747000, "Skill to Elo" below) is the one home of the seeds:
+  `BOT_SEED_RATINGS` is read off its Elo column in `const`. Printing is the default; with `--write`
+  (run from the repository root) it rewrites `BOT_CALIBRATION_GENERATION`, `SKILL_ELO_ANCHOR` and
+  the rows of `SKILL_ELO_TABLE` in `crates/server/src/config.rs` in place, as `cargo jackioh sweep
+  --write` does the shadow ban's, and a person reads the diff in the pull request. The same
+  calibration written again leaves no diff. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
   rated games against people (`ranked_bot_games_since`) and prints the rating they say it performs
   at, to give `bot-calibrate` as `--anchor`. Run it again after each AI promotion.
 
@@ -833,9 +837,9 @@ the table's +120).
    gap is the mean of the gaps it has: its games against the reference, and its games against
    random plus the random policy's gap.
 3. A row's Elo is `SKILL_ELO_ANCHOR` plus the gap, rounded to the nearest 10. Paste the rows over
-   `SKILL_ELO_TABLE` and `BOT_SEED_RATINGS`, the strengths' `seed_rating`s (the test
-   `r747000_strength_seed_ratings_match_skill_curve` fails until they agree), and the new numbers
-   over this table.
+   `SKILL_ELO_TABLE`; `BOT_SEED_RATINGS`, the strengths' `seed_rating`s, is read off it, and
+   `r747000_strength_seed_ratings_match_skill_curve` still holds each strength's seed to the curve
+   at its skill. Put the new numbers over this table.
 
 A run of 200 games near an even match is good to about ±50 Elo (95%), and a run of 50 to about ±95,
 which is as fast a check that an AI change moved the curve as is worth running; a shut-out run
