@@ -13,7 +13,7 @@ import Log, { LOG_CARD_TESTID, keptLineFor } from "./Log.tsx";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { testid } from "./contract.ts";
-import { EMPTY_LOG_HISTORY, LOG_GAP_TEXT, advanceLogHistory } from "./useLogHistory.ts";
+import { EMPTY_LOG_HISTORY, advanceLogHistory } from "./useLogHistory.ts";
 import { CHINESE } from "../cards/chinese.ts";
 import { baseView, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 
@@ -22,6 +22,9 @@ afterEach(() => {
   closeInspect();
   vi.useRealTimers();
 });
+
+/** A card's printed name: the module names a card by the catalog it carries, with or without one in context. */
+const catalogName = (defId: string): string => CATALOG[defId]?.name ?? defId;
 
 describe("Log: redacted events", () => {
   it("R177 says a hidden card was buffed rather than '+0/+0', and names a public buff in full", () => {
@@ -103,8 +106,8 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
       />,
     );
     const text = lines();
-    expect(text[1]).toBe("core-002 attacked your hero");
-    expect(text[2]).toBe("core-002 took 12 damage in combat");
+    expect(text[1]).toBe(`${catalogName("core-002")} attacked your hero`);
+    expect(text[2]).toBe(`${catalogName("core-002")} took 12 damage in combat`);
     // Nothing public ever named c99 or c98: they read as units, not as ids.
     expect(text[3]).toBe("A unit attacked a unit");
     expect(text.join("\n")).not.toMatch(/\bc\d+\b/);
@@ -118,7 +121,7 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
         view={withEvents(view, [
           { type: "manaChanged", player: "p1", current: 2, max: 2 },
           { type: "summoned", player: "p1", instanceId: "x1", defId: "core-015", row: "units", lane: 1 },
-          { type: "cardResolved", instanceId: "x1", defId: "core-015" } as never,
+          { type: "cardResolved", player: "p1", instanceId: "x1", defId: "core-015", permanent: true, costPaid: 1 },
           { type: "modifierChanged", player: "p1", modifierId: modifier?.id ?? "", added: true } as never,
           { type: "modifierChanged", player: "p2", modifierId: "m-gone", added: false } as never,
         ])}
@@ -126,7 +129,7 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     );
     const text = lines();
     expect(text[0]).toBe("You have 2/2 mana");
-    expect(text[1]).toBe("core-015 entered your lane 1");
+    expect(text[1]).toBe(`${catalogName("core-015")} entered your lane 1`);
     expect(text).toHaveLength(4);
     expect(text[2]).toBe(`You gained "${modifier?.label ?? ""}"`);
     expect(text[3]).toBe("Opponent lost an effect");
@@ -163,13 +166,14 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(lines()).toEqual(["Your starscape map reaches node 3", "The opponent's starscape map reaches node 20"]);
   });
 
-  it("malformed downloaded-replay curve cells keep the generic line", () => {
+  it("cells that make no curve (off the board, or two in one lane) keep the generic line", () => {
+    const cell = (lane: number, player: "p1" | "p2" = "p1"): { player: "p1" | "p2"; row: "units"; lane: number } => ({ player, row: "units", lane });
     render(
       <Log
         view={withEvents(fullBoardView(), [
-          { type: "curveDrawn", player: "p1", cells: null } as never,
-          { type: "curveDrawn", player: "p1", cells: {} } as never,
-          { type: "curveDrawn", player: "p1", cells: [null] } as never,
+          { type: "curveDrawn", player: "p1", cells: [] },
+          { type: "curveDrawn", player: "p1", cells: [cell(0)] },
+          { type: "curveDrawn", player: "p1", cells: [cell(2), cell(2, "p2")] },
         ])}
       />,
     );
@@ -382,6 +386,9 @@ describe("Log: a line about a card opens that card", () => {
 });
 
 describe("R745 the log keeps the whole game, not only the view's window", () => {
+  /** What the log says where a window shares no event with the one before (jackioh-shared writes it). */
+  const GAP_TEXT = "Some events may be missing here";
+
   /** The engine's `VIEW_EVENT_LIMIT`: how many of the newest events a view carries (R168). */
   const WINDOW = 32;
 
@@ -435,7 +442,7 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
 
     const history = views.reduce((h, view) => advanceLogHistory(h, view, keptLineFor(view, lookup)), EMPTY_LOG_HISTORY);
     const seat = history.seats.p1;
-    expect(seat?.kept.map((line) => line.text)).toEqual([`${name} entered the opponent's lane 1`, `${name} attacked your hero`]);
+    expect(seat?.kept.map((line) => line.text.full)).toEqual([`${name} entered the opponent's lane 1`, `${name} attacked your hero`]);
     expect(seat?.kept.map((line) => line.face?.defId)).toEqual(["core-002", "core-002"]);
     expect(JSON.stringify(seat?.kept)).not.toContain("c46");
     expect(JSON.stringify(seat?.window.map((entry) => entry.line))).not.toContain("c46");
@@ -515,8 +522,8 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
     const events = game(80);
     const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 32))} />);
     rerender(<Log view={withEvents(baseView(), windowOf(events, 80))} />);
-    expect(lines()).toEqual([...saidRange(1, 32), LOG_GAP_TEXT, ...saidRange(49, 80)]);
-    expect(screen.getByText(LOG_GAP_TEXT)).toHaveAttribute("data-event", "gap");
+    expect(lines()).toEqual([...saidRange(1, 32), GAP_TEXT, ...saidRange(49, 80)]);
+    expect(screen.getByText(GAP_TEXT)).toHaveAttribute("data-event", "gap");
   });
 });
 
@@ -658,9 +665,14 @@ describe("the Starship's fuse line in the log", () => {
   const fused = (pieces: number): GameEvent => ({ type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces });
 
   it("counts one piece as a piece and more as pieces", () => {
-    const line = keptLineFor(baseView(), lookup);
-    expect(line(fused(1))?.text).toMatch(/Dormant Starship \(1 piece\)$/);
-    expect(line(fused(3))?.text).toMatch(/Dormant Starship \(3 pieces\)$/);
+    /** The line the log keeps for an event of a window (the events a history is handed are the window's own). */
+    const kept = (event: GameEvent): string | undefined => {
+      const view = withEvents(baseView(), [event]);
+      const [windowed] = view.events;
+      return windowed === undefined ? undefined : keptLineFor(view, lookup)(windowed)?.text.full;
+    };
+    expect(kept(fused(1))).toMatch(/Dormant Starship \(1 piece\)$/);
+    expect(kept(fused(3))).toMatch(/Dormant Starship \(3 pieces\)$/);
   });
 });
 
@@ -801,7 +813,7 @@ describe("#2252 a play names what it aimed at, and a hit off combat what dealt i
     const turn = [announce(["u1"]), play(), hit()];
     const views = [withEvents(board(), turn), withEvents(board(), [...turn, ...filler.slice(0, 29)]), withEvents(board(), filler)];
     const history = views.reduce((kept, view) => advanceLogHistory(kept, view, keptLineFor(view, lookup)), EMPTY_LOG_HISTORY);
-    expect(history.seats.p1?.kept.map((line) => line.text)).toEqual([AIMED, DEALT]);
+    expect(history.seats.p1?.kept.map((line) => line.text.full)).toEqual([AIMED, DEALT]);
 
     // Each play pairs with its own announce, by the event itself.
     expect(lines(withEvents(board(), [announce(["u1"]), play(), announce(["hero-p1"]), { ...play() }]))).toEqual([

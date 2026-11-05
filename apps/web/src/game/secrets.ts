@@ -1,8 +1,8 @@
-// ME-SECRET's words (Meditative MB05, R860–R865): how the client names a secret choice and a
-// prediction's outcome. Presentation only (CLAUDE.md rule 7): the engine's `viewFor` decides who
+// ME-SECRET's words (Meditative MB05, R860–R865): how the client names a secret choice (the log's line about a
+// prediction is jackioh-shared's, #3108). Presentation only (CLAUDE.md rule 7): the engine's `viewFor` decides who
 // reads a choice, and this file only turns the choice it carries into words.
 
-import type { PredictOutcome, SecretChoice } from "@jackioh/shared";
+import type { SecretChoice } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 
@@ -10,12 +10,6 @@ export const SECRET_WORDS: Record<SecretChoice, string> = {
   greed: "Greed",
   attack: "Attack",
   defend: "Defend",
-};
-
-export const PREDICTED_WORDS: Record<PredictOutcome, string> = {
-  won: "the reward is canceled",
-  same: "the same, nothing happens",
-  lost: "the penalty lands",
 };
 
 /**

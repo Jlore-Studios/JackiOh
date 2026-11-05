@@ -7,7 +7,9 @@
 //! - `data/glossary.json`: the keyword glossary, in the order its tokenizer sorts (`glossary.rs`);
 //! - `data/power-words.json`: the thirteen powers of #98 Heroic Power (`power.rs`);
 //! - `data/short-forms.json`: the faces that print a short form (`short.rs`);
-//! - `data/zh-CN.json`: the face and glossary strings in Simplified Chinese, English sentence to words
+//! - `data/chaos-names.json`: the effects of the three Call to Chaos cards, the clause the engine names to
+//!   the words a reel and the log show (`log/chaos.rs`; the web's `fx/chaos.ts` reads the same file);
+//! - `data/zh-CN.json`: the face, glossary and log strings in Simplified Chinese, English sentence to words
 //!   (`words.rs`), the keys with `{name}` tokens listed again in matching order;
 //! - `../cards/chinese.json` and `../cards/chinese-terms.json`: the Chinese card and frame tables
 //!   (ME-CN, R1300 to R1303), which `crates/cards` writes from `card-text.yaml` (`chinese.rs`).
@@ -144,6 +146,21 @@ fn main() {
     writeln!(
         out,
         "pub static POWERS: &[PowerRow] = &[\n    {}\n];",
+        rows.join(",\n    ")
+    )
+    .unwrap();
+
+    // The Call to Chaos cards' effect names, by edition and clause.
+    let chaos = read(&data.join("chaos-names.json"));
+    let mut editions: Vec<(&String, &Value)> = object(&chaos).iter().collect();
+    editions.sort_by(|a, b| a.0.cmp(b.0));
+    let rows: Vec<String> = editions
+        .iter()
+        .map(|(id, names)| format!("({}, {})", lit(id), pairs(names)))
+        .collect();
+    writeln!(
+        out,
+        "pub static CHAOS_NAMES: &[(&str, &[(&str, &str)])] = &[\n    {}\n];",
         rows.join(",\n    ")
     )
     .unwrap();

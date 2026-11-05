@@ -783,6 +783,9 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn host(call_json: &str) -> String;
     // #3101: jackioh-shared's match host machine (SPEC §9.5, R79, R265, R268, R672, R738, R744, R1563006, R2685000). A HostCall in ({ call: "stepDuel", host, event, now } | { call: "newDuel", setup, now } | the rematch book's calls),
     // a HostAnswer out ({ answer: "stepped", host, outputs } | { view } | { presence } | the book's); the host holds the DuelHost, passes the time in and carries out the outputs in order (crates/shared/README.md, the host contract)
+#[wasm_bindgen] pub fn log(call_json: &str) -> String;
+    // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
+    // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)
 ```
 
 ### 10.2 Build
@@ -803,7 +806,7 @@ no CI job sets it yet.
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
-`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), …).
+`dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), `log` (#3108: the game log's lines, the normal module's own too), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
 `practice.worker.ts` awaits it before handling a message.

@@ -8,16 +8,16 @@ import { useState } from "react";
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import type { FaceModel } from "../cards/index.ts";
-import { t } from "../i18n/i18n.ts";
+import type { RichText } from "../wire/generated/RichText.ts";
 import { newEventsSince } from "./animations.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
+import { gapLine } from "./logLines.ts";
 
-export const LOG_GAP = "gap";
-export const LOG_GAP_TEXT = "Some events may be missing here";
-
+/** A line as the log keeps it: the words the log wrote for it (jackioh-shared, `logLines.ts`) and the face of the card it opens. */
 export type LoggedLine = {
-  readonly type: GameEvent["type"] | typeof LOG_GAP;
-  readonly text: string;
+  /** The event's type, or `gap`. */
+  readonly type: string;
+  readonly text: RichText;
   readonly face: FaceModel | null;
 };
 export type KeptLine = LoggedLine & { readonly key: string };
@@ -33,6 +33,12 @@ export type LogHistory = {
 };
 export const EMPTY_LOG_HISTORY: LogHistory = { view: null, seats: {} };
 export type ViewerLog = { readonly kept: readonly KeptLine[]; readonly keys: readonly string[] };
+
+/** R745: the line that says events may be missing, as the log wrote it (jackioh-shared). */
+function gapEntry(key: string): KeptLine {
+  const gap = gapLine();
+  return { key, type: gap.event, text: gap.text, face: null };
+}
 
 export function advanceLogHistory(
   history: LogHistory,
@@ -64,7 +70,7 @@ export function advanceLogHistory(
   const overlap = view.events.length - fresh.length;
   const left = before.events.length - overlap;
   const joined = overlap > 0 || before.events.length === 0 || view.events.length === 0;
-  const gap: KeptLine[] = joined ? [] : [{ key: key(), type: LOG_GAP, text: t(LOG_GAP_TEXT), face: null }];
+  const gap: KeptLine[] = joined ? [] : [gapEntry(key())];
   const kept = [
     ...before.kept,
     ...before.window.slice(0, left).flatMap((entry) => (entry.line === null ? [] : [entry.line])),

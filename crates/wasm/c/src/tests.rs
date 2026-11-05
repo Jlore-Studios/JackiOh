@@ -297,6 +297,24 @@ fn face_export_answers_what_the_core_body_answers() {
 }
 
 #[test]
+fn log_export_answers_what_the_core_body_answers() {
+    init();
+    let gap = r#"{ "call": "gap", "locale": "zh-CN" }"#;
+    let answer = call!(log; gap;);
+    assert_eq!(answer, expect(wasm_core::log(gap)));
+    assert_eq!(answer.status, STATUS_OK, "{}", answer.text);
+    let line: Value = serde_json::from_str(&answer.text).expect("JSON");
+    assert_eq!(line["answer"], "line");
+    assert_eq!(line["line"]["event"], "gap");
+    // The words are the reader's: a reader of Chinese reads the line in Chinese.
+    assert_ne!(line["line"]["text"]["full"], "Some events may be missing here");
+    // A call that does not parse is the one failure.
+    let broken = call!(log; "{}";);
+    assert_eq!(broken, expect(wasm_core::log("{}")));
+    assert_eq!(broken.status, STATUS_FAILED);
+}
+
+#[test]
 fn series_export_answers_what_the_core_body_answers() {
     init();
     let started = r#"{

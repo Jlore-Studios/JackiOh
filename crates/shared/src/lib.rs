@@ -7,12 +7,14 @@
 //! ticket, a room or a series freezes of a player's decks, and [`config`] their numbers. [`host`] is the
 //! match host's decisions (#3101): the clocks, the disconnect grace, the rematch offers and the relays as
 //! one state machine, `step(host, event, now) -> (host, outputs)`. [`face`] is what a card face prints,
-//! worked out from the catalog and a view in the reader's words (#3106).
+//! worked out from the catalog and a view in the reader's words (#3106). [`log`] is the game log's lines, from the
+//! events a view gives, in the same words and spans (#3108).
 
 pub mod config;
 pub mod deck;
 pub mod face;
 pub mod host;
+pub mod log;
 pub mod series;
 
 /// A field with three states — absent, `null`, a value — kept apart:

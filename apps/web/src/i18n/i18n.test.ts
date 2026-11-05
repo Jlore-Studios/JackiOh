@@ -111,7 +111,6 @@ describe("R711000 internationalisation and reader language", () => {
     expect(t("Looking for a {mode} opponent…", { mode: "单局" })).toBe("正在寻找单局对手…");
     expect(t("An untranslated engine sentence")).toBe("An untranslated engine sentence");
     expect(t("Hello {name}!", { name: "Player" })).toBe("Hello Player!");
-    expect(t("{seat} drew a card", { seat: t("You") })).toBe("你抽了一张牌");
     expect(conquestText("winsNeeded")).toBe(
       `用你的 ${String(SERIES_WINS_NEEDED)} 套卡组各赢一局即可拿下系列赛（先拿到 ${String(SERIES_WINS_NEEDED)} 场胜利者获胜）。`,
     );

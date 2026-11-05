@@ -13,6 +13,8 @@
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
+import chaosNamesJson from "../../../../crates/shared/data/chaos-names.json";
+
 import { frac, tunedBurst } from "./build.ts";
 import {
   FX_BANNER_TAIL_MS,
@@ -30,45 +32,12 @@ export const CHAOS_CORE = "core-095";
 export const CHAOS_CLASSIC_PLUS = "classicplus-073";
 export const CHAOS_MEDITATIVE = "meditative-095";
 
-/** Each edition's effects, the clause the engine names → the words a reel shows, in the card's order. */
-export const CHAOS_EFFECT_NAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  [CHAOS_CORE]: {
-    "Summon 3 random (3) Cost Units": "Summon 3 random (3) Cost Units",
-    "Heal your hero 30": "Heal the caster's hero 30",
-    "Draw your whole deck and gain 4 mana": "Draw the whole Deck, gain 4 mana",
-    "Add 3 random cards to your hand, which cost (0)": "Add 3 random (0) Cost cards",
-    "Make your hand Radiant": "The caster's hand becomes Radiant",
-    "Summon 5 Radiant Rush Tokens": "Summon 5 Radiant Rush Tokens",
-    "Cards in your hand and deck cost (2) less": "Hand and Deck cost (2) less",
-    "Summon a Chaos Golem": "Summon a Chaos Golem",
-    "Summon 5 random Field Spells or Traps into your backrow, Traps face-down": "Fill the backrow with Field Spells and Traps",
-    "Cast a random Call to Chaos": "Cast a random Call to Chaos",
-  },
-  [CHAOS_CLASSIC_PLUS]: {
-    "Add 5 random Fruits to your hand, which cost (0)": "Add 5 (0) Cost Fruits",
-    "Add 3 random Books to your hand, which cost (0)": "Add 3 (0) Cost Books",
-    "Destroy all enemy permanents": "Destroy all enemy permanents",
-    "Add 3 random Classic cards to your hand, which cost (0)": "Add 3 (0) Cost Classic cards",
-    "Buff every card in your hand and deck twice": "Buff hand and Deck twice",
-    "Fuse a random card into each card in your deck, each keeping its cost": "Fuse a card into every Deck card",
-    "Nerf every card on your opponent's field and in their hand three times": "Nerf the enemy's field and hand 3 times",
-    "Summon a Classic Golem": "Summon a Classic Golem",
-    "Replace your deck with random Call to Chaos cards, which cost (0)": "Replace the Deck with Calls to Chaos",
-    "Cast a random Call to Chaos": "Cast a random Call to Chaos",
-  },
-  [CHAOS_MEDITATIVE]: {
-    "Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0)": "Fuse the hand, add 2 copies, all (0) Cost",
-    "Add 2 random CN cards to your hand, which cost (0)": "Add 2 (0) Cost CN cards",
-    "Add 2 random Prime cards to your hand, which cost (0)": "Add 2 (0) Cost Prime cards",
-    "Your hero gains 6 Armor and you heal it 6": "Hero gains 6 Armor and heals 6",
-    "Summon a Jade Beauty": "Summon a Jade Beauty",
-    "Summon 3 random Acclaimed cards": "Summon 3 random Acclaimed cards",
-    "Bounce every enemy permanent, then Nerf each card bounced": "Bounce the enemy's field, then Nerf it",
-    "Summon a CN Golem": "Summon a CN Golem",
-    "For the rest of the game, at the start of each of your turns, cast a random Call to Chaos": "Each turn, cast a random Call to Chaos",
-    "Cast a random Call to Chaos": "Cast a random Call to Chaos",
-  },
-};
+/**
+ * Each edition's effects, the clause the engine names → the words a reel shows, in the card's order. The table
+ * is jackioh-shared's (`crates/shared/data/chaos-names.json`), which the game log's Rust reads for the same
+ * words (#3108), so the reel and the log say an effect alike.
+ */
+export const CHAOS_EFFECT_NAMES: Readonly<Record<string, Readonly<Record<string, string>>>> = chaosNamesJson;
 
 export type ChaosRoll = { player: PlayerId; instanceId: string; defId: string; effects: readonly string[] };
 

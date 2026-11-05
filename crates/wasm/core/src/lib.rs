@@ -778,6 +778,19 @@ pub fn face(call_json: &str) -> Result<String, String> {
     to_json(&jackioh_shared::face::apply(&call))
 }
 
+// The game log's lines (#3108; `jackioh_shared::log`)
+
+/// One call of `jackioh_shared::log`, the game log's lines: the input is a `LogCall`
+/// (`{ "call": "view", "view": …, "locale": "zh-CN" }`, or `gap`), the output a `LogAnswer`
+/// (`{ "answer": "lines", "lines": [ … ] }`, a line or `null` for each event of the view's window, or
+/// `{ "answer": "line", "line": … }`). The catalog is the one `init` registered; the locale comes in as an
+/// argument, and each line is final text as spans in the reader's words, naming only what the view lets its
+/// viewer read (`crates/shared/README.md`, the host contract). No decision is made here.
+pub fn log(call_json: &str) -> Result<String, String> {
+    let call: jackioh_shared::log::LogCall = parse("log: the call", call_json)?;
+    to_json(&jackioh_shared::log::apply(&call))
+}
+
 // The match host's machine (#3101; SPEC §9.2, §9.3, §9.5)
 
 /// One call of `jackioh_shared::host`, the match host's decisions the server calls natively: the input is
@@ -1257,6 +1270,62 @@ mod face_body_tests {
         for call in ["", "{}", r#"{ "call": "nothing" }"#] {
             let error = face(call).unwrap_err();
             assert!(error.starts_with("face: the call"), "{call:?}: {error}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod log_body_tests {
+    use super::*;
+    use serde_json::Value;
+
+    /// The body is `jackioh_shared::log::apply` over JSON: a view's events in, a line for each out, in the
+    /// locale it is asked in.
+    #[test]
+    fn log_body_answers_a_line_for_each_event_in_the_asked_locale() {
+        jackioh_cards::register_all();
+        let view = r#"{ "viewer": "p1", "turn": 3, "active": "p1", "phase": "main",
+            "you": { "player": "p1", "hero": { "health": 30, "armor": 0, "powers": [] },
+                "modifiers": [], "mana": { "current": 4, "max": 4 }, "hand": [], "libraryCount": 12,
+                "graveyard": [], "exile": [], "resolving": [], "units": [null, null, null, null, null],
+                "backrow": [null, null, null, null, null],
+                "locks": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "reserved": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "fatigueCount": 0 },
+            "opponent": { "player": "p2", "hero": { "health": 30, "armor": 0, "powers": [] },
+                "modifiers": [], "mana": { "current": 4, "max": 4 }, "hand": { "count": 4 }, "libraryCount": 12,
+                "graveyard": [], "exile": [], "resolving": [], "units": [null, null, null, null, null],
+                "backrow": [null, null, null, null, null],
+                "locks": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "reserved": { "units": [false, false, false, false, false], "backrow": [false, false, false, false, false] },
+                "fatigueCount": 0 },
+            "pending": null, "result": null, "clockMs": null,
+            "events": [
+                { "type": "drawn", "player": "p1", "instanceId": "c1", "defId": "core-011" },
+                { "type": "cardResolved", "player": "p2", "instanceId": "c2", "defId": "core-011", "permanent": false, "costPaid": 1 },
+                { "type": "cardPlayed", "player": "p2", "instanceId": "c7", "defId": "core-032", "costPaid": 2 }
+            ] }"#;
+        let ask = |locale: &str| {
+            let call = format!(r#"{{ "call": "view", "locale": "{locale}", "view": {view} }}"#);
+            serde_json::from_str::<Value>(&log(&call).unwrap()).unwrap()
+        };
+        let english = ask("en");
+        assert_eq!(english["answer"], "lines");
+        assert_eq!(english["lines"][0]["text"]["full"], "You drew a card");
+        assert_eq!(english["lines"][1], Value::Null);
+        assert_eq!(english["lines"][2]["event"], "cardPlayed");
+        assert_eq!(english["lines"][2]["card"]["defId"], "core-032");
+        assert_ne!(ask("zh-CN")["lines"][0]["text"]["full"], "You drew a card");
+        let gap = serde_json::from_str::<Value>(&log(r#"{ "call": "gap" }"#).unwrap()).unwrap();
+        assert_eq!(gap["line"]["event"], "gap");
+        assert_eq!(gap["line"]["text"]["full"], "Some events may be missing here");
+    }
+
+    #[test]
+    fn log_body_refuses_a_call_that_does_not_parse() {
+        for call in ["", "{}", r#"{ "call": "nothing" }"#] {
+            let error = log(call).unwrap_err();
+            assert!(error.starts_with("log: the call"), "{call:?}: {error}");
         }
     }
 }

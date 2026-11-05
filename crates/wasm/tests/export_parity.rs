@@ -61,8 +61,9 @@ const SHARED: &[&str] = &[
 /// creator plays, #3101's `host`, the match host's machine, which no custom-card practice game plays on
 /// (practice runs on it after the Luau module is gone, #3099), R3100000's combat forecast, which only a
 /// tutorial lesson asks for and a lesson holds no custom card, and #3106's `face`, its card face model,
-/// which no custom-card game or card creator draws with: so the Luau module that leaves with #3097 never
-/// binds them. Their other wrapper is the C module's (#3093), as the host contract of
+/// which no custom-card game or card creator draws with, and #3108's `log`, the game log's lines, which
+/// the web calls on the normal module whichever one the engine calls go through: so the Luau module that
+/// leaves with #3097 never binds them. Their other wrapper is the C module's (#3093), as the host contract of
 /// `crates/shared/README.md` says.
 const NORMAL_ONLY: &[&str] = &[
     "combat_forecast",
@@ -74,6 +75,7 @@ const NORMAL_ONLY: &[&str] = &[
     "duos_view_for",
     "series",
     "face",
+    "log",
     "host",
 ];
 
