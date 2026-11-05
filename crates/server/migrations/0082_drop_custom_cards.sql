@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0081: custom cards are removed, so the custom_cards table goes
+-- Migration 0082: custom cards are removed, so the custom_cards table goes
 -- (SPEC §12.9; issues #3095 and #2956)
 -- ============================================================================
 -- Custom cards (R915008; issue #918) are removed from the game (#2956): the
@@ -23,7 +23,7 @@
 -- 0037 stays where it is: a migration is history, and a database that has not
 -- applied it yet makes the table and drops it again.
 --
--- Apply order: ... -> 0037 (custom_cards) -> ... -> 0080 -> 0081 (this file).
+-- Apply order: ... -> 0037 (custom_cards) -> ... -> 0081 -> 0082 (this file).
 -- This file only drops. Safe to re-apply: every drop is `if exists`.
 -- ============================================================================
 

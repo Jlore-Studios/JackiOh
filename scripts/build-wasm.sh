@@ -44,7 +44,16 @@
 # JACKIOH_WASM_NORMAL: 1 (the default) builds the normal module; 0 skips it, with its target and
 # wasm-bindgen, and builds the Luau module alone. CI builds each module in a job of its own, side by
 # side (ci.yml's `web (wasm module)` and `web (wasm luau module)`): one after the other they took
-# over seven minutes (#959). With JACKIOH_WASM_LUAU=0 it would build nothing, so that pair fails.
+# over seven minutes (#959). With JACKIOH_WASM_LUAU=0 it would build nothing, so that pair fails, unless
+# JACKIOH_WASM_C=1 builds the C module.
+#
+# JACKIOH_WASM_C: 0 (the default) skips the C module; 1 builds it, #3093's `crates/wasm/c`, the engine's
+# C boundary as a plain `wasm32-unknown-unknown` cdylib with no host imports, with neither `preview` nor
+# `duos`, and checks with node that its import section is empty. It needs no emcc and no wasm-bindgen,
+# and nothing in apps/web loads it (a host that is not JavaScript does: crates/wasm/c/README.md), so
+# it writes nothing into pkg/: the module is `jackioh_wasm_c.wasm` in cargo's release directory for
+# that target. No CI job sets it yet (part 5 of #2956 adds that, since it changes .github/).
+# JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 JACKIOH_WASM_LUAU=0 builds it alone.
 #
 # CARGO_TARGET_DIR: where cargo builds, which is where the modules are read from; unset, target/
 # under the root. Cargo runs from the root, so a relative one is the root's. JACKIOH_CACHE_DIR: where
@@ -73,6 +82,7 @@ EMSDK_DIR="$TOOLS_DIR/emsdk"
 LUAU_OUT_DIR="$OUT_DIR/luau"
 LUAU_JS="$TARGET_DIR/$LUAU_TARGET/release/jackioh-wasm-luau.js"
 LUAU_WASM="$TARGET_DIR/$LUAU_TARGET/release/jackioh_wasm_luau.wasm"
+C_MODULE="$TARGET_DIR/$WASM_TARGET/release/jackioh_wasm_c.wasm"
 
 cd "$ROOT"
 
@@ -92,7 +102,14 @@ case "${JACKIOH_WASM_NORMAL:-1}" in
     exit 1
     ;;
 esac
-if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ]; then
+case "${JACKIOH_WASM_C:-0}" in
+  0 | 1) ;;
+  *)
+    echo "build-wasm: JACKIOH_WASM_C is 0 (the default) or 1, not \"$JACKIOH_WASM_C\"" >&2
+    exit 1
+    ;;
+esac
+if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ] && [ "${JACKIOH_WASM_C:-0}" != 1 ]; then
   echo "build-wasm: JACKIOH_WASM_NORMAL=0 with JACKIOH_WASM_LUAU=0 builds nothing" >&2
   exit 1
 fi
@@ -163,6 +180,28 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
   mkdir -p "$OUT_DIR"
   "$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
   echo "build-wasm: wrote $OUT_DIR"
+fi
+
+# #3093: the C module, the engine's C boundary for a host that is not JavaScript. JACKIOH_WASM_C 0 (the
+# default) skips it. It shares the normal module's target, and so its rustup check, but takes no
+# feature: a module with no way to preview a set and no Duos body is the one such a host ships. A link
+# that imported anything from its host (a wasm-bindgen glue, a JavaScript function, a system call)
+# would not instantiate with an empty import object, so the built module's imports are read with node,
+# which `WebAssembly.Module.imports` answers, and any one fails the build.
+if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
+  if command -v rustup >/dev/null 2>&1; then
+    if ! rustup target list --installed | grep -qx "$WASM_TARGET"; then
+      echo "build-wasm: adding the $WASM_TARGET target"
+      rustup target add "$WASM_TARGET"
+    fi
+  fi
+  cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+  if ! command -v node >/dev/null 2>&1; then
+    echo "build-wasm: node is needed to check that the C module imports nothing (JACKIOH_WASM_C=1)" >&2
+    exit 1
+  fi
+  node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
+  echo "build-wasm: built $C_MODULE, which imports nothing"
 fi
 
 # R915009, #919: the Luau module, the engine with the card kit, which the web loads only for a

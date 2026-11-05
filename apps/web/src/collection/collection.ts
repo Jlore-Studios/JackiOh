@@ -74,6 +74,12 @@ export const collectionTestid = {
   previewScrim: "collection-preview-scrim",
   previewClose: "collection-preview-close",
   previewStatus: "collection-preview-status",
+  // R3013001: a card's proficiency in its card view (ProficiencyPanel), its level, its plays and its stamps.
+  proficiency: "collection-proficiency",
+  proficiencyLevel: "collection-proficiency-level",
+  proficiencyPlays: "collection-proficiency-plays",
+  stamp: (level: number) => `collection-stamp-${String(level)}`,
+  stampNone: "collection-stamp-none",
 } as const;
 
 export const COLLECTED_DEFS: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && setShips(def.set));

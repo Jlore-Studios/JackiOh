@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 73 tables of migrations 0001-0081 ==='
+\echo '=== CHECK 2: the 74 tables of migrations 0001-0082 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -85,17 +85,18 @@ declare
   -- per-card picks, card_cosmetic_picks (0061, R1834000), each patch's whole games,
   -- game_totals (0063, R1994000), a saved deck's earlier versions, deck_versions (0066,
   -- R2100000), a spend's idempotency_keys (0067, R2124000), a news entry's claims, news_claims
-  -- (0077, R2875000), the practice claims' practice_claim_counts (0078, #2884), and the dev
-  -- dashboard's admin_actions, hand_set_ratings, rating_grants and news_posts (0080, R3074000).
+  -- (0077, R2875000), the practice claims' practice_claim_counts (0078, #2884), the dev
+  -- dashboard's admin_actions, hand_set_ratings, rating_grants and news_posts (0080, R3074000),
+  -- and each card's plays, level and stamp, card_proficiency (0081, R3013000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
-  -- 0076 and 0079 add no table, and 0081 drops custom_cards (0037, R915008), which 0037 had added.
+  -- 0076 and 0079 add no table, and 0082 drops custom_cards (0037, R915008), which 0037 had added.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
     'account_cosmetics', 'action_timings', 'admin_actions', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_cosmetic_picks',
-    'card_cosmetics', 'card_totals', 'cards', 'challenges',
+    'card_cosmetics', 'card_proficiency', 'card_totals', 'cards', 'challenges',
     'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
     'cosmetics',
     'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',

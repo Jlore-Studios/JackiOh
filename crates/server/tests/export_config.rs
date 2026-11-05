@@ -274,6 +274,9 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
         ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
         ("SET_TRACK_UNLOCK_LEVEL", json!(c::SET_TRACK_UNLOCK_LEVEL)),
+        // #3013's card proficiency (§14.14, R3013000): each level's plays and the level count.
+        ("PROFICIENCY_LEVEL_PLAYS", json!(c::PROFICIENCY_LEVEL_PLAYS)),
+        ("PROFICIENCY_LEVELS", json!(c::PROFICIENCY_LEVELS)),
         ("JLORE_LADDER_WIN", json!(c::JLORE_LADDER_WIN)),
         ("JLORE_LADDER_LOSS", json!(c::JLORE_LADDER_LOSS)),
         ("JLORE_PRACTICE_WIN", json!(c::JLORE_PRACTICE_WIN)),
@@ -389,8 +392,9 @@ fn every_name_is_listed_once() {
         // #2728: four per-step cosmetic bar sizes and four targets in place of COSMETIC_TOKEN_BAR_SIZE and
         // COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000). #2875: NEWS_TTL_DAYS and five news rewards.
         // #3074: the dev dashboard's seven (R3074000, R3074001, R3074003).
+        // #3013: PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -411,7 +415,8 @@ fn every_name_is_listed_once() {
          #2875's NEWS_TTL_DAYS and five NEWS_REWARD_* amounts (R2875001, R2875003), and #2990's four \
          SPECTATOR_EMOTE_* numbers (R2990001, R2990002), and #3074's DEV_JLORE_PER_REQUEST_MAX, \
          DEV_XP_PER_REQUEST_MAX, DEV_RATING_MIN, DEV_RATING_MAX, NEWS_POST_TITLE_MAX_CHARS, \
-         NEWS_POST_SUMMARY_MAX_CHARS and NEWS_SUMMARY_MAX_SENTENCES (R3074000, R3074001, R3074003)"
+         NEWS_POST_SUMMARY_MAX_CHARS and NEWS_SUMMARY_MAX_SENTENCES (R3074000, R3074001, R3074003), \
+         and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000)"
     );
 }
 

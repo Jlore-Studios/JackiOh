@@ -11,9 +11,10 @@
 //! `console_error_panic_hook` prints it on the console before the trap.
 //!
 //! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505), which the Luau
-//! module wraps too; this module keeps the wasm-bindgen wrappers, the panic hook, the clock and the
-//! custom-card refusal (R915009). The pure crates never read a clock (CLAUDE.md rule 4, SURFACE §3):
-//! `ai_decide` hands the body `js_sys::Date::now` against the deadline the page computed.
+//! module and the C module (`crates/wasm/c`, #3093) wrap too; this module keeps the wasm-bindgen
+//! wrappers, the panic hook, the clock and the custom-card refusal (R915009). The pure crates never read
+//! a clock (CLAUDE.md rule 4, SURFACE §3): `ai_decide` hands the body `js_sys::Date::now` against the
+//! deadline the page computed.
 
 use jackioh_engine::prelude::IndexMap;
 use jackioh_engine::{CreateGameArgs, SetupKind};
@@ -346,10 +347,13 @@ pub fn choose_action(
     js(wasm_core::choose_action(state_json, seat, rng_seed, rng_cursor))
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
-/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
-/// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
-/// fixtures were dealt.
+/// Every rules, AI and run number a client reads, as one flat JSON object (#3093): `AI_BUDGET`,
+/// `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `FIXTURE_BANNED_IDS` and `AI_DECK` for practice, the tutorial
+/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests;
+/// `RUN`, the dungeon run's numbers (`run_constants`'s object); and each constant of
+/// `apps/web/src/wire/engineConfig.ts` by its own name (`DECK_SIZE`, …), so a host restates none
+/// (CLAUDE.md rule 9). `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as
+/// it stood when the fixtures were dealt.
 #[wasm_bindgen]
 pub fn constants() -> Result<String, JsError> {
     js(wasm_core::constants())

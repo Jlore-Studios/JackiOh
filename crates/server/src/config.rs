@@ -2749,6 +2749,12 @@ pub const SET_TRACK_LEVELS: u32 = 100;
 pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
 /// SPEC §14.7: the newest track's level that unlocks the older ones (#1333's table: 10).
 pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
+/// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
+/// reach each of its proficiency levels, lowest first (#3013: the first comes in a game or two, the
+/// last after 200 plays, a season's commitment to one card). Level n unlocks stamp n (R3013001).
+pub const PROFICIENCY_LEVEL_PLAYS: [i64; 5] = [3, 15, 40, 100, 200];
+/// SPEC §14.14, R3013000: a card's proficiency levels, one stamp each (R3013001).
+pub const PROFICIENCY_LEVELS: usize = PROFICIENCY_LEVEL_PLAYS.len();
 /// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
 pub const JLORE_LADDER_WIN: i32 = 20;
 /// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves
