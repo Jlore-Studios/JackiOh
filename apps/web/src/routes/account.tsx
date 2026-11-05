@@ -34,7 +34,14 @@ import RankCrest from "../rank/RankCrest.tsx";
 import StreakFlame from "../rank/StreakFlame.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { paths } from "../net/navigate.ts";
-import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
+import {
+  clearSession,
+  forgetLinkAfterSignIn,
+  forgetPendingAddresses,
+  linkAfterSignIn,
+  readSession,
+} from "../net/session.ts";
+import { hasLinkResult } from "../auth/redirect.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import DevTools from "./DevTools.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -123,6 +130,8 @@ export function signOut(): void {
   // Whatever sign-up or reset this browser was waiting on ends with it (R193): an address left
   // armed here would accept the next person's link, or one planted by someone else.
   forgetPendingAddresses();
+  // R3147002: and so does a provider waiting to be linked to the account signed in next.
+  forgetLinkAfterSignIn();
   let left = false;
   const leave = (): void => {
     if (left || typeof window === "undefined") return;
@@ -244,7 +253,8 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [randomRank, setRandomRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [manageOpen, setManageOpen] = useState(false);
+  // Open where a provider link's outcome is said (R3025000), or where the one to link is (R3147002).
+  const [manageOpen, setManageOpen] = useState(() => hasLinkResult() || linkAfterSignIn() !== null);
   const [devOpen, setDevOpen] = useState(false);
 
   useEffect(() => {
