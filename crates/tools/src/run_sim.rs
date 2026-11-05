@@ -500,7 +500,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
                 sums.hp_lost += i64::from(fight.hp_before - fight.hp_after);
                 sums.turns += i64::from(fight.turns);
             }
-            if fight.kind.is_boss() {
+            if matches!(fight.kind, RunNodeKind::MiniBoss | RunNodeKind::Boss) {
                 if let Some((hp, reached)) = out.boss_hp.get_mut(bosses) {
                     *hp += i64::from(fight.hp_before);
                     *reached += 1;
@@ -838,6 +838,34 @@ mod tests {
         assert!(text.contains("HP entering boss 1: mean 22.0 (n 1)"), "{text}");
         assert!(text.contains("HP entering boss 2: mean - (n 0)"), "{text}");
         assert!(text.contains("runs won: 1 of 2"), "{text}");
+    }
+
+    #[test]
+    fn the_tally_puts_each_mini_boss_and_the_final_boss_in_act_order() {
+        let content = content();
+        let (setup, unlocks) = run_setup(0);
+        let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
+        let outcomes = [RunOutcome {
+            file: RunFile {
+                setup,
+                unlocks,
+                log: Vec::new(),
+            },
+            end: RunState {
+                phase: RunPhase::Won,
+                ..start
+            },
+            fights: vec![
+                row(RunNodeKind::Fight, 30, 28, true, 8),
+                row(RunNodeKind::MiniBoss, 28, 20, true, 18),
+                row(RunNodeKind::Elite, 20, 16, true, 12),
+                row(RunNodeKind::MiniBoss, 16, 12, true, 16),
+                row(RunNodeKind::Boss, 12, 5, true, 22),
+            ],
+            faults: Vec::new(),
+        }];
+        let sums = tally(&outcomes, &content);
+        assert_eq!(sums.boss_hp, [(28, 1), (16, 1), (12, 1)]);
     }
 
     #[test]
