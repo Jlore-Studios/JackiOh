@@ -17,13 +17,6 @@ function card(id: string, set: string, wins: number, games: number): PublicCardS
     set,
     games,
     winRate: games > 0 ? wins / games : null,
-    drawnGames: 0,
-    drawnWinRate: null,
-    playedGames: 0,
-    playedWinRate: null,
-    drawnNotPlayedGames: 0,
-    drawnNotPlayedWinRate: null,
-    playedDelta: null,
     playRate: 0,
     hasEnoughGames: games >= MIN_SAMPLE,
   };

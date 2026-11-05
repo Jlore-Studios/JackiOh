@@ -179,8 +179,8 @@ pub const MS_PER_DAY: i64 = 86_400_000;
 pub const MAX_FAIR_GAP: i64 = 400;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games". Its played delta needs this many on each side, played and
-/// drawn but not played, and displays "not enough data" until then.
+/// the row displays "not enough games" and has no tier (R3022000). `GET /api/stats/cards` sends no
+/// played or drawn delta, which waited for this many on each side (R3185000).
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
