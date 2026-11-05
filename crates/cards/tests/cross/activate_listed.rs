@@ -51,7 +51,7 @@ const LIVING_MANA_POTION: &str = "meditativeplus-011";
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 71] = [
+const ACTIVATE_CARDS: [&str; 72] = [
     HEROIC_POWER,
     TWINSPELL,
     INFINISCEPTER,
@@ -1864,8 +1864,8 @@ mod stinkyscape {
         assert_eq!(s.hand(P1).len(), hand - 1, "the resume left the hand");
     });
 
-    /// R3044000: Twinspell's Activate grants its controller's next Spell this turn Echo +1, a rider
-    /// with no source; the base face then goes to the graveyard and the Radiant one stays.
+    // R3044000: Twinspell's Activate grants its controller's next Spell this turn Echo +1, a rider
+    // with no source; the base face then goes to the graveyard and the Radiant one stays.
     both_faces!(c079_twinspell, |radiant: bool| {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(TWINSPELL, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1879,7 +1879,7 @@ mod stinkyscape {
             .p1
             .mods
             .iter()
-            .map(js)
+            .map(|m| serde_json::to_value(m).expect("a modifier serializes"))
             .filter(|m| m["kind"] == "echoNextSpell")
             .count();
         assert_eq!(riders, 1, "one Echo rider on its controller");

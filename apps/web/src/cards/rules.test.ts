@@ -886,8 +886,9 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     );
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
-    // Jlockeed's J15 Fighter no longer has it at all.
-    expect(termsIn(played("classicplus-051"))).not.toContain("Can't Defend");
+    // Jlockeed's J15 Fighter prints it again on both faces since #3042 (part 5 of #3000).
+    expect(termsIn(played("classicplus-051"))).toContain("Can't Defend");
+    expect(termsIn(played("classicplus-051", "radiant"))).toContain("Can't Defend");
   });
 
   it("R2657000 the status's spellings are plain words now, and Warp Disruptor's aura stays plain words", () => {
