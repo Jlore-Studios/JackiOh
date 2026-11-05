@@ -15983,15 +15983,8 @@
       "taken_asks": []
     },
     "3218": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42079089772",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-05T18:16:01Z",
-        "until": "2026-11-05T18:46:01Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16003,10 +15996,9 @@
         "reason": "planned on sonnet",
         "trail": " -rn \\\"boardRail=\\\" --include=*.tsx . | grep -v \\\"test\\\\.\\\" ; grep -n \\\"back\\\" duos/context.ts | head; grep -rn \\\"chrome.back\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -rn \\\"db-header\\\\|ws-history\\\\b\\\\|ws-sync\\\\|SyncStatusLine\\\\|db-title\\\\|stats-header\\\\|stats-title\\\" --include=*.css --includ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 30,95p game/deckbuilder/workshop.css; sed -n 470,520p game/deckbuilder/workshop.css; sed -n 1040,1125p game/deckbuilder/wor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; cat spec/rulings/R2122000.md; echo ======; cat spec/rulings/R1581000.md; ls spec/pending | head; for f in $(ls spec/pending | head -2); do echo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; cat spec/rulings/R1916000.md | head -30; echo ====; cat spec/rulings/R1651000.md | head -30; grep -n \\\"top-bar\\\\|top bar\\\\|BackLink\\\" spec/INDE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 396,436p routes/invite.tsx; grep -n \\\"invite-screen__top\\\\|invite-screen__account\\\\|invite-screen__who\\\" -r . --include=*.c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -rln \\\"screen-nav\\\\|db-header\\\\|stats-header\\\\|navTestid\\\\|nav-back\\\\|link-button\\\" --include=*.test.ts --include=*.test.tsx \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -rn \\\"screen-nav\\\\|link-button\\\\|\\\\.db-header\\\\|db-title\\\\|stats-title\\\\|\\\\\\\"navigation\\\\\\\"\\\" --include=*.test.ts --include=*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 1,60p together/FriendsButton.test.tsx; sed -n 140,185p together/FriendsButton.test.tsx; sed -n 1,50p routes/patch-notes.tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -n \\\"^\\\\.app-shell {\\\" -A14 index.css; grep -n \\\"^\\\\.app-shell--wide\\\" -A8 index.css | head -30; sed -n 155,185p routes/repla\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; grep -n \\\"restricted\\\\|boundaries\\\\|routes/\\\" eslint.config.js | head -20; grep -rn \\\"from \\\\\\\"../routes/\\\" apps/web/src/replay apps/web/src/du\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 1125,1175p game/deckbuilder/workshop.css; grep -n \\\"header\\\" game/deckbuilder/deckbuilder.css | sed -n 1,30p; sed -n 1,60p \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; sed -n 60,125p e2e/cypress/e2e/39-replays.cy.ts; grep -n \\\"SETTINGS_OPEN_NAV\\\\|SETTINGS_OPEN_GAME\\\" e2e/support/ux.ts; grep -n \\\"SMOKE\\\" -A30 e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; sed -n 355,380p e2e/cypress/e2e/13-practice-vs-ai.cy.ts; grep -n \\\"NAV_BACK\\\\|SETTINGS_OPEN_NAV\\\\|LANGUAGE\\\\|JLORE_PILL\\\\|FRIENDS\\\" e2e/support\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3218/.bot-plan.md\", \"content\": \"# Draft plan #3218 (planner notes; final message = whole plan)\\n\\n## Findings\\n- BackLink (apps/web/src/routes/nav.tsx\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; for spec in routes/shop.tsx:52:58 routes/account.tsx:284:290 routes/collection.tsx:161:167 routes/play.tsx:724:730 routes/play.tsx\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -n \\\"Consent\\\\|ageCheckOwed\\\" routes/invite.tsx | head -12; grep -rn \\\"BackLink\\\" --include=*.tsx auth | head; grep -n \\\"NotF\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -rn \\\"birthMonth\\\" --include=*.tsx . | grep -v test | head -3; grep -rln \\\"consentTestid\\\\|ConsentGate\\\\|ConsentScreen\\\" --in\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; grep -n \\\"560px\\\\|600px\\\" together/together.css settings/settings.css i18n/language.css economy/jlore-pill.css routes/top-bar.css \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 44,84p settings/settings.css | cat -n | sed 's/^ *\\\\([0-9]*\\\\)/\\\\1+43/' | head -45; echo; grep -n \\\"BackLink's bar\\\" i18n/l\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; grep -rn \\\"BackLink\\\\|screen-nav\\\\|top-bar\\\\|top bar\\\" apps/web/README.md docs/*.md docs/v0.3.0/*.md 2>/dev/null | head -20; grep -rn \\\"top-bar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; sed -n 70,90p apps/web/README.md; grep -n \\\"docs/issues-and-patches\\\" -n docs/issues-and-patches.md | head -2; grep -n \\\"Ruling numbers\\\" -A12 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 575,612p replay/ReplayPlayer.test.tsx; sed -n 125,160p replay/opening.test.tsx; sed -n 355,375p duos/DuosReplay.test.tsx; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218/apps/web/src; sed -n 415,470p auth/code-field.css; sed -n 236,246p auth/code-field.css\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; grep -rn \\\"PALETTE_MAX\\\\|palette.css\\\" --include=*.md --include=*.ts --include=*.tsx --include=*.mjs --include=*.sh . 2>/dev/null | grep -v nod\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; cat e2e/package.json | head -30; ls e2e; grep -n \\\"typecheck\\\\|\\\\\\\"lint\\\\\\\"\\\" package.json apps/web/package.json | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3218; grep -n \\\"46\\\\b\\\" e2e/README.md | head -5; grep -n \\\"nav-back\\\\|NAV_BACK\\\" -r e2e/cypress/e2e/*.ts | head -5; git log --oneline -3 -- apps/web/\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3218/.bot-plan.md\", \"old_string\": \"## Status\\n- research done; writing final plan next.\", \"new_string\": \"## Decisions (final)\\n-\u2026\n- said: ## Goal Give the top bar one layout, owned by `routes/top-bar.css` and `BackLink`. The slots run Back, the screen's title, a flexible spacer, then the end group (the screen's extras, the Jlore pill, Friends, language, the gear), so Back is always top left and the gear always top right. - Delete the\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-05T17:53:59Z",
       "owner_why": "it plans it",
@@ -16019,9 +16011,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-05T17:42:56Z",
       "requested_by": "squishy-squooby",
-      "run_id": "42079089772",
+      "run_id": "pending:bafdf13d-1793902986",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-05T17:53:59Z",
+      "started_at": "2026-11-05T18:23:54Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16298,9 +16290,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-05T18:22:48Z",
+    "at": "2026-11-05T18:23:54Z",
     "url": "",
-    "what": "revise #3194 on claude-6"
+    "what": "build #3218 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-05T18:02:14Z",
